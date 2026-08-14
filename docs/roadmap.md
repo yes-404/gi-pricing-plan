@@ -227,13 +227,50 @@ drives the version to `validated` — with the report and profile visible. This 
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
 | ~~**W2**~~ ✔ | Platform core — jobs, blobs, settings, auth, health, tracing | ✔ **closed 2026-08-14** — see the closure record below |
 | ~~**W3**~~ ✔ | Governance write path — audit log, RBAC, approval state machine | ✔ **closed 2026-08-14** — see the closure record below |
-| **W4** | Data — ingestion, preparation, validation, profiling, reference data | next |
+| **W4** | Data — ingestion, preparation, validation, profiling, reference data | **in progress** — computation done, platform layer outstanding (see below) |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered
 stated explicitly. A closure record without those is an assertion, not evidence.
+
+### W4 mid-workstream scope finding — 2026-08-14
+
+**W4 is roughly half delivered, and the requirement-coverage number said otherwise.**
+`scope-audit.py DATA` reported 44 of 50 requirements evidenced — 88 % — which reads as
+nearly finished. It is not, and the gap is a property of what the evidence *is* rather
+than a miscount.
+
+Two checks added while measuring the NFRs make the real position visible:
+
+| Check | Result |
+|---|---|
+| `scope-audit.py DATA --endpoints` | **0 of the 28 endpoints `01` §5.1 declares are published** |
+| Requirements evidenced only by `pricing-core` / `model-schema` tests | **19 of 50** |
+
+`@pytest.mark.req` markers do not distinguish "the maths is right" from "the platform does
+this". Nineteen `DATA` requirements are satisfied by pure-function tests over Polars
+frames, and several of those requirements are explicitly about persistence and
+orchestration rather than computation — FR-DATA-14 ("persisted with the Dataset Version"),
+FR-DATA-20 ("every non-pass outcome persists"), FR-DATA-25/27 ("runs automatically after
+successful ingestion", "persisted as an artifact"), FR-DATA-21/22 (rule sets versioned and
+governed). The functions those requirements need exist and are correct. Nothing stores
+their output, nothing runs them after an ingestion, and nothing serves them over HTTP.
+
+Concretely, still to build: `ValidationReport`, `Profile`, `ValidationRule` and
+`ValidationRuleSet` persistence with their migrations; the acknowledgement record
+(FR-DATA-17/18); validation and profiling as Jobs triggered by ingestion; and the §5.1
+REST surface. NFR-DATA-7 and FR-DATA-24 wait on that layer, and NFR-DATA-9 waits on the
+`sql` check, which does not exist.
+
+**The same check found a gap in a closed workstream.** `scope-audit.py PLAT --endpoints`
+reports 11 of 17 `PLAT` endpoints published: the blob upload-URL and download endpoints,
+environments CRUD, and `/metrics` are declared in `07` §5.1 and were never built. W2's
+closure record did not mention them, because nothing at the time compared the interface
+table to the contract. They are reassigned to W4 (blobs, `/metrics`) and W14
+(environments), and the W2 closure record is amended below rather than rewritten — a
+closure record states what was known when it was written.
 
 **W1 re-audited under §13, 2026-08-14.** W1 closed before the standard required a scope
 derivation, so it was audited again from the specifications rather than from its own
@@ -330,6 +367,22 @@ roadmap's "~35 of 60" meant. FR-PLAT-28..31 belong to W14 and FR-PLAT-37 to W7.
 
 **Gate (local):** ruff clean · mypy --strict on 49 files · import-linter 3 kept / 0 broken ·
 **246 tests** · generated contracts current · docs audit 14/14 · req-coverage 47 of 417.
+
+> **Amendment 2026-08-14, during W4.** `scope-audit.py PLAT --endpoints` — a check that
+> did not exist when this record was written — reports **11 of the 17 endpoints `07` §5.1
+> declares are published**. Six were never built: `GET /api/v1/blobs/{id}`,
+> `POST /api/v1/blobs/upload-url`, `GET`/`POST /api/v1/environments`,
+> `PUT /api/v1/environments/{name}/settings`, and `GET /metrics`.
+>
+> The closure was not careless about this; nothing at the time compared the spec's
+> interface table to the published contract, and all 35 in-scope requirements did have
+> evidence. That is precisely the blind spot: requirement markers sit on service-layer
+> tests, so a module can satisfy every requirement and still not be reachable over HTTP.
+>
+> Reassigned rather than reopened: the blob endpoints and `/metrics` to **W4**, which
+> needs blob download URLs for parquet anyway; environments to **W14**, which owns
+> `07` FR-PLAT-28..31. The record above stands as written — it states what was known
+> when it was written, which is what a closure record is for.
 
 **Enforcement proven, not assumed** (§13 rule 3). Each check was shown to fail on
 deliberately broken input: the ADR-0001 and DEP-3 import contracts (injected `import
