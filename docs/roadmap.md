@@ -602,8 +602,8 @@ you never block on a decision you have not reached.
 | **Before Phase 1b** | OQ-OVR-5, OQ-MODEL-1, OQ-MODEL-5 | 3 |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |
-| **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, OQ-DATA-4 | 12 |
-| **Deferred / any time** | OQ-OVR-3, OQ-OVR-4, ~~OQ-DATA-3~~ ✔ *decided 2026-08-14*, OQ-DATA-5, OQ-DATA-6, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
+| **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
+| **Deferred / any time** | OQ-OVR-3, OQ-OVR-4, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
 
 **OQ-RATE-1 was the one question able to invalidate an accepted ADR. It has been answered**
 — by a spike, not an opinion — and ADR-0004 survived
