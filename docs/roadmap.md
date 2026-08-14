@@ -225,7 +225,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | WS | Scope | Status |
 |---|---|---|
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
-| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23), the blob store (#24) and generated contracts (#25) landed; Celery worker, jobs REST routes and OIDC remain |
+| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23), the blob store (#24), generated contracts (#25) and the Celery worker (#26) landed; jobs REST routes and OIDC remain |
 | **W3** | Governance write path — audit log, RBAC, approval state machine | after W2 |
 | **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |

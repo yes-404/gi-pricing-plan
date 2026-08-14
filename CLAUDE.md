@@ -74,7 +74,7 @@ the maths.
 │   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1]
 │   └── pricing-core/         ◐ skeleton only — progress + money        [W1]
 │
-├── backend/                  ◐ FastAPI + SQLAlchemy; jobs, audit, outbox, blobs [1a W2]
+├── backend/                  ◐ API + worker: jobs, audit, outbox, blobs, Celery  [1a W2]
 ├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
 ├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
@@ -371,6 +371,11 @@ docker compose -f deploy/docker-compose.yml down
 Arriving with the workstream that needs them:
 
 ```bash
+# Worker and outbox relay (W2). The relay is what moves a committed job to the broker —
+# without beat running, jobs stay `queued` and nothing explains why.
+celery -A app.worker.entrypoint worker --queues compute,default,io,scoring
+celery -A app.worker.entrypoint beat
+
 pnpm install --dir frontend                  # W6a
 pnpm --dir frontend lint && pnpm --dir frontend test && pnpm --dir frontend type-check
 pnpm --dir frontend generate:api             # regenerate TS types from OpenAPI

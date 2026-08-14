@@ -13,6 +13,7 @@ dependencies = [
     "asyncpg>=0.30",
     "alembic>=1.14",
     "boto3>=1.35",
+    "celery[redis]>=5.4",
 ]
 
 # A member's dependency on another member needs its own source mapping — the root's does
