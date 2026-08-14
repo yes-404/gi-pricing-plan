@@ -22,6 +22,31 @@ project work (`CLAUDE.md` §12).
 
 ## External skills
 
+Five vendored from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills)
+(MIT, © 2025 Will McGinnis) on 2026-08-14, after a security review: no network calls of
+their own, no credential access, no filesystem reach outside a target project. The one
+bundled script (`security-audit/scripts/security_scan.py`) shells out only to `bandit`,
+`pip-audit`, `semgrep` and `detect-secrets` in list form with timeouts. **Note:**
+`semgrep --config auto` fetches rules from Semgrep's registry, so that scanner does reach
+the network.
+
+| Skill | Fills | Note |
+|---|---|---|
+| [`reproducing-ci-locally`](reproducing-ci-locally/SKILL.md) | Running the CI gate locally | Immediately found 21 ruff errors and a dead import-linter config |
+| [`security-audit`](security-audit/SKILL.md) | NFR-OVR-8 / NFR-PLAT-8 dependency and CVE scanning | Bundles a scanner script |
+| [`testing-strategy`](testing-strategy/SKILL.md) | pytest technique — fixtures, parametrization, Hypothesis | Complements this repo's `python-test` |
+| [`code-quality`](code-quality/SKILL.md) | ruff/mypy depth and refactoring | Complements this repo's `python-package` |
+| [`secret-hygiene`](secret-hygiene/SKILL.md) | Secrets and build artifacts in git | **Renamed** from upstream `git-hygiene` to avoid colliding with this repo's own |
+
+Vendored files are kept **as upstream wrote them** and are excluded from `ruff` — linting
+someone else's code to our rules produces churn and breaks that promise.
+
+Not installed, worth revisiting when the phase needs them: `github-actions` (CI cost and
+trigger hygiene), `performance` (Phase 2, NFR-RATE-1), `api-design` and
+`web-app-architecture` (W2's FastAPI surface).
+
+### Original discovery passes
+
 **None installed.** Two discovery passes against `anthropics/skills` (18 skills) and
 `claude-plugins-official`:
 

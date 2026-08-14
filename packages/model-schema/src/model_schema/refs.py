@@ -26,7 +26,9 @@ ARTIFACT_TYPES: Final[frozenset[str]] = frozenset(
 )
 
 _SLUG = r"[a-z0-9][a-z0-9-]{1,62}"
-_REF_RE: Final[re.Pattern[str]] = re.compile(rf"^(?P<type>[a-z_]+):(?P<slug>{_SLUG})@(?P<version>\d+)$")
+_REF_RE: Final[re.Pattern[str]] = re.compile(
+    rf"^(?P<type>[a-z_]+):(?P<slug>{_SLUG})@(?P<version>\d+)$"
+)
 
 Slug = Annotated[str, Field(pattern=rf"^{_SLUG}$")]
 
@@ -55,7 +57,10 @@ class ArtifactRef(BaseModel, frozen=True):
         """
         match = _REF_RE.match(raw)
         if match is None:
-            raise ValueError(f"{raw!r} is not a valid artifact reference ({{type}}:{{slug}}@{{version}})")
+            raise ValueError(
+                f"{raw!r} is not a valid artifact reference "
+                "({type}:{slug}@{version})"
+            )
         kind = match["type"]
         if kind not in ARTIFACT_TYPES:
             raise ValueError(f"unknown artifact type {kind!r}; extending the set is a spec change")

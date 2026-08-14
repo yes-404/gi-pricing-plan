@@ -24,7 +24,7 @@ def test_canonical_reference_round_trips():
     ],
 )
 def test_malformed_references_are_refused(bad):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"not a valid artifact reference|unknown artifact type"):
         ArtifactRef.parse(bad)
 
 

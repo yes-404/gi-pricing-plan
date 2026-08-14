@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_EVEN, Decimal
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from model_schema.money import DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
+from model_schema.money import MoneyMinor, Relativity, apply_factor, to_minor
 
 
 class Premium(BaseModel):

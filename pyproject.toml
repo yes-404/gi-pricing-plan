@@ -26,6 +26,9 @@ dev = [
 line-length = 100
 target-version = "py312"
 src = ["packages/model-schema/src", "packages/pricing-core/src"]
+# Vendored third-party skills are kept exactly as upstream wrote them. Linting someone
+# else's code to our rules produces churn and breaks the promise that it is unmodified.
+exclude = [".claude/skills"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "N", "ANN", "PT"]
@@ -33,6 +36,10 @@ ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["ANN"]
+# N818 wants an Error suffix on exception names. `JobCancelled` is deliberate: the spec
+# names it (07 §5.2), and cancellation is a control-flow signal rather than a failure.
+# Renaming would put the code and the specification out of step to satisfy a convention.
+"packages/pricing-core/src/pricing_core/progress.py" = ["N818"]
 
 # ---- mypy --strict on packages/ (CLAUDE.md §3) ----
 [tool.mypy]
