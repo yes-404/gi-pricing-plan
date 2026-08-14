@@ -1,0 +1,94 @@
+"""Repository-level invariants that no single component owns.
+
+These exist because of what a W1 re-audit found: **the traceability record only sees
+`@pytest.mark.req` markers**, so a requirement enforced by something else — an
+import-linter contract, a database privilege, a recorded measurement — reads as
+unevidenced. W1 was the extreme case: its whole deliverable is enforcement machinery, so
+`scope-audit.py` reported half its scope missing while the enforcement was working
+perfectly in CI.
+
+The fix is to make that enforcement visible as evidence rather than to trust it silently.
+A test here does not replace the CI step it names; it links the requirement to the
+mechanism, so an audit can find it.
+"""
+
+from __future__ import annotations
+
+import pathlib
+import shutil
+import subprocess
+
+import pytest
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+@pytest.mark.req("FR-OVR-5")
+def test_pricing_core_is_callable_without_the_backend() -> None:
+    """ADR-0001, enforced by the import-linter contract rather than by a unit test.
+
+    "All pricing computation lives in `pricing-core` and is callable without the backend"
+    is a property of the dependency graph, not of any function. The contract checks the
+    whole graph on every run, which is stronger than anything a test could assert about one
+    module — but it is invisible to the requirement record without this.
+    """
+    binary = shutil.which("lint-imports")
+    if binary is None:  # pragma: no cover - only when the dev group is not installed
+        pytest.skip("lint-imports is not installed; run `uv sync --all-packages --dev`")
+
+    result = subprocess.run([binary], capture_output=True, text=True, cwd=ROOT)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Contracts: 3 kept, 0 broken." in result.stdout
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_the_architecture_contracts_are_configured_and_not_silently_empty() -> None:
+    """A contract file that parses but checks nothing reports success for ever.
+
+    That happened here: `root_packages` was comma-separated on one line, the ini parser
+    split it into characters, and the ADR-0001 contract enforced nothing for a day while
+    reporting green. Asserting the count of *kept* contracts is what makes the difference
+    between "the checker ran" and "the checker checked something".
+    """
+    config = (ROOT / ".importlinter").read_text(encoding="utf-8")
+    assert "include_external_packages = True" in config
+    for package in ("model_schema", "pricing_core", "app"):
+        assert f"\n    {package}\n" in config, package
+    assert config.count("[importlinter:contract:") == 3
+
+
+@pytest.mark.req("NFR-OVR-9")
+def test_the_full_stack_is_declared_for_local_use() -> None:
+    """NFR-OVR-9: the stack runs locally via `docker compose up` with no cloud dependency.
+
+    Structural only — that the services and their health checks are declared. The timing
+    claim (NFR-PLAT-4, measured at 21 s against a 300 s budget) lives in `deploy/README.md`
+    and the roadmap, because starting containers is not something CI should do on every
+    push to assert a number that changes with the runner.
+    """
+    compose = (ROOT / "deploy" / "docker-compose.yml").read_text(encoding="utf-8")
+    for service in ("postgres:", "redis:", "minio:"):
+        assert service in compose, service
+    # No cloud dependency: every image is a public one pinned by name, and nothing
+    # references an external endpoint the stack could not reach offline.
+    assert "healthcheck:" in compose
+    assert compose.count("healthcheck:") >= 3
+    assert "amazonaws.com" not in compose
+
+
+@pytest.mark.req("FR-OVR-7")
+def test_money_discipline_is_enforced_by_the_docs_audit() -> None:
+    """FR-OVR-7 is checked in two places, and both must stay.
+
+    The types enforce it in code (`MoneyMinor`, `DecimalStr`); `scripts/audit-docs.py`
+    enforces it across the contracts, where a `_minor` field with a fractional example
+    would otherwise pass unnoticed.
+    """
+    audit = (ROOT / "scripts" / "audit-docs.py").read_text(encoding="utf-8")
+    assert "_minor" in audit, "the money-discipline check is gone from the docs audit"
+
+    result = subprocess.run(
+        ["python3", "scripts/audit-docs.py"], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "All checks passed" in result.stdout
