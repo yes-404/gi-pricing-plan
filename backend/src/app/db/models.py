@@ -48,6 +48,7 @@ __all__ = [
     "BlobRow",
     "DatasetRow",
     "DatasetVersionRow",
+    "IngestionRunRow",
     "JobLogRow",
     "JobRow",
     "OutboxRow",
@@ -754,4 +755,61 @@ class DatasetVersionRow(Base):
             "period_to IS NULL OR period_from IS NULL OR period_to >= period_from",
             name="period_is_ordered",
         ),
+    )
+
+
+class IngestionRunRow(Base):
+    """What one ingestion did (FR-DATA-6, FR-DATA-8).
+
+    Kept whether the run succeeded or failed. A failed run that leaves no record is a
+    question nobody can answer later — "why is there no version 12?" — and FR-DATA-6's list
+    is precisely the evidence needed to answer it: what was read, what was written, what
+    was rejected and why, and which build of which libraries did it.
+    """
+
+    __tablename__ = "ingestion_runs"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_version_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    source_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255))
+
+    # FR-DATA-8: the same key with a *changed* source is a different ingestion, so the
+    # fingerprint is part of the identity rather than a detail recorded beside it.
+    source_fingerprint: Mapped[str | None] = mapped_column(String(128))
+
+    rows_read: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rows_written: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rows_rejected: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reject_sample: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    bytes_read: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    library_versions: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    error: Mapped[str | None] = mapped_column(Text)
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_ingestion_runs_idempotency",
+            "workspace_id",
+            "dataset_id",
+            "idempotency_key",
+            "source_fingerprint",
+            unique=True,
+            postgresql_where=idempotency_key.isnot(None),
+        ),
+        Index("ix_ingestion_runs_dataset", "dataset_id"),
+        CheckConstraint("rows_read >= 0 AND rows_written >= 0 AND rows_rejected >= 0",
+                        name="row_counts_non_negative"),
     )

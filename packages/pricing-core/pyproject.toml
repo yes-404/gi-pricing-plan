@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "Pure actuarial engine — no web, no database, no I/O (ADR-0001)"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-dependencies = ["model-schema"]
+dependencies = [
+    "model-schema",
+    # ADR-0005: Polars for dataframes. No web, database or queue client — the
+    # import-linter contract enforces that, and `01` §5.2 requires these functions to be
+    # callable without the platform.
+    "polars>=1.9",
+]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and
 # `uv sync` fails. A root-level [tool.uv.sources] does not cover a member's dependencies.
