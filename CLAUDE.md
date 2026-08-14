@@ -74,7 +74,7 @@ the maths.
 │   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1]
 │   └── pricing-core/         ◐ skeleton only — progress + money        [W1]
 │
-├── backend/                  ◐ FastAPI: config, errors, trace, health     [1a W2 — active]
+├── backend/                  ◐ FastAPI + SQLAlchemy/Alembic; jobs, audit, outbox [1a W2]
 ├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
 ├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]

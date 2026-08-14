@@ -9,10 +9,14 @@ fails inside another middleware must still produce a problem response carrying a
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api import health
 from app.config import Settings, load_settings
+from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
@@ -29,7 +33,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     configure_logging(settings.log_level)
 
+    database = Database(settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # Probes are registered here rather than at import time so that building an app
+        # has no global side effect — two apps in one test session must not share a probe
+        # registry pointing at each other's engine.
+        health.register_probe("database", database_probe(database))
+        yield
+        health.clear_probes()
+        await database.dispose()
+
     app = FastAPI(
+        lifespan=lifespan,
         title="GI Pricing Platform API",
         version=settings.version,
         # OpenAPI 3.1 generated from the Pydantic models, published here and committed to
@@ -50,6 +67,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         summary="Service name, version and environment",
         response_model=health.VersionInfo,
     )
+
+    # FR-PLAT-35: migrations are an explicit pre-deploy step. Nothing here runs them.
+    app.state.database = database
 
     _log.info(
         "application configured",
