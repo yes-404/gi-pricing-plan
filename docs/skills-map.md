@@ -1,12 +1,24 @@
 # Skills Map
 
-**Purpose.** The maintainer's next step after Phase 0 is to research the skills each part
-of the stack requires. This file is the index for that: *stack component → where it is
-used → what to learn → where to learn it.*
+**Purpose.** The maintainer's next step after Phase 0 is to research the skills this
+project requires. This file is the index for that, across **two axes**:
 
-**Maintenance rule (CLAUDE.md §8).** Whenever a spec adds or changes a tech dependency,
-update this file in the same PR. Every row's "Used in" column must cite at least one spec
-section or requirement ID.
+| Axis | Sections | Question it answers |
+|---|---|---|
+| **Build** — stack component → skills | §1–§6 | "What must I know to write this code?" |
+| **Run** — practice → skills | §8–§9 | "What must I know to keep the project on track, and to prove it was done properly?" |
+
+The second axis exists because this platform's hard problems are not all technical. It is
+a governed system in a regulated domain, built documentation-first across 400 permanent
+requirement IDs — and the ways a project like this fails are as often about traceability,
+phase discipline, and evidence as about Polars or XGBoost.
+
+**Maintenance rules.**
+- *(CLAUDE.md §8)* Whenever a spec adds or changes a tech dependency, update §1–§6 in the
+  same PR. Every row's "Used in" column must cite at least one spec section or requirement
+  ID.
+- Whenever a working practice changes — a new gate, a new audit, a new standard the output
+  must satisfy — update §8–§9 in the same PR, citing the artifact that changed.
 
 **Depth key.** `★` working familiarity · `★★` competent, can debug · `★★★` deep, this is
 where the project's hard problems live.
@@ -132,3 +144,83 @@ Ordered by *risk × unfamiliarity*, not by build order:
 6. **Vue Flow custom nodes** — the highest-effort frontend surface.
 7. **Low-latency Python serving** — the 50 ms p99 budget (NFR-RATE-1) is the one NFR
    that cannot be fixed later by adding hardware alone.
+
+**Do not sequence §8–§9 after this list.** Three of those practice items — requirement
+traceability, the walking skeleton, and reproducibility auditing — shape decisions taken in
+the very first sprint and become expensive to introduce afterwards, exactly like the
+retrofit list in [`roadmap.md`](roadmap.md) §5. Start them alongside item 1, not after item 7.
+
+---
+
+## 8. Project delivery & management
+
+Practices that keep a 400-requirement, documentation-first, phase-gated project moving.
+"Used in" cites the artifact each practice operates on, so none of these is generic advice
+detached from the repo.
+
+| Practice | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| **Requirement traceability** | 400 permanent IDs across [`specs/`](specs/); `CLAUDE.md` §5 | ★★★ | Building an FR → contract → test → code matrix; coverage reporting that proves no requirement was silently dropped; handling `SUPERSEDED BY` without renumbering; deciding what granularity of test satisfies an FR. The hardest part is not building the matrix but keeping it honest once code moves faster than docs | [ISO/IEC/IEEE 29148](https://www.iso.org/standard/72089.html) (requirements engineering); [INCOSE traceability guidance](https://www.incose.org/) |
+| **Specification review** | [`specs/`](specs/), [`workflows/`](workflows/) | ★★ | Reading a spec for ambiguity rather than for agreement; testing whether an FR is falsifiable; Fagan-style inspection with defined roles; spotting requirements no workflow reaches (usually infrastructure — or genuinely unwanted) | Gilb & Graham, *Software Inspection*; Wiegers, *Software Requirements* (review chapters) |
+| **Decision records & decision hygiene** | [`adr/`](adr/), [`open-questions.md`](open-questions.md) | ★★ | When a choice earns an ADR versus an open question; superseding rather than editing an accepted ADR; writing consequences honestly, including the negative ones; closing a question with evidence rather than fatigue | [Nygard, *Documenting Architecture Decisions*](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions); [adr.github.io](https://adr.github.io/) |
+| **Phase gating & acceptance criteria** | [`roadmap.md`](roadmap.md) §12; the five [workflow docs](workflows/) | ★★ | Defining "done" as an executable journey rather than a requirement checklist — this project already does it, and the skill is holding the line; writing a definition of done that survives schedule pressure; recognising phase creep early | Cohn, *Agile Estimating and Planning* (release planning); [Basecamp, *Shape Up*](https://basecamp.com/shapeup) (appetite and circuit breakers) |
+| **Work breakdown under uncertainty** | [`roadmap.md`](roadmap.md) §11 — Phase 1 is ~47 % of the surface | ★★★ | Deriving a WBS from requirement surface rather than intuition; splitting a phase on an existing module boundary; reference-class forecasting; why velocity/points mislead across a 400-requirement surface; tracking by demo-able outcome instead of percent-complete | Kahneman & Lovallo on reference-class forecasting; [Shape Up](https://basecamp.com/shapeup) on appetite; McConnell, *Software Estimation* |
+| **Walking skeleton / architectural runway** | [`roadmap.md`](roadmap.md) §5 "What cannot be retrofitted" | ★★★ | Identifying what must exist in v1 because retrofitting is a rewrite; building a thin vertical slice through every layer before broadening any of them; deferring breadth, never depth. **This is the single most valuable practice skill for Phase 1** — the retrofit list is exactly its output | [Cockburn, *Walking Skeleton*](https://wiki.c2.com/?WalkingSkeleton); Nygard, *Architecture Without an End State* |
+| **Risk register & spike discipline** | [`phase-0-status.md`](phase-0-status.md) §5 — spikes S1, S2 | ★★ | Distinguishing a risk from an issue; sizing a spike to answer exactly one question; pre-mortems; being willing to let spike evidence kill an accepted ADR (S1 can invalidate ADR-0004) | DeMarco & Lister, *Waltzing with Bears*; Klein on the pre-mortem |
+| **Open-source project operations** | Public repo; licence pending OQ-OVR-2 | ★★ | Issue triage and labelling that scales past the maintainer; `CONTRIBUTING`, `CODEOWNERS`, security disclosure policy; DCO versus CLA and why the choice is hard to reverse; release process, semver for `pricing-core` (OQ-OVR-4), changelog discipline | [opensource.guide](https://opensource.guide/); [Semantic Versioning](https://semver.org/); [Keep a Changelog](https://keepachangelog.com/) |
+| **Commit and PR hygiene** | `CLAUDE.md` §10 — Conventional Commits, squash-merge | ★ | Commit granularity that maps to a reviewable unit of work; writing a body that survives archaeology two years later; PR descriptions that state known gaps rather than hiding them; automated changelog generation from commit trailers | [Conventional Commits](https://www.conventionalcommits.org/) |
+| **Stakeholder reporting** | Pricing committee; [`phase-0-status.md`](phase-0-status.md) | ★★ | Reporting progress by exit criteria rather than percent-complete; communicating a re-plan without losing credibility; presenting a decision backlog so it gets decided rather than admired | Any credible project-communication text; the practice matters more than the source |
+
+---
+
+## 9. Audit & assurance
+
+Two distinct things share the word "audit" on this project, and conflating them causes
+real confusion:
+
+- **§9.1 — auditing the project.** Is the work actually done, and does the code match the
+  specification?
+- **§9.2 — assurance the platform's *output* must withstand.** When an insurer's internal
+  audit, an external reviewer, or a regulator examines a price this platform produced, what
+  do they test for?
+
+The platform's own audit-log *engineering* (append-only tables, hash chaining,
+separation-of-duties enforcement) is a build-axis skill and lives in §5b.
+
+### 9.1 Auditing the project
+
+| Practice | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| **Documentation audit automation** | [`scripts/audit-docs.py`](../scripts/audit-docs.py) | ★★ | Extending the existing script as the suite grows — requirement coverage, contract-to-spec drift, orphaned artifacts; gating CI on it so docs drift fails the build rather than accumulating; writing checks that fail for the right reason (verify a new check against a deliberately broken input before trusting it) | The script itself is the reference; treat it as production code |
+| **Spec-to-implementation conformance** | Phase 1 onward; FR-PLAT-48 | ★★★ | Marking tests with the requirement IDs they satisfy (`pytest` markers) and generating a coverage report from them; failing CI when a generated contract drifts from `model-schema`; periodic reconciliation of "what the spec says" against "what the code does" — the gap opens silently and only ever widens | [pytest markers](https://docs.pytest.org/en/stable/example/markers.html); OpenAPI diff tooling |
+| **Review for a governed system** | `06` NFR-GOV-8; FR-OVR-4 | ★★★ | **Negative testing as a first-class discipline** — the suite must prove a submitter *cannot* approve, not merely that an approver can; reviewing every write path for a co-located audit write; adversarial review of anything touching money, permissions, or immutability | [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/) (access-control chapter) |
+| **Reproducibility audit** | FR-OVR-8; NFR-MODEL-6/7; NFR-RATE-7 | ★★ | Verifying determinism claims rather than asserting them: byte-identical artifact round-trips, identical `spec_hash` producing identical coefficients, bundle-hash-to-premium stability across machines; pinning library versions per artifact and testing what happens when they move | Reproducible-builds practice; the NFRs name the exact tolerances |
+| **Dependency, licence & supply-chain audit** | NFR-OVR-11; NFR-PLAT-8 | ★★ | SBOM generation and — the part usually skipped — actually reading one; CVE triage and what "no HIGH/CRITICAL at release" costs to sustain; licence compatibility, including why a copyleft transitive dependency would break the Apache-2.0 recommendation in OQ-OVR-2 | [`pip-audit`](https://pypi.org/project/pip-audit/), [Syft](https://github.com/anchore/syft), [Trivy](https://trivy.dev/), [SPDX licence list](https://spdx.org/licenses/) |
+| **Performance regression auditing** | NFR-RATE-1; NFR-MODEL-1/2 | ★★ | Benchmarks as CI gates rather than one-off measurements; distinguishing a regression from noise on shared runners; tracking p99 rather than mean, because the NFR is written on p99 | [pytest-benchmark](https://pytest-benchmark.readthedocs.io/); latency-measurement literature on coordinated omission |
+
+### 9.2 Assurance the platform's output must withstand
+
+The specs already encode most of what follows — this is the reading that explains *why*
+those requirements are shaped as they are, and what a reviewer will actually ask for.
+
+| Standard / practice | Relates to | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| **TAS 100 — Principles for Technical Actuarial Work** | `06` dossiers §4.4; `02` diagnostics | ★★★ | The FRC's requirements on judgement, data, assumptions, models and communications; what "sufficient documentation for another actuary to understand the work" means in practice — which is precisely what the generated dossier is trying to be. Read it *against* the §4.4 section list and check for gaps | [FRC — TAS 100 v2.0](https://www.frc.org.uk/actuaries/technical-actuarial-standards) |
+| **APS X2 — Review of Actuarial Work** | `06` approval workflow; FR-GOV-11 | ★★ | The IFoA's standard on independent peer review: when it is required, what independence means, and how the reviewer's work is itself evidenced. Maps directly onto separation of duties and the evidence bundle | [IFoA — APS X2](https://actuaries.org.uk/standards/) |
+| **Model risk management principles** | `06` governance; OQ-GOV-4 risk tiering | ★★★ | Model identification and **tiering**, governance and ownership, development/implementation/use controls, independent validation, and an MRM policy. **Caveat worth knowing: PRA SS1/23 is written for banks, not insurers** — it does not apply to a GI insurer directly, but it is the clearest articulation of these principles in UK regulation and insurers commonly align to it voluntarily. Its five principles map almost one-to-one onto spec `06`, and it is the strongest argument for OQ-GOV-4 | [PRA SS1/23](https://www.bankofengland.co.uk/prudential-regulation/publication/2023/may/model-risk-management-principles-for-banks) (read with the applicability caveat above) |
+| **Three lines of defence** | `06` §1.4 actors; FR-GOV-4/5 | ★★ | Who owns what: the pricing team owns the model (first line), model risk and compliance challenge it (second), internal audit assures the whole framework (third). This is the organisational shape the RBAC roles must be able to express — particularly the read-everything, write-nothing **Auditor** role, which exists for the third line | [IIA — Three Lines Model (2020)](https://www.theiia.org/en/content/position-papers/2020/the-iias-three-lines-model/) |
+| **Solvency II data quality** | `01` validation layers; FR-DATA-16 | ★★ | The accuracy / completeness / appropriateness triad for data used in technical provisions, and the expectation of a documented data-quality process. The four validation layers in spec `01` are effectively an implementation of it, and framing them that way makes them far easier to defend | Solvency II Delegated Regulation (EU) 2015/35, Art. 19; EIOPA data-quality guidance |
+| **FCA Consumer Duty — price and value** | `04` GIPP and fairness constraints | ★★ | Fair value assessments, what evidence supports one, and how pricing decisions must be justified in outcome terms rather than technical ones. Sits alongside PS21/5 (already in §3b) and shapes what `04`'s fairness constraints need to be able to demonstrate | [FCA PS22/9 — A new Consumer Duty](https://www.fca.org.uk/publications/policy-statements/ps22-9-new-consumer-duty) |
+| **Audit engagement practice** | `06` FR-GOV-32 regulatory export | ★★ | What an auditor *tests* versus what they *read*; preparing a walkthrough; control design versus operating effectiveness; sampling; assembling an evidence pack that answers the question asked rather than the one you prepared for. The regulatory export exists to make this a retrieval task rather than an archaeology project | IIA practice guides; ISAE 3402 / SOC 2 control-testing concepts as a mental model |
+
+### 9.3 The one thing to internalise
+
+Every one of these standards asks the same question in different words: **can you show
+what you did, why, on what data, who checked it, and reproduce it now?** The specification
+suite already answers it — immutable artifacts, evidence-gated approvals, in-transaction
+audit, generated dossiers, determinism NFRs.
+
+The risk in Phase 1 is not that the platform fails to satisfy these standards. It is that
+the answers get *implemented as features* rather than *held as invariants*, and quietly
+erode under delivery pressure — one un-audited write path, one mutable artifact, one
+float in the rating path. §9.1 exists to catch that while it is still cheap.
