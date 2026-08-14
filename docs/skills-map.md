@@ -214,15 +214,36 @@ separation-of-duties enforcement) is a build-axis skill and lives in §5b.
 The specs already encode most of what follows — this is the reading that explains *why*
 those requirements are shaped as they are, and what a reviewer will actually ask for.
 
+The UK actuarial standards are a **two-layer stack**: TAS 100 applies to all technical
+actuarial work; TAS 200 adds insurance-specific requirements on top of it. Read them in
+that order.
+
 | Standard / practice | Relates to | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| **TAS 100 — Principles for Technical Actuarial Work** | `06` dossiers §4.4; `02` diagnostics | ★★★ | The FRC's requirements on judgement, data, assumptions, models and communications; what "sufficient documentation for another actuary to understand the work" means in practice — which is precisely what the generated dossier is trying to be. Read it *against* the §4.4 section list and check for gaps | [FRC — TAS 100 v2.0](https://www.frc.org.uk/actuaries/technical-actuarial-standards) |
+| **TAS 100 — Principles for Technical Actuarial Work** *(general)* | `06` dossiers §4.4; `02` diagnostics | ★★★ | The FRC's **general** standard, applying to all technical actuarial work regardless of domain. Requirements on judgement, data, assumptions, models and communications; what "sufficient documentation for another actuary to understand the work" means in practice — precisely what the generated dossier is trying to be. Read it *against* the §4.4 section list and check for gaps | [FRC — TAS 100 and TAG](https://www.frc.org.uk/library/standards-codes-policy/actuarial/tas-100/) |
+| **TAS 200 — Insurance** *(sector-specific)* | `01` assumptions & data; `02` model build; `06` dossiers | ★★★ | The **insurance-specific** standard that sits on top of TAS 100 — one of three Specific TASs (200 Insurance, 300 Pensions, 400 Funeral Plans) applying where public-interest risk is highest. **v2.0, published 20 Sep 2024, effective 1 Jan 2025.** The revision closed gaps in **assumption setting**, insurance transformations and audit, and added material to help practitioners consider the implications of the FCA's **Consumer Duty** — which makes it the standard that ties this platform's assumption/documentation trail to the fair-value work in `04`. **Scope caveat below.** | [FRC — TAS 200](https://www.frc.org.uk/library/standards-codes-policy/actuarial/tas-200/), [FRC revision announcement](https://www.frc.org.uk/news-and-events/news/2024/09/frc-publishes-revised-technical-actuarial-standards-for-the-insurance-sector/) |
 | **APS X2 — Review of Actuarial Work** | `06` approval workflow; FR-GOV-11 | ★★ | The IFoA's standard on independent peer review: when it is required, what independence means, and how the reviewer's work is itself evidenced. Maps directly onto separation of duties and the evidence bundle | [IFoA — APS X2](https://actuaries.org.uk/standards/) |
 | **Model risk management principles** | `06` governance; OQ-GOV-4 risk tiering | ★★★ | Model identification and **tiering**, governance and ownership, development/implementation/use controls, independent validation, and an MRM policy. **Caveat worth knowing: PRA SS1/23 is written for banks, not insurers** — it does not apply to a GI insurer directly, but it is the clearest articulation of these principles in UK regulation and insurers commonly align to it voluntarily. Its five principles map almost one-to-one onto spec `06`, and it is the strongest argument for OQ-GOV-4 | [PRA SS1/23](https://www.bankofengland.co.uk/prudential-regulation/publication/2023/may/model-risk-management-principles-for-banks) (read with the applicability caveat above) |
 | **Three lines of defence** | `06` §1.4 actors; FR-GOV-4/5 | ★★ | Who owns what: the pricing team owns the model (first line), model risk and compliance challenge it (second), internal audit assures the whole framework (third). This is the organisational shape the RBAC roles must be able to express — particularly the read-everything, write-nothing **Auditor** role, which exists for the third line | [IIA — Three Lines Model (2020)](https://www.theiia.org/en/content/position-papers/2020/the-iias-three-lines-model/) |
 | **Solvency II data quality** | `01` validation layers; FR-DATA-16 | ★★ | The accuracy / completeness / appropriateness triad for data used in technical provisions, and the expectation of a documented data-quality process. The four validation layers in spec `01` are effectively an implementation of it, and framing them that way makes them far easier to defend | Solvency II Delegated Regulation (EU) 2015/35, Art. 19; EIOPA data-quality guidance |
-| **FCA Consumer Duty — price and value** | `04` GIPP and fairness constraints | ★★ | Fair value assessments, what evidence supports one, and how pricing decisions must be justified in outcome terms rather than technical ones. Sits alongside PS21/5 (already in §3b) and shapes what `04`'s fairness constraints need to be able to demonstrate | [FCA PS22/9 — A new Consumer Duty](https://www.fca.org.uk/publications/policy-statements/ps22-9-new-consumer-duty) |
+| **FCA Consumer Duty — price and value** | `04` GIPP and fairness constraints | ★★ | Fair value assessments, what evidence supports one, and how pricing decisions must be justified in outcome terms rather than technical ones. Sits alongside PS21/5 (already in §3b), and **TAS 200 v2.0 added material specifically to help actuaries reason about Consumer Duty implications** — so read the two together rather than separately | [FCA PS22/9 — A new Consumer Duty](https://www.fca.org.uk/publications/policy-statements/ps22-9-new-consumer-duty) |
 | **Audit engagement practice** | `06` FR-GOV-32 regulatory export | ★★ | What an auditor *tests* versus what they *read*; preparing a walkthrough; control design versus operating effectiveness; sampling; assembling an evidence pack that answers the question asked rather than the one you prepared for. The regulatory export exists to make this a retrieval task rather than an archaeology project | IIA practice guides; ISAE 3402 / SOC 2 control-testing concepts as a mental model |
+
+#### Scope caveat on TAS 200 — resolve this before relying on it
+
+**TAS 100 applies to this platform's output regardless** — it is the general standard and
+covers all technical actuarial work. TAS 200 is narrower, and whether **pricing and premium
+rating** fall inside its scope could not be established from the FRC's public summaries;
+the scope statement lives in the standard text itself.
+
+This is not a detail. If pricing is in scope, TAS 200's assumption-setting requirements
+bear directly on `02`'s factor, banding and grouping rationale and on `01`'s validation
+evidence, and the generated dossier (`06` §4.4) has to satisfy them. If it is not, TAS 100
+alone governs and the dossier's bar is lower.
+
+**Read the standard and record the determination** — in `06` if it changes the dossier's
+required sections, otherwise here. Do not cite TAS 200 as binding on pricing work until
+someone has confirmed it is.
 
 ### 9.3 The one thing to internalise
 

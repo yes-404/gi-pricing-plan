@@ -15,7 +15,7 @@ It exits non-zero and lists failures. Passing output looks like:
 
 ```
   408 requirements defined across 8 specs
-  45 open questions, all mirrored
+  46 open questions, all mirrored
   31 JSON schemas parsed, $refs checked
 
 All checks passed.
@@ -49,7 +49,7 @@ a module with unglamorous requirements.
 
 ## The check the script does not do
 
-The roadmap's decision-gate table must cover all 45 open questions **exactly once**. Rows
+The roadmap's decision-gate table must cover every open question **exactly once**. Rows
 use the compact range form `OQ-GOV-1..5`:
 
 ```bash

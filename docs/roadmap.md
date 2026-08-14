@@ -18,7 +18,7 @@ Three things this document deliberately does not do:
 - It does not re-order or rename the phases. That is `CLAUDE.md` §9's call.
 - It does not give dates. Sizing is relative and the assumption is stated in §10.
 - It does not resolve open questions. It says *which* ones block *what*, so you can answer
-  them in the order that unblocks work, rather than all 45 at once.
+  them in the order that unblocks work, rather than all 46 at once.
 
 ---
 
@@ -27,7 +27,7 @@ Three things this document deliberately does not do:
 | | |
 |---|---|
 | **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 408 requirements |
-| **Blocking Phase 1** | 45 open questions, 2 spikes, and the skills research in `skills-map.md` §7 |
+| **Blocking Phase 1** | 7 decisions and 1 spike (§3). Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
 | **Code written** | None, by design (`CLAUDE.md` §0) |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
@@ -39,24 +39,46 @@ question already carries options, trade-offs, and a recommendation.
 
 Three tracks that can run concurrently and mostly do not need each other.
 
-### Track A — Skills research (the maintainer's stated next step, `CLAUDE.md` §8)
+### Track A — Skills research · **CLOSED 2026-08-14**
 
-[`skills-map.md`](skills-map.md) covers two axes. **Build** (§1–§6) is ordered by
-risk × unfamiliarity in its §7:
+Track A is closed. **Not because every question was answered** — three were not — but
+because **nothing left in it belongs in it**. Each unfinished fragment turned out to be
+build work, an acceptance test, or a spike, and has been re-homed to where it will actually
+get done. A research track that keeps items it cannot discharge is a parking lot.
 
-1. Custom objectives end to end — restricted AST parsing, SymPy derivation, certification,
-   XGBoost/LightGBM `base_margin`
-2. ZEN Engine JDM and its numeric semantics
-3. glum GLM API and standard errors
-4. Polars lazy execution at 10 M+ rows
-5. Pydantic v2 discriminated unions → JSON Schema
-6. Vue Flow custom nodes
-7. Low-latency Python serving
+Evidence: [`research/track-a-findings.md`](research/track-a-findings.md).
 
-**Run** (§8–§9) covers delivery practice and audit. Three of those items are not
-sequenceable after the build list because they shape first-sprint decisions:
-**requirement traceability**, the **walking skeleton** (§5 below is literally its output),
-and **reproducibility auditing**. Start them in parallel.
+| # | Item (`skills-map.md` §7) | Outcome |
+|---|---|---|
+| 1 | Custom objectives end to end | **Partly closed.** SymPy derivation ✔ (F2) and XGBoost `base_margin` ✔ (F5) verified empirically; the certification design was found *wrong* and rewritten (F3 → FR-MODEL-68..70). Two fragments re-homed ↓ |
+| 2 | ZEN Engine decimal semantics | **Closed** ✔ — `rust_decimal`, ADR-0004 confirmed, OQ-RATE-1 decided (F1) |
+| 3 | glum standard errors | **Closed** ✔ — `std_errors()`/`covariance_matrix()` confirmed to exist (F8) |
+| 4 | Polars at 10 M+ rows | **Partly closed.** Streaming-engine status and an open group-by memory regression found (F10), validating ADR-0005's split. Benchmark re-homed ↓ |
+| 5 | Pydantic v2 → JSON Schema | **Closed** ✔ — discriminated unions confirmed, and a `Decimal` gap found that would let a lossy payload satisfy the contract (F6/F7) |
+| 6 | Vue Flow custom nodes | **Documentation only.** `isValidConnection`, node memoisation, Web Workers (F12). Re-homed ↓ |
+| 7 | Low-latency Python serving | **Documentation only**, but actionable: Pydantic costs ~1 ms of the 50 ms budget → NFR-RATE-13 (F11). Re-homed ↓ |
+
+#### Re-homed, not dropped
+
+| Fragment | New home | Why there |
+|---|---|---|
+| Restricted AST parser for the expression grammar | **Phase 1, W5** | Nothing left to research — `02` §4.6 specifies the grammar. This is build work, and the only place user input reaches the numerical core |
+| LightGBM `init_score` symmetry | **Spike S3** (Track B) | Unverified assumption of the exact class that hid a silent failure in F5 |
+| Polars 10 M-row benchmark | **Phase 1, W4 acceptance** | It is NFR-DATA-1/3, measured against real data — an acceptance test, not reading |
+| Vue Flow depth | **Phase 2 on-ramp, W15** | Does not block Phase 1; belongs with the DAG designer it serves |
+| Low-latency measurement | **Spike S2** / Phase 2 W11 | Already partly discharged into NFR-RATE-13; the rest is measurement |
+
+#### What Track A cost and returned
+
+Four executable spikes. It closed one open question, **found two specification defects**
+that would otherwise have surfaced in Phase 1 as confusing failures, and **corrected one
+fabricated figure** presented as a measurement. That last one is the strongest argument for
+running research against a spec rather than reading about it.
+
+**Practice items** (`skills-map.md` §8–§9) were never in scope for Track A as *research* —
+they are working habits, several already exercised: requirement traceability, audit
+automation, and the walking-skeleton framing that produced §5 below. They stay live as
+practice, not as an open task.
 
 ### Track B — Spikes that need code
 
@@ -73,7 +95,7 @@ All three are small — days, not weeks — and cheap insurance against a Phase 
 
 ### Track C — The decision backlog, sequenced
 
-You do not need to answer 45 questions. You need to answer **7 before Phase 1 starts**:
+You do not need to answer 46 questions. You need to answer **7 before Phase 1 starts**:
 
 | Question | Why it blocks Phase 1 |
 |---|---|
@@ -86,6 +108,39 @@ You do not need to answer 45 questions. You need to answer **7 before Phase 1 st
 | **OQ-OVR-5** notebook escape hatch | Affects whether a client library is Phase 1 scope |
 
 The other 38 can wait for the phase that needs them (§9).
+
+---
+
+### Outstanding work — consolidated
+
+Everything still open before Phase 1 can start, in one place. Tracks A–C above explain
+*why*; this is the list.
+
+| # | Task | Kind | Owner | Blocks |
+|---|---|---|---|---|
+| **1** | **OQ-OVR-2** — project licence | decision | maintainer | Public contribution, not code |
+| **2** | **OQ-OVR-5** — notebook escape hatch | decision | maintainer | Phase 1 scope |
+| **3** | **OQ-PLAT-1** — Celery vs a transactional Postgres queue | decision | maintainer | W2, first sprint |
+| **4** | **OQ-DATA-1** — where large-loss capping lives | decision | maintainer | W4/W5 boundary; contract change if deferred |
+| **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | W4, only if the first dataset is large |
+| **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1? | decision | maintainer | W5 scope, materially |
+| **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | W5 grouping implementation |
+| **8** | **S3** — LightGBM `init_score` symmetry | spike | — | The dual-backend contract (FR-MODEL-27/71) |
+| **9** | **Phase 1 split** — accept or reject 1a/1b (§5 recommendation) | decision | maintainer | How Phase 1 is planned |
+
+**Not blocking Phase 1, but do not lose them:**
+
+| Task | Kind | Due |
+|---|---|---|
+| **S1 (re-scoped)** — precision across the ZEN binding; `maths-nopanic` reachability | spike | Before Phase 2 |
+| **S2** — `exact`-mode GBM latency at 200 rps | spike | Before Phase 2 — highest-risk remaining unknown |
+| 6 Phase-2 decisions (OQ-RATE-2/3/4/6, OQ-MODEL-3, OQ-PLAT-3) | decisions | Before Phase 2 |
+| 7 Phase-3 decisions · 12 Phase-4 decisions · 12 any-time | decisions | Per gate (§10) |
+| Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
+
+**Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
+audit are complete and passing; the remaining Phase 0 work is entirely decisions and
+spikes — nine items, of which seven are decisions only the maintainer can make.
 
 ---
 
@@ -282,7 +337,7 @@ you never block on a decision you have not reached.
 |---|---|---|
 | **Before Phase 1** | OQ-OVR-2, OQ-OVR-5, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2, OQ-MODEL-1, OQ-MODEL-5 | 7 |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔ *decided 2026-08-14*, **OQ-RATE-2**, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (6 open) |
-| **Before Phase 3** | OQ-GOV-1..5, OQ-OVR-1, OQ-MODEL-7 | 7 |
+| **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, OQ-DATA-4 | 12 |
 | **Deferred / any time** | OQ-OVR-3, OQ-OVR-4, OQ-DATA-3, OQ-DATA-5, OQ-DATA-6, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
 
