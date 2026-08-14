@@ -231,3 +231,28 @@ pnpm --dir frontend lint && pnpm --dir frontend test && pnpm --dir frontend type
 pnpm --dir frontend generate:api             # regenerate TS types from OpenAPI
 uv run alembic upgrade head
 ```
+
+## 12. Skills
+
+Project-specific procedures live in `.claude/skills/`, versioned with the repo so they
+travel with it. `.claude/skills/README.md` is the index — read it when starting work on an
+unfamiliar part of the suite.
+
+Current skills: `spec-change`, `docs-audit`, `adr-write`, `contract-schema`,
+`library-spike`. No external skills are installed.
+
+### Skill maintenance rules
+
+- After completing any task, if you discovered a non-obvious procedure (build quirk, test
+  setup, data format rule, deploy step), write or update a skill in `.claude/skills/`
+  capturing it — then update `.claude/skills/README.md` and commit both together with the
+  work.
+- If a documented skill turns out to be wrong or outdated during a task, **fix the skill in
+  the same session** and refresh its `Verified` date. Never leave a known-stale skill in
+  place.
+- Once a month (or when the maintainer says "skill audit"): re-check installed external
+  skills for upstream updates, re-run the gap analysis from the project's current state,
+  and propose additions/removals — but **never install external skills without the
+  maintainer's approval**.
+- Never modify skills under `~/.claude/skills/` (personal/global) as part of project work;
+  project knowledge belongs in `.claude/skills/` so it travels with the repo.
