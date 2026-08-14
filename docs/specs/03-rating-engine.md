@@ -61,12 +61,10 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 |---|---|
 | **Rating Input** | A named, typed field the algorithm expects from the caller (`driver_age: int`, `postcode: string`). The input contract is part of the Rating Version and is versioned with it. |
 | **Quote Context** | The complete input to one scoring call: rating inputs, a quote timestamp, an effective date, and a `purpose` (`new_business` \| `renewal` \| `mid_term_adjustment` \| `what_if`). |
-| **Rating Step** | A node in the DAG. Exactly seven types exist (§3.2). |
 | **Derived Value** | A named intermediate produced by a step and consumable by downstream steps. The DAG's edges are these name references, not hand-drawn arrows. |
 | **Rate Table Version** | An immutable version of one rate table. Rate tables version independently of the algorithm so a pure rate change does not require touching structure. |
 | **Bundle** | The serialised, self-contained artifact a Rating Version compiles to: algorithm + tables + model artifacts + reference slices + input contract. What gets deployed and cached. |
 | **Compiled Bundle** | The bundle transformed into its execution form (a ZEN JDM graph plus loaded tables and boosters), cached in memory and in Redis, keyed by bundle content hash. |
-| **Trace** | Per-step record of one scoring call: step id, inputs consumed, output value, table row matched, and timing. |
 | **Golden Quote** | A named quote context with an expected premium, stored with a Rating Version. Golden quotes must reproduce exactly before promotion. |
 | **Regression Suite** | A collection of golden quotes plus property assertions (monotonicity, no-negative-premium, bounded relativity) run against a candidate Rating Version. |
 | **Dislocation Run** | Batch re-rating of a fixed portfolio under two Rating Versions, producing the distribution of premium change. |
@@ -464,7 +462,7 @@ pins.
 `RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`, `INPUT_CONTRACT_VIOLATION`,
 `REFERENCE_LOOKUP_MISS`, `RATE_TABLE_MISS`, `RATE_TABLE_INCOMPLETE`,
 `RATE_TABLE_KEY_DUPLICATE`, `CONTROL_FACTOR_IN_RATEABLE_PATH`, `PIN_NOT_APPROVED`,
-`BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE`, `GOLDEN_QUOTE_MISMATCH`,
+`BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
 `LADDER_RECONCILIATION_FAILED`.
 
@@ -551,9 +549,13 @@ Full journeys: [`wf-02-model-to-rating-version.md`](../workflows/wf-02-model-to-
 |---|---|
 | `02-modelling` | `approved` Models and Peril Structures; GLM approximation relativity tables for seeding and for `approximation` mode; bandings referenced by table keys |
 | `01-data-management` | Reference Table Versions for `lookup` steps; portfolio Dataset Versions for dislocation and batch scoring |
-| `04-optimisation` | Optimisation adjustments materialised as rate tables or an adjustment step; GIPP check results as approval evidence |
 | `06-governance` | Approval workflow, RBAC (Deployer role), audit sink |
 | `07-platform` | Environments, jobs, bundle cache (Redis), blob storage, API gateway and rate limiting |
+
+**Not a dependency:** `04-optimisation` *writes into* this module — it materialises
+proposals as Rate Table Versions and its run id is stored on a Rating Version as an opaque
+evidence reference. This module never calls optimisation code, so the direction is
+OPT → RATE and DEP-1 is respected.
 
 ### 7.2 Provides
 

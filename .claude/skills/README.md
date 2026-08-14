@@ -12,7 +12,7 @@ project work (`CLAUDE.md` §12).
 | Skill | Purpose | Source | Last verified |
 |---|---|---|---|
 | [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing | self-written | 2026-08-14 |
-| [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR, including the decision-gate invariant the script does not cover | self-written | 2026-08-14 |
+| [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — 14 checks (8 bookkeeping, 6 structural) plus the decision-gate invariant the script does not cover | self-written | 2026-08-14 |
 | [`adr-write`](adr-write/SKILL.md) | Create, supersede, or annotate an architecture decision record — including the addendum-versus-edit rule that keeps accepted ADRs immutable | self-written | 2026-08-14 |
 | [`contract-schema`](contract-schema/SKILL.md) | Add or modify a JSON Schema contract in `docs/contracts/` — money conventions, `invariants` annotation, duplicate-key and `$ref` traps | self-written | 2026-08-14 |
 | [`library-spike`](library-spike/SKILL.md) | Empirically verify library behaviour where pip is unavailable, then land the finding across the suite | self-written | 2026-08-14 |
