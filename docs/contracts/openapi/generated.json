@@ -1,6 +1,49 @@
 {
   "components": {
     "schemas": {
+      "AcknowledgeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "justification": {
+            "minLength": 1,
+            "title": "Justification",
+            "type": "string"
+          }
+        },
+        "required": [
+          "justification"
+        ],
+        "title": "AcknowledgeRequest",
+        "type": "object"
+      },
+      "Acknowledgement": {
+        "additionalProperties": false,
+        "description": "A Principal accepting a warning, on this report (FR-DATA-17, FR-DATA-18).",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "justification": {
+            "minLength": 1,
+            "title": "Justification",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "at",
+          "justification"
+        ],
+        "title": "Acknowledgement",
+        "type": "object"
+      },
       "ActorKind": {
         "enum": [
           "user",
@@ -217,6 +260,58 @@
         "title": "AuditEventView",
         "type": "object"
       },
+      "BlobRef": {
+        "description": "A content-addressed object reference (ID-4).",
+        "properties": {
+          "bytes": {
+            "minimum": 0.0,
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "part_count": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Part Count"
+          },
+          "sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sha256",
+          "bytes",
+          "media_type"
+        ],
+        "title": "BlobRef",
+        "type": "object"
+      },
+      "Body_preview_source_api_v1_sources__source_id__preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_source_api_v1_sources__source_id__preview_post",
+        "type": "object"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "The result of recomputing the chain (FR-GOV-24).",
@@ -264,6 +359,188 @@
           "intact"
         ],
         "title": "ChainVerification",
+        "type": "object"
+      },
+      "ColumnComparison": {
+        "additionalProperties": false,
+        "description": "How one column moved between two versions (FR-DATA-28).",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "mean_shift": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Shift"
+          },
+          "new_levels": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "New Levels",
+            "type": "array"
+          },
+          "null_rate_shift": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Null Rate Shift"
+          },
+          "psi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Psi"
+          },
+          "vanished_levels": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Vanished Levels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "column"
+        ],
+        "title": "ColumnComparison",
+        "type": "object"
+      },
+      "ColumnProfile": {
+        "additionalProperties": false,
+        "description": "Per-column statistics (`01` §4.7).",
+        "properties": {
+          "distinct_count": {
+            "minimum": 0.0,
+            "title": "Distinct Count",
+            "type": "integer"
+          },
+          "dtype": {
+            "title": "Dtype",
+            "type": "string"
+          },
+          "maximum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "minimum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "null_count": {
+            "minimum": 0.0,
+            "title": "Null Count",
+            "type": "integer"
+          },
+          "null_rate": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Null Rate",
+            "type": "number"
+          },
+          "quantiles": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Quantiles",
+            "type": "object"
+          },
+          "row_count": {
+            "minimum": 0.0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "semantic_type": {
+            "$ref": "#/components/schemas/SemanticType"
+          },
+          "std": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Std"
+          },
+          "top_levels": {
+            "default": [],
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Top Levels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "dtype",
+          "semantic_type",
+          "row_count",
+          "null_count",
+          "null_rate",
+          "distinct_count"
+        ],
+        "title": "ColumnProfile",
         "type": "object"
       },
       "ComponentHealth": {
@@ -392,6 +669,532 @@
         "title": "CreatedServiceAccount",
         "type": "object"
       },
+      "DataDictionaryEntry": {
+        "additionalProperties": false,
+        "description": "What one column means (`01` §4.1).\n\nThe dictionary is authored, not inferred. A Profile says a column is 98 % distinct\nintegers; only a person can say it is a policy id rather than a very granular rating\nfactor, and only a person can say it is a special category.",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "pii_class": {
+            "$ref": "#/components/schemas/PiiClass",
+            "default": "none"
+          },
+          "reference_table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Table"
+          },
+          "semantic_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SemanticType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "title": "DataDictionaryEntry",
+        "type": "object"
+      },
+      "Dataset": {
+        "additionalProperties": false,
+        "description": "A named body of data with versions (`01` §4.1).",
+        "properties": {
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "default": "GBP",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "data_dictionary": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DataDictionaryEntry"
+            },
+            "title": "Data Dictionary",
+            "type": "object"
+          },
+          "default_record_grain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordGrain"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "line_of_business": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Of Business"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "territory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Territory"
+          },
+          "validation_rule_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Rule Set Id"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspace_id",
+          "slug",
+          "created_at"
+        ],
+        "title": "Dataset",
+        "type": "object"
+      },
+      "DatasetCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "data_dictionary": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DataDictionaryEntry"
+            },
+            "title": "Data Dictionary",
+            "type": "object"
+          },
+          "default_record_grain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordGrain"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "line_of_business": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Of Business"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "territory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Territory"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "DatasetCreate",
+        "type": "object"
+      },
+      "DatasetKind": {
+        "enum": [
+          "ingested",
+          "derived"
+        ],
+        "title": "DatasetKind",
+        "type": "string"
+      },
+      "DatasetStatus": {
+        "enum": [
+          "draft",
+          "validating",
+          "validated",
+          "failed",
+          "archived"
+        ],
+        "title": "DatasetStatus",
+        "type": "string"
+      },
+      "DatasetTable": {
+        "additionalProperties": false,
+        "description": "One table within a version (`01` §4.2).\n\n`_rejected` is a table like any other — the quarantine FR-DATA-7 requires, stored with\nthe version rather than discarded. A row that could not be parsed is evidence about the\nfeed, and throwing it away is how a broken upstream export goes unnoticed for a quarter.",
+        "properties": {
+          "arrow_schema": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Arrow Schema",
+            "type": "object"
+          },
+          "blob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "pattern": "^_?[a-z][a-z0-9_]*$",
+            "title": "Name",
+            "type": "string"
+          },
+          "pandera_schema_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pandera Schema Ref"
+          },
+          "primary_key": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Primary Key",
+            "type": "array"
+          },
+          "record_grain": {
+            "title": "Record Grain",
+            "type": "string"
+          },
+          "row_count": {
+            "minimum": 0.0,
+            "title": "Row Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "record_grain",
+          "row_count"
+        ],
+        "title": "DatasetTable",
+        "type": "object"
+      },
+      "DatasetVersion": {
+        "additionalProperties": false,
+        "description": "An immutable versioned snapshot of policy, claims and exposure data (`01` §4.2).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_id": {
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "derived_from": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derived From"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ingestion_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingestion Run Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DatasetKind",
+            "default": "ingested"
+          },
+          "library_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Library Versions",
+            "type": "object"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "preparation_recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preparation Recipe Id"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "source_fingerprint": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Fingerprint"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DatasetStatus"
+          },
+          "tables": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DatasetTable"
+            },
+            "title": "Tables",
+            "type": "array"
+          },
+          "totals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionTotals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validation_report_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Report Id"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_id",
+          "workspace_id",
+          "version",
+          "status",
+          "created_at"
+        ],
+        "title": "DatasetVersion",
+        "type": "object"
+      },
       "Decide": {
         "additionalProperties": false,
         "properties": {
@@ -424,6 +1227,57 @@
         ],
         "title": "DecisionKind",
         "type": "string"
+      },
+      "DeriveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "operation"
+        ],
+        "title": "DeriveRequest",
+        "type": "object"
+      },
+      "DictionaryUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "data_dictionary": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DataDictionaryEntry"
+            },
+            "title": "Data Dictionary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data_dictionary"
+        ],
+        "title": "DictionaryUpdate",
+        "type": "object"
+      },
+      "DryRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_version_id"
+        ],
+        "title": "DryRunRequest",
+        "type": "object"
       },
       "FieldError": {
         "additionalProperties": false,
@@ -892,6 +1746,153 @@
         "title": "Me",
         "type": "object"
       },
+      "OneWayRow": {
+        "additionalProperties": false,
+        "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency and\nseverity are ratios and stay floats: they are statistics, not amounts, and rounding\nthem to minor units would lose the precision the confidence interval is expressing.",
+        "properties": {
+          "burning_cost_minor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burning Cost Minor"
+          },
+          "claim_amount_minor": {
+            "default": 0,
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Claim Amount Minor",
+            "type": "integer"
+          },
+          "claim_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Claim Count",
+            "type": "integer"
+          },
+          "exposure_years": {
+            "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Exposure Years",
+            "type": "string"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency"
+          },
+          "frequency_ci": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency Ci"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "severity_ci": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Ci"
+          },
+          "severity_minor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Minor"
+          }
+        },
+        "required": [
+          "level",
+          "exposure_years"
+        ],
+        "title": "OneWayRow",
+        "type": "object"
+      },
+      "OneWaySummary": {
+        "additionalProperties": false,
+        "description": "A candidate rating column summarised by level (FR-DATA-26).\n\nComputed here, once, because `02`'s factor workbench and the pricing actuary looking at\na dataset must see the same numbers — and because recomputing per request is the\ndifference between an interactive screen and a spinner.",
+        "properties": {
+          "banding": {
+            "default": "levels",
+            "title": "Banding",
+            "type": "string"
+          },
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "rows": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OneWayRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "column"
+        ],
+        "title": "OneWaySummary",
+        "type": "object"
+      },
+      "OverallOutcome": {
+        "enum": [
+          "pass",
+          "pass_with_warnings",
+          "fail",
+          "error"
+        ],
+        "title": "OverallOutcome",
+        "type": "string"
+      },
       "Page_AuditEventView_": {
         "additionalProperties": false,
         "properties": {
@@ -926,6 +1927,42 @@
           "total_estimate"
         ],
         "title": "Page[AuditEventView]",
+        "type": "object"
+      },
+      "Page_Dataset_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Dataset"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[Dataset]",
         "type": "object"
       },
       "Page_JobLogLine_": {
@@ -1068,6 +2105,18 @@
         "title": "Permission",
         "type": "string"
       },
+      "PiiClass": {
+        "description": "How sensitive a column is (`01` §4.1, FR-OVR-9, FR-DATA-13).\n\nThe two strongest classes are not a warning label. A `direct_identifier` or\n`special_category` column is **refused for modelling use** — rating on a special\ncategory is unlawful in the UK/EU, and a direct identifier in a model is a\nre-identification risk that no amount of care downstream removes.",
+        "enum": [
+          "none",
+          "pseudonymous_key",
+          "quasi_identifier",
+          "direct_identifier",
+          "special_category"
+        ],
+        "title": "PiiClass",
+        "type": "string"
+      },
       "Principal": {
         "additionalProperties": false,
         "description": "An authenticated identity: User, Service Account, or the platform itself.",
@@ -1189,6 +2238,104 @@
         "title": "ProblemDetail",
         "type": "object"
       },
+      "Profile": {
+        "additionalProperties": false,
+        "description": "The profile artifact for one Dataset Version (`01` §4.7).",
+        "properties": {
+          "columns": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ColumnProfile"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "library_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Library Versions",
+            "type": "object"
+          },
+          "one_ways": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OneWaySummary"
+            },
+            "title": "One Ways",
+            "type": "array"
+          },
+          "row_count": {
+            "minimum": 0.0,
+            "title": "Row Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_version_id",
+          "computed_at",
+          "row_count"
+        ],
+        "title": "Profile",
+        "type": "object"
+      },
+      "ProfileComparison": {
+        "additionalProperties": false,
+        "description": "The comparison the distributional validation layer consumes (FR-DATA-28).\n\nThe same computation serves an on-demand UI comparison and the `VR-DST-*` rules, so a\nrule's verdict and the screen an actuary is looking at cannot disagree.",
+        "properties": {
+          "columns": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ColumnComparison"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "current_version_id": {
+            "format": "uuid",
+            "title": "Current Version Id",
+            "type": "string"
+          },
+          "reference_version_id": {
+            "format": "uuid",
+            "title": "Reference Version Id",
+            "type": "string"
+          },
+          "row_count_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count Ratio"
+          }
+        },
+        "required": [
+          "current_version_id",
+          "reference_version_id"
+        ],
+        "title": "ProfileComparison",
+        "type": "object"
+      },
       "Progress": {
         "additionalProperties": false,
         "description": "Structured progress (FR-PLAT-8) — a fraction, a stage label, and counters.",
@@ -1235,6 +2382,137 @@
           "status"
         ],
         "title": "ReadinessReport",
+        "type": "object"
+      },
+      "RecordGrain": {
+        "description": "What one row of the dataset *is*.\n\nRecorded because every actuarial check downstream depends on it: \"exposure > 0 and\nperiod-consistent\" means something different per policy-year than per claim.",
+        "enum": [
+          "policy_exposure",
+          "policy_term",
+          "claim",
+          "quote"
+        ],
+        "title": "RecordGrain",
+        "type": "string"
+      },
+      "ReferenceRowIn": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "effective_from"
+        ],
+        "title": "ReferenceRowIn",
+        "type": "object"
+      },
+      "ReportSummary": {
+        "additionalProperties": false,
+        "description": "A report's headline, without its body (NFR-DATA-7).\n\nThe history view renders dates and verdicts. Loading fifty full reports to do that is\nthe difference between a 500 ms budget met and missed, so the list returns this and\n`GET /validation-reports/{id}` returns the artifact.",
+        "properties": {
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "fail_count": {
+            "title": "Fail Count",
+            "type": "integer"
+          },
+          "finished_at": {
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/OverallOutcome"
+          },
+          "rule_count": {
+            "title": "Rule Count",
+            "type": "integer"
+          },
+          "rule_set_id": {
+            "format": "uuid",
+            "title": "Rule Set Id",
+            "type": "string"
+          },
+          "rule_set_version": {
+            "title": "Rule Set Version",
+            "type": "integer"
+          },
+          "started_at": {
+            "title": "Started At"
+          },
+          "unacknowledged_warnings": {
+            "title": "Unacknowledged Warnings",
+            "type": "integer"
+          },
+          "warn_count": {
+            "title": "Warn Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_version_id",
+          "rule_set_id",
+          "rule_set_version",
+          "job_id",
+          "overall",
+          "rule_count",
+          "fail_count",
+          "warn_count",
+          "error_count",
+          "unacknowledged_warnings",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "ReportSummary",
         "type": "object"
       },
       "ResourceBudget": {
@@ -1346,6 +2624,264 @@
         ],
         "title": "RoleAssignmentView",
         "type": "object"
+      },
+      "RuleCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "title": "Check",
+            "type": "string"
+          },
+          "layer": {
+            "$ref": "#/components/schemas/ValidationLayer"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "rationale": {
+            "default": "",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": true,
+            "title": "Target",
+            "type": "object"
+          }
+        },
+        "required": [
+          "slug",
+          "layer",
+          "check",
+          "severity"
+        ],
+        "title": "RuleCreate",
+        "type": "object"
+      },
+      "RuleOutcome": {
+        "enum": [
+          "pass",
+          "warn",
+          "fail",
+          "error",
+          "skipped"
+        ],
+        "title": "RuleOutcome",
+        "type": "string"
+      },
+      "RuleResult": {
+        "additionalProperties": false,
+        "description": "One rule's outcome (`01` §4.6, FR-DATA-20).",
+        "properties": {
+          "acknowledgement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Acknowledgement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "affected_exposure_fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Exposure Fraction"
+          },
+          "affected_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Rows"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "error_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Reason"
+          },
+          "layer": {
+            "$ref": "#/components/schemas/ValidationLayer"
+          },
+          "measured": {
+            "additionalProperties": true,
+            "title": "Measured",
+            "type": "object"
+          },
+          "offending_sample": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Offending Sample",
+            "type": "array"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/RuleOutcome"
+          },
+          "rule_id": {
+            "format": "uuid",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rule_slug": {
+            "title": "Rule Slug",
+            "type": "string"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "integer"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "threshold": {
+            "additionalProperties": true,
+            "title": "Threshold",
+            "type": "object"
+          }
+        },
+        "required": [
+          "rule_id",
+          "rule_slug",
+          "rule_version",
+          "layer",
+          "severity",
+          "outcome"
+        ],
+        "title": "RuleResult",
+        "type": "object"
+      },
+      "RuleSetEntry": {
+        "additionalProperties": false,
+        "description": "A rule's membership of a set, with the one override that is permitted.",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/ValidationRule"
+          },
+          "severity_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Severity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rule"
+        ],
+        "title": "RuleSetEntry",
+        "type": "object"
+      },
+      "RuleSetReplace": {
+        "additionalProperties": false,
+        "properties": {
+          "reference_dataset_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Dataset Version Id"
+          },
+          "rule_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Rule Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rule_ids"
+        ],
+        "title": "RuleSetReplace",
+        "type": "object"
+      },
+      "SchemaCorrection": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "columns"
+        ],
+        "title": "SchemaCorrection",
+        "type": "object"
+      },
+      "SemanticType": {
+        "description": "What a column *means*, inferred separately from its dtype (FR-DATA-25).\n\nA dtype says `int32`; a semantic type says whether that is a policy id, a vehicle\ngroup, or an age. The distinction decides whether a one-way summary is meaningful —\nbanding a policy id produces a chart with five million bars.",
+        "enum": [
+          "identifier",
+          "categorical",
+          "ordinal",
+          "continuous",
+          "date",
+          "money",
+          "boolean"
+        ],
+        "title": "SemanticType",
+        "type": "string"
       },
       "ServiceAccountView": {
         "additionalProperties": false,
@@ -1503,6 +3039,97 @@
         "title": "SettingType",
         "type": "string"
       },
+      "Severity": {
+        "description": "What a violation means. `warn` is not \"ignore\" — it needs an acknowledgement.",
+        "enum": [
+          "warn",
+          "fail"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "SourceCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          },
+          "credentials_secret_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials Secret Ref"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "kind"
+        ],
+        "title": "SourceCreate",
+        "type": "object"
+      },
+      "SourceKind": {
+        "description": "Where data comes from (FR-DATA-1). Credentials are always a `secret:<slug>`\nreference, never a value (`07` FR-PLAT-25).",
+        "enum": [
+          "upload",
+          "object_store",
+          "sql",
+          "pipeline"
+        ],
+        "title": "SourceKind",
+        "type": "string"
+      },
+      "SourceView": {
+        "additionalProperties": false,
+        "description": "What a Source looks like from outside. Note what is absent.",
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          },
+          "has_credentials": {
+            "title": "Has Credentials",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "kind",
+          "config",
+          "has_credentials"
+        ],
+        "title": "SourceView",
+        "type": "object"
+      },
       "SubmitApproval": {
         "additionalProperties": false,
         "properties": {
@@ -1535,6 +3162,84 @@
         "title": "SubmitApproval",
         "type": "object"
       },
+      "TableCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "key_columns": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Key Columns",
+            "type": "array"
+          },
+          "payload_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Payload Columns",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "key_columns"
+        ],
+        "title": "TableCreate",
+        "type": "object"
+      },
+      "TransitionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "report_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Id"
+          },
+          "to": {
+            "$ref": "#/components/schemas/DatasetStatus"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "TransitionRequest",
+        "type": "object"
+      },
       "UpdateSettings": {
         "additionalProperties": false,
         "properties": {
@@ -1549,6 +3254,360 @@
           "values"
         ],
         "title": "UpdateSettings",
+        "type": "object"
+      },
+      "UploadUrlRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "parts": {
+            "default": 1,
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Parts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "media_type"
+        ],
+        "title": "UploadUrlRequest",
+        "type": "object"
+      },
+      "UploadUrlResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_in_s": {
+            "title": "Expires In S",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "upload_id",
+          "urls",
+          "expires_in_s"
+        ],
+        "title": "UploadUrlResponse",
+        "type": "object"
+      },
+      "ValidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reference_dataset_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Dataset Version Id"
+          },
+          "rule_set_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Set Id"
+          }
+        },
+        "title": "ValidateRequest",
+        "type": "object"
+      },
+      "ValidationLayer": {
+        "description": "The four layers of FR-DATA-16, all of which a Rule Set must cover.",
+        "enum": [
+          "structural",
+          "referential",
+          "actuarial_sanity",
+          "distributional"
+        ],
+        "title": "ValidationLayer",
+        "type": "string"
+      },
+      "ValidationReport": {
+        "additionalProperties": false,
+        "description": "The outcome of one validation run (`01` §4.6).",
+        "properties": {
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "empty_layers": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ValidationLayer"
+            },
+            "title": "Empty Layers",
+            "type": "array"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "reference_dataset_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Dataset Version Id"
+          },
+          "results": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RuleResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "rule_set_id": {
+            "format": "uuid",
+            "title": "Rule Set Id",
+            "type": "string"
+          },
+          "rule_set_version": {
+            "title": "Rule Set Version",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_version_id",
+          "rule_set_id",
+          "rule_set_version",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "ValidationReport",
+        "type": "object"
+      },
+      "ValidationRule": {
+        "additionalProperties": false,
+        "description": "One rule (`01` §4.3). A tagged union on `layer` + `check`.",
+        "properties": {
+          "check": {
+            "title": "Check",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "layer": {
+            "$ref": "#/components/schemas/ValidationLayer"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "rationale": {
+            "default": "",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "scope": {
+            "additionalProperties": true,
+            "title": "Scope",
+            "type": "object"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "default": "approved",
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": true,
+            "title": "Target",
+            "type": "object"
+          },
+          "tolerance": {
+            "additionalProperties": true,
+            "title": "Tolerance",
+            "type": "object"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "version",
+          "layer",
+          "check",
+          "severity"
+        ],
+        "title": "ValidationRule",
+        "type": "object"
+      },
+      "ValidationRuleSet": {
+        "additionalProperties": false,
+        "description": "A versioned set of rules for a Dataset (`01` §4.3, FR-DATA-22).",
+        "properties": {
+          "dataset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "entries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RuleSetEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reference_dataset_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Dataset Version Id"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "default": "approved",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "version"
+        ],
+        "title": "ValidationRuleSet",
+        "type": "object"
+      },
+      "VersionCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "recipe": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Recipe",
+            "type": "array"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          }
+        },
+        "title": "VersionCreate",
         "type": "object"
       },
       "VersionInfo": {
@@ -1573,6 +3632,99 @@
           "environment"
         ],
         "title": "VersionInfo",
+        "type": "object"
+      },
+      "VersionLoad": {
+        "additionalProperties": false,
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceRowIn"
+            },
+            "minItems": 1,
+            "title": "Rows",
+            "type": "array"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "VersionLoad",
+        "type": "object"
+      },
+      "VersionTotals": {
+        "additionalProperties": false,
+        "description": "The headline numbers, checked by validation and shown everywhere.\n\nMoney is integer minor units and exposure is a decimal string (FR-OVR-7): a float\nexposure total silently disagrees with the sum of its parts, and the disagreement is\nexactly the kind of thing an actuary is asked to explain.",
+        "properties": {
+          "claim_amount_minor": {
+            "default": 0,
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Claim Amount Minor",
+            "type": "integer"
+          },
+          "claim_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Claim Count",
+            "type": "integer"
+          },
+          "exposure_years": {
+            "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Exposure Years",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exposure_years"
+        ],
+        "title": "VersionTotals",
+        "type": "object"
+      },
+      "VersionView": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "version",
+          "status",
+          "row_count"
+        ],
+        "title": "VersionView",
         "type": "object"
       },
       "Withdraw": {
@@ -2704,6 +4856,2076 @@
         ]
       }
     },
+    "/api/v1/blobs/upload-url": {
+      "post": {
+        "description": "FR-PLAT-21.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key and\nis promoted to its content address on completion. Asking the client for the digest up\nfront would let it choose one, which is the difference between content addressing and\nclient-supplied naming.",
+        "operationId": "upload_url_api_v1_blobs_upload_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Presigned upload URL",
+        "tags": [
+          "blobs"
+        ]
+      }
+    },
+    "/api/v1/blobs/{sha256}": {
+      "get": {
+        "operationId": "download_api_v1_blobs__sha256__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sha256",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{64}$",
+              "title": "Sha256",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expires_in_s",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 3600,
+              "minimum": 30,
+              "title": "Expires In S",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Download a blob",
+        "tags": [
+          "blobs"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/compare": {
+      "get": {
+        "description": "FR-DATA-28. Computed from two stored Profiles, which is why it is cheap enough to\nbe a `GET` — neither dataset is read.",
+        "operationId": "compare_api_v1_dataset_versions__version_id__compare_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "against",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Against",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Profile comparison / PSI",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/derive": {
+      "post": {
+        "description": "**202**. FR-DATA-33: sample, split, filter or union.",
+        "operationId": "derive_api_v1_dataset_versions__version_id__derive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeriveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Derive a version",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/lineage": {
+      "get": {
+        "description": "FR-DATA-35.",
+        "operationId": "lineage_api_v1_dataset_versions__version_id__lineage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "both",
+              "pattern": "^(up|down|both)$",
+              "title": "Direction",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Lineage Api V1 Dataset Versions  Version Id  Lineage Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Lineage graph",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/one-ways": {
+      "get": {
+        "description": "FR-DATA-26, NFR-DATA-4: read from the stored Profile in a single lookup.",
+        "operationId": "get_one_way_api_v1_dataset_versions__version_id__one_ways_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "column",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Column",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneWaySummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "One-way summary for a column",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/profile": {
+      "get": {
+        "description": "FR-DATA-25. Read, never recomputed (FR-DATA-27).",
+        "operationId": "get_profile_api_v1_dataset_versions__version_id__profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Profile artifact",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/rejected": {
+      "get": {
+        "description": "FR-DATA-7: the rows ingestion could not accept, with the reason each was refused.\n\nA sample rather than the full quarantine. The reject file itself is a blob; this is the\nscreen that answers \"why is my row count short?\", and a hundred examples answer it as\nwell as a million.",
+        "operationId": "rejected_rows_api_v1_dataset_versions__version_id__rejected_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rejected Rows Api V1 Dataset Versions  Version Id  Rejected Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Quarantined rows",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/transition": {
+      "post": {
+        "description": "`01` §4.2's invariants, enforced (FR-DATA-17).\n\nReaching `validated` requires a `report_id`, and the report is read here rather than\ntrusted: the caller says which report, never whether it passed.",
+        "operationId": "transition_api_v1_dataset_versions__version_id__transition_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Change a version's status",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/validate": {
+      "post": {
+        "description": "**202** with the Job (FR-DATA-15).",
+        "operationId": "run_validation_api_v1_dataset_versions__version_id__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Run validation",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/validation-reports": {
+      "get": {
+        "operationId": "list_reports_api_v1_dataset_versions__version_id__validation_reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportSummary"
+                  },
+                  "title": "Response List Reports Api V1 Dataset Versions  Version Id  Validation Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Validation report history",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/datasets": {
+      "get": {
+        "operationId": "list_datasets_api_v1_datasets_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "line_of_business",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Line Of Business"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Dataset_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List datasets",
+        "tags": [
+          "datasets"
+        ]
+      },
+      "post": {
+        "operationId": "create_dataset_api_v1_datasets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create a dataset",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{slug}": {
+      "get": {
+        "operationId": "get_dataset_api_v1_datasets__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Dataset detail",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{slug}/dictionary": {
+      "put": {
+        "description": "A replace, audited with before and after (NFR-DATA-8).",
+        "operationId": "put_dictionary_api_v1_datasets__slug__dictionary_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DictionaryUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Replace the data dictionary",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{slug}/rule-set": {
+      "get": {
+        "operationId": "get_rule_set_api_v1_datasets__slug__rule_set_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationRuleSet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a dataset's rule set",
+        "tags": [
+          "validation"
+        ]
+      },
+      "put": {
+        "description": "FR-DATA-22: a replace creates a **new rule-set version**.\n\nNever an edit in place. A Validation Report records the exact `rule_set_version` it\nran, so mutating a rule set would change what every past report was a report *of*.",
+        "operationId": "put_rule_set_api_v1_datasets__slug__rule_set_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleSetReplace"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationRuleSet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Replace a dataset's rule set",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/api/v1/datasets/{slug}/versions": {
+      "post": {
+        "description": "**202** with the Job (`00` §5.1 R1, FR-DATA-2).\n\nThe version row is created by the worker, not here: a version that exists before its\ndata does is a version something can be fitted on. What this returns is the Job, and\n`Location` points at it.",
+        "operationId": "start_ingestion_api_v1_datasets__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "idempotency_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Start an ingestion run",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{slug}/versions/{version}": {
+      "get": {
+        "operationId": "get_version_api_v1_datasets__slug__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Dataset version detail",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{slug}/versions/{version}/schema": {
+      "patch": {
+        "description": "FR-DATA-4: correctable **while `draft` only**.\n\nOnce a version leaves `draft` its schema is part of what was validated and what a model\nmay be fitted on. Editing it afterwards would silently change the meaning of a report\nthat has already been signed off, which is the immutability ID-1 exists to prevent.",
+        "operationId": "patch_schema_api_v1_datasets__slug__versions__version__schema_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchemaCorrection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Correct the inferred schema",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
     "/api/v1/jobs": {
       "get": {
         "description": "Filtered, cursor-paginated (`00` §5.2).",
@@ -3347,6 +7569,450 @@
         ]
       }
     },
+    "/api/v1/reference-tables": {
+      "post": {
+        "operationId": "create_table_api_v1_reference_tables_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Table Api V1 Reference Tables Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Declare a reference table",
+        "tags": [
+          "reference data"
+        ]
+      }
+    },
+    "/api/v1/reference-tables/{slug}/lookup": {
+      "get": {
+        "description": "**For debugging** (FR-DATA-31).\n\nRating pins a reference version id (FR-DATA-32) and never resolves \"the latest\" at\nscoring time. This endpoint exists to answer \"what does this table say about this key\non this date?\" when a quote looks wrong.",
+        "operationId": "lookup_api_v1_reference_tables__slug__lookup_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_at",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "As At",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Lookup Api V1 Reference Tables  Slug  Lookup Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Point lookup, as at a date",
+        "tags": [
+          "reference data"
+        ]
+      }
+    },
+    "/api/v1/reference-tables/{slug}/versions": {
+      "post": {
+        "description": "FR-DATA-29. Loaded whole, into `draft`; publish it to make it pinnable.",
+        "operationId": "load_version_api_v1_reference_tables__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionLoad"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Load a reference table version",
+        "tags": [
+          "reference data"
+        ]
+      }
+    },
+    "/api/v1/reference-tables/{slug}/versions/{version}/publish": {
+      "post": {
+        "operationId": "publish_version_api_v1_reference_tables__slug__versions__version__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Publish a reference table version",
+        "tags": [
+          "reference data"
+        ]
+      }
+    },
     "/api/v1/service-accounts": {
       "post": {
         "description": "Create the account and its first key. The key is in this response and nowhere else.",
@@ -3793,6 +8459,828 @@
         "summary": "Update workspace settings",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "operationId": "list_sources_api_v1_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceView"
+                  },
+                  "title": "Response List Sources Api V1 Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          }
+        },
+        "summary": "List sources",
+        "tags": [
+          "datasets"
+        ]
+      },
+      "post": {
+        "description": "FR-DATA-1.",
+        "operationId": "create_source_api_v1_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Register a source",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/sources/{source_id}/preview": {
+      "post": {
+        "description": "First N rows and the inferred schema, **without creating a Dataset Version**.\n\nThe point is that it is free to be wrong. Inference guesses — a zero-padded policy id\nreads as an integer, a European date reads as American — and an analyst needs to see\nthat before a version exists, because a version is immutable and the only remedy after\nthe fact is another one.\n\nNothing is stored: no blob, no version, no ingestion run. A preview that left a trace\nwould make \"just have a look at this file\" an audited act, and people would stop\nlooking.",
+        "operationId": "preview_source_api_v1_sources__source_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rows",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Rows",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_source_api_v1_sources__source_id__preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Source Api V1 Sources  Source Id  Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Preview a source without creating a version",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/validation-reports/{report_id}": {
+      "get": {
+        "operationId": "get_report_api_v1_validation_reports__report_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Full validation report",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge": {
+      "post": {
+        "description": "FR-DATA-17. Actuary only, justified, audited, once per `(report, rule)`.",
+        "operationId": "acknowledge_api_v1_validation_reports__report_id__results__rule_id__acknowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Acknowledge Api V1 Validation Reports  Report Id  Results  Rule Id  Acknowledge Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Acknowledge a validation warning",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/api/v1/validation-rules": {
+      "post": {
+        "description": "FR-DATA-21 step 1: authored → `draft`.",
+        "operationId": "create_rule_api_v1_validation_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create a custom validation rule",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/api/v1/validation-rules/{rule_id}/dry-run": {
+      "post": {
+        "description": "**202**. FR-DATA-21 step 2: a rule cannot be approved until it has run somewhere.\n\nThe dry run is what makes the approval a decision rather than a signature — an approver\nreading a rule's JSON cannot tell whether it selects three rows or three million.",
+        "operationId": "dry_run_api_v1_validation_rules__rule_id__dry_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DryRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Dry-run a rule against a version",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/api/v1/validation-rules/{rule_id}/submit": {
+      "post": {
+        "description": "FR-DATA-21 step 3: `draft` → `review`, and only with a dry run attached.",
+        "operationId": "submit_rule_api_v1_validation_rules__rule_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Submit a rule for approval",
+        "tags": [
+          "validation"
         ]
       }
     },

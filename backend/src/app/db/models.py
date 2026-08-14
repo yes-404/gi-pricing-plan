@@ -690,7 +690,23 @@ class DatasetRow(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, default="")
     description: Mapped[str | None] = mapped_column(Text)
+
+    line_of_business: Mapped[str | None] = mapped_column(String(64))
+    territory: Mapped[str | None] = mapped_column(String(64))
+    #: `07` FR-PLAT-46 sets the workspace default; a dataset may differ, because a group
+    #: writing GB and IE business holds both in one workspace.
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="GBP")
+    default_record_grain: Mapped[str | None] = mapped_column(String(32))
+
+    #: Authored, not inferred (`01` §4.1). A Profile can say a column is 98 % distinct
+    #: integers; only a person can say it is a special category.
+    data_dictionary: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    validation_rule_set_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -698,6 +714,7 @@ class DatasetRow(Base):
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", name="uq_datasets_workspace_slug"),
+        CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency_is_iso_4217"),
     )
 
 
@@ -1053,7 +1070,7 @@ class ValidationRuleRow(Base):
         CheckConstraint(
             "status <> 'approved' OR (approved_by IS NOT NULL "
             "AND approved_by <> authored_by AND dry_run_report_id IS NOT NULL)",
-            name="approved_rule_has_a_dry_run_and_a_separate_approver",
+            name="approved_rule_dry_run_and_separate_approver",
         ),
     )
 

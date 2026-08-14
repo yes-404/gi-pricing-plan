@@ -31,7 +31,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, datasets, rbac
 from app.platform.blobs import BlobStore
-from model_schema import DatasetKind, JobSource, Permission, Principal
+from model_schema import BlobRef, DatasetKind, JobSource, Permission, Principal
 from pricing_core.data.ingest import (
     ColumnNameCollisionError,
     infer_schema,
@@ -144,7 +144,7 @@ async def ingest_upload(
             str(exc),
         ) from exc
 
-    frame = frame.rename(mapping.rename_map())
+    frame = frame.rename(mapping.rename_map)
     rows_read = frame.height
 
     partition = partition_rejects(frame, required_non_null=required_non_null)
@@ -275,3 +275,118 @@ def _reject_sample(rejected: pl.DataFrame) -> list[dict[str, Any]]:
         {key: (None if value is None else str(value)) for key, value in row.items()}
         for row in sample.iter_rows(named=True)
     ]
+
+
+async def correct_schema(
+    session: AsyncSession,
+    blob_store: BlobStore,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    version_id: UUID,
+    table: str,
+    columns: dict[str, str],
+) -> DatasetVersionRow:
+    """Recast columns of a `draft` version's table (FR-DATA-4).
+
+    Inference is a guess, and the guess this platform makes most often is reading a
+    zero-padded policy id as an integer. Correcting it has to recast the **data**, not
+    only the recorded dtype: a version whose `arrow_schema` says `String` over a parquet
+    file holding `Int64` is a version that validates against one schema and fits against
+    another.
+
+    `draft` only, checked by the caller. Once a version is validated its schema is part of
+    what was checked, and editing it would silently change what an approved report was
+    about.
+    """
+    import io
+
+    from pricing_core.data.prepare import RecipeError, apply_recipe
+
+    version = await session.get(DatasetVersionRow, version_id, with_for_update=True)
+    if version is None or version.workspace_id != workspace_id:
+        raise PlatformError(
+            "NOT_FOUND", "Dataset version not found", 404, f"No version {version_id}."
+        )
+    await rbac.require_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.DATASET_WRITE,
+    )
+
+    tables = [dict(entry) for entry in version.tables]
+    target = next((entry for entry in tables if entry["name"] == table), None)
+    if target is None:
+        present = ", ".join(sorted(entry["name"] for entry in tables)) or "none"
+        raise PlatformError(
+            "NOT_FOUND",
+            f"This version has no table named {table!r}",
+            404,
+            f"Tables present: {present}.",
+        )
+
+    missing = sorted(set(columns) - set(target["arrow_schema"]))
+    if missing:
+        raise PlatformError(
+            "SCHEMA_INFERENCE_CONFLICT",
+            "Correction names columns the table does not have",
+            422,
+            f"Unknown column(s): {', '.join(missing)}. Correction renames nothing — it "
+            "recasts existing columns, so every name must already be present.",
+        )
+
+    payload = await blob_store.read(BlobRef.model_validate(target["blob"]))
+    frame = pl.read_parquet(io.BytesIO(payload))
+    try:
+        recast = apply_recipe(
+            {table: frame}, [{"step": "cast", "table": table, "params": {"columns": columns}}]
+        ).tables[table]
+    except RecipeError as exc:
+        raise PlatformError(
+            "SCHEMA_INFERENCE_CONFLICT",
+            "The correction is not a supported cast",
+            422,
+            str(exc),
+        ) from exc
+
+    # A cast that silently nulls the column is worse than a refused one: the version stays
+    # draft, looks corrected, and loses the data. `strict=False` is what makes the cast
+    # survivable at all, so the check has to be here rather than in Polars.
+    for column in columns:
+        added_nulls = recast[column].null_count() - frame[column].null_count()
+        if added_nulls:
+            raise PlatformError(
+                "SCHEMA_INFERENCE_CONFLICT",
+                f"Casting {column!r} to {columns[column]!r} would discard values",
+                422,
+                f"{added_nulls} of {frame.height} values do not survive the cast and would "
+                "become null. The column holds something other than what the correction "
+                "claims — inspect the rejected rows before correcting the schema.",
+            )
+
+    buffer = io.BytesIO()
+    recast.write_parquet(buffer, compression="zstd")
+    ref = await blob_store.put(session, buffer.getvalue(), PARQUET_MEDIA_TYPE)
+
+    before = dict(target["arrow_schema"])
+    target["blob"] = ref.model_dump(mode="json", by_alias=True)
+    target["arrow_schema"] = {
+        name: str(dtype) for name, dtype in zip(recast.columns, recast.dtypes, strict=True)
+    }
+    # Reassigned rather than mutated in place: SQLAlchemy does not track mutation inside a
+    # JSONB list, so an in-place edit commits nothing and reports success.
+    version.tables = tables
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="dataset_version.schema_corrected",
+        entity_ref=f"dataset_version:{version_id}",
+        before={"table": table, "arrow_schema": before},
+        after={"table": table, "arrow_schema": target["arrow_schema"]},
+    )
+    return version

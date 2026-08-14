@@ -52,6 +52,7 @@ __all__ = [
     "PresignedUpload",
     "blob_key",
     "blob_probe",
+    "to_ref",
 ]
 
 _log = get_logger("app.blobs")
@@ -160,7 +161,7 @@ class BlobStore:
                         "requested_media_type": media_type,
                     },
                 )
-            return _to_ref(existing)
+            return to_ref(existing)
 
         key = blob_key(digest)
         await asyncio.to_thread(
@@ -207,6 +208,22 @@ class BlobStore:
     async def read(self, ref: BlobRef) -> bytes:
         """Read a blob whole. Only for content known to be small — see `open`."""
         return b"".join([chunk async for chunk in self.open(ref)])
+
+    async def presign_download(self, ref: BlobRef, *, expires_in_s: int = 300) -> str:
+        """A short-lived URL the client fetches directly (`07` §5.1, FR-PLAT-21).
+
+        Short-lived on purpose. The URL carries its own authorisation, so it is a bearer
+        credential for those bytes — one pasted into a ticket should stop working before
+        anyone reads the ticket. Five minutes is enough to start a download and not enough
+        to be worth sharing.
+        """
+        url: str = await asyncio.to_thread(
+            self._client.generate_presigned_url,
+            "get_object",
+            Params={"Bucket": self._bucket, "Key": blob_key(ref.sha256)},
+            ExpiresIn=expires_in_s,
+        )
+        return url
 
     async def presign_upload(
         self, media_type: str, parts: int = 1, *, expires_in_s: int = 3600
@@ -348,7 +365,7 @@ async def _adjust_ref_count(session: AsyncSession, sha256: str, delta: int) -> i
     return int(row[0])
 
 
-def _to_ref(row: BlobRow) -> BlobRef:
+def to_ref(row: BlobRow) -> BlobRef:
     return BlobRef(
         sha256=row.sha256,
         bytes=row.bytes_,

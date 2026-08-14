@@ -97,7 +97,7 @@ def upgrade() -> None:
     sa.Column('approved_by', sa.UUID(), nullable=True),
     sa.Column('dry_run_report_id', sa.UUID(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint("status <> 'approved' OR (approved_by IS NOT NULL AND approved_by <> authored_by AND dry_run_report_id IS NOT NULL)", name=op.f('ck_validation_rules_approved_rule_has_a_dry_run_and_a_separate_approver')),
+    sa.CheckConstraint("status <> 'approved' OR (approved_by IS NOT NULL AND approved_by <> authored_by AND dry_run_report_id IS NOT NULL)", name=op.f('ck_validation_rules_approved_rule_dry_run_and_separate_approver')),
     sa.CheckConstraint('version >= 1', name=op.f('ck_validation_rules_rule_version_starts_at_one')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_validation_rules')),
     sa.UniqueConstraint('workspace_id', 'slug', 'version', name='uq_validation_rule_version')

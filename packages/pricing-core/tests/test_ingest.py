@@ -72,7 +72,7 @@ def test_the_source_name_is_retained() -> None:
         "policy_id": "Policy ID",
         "gross_premium": "Gross Premium £",
     }
-    assert mapping.rename_map() == {
+    assert mapping.rename_map == {
         "Policy ID": "policy_id",
         "Gross Premium £": "gross_premium",
     }

@@ -16,6 +16,7 @@ This module is where that is true or not. Three things make it true:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
@@ -35,11 +36,15 @@ from app.observability.logging import get_logger
 from app.platform import audit, rbac
 from model_schema import (
     VALID_DATASET_TRANSITIONS,
+    DataDictionaryEntry,
+    Dataset,
     DatasetKind,
     DatasetStatus,
     JobSource,
     Permission,
     Principal,
+    RecordGrain,
+    ScopeType,
     SourceKind,
 )
 
@@ -50,11 +55,14 @@ __all__ = [
     "derive_version",
     "fittable_or_refuse",
     "lineage_of",
+    "load_dataset",
     "new_version",
     "promote_to_validated",
     "purge_subject",
     "record_split",
+    "to_schema",
     "transition",
+    "update_dictionary",
 ]
 
 _log = get_logger("app.datasets")
@@ -132,6 +140,12 @@ async def create_dataset(
     actor: Principal,
     slug: str,
     description: str | None = None,
+    name: str = "",
+    line_of_business: str | None = None,
+    territory: str | None = None,
+    currency: str | None = None,
+    default_record_grain: RecordGrain | None = None,
+    data_dictionary: Mapping[str, DataDictionaryEntry] | None = None,
 ) -> DatasetRow:
     """Create a Dataset — the named container its versions belong to (`01` §4.1)."""
     await rbac.require_permission(
@@ -140,7 +154,19 @@ async def create_dataset(
         principal=actor,
         permission=Permission.DATASET_WRITE,
     )
-    row = DatasetRow(workspace_id=workspace_id, slug=slug, description=description)
+    row = DatasetRow(
+        workspace_id=workspace_id,
+        slug=slug,
+        name=name or slug,
+        description=description,
+        line_of_business=line_of_business,
+        territory=territory,
+        currency=currency or "GBP",
+        default_record_grain=(
+            default_record_grain.value if default_record_grain is not None else None
+        ),
+        data_dictionary=_dictionary_json(data_dictionary or {}),
+    )
     session.add(row)
     try:
         await session.flush()
@@ -156,9 +182,95 @@ async def create_dataset(
         source=JobSource.API,
         action="dataset.created",
         entity_ref=f"dataset:{slug}@1",
-        after={"slug": slug},
+        after={"slug": slug, "name": row.name, "currency": row.currency},
     )
     return row
+
+
+def _dictionary_json(entries: Mapping[str, DataDictionaryEntry]) -> dict[str, Any]:
+    return {column: entry.model_dump(mode="json") for column, entry in entries.items()}
+
+
+async def load_dataset(
+    session: AsyncSession, *, workspace_id: UUID, slug: str
+) -> DatasetRow:
+    """A Dataset by slug, or a 404 that does not confirm it exists elsewhere."""
+    row = (
+        await session.execute(
+            select(DatasetRow).where(
+                DatasetRow.workspace_id == workspace_id, DatasetRow.slug == slug
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise PlatformError("NOT_FOUND", "Dataset not found", 404, f"No dataset {slug!r}.")
+    return row
+
+
+async def update_dictionary(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    slug: str,
+    entries: Mapping[str, DataDictionaryEntry],
+) -> DatasetRow:
+    """Replace the Data Dictionary, audited with before and after (`01` §5.1, NFR-DATA-8).
+
+    A **replace**, not a merge, and the audit event carries both states. The dictionary
+    decides which columns may be modelled at all (FR-OVR-9), so "who removed the
+    `special_category` marking from this column, and when?" has to be answerable — and a
+    merge would make a removal indistinguishable from an omission.
+    """
+    row = await load_dataset(session, workspace_id=workspace_id, slug=slug)
+    await rbac.require_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.DATASET_WRITE,
+        resource=rbac.ResourceRef(scope_type=ScopeType.DATASET, scope_id=row.id),
+    )
+
+    before = dict(row.data_dictionary)
+    row.data_dictionary = _dictionary_json(entries)
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="dataset.dictionary_updated",
+        entity_ref=f"dataset:{slug}",
+        before={"data_dictionary": before},
+        after={"data_dictionary": row.data_dictionary},
+    )
+    return row
+
+
+def to_schema(row: DatasetRow, *, latest_version: int | None = None) -> Dataset:
+    """The row as the `01` §4.1 artifact the API returns."""
+    return Dataset(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        slug=row.slug,
+        name=row.name,
+        description=row.description,
+        line_of_business=row.line_of_business,
+        territory=row.territory,
+        currency=row.currency,
+        default_record_grain=(
+            RecordGrain(row.default_record_grain) if row.default_record_grain else None
+        ),
+        data_dictionary={
+            column: DataDictionaryEntry.model_validate(entry)
+            for column, entry in row.data_dictionary.items()
+        },
+        validation_rule_set_id=row.validation_rule_set_id,
+        latest_version=latest_version,
+        created_at=row.created_at,
+        archived_at=row.archived_at,
+    )
 
 
 async def new_version(
