@@ -3,22 +3,40 @@
 This file gives Claude Code the context, conventions, and roadmap to develop this project
 continuously and consistently. Read it fully before making changes.
 
-## 0. CURRENT PROJECT PHASE: DOCUMENTATION-FIRST (read this before anything else)
+## 0. CURRENT PROJECT PHASE: 1a — DATA WORKBENCH (read this before anything else)
 
-**The primary objective right now is NOT writing application code.** It is iterating a
-complete specification suite in `docs/` until every module's functions, data contracts,
-and cross-module workflows are defined in enough detail that implementation can start
-without ambiguity. Treat documents as the product of this phase.
+**Phase 0 (Specification) closed 2026-08-14. Phase 1a is active, and writing application
+code is now the expected default** for work inside its scope (§9).
 
-When asked to "add" a capability (a model type, a validation feature, a workflow), the
-default deliverable is a **spec document update**, not code. Only write code when the
-maintainer explicitly asks, or as small throwaway snippets inside specs to illustrate an
-interface.
+The specification suite in `docs/` is the contract that Phase 1 builds against. It is
+finished, audited, and authoritative: 8 module specs, 5 workflow journeys, 5 ADRs, 31
+artifact contracts, 417 numbered requirements. **Read the relevant spec before writing the
+code that implements it** — the specs are precise enough that guessing is never the faster
+path, and a divergence between code and spec is a defect in whichever is wrong.
 
-The maintainer's next step after this phase is to use these docs to research the skills
-required for each part of the tech stack — so every spec must state clearly *which
-technologies it depends on and what they are used for* (see the Tech Dependencies section
-required in every spec, §5).
+### What this means for the default deliverable
+
+| Request | Deliverable |
+|---|---|
+| Implement something inside Phase 1a's scope (§9) | **Code**, plus any spec change the implementation proves necessary |
+| Add a capability not yet specified | **Spec change first**, then code — the spec is the design step, not paperwork |
+| Something in a later phase (rating, optimisation, monitoring, governance UI) | **Spec change only.** Do not build ahead of the phase |
+| A design choice the specs leave open | Record it in `docs/open-questions.md` with options and a recommendation; do not silently pick one |
+
+When code and spec disagree, **stop and resolve it** rather than quietly making the code
+match or the spec match. Which one is wrong is a real question, and this project's history
+shows it is often the spec — five specification defects were found by running spikes against
+it, including one that would have rejected every valid custom objective.
+
+### The rules that survive the phase change
+
+- Requirement IDs are permanent (§5). Never renumber; append or mark superseded.
+- Every spec change runs `python3 scripts/audit-docs.py` before commit (14 checks).
+- `.claude/skills/` holds the procedures for this repo; §12's maintenance rules apply.
+- The retrofit-impossible foundations (`docs/roadmap.md` §5) land in Phase 1a. Audit writes
+  share the caller's transaction, artifacts are immutable, money is integer minor units,
+  `model-schema` is the single source of truth. **These are not deferrable to a later
+  phase** — retrofitting any of them is a rewrite, and Phase 1a is where they are cheap.
 
 ## 1. Project Mission
 
@@ -188,11 +206,18 @@ lazy validation reports).
 
 ## 9. Roadmap
 
-- **Phase 0 — Specification (CURRENT)**: iterate `docs/` until every module spec meets
-  the §5 standard, all five workflow docs are complete, contracts drafted, and
-  open-questions is empty or explicitly deferred. Exit criteria: an engineer could start
-  Phase 1 from docs alone.
-- **Phase 1a — Data Workbench**: dataset upload, preparation, the four-layer validation
+- **Phase 0 — Specification: COMPLETE (closed 2026-08-14)**. Every module spec meets the
+  §5 standard, all five workflow docs are complete, 31 contracts are drafted, and every
+  open question is **gated** — assigned to the phase that needs it (`docs/roadmap.md` §10).
+  Exit criterion met: an engineer could start Phase 1 from docs alone.
+
+  *Exit criterion amended 2026-08-14.* It previously required `open-questions.md` to be
+  "empty or explicitly deferred". That is now read as **gated rather than emptied**: each
+  question is answered before the phase that depends on it, not before any code is written.
+  Answering Phase 4 optimisation questions today would be speculation — and this project's
+  own record argues against it, since three of the questions that *were* answered by
+  reasoning had to be corrected once a spike tested them.
+- **Phase 1a — Data Workbench (CURRENT)**: dataset upload, preparation, the four-layer validation
   gate, profiling, reference data. Exit: a freMTPL2 dataset version reaches `validated`,
   having been through the failure loop at least once. The cross-cutting foundations that
   cannot be retrofitted (audit-in-transaction, artifact immutability, the Job model,

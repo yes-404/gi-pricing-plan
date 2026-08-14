@@ -19,9 +19,9 @@ project work (`CLAUDE.md` §12).
 
 ## External skills
 
-**None installed.** A discovery pass against `anthropics/skills` (18 skills) and
+**None installed.** A discovery pass on 2026-08-14 against `anthropics/skills` (18 skills) and
 `claude-plugins-official` on 2026-08-14 found no external skill that fits the project's
-current state — Phase 0 is documentation-first with highly repo-specific conventions, and
+state at that time — Phase 0 was documentation-first with highly repo-specific conventions, and
 the closest candidate (`doc-coauthoring`) overlaps `CLAUDE.md` §5/§10, which is more
 specific and already binding.
 

@@ -3,7 +3,8 @@
 **As at:** 2026-08-14 · Regenerate the counts with `scripts/audit-docs.py` (below).
 
 Phase 0's exit criterion (`CLAUDE.md` §9): *an engineer could start Phase 1 from these
-documents alone.*
+documents alone.* **Met — Phase 0 closed 2026-08-14.** This page is retained as the record
+of how it was reached and as the entry point for planning 1a/1b.
 
 ---
 
@@ -18,7 +19,7 @@ documents alone.*
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
 | All five workflow documents complete | **done** | wf-01 … wf-05, each with failure paths and traceability |
 | Contracts drafted | **done** | 31 JSON Schemas covering every persisted artifact, + OpenAPI stub |
-| `open-questions.md` empty or explicitly deferred | **open** | 46 questions: 33 `open`, 6 `deferred`, **7 `decided`** (OQ-RATE-1/2, OQ-OPT-6 by spike; OQ-OVR-2, OQ-PLAT-1, OQ-DATA-1/2 by decision). Each has options, trade-offs, and a recommendation |
+| `open-questions.md` **gated** (criterion amended 2026-08-14) | **done** | 46 questions, every one assigned to the phase that needs it (`roadmap.md` §10): 7 `decided`, 6 `deferred`, 33 `open` but none gating Phase 1a. Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
 **Remaining before Phase 1a can start: nothing.** Licence (Apache-2.0), job queue (Celery),

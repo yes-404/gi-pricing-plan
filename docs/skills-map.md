@@ -9,8 +9,7 @@ project requires. This file is the index for that, across **two axes**:
 | **Run** — practice → skills | §8–§9 | "What must I know to keep the project on track, and to prove it was done properly?" |
 
 The second axis exists because this platform's hard problems are not all technical. It is
-a governed system in a regulated domain, built documentation-first across 400 permanent
-requirement IDs — and the ways a project like this fails are as often about traceability,
+a governed system in a regulated domain, specified across 417 permanent requirement IDs — and the ways a project like this fails are as often about traceability,
 phase discipline, and evidence as about Polars or XGBoost.
 
 **Maintenance rules.**
@@ -165,17 +164,17 @@ retrofit list in [`roadmap.md`](roadmap.md) §5. Start them alongside item 1, no
 
 ## 8. Project delivery & management
 
-Practices that keep a 400-requirement, documentation-first, phase-gated project moving.
+Practices that keep a 417-requirement, phase-gated project moving.
 "Used in" cites the artifact each practice operates on, so none of these is generic advice
 detached from the repo.
 
 | Practice | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| **Requirement traceability** | 400 permanent IDs across [`specs/`](specs/); `CLAUDE.md` §5 | ★★★ | Building an FR → contract → test → code matrix; coverage reporting that proves no requirement was silently dropped; handling `SUPERSEDED BY` without renumbering; deciding what granularity of test satisfies an FR. The hardest part is not building the matrix but keeping it honest once code moves faster than docs | [ISO/IEC/IEEE 29148](https://www.iso.org/standard/72089.html) (requirements engineering); [INCOSE traceability guidance](https://www.incose.org/) |
+| **Requirement traceability** | 417 permanent IDs across [`specs/`](specs/); `CLAUDE.md` §5 | ★★★ | Building an FR → contract → test → code matrix; coverage reporting that proves no requirement was silently dropped; handling `SUPERSEDED BY` without renumbering; deciding what granularity of test satisfies an FR. The hardest part is not building the matrix but keeping it honest once code moves faster than docs | [ISO/IEC/IEEE 29148](https://www.iso.org/standard/72089.html) (requirements engineering); [INCOSE traceability guidance](https://www.incose.org/) |
 | **Specification review** | [`specs/`](specs/), [`workflows/`](workflows/) | ★★ | Reading a spec for ambiguity rather than for agreement; testing whether an FR is falsifiable; Fagan-style inspection with defined roles; spotting requirements no workflow reaches (usually infrastructure — or genuinely unwanted) | Gilb & Graham, *Software Inspection*; Wiegers, *Software Requirements* (review chapters) |
 | **Decision records & decision hygiene** | [`adr/`](adr/), [`open-questions.md`](open-questions.md) | ★★ | When a choice earns an ADR versus an open question; superseding rather than editing an accepted ADR; writing consequences honestly, including the negative ones; closing a question with evidence rather than fatigue | [Nygard, *Documenting Architecture Decisions*](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions); [adr.github.io](https://adr.github.io/) |
 | **Phase gating & acceptance criteria** | [`roadmap.md`](roadmap.md) §12; the five [workflow docs](workflows/) | ★★ | Defining "done" as an executable journey rather than a requirement checklist — this project already does it, and the skill is holding the line; writing a definition of done that survives schedule pressure; recognising phase creep early | Cohn, *Agile Estimating and Planning* (release planning); [Basecamp, *Shape Up*](https://basecamp.com/shapeup) (appetite and circuit breakers) |
-| **Work breakdown under uncertainty** | [`roadmap.md`](roadmap.md) §11 — Phase 1 is ~47 % of the surface | ★★★ | Deriving a WBS from requirement surface rather than intuition; splitting a phase on an existing module boundary; reference-class forecasting; why velocity/points mislead across a 400-requirement surface; tracking by demo-able outcome instead of percent-complete | Kahneman & Lovallo on reference-class forecasting; [Shape Up](https://basecamp.com/shapeup) on appetite; McConnell, *Software Estimation* |
+| **Work breakdown under uncertainty** | [`roadmap.md`](roadmap.md) §11 — Phase 1 is ~47 % of the surface | ★★★ | Deriving a WBS from requirement surface rather than intuition; splitting a phase on an existing module boundary; reference-class forecasting; why velocity/points mislead across a 417-requirement surface; tracking by demo-able outcome instead of percent-complete | Kahneman & Lovallo on reference-class forecasting; [Shape Up](https://basecamp.com/shapeup) on appetite; McConnell, *Software Estimation* |
 | **Walking skeleton / architectural runway** | [`roadmap.md`](roadmap.md) §5 "What cannot be retrofitted" | ★★★ | Identifying what must exist in v1 because retrofitting is a rewrite; building a thin vertical slice through every layer before broadening any of them; deferring breadth, never depth. **This is the single most valuable practice skill for Phase 1** — the retrofit list is exactly its output | [Cockburn, *Walking Skeleton*](https://wiki.c2.com/?WalkingSkeleton); Nygard, *Architecture Without an End State* |
 | **Risk register & spike discipline** | [`phase-0-status.md`](phase-0-status.md) §5 — spikes S1, S2 | ★★ | Distinguishing a risk from an issue; sizing a spike to answer exactly one question; pre-mortems; being willing to let spike evidence kill an accepted ADR (S1 can invalidate ADR-0004) | DeMarco & Lister, *Waltzing with Bears*; Klein on the pre-mortem |
 | **Open-source project operations** | Public repo; licence pending OQ-OVR-2 | ★★ | Issue triage and labelling that scales past the maintainer; `CONTRIBUTING`, `CODEOWNERS`, security disclosure policy; DCO versus CLA and why the choice is hard to reverse; release process, semver for `pricing-core` (OQ-OVR-4), changelog discipline | [opensource.guide](https://opensource.guide/); [Semantic Versioning](https://semver.org/); [Keep a Changelog](https://keepachangelog.com/) |
