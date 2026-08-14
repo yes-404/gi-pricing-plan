@@ -1,0 +1,98 @@
+# Skills Map
+
+**Purpose.** The maintainer's next step after Phase 0 is to research the skills each part
+of the stack requires. This file is the index for that: *stack component → where it is
+used → what to learn → where to learn it.*
+
+**Maintenance rule (CLAUDE.md §8).** Whenever a spec adds or changes a tech dependency,
+update this file in the same PR. Every row's "Used in" column must cite at least one spec
+section or requirement ID.
+
+**Depth key.** `★` working familiarity · `★★` competent, can debug · `★★★` deep, this is
+where the project's hard problems live.
+
+---
+
+## 1. Backend core
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| Python 3.12+ / `uv` workspaces | Whole monorepo; `CLAUDE.md` §11 | ★★ | Workspace layout, lockfile & sync semantics, per-package deps, editable installs, `uv run` in CI | [uv docs — workspaces](https://docs.astral.sh/uv/concepts/projects/workspaces/) |
+| FastAPI | 00 §5, all module Interfaces sections | ★★ | Async endpoints, dependency injection for auth/session, `202 Accepted` + job pattern, OpenAPI customisation, streaming responses | [FastAPI docs](https://fastapi.tiangolo.com/), [Advanced OpenAPI](https://fastapi.tiangolo.com/advanced/extending-openapi/) |
+| Pydantic v2 | ADR-0002, FR-OVR-6 | ★★★ | Discriminated unions for artifact polymorphism, `model_json_schema()` output shaping, validators vs serialisers, `Decimal` handling, schema versioning & migration | [Pydantic v2 docs](https://docs.pydantic.dev/latest/), [JSON Schema generation](https://docs.pydantic.dev/latest/concepts/json_schema/) |
+| SQLAlchemy 2.x (async) | FR-OVR-4, 07-platform | ★★ | 2.0 style `select()`, async sessions & unit of work, JSONB columns, transactional audit writes, optimistic locking with version counters | [SQLAlchemy 2.0 ORM](https://docs.sqlalchemy.org/en/20/orm/) |
+| Alembic | 07-platform | ★ | Autogenerate limits, data migrations, migrating JSONB artifact `schema_version` | [Alembic docs](https://alembic.sqlalchemy.org/) |
+| PostgreSQL 16 | FR-OVR-4, ID-1..ID-5 | ★★ | JSONB indexing (GIN), `timestamptz` and half-open ranges, exclusion constraints for effective dating, append-only tables via privileges/triggers, partitioning the trace table | [PostgreSQL 16 docs](https://www.postgresql.org/docs/16/) |
+| Celery + Redis | FR-OVR-10, 07-platform | ★★ | Task routing & queues, revocation/cancellation, progress reporting, result backends, idempotency, worker memory limits for large fits | [Celery docs](https://docs.celeryq.dev/) |
+| OpenTelemetry | 00 §5.3, NFR-OVR-5 | ★ | Trace propagation API→worker, span attributes for job/artifact ids, OTLP export | [OpenTelemetry Python](https://opentelemetry.io/docs/languages/python/) |
+
+## 2. Data engine
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| Polars | ADR-0005; 01, 02 | ★★★ | Lazy frames & query plans, expression API, strict dtypes, `group_by` aggregation idioms, joins at scale, memory profiling, Arrow interop | [Polars user guide](https://docs.pola.rs/) |
+| DuckDB | ADR-0005; profiling, PSI, dislocation | ★★ | Querying parquet directly, `read_parquet` globbing, window functions for one-ways, `QUALIFY`, extension loading, embedding in Python | [DuckDB docs](https://duckdb.org/docs/) |
+| Apache Parquet / Arrow | ADR-0005, ID-4 | ★★ | Schema evolution, row groups & predicate pushdown, dictionary encoding, decimal logical types | [Parquet format](https://parquet.apache.org/docs/), [Arrow Python](https://arrow.apache.org/docs/python/) |
+| Object storage (S3 / MinIO) | ID-4, NFR-OVR-9 | ★ | Content-addressed layout, presigned URLs, multipart upload, lifecycle rules | [MinIO docs](https://min.io/docs/minio/linux/index.html) |
+| Dagster | `pipelines/` | ★★ | Assets vs ops, partitioned assets by dataset version, schedules & sensors, resource configuration | [Dagster docs](https://docs.dagster.io/) |
+
+## 3. Actuarial / ML
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| glum | 02-modelling (GLM fitting) | ★★★ | `GeneralizedLinearRegressor` API, Tweedie/Poisson/Gamma families, log link, offsets vs weights, L1/L2 and elastic-net paths, categorical handling, standard errors | [glum docs](https://glum.readthedocs.io/) |
+| statsmodels | 02-modelling (fallback diagnostics) | ★ | GLM summary output, deviance/AIC, residual types, comparison against glum coefficients | [statsmodels GLM](https://www.statsmodels.org/stable/glm.html) |
+| XGBoost | 02-modelling, ADR-0003 | ★★★ | Custom objective gradient/hessian signature, `base_margin` for exposure offsets, `monotone_constraints`, `count:poisson`/`reg:gamma`/`reg:tweedie`, JSON model export, `DMatrix` vs `QuantileDMatrix` | [XGBoost custom objective](https://xgboost.readthedocs.io/en/stable/tutorials/custom_metric_obj.html), [Model IO](https://xgboost.readthedocs.io/en/stable/tutorials/saving_model.html) |
+| LightGBM | 02-modelling | ★★ | `fobj`/`feval` interface, `init_score` for offsets, monotone constraint modes, categorical feature handling, text model dump | [LightGBM docs](https://lightgbm.readthedocs.io/) |
+| interpret (EBM) | 02-modelling (transparent ML) | ★ | `ExplainableBoostingRegressor`, term contributions as an additive structure, exporting shape functions as tables | [InterpretML docs](https://interpret.ml/docs/) |
+| SHAP | 02-modelling (transparency artifact) | ★★ | TreeSHAP for GBMs, interaction values, cost of exact vs approximate, turning SHAP into a factor summary an actuary trusts | [SHAP docs](https://shap.readthedocs.io/) |
+| pandera | 01-data-management (structural validation) | ★★ | Polars-backed schemas, lazy validation and error reports, custom checks, schema serialisation to store with a dataset | [pandera docs](https://pandera.readthedocs.io/) |
+| Actuarial GLM practice | 02, 07 (§7 defaults) | ★★★ | Frequency/severity vs Tweedie burning cost, offsets for exposure, base level choice, credibility-weighted grouping, one-way vs multivariate distortion, lift/gains and Gini for pricing | Ohlsson & Johansson, *Non-Life Insurance Pricing with GLMs*; CAS monographs; Institute & Faculty of Actuaries GI pricing material |
+
+## 4. Rating execution
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| GoRules ZEN Engine | ADR-0004, 03-rating-engine | ★★★ | JDM graph format, decision tables, expression language & its limits, custom node/loader extension points, Python bindings & performance, tracing output | [ZEN Engine docs](https://gorules.io/docs/), [zen-engine-py](https://github.com/gorules/zen) |
+| Decimal arithmetic | FR-OVR-7 | ★★ | `decimal.Decimal` contexts, rounding modes (half-even for money), integer minor units, avoiding float contamination through JSON | [Python decimal](https://docs.python.org/3/library/decimal.html) |
+
+## 5. Frontend
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| Vue 3 Composition API | 00 §5.6 | ★★ | `<script setup lang="ts">`, composables, provide/inject, suspense for async views | [Vue 3 docs](https://vuejs.org/guide/introduction.html) |
+| Pinia | frontend state | ★ | Store composition, persisting selected dataset/model context, typed stores | [Pinia docs](https://pinia.vuejs.org/) |
+| Vite + TS strict | frontend build | ★ | Strict-mode config, path aliases, env handling, build splitting for heavy chart bundles | [Vite docs](https://vite.dev/) |
+| Tailwind | frontend styling | ★ | Design tokens, dark mode, component extraction discipline | [Tailwind docs](https://tailwindcss.com/docs) |
+| ECharts / vue-echarts | 02 diagnostics, 05 dashboards | ★★ | Large-dataset rendering, dual-axis A/E charts, custom tooltips, accessible tabular fallback (NFR-OVR-10) | [Apache ECharts](https://echarts.apache.org/en/index.html), [vue-echarts](https://github.com/ecomfe/vue-echarts) |
+| TanStack Table | 03 rate table editor | ★★ | Virtualised rows, editable cells, column pinning, diffing edits against a baseline version | [TanStack Table](https://tanstack.com/table/latest) |
+| Vue Flow | 03 DAG designer | ★★★ | Custom node/edge components, validation of graph edits, layout algorithms, undo/redo, mapping the canvas to our `RatingAlgorithm` contract | [Vue Flow docs](https://vueflow.dev/) |
+| openapi-typescript | FR-OVR-6 | ★ | Generation pipeline, `paths`/`components` typing, keeping generation in CI | [openapi-typescript](https://openapi-ts.dev/) |
+
+## 6. Quality & operations
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| pytest + hypothesis | all Python | ★★ | Property-based testing of actuarial invariants (monotonicity, additivity, decimal exactness), fixtures for artifact round-trips | [Hypothesis docs](https://hypothesis.readthedocs.io/) |
+| mypy --strict | `packages/` | ★★ | Strict-mode idioms with Pydantic v2 and Polars, typed protocols for callbacks | [mypy docs](https://mypy.readthedocs.io/) |
+| Ruff | all Python | ★ | Rule selection, line length 100, import sorting, import-linter-style layering (ADR-0001) | [Ruff docs](https://docs.astral.sh/ruff/) |
+| Vitest / Vue Testing Library / Playwright | frontend | ★ | Component testing with generated API types mocked, E2E for the DAG designer | [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) |
+| Docker Compose / Helm | `deploy/` | ★ | Local full-stack parity (NFR-OVR-9), worker scaling, MinIO wiring | [Compose docs](https://docs.docker.com/compose/) |
+
+---
+
+## 7. Research priority
+
+Ordered by *risk × unfamiliarity*, not by build order:
+
+1. **XGBoost/LightGBM custom objectives + exposure via `base_margin`** — the platform's
+   headline differentiator and the easiest place to be subtly, expensively wrong.
+2. **ZEN Engine JDM + decimal semantics** — an external format on the p99-latency path
+   (ADR-0004, OQ-RATE-1).
+3. **glum GLM API and standard errors** — actuaries will check these numbers against
+   Emblem.
+4. **Polars lazy execution at 10 M+ rows** — everything downstream inherits its
+   performance.
+5. **Pydantic v2 discriminated unions + JSON Schema** — the contract layer that all
+   generation depends on.
+6. **Vue Flow custom nodes** — the highest-effort frontend surface.
