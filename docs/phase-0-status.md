@@ -107,9 +107,11 @@ the substance of the first**; what remains is smaller and better aimed.
    the exact model, and therefore resolves OQ-MODEL-3 by force rather than by choice.
    Research sharpened the budget: Pydantic response validation alone costs ~1 ms, which
    NFR-RATE-13 now removes from the hot path.
-3. **S3 (new) — LightGBM `init_score`.** The dual-backend contract assumes `init_score` is
-   symmetric with XGBoost's `base_margin`. XGBoost's behaviour is now verified; LightGBM's
-   is **assumed**. Cheap to check, and the failure mode is the same silent one (F5).
+3. **~~S3 — LightGBM `init_score`.~~ CLOSED 2026-08-14.** The assumption was **half wrong**.
+   Symmetric at fit time — both backends include the offset in the raw score handed to a
+   custom objective. **Asymmetric at scoring time**: `Booster.predict()` has no offset
+   parameter at all, so a scoring path ported from XGBoost's API silently omits the offset
+   and under-predicts by exactly `log(exposure)`. Fixed as FR-MODEL-72 (F13).
 
 ---
 
@@ -122,10 +124,10 @@ Track A ran on 2026-08-14 with four executable spikes against real library versi
 | Outcome | Count | Detail |
 |---|---|---|
 | Open questions closed | 1 | OQ-RATE-1 |
-| **Spec defects found and fixed** | **2** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5) |
+| **Spec defects found and fixed** | **3** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5); the dual-backend scoring path assumed a symmetry that does not hold (F13) |
 | **Fabricated figure corrected** | **1** | An invented convexity percentage presented as a measurement (F4) |
 | Designs confirmed | 5 | SymPy derivation, `base_margin` semantics, glum standard errors, pandera Polars, Pydantic discriminated unions |
-| New requirements | 8 | FR-MODEL-68..71, FR-RATE-56..58, NFR-RATE-13 |
+| New requirements | 9 | FR-MODEL-68..72, FR-RATE-56..58, NFR-RATE-13 |
 
 The two defects are the return on this work: both would have surfaced in Phase 1 as
 confusing failures rather than as design decisions.

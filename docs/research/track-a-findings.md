@@ -22,6 +22,7 @@ reproducible from the description given.
 | F9 | Is pandera's Polars support production-ready? | ✓ Yes, plus a lazy backend | NFR-DATA-2 strengthened |
 | F10 | Is the Polars streaming engine safe for aggregation? | ⚠ Open memory regression | ADR-0005's split validated |
 | F11 | What actually consumes a 50 ms p99 budget? | ⚠ Pydantic on the hot path | NFR-RATE-1 guidance added |
+| F13 | Is LightGBM's `init_score` symmetric with XGBoost's `base_margin`? | ⚠ **Half** — symmetric at fit, **asymmetric at scoring** | FR-MODEL-72 added (spike S3) |
 
 ---
 
@@ -271,6 +272,47 @@ need memoised custom node components, and Web Workers are the escape hatch for h
 
 ---
 
+## F13 — LightGBM `init_score` (spike S3, LightGBM 4.7.0 / XGBoost 3.4.0) ⚠
+
+The dual-backend contract assumed `init_score` behaves like `base_margin`. **It does at fit
+time and does not at scoring time**, which is the half that matters.
+
+| Behaviour | XGBoost 3.4.0 | LightGBM 4.7.0 | Symmetric? |
+|---|---|---|---|
+| Offset included in the raw score passed to a custom objective | yes (`base_margin`) | yes (`init_score`) | **✔ yes** |
+| Implicit intercept when no offset is supplied | `base_score` = 0.5 | **0.0** — none under a custom objective | ✘ (benign) |
+| Offset can be re-supplied at prediction time | ✔ `DMatrix.set_base_margin()` | ✘ **no such parameter exists** | **✘ — the material one** |
+| Failure mode if the offset is missing at scoring | silently substitutes `base_score` | silently returns trees only | both silent, different causes |
+
+**Fit time (symmetric).** With `init_score = log(exposure)`, the raw score at iteration 0 is
+exactly `log(exposure)`. Without it, iteration 0 is `0.0` — LightGBM adds no implicit
+intercept under a custom objective, where XGBoost adds `base_score`.
+
+**Scoring time (asymmetric).** `Booster.predict()`'s parameters are
+`data, start_iteration, num_iteration, raw_score, pred_leaf, pred_contrib,
+data_has_header, validate_features` — **there is nowhere to put an offset**. Measured
+against the fitted raw score:
+
+```
+corr(predict_raw            , train_raw) = 0.449336
+corr(predict_raw + log_expo , train_raw) = 0.998968
+mean |predict_raw           - train_raw| = 0.550092
+mean |predict_raw + log_expo - train_raw| = 0.037736   (residual is the one-round lag)
+```
+
+`predict()` returns **tree contributions only**. The caller must add the offset back.
+
+**Why this is worse than it looks.** A shared "apply the offset" helper written against
+XGBoost's API sets `base_margin` on a matrix. On LightGBM there is no equivalent call, so
+the natural port is *no call at all* — and predictions are then wrong by exactly
+`log(exposure)`, with nothing raising. The XGBoost failure at least has an API surface you
+might notice you skipped; this one does not.
+
+Recorded as **FR-MODEL-72**: implement the scoring-side offset per backend, and assert on
+each backend independently that `predict(fit_data)` reproduces the fitted raw score.
+
+**Spike S3 is closed.**
+
 ## What this changes
 
 | Document | Change |
@@ -282,12 +324,14 @@ need memoised custom node components, and Web Workers are the escape hatch for h
 | [`ADR-0004`](../adr/0004-zen-engine-for-rating-execution.md) | Addendum: confirmed, residual risks named |
 | [`ADR-0005`](../adr/0005-polars-duckdb-over-pandas.md) | Addendum: split validated by the streaming regression |
 | [`contracts/README.md`](../contracts/README.md) | `oneOf`+`discriminator` is the generated shape; `Decimal` must be string-constrained |
-| [`skills-map.md`](../skills-map.md) | Version-pinned specifics replacing assumptions |
+| [`skills-map.md`](../skills-map.md) | Version-pinned specifics replacing assumptions; LightGBM row now verified |
 | [`roadmap.md`](../roadmap.md), [`phase-0-status.md`](../phase-0-status.md) | S1 re-scoped, gate counts updated |
 
 ## What Track A did not cover
 
-Items deferred, with nothing blocking on them: LightGBM's `init_score` (assumed symmetric
-with XGBoost's `base_margin` — **unverified**, and worth its own spike before Phase 1
-commits to the dual-backend contract), interpret/EBM export shapes, SHAP cost at scale,
-ZEN custom-node authoring, and the §8–§9 practice items in `skills-map.md`.
+Items deferred, with nothing blocking on them: interpret/EBM export shapes, SHAP cost at
+scale, ZEN custom-node authoring, and the §8–§9 practice items in `skills-map.md`.
+
+*(LightGBM's `init_score` was listed here as unverified; it became spike S3 and is now
+closed — see F13. The assumption of symmetry was half wrong, which is why it was worth
+running.)*

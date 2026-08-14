@@ -27,7 +27,7 @@ Three things this document deliberately does not do:
 | | |
 |---|---|
 | **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 408 requirements |
-| **Blocking Phase 1** | 7 decisions and 1 spike (§3). Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
+| **Blocking Phase 1** | **7 decisions** (§3). Spike S3 closed 2026-08-14. Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
 | **Code written** | None, by design (`CLAUDE.md` §0) |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
@@ -63,7 +63,7 @@ Evidence: [`research/track-a-findings.md`](research/track-a-findings.md).
 | Fragment | New home | Why there |
 |---|---|---|
 | Restricted AST parser for the expression grammar | **Phase 1, W5** | Nothing left to research — `02` §4.6 specifies the grammar. This is build work, and the only place user input reaches the numerical core |
-| LightGBM `init_score` symmetry | **Spike S3** (Track B) | Unverified assumption of the exact class that hid a silent failure in F5 |
+| LightGBM `init_score` symmetry | ~~Spike S3~~ **run 2026-08-14** | Symmetric at fit, **asymmetric at scoring** — `predict()` has no offset parameter. Now FR-MODEL-72 (F13) |
 | Polars 10 M-row benchmark | **Phase 1, W4 acceptance** | It is NFR-DATA-1/3, measured against real data — an acceptance test, not reading |
 | Vue Flow depth | **Phase 2 on-ramp, W15** | Does not block Phase 1; belongs with the DAG designer it serves |
 | Low-latency measurement | **Spike S2** / Phase 2 W11 | Already partly discharged into NFR-RATE-13; the rest is measurement |
@@ -89,9 +89,9 @@ S1 — see [`research/track-a-findings.md`](research/track-a-findings.md). Remai
 |---|---|---|
 | **S1 (re-scoped)** | FR-RATE-56/57 | ~~Does the engine do decimal?~~ **It does** — `rust_decimal`, ADR-0004 stands. Now: does arbitrary precision survive the Python binding in both directions, and can a rateable path reach a `maths-nopanic` sink that returns `0` instead of raising? Both failure modes are **silent**. |
 | **S2 — `exact`-mode GBM latency** | OQ-RATE-2 | Now the highest-risk remaining unknown. Determines whether production rating can ever call the model directly, which silently resolves OQ-MODEL-3. |
-| **S3 (new) — LightGBM `init_score`** | FR-MODEL-27/71 | XGBoost's offset semantics are now verified; LightGBM's are **assumed symmetric**. Research showed this exact class of assumption hides a silent wrong-answer failure. |
+| ~~**S3 — LightGBM `init_score`**~~ ✔ **CLOSED 2026-08-14** | FR-MODEL-72 | The assumption was **half wrong**: symmetric at fit time, but `Booster.predict()` has no offset parameter at all, so a scoring path ported from XGBoost silently omits the offset entirely. Fixed as FR-MODEL-72 (F13). |
 
-All three are small — days, not weeks — and cheap insurance against a Phase 2 rewrite.
+S1 and S2 remain — small, days not weeks, and cheap insurance against a Phase 2 rewrite. S3 is done.
 
 ### Track C — The decision backlog, sequenced
 
@@ -125,7 +125,7 @@ Everything still open before Phase 1 can start, in one place. Tracks A–C above
 | **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | W4, only if the first dataset is large |
 | **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1? | decision | maintainer | W5 scope, materially |
 | **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | W5 grouping implementation |
-| **8** | **S3** — LightGBM `init_score` symmetry | spike | — | The dual-backend contract (FR-MODEL-27/71) |
+| ~~8~~ | ~~**S3** — LightGBM `init_score` symmetry~~ ✔ **done 2026-08-14** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
 | **9** | **Phase 1 split** — accept or reject 1a/1b (§5 recommendation) | decision | maintainer | How Phase 1 is planned |
 
 **Not blocking Phase 1, but do not lose them:**
@@ -140,7 +140,7 @@ Everything still open before Phase 1 can start, in one place. Tracks A–C above
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
 audit are complete and passing; the remaining Phase 0 work is entirely decisions and
-spikes — nine items, of which seven are decisions only the maintainer can make.
+spikes — eight items, of which **seven are decisions only the maintainer can make** — the spike backlog for Phase 1 is now empty.
 
 ---
 
