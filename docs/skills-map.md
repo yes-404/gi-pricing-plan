@@ -40,12 +40,16 @@ where the project's hard problems live.
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| glum | 02-modelling (GLM fitting) | ★★★ | `GeneralizedLinearRegressor` API, Tweedie/Poisson/Gamma families, log link, offsets vs weights, L1/L2 and elastic-net paths, categorical handling, standard errors | [glum docs](https://glum.readthedocs.io/) |
-| statsmodels | 02-modelling (fallback diagnostics) | ★ | GLM summary output, deviance/AIC, residual types, comparison against glum coefficients | [statsmodels GLM](https://www.statsmodels.org/stable/glm.html) |
-| XGBoost | 02-modelling, ADR-0003 | ★★★ | Custom objective gradient/hessian signature, `base_margin` for exposure offsets, `monotone_constraints`, `count:poisson`/`reg:gamma`/`reg:tweedie`, JSON model export, `DMatrix` vs `QuantileDMatrix` | [XGBoost custom objective](https://xgboost.readthedocs.io/en/stable/tutorials/custom_metric_obj.html), [Model IO](https://xgboost.readthedocs.io/en/stable/tutorials/saving_model.html) |
-| LightGBM | 02-modelling | ★★ | `fobj`/`feval` interface, `init_score` for offsets, monotone constraint modes, categorical feature handling, text model dump | [LightGBM docs](https://lightgbm.readthedocs.io/) |
-| interpret (EBM) | 02-modelling (transparent ML) | ★ | `ExplainableBoostingRegressor`, term contributions as an additive structure, exporting shape functions as tables | [InterpretML docs](https://interpret.ml/docs/) |
-| SHAP | 02-modelling (transparency artifact) | ★★ | TreeSHAP for GBMs, interaction values, cost of exact vs approximate, turning SHAP into a factor summary an actuary trusts | [SHAP docs](https://shap.readthedocs.io/) |
+| glum | 02 FR-MODEL-18..24 | ★★★ | `GeneralizedLinearRegressor` API, Tweedie/Poisson/Gamma families, log link, offsets vs weights (they are not interchangeable), elastic-net CV paths, categorical handling, **extracting the covariance matrix for standard errors (FR-MODEL-21)**, detecting rank deficiency and separation | [glum docs](https://glum.readthedocs.io/), [glum GLM tutorial](https://glum.readthedocs.io/en/latest/tutorials/glm_intro_tutorial/glm_intro.html) |
+| statsmodels | 02 FR-MODEL-51 fallback diagnostics | ★ | GLM summary output, type-III deviance tests, residual types (deviance/Pearson/standardised), leverage and Cook's distance, cross-checking glum coefficients | [statsmodels GLM](https://www.statsmodels.org/stable/glm.html) |
+| XGBoost | 02 FR-MODEL-25..32, ADR-0003 | ★★★ | Custom objective `(grad, hess)` signature and its exact shape contract, `base_margin` for exposure offsets (FR-MODEL-27), `monotone_constraints` and `interaction_constraints`, `count:poisson`/`reg:gamma`/`reg:tweedie`, JSON model export, `DMatrix` vs `QuantileDMatrix` memory behaviour | [Custom objective tutorial](https://xgboost.readthedocs.io/en/stable/tutorials/custom_metric_obj.html), [Model IO](https://xgboost.readthedocs.io/en/stable/tutorials/saving_model.html), [Monotonic constraints](https://xgboost.readthedocs.io/en/stable/tutorials/monotonic.html) |
+| LightGBM | 02 FR-MODEL-25..32 | ★★ | `fobj`/`feval` interface, `init_score` as the exposure offset, monotone constraint methods (`basic`/`intermediate`/`advanced`) and how they differ from XGBoost's, native categorical handling, text model dump | [LightGBM docs](https://lightgbm.readthedocs.io/), [Parameters](https://lightgbm.readthedocs.io/en/latest/Parameters.html) |
+| interpret (EBM) | 02 FR-MODEL-37 | ★ | `ExplainableBoostingRegressor`, term contributions as an additive structure, exporting shape functions directly as rateable tables | [InterpretML docs](https://interpret.ml/docs/) |
+| SHAP | 02 FR-MODEL-35 transparency artifact | ★★ | TreeSHAP for GBMs, interaction values and their cost, exposure-weighted dependence summaries, turning SHAP output into a factor summary an actuary will actually sign | [SHAP docs](https://shap.readthedocs.io/), [TreeSHAP paper](https://arxiv.org/abs/1802.03888) |
+| **SymPy** | 02 FR-MODEL-40 objective derivation | ★★★ | Symbolic differentiation, differentiating `Piecewise` (what `where()` compiles to), simplification that keeps expressions reviewable, code generation into our own expression tree rather than `lambdify` | [SymPy docs](https://docs.sympy.org/latest/index.html), [Piecewise](https://docs.sympy.org/latest/modules/functions/elementary.html#piecewise) |
+| **Python `ast` / restricted parsing** | 02 §4.6 grammar; 01 FR-DATA-10 | ★★★ | Allow-list node walking, depth/size limits, why `eval`/`compile`/`literal_eval` on user input is not acceptable, position-accurate error reporting, sandbox threat modelling | [ast module](https://docs.python.org/3/library/ast.html), [Green Tree Snakes](https://greentreesnakes.readthedocs.io/) |
+| **NumPy (numerics discipline)** | 02 FR-MODEL-48 objective evaluation | ★★ | Vectorised allocation-conscious gradient/hessian evaluation, `np.errstate` around log/exp edges, detecting NaN/inf early, float64 vs float32 in boosting | [NumPy docs](https://numpy.org/doc/stable/) |
+| **Credibility theory** | 02 FR-MODEL-14, OQ-MODEL-5 | ★★ | Limited fluctuation (full/partial credibility standards) vs Bühlmann–Straub variance components; what a UK reviewer expects to see in a grouping justification | Klugman, Panjer & Willmot, *Loss Models*; CAS credibility study notes |
 | pandera | 01-data-management FR-DATA-16, VR-STR-* | ★★ | Polars-backed schemas, lazy validation to collect all errors in one pass, custom checks, serialising a schema to store with a Dataset Version | [pandera docs](https://pandera.readthedocs.io/), [Polars backend](https://pandera.readthedocs.io/en/stable/polars.html) |
 | SciPy (stats) | 01 FR-DATA-26 one-way CIs | ★ | Exact Poisson and Gamma confidence intervals at low claim counts (not normal approximations) | [scipy.stats](https://docs.scipy.org/doc/scipy/reference/stats.html) |
 | PSI / KS / stability metrics | 01 VR-DST-*, 05-monitoring | ★★ | PSI binning choices and their sensitivity, exposure-weighted vs count-weighted PSI, KS for continuous columns, thresholds that mean something in a pricing book | Siddiqi, *Credit Risk Scorecards* (PSI); [Evidently drift docs](https://docs.evidentlyai.com/) as a reference implementation to compare against |
@@ -87,8 +91,11 @@ where the project's hard problems live.
 
 Ordered by *risk × unfamiliarity*, not by build order:
 
-1. **XGBoost/LightGBM custom objectives + exposure via `base_margin`** — the platform's
-   headline differentiator and the easiest place to be subtly, expensively wrong.
+1. **Custom objectives end-to-end** — the restricted AST parser, SymPy derivation of
+   gradients/hessians, and the certification checks (02 §4.6–4.7), plus XGBoost/LightGBM
+   `base_margin`/`init_score` mechanics. The platform's headline differentiator, the
+   easiest place to be subtly and expensively wrong, and the only place user input
+   reaches the numerical core.
 2. **ZEN Engine JDM + decimal semantics** — an external format on the p99-latency path
    (ADR-0004, OQ-RATE-1).
 3. **glum GLM API and standard errors** — actuaries will check these numbers against
