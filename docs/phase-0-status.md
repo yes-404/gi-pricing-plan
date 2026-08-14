@@ -9,6 +9,9 @@ documents alone.*
 
 ## 1. Exit criteria
 
+> **Track A research is closed** (2026-08-14). Remaining Phase 0 work is **7 decisions and
+> 1 spike** — see [`roadmap.md`](roadmap.md) §3 "Outstanding work — consolidated".
+
 | Criterion | Status | Note |
 |---|---|---|
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
