@@ -21,9 +21,12 @@ where the project's hard problems live.
 | FastAPI | 00 §5, all module Interfaces sections | ★★ | Async endpoints, dependency injection for auth/session, `202 Accepted` + job pattern, OpenAPI customisation, streaming responses | [FastAPI docs](https://fastapi.tiangolo.com/), [Advanced OpenAPI](https://fastapi.tiangolo.com/advanced/extending-openapi/) |
 | Pydantic v2 | ADR-0002, FR-OVR-6 | ★★★ | Discriminated unions for artifact polymorphism, `model_json_schema()` output shaping, validators vs serialisers, `Decimal` handling, schema versioning & migration | [Pydantic v2 docs](https://docs.pydantic.dev/latest/), [JSON Schema generation](https://docs.pydantic.dev/latest/concepts/json_schema/) |
 | SQLAlchemy 2.x (async) | FR-OVR-4, 07-platform | ★★ | 2.0 style `select()`, async sessions & unit of work, JSONB columns, transactional audit writes, optimistic locking with version counters | [SQLAlchemy 2.0 ORM](https://docs.sqlalchemy.org/en/20/orm/) |
-| Alembic | 07-platform | ★ | Autogenerate limits, data migrations, migrating JSONB artifact `schema_version` | [Alembic docs](https://alembic.sqlalchemy.org/) |
+| Alembic | 07 FR-PLAT-35 | ★★ | Autogenerate limits, data migrations, migrating JSONB artifact `schema_version`, **forward-compatible migrations so a rolling deploy runs the previous app version against the new schema** | [Alembic docs](https://alembic.sqlalchemy.org/) |
+| OIDC / OAuth2 for SPAs | 07 FR-PLAT-1..4 | ★★ | Authorisation code + PKCE, refresh handling, why tokens stay out of `localStorage`, claim-to-role mapping, running Keycloak locally | [OAuth 2.0 for browser apps](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-browser-based-apps), [Keycloak docs](https://www.keycloak.org/documentation) |
+| Server-sent events (SSE) | 07 FR-PLAT-8, §5.1 | ★ | Streaming job progress from FastAPI, reconnection semantics, proxy buffering pitfalls | [MDN SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) |
+| S3 presigned uploads | 07 FR-PLAT-21 | ★ | Multipart presigned URLs, expiry and scope, keeping large dataset bytes out of the API process | [S3 presigned URLs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html) |
 | PostgreSQL 16 | FR-OVR-4, ID-1..ID-5, FR-DATA-29 | ★★ | JSONB indexing (GIN), `timestamptz` and half-open ranges, **exclusion constraints with `daterange` for reference-table effective dating**, append-only tables via privileges/triggers, partitioning the trace table | [PostgreSQL 16 docs](https://www.postgresql.org/docs/16/), [Exclusion constraints](https://www.postgresql.org/docs/16/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION) |
-| Celery + Redis | FR-OVR-10, 07-platform | ★★ | Task routing & queues, revocation/cancellation, progress reporting, result backends, idempotency, worker memory limits for large fits | [Celery docs](https://docs.celeryq.dev/) |
+| Celery + Redis | FR-OVR-10, 07 FR-PLAT-7..16 | ★★ | Queue routing by job kind, **revocation and cooperative cancellation**, progress reporting, result backends, idempotency keys, worker memory limits for large fits, and the enqueue-vs-transaction failure mode driving OQ-PLAT-1 | [Celery docs](https://docs.celeryq.dev/), [procrastinate](https://procrastinate.readthedocs.io/) (the Postgres-queue alternative) |
 | OpenTelemetry | 00 §5.3, NFR-OVR-5 | ★ | Trace propagation API→worker, span attributes for job/artifact ids, OTLP export | [OpenTelemetry Python](https://opentelemetry.io/docs/languages/python/) |
 
 ## 2. Data engine
@@ -87,6 +90,15 @@ where the project's hard problems live.
 | TanStack Table | 03 rate table editor | ★★ | Virtualised rows, editable cells, column pinning, diffing edits against a baseline version | [TanStack Table](https://tanstack.com/table/latest) |
 | Vue Flow | 03 §5.3 DAG designer | ★★★ | Custom node components per step type, showing validation errors *on the node*, edge derivation from produces/consumes names rather than hand-drawn arrows, auto-layout, undo/redo, structural diff overlay | [Vue Flow docs](https://vueflow.dev/), [Custom nodes](https://vueflow.dev/guide/node.html) |
 | openapi-typescript | FR-OVR-6 | ★ | Generation pipeline, `paths`/`components` typing, keeping generation in CI | [openapi-typescript](https://openapi-ts.dev/) |
+
+## 5b. Governance & security
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| Append-only tables in PostgreSQL | 06 FR-GOV-22, NFR-OVR-5 | ★★ | Revoking `UPDATE`/`DELETE` from the application role, `BEFORE UPDATE` triggers as a second line, partitioning an audit table by month while keeping it append-only | [PostgreSQL privileges](https://www.postgresql.org/docs/16/ddl-priv.html), [Row-level triggers](https://www.postgresql.org/docs/16/plpgsql-trigger.html) |
+| Hash-chained audit logs | 06 FR-GOV-24, OQ-GOV-1 | ★★ | Canonical JSON serialisation so hashes are stable, chain verification cost over 100 M events, what tamper-*evidence* does and does not prove, external anchoring options | [RFC 8785 JSON Canonicalization](https://datatracker.ietf.org/doc/html/rfc8785), [Certificate Transparency](https://certificate.transparency.dev/) as a design reference |
+| Separation-of-duties enforcement | 06 R1, NFR-GOV-8 | ★★ | Enforcing in the service layer rather than the UI, negative testing (proving a submitter *cannot* approve), scoped permission checks as a FastAPI dependency | [OWASP ASVS — access control](https://owasp.org/www-project-application-security-verification-standard/) |
+| Deterministic document generation | 06 FR-GOV-29/30, NFR-GOV-5 | ★ | HTML→PDF with embedded fonts, byte-reproducible output, rendering charts server-side from the same artifacts the UI uses, point-in-time regeneration | [WeasyPrint](https://weasyprint.org/), [Typst](https://typst.app/docs/) |
 
 ## 6. Quality & operations
 
