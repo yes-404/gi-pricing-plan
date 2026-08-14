@@ -10,6 +10,14 @@ dependencies = [
     # import-linter contract enforces that, and `01` §5.2 requires these functions to be
     # callable without the platform.
     "polars>=1.9",
+    # FR-DATA-27: profiles are computed with DuckDB directly over the version's parquet.
+    "duckdb>=1.1",
+    # Polars needs it for the parquet interchange DuckDB reads back (FR-DATA-27).
+    "pyarrow>=17",
+    # FR-DATA-26 wants Poisson and Gamma confidence intervals. Exact intervals need the
+    # chi-square and gamma quantiles; a normal approximation is wrong exactly where it
+    # matters, on the low-count cells an actuary is most cautious about.
+    "scipy>=1.14",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and

@@ -31,6 +31,9 @@ dev = [
     # Same reasoning for Celery: the task decorators are untyped without these, and
     # --strict then treats every task function as untyped.
     "celery-types>=0.22",
+    # SciPy's own stubs. Without them `from scipy import stats` is an untyped import and
+    # --strict rejects every call into it.
+    "scipy-stubs>=1.14",
 ]
 
 # ---- Ruff: CLAUDE.md §3, line length 100 ----
