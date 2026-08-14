@@ -187,7 +187,7 @@ Reconciles with the roadmap's claim of "~N" / *differs, because …*
 | … | … |
 
 **Gate:** ruff clean · mypy --strict clean · N contracts kept, 0 broken · N tests pass ·
-docs audit 14/14 · req-coverage N requirements
+docs audit 15/15 · req-coverage N requirements
 
 **Requirement coverage:** X of N in-scope requirements carry test evidence (Y %).
 
