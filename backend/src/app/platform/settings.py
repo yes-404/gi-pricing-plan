@@ -187,8 +187,11 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         key="features.sql_validation_check_enabled",
         type=SettingType.BOOL,
         default=False,
-        description="Validation rules expressed as SQL (`01` OQ-DATA-3). Off by default "
-        "for the same reason: it executes user-authored code against the dataset.",
+        description="Validation rules expressed as SQL (`01` §4.5). Off by default: it "
+        "executes user-authored code against the dataset. OQ-DATA-3 was decided on "
+        "2026-08-14 — the check is kept, but Admin-authored, single-Approver, and behind "
+        "this flag, so a workspace that never needs the escape hatch never carries its "
+        "risk.",
         feature_flag=True,
     ),
 )

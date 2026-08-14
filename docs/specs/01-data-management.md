@@ -345,10 +345,24 @@ vocabulary — never arbitrary code (governance parity with custom objectives, A
    Dataset Version, and the dry-run result is attached to the approval request.
 3. Submitted → `review` → approved by an Approver (never the author).
 4. `approved` rules are immutable; edits create a new rule version needing re-approval.
-5. The `sql` check carries extra controls: parsed and rejected if it contains anything but
-   a single `SELECT`, executed against a read-only DuckDB connection with no filesystem or
-   extension access, and subject to a hard time budget (FR-DATA-19). It is the only check
-   requiring two approvers (see OQ-DATA-3).
+5. The `sql` check carries extra controls (**OQ-DATA-3, decided 2026-08-14**):
+
+   - **Authored by an Admin only** — not by an Analyst or Actuary as in step 1. The
+     control that matters is how few people can write one, not how many must approve it.
+   - **A single Approver**, as for every other rule. Requiring two was the original
+     proposal and was dropped: dual approval on a check nobody may author anyway adds
+     ceremony without adding a decision, and ceremony is what turns review into signature.
+   - **Gated by the `features.sql_validation_check_enabled` workspace setting, which
+     defaults to off** (`07` FR-PLAT-46). A workspace that never needs the escape hatch
+     never carries its risk.
+   - Parsed and rejected if it contains anything but a single `SELECT`; executed against a
+     read-only DuckDB connection with no filesystem or extension access; subject to a hard
+     time budget (FR-DATA-19).
+
+   The declarative checks cover the great majority of real rules. This exists for the
+   remainder, and is deliberately expensive to reach for. **Revisit after Phase 1** with
+   evidence of what it was actually used for — if the answer is "nothing the declarative
+   checks could not express", it should go.
 
 ### 4.6 `ValidationReport`
 
@@ -648,7 +662,7 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 |---|---|
 | **OQ-DATA-1** | Should large-loss handling (capping, spreading above a threshold) be a *preparation* step baked into the dataset, or a *modelling* decision applied at fit time? Baking it in makes exposure/claims totals consistent everywhere; applying it at fit time lets one dataset serve multiple capping assumptions. |
 | **OQ-DATA-2** | Do we support incremental/append ingestion (adding a new month to an existing version) or is every version a full snapshot? Full snapshots are simpler and match immutability; append is far cheaper for a 10-year book refreshed monthly. |
-| **OQ-DATA-3** | Does the `sql` custom check earn its keep given the sandboxing burden, and if kept, is dual approval the right control or should it be admin-only? |
+| ~~**OQ-DATA-3**~~ ✔ | ~~Does the `sql` custom check earn its keep, and if kept, is dual approval the right control or should it be admin-only?~~ **Decided 2026-08-14: kept, Admin-authored, single Approver, behind a workspace flag defaulting to off (§4.5). Revisit after Phase 1.** |
 | **OQ-DATA-4** | Where do IBNR / claims-development adjustments live — a preparation step producing developed claim amounts, a modelling offset, or out of scope entirely (user supplies developed data)? `VR-ACT-14` currently only *warns*. |
 | **OQ-DATA-5** | Should the platform hold the ONS/ABI reference sets as shipped data, given their licensing terms, or only ship loaders and require the user to supply the files? |
 | **OQ-DATA-6** | Is `warn` acknowledgement per-rule-per-report the right granularity, or should an actuary be able to pre-approve a recurring known warning for a defined period (with expiry) to avoid acknowledgement fatigue? |
