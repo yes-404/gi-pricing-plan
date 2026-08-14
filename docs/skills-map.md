@@ -59,8 +59,10 @@ where the project's hard problems live.
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| GoRules ZEN Engine | ADR-0004, 03-rating-engine | ★★★ | JDM graph format, decision tables, expression language & its limits, custom node/loader extension points, Python bindings & performance, tracing output | [ZEN Engine docs](https://gorules.io/docs/), [zen-engine-py](https://github.com/gorules/zen) |
-| Decimal arithmetic | FR-OVR-7 | ★★ | `decimal.Decimal` contexts, rounding modes (half-even for money), integer minor units, avoiding float contamination through JSON | [Python decimal](https://docs.python.org/3/library/decimal.html) |
+| GoRules ZEN Engine | ADR-0004, 03 FR-RATE-1..13 | ★★★ | JDM graph format, decision tables, expression language and its numeric semantics (**OQ-RATE-1**), custom node / loader extension points for rate-table lookup and `model_call`, Python binding overhead at 200 rps, native trace output | [ZEN Engine docs](https://gorules.io/docs/), [zen-engine-py](https://github.com/gorules/zen) |
+| Decimal arithmetic | FR-OVR-7, 03 FR-RATE-29/32 | ★★ | `decimal.Decimal` contexts, `ROUND_HALF_EVEN` for money, integer minor units and their exact float64 range, avoiding float contamination through JSON serialisation, proving a premium ladder reconciles to the penny | [Python decimal](https://docs.python.org/3/library/decimal.html), [What Every Computer Scientist Should Know About Floating-Point](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html) |
+| **Redis (cache semantics)** | 03 FR-RATE-51, NFR-RATE-6 | ★★ | Cache warming before an atomic bundle switchover, content-hash keying, memory sizing for 500 MB bundles, eviction policy that must never evict the live bundle | [Redis docs](https://redis.io/docs/latest/) |
+| **Low-latency Python serving** | 03 NFR-RATE-1 | ★★★ | Where a 50 ms p99 budget actually goes: Pydantic validation cost on the hot path, single-row GBM inference, thread pinning and BLAS contention, async vs sync endpoints for CPU-bound work, GIL behaviour under 200 rps | [FastAPI concurrency](https://fastapi.tiangolo.com/async/), [XGBoost inference notes](https://xgboost.readthedocs.io/en/stable/prediction.html) |
 
 ## 5. Frontend
 
@@ -72,14 +74,14 @@ where the project's hard problems live.
 | Tailwind | frontend styling | ★ | Design tokens, dark mode, component extraction discipline | [Tailwind docs](https://tailwindcss.com/docs) |
 | ECharts / vue-echarts | 02 diagnostics, 05 dashboards | ★★ | Large-dataset rendering, dual-axis A/E charts, custom tooltips, accessible tabular fallback (NFR-OVR-10) | [Apache ECharts](https://echarts.apache.org/en/index.html), [vue-echarts](https://github.com/ecomfe/vue-echarts) |
 | TanStack Table | 03 rate table editor | ★★ | Virtualised rows, editable cells, column pinning, diffing edits against a baseline version | [TanStack Table](https://tanstack.com/table/latest) |
-| Vue Flow | 03 DAG designer | ★★★ | Custom node/edge components, validation of graph edits, layout algorithms, undo/redo, mapping the canvas to our `RatingAlgorithm` contract | [Vue Flow docs](https://vueflow.dev/) |
+| Vue Flow | 03 §5.3 DAG designer | ★★★ | Custom node components per step type, showing validation errors *on the node*, edge derivation from produces/consumes names rather than hand-drawn arrows, auto-layout, undo/redo, structural diff overlay | [Vue Flow docs](https://vueflow.dev/), [Custom nodes](https://vueflow.dev/guide/node.html) |
 | openapi-typescript | FR-OVR-6 | ★ | Generation pipeline, `paths`/`components` typing, keeping generation in CI | [openapi-typescript](https://openapi-ts.dev/) |
 
 ## 6. Quality & operations
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| pytest + hypothesis | all Python | ★★ | Property-based testing of actuarial invariants (monotonicity, additivity, decimal exactness), fixtures for artifact round-trips | [Hypothesis docs](https://hypothesis.readthedocs.io/) |
+| pytest + hypothesis | all Python; 03 FR-RATE-44 | ★★ | Property-based testing of actuarial invariants (monotonicity, additivity, decimal exactness), **building strategies from a declarative input contract**, shrinking counterexamples into something an actuary can read, fixtures for artifact round-trips | [Hypothesis docs](https://hypothesis.readthedocs.io/), [Composite strategies](https://hypothesis.readthedocs.io/en/latest/data.html#composite-strategies) |
 | mypy --strict | `packages/` | ★★ | Strict-mode idioms with Pydantic v2 and Polars, typed protocols for callbacks | [mypy docs](https://mypy.readthedocs.io/) |
 | Ruff | all Python | ★ | Rule selection, line length 100, import sorting, import-linter-style layering (ADR-0001) | [Ruff docs](https://docs.astral.sh/ruff/) |
 | Vitest / Vue Testing Library / Playwright | frontend | ★ | Component testing with generated API types mocked, E2E for the DAG designer | [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) |
@@ -105,3 +107,5 @@ Ordered by *risk × unfamiliarity*, not by build order:
 5. **Pydantic v2 discriminated unions + JSON Schema** — the contract layer that all
    generation depends on.
 6. **Vue Flow custom nodes** — the highest-effort frontend surface.
+7. **Low-latency Python serving** — the 50 ms p99 budget (NFR-RATE-1) is the one NFR
+   that cannot be fixed later by adding hardware alone.
