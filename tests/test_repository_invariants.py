@@ -121,3 +121,38 @@ def test_the_governance_negative_tests_exist_in_ci() -> None:
     }
     missing = [name for name, pattern in required.items() if not re.search(pattern, suite)]
     assert missing == [], f"negative tests missing for: {missing}"
+
+
+@pytest.mark.req("FR-PLAT-47")
+def test_the_error_code_registry_matches_the_specs() -> None:
+    """Every code a module declares it owns is registered, and no code is invented.
+
+    Written after four codes were invented for `01` in one sitting — plausible names for
+    conditions the spec had already named differently. `PlatformError` validates against
+    the registry, so an unregistered code fails loudly; an *extra* one does not, and would
+    reach a client as something no spec documents.
+    """
+    import re
+    import sys
+
+    sys.path.insert(0, str(ROOT / "backend" / "src"))
+    from app.errors import DATA_ERROR_CODES, GOVERNANCE_ERROR_CODES, PLATFORM_ERROR_CODES
+
+    registries = {
+        "01-data-management.md": DATA_ERROR_CODES,
+        "06-governance.md": GOVERNANCE_ERROR_CODES,
+        "07-platform.md": PLATFORM_ERROR_CODES,
+    }
+
+    for filename, registry in registries.items():
+        spec = (ROOT / "docs" / "specs" / filename).read_text(encoding="utf-8")
+        marker = "**Error codes owned by this module:**"
+        start = spec.index(marker)
+        # The declaration runs to the blank line that ends the paragraph.
+        block = spec[start : spec.index("\n\n", start)]
+        declared = set(re.findall(r"`([A-Z][A-Z0-9_]{2,})`", block))
+        assert declared, filename
+        assert declared == set(registry), (
+            f"{filename}: spec-only {sorted(declared - set(registry))}, "
+            f"registry-only {sorted(set(registry) - declared)}"
+        )

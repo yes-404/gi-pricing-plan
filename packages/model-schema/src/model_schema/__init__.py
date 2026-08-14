@@ -21,6 +21,16 @@ from model_schema.audit import (
     canonical_payload,
     compute_event_hash,
 )
+from model_schema.datasets import (
+    TERMINAL_DATASET_STATUSES,
+    VALID_DATASET_TRANSITIONS,
+    DatasetKind,
+    DatasetStatus,
+    DatasetTable,
+    DatasetVersion,
+    SourceKind,
+    VersionTotals,
+)
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
 from model_schema.jobs import (
@@ -62,8 +72,10 @@ __all__ = [
     "BUILTIN_ROLES",
     "DEFAULT_POLICY",
     "READ_PERMISSIONS",
+    "TERMINAL_DATASET_STATUSES",
     "TERMINAL_STATUSES",
     "VALID_APPROVAL_TRANSITIONS",
+    "VALID_DATASET_TRANSITIONS",
     "VALID_TRANSITIONS",
     "ActorKind",
     "ApprovalDecision",
@@ -77,6 +89,10 @@ __all__ = [
     "AuditEventCore",
     "BlobRef",
     "Currency",
+    "DatasetKind",
+    "DatasetStatus",
+    "DatasetTable",
+    "DatasetVersion",
     "DecimalStr",
     "DecisionKind",
     "FieldError",
@@ -102,6 +118,8 @@ __all__ = [
     "SettingSource",
     "SettingType",
     "Slug",
+    "SourceKind",
+    "VersionTotals",
     "apply_factor",
     "canonical_payload",
     "compute_event_hash",

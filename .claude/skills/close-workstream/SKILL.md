@@ -106,6 +106,11 @@ uv run lint-imports          # MUST report a broken contract
 git checkout -- packages/pricing_core/src/pricing_core/money.py
 ```
 
+**Restore by the method that matches the file's state.** `git checkout -- <path>` silently
+fails on an **untracked** file — a new module in the slice you are testing — and prints an
+error that is easy to skim past while the sabotage stays in place. Copy the file aside
+first, or check `git status` after restoring rather than trusting the command.
+
 This is not paranoia. `.importlinter` was silently dead for a day: `root_packages` was
 comma-separated on one line, so the ini parser split it character by character and looked
 for a package named `m`. It reported success while enforcing nothing.
