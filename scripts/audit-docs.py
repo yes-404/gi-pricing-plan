@@ -10,6 +10,12 @@ Checks (all non-destructive, exit 1 on any failure):
   6. Every spec has the ten sections required by CLAUDE.md §5.
   7. Every JSON Schema parses and has no duplicate keys.
   8. Every JSON Schema $ref resolves, including cross-file pointers into $defs.
+  9. Cross-spec section references ("01 §4.5") point at sections that exist.
+ 10. No error code is claimed as owned by more than one module.
+ 11. Module dependency direction respects DEP-1 (no consuming from the right).
+ 12. Money fields (*_minor) are never written as fractional numbers.
+ 13. Terms are not redefined in a module glossary after 00-overview defines them.
+ 14. Every module is exercised by at least one workflow, above a coverage floor.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -169,6 +175,119 @@ def main() -> int:
         if f.resolve() in loaded:
             walk(loaded[f.resolve()], f.resolve())
     notes.append(f"{len(loaded)} JSON schemas parsed, $refs checked")
+
+    # ------------------------------------------------------------------ 9-14
+    SPEC_BY_CODE = {
+        "00": "00-overview.md", "01": "01-data-management.md",
+        "02": "02-modelling.md", "03": "03-rating-engine.md",
+        "04": "04-optimisation.md", "05": "05-monitoring.md",
+        "06": "06-governance.md", "07": "07-platform.md",
+    }
+    spec_text = {f.name: f.read_text() for f in specs}
+
+    # 9. cross-spec section references, e.g. `01` §4.5  /  02 §3.2
+    sec_re = re.compile(r"`?(0[0-7])`?[^\n]{0,24}?§(\d+(?:\.\d+)*)")
+    for f in md:
+        for m in sec_re.finditer(f.read_text()):
+            code, sec = m.group(1), m.group(2)
+            target = SPEC_BY_CODE[code]
+            body = spec_text.get(target, "")
+            top = sec.split(".")[0]
+            # a heading "## N." must exist; sub-sections may be "### N.M"
+            if not re.search(rf"^#{{2,4}} {re.escape(sec)}[.\s]", body, re.M) and \
+               not re.search(rf"^#{{2,4}} {re.escape(top)}\.", body, re.M):
+                fail(f"{f.relative_to(ROOT)}: reference to {code} §{sec} — no such section in {target}")
+
+    # 10. error-code ownership is exclusive
+    owner: dict[str, str] = {}
+    code_re = re.compile(r"\*\*Error codes owned by this module:\*\*(.+?)(?:\n\n|###)", re.S)
+    for f in specs:
+        m = code_re.search(f.read_text())
+        if not m:
+            continue
+        block = m.group(1)
+        for cm in re.finditer(r"`([A-Z][A-Z0-9_]{3,})`(\s*\(re-raised from[^)]*\))?", block):
+            code, reraised = cm.group(1), bool(cm.group(2))
+            if reraised:
+                continue  # explicitly borrowed from the owning module
+            if code in owner and owner[code] != f.name:
+                fail(f"error code {code} claimed by both {owner[code]} and {f.name} "
+                     f"— annotate one as '(re-raised from `NN`)' or give ownership to one module")
+            owner.setdefault(code, f.name)
+    notes.append(f"{len(owner)} error codes, ownership exclusive")
+
+    # 11. DEP-1 build order: a module must not consume from a module to its right
+    ORDER = ["PLAT", "GOV", "DATA", "MODEL", "RATE", "OPT", "MON"]
+    CODE_OF = {"01": "DATA", "02": "MODEL", "03": "RATE", "04": "OPT",
+               "05": "MON", "06": "GOV", "07": "PLAT"}
+    for f in specs:
+        code = f.name[:2]
+        if code not in CODE_OF:
+            continue
+        me = CODE_OF[code]
+        body = f.read_text()
+        m = re.search(r"### 7\.1 (?:This module )?[Cc]onsumes(.*?)### 7\.2", body, re.S)
+        if not m:
+            continue
+        for row in m.group(1).splitlines():
+            if not row.startswith("| `"):
+                continue
+            src = re.match(r"\| `(\d\d)", row)
+            if not src or src.group(1) not in CODE_OF:
+                continue
+            other = CODE_OF[src.group(1)]
+            if ORDER.index(other) <= ORDER.index(me):
+                continue
+            # DEP-1a: GOV's audit sink and permission check are cross-cutting interfaces
+            if other == "GOV" and re.search(r"audit|permission|authoris|authoriz|RBAC", row, re.I):
+                continue
+            fail(f"{f.name}: DEP-1 violation — {me} consumes from {other}, which is to its right")
+
+    # 12. money discipline: *_minor fields must never be fractional
+    money_re = re.compile(r'"(\w*_minor)"\s*:\s*(-?\d+\.\d+)')
+    for f in list(md) + schemas:
+        for m in money_re.finditer(f.read_text()):
+            fail(f"{f.relative_to(ROOT)}: {m.group(1)} written as fractional {m.group(2)} (FR-OVR-7)")
+
+    # 13. glossary terms not redefined downstream
+    def terms(body: str, section: str) -> set[str]:
+        m = re.search(rf"^## {section}\..*?$(.*?)^## ", body, re.S | re.M)
+        if not m:
+            return set()
+        return {t.strip().lower() for t in re.findall(r"^\| \*\*(.+?)\*\* \|", m.group(1), re.M)}
+    canon = terms(spec_text["00-overview.md"], "2")
+    for f in specs:
+        if f.name == "00-overview.md":
+            continue
+        for t in terms(f.read_text(), "2") & canon:
+            fail(f"{f.name}: glossary term '{t}' is already defined in 00-overview.md §2 — reference it, do not redefine")
+
+    # 14. workflow coverage per module
+    #
+    # Most requirements are property-level ("TLS 1.3", "normalise to snake_case") and a
+    # workflow legitimately never cites them — journeys cite step-level requirements.
+    # So raw orphan count is not a defect signal. What IS a defect is a module no
+    # workflow exercises at all, or coverage collapsing for one module while others
+    # hold. The floor catches both; it is deliberately low.
+    COVERAGE_FLOOR = 0.10
+    wf_text = "\n".join(f.read_text() for f in ROOT.glob("workflows/*.md"))
+    per_mod: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0])
+    for rid in defined:
+        if rid.startswith("NFR-"):
+            continue
+        mod = rid.split("-")[1]
+        per_mod[mod][1] += 1
+        if rid in wf_text:
+            per_mod[mod][0] += 1
+    summary = []
+    for mod in sorted(per_mod):
+        hit, tot = per_mod[mod]
+        ratio = hit / tot if tot else 1.0
+        summary.append(f"{mod} {ratio:.0%}")
+        if ratio < COVERAGE_FLOOR:
+            fail(f"workflow coverage for {mod} is {ratio:.0%} ({hit}/{tot}), below the "
+                 f"{COVERAGE_FLOOR:.0%} floor — no user journey exercises this module")
+    notes.append("workflow coverage: " + ", ".join(summary))
 
     for note in notes:
         print(f"  {note}")

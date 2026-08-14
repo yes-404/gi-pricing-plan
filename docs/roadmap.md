@@ -26,7 +26,7 @@ Three things this document deliberately does not do:
 
 | | |
 |---|---|
-| **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 400 requirements |
+| **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 408 requirements |
 | **Blocking Phase 1** | 45 open questions, 2 spikes, and the skills research in `skills-map.md` §7 |
 | **Code written** | None, by design (`CLAUDE.md` §0) |
 

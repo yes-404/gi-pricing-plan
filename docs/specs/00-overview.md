@@ -141,7 +141,7 @@ term must be added here before it is used in any other document.**
 | **Level** | A discrete value a categorical Factor can take. |
 | **Banding** | A Factor transformation mapping a continuous column to ordered intervals, defined by explicit boundaries. A first-class, versioned, auditable object. |
 | **Grouping** | A Factor transformation mapping many Levels onto fewer Levels. First-class, versioned, auditable; carries the method used (manual, credibility-weighted, tree-derived) and the evidence for it. |
-| **Base Level** | The reference Level of a categorical Factor against which relativities are expressed. |
+| **Base Level** | The reference Level of a categorical Factor against which relativities are expressed. Chosen by exposure (default: largest exposure) or set explicitly. |
 | **Response** | The modelled quantity: `claim_count`, `claim_severity`, `burning_cost`, `retention`, `conversion`, `elasticity`. |
 | **Peril** | A cause-of-loss partition of claims (e.g. `AD`, `TP_PD`, `TP_BI`, `THEFT`, `FIRE`, `WS`). |
 | **Model** | A fitted statistical model for exactly one (peril, response) pair. Types: `glm`, `xgboost`, `lightgbm`, `ebm`. Immutable once fitted. |
@@ -157,13 +157,13 @@ term must be added here before it is used in any other document.**
 | Term | Definition |
 |---|---|
 | **Rating Algorithm** | The declarative DAG of calculation steps that turns a quote's raw inputs into a final premium. |
-| **Rating Step** | A node in the DAG: `input`, `lookup`, `expression`, `table`, `model_call`, `constraint`, `output`. |
+| **Rating Step** | A node in the DAG. **Exactly seven types exist**: `input`, `lookup`, `expression`, `table`, `model_call`, `constraint`, `output`. |
 | **Rate Table** | A versioned, typed table of rating factors/loadings keyed by one or more Factors. The unit an actuary edits when making a rate change. |
 | **Rating Version** | An **immutable deployable bundle**: rating algorithm + all rate tables + referenced model artifacts + reference table pins. Lifecycle `draft → review → approved → live → retired`. |
 | **Deployment** | The binding of a Rating Version to an Environment at a point in time. Recorded, reversible, audited. |
-| **Environment** | A named runtime target: `dev`, `uat`, `prod`. Environments have independent live Rating Versions. |
+| **Environment** | A named runtime target: `dev`, `uat`, `prod`. Each owns its own live Rating Version deployments and service-account scopes. |
 | **Scoring** | Evaluating a Rating Version for one or more risks. **Real-time** (single quote, target p99 < 50 ms) or **batch** (portfolio re-rate). |
-| **Trace** | The per-step record of a single scoring call: every intermediate value, table hit, and model output. The backbone of explainability and dispute resolution. |
+| **Trace** | The per-step record of a single scoring call: step id, every intermediate value, table row matched, model output, and per-step timing. The backbone of explainability and dispute resolution. |
 | **Dislocation** | The distribution of premium change between two Rating Versions over a fixed portfolio. |
 
 ### 2.4 Optimisation & monitoring layer
@@ -174,7 +174,7 @@ term must be added here before it is used in any other document.**
 | **Price Elasticity** | ∂ log(demand) / ∂ log(price), derived from a Demand Model. |
 | **Optimisation Run** | A constrained search over candidate price adjustments maximising an objective (volume, profit, or a blend) subject to business and regulatory constraints. |
 | **GIPP** | General Insurance Pricing Practices (FCA PS21/5). Requires that a renewing customer is not quoted more than an equivalent new-business customer. |
-| **GIPP check** | An automated comparison of new-business and renewal price surfaces for equivalent risks, producing pass/fail evidence attached to a Rating Version. |
+| **GIPP check** | An automated comparison of new-business and renewal price surfaces for equivalent risks, producing per-segment evidence and an overall verdict, attached to a Rating Version. |
 | **Drift** | Change over time in the live population's factor distribution (input drift) or in model performance (concept drift). |
 | **A/E** | Actual vs Expected — realised claims experience compared with model prediction, sliced by factor, cohort, and time. |
 
@@ -182,9 +182,9 @@ term must be added here before it is used in any other document.**
 
 | Term | Definition |
 |---|---|
-| **Approval Request** | A submission of an artifact (Model, Custom Objective, Rating Version, Validation Rule) for review, with a required checklist and evidence bundle. |
-| **Audit Event** | An immutable, append-only record: actor, timestamp, action, entity, before/after, justification. |
-| **Model Documentation** | A generated, human-readable dossier for a Model or Rating Version, assembled from persisted artifacts — never hand-maintained. |
+| **Approval Request** | The submission of one Governed Artifact (Model, Custom Objective, Rating Version, Validation Rule, …) for review, carrying its evidence bundle, a required checklist, and a change summary. |
+| **Audit Event** | An immutable, append-only record: `actor, at, action, entity_ref, before, after, justification, trace_id, source`. |
+| **Model Documentation** | A generated, human-readable dossier for a Model, Peril Structure, or Rating Version, assembled from persisted artifacts — never hand-maintained. |
 | **Artifact** | Any versioned, immutable, JSON-serialisable object the platform produces: Dataset Version, Validation Report, Model, Custom Objective, Rate Table, Rating Version, Optimisation Run. |
 
 ### 2.6 Terms deliberately avoided
@@ -419,16 +419,26 @@ Rows *consume from* columns.
 |---|---|---|---|---|---|---|---|
 | **DATA** | — | — | — | — | — | approvals, audit | jobs, storage, auth |
 | **MODEL** | Dataset Versions, Factors' source columns, profiles | — | — | — | — | approvals, audit | jobs, storage, auth |
-| **RATE** | Reference Table Versions | Models, transparency artifacts | — | — | — | approvals, audit | jobs, storage, auth, environments |
+| **RATE** | Reference Table Versions | Models, transparency artifacts | — | *(OPT writes in; not a dependency — see `03` §7.1)* | — | approvals, audit | jobs, storage, auth, environments |
 | **OPT** | Dataset Versions (portfolio) | Demand Models | Rating Versions, batch scoring | — | — | approvals, audit | jobs, auth |
 | **MON** | Reference distributions | Models (expected) | Deployments, scoring traces | Optimisation targets | — | audit | jobs, alerting |
-| **GOV** | statuses | statuses | statuses | statuses | statuses | — | auth, users |
-| **PLAT** | — | — | — | — | — | user/role model | — |
+| **GOV** | *(pushed in)* | *(pushed in)* | *(pushed in)* | *(pushed in)* | *(pushed in)* | — | auth, users |
+| **PLAT** | — | — | — | — | — | audit sink, permission check (DEP-1a) | — |
 
 **Dependency rules:**
 
 - **DEP-1** — No cycles. The order `PLAT → GOV → DATA → MODEL → RATE → OPT/MON` is the
   build order; a module never imports from a module to its right.
+- **DEP-1a** — **Two `GOV` interfaces are cross-cutting and sit outside that order: the
+  audit sink and the permission check.** Every module may call them, `PLAT` included —
+  platform-level actions such as key rotation and settings changes must be audited like any
+  other, and audit writes share the caller's transaction (`06` R2). This is an interface
+  dependency, not a data dependency: nothing reads governance tables. `GOV`'s *approval
+  workflow* and its *artifact reads* still respect DEP-1 strictly.
+
+  Without this carve-out DEP-1 is simply false, because a cross-cutting audit obligation
+  cannot be expressed as a position in a linear chain. Stating it explicitly is what stops
+  the rule being quietly ignored the first time it is inconvenient.
 - **DEP-2** — Cross-module reads happen through the owning module's public service
   interface (or its `model-schema` contract), never by reaching into another module's
   tables.

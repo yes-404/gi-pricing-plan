@@ -66,14 +66,10 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **Fit Result** | What fitting produced: coefficients or booster reference, convergence information, timings, library versions. |
 | **Offset** | A known additive term on the linear predictor scale (log exposure for frequency). Distinct from a weight. |
 | **Weight** | A per-row observation weight (claim counts for severity, exposure for burning cost). |
-| **Base Level** | The reference Level of a categorical Factor; relativities are expressed against it. Chosen by exposure (default: largest exposure), or set explicitly. |
 | **Relativity** | `exp(coefficient)` for a log-link GLM — the multiplicative effect of a Level relative to the Base Level. |
 | **Banding Method** | How interval boundaries were derived: `manual`, `equal_width`, `quantile`, `exposure_quantile`, `tree`, `credibility`. Recorded so a reviewer sees the judgement. |
 | **Grouping Method** | How Levels were merged: `manual`, `credibility_weighted`, `hierarchical_clustering`, `tree`, `reference_hierarchy`. |
-| **Custom Objective** | A named, versioned, approvable loss definition of form `template` (parameterised standard) or `expression` (restricted symbolic DSL, §4.6). |
 | **Objective Certificate** | The persisted evidence that a Custom Objective passed its mathematical checks (§4.7): derivative agreement, convexity, boundary behaviour, and a fitted smoke test. Required for approval. |
-| **Transparency Artifact** | GLM approximation and/or SHAP factor summary explaining a non-GLM Model (§4.9). |
-| **Peril Structure** | The declarative composition of per-peril models into a Risk Premium (§4.10). |
 | **Holdout** | The named split (from `01` FR-DATA-36) not used for fitting, on which reported performance is measured. |
 | **Backtest** | Evaluation of a Model on a Dataset Version other than the one it was fitted on — typically a later period. |
 
