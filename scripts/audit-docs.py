@@ -43,6 +43,40 @@ def fail(msg: str) -> None:
     failures.append(msg)
 
 
+
+def check_open_question_columns() -> None:
+    """15. Every OQ row has an owner and a status drawn from a known set.
+
+    Added after an edit wrote "decided" into the *owner* column and left the status as
+    "open": the register then disagreed with the spec about whether a question was settled,
+    and all fourteen existing checks passed. A malformed row here is not a typo — this file
+    is the project's record of what has been decided.
+    """
+    allowed = {"open", "decided", "deferred", "superseded"}
+    path = ROOT / "open-questions.md"
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        match = re.match(r"\| (?:~~)?\*\*(OQ-[A-Z]+-\d+)\*\*", line)
+        if not match:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 3:
+            fail(f"open-questions.md:{number}: {match.group(1)} has too few columns")
+            continue
+        owner = cells[-2].replace("*", "").strip().lower()
+        status = cells[-1].replace("*", "").replace("~", "").strip().lower()
+        first = status.split()[0] if status else ""
+        if first not in allowed:
+            fail(
+                f"open-questions.md:{number}: {match.group(1)} status {cells[-1]!r} is not "
+                f"one of {sorted(allowed)}"
+            )
+        if not owner or owner in allowed:
+            fail(
+                f"open-questions.md:{number}: {match.group(1)} owner {cells[-2]!r} looks "
+                "like a status — the columns may be shifted"
+            )
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
@@ -306,6 +340,9 @@ def main() -> int:
 
     for note in notes:
         print(f"  {note}")
+    # 15. open-question rows have an owner and a recognised status
+    check_open_question_columns()
+
     if failures:
         print(f"\nFAILED ({len(failures)}):")
         for msg in failures:

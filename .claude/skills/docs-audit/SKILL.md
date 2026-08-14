@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite before committing or opening a PR in this GI pricing platform repo. Runs fourteen checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage — and the decision-gate invariant the script does not cover. Use before any docs commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite before committing or opening a PR in this GI pricing platform repo. Runs fifteen checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage — and the decision-gate invariant the script does not cover. Use before any docs commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
