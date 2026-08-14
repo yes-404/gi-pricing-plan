@@ -214,11 +214,51 @@ drives the version to `validated` — with the report and profile visible. This 
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W1** | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | Must be first; everything else assumes it |
+| ~~**W1**~~ ✔ | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | **Closed 2026-08-14** — see the status table below |
 | **W2** | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | ~35 of 60 `PLAT` requirements |
 | **W3** | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | §5 — skeleton only, no governance UI |
 | **W4** | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | All 49 `DATA` requirements |
 | **W6a** | Frontend: app shell, dataset views, **validation report view** | W4 | `01` §5.3 puts its interaction requirement here — "why can I not fit a model on this?" answerable in one screen |
+
+#### Phase 1a status
+
+| WS | Scope | Status |
+|---|---|---|
+| **W1** | Repo foundations | ✔ **closed 2026-08-14** |
+| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | next |
+| **W3** | Governance write path — audit log, RBAC, approval state machine | after W2 |
+| **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
+| **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
+
+**W1 closure evidence** (all re-verified 2026-08-14):
+
+| Deliverable | Evidence |
+|---|---|
+| `uv` workspace | `pyproject.toml` + committed `uv.lock`; `uv sync --all-packages --dev` clean |
+| `model-schema` | 4 modules; `MoneyMinor` strict, `DecimalStr` string-pinned, envelope frozen |
+| `pricing-core` skeleton | 3 modules; `ProgressCallback` protocol, decimal money helpers |
+| import-linter (ADR-0001) | **3 contracts kept, 0 broken** — and proven to fail on injected violations |
+| CI | `docs.yml` + `python.yml`, path-filtered per component, both green |
+| docker compose | **21 s cold start** against NFR-PLAT-4's 300 s; all three services healthy |
+| Quality gates | ruff clean · mypy clean on 7 files · 21 tests · docs audit 14/14 |
+
+**What W1 deliberately did *not* deliver.** It is *repo foundations*, so it landed the
+**type-level** half of §5's retrofit list and the machinery that enforces it — not the
+runtime half:
+
+| §5 item | W1 | Lands in |
+|---|---|---|
+| Artifact immutability, versioning, `parent_id` | ✔ as types (`frozen=True`, `extra="forbid"`) | persistence in W3 |
+| `model-schema` as single source of truth | ✔ as a package | generation into `docs/contracts` in W2 |
+| Decimal money discipline | ✔ as types + helpers | rating path in Phase 2 |
+| The Job model | — only the `ProgressCallback` protocol | **W2** |
+| Content-addressed blob store | — only the `BlobRef` type | **W2** |
+| `trace_id` propagation | — | **W2** |
+| Append-only audit log in the caller's transaction | — | **W3** |
+| RBAC checks in the backend | — | **W3** |
+
+Stating this explicitly so nobody reads "W1 closed" as "the retrofit list is handled". It
+is not; W1 made it *cheap*, which was its job.
 
 **Coverage:** ≈ 99 of 375 module requirements (~26 %).
 
@@ -261,7 +301,7 @@ XGBoost model, compares them, and gets one approved — i.e. **`wf-01` executed 
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W1** | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | Must be first; everything else assumes it |
+| ~~**W1**~~ ✔ | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | **Closed 2026-08-14** — see the status table below |
 | **W2** | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | ~35 of 60 `PLAT` requirements |
 | **W3** | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | §5 — skeleton only, no governance UI |
 | **W4** | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | All 49 `DATA` requirements |

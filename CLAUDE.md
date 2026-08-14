@@ -59,7 +59,7 @@ the maths.
 ├── .gitignore                ✔ see .claude/skills/git-hygiene
 ├── pyproject.toml            ✔ uv workspace root; ruff, mypy, pytest config
 ├── uv.lock                   ✔ COMMITTED — a lockfile, not an environment
-├── .importlinter             ✔ ADR-0001/0002/DEP-3 contracts, enforced in CI
+├── .importlinter             ✔ ADR-0001/0002/DEP-3 — 3 contracts, enforced in CI
 │
 ├── docs/                     ✔ the specification suite — still authoritative
 │   ├── specs/                ✔ 00–07, the contract code is written against
@@ -71,17 +71,17 @@ the maths.
 │   └── open-questions.md     ✔ every unresolved choice, gated by phase
 │
 ├── packages/
-│   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)
-│   └── pricing-core/         ◐ all actuarial computation (ADR-0001)
+│   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1]
+│   └── pricing-core/         ◐ skeleton only — progress + money        [W1]
 │
-├── backend/                  … FastAPI: orchestration, persistence, API   [1a W2]
+├── backend/                  … FastAPI: orchestration, persistence, API   [1a W2 — next]
 ├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
 ├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
 │
-├── deploy/                   ✔ docker-compose.yml; Helm later             [3]
+├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
 ├── scripts/                  ✔ audit-docs.py, req-coverage.py
-└── .claude/skills/           ✔ procedures for this repo (§12)
+└── .claude/skills/           ✔ 13 skills — 8 written here, 5 vendored (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -363,8 +363,15 @@ Project-specific procedures live in `.claude/skills/`, versioned with the repo s
 travel with it. `.claude/skills/README.md` is the index — read it when starting work on an
 unfamiliar part of the suite.
 
-Current skills: `spec-change`, `docs-audit`, `adr-write`, `contract-schema`,
-`library-spike`. No external skills are installed.
+**Written for this repo:** `spec-change`, `docs-audit`, `adr-write`, `contract-schema`,
+`library-spike`, `git-hygiene`, `python-package`, `python-test`.
+
+**Vendored** from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills) (MIT,
+security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,
+`testing-strategy`, `code-quality`, `secret-hygiene`. Kept as upstream wrote them and
+excluded from `ruff`.
+
+`.claude/skills/README.md` is the index and records why each was added.
 
 ### Skill maintenance rules
 
