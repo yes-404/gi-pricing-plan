@@ -97,38 +97,40 @@ about them.
 
 ### Track C — The decision backlog, sequenced
 
-You do not need to answer 46 questions. You need to answer **7 before Phase 1 starts**:
+You do not need to answer 46 questions. Since the 1a/1b split was accepted, you need
+**4 before Phase 1a starts** — the other 3 can wait for 1b:
 
-| Question | Why it blocks Phase 1 |
-|---|---|
-| **OQ-OVR-2** licence | Blocks nothing technically; blocks every external contribution and the public repo story |
-| **OQ-PLAT-1** Celery vs Postgres queue | Job submission is in the first sprint; transactional enqueue interacts with the audit rule (`06` R2) |
-| **OQ-MODEL-1** expression objectives in Phase 1? | Decides whether the AST parser and SymPy derivation are Phase 1 or Phase 2 scope — a material slice of work |
-| **OQ-DATA-1** large-loss capping: dataset or model? | Sits on the boundary between the two biggest Phase 1 workstreams; changing it later is a contract change |
-| **OQ-MODEL-5** credibility standard | Needed to implement `credibility_weighted` grouping |
-| **OQ-DATA-2** append ingestion | Only if the first real dataset is large enough that full snapshots hurt |
-| **OQ-OVR-5** notebook escape hatch | Affects whether a client library is Phase 1 scope |
+| Question | Gates | Why it blocks |
+|---|---|---|
+| **OQ-PLAT-1** Celery vs a transactional Postgres queue | **1a** | Job submission is in the first sprint, and transactional enqueue interacts directly with the audit rule (`06` R2) |
+| **OQ-DATA-1** large-loss capping: dataset or model? | **1a** | It *is* the 1a/1b boundary — deferring it makes it a contract change rather than a decision |
+| **OQ-DATA-2** append ingestion vs full snapshots | **1a** | W4, and only if the first real dataset is large enough that full snapshots hurt |
+| **OQ-OVR-2** project licence | **1a** | Blocks nothing technically; blocks every external contribution and the public-repo story |
+| **OQ-MODEL-1** expression objectives in 1b? | 1b | Decides whether the AST parser and SymPy derivation are in scope — a material slice of W5 |
+| **OQ-MODEL-5** credibility standard | 1b | Needed to implement `credibility_weighted` grouping |
+| **OQ-OVR-5** notebook escape hatch | 1b | Affects whether a client library is in scope |
 
-The other 38 can wait for the phase that needs them (§9).
+The four marked **1a** are the ones that actually gate the start of work. The other 39
+can wait for the phase that needs them (§10).
 
 ---
 
 ### Outstanding work — consolidated
 
-Everything still open before Phase 1 can start, in one place. Tracks A–C above explain
-*why*; this is the list.
+Everything still open before Phase 1a can start, in one place. Tracks A–C above explain
+*why*; this is the list. The **Gates** column shows which half of Phase 1 each blocks.
 
 | # | Task | Kind | Owner | Blocks |
 |---|---|---|---|---|
-| **1** | **OQ-OVR-2** — project licence | decision | maintainer | Public contribution, not code |
-| **2** | **OQ-OVR-5** — notebook escape hatch | decision | maintainer | Phase 1 scope |
-| **3** | **OQ-PLAT-1** — Celery vs a transactional Postgres queue | decision | maintainer | W2, first sprint |
-| **4** | **OQ-DATA-1** — where large-loss capping lives | decision | maintainer | W4/W5 boundary; contract change if deferred |
-| **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | W4, only if the first dataset is large |
-| **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1? | decision | maintainer | W5 scope, materially |
-| **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | W5 grouping implementation |
+| **1** | **OQ-OVR-2** — project licence | decision | maintainer | **1a** — public contribution, not code |
+| **2** | **OQ-OVR-5** — notebook escape hatch | decision | maintainer | **1b** — client library scope |
+| **3** | **OQ-PLAT-1** — Celery vs a transactional Postgres queue | decision | maintainer | **1a** — W2, first sprint |
+| **4** | **OQ-DATA-1** — where large-loss capping lives | decision | maintainer | **1a** — it *is* the 1a/1b boundary; a contract change if deferred |
+| **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | **1a** — W4, only if the first dataset is large |
+| **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1b? | decision | maintainer | **1b** — W5 scope, materially |
+| **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | **1b** — W5 grouping implementation |
 | ~~8~~ | ~~**S3** — LightGBM `init_score`~~ ✔ **done** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
-| **9** | **Phase 1 split** — accept or reject 1a/1b (§5 recommendation) | decision | maintainer | How Phase 1 is planned |
+| ~~9~~ | ~~**Phase 1 split** — accept or reject 1a/1b~~ ✔ **ACCEPTED 2026-08-14** | decision | maintainer | Now the plan; `CLAUDE.md` §9 updated |
 
 **Not blocking Phase 1, but do not lose them:**
 
@@ -141,7 +143,7 @@ Everything still open before Phase 1 can start, in one place. Tracks A–C above
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
 audit are complete and passing; the remaining Phase 0 work is entirely decisions and
-spikes — eight items, of which **seven are decisions only the maintainer can make** — the spike backlog for Phase 1 is now empty.
+spikes — **four decisions before 1a can start**, and three more before 1b. The spike backlog is empty.
 
 ---
 
@@ -186,9 +188,68 @@ is Phase 3's job.
 
 ---
 
-## 6. Phase 1 — Modelling Workbench
+## 6. Phase 1 — split into 1a and 1b · **accepted 2026-08-14**
 
-**Goal (`CLAUDE.md` §9):** dataset upload + validation + profiling, GLM and XGBoost fitting
+> The split recommended here was **accepted by the maintainer on 2026-08-14** and is now
+> the plan, not a proposal. `CLAUDE.md` §9 updated to match.
+>
+> **Why it was accepted:** Phase 1 as originally scoped was ~47 % of the platform's
+> requirement surface with no intermediate demo — the single most likely place for the
+> project to stall. The split falls on the existing `DATA` / `MODEL` module boundary, so it
+> costs nothing structurally, and it buys a working demo months earlier plus an honest
+> checkpoint on whether the validation design survives contact with real data.
+>
+> **A second benefit emerged on splitting the decision gates:** only **4** of the 7 Phase 1
+> decisions block 1a. Work can start once four questions are answered, not seven.
+
+### Phase 1a — Data Workbench
+
+**Goal:** ingestion, preparation, the four-layer validation gate, profiling, reference data
+— everything up to a dataset that is fit to model on.
+
+**Demo-able outcome:** an actuary loads freMTPL2, watches validation **fail on a real
+problem**, fixes the preparation recipe, acknowledges a warning with a justification, and
+drives the version to `validated` — with the report and profile visible. This is
+`wf-01` phases A–B end to end.
+
+| # | Workstream | Depends on | Notes |
+|---|---|---|---|
+| **W1** | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | Must be first; everything else assumes it |
+| **W2** | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | ~35 of 60 `PLAT` requirements |
+| **W3** | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | §5 — skeleton only, no governance UI |
+| **W4** | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | All 49 `DATA` requirements |
+| **W6a** | Frontend: app shell, dataset views, **validation report view** | W4 | `01` §5.3 puts its interaction requirement here — "why can I not fit a model on this?" answerable in one screen |
+
+**Coverage:** ≈ 99 of 375 module requirements (~26 %).
+
+**Exit:** a freMTPL2 dataset version reaches `validated`, including at least one deliberate
+round through the failure loop. The retrofit list (§5) is fully in place by the end of 1a —
+that is the phase's other, quieter deliverable.
+
+### Phase 1b — Modelling Workbench
+
+**Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
+artifacts, model versioning.
+
+**Demo-able outcome:** the actuary bands and groups factors, fits a GLM and an XGBoost
+model, compares them, and gets one approved — **`wf-01` end to end**.
+
+| # | Workstream | Depends on | Notes |
+|---|---|---|---|
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project |
+| **W6b** | Frontend: **factor workbench**, model detail, diagnostics | W5 | `02` §5.3's interaction requirement — an edit's consequence visible before saving |
+| **W7** | freMTPL2 demo seed | W5, W6b | `07` FR-PLAT-37 — one command to a working system |
+
+**Coverage:** ≈ 78 of 375 module requirements (~21 %).
+
+**Exit:** [`wf-01`](workflows/wf-01-dataset-to-model.md) end to end on freMTPL2.
+
+W5's *frontend* work (W6b) can start as soon as the `02` contracts are frozen, which is the
+main parallelisation opportunity inside 1b.
+
+### Original scope, for reference
+
+**Goal (`CLAUDE.md` §9, now superseded by the split above):** dataset upload + validation + profiling, GLM and XGBoost fitting
 (incl. custom objectives), factor management, diagnostics, model versioning. Demo on
 freMTPL2.
 
@@ -216,19 +277,8 @@ as the contracts are frozen, which is a Phase 1 parallelisation opportunity wort
 ≈ **177 of 375** module requirements — **roughly 47 % of the entire platform's requirement
 surface sits in Phase 1.**
 
-> ### Recommendation: split Phase 1
->
-> Phase 1 as scoped is nearly half the platform and has no intermediate demo. Consider:
->
-> - **Phase 1a — Data Workbench.** W1–W4 + the dataset half of W6. Exit: a dataset reaches
->   `validated` on freMTPL2, with the validation report and profile visible.
-> - **Phase 1b — Modelling Workbench.** W5 + the modelling half of W6 + W7. Exit: `wf-01`
->   end to end.
->
-> This costs nothing — the split falls on the existing module boundary — and buys a real
-> demo months earlier, plus an honest checkpoint on whether the validation design survives
-> contact with real data. **This is a recommendation; §9's phasing stands unless you
-> accept it.**
+> **Accepted 2026-08-14.** This callout is retained as the record of the reasoning; the
+> split is specified above and in `CLAUDE.md` §9.
 
 ### Top risks
 
@@ -336,7 +386,8 @@ you never block on a decision you have not reached.
 
 | Gate | Questions | Count |
 |---|---|---|
-| **Before Phase 1** | OQ-OVR-2, OQ-OVR-5, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2, OQ-MODEL-1, OQ-MODEL-5 | 7 |
+| **Before Phase 1a** | OQ-OVR-2, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2 | 4 |
+| **Before Phase 1b** | OQ-OVR-5, OQ-MODEL-1, OQ-MODEL-5 | 3 |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, OQ-DATA-4 | 12 |
@@ -363,14 +414,15 @@ parallelisable workstreams. **No dates, because team size is unknown.**
 |---|---|---|---|---|
 | 0 — Specification | — | — | done | — |
 | On-ramp (§3) | — | 3 | XS | ~~Research~~ ✔ · ~~3 spikes~~ ✔ · **7 decisions outstanding** |
-| 1 — Modelling Workbench | ~47 % | 3–4 after W1 | **XL** | Broad; recommend splitting (§6) |
+| **1a — Data Workbench** | ~26 % | 3 after W1 | **L** | W1–W4 + dataset views; ends at a `validated` dataset |
+| **1b — Modelling Workbench** | ~21 % | 2 | **L** | W5–W7; ends at `wf-01` end to end |
 | 2 — Rating Engine | ~24 % | 2–3 | **L** | Deep; one large frontend, one hard NFR |
 | 3 — Governance | ~11 % | 3 | **M** | Mostly surfacing Phase 1 foundations |
 | 4 — Optimisation & Monitoring | ~18 % | 2 independent halves | **L** | Two loosely-coupled halves; monitoring can come early |
 
-The distribution is worth absorbing: **Phase 1 is not "the first phase", it is nearly half
-the platform.** Planning it as one undifferentiated block is the most likely way this
-project stalls.
+The distribution is why the split was accepted: **Phase 1 was not "the first phase", it was
+nearly half the platform.** Split on the module boundary, each half is a normal-sized phase
+with its own demo.
 
 ---
 
@@ -382,7 +434,8 @@ not when its requirements are individually ticked off.
 | Phase | Exit criterion |
 |---|---|
 | 0 | An engineer could start Phase 1 from the docs alone (`CLAUDE.md` §9) |
-| 1 | [`wf-01`](workflows/wf-01-dataset-to-model.md) end to end on freMTPL2, including the validation-failure loop |
+| 1a | A freMTPL2 dataset version reaches `validated`, including at least one deliberate round through the validation-failure loop |
+| 1b | [`wf-01`](workflows/wf-01-dataset-to-model.md) end to end on freMTPL2 |
 | 2 | [`wf-02`](workflows/wf-02-model-to-rating-version.md) end to end, plus `wf-04` phases A–D, meeting NFR-RATE-1 |
 | 3 | [`wf-05`](workflows/wf-05-custom-objective-lifecycle.md) end to end, plus a dossier that survives external review |
 | 4 | [`wf-03`](workflows/wf-03-rate-change-impact.md) end to end, plus `wf-04` phases E–H |
