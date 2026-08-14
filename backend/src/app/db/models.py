@@ -47,16 +47,21 @@ __all__ = [
     "AuditEventRow",
     "BlobRow",
     "DatasetRow",
+    "DatasetSplitRow",
     "DatasetVersionRow",
     "IngestionRunRow",
     "JobLogRow",
     "JobRow",
     "OutboxRow",
     "OutboxStatus",
+    "ReferenceRowRow",
+    "ReferenceTableRow",
+    "ReferenceTableVersionRow",
     "RoleAssignmentRow",
     "RoleRow",
     "ServiceAccountRow",
     "SourceRow",
+    "SubjectPurgeRow",
     "UserRow",
     "WorkspaceMemberRow",
     "WorkspaceSettingRow",
@@ -812,4 +817,135 @@ class IngestionRunRow(Base):
         Index("ix_ingestion_runs_dataset", "dataset_id"),
         CheckConstraint("rows_read >= 0 AND rows_written >= 0 AND rows_rejected >= 0",
                         name="row_counts_non_negative"),
+    )
+
+
+class ReferenceTableRow(Base):
+    """An effective-dated lookup table (FR-DATA-29)."""
+
+    __tablename__ = "reference_tables"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    key_columns: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    payload_columns: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_reference_tables_workspace_slug"),
+    )
+
+
+class ReferenceTableVersionRow(Base):
+    """An immutable, independently approvable version (FR-DATA-30).
+
+    Pinned explicitly by both validation and the rating engine — never "latest". A lookup
+    that silently followed the newest version would change a quote's answer without any
+    artifact changing, which is the one thing a rating version's immutability exists to
+    prevent.
+    """
+
+    __tablename__ = "reference_table_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    reference_table_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    source_note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("reference_table_id", "version", name="uq_reference_versions"),
+        CheckConstraint("version >= 1", name="reference_version_starts_at_one"),
+    )
+
+
+class ReferenceRowRow(Base):
+    """One effective-dated row of a reference version (FR-DATA-29).
+
+    The half-open `[effective_from, effective_to)` interval and the exclusion constraint
+    below are what make "as at" lookups single-valued. Overlapping intervals for one key
+    mean a lookup has two answers, and which one a quote gets would depend on row order —
+    a rating difference nobody could reproduce.
+    """
+
+    __tablename__ = "reference_rows"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    reference_table_version_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), nullable=False
+    )
+    key: Mapped[str] = mapped_column(String(256), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    #: NULL means open-ended. The exclusion constraint treats it as infinity.
+    effective_to: Mapped[date | None] = mapped_column(Date)
+
+    __table_args__ = (
+        Index("ix_reference_rows_version_key", "reference_table_version_id", "key"),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to > effective_from",
+            name="effective_interval_is_ordered",
+        ),
+    )
+
+
+class SubjectPurgeRow(Base):
+    """A GDPR erasure of a pseudonymous subject token (FR-DATA-39).
+
+    The purge is recorded even though the data is gone — especially because it is. An
+    erasure with no record is indistinguishable from data that was never there, and a
+    regulator asking "did you action this request?" needs an answer that is not a shrug.
+    """
+
+    __tablename__ = "subject_purges"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    subject_token: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    versions_affected: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    purged_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_subject_purges_dataset", "workspace_id", "dataset_id"),
+    )
+
+
+class DatasetSplitRow(Base):
+    """A named train/test split, recorded on the **parent** version (FR-DATA-36).
+
+    On the parent, not the parts, so that two models can be compared on provably identical
+    data: "trained on the same split" is then a single reference both models cite, rather
+    than two derivations that were *believed* to match. A split recorded on the parts would
+    make that claim unverifiable the moment either part was rebuilt.
+    """
+
+    __tablename__ = "dataset_splits"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    parent_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    method: Mapped[str] = mapped_column(String(32), nullable=False)
+    seed: Mapped[int] = mapped_column(Integer, nullable=False)
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    parts: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("parent_version_id", "name", name="uq_dataset_splits_parent_name"),
     )

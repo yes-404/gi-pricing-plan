@@ -261,6 +261,11 @@ assert exc.value.title == "Withdrawal requires a reason"
 The `code` is the contract anyway — it is what a client branches on — so asserting it is
 both more correct and more stable than any substring of prose.
 
+**Make this the default, not the fallback.** It has now cost three separate debugging
+detours across W3 and W4, each time because `match=` reads naturally and the failure
+message looks like the assertion nearly worked. Never write `pytest.raises(PlatformError,
+match=...)`; write `as exc` and assert `exc.value.code` or `exc.value.title`.
+
 ## Routes must fail closed
 
 `require_caller` returns **401** when no identity provider is configured, and

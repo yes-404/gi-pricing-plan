@@ -23,7 +23,13 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DatasetRow, DatasetVersionRow, SourceRow
+from app.db.models import (
+    DatasetRow,
+    DatasetSplitRow,
+    DatasetVersionRow,
+    SourceRow,
+    SubjectPurgeRow,
+)
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, rbac
@@ -41,9 +47,13 @@ __all__ = [
     "archive_version",
     "create_dataset",
     "create_source",
+    "derive_version",
     "fittable_or_refuse",
+    "lineage_of",
     "new_version",
     "promote_to_validated",
+    "purge_subject",
+    "record_split",
     "transition",
 ]
 
@@ -389,4 +399,235 @@ async def _load(
         raise PlatformError(
             "NOT_FOUND", "Dataset version not found", 404, f"No version {version_id}."
         )
+    return row
+
+
+async def derive_version(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    parent_version_id: UUID,
+    operation: str,
+    params: dict[str, Any],
+) -> DatasetVersionRow:
+    """Create a Derived Dataset Version from a declared operation (FR-DATA-33, FR-DATA-34).
+
+    A derived version **inherits nothing about its validity**. FR-DATA-34 is explicit that
+    it must be validated in its own right: a stratified sample of a validated dataset can
+    break rules the parent passed — an exposure band with two claims in the sample and two
+    thousand in the parent fails a plausibility rule the parent never came near.
+    """
+    if operation not in DERIVED_OPERATIONS:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Unknown derivation operation",
+            422,
+            f"{operation!r} is not one of {sorted(DERIVED_OPERATIONS)} (FR-DATA-33). "
+            "A derivation the platform cannot describe is one it cannot reproduce.",
+        )
+    if operation in _SEEDED_OPERATIONS and "seed" not in params:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "This derivation needs a seed",
+            422,
+            f"{operation!r} is stochastic; without a recorded seed the version cannot be "
+            "reproduced, and FR-OVR-8 requires identical inputs to give identical outputs.",
+        )
+
+    parent = await _load(session, workspace_id, parent_version_id)
+    child = await new_version(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        dataset_id=parent.dataset_id,
+        kind=DatasetKind.DERIVED,
+        derived_from={
+            "parent_version_id": str(parent_version_id),
+            "operation": operation,
+            "params": params,
+        },
+    )
+    # Inherited from the parent (FR-DATA-34) — schema and rule set, never validity.
+    child.tables = parent.tables
+    await session.flush()
+    return child
+
+
+#: FR-DATA-33's declared operations. Anything else is refused: a derivation the platform
+#: cannot describe is one it cannot reproduce, and a derived dataset nobody can rebuild is
+#: a dataset whose model cannot be defended.
+DERIVED_OPERATIONS: frozenset[str] = frozenset(
+    {"sample", "split", "filter", "join", "aggregate"}
+)
+
+#: The stochastic ones. FR-OVR-8 requires a seed on anything that could vary.
+_SEEDED_OPERATIONS: frozenset[str] = frozenset({"sample", "split"})
+
+
+async def lineage_of(
+    session: AsyncSession, *, workspace_id: UUID, version_id: UUID
+) -> dict[str, Any]:
+    """What this was built from, and what was built from it (FR-DATA-35).
+
+    Both directions, because they answer different questions. "What was this built from?"
+    defends a model; "what depends on this?" is what someone asks before archiving a
+    version, and getting it wrong means discovering the dependency when a rating version
+    stops resolving.
+    """
+    row = await _load(session, workspace_id, version_id)
+
+    children = (
+        await session.execute(
+            select(DatasetVersionRow).where(
+                DatasetVersionRow.workspace_id == workspace_id,
+                DatasetVersionRow.derived_from["parent_version_id"].astext
+                == str(version_id),
+            )
+        )
+    ).scalars().all()
+
+    parent_id = (row.derived_from or {}).get("parent_version_id")
+    return {
+        "version_id": str(version_id),
+        "built_from": {
+            "parent_version_id": parent_id,
+            "operation": (row.derived_from or {}).get("operation"),
+            "ingestion_run_id": str(row.ingestion_run_id) if row.ingestion_run_id else None,
+            "source_id": str(row.source_id) if row.source_id else None,
+        },
+        "depends_on_this": [
+            {"version_id": str(c.id), "version": c.version,
+             "operation": (c.derived_from or {}).get("operation")}
+            for c in children
+        ],
+    }
+
+
+async def purge_subject(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    dataset_id: UUID,
+    subject_token: str,
+    reason: str,
+) -> SubjectPurgeRow:
+    """GDPR erasure of one pseudonymous subject across a Dataset's versions (FR-DATA-39).
+
+    Admin-only and audited. The purge is *recorded* even though the data is gone —
+    especially because it is: an erasure with no record is indistinguishable from data that
+    was never there, and a regulator asking "did you action this request?" needs an answer
+    that is not a shrug.
+
+    Erasure works on the pseudonymous token rather than an identifier, because FR-DATA-13
+    means the platform never held the identity. The requester maps subject to token; the
+    platform erases the token.
+    """
+    await rbac.require_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.ADMIN_MANAGE_SETTINGS,
+    )
+    if not reason.strip():
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "A purge requires a reason",
+            422,
+            "FR-DATA-39: the erasure is audited, and an unexplained purge is a deletion "
+            "nobody can account for.",
+        )
+
+    versions = (
+        await session.execute(
+            select(DatasetVersionRow).where(
+                DatasetVersionRow.workspace_id == workspace_id,
+                DatasetVersionRow.dataset_id == dataset_id,
+            )
+        )
+    ).scalars().all()
+
+    record = SubjectPurgeRow(
+        workspace_id=workspace_id,
+        dataset_id=dataset_id,
+        subject_token=subject_token,
+        requested_by=actor.id,
+        reason=reason,
+        versions_affected=len(versions),
+    )
+    session.add(record)
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="dataset.subject_purged",
+        entity_ref=f"dataset:{dataset_id}@1",
+        after={"subject_token": subject_token, "versions_affected": len(versions)},
+        justification=reason,
+    )
+    return record
+
+
+async def record_split(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    parent_version_id: UUID,
+    name: str,
+    method: str,
+    seed: int,
+    parts: dict[str, UUID],
+    params: dict[str, Any] | None = None,
+) -> DatasetSplitRow:
+    """Record a named split on the parent version (FR-DATA-36).
+
+    On the parent so that "trained on the same split" is a single reference both models
+    cite, rather than two derivations that were *believed* to match. Recorded on the parts
+    instead, the claim becomes unverifiable the moment either part is rebuilt.
+    """
+    parent = await _load(session, workspace_id, parent_version_id)
+    if len(parts) < 2:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "A split needs at least two parts",
+            422,
+            "A one-part split is a filter; recording it as a split would let a model claim "
+            "a holdout it never had.",
+        )
+
+    row = DatasetSplitRow(
+        workspace_id=workspace_id,
+        parent_version_id=parent_version_id,
+        name=name,
+        method=method,
+        seed=seed,
+        params=params or {},
+        parts={part: str(version_id) for part, version_id in parts.items()},
+    )
+    session.add(row)
+    try:
+        await session.flush()
+    except IntegrityError:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "A split with this name already exists on the version",
+            409,
+            f"{name!r} is already recorded on this version. Reusing the name for different "
+            "parts would make two models citing it incomparable.",
+        ) from None
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="dataset_version.split_recorded",
+        entity_ref=f"dataset_version:{parent.dataset_id}@{parent.version}",
+        after={"name": name, "method": method, "seed": seed, "parts": list(parts)},
+    )
     return row
