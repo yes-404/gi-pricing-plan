@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health
+from app.api import health, jobs
 from app.config import Settings, load_settings
 from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
@@ -66,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
 
     app.include_router(health.router)
+    app.include_router(jobs.router, prefix=API_PREFIX)
     app.add_api_route(
         "/version",
         health.version_route(settings),
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     # FR-PLAT-35: migrations are an explicit pre-deploy step. Nothing here runs them.
+    app.state.settings = settings
     app.state.database = database
     app.state.blob_store = blob_store
 

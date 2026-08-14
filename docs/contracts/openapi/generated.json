@@ -1,6 +1,15 @@
 {
   "components": {
     "schemas": {
+      "ActorKind": {
+        "enum": [
+          "user",
+          "service_account",
+          "system"
+        ],
+        "title": "ActorKind",
+        "type": "string"
+      },
       "ComponentHealth": {
         "additionalProperties": false,
         "properties": {
@@ -39,6 +48,468 @@
         "title": "ComponentStatus",
         "type": "string"
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Job": {
+        "additionalProperties": false,
+        "description": "A tracked asynchronous unit of work, as returned by the API (`07` §4.1).",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/JobKind"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Progress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "queue": {
+            "$ref": "#/components/schemas/JobQueue"
+          },
+          "queued_at": {
+            "format": "date-time",
+            "title": "Queued At",
+            "type": "string"
+          },
+          "resource_budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResourceBudget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retries": {
+            "$ref": "#/components/schemas/RetryState"
+          },
+          "source": {
+            "$ref": "#/components/schemas/JobSource"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "submitted_by": {
+            "$ref": "#/components/schemas/Principal"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspace_id",
+          "kind",
+          "status",
+          "queue",
+          "submitted_by",
+          "source",
+          "queued_at"
+        ],
+        "title": "Job",
+        "type": "object"
+      },
+      "JobError": {
+        "additionalProperties": false,
+        "description": "A typed failure (FR-PLAT-11).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.",
+        "properties": {
+          "code": {
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "JobError",
+        "type": "object"
+      },
+      "JobKind": {
+        "description": "The typed operation a Job performs (`07` §2, job.schema.json).",
+        "enum": [
+          "dataset.ingest",
+          "dataset.validate",
+          "dataset.profile",
+          "dataset.derive",
+          "model.fit",
+          "model.transparency",
+          "model.backtest",
+          "model.compare",
+          "objective.certify",
+          "rating.compile",
+          "rating.regression",
+          "score.batch",
+          "dislocation.run",
+          "optimisation.run",
+          "gipp.check",
+          "monitor.run",
+          "dossier.generate",
+          "export.regulatory",
+          "blob.gc"
+        ],
+        "title": "JobKind",
+        "type": "string"
+      },
+      "JobLogLine": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "logger": {
+            "title": "Logger",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "at",
+          "level",
+          "logger",
+          "message"
+        ],
+        "title": "JobLogLine",
+        "type": "object"
+      },
+      "JobQueue": {
+        "description": "Named Celery queues with independently sized worker pools (FR-PLAT-13).",
+        "enum": [
+          "default",
+          "compute",
+          "scoring",
+          "io"
+        ],
+        "title": "JobQueue",
+        "type": "string"
+      },
+      "JobResult": {
+        "additionalProperties": false,
+        "description": "Where a succeeded Job put its output.",
+        "properties": {
+          "kind": {
+            "pattern": "^(artifact|blob|none)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "JobResult",
+        "type": "object"
+      },
+      "JobSource": {
+        "enum": [
+          "ui",
+          "api",
+          "schedule",
+          "system"
+        ],
+        "title": "JobSource",
+        "type": "string"
+      },
+      "JobStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobStatus",
+        "type": "string"
+      },
+      "Page_JobLogLine_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/JobLogLine"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[JobLogLine]",
+        "type": "object"
+      },
+      "Page_Job_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Job"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[Job]",
+        "type": "object"
+      },
+      "Principal": {
+        "additionalProperties": false,
+        "description": "An authenticated identity: User, Service Account, or the platform itself.",
+        "properties": {
+          "display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Human-readable label recorded at the time of the action.",
+            "title": "Display"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null only for `system`, which has no principal row.",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ActorKind"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Principal",
+        "type": "object"
+      },
+      "Progress": {
+        "additionalProperties": false,
+        "description": "Structured progress (FR-PLAT-8) — a fraction, a stage label, and counters.",
+        "properties": {
+          "counters": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counters",
+            "type": "object"
+          },
+          "fraction": {
+            "default": 0.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Fraction",
+            "type": "number"
+          },
+          "stage": {
+            "default": "",
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "title": "Progress",
+        "type": "object"
+      },
       "ReadinessReport": {
         "additionalProperties": false,
         "properties": {
@@ -58,6 +529,110 @@
           "status"
         ],
         "title": "ReadinessReport",
+        "type": "object"
+      },
+      "ResourceBudget": {
+        "additionalProperties": false,
+        "description": "Exceeding it yields a typed error naming the budget, not an opaque kill (FR-PLAT-16).",
+        "properties": {
+          "memory_gb": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Gb"
+          },
+          "wall_clock_s": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wall Clock S"
+          }
+        },
+        "title": "ResourceBudget",
+        "type": "object"
+      },
+      "RetryPolicy": {
+        "description": "`infrastructure_only` retries a lost worker, never a rejected input.\n\nRetrying a deterministic failure burns a worker pool to produce the same error, and on\na job that writes artifacts it risks producing them more than once.",
+        "enum": [
+          "infrastructure_only",
+          "none"
+        ],
+        "title": "RetryPolicy",
+        "type": "string"
+      },
+      "RetryState": {
+        "additionalProperties": false,
+        "properties": {
+          "attempted": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Attempted",
+            "type": "integer"
+          },
+          "max": {
+            "default": 3,
+            "minimum": 0.0,
+            "title": "Max",
+            "type": "integer"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/RetryPolicy",
+            "default": "infrastructure_only"
+          }
+        },
+        "title": "RetryState",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
         "type": "object"
       },
       "VersionInfo": {
@@ -92,6 +667,318 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/jobs": {
+      "get": {
+        "description": "Filtered, cursor-paginated (`00` §5.2).",
+        "operationId": "list_jobs_api_v1_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/JobStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/JobKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "submitted_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Submitted By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Job_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List jobs",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "get_job_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Job detail with progress and result",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Cancel a Job.\n\nA `queued` Job is cancelled outright; a `running` one is *marked* and stops at its next\ncheckpoint, so the response may still report `running`. That is the honest answer —\nreporting `cancelled` while the work is still burning CPU shows a freed worker slot\nthat is not free.",
+        "operationId": "cancel_job_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request cooperative cancellation (FR-PLAT-9)",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/events": {
+      "get": {
+        "description": "Server-sent events, so the UI shows progress where the action was taken (`07` §6).\n\nPolled rather than pushed. A `LISTEN`/`NOTIFY` subscription would hold a database\nconnection open per viewer, and a jobs page with twenty rows open in three browsers\nexhausts the pool. Polling one row on an interval is dull and survives a restart of\nanything.\n\nThe stream closes when the Job reaches a terminal state, so a client that forgets to\nunsubscribe does not hold the connection for ever.",
+        "operationId": "stream_job_events_api_v1_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "SSE stream of progress updates",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/logs": {
+      "get": {
+        "description": "Oldest first — a log read out of order is not a log.\n\nOrdered by the database-assigned `seq`, not by the UUIDv7 id: ids generated within one\nmillisecond have no defined order, and every row written in a single transaction shares\nits `at` timestamp. Both produce scrambled output.",
+        "operationId": "get_job_logs_api_v1_jobs__job_id__logs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_JobLogLine_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Captured log lines (FR-PLAT-10)",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "description": "Never touches a dependency. See the module docstring for why.",

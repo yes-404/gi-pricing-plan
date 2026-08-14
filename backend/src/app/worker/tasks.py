@@ -18,6 +18,7 @@ Two properties are load-bearing:
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -31,6 +32,7 @@ from app.observability.trace import bind_trace_id, current_trace_id, reset_trace
 from app.platform import jobs, outbox
 from app.worker.celery_app import TASK_RELAY_OUTBOX, TASK_RUN_JOB, build_celery
 from app.worker.handlers import handler_for
+from app.worker.logs import JobLogCapture
 from app.worker.progress import JobBudgetExceededError, JobProgress
 from model_schema import (
     TERMINAL_STATUSES,
@@ -132,50 +134,62 @@ async def execute_job(database: Database, job_id: UUID) -> JobStatus:
     )
     parameters = dict(row.parameters)
 
-    try:
-        # In a thread: the handler is synchronous CPU-bound `pricing-core` code, and
-        # running it on the loop would block the very progress writes its callback makes.
-        result: JobResult = await asyncio.to_thread(handler, parameters, progress)
-    except JobCancelled:
-        async with database.unit_of_work() as session:
-            await jobs.transition(session, job_id, JobStatus.CANCELLED, actor=SYSTEM)
-        return JobStatus.CANCELLED
-    except JobBudgetExceededError as exc:
-        await _fail(
-            database,
-            job_id,
-            JobError(
-                code="JOB_RESOURCE_BUDGET_EXCEEDED",
-                message=str(exc),
-                retryable=False,
-                detail={"wall_clock_s": exc.wall_clock_s, "elapsed_s": round(exc.elapsed_s)},
-                trace_id=current_trace_id(),
-            ),
-        )
-        return JobStatus.FAILED
-    except Exception as exc:
-        # The message is the exception's, not the caller's input: FR-PLAT-11 wants a
-        # human message, and R3 keeps secrets out — a handler that puts a credential in an
-        # exception string is a bug in the handler, and the type name alone would leave an
-        # operator with nothing to act on.
-        _log.exception("job handler failed", extra={"job_id": str(job_id)})
-        await _fail(
-            database,
-            job_id,
-            JobError(
-                code="JOB_HANDLER_FAILED",
-                message=f"{type(exc).__name__}: {exc}",
-                retryable=False,
-                trace_id=current_trace_id(),
-            ),
-        )
-        return JobStatus.FAILED
+    # FR-PLAT-10: captured for the duration of this Job only. Attached to the root logger
+    # so a handler's own log calls are collected without it knowing it is being watched.
+    capture = JobLogCapture(job_id, database)
+    logging.getLogger().addHandler(capture)
 
-    async with database.unit_of_work() as session:
-        await jobs.transition(
-            session, job_id, JobStatus.SUCCEEDED, actor=SYSTEM, result=result
-        )
-    return JobStatus.SUCCEEDED
+    try:
+        try:
+            # In a thread: the handler is synchronous CPU-bound `pricing-core` code, and
+            # running it on the loop would block the very progress writes its callback makes.
+            result: JobResult = await asyncio.to_thread(handler, parameters, progress)
+        except JobCancelled:
+            async with database.unit_of_work() as session:
+                await jobs.transition(session, job_id, JobStatus.CANCELLED, actor=SYSTEM)
+            return JobStatus.CANCELLED
+        except JobBudgetExceededError as exc:
+            await _fail(
+                database,
+                job_id,
+                JobError(
+                    code="JOB_RESOURCE_BUDGET_EXCEEDED",
+                    message=str(exc),
+                    retryable=False,
+                    detail={"wall_clock_s": exc.wall_clock_s, "elapsed_s": round(exc.elapsed_s)},
+                    trace_id=current_trace_id(),
+                ),
+            )
+            return JobStatus.FAILED
+        except Exception as exc:
+            # The message is the exception's, not the caller's input: FR-PLAT-11 wants a
+            # human message, and R3 keeps secrets out — a handler that puts a credential in an
+            # exception string is a bug in the handler, and the type name alone would leave an
+            # operator with nothing to act on.
+            _log.exception("job handler failed", extra={"job_id": str(job_id)})
+            await _fail(
+                database,
+                job_id,
+                JobError(
+                    code="JOB_HANDLER_FAILED",
+                    message=f"{type(exc).__name__}: {exc}",
+                    retryable=False,
+                    trace_id=current_trace_id(),
+                ),
+            )
+            return JobStatus.FAILED
+
+        async with database.unit_of_work() as session:
+            await jobs.transition(
+                session, job_id, JobStatus.SUCCEEDED, actor=SYSTEM, result=result
+            )
+        return JobStatus.SUCCEEDED
+    finally:
+        # Detach before flushing: the flush writes through the same logger tree,
+        # and a handler still attached would capture its own writes.
+        logging.getLogger().removeHandler(capture)
+        await capture.flush_to_database()
+
 
 
 async def _fail(database: Database, job_id: UUID, error: JobError) -> None:

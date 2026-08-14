@@ -22,6 +22,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     Enum,
+    Identity,
     Index,
     Integer,
     String,
@@ -36,7 +37,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
 
-__all__ = ["AuditEventRow", "BlobRow", "JobRow", "OutboxRow", "OutboxStatus"]
+__all__ = [
+    "AuditEventRow",
+    "BlobRow",
+    "JobLogRow",
+    "JobRow",
+    "OutboxRow",
+    "OutboxStatus",
+]
 
 
 def _pg_enum(python_enum: type[enum.Enum], name: str, *, create: bool = True) -> Enum:
@@ -273,4 +281,42 @@ class BlobRow(Base):
         # left to explain it.
         CheckConstraint("ref_count >= 0", name="ref_count_non_negative"),
         Index("ix_blobs_ref_count_created_at", "ref_count", "created_at"),
+    )
+
+
+class JobLogRow(Base):
+    """One captured log line for a Job (FR-PLAT-10).
+
+    Retained with the Job and carrying its `trace_id`, so "what happened in this run?" is
+    answerable from the Job page rather than by correlating timestamps against a cluster's
+    log aggregator — which the actuary reading the failure does not have access to.
+
+    **Secrets must never reach this table** (R3, FR-GOV-26). Only the formatted message is
+    stored, never a record's arbitrary attributes, so a structured field holding a
+    credential cannot be swept in by accident.
+    """
+
+    __tablename__ = "job_logs"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+
+    # Insertion order, assigned by the database. **Not** the UUIDv7 id: two ids generated
+    # in the same millisecond have no defined order relative to each other (see
+    # `model_schema.ids`), and `at` ties too because every row written in one transaction
+    # shares its transaction timestamp. Ordering log lines by either returns them
+    # scrambled, which was the first thing the API test caught.
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(), nullable=False, unique=True)
+
+    job_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    level: Mapped[str] = mapped_column(String(16), nullable=False)
+    logger: Mapped[str] = mapped_column(String(128), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    trace_id: Mapped[str | None] = mapped_column(String(32))
+
+    __table_args__ = (
+        # The only query: one job's lines in insertion order.
+        Index("ix_job_logs_job_id_seq", "job_id", "seq"),
     )
