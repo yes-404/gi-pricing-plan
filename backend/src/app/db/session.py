@@ -38,7 +38,7 @@ class Database:
 
     def __init__(self, settings: Settings) -> None:
         self._engine: AsyncEngine = create_async_engine(
-            settings.database_url,
+            settings.database_url.get_secret_value(),
             pool_pre_ping=True,
             # A connection that died while idle — a database restart, a network blip —
             # otherwise fails the *next* request rather than being replaced silently.

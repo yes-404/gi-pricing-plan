@@ -12,8 +12,6 @@ from app.db.session import Database
 from app.platform import outbox
 from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
 
-pytestmark = pytest.mark.asyncio
-
 
 class RecordingPublisher:
     """A broker that remembers instead of sending."""

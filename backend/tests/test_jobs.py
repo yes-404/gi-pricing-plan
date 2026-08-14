@@ -19,8 +19,6 @@ from model_schema import (
     new_uuid7,
 )
 
-pytestmark = pytest.mark.asyncio
-
 
 @pytest.mark.req("FR-PLAT-7")
 async def test_submit_creates_job_audit_and_outbox_in_one_transaction(

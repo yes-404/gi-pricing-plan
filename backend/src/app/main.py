@@ -20,6 +20,7 @@ from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
+from app.platform.blobs import BlobStore, blob_probe
 
 __all__ = ["create_app"]
 
@@ -34,6 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(settings.log_level)
 
     database = Database(settings)
+    blob_store = BlobStore(settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -41,6 +43,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # has no global side effect — two apps in one test session must not share a probe
         # registry pointing at each other's engine.
         health.register_probe("database", database_probe(database))
+        health.register_probe("blobs", blob_probe(blob_store))
+        # Idempotent, and it is the one piece of setup that must happen before the first
+        # upload rather than as a deploy step: a missing bucket fails every write, and the
+        # failure reads as a credentials problem.
+        await blob_store.ensure_bucket()
         yield
         health.clear_probes()
         await database.dispose()
@@ -70,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # FR-PLAT-35: migrations are an explicit pre-deploy step. Nothing here runs them.
     app.state.database = database
+    app.state.blob_store = blob_store
 
     _log.info(
         "application configured",

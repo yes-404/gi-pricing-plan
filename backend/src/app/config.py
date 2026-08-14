@@ -14,7 +14,7 @@ from __future__ import annotations
 import enum
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
@@ -99,14 +99,35 @@ class Settings(BaseSettings):
     version: str = "0.1.0"
 
     # Postgres holds all metadata, artifacts, the audit log and job records (FR-PLAT-17).
-    database_url: str = "postgresql+asyncpg://gip:gip@localhost:5432/gip"
+    #
+    # SecretStr because a DSN embeds a password. As a plain `str` it appeared verbatim in
+    # `model_dump()`, so any structured log line carrying settings would have published the
+    # database credentials — which is exactly what NFR-PLAT-7 forbids.
+    database_url: SecretStr = SecretStr("postgresql+asyncpg://gip:gip@localhost:5432/gip")
 
     # Redis is the Celery broker and a cache; nothing durable lives here (FR-PLAT-22).
-    redis_url: str = "redis://localhost:6379/0"
+    # SecretStr for the same reason as `database_url` — a Redis URL can carry a password.
+    redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
 
     # S3-compatible blob store: MinIO locally, any S3 in production (FR-PLAT-18).
     blob_endpoint_url: str = "http://localhost:9000"
     blob_bucket: str = "gip-blobs"
+    blob_region: str = "us-east-1"
+
+    # SecretStr, not str: R3 keeps credentials out of logs, artifacts, audit events and
+    # API responses. Pydantic renders these as `**********` in every repr and model_dump,
+    # so an accidental `log.info("settings", extra={"settings": settings})` cannot leak
+    # them — the protection is in the type rather than in remembering.
+    blob_access_key: SecretStr = SecretStr("gipricing")
+    blob_secret_key: SecretStr = SecretStr("gipricing")
+
+    # FR-PLAT-20: a blob is deletable only when nothing references it *and* it is older
+    # than this. Conservative by default — an over-eager GC deletes a dataset.
+    blob_gc_grace_days: Annotated[int, Field(ge=1, le=3650)] = 30
+
+    # FR-PLAT-21: uploads above this size use presigned multipart, so dataset files do not
+    # transit the API process.
+    blob_multipart_threshold_mb: Annotated[int, Field(ge=1, le=1024)] = 64
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
@@ -121,13 +142,13 @@ class Settings(BaseSettings):
 
     @field_validator("database_url")
     @classmethod
-    def _database_must_be_async(cls, v: str) -> str:
+    def _database_must_be_async(cls, v: SecretStr) -> SecretStr:
         """SQLAlchemy picks its driver from the URL scheme.
 
         A sync driver in an async application does not fail loudly — it blocks the event
         loop, and the symptom is latency under concurrency rather than an error.
         """
-        if not v.startswith("postgresql+asyncpg://"):
+        if not v.get_secret_value().startswith("postgresql+asyncpg://"):
             raise ValueError(
                 "database_url must use the postgresql+asyncpg:// scheme; a sync driver "
                 "blocks the event loop instead of failing"

@@ -140,6 +140,40 @@ twice** — a rollback that cannot be re-applied is a one-way door (FR-PLAT-35).
 Also: reuse an existing type with `create_type=False` on the second and later tables, or
 the migration tries to create it again within a single upgrade.
 
+### Blob store: write order is not symmetric
+
+    upload to S3  →  then insert the row
+
+A crash between them leaves an object with no row — an orphan, which GC reclaims. The
+reverse leaves a row with no object: a reference that resolves to nothing, which no sweep
+repairs and which surfaces months later when someone opens a dataset. Orphaned bytes are
+cheap; dangling references are not.
+
+Content addressing makes the upload safely repeatable, so the retry is free.
+
+### Content addressing makes fixed test payloads stateful
+
+`put(b"counted content")` returns the *existing* row on the second run, reference count and
+all. A test asserting `ref_count == 1` passes once and fails for ever after. Deduplication
+working correctly is precisely what causes this. Generate unique payloads per run.
+
+The same reasoning as audit: with a persistent database, isolation comes from unique data,
+not from cleanup.
+
+### MinIO needs path-style addressing and a bucket
+
+`BotoConfig(s3={"addressing_style": "path"})` — MinIO does not serve virtual-host style
+buckets by default and the failure is a DNS error that looks nothing like configuration.
+`ensure_bucket()` is idempotent and runs at startup: a missing bucket fails every write
+with an error that reads as a credentials problem.
+
+### Credentials are `SecretStr`, and GC dry-runs by default
+
+`SecretStr` redacts in every `repr` and `model_dump`, so an accidental
+`log.info(..., extra={"settings": settings})` cannot leak them (R3) — the protection is in
+the type, not in remembering. And `collect_garbage(dry_run=True)` by default: a destructive
+sweep whose default is to destroy is one that gets run by accident.
+
 ### Async fixtures are function-scoped
 
 A `scope="session"` async engine binds connections to the loop that created it, while
@@ -155,6 +189,9 @@ session; only `Database.unit_of_work()` commits. If a service needs its own tran
 that is the bug — not the guard.
 
 ## Verified
+
+2026-08-14 — W2 blob slice. 115 tests pass; blob behaviours verified against real MinIO,
+and the suite re-run to confirm it is repeatable rather than passing once.
 
 2026-08-14 — W2 persistence slice. 96 tests pass (75 backend, of which 35 run against a
 real PostgreSQL 16). Every claim in the append-only table was measured against the running

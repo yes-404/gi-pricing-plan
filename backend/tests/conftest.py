@@ -42,6 +42,7 @@ def _isolate_probes() -> None:
 
 # Re-exported so pytest registers them as fixtures for the whole package.
 from backend.tests.conftest_db import (  # noqa: E402,F401
+    blob_store,
     database,
     principal,
     workspace_id,

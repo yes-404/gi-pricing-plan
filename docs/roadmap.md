@@ -225,7 +225,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | WS | Scope | Status |
 |---|---|---|
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
-| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22) and persistence (#23) landed; blobs, OpenAPI generation, Celery worker and OIDC remain |
+| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23) and the blob store (#24) landed; OpenAPI generation, Celery worker, jobs REST routes and OIDC remain |
 | **W3** | Governance write path — audit log, RBAC, approval state machine | after W2 |
 | **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
@@ -257,10 +257,10 @@ runtime half:
 | Artifact immutability, versioning, `parent_id` | ✔ as types (`frozen=True`, `extra="forbid"`) | persistence in W3 |
 | `model-schema` as single source of truth | ✔ as a package | generation into `docs/contracts` in W2 |
 | Decimal money discipline | ✔ as types + helpers | rating path in Phase 2 |
-| The Job model | — only the `ProgressCallback` protocol | **W2** |
-| Content-addressed blob store | — only the `BlobRef` type | **W2** |
+| The Job model | — only the `ProgressCallback` protocol | ✔ **delivered in W2** (#23) |
+| Content-addressed blob store | — only the `BlobRef` type | ✔ **delivered in W2** (#24) — S3 + refcounts + conservative GC |
 | `trace_id` propagation | — | **W2** |
-| Append-only audit log in the caller's transaction | — | **W3** |
+| Append-only audit log in the caller's transaction | — | ✔ **sink delivered early in W2** (#23, DEP-1a); RBAC and approvals remain W3 |
 | RBAC checks in the backend | — | **W3** |
 
 Stating this explicitly so nobody reads "W1 closed" as "the retrofit list is handled". It

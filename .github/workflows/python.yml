@@ -66,6 +66,23 @@ jobs:
       - name: Architecture contracts (ADR-0001 / ADR-0002 / DEP-3)
         run: uv run lint-imports
 
+      # Deduplication is a primary-key behaviour and presigning is a signature behaviour.
+      # Neither is testable against a double, so CI runs a real S3-compatible store.
+      #
+      # A `services:` entry cannot express this: minio/minio needs the `server /data`
+      # command, and service containers take no command. (bitnami/minio, which starts a
+      # server by default, no longer publishes a `latest` tag.) So it starts as a step.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=gipricing -e MINIO_ROOT_PASSWORD=gipricing \
+            minio/minio:latest server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && break
+            sleep 2
+          done
+          curl -sf http://localhost:9000/minio/health/live
+
       # FR-PLAT-35: migrations are an explicit step, never run on application start.
       - name: Migrate
         run: uv run alembic upgrade head
@@ -77,6 +94,7 @@ jobs:
         env:
           GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+          GIP_BLOB_ENDPOINT_URL: http://localhost:9000
 
       # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.
