@@ -174,7 +174,44 @@ with an error that reads as a credentials problem.
 the type, not in remembering. And `collect_garbage(dry_run=True)` by default: a destructive
 sweep whose default is to destroy is one that gets run by accident.
 
-### Collection endpoints
+### Authentication
+
+Three credential paths, all fail-closed: OIDC bearer, service-account API key, and
+local-only development headers that `require_startable` refuses in `uat`/`prod`.
+
+**The workspace is never taken from the request.** It is derived from membership (users) or
+from the account's own row (service accounts). A header-supplied workspace makes tenancy a
+claim rather than a fact.
+
+### Token verification: five things, and the allow-list is the important one
+
+Signature, algorithm, issuer, audience, expiry. **Restrict algorithms to asymmetric
+families.** Accepting `HS256` beside an RSA key set is algorithm confusion: the *public*
+key becomes the HMAC secret, so anyone who can read the JWKS can mint tokens for any user.
+
+Testing that attack needs a **hand-assembled** token — `jwt.encode` refuses to sign HS256
+with a PEM public key. That guard protects the signer; an attacker is not using PyJWT, so
+testing through it proves nothing about the verifier.
+
+Never return the rejection reason. "Expired" versus "bad signature" tells an attacker what
+to fix next and tells a legitimate caller nothing the trace id does not.
+
+### API keys: hash the secret, store the prefix
+
+Prefix in clear so a leaked key is identifiable and revocable without anyone holding the
+secret; SHA-256 of the secret because these are 256 random bits — a slow KDF protects
+*low-entropy* secrets and here only adds latency to every scoring request. Constant-time
+compare. An unknown prefix and a wrong secret must fail **identically**, or the prefix
+becomes an oracle for which keys exist.
+
+**No field may contain the separator.** `secrets.token_urlsafe` includes `_`, which is the
+character separating key fields — `parse_key` handled it with `maxsplit=3`, but the format
+invited a `rsplit` mistake that landed within the hour. `token_hex` has no such character.
+
+The environment inside a key is a **label, not an authorisation**: it is attacker-supplied
+and not covered by the hash. Check it against the account's grant.
+
+## Collection endpoints
 
 **Cursor, never offset** (`00` §5.2). With `OFFSET`, a row inserted while a client pages
 shifts everything after it — the client sees one row twice and misses another. On a jobs
@@ -186,6 +223,15 @@ key.
 
 **`total_estimate` is capped, not exact.** FR-PLAT-14 keeps 13 months of job history; an
 unbounded `COUNT(*)` scans the year to render one page.
+
+### UUIDv7's leading bits are a timestamp, so `hex[:8]` is not unique
+
+`f"user-{new_uuid7().hex[:8]}"` collides for anything created in the same millisecond —
+two tests shared a user, and one inherited the other's workspace memberships. Take the
+**tail** when you want randomness, or the whole thing.
+
+This is the same property as the ordering trap below, seen from the other side: the head is
+time and the tail is entropy.
 
 ### UUIDv7 does not order within a millisecond
 
@@ -279,6 +325,10 @@ session; only `Database.unit_of_work()` commits. If a service needs its own tran
 that is the bug — not the guard.
 
 ## Verified
+
+2026-08-14 — W2 OIDC slice. 218 tests pass, the suite run five times to confirm it after
+three genuine flakes were found and fixed — two of them real defects in the code and test
+data rather than in the harness.
 
 2026-08-14 — W2 jobs-routes slice. 173 tests pass; the full suite was run seven times to
 confirm it is repeatable, after one run failed two tests that did not reproduce. The

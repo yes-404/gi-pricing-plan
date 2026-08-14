@@ -38,12 +38,16 @@ from app.db.base import Base
 from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
 
 __all__ = [
+    "ApiKeyRow",
     "AuditEventRow",
     "BlobRow",
     "JobLogRow",
     "JobRow",
     "OutboxRow",
     "OutboxStatus",
+    "ServiceAccountRow",
+    "UserRow",
+    "WorkspaceMemberRow",
 ]
 
 
@@ -319,4 +323,120 @@ class JobLogRow(Base):
     __table_args__ = (
         # The only query: one job's lines in insertion order.
         Index("ix_job_logs_job_id_seq", "job_id", "seq"),
+    )
+
+
+class UserRow(Base):
+    """A platform user, created on first login from identity-provider claims (FR-PLAT-4).
+
+    **No password column, and there never will be one** — FR-PLAT-1 puts authentication
+    entirely with the identity provider. `subject` is the provider's `sub` claim, which is
+    stable across email changes; keying on email instead would silently reassign a user's
+    history when they change name.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    issuer: Mapped[str] = mapped_column(String(512), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(320))
+    display_name: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # Scoped to the issuer: two providers may legitimately use the same `sub`.
+        UniqueConstraint("issuer", "subject", name="uq_users_issuer_subject"),
+    )
+
+
+class ServiceAccountRow(Base):
+    """A non-human principal (`07` §4.3, FR-PLAT-3)."""
+
+    __tablename__ = "service_accounts"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    # FR-PLAT-3: scoped to named environments and the scoring permission set only. A `uat`
+    # key can never score against `prod` (FR-PLAT-30), and that is enforced by comparing
+    # this list, not by trusting the environment embedded in the key string.
+    environments: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    permissions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    rate_limit_rps: Mapped[int | None] = mapped_column(Integer)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_service_accounts_workspace_slug"),
+    )
+
+
+class ApiKeyRow(Base):
+    """One key belonging to a Service Account.
+
+    The **secret is never stored** — only its hash (FR-PLAT-3). The prefix is stored in
+    clear so a leaked key can be identified and revoked from the prefix alone, without
+    anyone holding the secret.
+
+    Several rows may be active for one account at once: that is the rotation overlap
+    window, which lets a deployment pick up the new key before the old one stops working.
+    """
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    service_account_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    prefix: Mapped[str] = mapped_column(String(16), nullable=False)
+    secret_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    environment: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("prefix", name="uq_api_keys_prefix"),
+        Index("ix_api_keys_service_account_id", "service_account_id"),
+        CheckConstraint("secret_hash ~ '^sha256:[a-f0-9]{64}$'", name="secret_hash_format"),
+    )
+
+
+class WorkspaceMemberRow(Base):
+    """Which workspaces a user may act in.
+
+    FR-PLAT-4: *a user with no mapped role gets no access, not default access.* Roles
+    themselves belong to `06` and arrive with W3; this is the coarsest form of the same
+    rule, and the one W2 can enforce honestly — an authenticated user with no membership
+    row can reach no workspace at all.
+
+    There is deliberately **no API to create these in W2**. Self-service membership would
+    make authentication sufficient for access, which is precisely what FR-PLAT-4 forbids.
+    Provisioning arrives with the governance write path (W3, FR-GOV-4).
+    """
+
+    __tablename__ = "workspace_members"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "workspace_id", name="uq_workspace_members_user_workspace"),
+        Index("ix_workspace_members_user_id", "user_id"),
     )

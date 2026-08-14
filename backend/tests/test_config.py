@@ -68,9 +68,23 @@ def test_prod_without_tls_refuses_to_start() -> None:
 
 
 @pytest.mark.req("FR-PLAT-5")
-def test_prod_with_tls_starts() -> None:
-    settings = load_settings(environment=Environment.PROD, tls_terminated=True)
+def test_prod_with_tls_and_an_identity_provider_starts() -> None:
+    settings = load_settings(
+        environment=Environment.PROD,
+        tls_terminated=True,
+        oidc_issuer="https://idp.example/realms/gip",
+        oidc_audience="gi-pricing-api",
+        oidc_jwks_url="https://idp.example/realms/gip/protocol/openid-connect/certs",
+    )
     assert settings.environment is Environment.PROD
+    assert settings.oidc_configured
+
+
+@pytest.mark.req("FR-PLAT-1")
+def test_prod_without_an_identity_provider_refuses_to_start() -> None:
+    """Starting anyway would present a service that rejects every request as if broken."""
+    with pytest.raises(ConfigInvalidError, match="OIDC issuer"):
+        load_settings(environment=Environment.PROD, tls_terminated=True)
 
 
 @pytest.mark.req("FR-PLAT-5")

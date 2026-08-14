@@ -1,13 +1,18 @@
-"""Request dependencies: who is calling, and on whose behalf.
+"""Request dependencies: who is calling, and on whose behalf (FR-PLAT-1..4).
 
-**OIDC is not implemented yet** (FR-PLAT-1..4, the next W2 slice). Until it is, this module
-is deliberately shaped so that the absence of authentication is a *refusal*, not an
-omission: `require_principal` returns `401 UNAUTHENTICATED` unless development identity is
-explicitly switched on, and `Settings.require_startable` refuses to boot with it on in
-`uat` or `prod`.
+Three credential paths, tried in order, and every one of them can only *fail closed*:
 
-Every route that reads or changes workspace data depends on this, so a route added later
-inherits the refusal by default rather than having to remember to ask for it.
+1. `Authorization: Bearer <jwt>` — an OIDC access token, verified against the provider.
+2. `Authorization: ApiKey <key>` / `X-API-Key` — a Service Account key.
+3. Development headers — **local only**, and `Settings.require_startable` refuses to boot
+   with them enabled in `uat` or `prod`.
+
+With none of these configured or presented, the answer is `401`, never a default identity.
+
+The workspace is not taken from the request. A caller states nothing about which tenant it
+is acting in; the platform derives it from membership (users) or from the account's own
+workspace (service accounts). A header-supplied workspace would make tenancy a claim rather
+than a fact.
 """
 
 from __future__ import annotations
@@ -18,7 +23,10 @@ from uuid import UUID
 
 from fastapi import Depends, Request
 
+from app.auth.oidc import OidcVerifier
+from app.auth.service import AuthenticatedIdentity, authenticate_api_key, authenticate_bearer
 from app.config import Settings
+from app.db.session import Database
 from app.errors import PlatformError
 from model_schema import ActorKind, Principal
 
@@ -35,6 +43,8 @@ class Caller:
 
     principal: Principal
     workspace_id: UUID
+    environments: frozenset[str] = frozenset()
+    permissions: frozenset[str] = frozenset()
 
 
 def _settings(request: Request) -> Settings:
@@ -45,20 +55,72 @@ def _settings(request: Request) -> Settings:
 SettingsDep = Annotated[Settings, Depends(_settings)]
 
 
-def require_caller(request: Request, settings: SettingsDep) -> Caller:
-    """Resolve the caller, or refuse.
+async def require_caller(request: Request, settings: SettingsDep) -> Caller:
+    """Resolve the caller, or refuse."""
+    authorization = request.headers.get("authorization", "")
+    scheme, _, credential = authorization.partition(" ")
+    scheme = scheme.lower()
 
-    The unauthenticated path is the default and returns 401 with a code the frontend can
-    branch on, rather than a 500 from a missing attribute — an endpoint whose auth is
-    "not wired up yet" must fail closed and say so.
+    database: Database = request.app.state.database
+
+    if scheme == "bearer" and credential:
+        verifier: OidcVerifier = request.app.state.oidc_verifier
+        async with database.unit_of_work() as session:
+            identity = await authenticate_bearer(session, verifier, credential)
+        return _single_workspace(identity)
+
+    api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
+    if api_key:
+        async with database.unit_of_work() as session:
+            identity = await authenticate_api_key(session, api_key)
+        return _single_workspace(identity)
+
+    return _development_caller(request, settings)
+
+
+def _single_workspace(identity: AuthenticatedIdentity) -> Caller:
+    """Collapse an authenticated identity to the one workspace it is acting in.
+
+    A user may belong to several. Until the API carries a workspace selector — which
+    arrives with governance in W3, alongside the roles that make the choice meaningful —
+    a caller with more than one must choose, and the platform must not choose for them.
     """
+    from app.auth.service import AuthenticatedIdentity
+
+    assert isinstance(identity, AuthenticatedIdentity)
+    if not identity.workspaces:
+        raise PlatformError(
+            "UNAUTHENTICATED",
+            "No workspace access",
+            403,
+            "This principal is authenticated but is a member of no workspace. Access is "
+            "granted explicitly (FR-PLAT-4); it is never the default.",
+        )
+    if len(identity.workspaces) > 1:
+        raise PlatformError(
+            "UNAUTHENTICATED",
+            "Workspace selection required",
+            403,
+            "This principal belongs to more than one workspace and the API has no "
+            "selector yet. Workspace selection arrives with W3.",
+        )
+    return Caller(
+        principal=identity.principal,
+        workspace_id=next(iter(identity.workspaces)),
+        environments=identity.environments,
+        permissions=identity.permissions,
+    )
+
+
+def _development_caller(request: Request, settings: Settings) -> Caller:
+    """Local-only identity from headers. Refused outside `local`/`dev` at startup."""
     if not settings.dev_auth_enabled:
         raise PlatformError(
             "UNAUTHENTICATED",
             "Authentication required",
             401,
-            "This deployment has no identity provider configured. OIDC login "
-            "(FR-PLAT-1) is not yet implemented in this build.",
+            "No credential was presented. Use an OIDC bearer token or a service account "
+            "API key.",
         )
 
     principal_id = request.headers.get(DEV_PRINCIPAL_HEADER)

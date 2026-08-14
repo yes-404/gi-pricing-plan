@@ -14,7 +14,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health, jobs
+from app.api import health, jobs, service_accounts
+from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
 from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
@@ -36,6 +37,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     database = Database(settings)
     blob_store = BlobStore(settings)
+    # One verifier per app: it caches the provider's key set, and a per-request client
+    # would fetch the JWKS on every call and make the platform's own traffic the reason
+    # logins start failing.
+    oidc_verifier = OidcVerifier(settings)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -67,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(jobs.router, prefix=API_PREFIX)
+    app.include_router(service_accounts.router, prefix=API_PREFIX)
     app.add_api_route(
         "/version",
         health.version_route(settings),
@@ -78,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # FR-PLAT-35: migrations are an explicit pre-deploy step. Nothing here runs them.
     app.state.settings = settings
+    app.state.oidc_verifier = oidc_verifier
     app.state.database = database
     app.state.blob_store = blob_store
 

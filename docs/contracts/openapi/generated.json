@@ -48,6 +48,94 @@
         "title": "ComponentStatus",
         "type": "string"
       },
+      "CreateServiceAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "environments": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Environments",
+            "type": "array"
+          },
+          "expires_in_days": {
+            "default": 365,
+            "exclusiveMinimum": 0.0,
+            "maximum": 3650.0,
+            "title": "Expires In Days",
+            "type": "integer"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Permissions",
+            "type": "array"
+          },
+          "rate_limit_rps": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Rps"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "environments",
+          "permissions"
+        ],
+        "title": "CreateServiceAccount",
+        "type": "object"
+      },
+      "CreatedServiceAccount": {
+        "additionalProperties": false,
+        "description": "The one response that carries a key value (FR-PLAT-3).",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ServiceAccountView"
+          },
+          "key": {
+            "description": "The full key. Shown once and never recoverable — nothing stores it.",
+            "title": "Key",
+            "type": "string"
+          },
+          "warning": {
+            "default": "Store this now. It cannot be retrieved again.",
+            "title": "Warning",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account",
+          "key"
+        ],
+        "title": "CreatedServiceAccount",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -372,6 +460,62 @@
         "title": "JobStatus",
         "type": "string"
       },
+      "KeyView": {
+        "additionalProperties": false,
+        "description": "A key as it can safely be shown: prefix and dates, never the secret.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "prefix",
+          "environment",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "KeyView",
+        "type": "object"
+      },
       "Page_JobLogLine_": {
         "additionalProperties": false,
         "properties": {
@@ -593,6 +737,74 @@
           }
         },
         "title": "RetryState",
+        "type": "object"
+      },
+      "ServiceAccountView": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "environments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Environments",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/KeyView"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "rate_limit_rps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Rps"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "description",
+          "environments",
+          "permissions",
+          "rate_limit_rps",
+          "keys"
+        ],
+        "title": "ServiceAccountView",
         "type": "object"
       },
       "ValidationError": {
@@ -976,6 +1188,156 @@
         "summary": "Captured log lines (FR-PLAT-10)",
         "tags": [
           "jobs"
+        ]
+      }
+    },
+    "/api/v1/service-accounts": {
+      "post": {
+        "description": "Create the account and its first key. The key is in this response and nowhere else.",
+        "operationId": "create_service_account_api_v1_service_accounts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServiceAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedServiceAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create a service account",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/service-accounts/{account_id}/keys/{prefix}": {
+      "delete": {
+        "operationId": "revoke_key_api_v1_service_accounts__account_id__keys__prefix__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "prefix",
+            "required": true,
+            "schema": {
+              "title": "Prefix",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceAccountView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke a key immediately",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/service-accounts/{account_id}/rotate": {
+      "post": {
+        "description": "Issue a new key and give the old one a deadline (FR-PLAT-3).\n\nThe old key keeps working for the overlap window rather than dying immediately. A\nrotation that breaks production the instant it is requested is a rotation nobody\nperforms, and an unrotated key is the failure this exists to prevent.",
+        "operationId": "rotate_key_api_v1_service_accounts__account_id__rotate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "overlap_days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 90,
+              "minimum": 0,
+              "title": "Overlap Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedServiceAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate the key with an overlap window",
+        "tags": [
+          "platform"
         ]
       }
     },

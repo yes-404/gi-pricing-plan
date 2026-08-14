@@ -225,7 +225,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | WS | Scope | Status |
 |---|---|---|
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
-| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23), the blob store (#24), generated contracts (#25), the Celery worker (#26) and the jobs REST routes (#27) landed; **OIDC is the last piece** — until it lands the routes fail closed with 401 |
+| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23), the blob store (#24), generated contracts (#25), the Celery worker (#26), the jobs REST routes (#27) and OIDC with service accounts (#28) landed. **Not delivered:** the local development identity provider in the compose stack (FR-PLAT-1's last clause) and rate limiting (FR-PLAT-49); dev-header identity covers local work and is refused outside `local`/`dev` |
 | **W3** | Governance write path — audit log, RBAC, approval state machine | after W2 |
 | **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
@@ -261,7 +261,7 @@ runtime half:
 | Content-addressed blob store | — only the `BlobRef` type | ✔ **delivered in W2** (#24) — S3 + refcounts + conservative GC |
 | `trace_id` propagation | — | **W2** |
 | Append-only audit log in the caller's transaction | — | ✔ **sink delivered early in W2** (#23, DEP-1a); RBAC and approvals remain W3 |
-| RBAC checks in the backend | — | **W3** |
+| RBAC checks in the backend | — authentication and workspace membership only (#28) | **W3** — roles, assignments and permission checks |
 
 Stating this explicitly so nobody reads "W1 closed" as "the retrofit list is handled". It
 is not; W1 made it *cheap*, which was its job.
