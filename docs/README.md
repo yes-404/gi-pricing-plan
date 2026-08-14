@@ -21,6 +21,7 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 | `skills-map.md` | Stack component → where used → skills to research → resources |
 | `open-questions.md` | Unresolved design questions, owner, status |
 | `phase-0-status.md` | Exit-criteria progress, requirement inventory, contract coverage, spikes |
+| `roadmap.md` | Build order, what cannot be retrofitted, per-phase workstreams, decision gates |
 
 ## Reading order for a newcomer
 
