@@ -70,6 +70,11 @@ testpaths = [
     "packages/model-schema/tests",
     "packages/pricing-core/tests",
     "backend/tests",
+    # Repository-level invariants no single component owns — the architecture contracts,
+    # the compose stack, the cross-cutting checks. `scripts/req-coverage.py` and
+    # `scripts/scope-audit.py` read this list, so adding a root here is all that is needed
+    # for its markers to count as evidence.
+    "tests",
 ]
 # Each package owns a test module of the same name (test_money.py in both). The legacy
 # prepend import mode collides on the basename; importlib keeps them distinct without

@@ -235,11 +235,43 @@ deliverable re-verified against its row above, the gate run locally, each new ch
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered
 stated explicitly. A closure record without those is an assertion, not evidence.
 
-*W1 was closed before `CLAUDE.md` §13 required a scope derivation (step 1), so the record
-below lists deliverables without an independent count of the requirements W1's areas
-contain. W1 delivered foundations rather than a requirement set, so the omission is small —
-but it is an omission, and a re-audit under the current standard would be the way to
-retire it.*
+**W1 re-audited under §13, 2026-08-14.** W1 closed before the standard required a scope
+derivation, so it was audited again from the specifications rather than from its own
+record.
+
+**Scope**, derived from what W1's named deliverables are required *by* — W1 produced
+foundations, not a spec section, so its scope is the set of system-level requirements its
+deliverables implement:
+
+| Deliverable | Requirement | Verdict |
+|---|---|---|
+| `model-schema` | FR-OVR-1 artifact immutability | ✔ as types (`frozen`, `extra="forbid"`); persistence in W3 |
+| `model-schema` | FR-OVR-6 shapes defined once | ✔ package in W1, generation and drift check in W2 (#25) |
+| `model-schema` | FR-OVR-7 money discipline | ✔ `MoneyMinor`, `DecimalStr`, and the docs-audit check |
+| `pricing-core` | FR-OVR-5 computation callable without the backend | ✔ enforced by the ADR-0001 contract |
+| compose stack | NFR-OVR-9 full stack local, no cloud | ✔ services and health checks declared |
+| compose stack | NFR-PLAT-4 usable state in < 5 min | ✔ **measured 21 s**; deliberately not a test |
+
+**6 requirements in scope; 5 carry test evidence, all 6 carry evidence of some kind.**
+
+**The re-audit found a gap in the standard, not in W1.** `scope-audit.py` sees
+`@pytest.mark.req` markers and nothing else, so a requirement enforced by an import-linter
+contract, a database privilege or a recorded measurement reads as unevidenced. W1 is the
+extreme case — its deliverable *is* enforcement machinery — and the audit reported half its
+scope missing while the enforcement worked perfectly in CI.
+
+Rather than weaken the standard, the enforcement was made visible:
+`tests/test_repository_invariants.py` links FR-OVR-5 to the import-linter run, FR-OVR-6 to
+the contract configuration being non-empty, NFR-OVR-9 to the compose declaration, and
+FR-OVR-7 to the docs-audit money check. A repository-level `tests/` root was added to
+`testpaths`, which both traceability scripts read.
+
+NFR-PLAT-4 keeps its measurement rather than gaining a test: starting containers on every
+push to assert a number that varies with the runner would be a slow check that fails for
+reasons unrelated to the code.
+
+*Nothing in W1's original closure was found to be wrong.* The record below stands; what was
+missing was the scope derivation and the visibility of enforcement as evidence.
 
 **W1 closure evidence** (re-verified 2026-08-14, and again on the rebuilt instance the same
 day — `uv` had to be reinstalled durably, and the gate was re-run from a clean sync):

@@ -34,8 +34,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS = ROOT / "docs" / "specs"
 
 _REQUIREMENT = re.compile(r"^\| \*\*((?:FR|NFR)-([A-Z]+)-\d+)\*\*")
-_SECTION = re.compile(r"^### (\d+\.\d+) (.+)")
-_NFR_HEADING = re.compile(r"^## \d+\. Non-functional requirements")
+# Both heading levels. Specs differ: `07` puts requirements under `### 3.2 Jobs`, while
+# `00` puts them under `## 3. Functional requirements`. Matching only `###` made the last
+# level-3 heading stick, and every FR-OVR requirement was attributed to
+# "2.6 Terms deliberately avoided" — found by running this against a second module, which
+# is the reason to do that before trusting a new check.
+_SECTION = re.compile(r"^(#{2,3}) (\d+(?:\.\d+)?)\.?\s+(.+)")
+_NFR_HEADING = re.compile(r"^#{2,3} \d+(?:\.\d+)?\.?\s+Non-functional requirements")
 _MARKER = re.compile(r'@pytest\.mark\.req\("([^"]+)"\)')
 
 
@@ -45,11 +50,10 @@ def requirements_by_section(module: str) -> dict[str, list[str]]:
     for spec in sorted(SPECS.glob("*.md")):
         section = "(preamble)"
         for line in spec.read_text(encoding="utf-8").splitlines():
-            heading = _SECTION.match(line)
-            if heading:
-                section = f"{heading.group(1)} {heading.group(2)}"
-            elif _NFR_HEADING.match(line):
+            if _NFR_HEADING.match(line):
                 section = "NFR"
+            elif heading := _SECTION.match(line):
+                section = f"{heading.group(2)} {heading.group(3)}"
             match = _REQUIREMENT.match(line)
             if match and match.group(2) == module:
                 found[section].append(match.group(1))

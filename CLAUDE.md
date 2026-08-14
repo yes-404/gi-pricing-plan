@@ -466,6 +466,18 @@ documentation at all.
 **A marker is a claim, not a proof.** It says a test asserts *something* about a
 requirement, not that it covers it. Read the ones that matter.
 
+**Evidence is not only markers.** A requirement can be enforced by an import-linter
+contract, a database privilege, a migration, or a recorded measurement — none of which the
+script can see, so all of which read as unevidenced. Re-auditing W1 reported half its scope
+missing while the enforcement was working perfectly in CI, because W1's whole deliverable
+*is* enforcement machinery.
+
+The answer is to make the enforcement visible rather than to trust it silently: a test that
+runs the check and names the requirement (`tests/test_repository_invariants.py`) links the
+two, so the audit finds it. Where a test genuinely is the wrong instrument — NFR-PLAT-4
+would have CI start containers to assert a number that varies with the runner — record the
+measurement and say why it is not a test.
+
 ### 2. Deliverables — audited against the definition, not memory
 
 Re-read the workstream's row in `roadmap.md` §6 and check each named deliverable **exists

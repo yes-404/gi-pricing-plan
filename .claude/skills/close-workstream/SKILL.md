@@ -47,6 +47,21 @@ grep -nE '\| \*\*W[0-9]+' docs/roadmap.md | grep PLAT     # e.g. FR-PLAT-28..31 
 owner, reassigned, or not started. Silence is not one of the options, and it was the
 default for four of W2's six gaps until an audit went looking.
 
+## 0a. Evidence is not only markers
+
+`scope-audit.py` sees `@pytest.mark.req` and nothing else. A requirement enforced by an
+import-linter contract, a database privilege, a migration or a recorded measurement reads
+as unevidenced. Before writing a gap into a closure record, ask **how else this could be
+enforced** — and then make that enforcement visible, in a test that runs the check and
+names the requirement, rather than leaving the audit to rediscover it next time.
+
+W1's re-audit reported half its scope missing while every one of those mechanisms was
+working. The mechanisms were fine; the record could not see them.
+
+Where a test is genuinely the wrong instrument, say so and keep the measurement: NFR-PLAT-4
+would otherwise have CI start containers on every push to assert a number that varies with
+the runner.
+
 ## 0b. Read the markers that matter
 
 A marker is a *claim* that a test asserts something about a requirement, not proof that it
