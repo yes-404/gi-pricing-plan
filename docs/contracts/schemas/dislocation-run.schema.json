@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/dislocation-run.schema.json",
+  "title": "DislocationRun",
+  "description": "Premium change between two Rating Versions over a fixed portfolio. A persisted, citable artifact, not a transient screen (03 FR-RATE-46..49, §4.6).",
+  "type": "object",
+  "required": ["baseline_ref", "candidate_ref", "portfolio_dataset_version_id",
+               "policy_count", "exposure_years", "totals", "distribution"],
+  "properties": {
+    "baseline_ref": {"$ref": "common/artifact-ref.schema.json"},
+    "candidate_ref": {"$ref": "common/artifact-ref.schema.json"},
+    "portfolio_dataset_version_id": {"type": "string", "format": "uuid"},
+    "job_id": {"type": "string", "format": "uuid"},
+    "policy_count": {"type": "integer", "minimum": 0},
+    "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+    "totals": {
+      "type": "object",
+      "required": ["baseline_premium_minor", "candidate_premium_minor", "change_pct"],
+      "properties": {
+        "baseline_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "candidate_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "change_pct": {"type": "number"}
+      }
+    },
+    "distribution": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["band", "policies", "exposure_share", "mean_change_pct"],
+        "properties": {
+          "band": {"type": "string"},
+          "policies": {"type": "integer", "minimum": 0},
+          "exposure_share": {"type": "number", "minimum": 0, "maximum": 1},
+          "mean_change_pct": {"type": "number"}
+        }
+      }
+    },
+    "by_segment": {
+      "type": "array",
+      "description": "Sliceable by any factor available on the portfolio dataset (FR-RATE-47).",
+      "items": {
+        "type": "object",
+        "required": ["factor", "level", "policies", "mean_change_pct"],
+        "properties": {
+          "factor": {"type": "string"},
+          "level": {"type": "string"},
+          "policies": {"type": "integer", "minimum": 0},
+          "mean_change_pct": {"type": "number"},
+          "exposure_share": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "by_ladder_rung": {
+      "type": "array",
+      "description": "Which part of the change caused this, not merely how much it changed (FR-RATE-47).",
+      "items": {
+        "type": "object",
+        "required": ["rung", "contribution_pct"],
+        "properties": {"rung": {"type": "string"}, "contribution_pct": {"type": "number"}}
+      }
+    },
+    "attribution": {
+      "type": "array",
+      "description": "Each change applied in isolation and cumulatively, decomposing the movement into its causes (FR-RATE-49).",
+      "items": {
+        "type": "object",
+        "required": ["change", "mean_change_pct"],
+        "properties": {
+          "change": {"type": "string"},
+          "mean_change_pct": {"type": "number"},
+          "cumulative_change_pct": {"type": "number"}
+        }
+      }
+    },
+    "largest_movers_blob": {"type": ["string", "null"],
+      "description": "Drill-down to individual quotes and their traces."},
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "count"],
+        "properties": {
+          "code": {"type": "string"},
+          "count": {"type": "integer", "minimum": 0},
+          "sample": {"type": "array", "items": {"type": "object"}}
+        }
+      }
+    }
+  }
+}

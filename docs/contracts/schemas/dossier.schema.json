@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/dossier.schema.json",
+  "title": "Dossier",
+  "description": "Generated documentation for a Model, Peril Structure, or Rating Version. Assembled from persisted artifacts only; human commentary is separate, attributed, and versioned (06 R3, FR-GOV-27..32, §4.4).",
+  "type": "object",
+  "required": ["subject_ref", "generated_at", "as_at", "template_version", "sections", "artifact_references"],
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "properties": {
+    "subject_ref": {"$ref": "common/artifact-ref.schema.json"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "as_at": {
+      "type": "string", "format": "date-time",
+      "description": "The point in time the dossier describes. Any historical state can be regenerated (FR-GOV-30)."
+    },
+    "template_version": {"type": "string"},
+    "sections": {
+      "type": "array", "minItems": 17,
+      "items": {
+        "type": "object",
+        "required": ["number", "title", "origin"],
+        "properties": {
+          "number": {"type": "integer", "minimum": 1, "maximum": 17},
+          "title": {
+            "enum": ["Purpose, scope, and intended use", "Data", "Data quality", "Factors",
+                     "Model specification", "Results", "Diagnostics", "Transparency",
+                     "Peril structure and reconciliation", "Rating structure", "Impact",
+                     "Commercial", "Compliance", "Monitoring plan and live performance",
+                     "Limitations and known issues", "Approval history and attestations",
+                     "Appendix — artifact references"]
+          },
+          "origin": {
+            "enum": ["generated", "commentary"],
+            "description": "Rendered output distinguishes the two; numbers are never retyped into commentary (06 R3, FR-GOV-28)."
+          },
+          "source_module": {"enum": ["01", "02", "03", "04", "05", "06", "all", null]},
+          "content_blob": {"type": ["string", "null"]},
+          "commentary": {
+            "type": ["object", "null"],
+            "required": ["text", "author_id", "at", "version"],
+            "properties": {
+              "text": {"type": "string", "minLength": 1},
+              "author_id": {"type": "string", "format": "uuid"},
+              "at": {"type": "string", "format": "date-time"},
+              "version": {"type": "integer", "minimum": 1}
+            }
+          }
+        }
+      }
+    },
+    "artifact_references": {
+      "type": "array",
+      "description": "Section 17: every artifact drawn on, with its content hash, so an external reviewer can verify a figure without platform access (FR-GOV-29).",
+      "items": {
+        "type": "object",
+        "required": ["ref"],
+        "properties": {
+          "ref": {"$ref": "common/artifact-ref.schema.json"},
+          "content_hash": {"type": "string"},
+          "cited_in_sections": {"type": "array", "items": {"type": "integer"}}
+        }
+      }
+    },
+    "renderings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["format", "blob"],
+        "properties": {
+          "format": {"enum": ["html", "pdf", "bundle"]},
+          "blob": {"$ref": "common/blob-ref.schema.json"}
+        }
+      }
+    },
+    "submitted_with_approval_request_id": {
+      "type": ["string", "null"], "format": "uuid",
+      "description": "The version submitted with an approval is retained exactly as reviewed (FR-GOV-31)."
+    }
+  },
+  "invariants": [
+    "sections 1 and 15 require a commentary block before an approval can be submitted (OQ-GOV-5 recommendation)",
+    "every figure in a generated section traces to an entry in artifact_references (06 R3)",
+    "regenerating for the same as_at and template_version is byte-reproducible (NFR-GOV-5)"
+  ]
+}

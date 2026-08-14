@@ -95,7 +95,7 @@
       }
     }
   },
-  "allOf_invariants": [
+  "invariants": [
     "DAG is acyclic (FR-RATE-1)",
     "every consumed name is produced by exactly one upstream step",
     "every declared output has a corresponding output step",

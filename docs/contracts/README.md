@@ -29,15 +29,26 @@ fix the schema.
   (`00-overview.md` ID-3), validated by `common/artifact-ref.schema.json`.
 - Enum values match the status vocabularies in the specs exactly; a status not listed in a
   spec must not appear here.
+- **`invariants`** is a non-standard annotation carrying the rules JSON Schema cannot
+  express — cross-field conditions, state-machine constraints, and referential rules —
+  each citing its requirement ID. Validators ignore it; reviewers and the Phase 1
+  implementers should not. Where an invariant *can* be expressed in schema
+  (`if`/`then`, `required`, `pattern`), it is, and it does not appear in `invariants`.
 
 ## Coverage
 
-Drafted: envelope, artifact ref, money, dataset version, validation rule, validation
-report, model spec, model, custom objective, objective certificate, rating algorithm, rate
-table, rating version, quote context, scoring result, optimisation run, GIPP check,
-monitor, monitoring result, audit event, job.
+**31 schemas, covering every persisted artifact the specs define.**
 
-Not yet drafted (Phase 0 remaining): profile, banding, grouping, peril structure,
-transparency artifact, diagnostics, dislocation run, regression suite, approval request,
-dossier. Each is specified in prose in its module spec; the schema is mechanical from
-there.
+| Area | Schemas |
+|---|---|
+| Common | artifact envelope, artifact ref, blob ref, money primitives, provenance |
+| Data (01) | dataset version, validation rule, validation report, profile |
+| Modelling (02) | banding, grouping, model spec, model, diagnostics, custom objective, objective certificate, transparency artifact, peril structure |
+| Rating (03) | rating algorithm, rate table, rating version, scoring (quote context / result / ladder / trace), dislocation run, regression suite + run |
+| Optimisation (04) | optimisation run + result, GIPP check |
+| Monitoring (05) | monitor, monitoring result, alert |
+| Governance (06) | approval request, audit event, dossier |
+| Platform (07) | job |
+
+Verify with `python3 scripts/audit-docs.py`, which parses every schema, rejects duplicate
+keys, and resolves every local and cross-file `$ref`.

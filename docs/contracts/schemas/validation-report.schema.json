@@ -59,7 +59,7 @@
       }
     }
   },
-  "allOf_invariants": [
+  "invariants": [
     "overall == 'pass' iff counts.fail == 0 and counts.error == 0 and counts.warn == 0",
     "overall == 'pass_with_warnings' iff counts.fail == 0 and counts.error == 0 and every warn result has an acknowledgement (FR-DATA-17)"
   ]

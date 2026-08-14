@@ -65,7 +65,7 @@
     },
     "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
   },
-  "allOf_invariants": [
+  "invariants": [
     "status == 'validated' implies validation_report_id is set and that report's overall is pass or pass_with_warnings (FR-DATA-17)",
     "kind == 'derived' implies derived_from is set (FR-DATA-33)",
     "totals.exposure_years > 0"

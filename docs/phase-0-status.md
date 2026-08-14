@@ -13,12 +13,13 @@ documents alone.*
 |---|---|---|
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
 | All five workflow documents complete | **done** | wf-01 … wf-05, each with failure paths and traceability |
-| Contracts drafted | **partial** | 21 JSON Schemas + OpenAPI stub; 10 artifact schemas still prose-only (§3) |
+| Contracts drafted | **done** | 31 JSON Schemas covering every persisted artifact, + OpenAPI stub |
 | `open-questions.md` empty or explicitly deferred | **open** | 45 questions: 39 `open`, 6 `deferred`. Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
 **Remaining before Phase 1 can start:** resolve or explicitly defer the open questions
-(§4), and close the two spikes (§5).
+(§4), and close the two spikes (§5). Both are maintainer decisions; nothing in the
+document suite blocks on further writing.
 
 ---
 
@@ -44,18 +45,24 @@ Requirement IDs are permanent (`CLAUDE.md` §5). Never renumber; append, or mark
 
 ## 3. Contract coverage
 
-**Drafted** (`docs/contracts/schemas/`): artifact envelope, artifact ref, blob ref, money
-primitives, provenance, dataset version, validation rule, validation report, model spec,
-model, custom objective, objective certificate, rating algorithm, rate table, rating
-version, scoring (quote context / result / ladder / trace), optimisation run, GIPP check,
-monitoring (monitor / result / alert), audit event, job.
+**Complete.** 31 JSON Schemas in `docs/contracts/schemas/` cover every persisted artifact
+the specs define, plus a 32-path OpenAPI 3.1 stub.
 
-**Prose-only, schema pending:** profile, banding, grouping, peril structure, transparency
-artifact, diagnostics, dislocation run, regression suite, approval request, dossier.
+| Area | Count | Schemas |
+|---|---|---|
+| Common | 5 | artifact envelope, artifact ref, blob ref, money primitives, provenance |
+| Data (01) | 4 | dataset version, validation rule, validation report, profile |
+| Modelling (02) | 9 | banding, grouping, model spec, model, diagnostics, custom objective, objective certificate, transparency artifact, peril structure |
+| Rating (03) | 6 | rating algorithm, rate table, rating version, scoring, dislocation run, regression suite |
+| Optimisation (04) | 2 | optimisation run, GIPP check |
+| Monitoring (05) | 1 | monitoring (monitor / result / alert) |
+| Governance (06) | 3 | approval request, audit event, dossier |
+| Platform (07) | 1 | job |
 
-Each pending item is fully specified in its module spec; deriving the schema is mechanical.
-From Phase 1 all of these become generated output from `packages/model-schema`
-([ADR-0002](adr/0002-model-schema-single-source-of-truth.md)).
+Where a rule can be expressed in schema it is (`if`/`then`, `required`, `pattern`); the
+rest sit in an `invariants` annotation citing their requirement ID. From Phase 1 all of
+these become generated output from `packages/model-schema`
+([ADR-0002](adr/0002-model-schema-single-source-of-truth.md)), with CI failing on drift.
 
 ---
 
@@ -117,5 +124,6 @@ python3 scripts/audit-docs.py
 
 It verifies: no broken relative links; every referenced requirement ID is defined exactly
 once; no numbering gaps; every spec open question is mirrored into `open-questions.md`
-and vice versa; every referenced ADR exists; every spec has the ten §5 sections; and every
-JSON Schema parses with no duplicate keys.
+and vice versa; every referenced ADR exists; every spec has the ten §5 sections; every
+JSON Schema parses with no duplicate keys; and every schema `$ref` resolves, including
+cross-file pointers into `$defs`.

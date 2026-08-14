@@ -57,7 +57,7 @@
     "flags": {"type": "array", "items": {"enum": ["dataset_invalidated", "objective_deprecated", "attestation_overdue"]}},
     "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
   },
-  "allOf_invariants": [
+  "invariants": [
     "status in {fitted, review, approved} implies diagnostics_id is set (FR-MODEL-64)",
     "fit_result.model_type != 'glm' and status == 'approved' implies transparency_artifact_id is set (02 R3)",
     "custom_objective_ref set and status == 'approved' implies that objective version is approved (02 R4)",
