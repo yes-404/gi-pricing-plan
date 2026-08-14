@@ -245,6 +245,66 @@ For anything where **insertion order is the meaning** (log lines), use a databas
 follows with its per-workspace `sequence`; it just has to be applied everywhere order
 matters, not only where tamper-evidence does.
 
+## `alembic.ini` is at the repository root, not in `backend/`
+
+Running `uv run alembic ...` from `backend/` fails with `No 'script_location' key found in
+configuration` — which reads like a broken config file rather than a wrong working
+directory. `CLAUDE.md` §11 is right; run it from the root.
+
+```bash
+uv run alembic upgrade head            # from the repo root, always
+```
+
+## `PlatformError` exposes `status_code`, not `status`
+
+`excinfo.value.status` raises `AttributeError` inside `pytest.raises`, which pytest
+reports as a test error rather than a mismatch — so it looks like the code under test
+misbehaved. Assert `.code` by preference (the code is the contract, not the status), and
+`.status_code` when the status is genuinely the point.
+
+## Inventing an error code fails loudly, and that is the design
+
+`PlatformError.__init__` refuses any code not in `_KNOWN_CODES`, and a conformance test
+asserts each module's registry equals its spec's declared list. So a genuinely new failure
+condition is a **spec change first**: add the code to the owning spec's §5.1 list and the
+registry in the same commit.
+
+Before adding one, check whether the spec already owns a code for the case. `01` §5.1 had
+`ACKNOWLEDGE_FORBIDDEN_ROLE` for a refusal that `rbac.require_permission` would have
+reported as the generic `PERMISSION_DENIED`. The specific code is the better answer: an
+analyst reading "permission denied" goes looking for a grant, where the requirement means
+them to go and find an actuary. Use `rbac.has_permission` and raise the owned code.
+
+## Size `String()` columns against the *longest enum value*, not a round number
+
+`overall` was `String(16)`; `pass_with_warnings` is 18 characters. The column accepted
+every verdict except the one a report with warnings actually gets, and nothing caught it
+until a test wrote that value. `StringDataRightTruncationError` names the type and the
+limit but not the column, so grep the width, not the field name.
+
+Fold the fix into the unmerged migration rather than adding a corrective one, and
+round-trip `upgrade`/`downgrade` twice afterwards.
+
+## Measuring memory: a phase inherits whatever the phase before it allocated
+
+`ru_maxrss` is a process high-water mark, and glibc does not return freed arenas to the
+OS. So profiling measured *after* generating the test data reports the generator's peak,
+not the profiler's — 2,278 MB became 636 MB became 376 MB as the measurement got cleaner,
+with no change to the code being measured.
+
+Two things fix it. Sample `/proc/self/statm` in a thread during the block to get a
+per-operation peak rather than a process one, and run the phase in a **fresh process** that
+has never held the data:
+
+```bash
+uv run python scripts/bench-data.py --rows 2000000 --generate-to /tmp/bench.parquet
+uv run python scripts/bench-data.py --parquet /tmp/bench.parquet     # clean process
+```
+
+Also record the baseline after imports. A Python process with `polars`, `duckdb`, `scipy`
+and `pydantic` loaded occupies ~140 MB before reading a byte, and a memory budget that
+ignores it is measuring the interpreter.
+
 ## `pytest.raises(match=...)` on a `PlatformError` tests the *detail*
 
 `PlatformError.__str__` is `detail or title`, so `match="requires a reason"` compares
@@ -371,3 +431,8 @@ database before the migration was written, and the migration round-trip was run 
 
 2026-08-14 — W2 sprint 1. 40 backend tests pass; the middleware-ordering trap was found by
 a failing test asserting `trace_id` on the 500 path, not by reading Starlette's source.
+
+2026-08-14 — W4 validation persistence. The `alembic.ini` location, the `status_code`
+attribute, the error-registry refusal and the `String(16)` truncation were each found by a
+failing run rather than by reading; the memory-measurement trap was found by the same
+number falling by 6× across three progressively cleaner measurements of unchanged code.
