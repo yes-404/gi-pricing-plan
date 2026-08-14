@@ -56,7 +56,18 @@ Ignore build output, caches, environments and editor state. **Do not ignore:**
 | `deploy/docker-compose.yml` | The local stack is part of NFR-OVR-9 |
 
 Adding a tool that generates files? **Update `.gitignore` in the same commit.** Otherwise
-the first `git add -A` sweeps its cache in, and cleaning up afterwards rewrites history.
+the first `git add -A` sweeps its cache in.
+
+**`.gitignore` does not untrack what is already tracked.** Once a file is in the index, a
+new pattern is ignored for it — the giveaway is `git status` showing it as *modified*
+rather than untracked. Recovery:
+
+```bash
+git ls-files | grep -E "__pycache__|\.pyc$|\.venv"   # find what slipped in
+git rm -r --cached <paths>                            # index only; files stay on disk
+```
+
+Check for this whenever `.gitignore` is added *after* the code it should have covered.
 
 ## Never commit
 
@@ -88,6 +99,10 @@ Read the message rather than retrying. Two seen in this repo:
 2026-08-14 — Written after the trap fired twice. Confirmed: `git diff --stat main <branch>`
 correctly identified `chore/skills-library` and `spike/s3-…` as fully superseded before
 deletion, where `git branch -d` refused both because of squash-merge. The `.gitignore`
-generated from the rules above stops `__pycache__` entering the tree — it had already
-appeared during W1 and was removed by hand, which is the symptom this skill exists to
-prevent.
+generated from the rules above stops `__pycache__` entering the tree.
+
+**And it caught a live instance immediately.** W1 was committed before `.gitignore`
+existed, so 12 `.pyc` files were already tracked; the new patterns did not untrack them,
+and `git status` reported them as *modified*. `git rm -r --cached` cleared them. The
+failure landed in the gap between writing this skill and committing it, which is a fair
+demonstration that the same-commit rule above is a rule and not a preference.
