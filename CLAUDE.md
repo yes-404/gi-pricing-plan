@@ -74,7 +74,7 @@ the maths.
 │   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1]
 │   └── pricing-core/         ◐ skeleton only — progress + money        [W1]
 │
-├── backend/                  … FastAPI: orchestration, persistence, API   [1a W2 — next]
+├── backend/                  ◐ FastAPI: config, errors, trace, health     [1a W2 — active]
 ├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
 ├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
@@ -94,7 +94,7 @@ make the repository a Python project.
 |---|---|---|---|---|
 | `packages/model-schema` | Python | `00` §4.3, FR-OVR-1/6/7 | root `pyproject.toml` | `python.yml` |
 | `packages/pricing-core` | Python | `02`–`05` — the maths | root `pyproject.toml` | `python.yml` |
-| `backend/` *(W2)* | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
+| `backend/` | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
 | `pipelines/` *(W4)* | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
 | `frontend/` *(W6a)* | TypeScript | each spec's §5.3 views | `frontend/package.json`, `tsconfig.json` | `frontend.yml` *(add with the code)* |
 | `docs/` | Markdown | itself — the specification | — | `docs.yml` |
@@ -384,7 +384,8 @@ travel with it. `.claude/skills/README.md` is the index — read it when startin
 unfamiliar part of the suite.
 
 **Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`, `adr-write`,
-`contract-schema`, `library-spike`, `git-hygiene`, `python-package`, `python-test`.
+`contract-schema`, `library-spike`, `git-hygiene`, `python-package`, `python-test`,
+`fastapi-service`.
 
 **Vendored** from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills) (MIT,
 security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,

@@ -181,7 +181,7 @@ The substrate every other module stands on:
                "counters": {"rows": 4_821_904, "rounds": 1240}},
   "result": {"kind": "artifact", "ref": "model:motor-ad-frequency@7"},
   "error": null,
-  "trace_id": "01J…",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
   "queued_at": "2026-08-14T09:00:00Z",
   "started_at": "2026-08-14T09:00:04Z",
   "finished_at": null,
@@ -199,7 +199,7 @@ Failure shape:
     "message": "GLM failed to converge after 200 iterations.",
     "retryable": false,
     "detail": {"factors_suspected": ["vehicle_group_rated"], "max_gradient": 4.1e-3},
-    "trace_id": "01J…"
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
   }
 }
 ```

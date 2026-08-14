@@ -1,0 +1,213 @@
+"""Turning failures into the one error shape the API promises (`00` §5.3, FR-PLAT-47).
+
+Two rules hold this together:
+
+* Every non-2xx response is a `ProblemDetail`, including the ones FastAPI and Starlette
+  raise on their own. A framework default that leaks `{"detail": "..."}` is a second error
+  shape, and a client cannot branch on a shape it was not told about.
+* Every problem carries the request's `trace_id` (R4, FR-PLAT-42), so a support
+  conversation starts with an identifier rather than a screenshot.
+"""
+
+from __future__ import annotations
+
+from typing import Final
+
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.observability.trace import current_trace_id
+from model_schema import FieldError, ProblemDetail
+
+__all__ = [
+    "PLATFORM_ERROR_CODES",
+    "PlatformError",
+    "install_error_handlers",
+    "problem_response",
+    "unexpected_problem",
+]
+
+PROBLEM_MEDIA_TYPE: Final = "application/problem+json"
+_DOC_BASE: Final = "https://docs.gi-pricing.dev/errors/"
+
+#: Error codes owned by `07 — Platform` (§5.1). Kept as a frozenset so a typo raises here
+#: rather than reaching a client as an unbranchable code.
+PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {
+        "UNAUTHENTICATED",
+        "TOKEN_EXPIRED",
+        "API_KEY_INVALID",
+        "API_KEY_EXPIRED",
+        "ENVIRONMENT_SCOPE_DENIED",
+        "JOB_NOT_CANCELLABLE",
+        "JOB_RESOURCE_BUDGET_EXCEEDED",
+        "IDEMPOTENCY_KEY_CONFLICT",
+        "RATE_LIMITED",
+        "BLOB_NOT_FOUND",
+        "SECRET_NOT_FOUND",
+        "SETTING_INVALID",
+        "PROMOTION_ORDER_VIOLATION",
+        "MIGRATION_REQUIRED",
+    }
+)
+
+#: Codes raised by the shared request machinery rather than owned by one module.
+_GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {"VALIDATION_FAILED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR"}
+)
+
+_KNOWN_CODES: Final[frozenset[str]] = PLATFORM_ERROR_CODES | _GENERIC_ERROR_CODES
+
+
+def _type_uri(code: str) -> str:
+    return _DOC_BASE + code.lower().replace("_", "-")
+
+
+class PlatformError(Exception):
+    """An expected failure with a stable code, renderable as a problem response.
+
+    Deliberately not a subclass of `HTTPException`: the code — not the status — is the
+    contract, and several codes share a status.
+    """
+
+    def __init__(
+        self,
+        code: str,
+        title: str,
+        status_code: int,
+        detail: str | None = None,
+        *,
+        errors: tuple[FieldError, ...] = (),
+    ) -> None:
+        if code not in _KNOWN_CODES:
+            raise ValueError(
+                f"unknown error code {code!r}. Codes are enumerated in the owning spec's "
+                "Interfaces section; add it there before raising it."
+            )
+        super().__init__(detail or title)
+        self.code = code
+        self.title = title
+        self.status_code = status_code
+        self.detail = detail
+        self.errors = errors
+
+    def to_problem(self, instance: str | None = None) -> ProblemDetail:
+        return ProblemDetail(
+            type=_type_uri(self.code),
+            title=self.title,
+            status=self.status_code,
+            code=self.code,
+            detail=self.detail,
+            instance=instance,
+            errors=self.errors,
+            trace_id=current_trace_id(),
+        )
+
+
+def problem_response(problem: ProblemDetail) -> JSONResponse:
+    """Render a problem as `application/problem+json`, as RFC 9457 requires."""
+    return JSONResponse(
+        status_code=problem.status,
+        content=problem.model_dump(mode="json", exclude_none=True),
+        media_type=PROBLEM_MEDIA_TYPE,
+    )
+
+
+async def _handle_platform_error(request: Request, exc: PlatformError) -> JSONResponse:
+    return problem_response(exc.to_problem(instance=request.url.path))
+
+
+async def _handle_validation_error(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Render FastAPI's request-validation failure as a problem with field-level errors.
+
+    FR-PLAT-11's principle applies to synchronous rejections too: a deterministic failure
+    should name the field, so the UI can mark it rather than showing a banner.
+    """
+    field_errors = tuple(
+        FieldError(
+            # Drop the leading location segment ('body', 'query'): the client sent one
+            # document and does not need our parser's internal framing.
+            field=".".join(str(part) for part in err["loc"][1:]) or str(err["loc"][0]),
+            code=str(err["type"]).upper().replace(".", "_"),
+            message=str(err["msg"]),
+        )
+        for err in exc.errors()
+    )
+    problem = ProblemDetail(
+        type=_type_uri("VALIDATION_FAILED"),
+        title="Request validation failed",
+        status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        code="VALIDATION_FAILED",
+        detail=f"{len(field_errors)} field(s) failed validation.",
+        instance=request.url.path,
+        errors=field_errors,
+        trace_id=current_trace_id(),
+    )
+    return problem_response(problem)
+
+
+_STATUS_CODES: Final[dict[int, tuple[str, str]]] = {
+    status.HTTP_404_NOT_FOUND: ("NOT_FOUND", "Resource not found"),
+    status.HTTP_405_METHOD_NOT_ALLOWED: ("METHOD_NOT_ALLOWED", "Method not allowed"),
+}
+
+
+async def _handle_http_exception(
+    request: Request, exc: StarletteHTTPException
+) -> JSONResponse:
+    """Convert framework-raised HTTP errors into problems.
+
+    Without this, a 404 from the router returns `{"detail": "Not Found"}` — a second error
+    shape, with no code and no `trace_id`.
+    """
+    code, title = _STATUS_CODES.get(exc.status_code, ("INTERNAL_ERROR", "Request failed"))
+    problem = ProblemDetail(
+        type=_type_uri(code),
+        title=title,
+        status=exc.status_code,
+        code=code,
+        detail=str(exc.detail) if exc.detail else None,
+        instance=request.url.path,
+        trace_id=current_trace_id(),
+    )
+    return problem_response(problem)
+
+
+def unexpected_problem(instance: str | None = None) -> ProblemDetail:
+    """The problem returned for an unhandled exception.
+
+    The message is deliberately fixed. An exception string can carry a connection URL or a
+    row of data, and R3 puts secrets out of API responses; the `trace_id` is how the
+    detail is retrieved, from logs the operator can see and the caller cannot.
+
+    Built here but rendered by `TraceMiddleware`, because Starlette's own
+    `ServerErrorMiddleware` — where an app-level `Exception` handler is installed — sits
+    *outside* every user middleware. By the time it runs, the trace context has been reset
+    and the id is gone from precisely the response that most needs it.
+    """
+    return ProblemDetail(
+        type=_type_uri("INTERNAL_ERROR"),
+        title="Internal server error",
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        code="INTERNAL_ERROR",
+        detail="The request failed unexpectedly. Quote the trace id when reporting it.",
+        instance=instance,
+        trace_id=current_trace_id(),
+    )
+
+
+async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
+    """Backstop for an exception raised outside `TraceMiddleware`'s reach."""
+    return problem_response(unexpected_problem(request.url.path))
+
+
+def install_error_handlers(app: FastAPI) -> None:
+    """Register the handlers that make every error path produce a `ProblemDetail`."""
+    app.add_exception_handler(PlatformError, _handle_platform_error)  # type: ignore[arg-type]
+    app.add_exception_handler(RequestValidationError, _handle_validation_error)  # type: ignore[arg-type]
+    app.add_exception_handler(StarletteHTTPException, _handle_http_exception)  # type: ignore[arg-type]
+    app.add_exception_handler(Exception, _handle_unexpected)

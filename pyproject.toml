@@ -11,7 +11,7 @@ license = "Apache-2.0"
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "backend"]
 
 [dependency-groups]
 dev = [
@@ -20,13 +20,16 @@ dev = [
     "mypy>=1.11",
     "ruff>=0.6",
     "import-linter>=2.1",
+    # FastAPI's TestClient is an httpx transport; without httpx it imports but cannot run.
+    "httpx>=0.27",
+    "pytest-asyncio>=0.24",
 ]
 
 # ---- Ruff: CLAUDE.md §3, line length 100 ----
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["packages/model-schema/src", "packages/pricing-core/src"]
+src = ["packages/model-schema/src", "packages/pricing-core/src", "backend/src"]
 # Vendored third-party skills are kept exactly as upstream wrote them. Linting someone
 # else's code to our rules produces churn and breaks the promise that it is unmodified.
 exclude = [".claude/skills"]
@@ -46,12 +49,16 @@ ignore = ["ANN401"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["packages/model-schema/src", "packages/pricing-core/src"]
+files = ["packages/model-schema/src", "packages/pricing-core/src", "backend/src"]
 warn_unreachable = true
 disallow_any_explicit = false
 
 [tool.pytest.ini_options]
-testpaths = ["packages/model-schema/tests", "packages/pricing-core/tests"]
+testpaths = [
+    "packages/model-schema/tests",
+    "packages/pricing-core/tests",
+    "backend/tests",
+]
 # Each package owns a test module of the same name (test_money.py in both). The legacy
 # prepend import mode collides on the basename; importlib keeps them distinct without
 # forcing artificial file names or __init__.py files into test directories.
@@ -59,6 +66,7 @@ testpaths = ["packages/model-schema/tests", "packages/pricing-core/tests"]
 # fails loudly instead of silently doing nothing — which matters when those marks are the
 # requirement-traceability record (scripts/req-coverage.py).
 addopts = "--import-mode=importlib --strict-markers"
+asyncio_mode = "auto"
 markers = [
     # Requirement traceability: mark each test with the requirement it satisfies.
     # skills-map §9.1 "spec-to-implementation conformance".

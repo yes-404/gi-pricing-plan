@@ -325,12 +325,19 @@ A single RFC 9457 `application/problem+json` shape, with a stable machine `code`
   "detail": "dataset:motor-gb@12 has status 'draft'; fitting requires 'validated'.",
   "instance": "/api/v1/models",
   "errors": [{"field": "dataset_version_id", "code": "INVALID_STATE", "message": "..."}],
-  "trace_id": "01J..."
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
 }
 ```
 
 Codes are namespaced per module and enumerated in each spec's Interfaces section.
-`trace_id` is the OpenTelemetry trace id and appears in every log line for the request.
+`trace_id` is the OpenTelemetry trace id — **32 lowercase hexadecimal characters**, the
+W3C `trace-id` form — and appears in every log line for the request, every problem
+response, and every Audit Event (`07` R4).
+
+The format is part of the contract, not a rendering detail: the value's whole purpose is
+to join a problem response to a span in a trace backend, and an id in any other shape
+correlates with nothing. Earlier examples in `06` and `07` showed a ULID; that was a
+defect, corrected 2026-08-14 when W2 implemented the propagation.
 
 ### 5.4 Concurrency and idempotency
 

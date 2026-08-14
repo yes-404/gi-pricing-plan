@@ -7,6 +7,7 @@ this package un-generatable and un-shareable.
 
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
+from model_schema.problem import FieldError, ProblemDetail
 from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
 
 __all__ = [
@@ -16,7 +17,9 @@ __all__ = [
     "BlobRef",
     "Currency",
     "DecimalStr",
+    "FieldError",
     "MoneyMinor",
+    "ProblemDetail",
     "Relativity",
     "Slug",
     "apply_factor",

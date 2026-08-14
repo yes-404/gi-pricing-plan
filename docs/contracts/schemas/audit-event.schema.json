@@ -24,7 +24,7 @@
     "before": {"type": ["object", "null"]},
     "after": {"type": ["object", "null"]},
     "justification": {"type": ["string", "null"]},
-    "trace_id": {"type": ["string", "null"]},
+    "trace_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}$", "description": "W3C/OpenTelemetry trace id: 32 lowercase hex characters (00 §5.3)."},
     "job_id": {"type": ["string", "null"], "format": "uuid"},
     "prev_event_hash": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
     "event_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
