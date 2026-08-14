@@ -396,9 +396,30 @@ vocabulary — never arbitrary code (governance parity with custom objectives, A
 }
 ```
 
-**Invariants** — `overall = pass` iff no `fail`/`error` and no `warn`;
-`pass_with_warnings` iff no `fail`/`error` and every `warn` has an `acknowledgement`.
-The transition to `validated` is permitted for `pass` and `pass_with_warnings` only.
+**Invariants** — `overall` is a function of the rule results alone:
+`fail` if any result is `fail`; `error` if any is `error` and none is `fail`;
+`pass_with_warnings` if any is `warn` and none is `fail`/`error`; `pass` otherwise.
+The transition to `validated` is permitted for `pass` and `pass_with_warnings` only, and
+`pass_with_warnings` **additionally requires every `warn` to carry an acknowledgement** —
+checked at promotion (FR-DATA-17), not baked into `overall`.
+
+> **Amended 2026-08-14 (W4).** `overall` previously read *"`pass_with_warnings` iff no
+> `fail`/`error` and every `warn` has an `acknowledgement`"*, which had two problems.
+>
+> It left a state unnamed: a report with three warnings and no acknowledgements yet — the
+> state *every* report with warnings is in the moment it is written — was none of the four
+> values. Implementing it surfaced this immediately, because the field is `NOT NULL`.
+>
+> More seriously it made `overall` depend on acknowledgements, which arrive minutes or days
+> after the run. A report is an immutable artifact and NFR-DATA-5 requires byte-identical
+> bodies across runs; a verdict that changes when somebody clicks acknowledge is neither.
+> Acknowledgement is a fact *about* a report, recorded beside it and scoped to
+> `(dataset_version_id, rule_id, report_id)` by FR-DATA-18 — not a fact inside it.
+>
+> Nothing is lost: the promotion rule is unchanged, because `promote_to_validated` already
+> took `unacknowledged_warnings` as a separate argument. `fail` outranks `error` when both
+> are present — a definite failure is more actionable than "a rule could not tell", and
+> both block promotion identically.
 
 ### 4.7 `Profile`
 
@@ -488,6 +509,7 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 `SCHEMA_INFERENCE_CONFLICT`, `COLUMN_NAME_COLLISION`, `DIRECT_IDENTIFIER_PRESENT`,
 `VALIDATION_HAS_FAILURES`, `WARN_NOT_ACKNOWLEDGED`, `ACKNOWLEDGE_FORBIDDEN_ROLE`,
 `RULE_NOT_APPROVED`, `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`, `RULE_TIMEOUT`,
+`ACKNOWLEDGEMENT_ALREADY_RECORDED`,
 `REFERENCE_INTERVAL_OVERLAP`, `REFERENCE_VERSION_NOT_PINNED`, `SOURCE_UNREACHABLE`,
 `REJECT_RATE_EXCEEDED`.
 

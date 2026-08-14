@@ -40,6 +40,7 @@ from app.db.base import Base
 from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
 
 __all__ = [
+    "AcknowledgementRow",
     "ApiKeyRow",
     "ApprovalDecisionRow",
     "ApprovalPolicyRow",
@@ -894,6 +895,197 @@ class ReferenceRowRow(Base):
             "effective_to IS NULL OR effective_to > effective_from",
             name="effective_interval_is_ordered",
         ),
+    )
+
+
+class ValidationReportRow(Base):
+    """One validation run's result (`01` §4.6, FR-DATA-15, FR-DATA-20).
+
+    The report **is** the artifact: the body is the `ValidationReport` model serialised
+    whole, not a shredded set of columns to be reassembled. Two reasons, and both are
+    about disputes. A report is evidence that a version was or was not fit to model on,
+    and evidence that the platform rewrote on read — because a column was added, or an
+    enum gained a member — is not evidence. And NFR-DATA-5 requires byte-identical bodies
+    across runs, which can only be checked against a body that was stored as bytes.
+
+    The summary columns beside it are indexes, never the source of truth. `overall` is
+    stored because "show me every version that failed validation" must not deserialise
+    every report in the workspace to answer.
+    """
+
+    __tablename__ = "validation_reports"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    rule_set_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    rule_set_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    # 24, not 16: 'pass_with_warnings' is 18 characters. The narrower column accepted every
+    # verdict except the one a report with warnings actually gets.
+    overall: Mapped[str] = mapped_column(String(24), nullable=False)
+    rule_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    fail_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    warn_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_validation_reports_version", "dataset_version_id", "created_at"),
+        CheckConstraint("finished_at >= started_at", name="report_is_ordered"),
+        CheckConstraint(
+            "rule_count >= fail_count + warn_count + error_count",
+            name="counts_do_not_exceed_the_rules",
+        ),
+    )
+
+
+class AcknowledgementRow(Base):
+    """An actuary accepting a `warn` (FR-DATA-17, FR-DATA-18).
+
+    Scoped to `(dataset_version_id, rule_id, report_id)` by a unique constraint, which is
+    FR-DATA-18's rule made unarguable: an acknowledgement does not carry forward to the
+    next version or the next report. Re-running validation asks the question again, which
+    is the entire point — a warn that was acceptable on last month's data is a fresh
+    judgement on this month's.
+    """
+
+    __tablename__ = "validation_acknowledgements"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    report_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    rule_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    justification: Mapped[str] = mapped_column(Text, nullable=False)
+    acknowledged_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "report_id", "rule_id", name="uq_acknowledgement_scope"
+        ),
+        Index("ix_acknowledgements_version", "dataset_version_id"),
+        CheckConstraint("length(justification) > 0", name="justification_is_not_empty"),
+    )
+
+
+class ProfileRow(Base):
+    """A dataset version's profile (`01` §4.7, FR-DATA-25, FR-DATA-27).
+
+    Stored whole for the same reason as a validation report, plus one of its own:
+    FR-DATA-27 forbids the UI recomputing a one-way, and NFR-DATA-4 gives it 300 ms. Both
+    are only true if the answer is *read*. A profile assembled from normalised rows on
+    each request is a recomputation with extra steps.
+    """
+
+    __tablename__ = "profiles"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    row_count: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_profiles_version", "dataset_version_id", "created_at"),
+        CheckConstraint("row_count >= 0", name="profile_row_count_is_not_negative"),
+    )
+
+
+class ValidationRuleRow(Base):
+    """A custom validation rule, versioned and governed (FR-DATA-21, §4.5).
+
+    `(slug, version)` is unique per workspace and an approved row is never edited —
+    `01` §4.5 step 4 makes an edit a new version needing its own approval. A rule is what
+    a report's verdict *means*, so a rule mutated after the fact silently rewrites the
+    meaning of every report that cites it.
+
+    `authored_by` is kept beside `status` because §4.5 step 3 requires the approver not be
+    the author, and an approval check that cannot see the author cannot enforce it.
+    """
+
+    __tablename__ = "validation_rules"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    layer: Mapped[str] = mapped_column(String(32), nullable=False)
+    check: Mapped[str] = mapped_column(String(64), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    authored_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    approved_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    dry_run_report_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", "version", name="uq_validation_rule_version"),
+        CheckConstraint("version >= 1", name="rule_version_starts_at_one"),
+        # §4.5 step 2: approval requires a dry run, and step 3 requires an approver who is
+        # not the author. Both are enforced by the service; the pair that cannot be
+        # expressed any other way is enforced here.
+        CheckConstraint(
+            "status <> 'approved' OR (approved_by IS NOT NULL "
+            "AND approved_by <> authored_by AND dry_run_report_id IS NOT NULL)",
+            name="approved_rule_has_a_dry_run_and_a_separate_approver",
+        ),
+    )
+
+
+class ValidationRuleSetRow(Base):
+    """The rule set a dataset is validated against (FR-DATA-22).
+
+    Versioned, because a Validation Report records the exact `rule_set_version` it ran.
+    Without that a report says "it passed" without saying what it passed, and the two
+    readings — "passed our rules" and "passed the rules we had in March" — differ exactly
+    when someone is asking why a model was allowed.
+    """
+
+    __tablename__ = "validation_rule_sets"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    reference_dataset_version_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="approved")
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", "version", name="uq_rule_set_version"),
+        CheckConstraint("version >= 1", name="rule_set_version_starts_at_one"),
     )
 
 
