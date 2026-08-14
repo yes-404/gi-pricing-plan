@@ -84,25 +84,63 @@ the maths.
 └── .claude/skills/           ✔ procedures for this repo (§12)
 ```
 
+### Component map — who owns what, and what CI runs
+
+This is a **polyglot monorepo**: Python and TypeScript live side by side, and neither is
+the "main" language. The root `pyproject.toml` configures Python tooling only; it does not
+make the repository a Python project.
+
+| Component | Language | Governed by | Tooling config | CI workflow |
+|---|---|---|---|---|
+| `packages/model-schema` | Python | `00` §4.3, FR-OVR-1/6/7 | root `pyproject.toml` | `python.yml` |
+| `packages/pricing-core` | Python | `02`–`05` — the maths | root `pyproject.toml` | `python.yml` |
+| `backend/` *(W2)* | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
+| `pipelines/` *(W4)* | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
+| `frontend/` *(W6a)* | TypeScript | each spec's §5.3 views | `frontend/package.json`, `tsconfig.json` | `frontend.yml` *(add with the code)* |
+| `docs/` | Markdown | itself — the specification | — | `docs.yml` |
+| `scripts/`, `.github/`, `deploy/`, `.claude/` | mixed | operational | — | as their target |
+
+**CI is path-filtered per component.** GitHub applies `paths:` at workflow level, not per
+job, so each component gets its own workflow file. A docs-only change must not spend two
+minutes resolving Python dependencies, and once the frontend lands neither side should wait
+on the other's toolchain.
+
+> **If branch protection is ever enabled**, do not mark a path-filtered workflow as a
+> required check. A required check that does not run on a given PR blocks it forever. Add a
+> always-running aggregator job instead.
+
+### The seam between backend and frontend
+
+One contract joins them, and it flows in one direction:
+
+```
+packages/model-schema      ← the single source of truth (ADR-0002)
+        │  generated
+        ▼
+docs/contracts/            ← JSON Schema + OpenAPI 3.1, committed; CI fails on drift
+        │  consumed                                        (FR-PLAT-48)
+        ▼
+frontend/src/api/generated ← openapi-typescript output, git-ignored, never hand-written
+```
+
+`docs/contracts/` living under `docs/` is deliberate rather than accidental: the contract
+is a **published specification artifact** that external consumers read, not merely a build
+output. FR-PLAT-48 pins it there. The frontend generates from it; it never defines types of
+its own (`CLAUDE.md` §3).
+
+**The rule that keeps this honest:** nobody hand-writes a shape that already exists in
+`model-schema`. Not the backend, not the frontend, not a test fixture. A shape defined
+twice will diverge, and in a pricing platform a diverged shape is a mispricing.
+
 ### How code and documents relate
 
 They are not parallel tracks that occasionally sync. **The specification is the contract
-the code is written against**, and each package answers to a specific spec:
-
-| Code | Governed by | Traceability |
-|---|---|---|
-| `packages/model-schema` | `00` §4.3 envelope, FR-OVR-1/6/7 | Tests marked `@pytest.mark.req` |
-| `packages/pricing-core` | `02`, `03`, `04`, `05` — the maths | Same |
-| `backend/` | `01`, `06`, `07` — orchestration and governance | Same |
-| `docs/contracts/` | Generated *from* `model-schema` from Phase 1 (ADR-0002) | CI fails on drift |
-
-Two scripts keep the relationship honest rather than aspirational:
+the code is written against.** Two scripts keep that honest rather than aspirational:
 
 - **`scripts/audit-docs.py`** — 14 checks over the suite: requirement IDs, cross-references,
   dependency direction, glossary single-sourcing, money discipline, schema validity.
 - **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
-  requirements the suite actually covers, and fails when a test claims one that does not
-  exist.
+  requirements the suite covers, failing when a test claims one that does not exist.
 
 **When code and spec disagree, stop and resolve it** (§0). Which is wrong is a real
 question: five specification defects were found by running spikes against the specs, so the

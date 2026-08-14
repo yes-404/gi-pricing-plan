@@ -1,27 +1,35 @@
-name: CI
+name: python
 
 on:
-  push: {branches: [main]}
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'backend/**'          # arrives in Phase 1a W2
+      - 'pipelines/**'        # arrives in Phase 1a W4
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.importlinter'
+      - 'scripts/req-coverage.py'
+      - '.github/workflows/python.yml'
   pull_request:
+    paths:
+      - 'packages/**'
+      - 'backend/**'
+      - 'pipelines/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.importlinter'
+      - 'scripts/req-coverage.py'
+      - '.github/workflows/python.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # The documentation suite is a deliverable in its own right and stays gated.
-  docs:
-    name: docs audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12"}
-      - name: Audit the specification suite
-        run: python3 scripts/audit-docs.py
-
-  packages:
-    name: packages (ruff · mypy · import-linter · pytest)
+  check:
+    name: ruff · mypy · import-linter · pytest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +51,7 @@ jobs:
       - name: Tests
         run: uv run pytest -q
 
-      # skills-map §9.1: requirement coverage is reported, so a drift between the
+      # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.
       - name: Requirement coverage
         run: uv run python scripts/req-coverage.py
