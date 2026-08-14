@@ -11,19 +11,27 @@ project work (`CLAUDE.md` §12).
 
 | Skill | Purpose | Source | Last verified |
 |---|---|---|---|
+| [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup, and the merge-order trap that strands work | self-written | 2026-08-14 |
 | [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing | self-written | 2026-08-14 |
 | [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — 14 checks (8 bookkeeping, 6 structural) plus the decision-gate invariant the script does not cover | self-written | 2026-08-14 |
 | [`adr-write`](adr-write/SKILL.md) | Create, supersede, or annotate an architecture decision record — including the addendum-versus-edit rule that keeps accepted ADRs immutable | self-written | 2026-08-14 |
 | [`contract-schema`](contract-schema/SKILL.md) | Add or modify a JSON Schema contract in `docs/contracts/` — money conventions, `invariants` annotation, duplicate-key and `$ref` traps | self-written | 2026-08-14 |
+| [`python-package`](python-package/SKILL.md) | Write Python in the uv workspace — where code belongs, the import-linter boundaries, and the Pydantic v2 idioms the contracts depend on | self-written | 2026-08-14 |
+| [`python-test`](python-test/SKILL.md) | Testing discipline — requirement-traceability markers, the negative-test emphasis, pytest config, and running without pip | self-written | 2026-08-14 |
 | [`library-spike`](library-spike/SKILL.md) | Empirically verify library behaviour where pip is unavailable — wheel fetching, version pinning, missing native libs — then land the finding across the suite | self-written | 2026-08-14 |
 
 ## External skills
 
-**None installed.** A discovery pass on 2026-08-14 against `anthropics/skills` (18 skills) and
-`claude-plugins-official` on 2026-08-14 found no external skill that fits the project's
-state at that time — Phase 0 was documentation-first with highly repo-specific conventions, and
-the closest candidate (`doc-coauthoring`) overlaps `CLAUDE.md` §5/§10, which is more
-specific and already binding.
+**None installed.** Two discovery passes against `anthropics/skills` (18 skills) and
+`claude-plugins-official`:
+
+- **2026-08-14, Phase 0** — nothing fitted a documentation-first phase with highly
+  repo-specific conventions; the closest candidate (`doc-coauthoring`) overlaps
+  `CLAUDE.md` §5/§10, which is more specific and already binding.
+- **2026-08-14, Phase 1a re-run** (§12's rule: re-run the gap analysis when project state
+  changes) — writing Python changed the calculus, so this was worth redoing. It still found
+  nothing: no external skill covers `uv` workspaces, this repo's Pydantic money idioms, or
+  requirement-traceability markers. Those became `python-package` and `python-test`.
 
 Several become relevant in later phases and are recorded so the next gap analysis does not
 have to rediscover them:

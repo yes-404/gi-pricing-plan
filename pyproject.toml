@@ -47,7 +47,10 @@ testpaths = ["packages/model-schema/tests", "packages/pricing-core/tests"]
 # Each package owns a test module of the same name (test_money.py in both). The legacy
 # prepend import mode collides on the basename; importlib keeps them distinct without
 # forcing artificial file names or __init__.py files into test directories.
-addopts = "--import-mode=importlib"
+# --strict-markers: an unregistered marker is an error, so a typo'd @pytest.mark.req
+# fails loudly instead of silently doing nothing — which matters when those marks are the
+# requirement-traceability record (scripts/req-coverage.py).
+addopts = "--import-mode=importlib --strict-markers"
 markers = [
     # Requirement traceability: mark each test with the requirement it satisfies.
     # skills-map §9.1 "spec-to-implementation conformance".

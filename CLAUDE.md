@@ -50,19 +50,71 @@ the maths.
 
 ## 2. Repository Layout (Monorepo)
 
+`✔` exists · `◐` partial · `…` arrives in the phase shown.
+
 ```
 /
-├── docs/                     # ★ PRIMARY WORKSPACE THIS PHASE — see §4
-├── frontend/                 # Vue 3 SPA (Vite + TypeScript + Pinia)      [later]
-├── backend/                  # FastAPI application                        [later]
+├── CLAUDE.md                 ✔ this file — phase, conventions, roadmap
+├── LICENSE                   ✔ Apache-2.0 (OQ-OVR-2)
+├── .gitignore                ✔ see .claude/skills/git-hygiene
+├── pyproject.toml            ✔ uv workspace root; ruff, mypy, pytest config
+├── uv.lock                   ✔ COMMITTED — a lockfile, not an environment
+├── .importlinter             ✔ ADR-0001/0002/DEP-3 contracts, enforced in CI
+│
+├── docs/                     ✔ the specification suite — still authoritative
+│   ├── specs/                ✔ 00–07, the contract code is written against
+│   ├── workflows/            ✔ wf-01…05, the end-to-end journeys
+│   ├── adr/                  ✔ architecture decisions
+│   ├── contracts/            ✔ JSON Schema + OpenAPI (generated from Phase 1)
+│   ├── research/             ✔ spike findings, with what each one changed
+│   ├── roadmap.md            ✔ phases, workstreams, decision gates
+│   └── open-questions.md     ✔ every unresolved choice, gated by phase
+│
 ├── packages/
-│   ├── pricing-core/         # Pure Python actuarial engine — no web/db deps
-│   └── model-schema/         # Pydantic + JSON Schema shared contracts
-├── pipelines/                # Ingestion, preparation, batch scoring (Dagster)
-├── examples/                 # Synthetic + freMTPL2 demo datasets, notebooks
-├── deploy/                   # docker-compose.yml, k8s/Helm later
-└── .github/workflows/        # CI (path-filtered per component)
+│   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)
+│   └── pricing-core/         ◐ all actuarial computation (ADR-0001)
+│
+├── backend/                  … FastAPI: orchestration, persistence, API   [1a W2]
+├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
+├── frontend/                 … Vue 3 SPA                                  [1a W6a]
+├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
+│
+├── deploy/                   ✔ docker-compose.yml; Helm later             [3]
+├── scripts/                  ✔ audit-docs.py, req-coverage.py
+└── .claude/skills/           ✔ procedures for this repo (§12)
 ```
+
+### How code and documents relate
+
+They are not parallel tracks that occasionally sync. **The specification is the contract
+the code is written against**, and each package answers to a specific spec:
+
+| Code | Governed by | Traceability |
+|---|---|---|
+| `packages/model-schema` | `00` §4.3 envelope, FR-OVR-1/6/7 | Tests marked `@pytest.mark.req` |
+| `packages/pricing-core` | `02`, `03`, `04`, `05` — the maths | Same |
+| `backend/` | `01`, `06`, `07` — orchestration and governance | Same |
+| `docs/contracts/` | Generated *from* `model-schema` from Phase 1 (ADR-0002) | CI fails on drift |
+
+Two scripts keep the relationship honest rather than aspirational:
+
+- **`scripts/audit-docs.py`** — 14 checks over the suite: requirement IDs, cross-references,
+  dependency direction, glossary single-sourcing, money discipline, schema validity.
+- **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
+  requirements the suite actually covers, and fails when a test claims one that does not
+  exist.
+
+**When code and spec disagree, stop and resolve it** (§0). Which is wrong is a real
+question: five specification defects were found by running spikes against the specs, so the
+document is not automatically the authority — but neither is the code, and quietly changing
+one to match the other destroys the record of which was believed.
+
+### Working rhythm
+
+A change that spans both lands as **one commit**: the spec change, the code, the tests, and
+any skill update that captures a non-obvious procedure (§12). Splitting them means the spec
+merges and the code does not, or vice versa — and the audit then reports a consistency the
+repository does not have.
 
 Standing architecture rules (already decided — do not reopen without an ADR):
 - `pricing-core` stays importable standalone with zero FastAPI/SQLAlchemy/Redis deps.
