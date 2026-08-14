@@ -6,6 +6,11 @@ requires-python = ">=3.12"
 license = "Apache-2.0"
 dependencies = ["model-schema"]
 
+# Without this, uv resolves `model-schema` from PyPI — where it does not exist — and
+# `uv sync` fails. A root-level [tool.uv.sources] does not cover a member's dependencies.
+[tool.uv.sources]
+model-schema = { workspace = true }
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

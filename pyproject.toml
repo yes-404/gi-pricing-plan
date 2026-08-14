@@ -5,12 +5,13 @@ description = "Open source general insurance pricing platform"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 
+# The root is a workspace container, not a distributable package. Without this uv tries to
+# build it, finds no [build-system], and `uv sync` fails before any check runs.
+[tool.uv]
+package = false
+
 [tool.uv.workspace]
 members = ["packages/*"]
-
-[tool.uv.sources]
-model-schema = { workspace = true }
-pricing-core = { workspace = true }
 
 [dependency-groups]
 dev = [

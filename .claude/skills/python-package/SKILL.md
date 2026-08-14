@@ -25,6 +25,22 @@ uv sync --all-packages --dev
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
 ```
 
+## uv workspace wiring that bites
+
+Two settings whose absence fails `uv sync` before any check runs:
+
+- **The root is not a package.** It is a workspace container, so `[tool.uv] package = false`.
+  Otherwise uv tries to build it, finds no `[build-system]`, and stops.
+- **A member's dependency on another member needs its own source mapping.** In
+  `packages/pricing-core/pyproject.toml`:
+  ```toml
+  dependencies = ["model-schema"]
+  [tool.uv.sources]
+  model-schema = { workspace = true }
+  ```
+  A root-level `[tool.uv.sources]` does **not** cover a member's dependencies — uv resolves
+  `model-schema` from PyPI, where it does not exist.
+
 ## Adding a dependency
 
 Add it to the *package's* `pyproject.toml`, not the root. Then check it against

@@ -37,12 +37,17 @@ def apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int:
     here would silently satisfy the type checker while defeating the requirement.
 
     >>> apply_factor(24150, Decimal("1.15"), "half_even")
-    27773
+    27772
     """
-    if isinstance(factor, float):
+    # Annotations are not enforced at runtime, so this guard is for callers the type
+    # checker never saw. Phrased as `not isinstance(..., Decimal)` rather than
+    # `isinstance(..., float)`: the latter is statically unreachable given the annotation
+    # (mypy --strict with warn_unreachable rejects it), and this form catches int and str
+    # as well, which is what we actually want.
+    if not isinstance(factor, Decimal):
         raise TypeError(
-            "factor must be Decimal, not float — a float factor reintroduces binary "
-            "rounding into the rating path (FR-OVR-7)"
+            f"factor must be Decimal, got {type(factor).__name__} — a float factor "
+            "reintroduces binary rounding into the rating path (FR-OVR-7)"
         )
     return int((Decimal(amount_minor) * factor).quantize(Decimal(1), rounding=ROUNDING_MODES[mode]))
 
