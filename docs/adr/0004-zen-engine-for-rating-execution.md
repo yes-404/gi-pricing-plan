@@ -1,6 +1,6 @@
 # ADR-0004 — GoRules ZEN Engine executes rating DAGs
 
-- **Status:** accepted
+- **Status:** accepted · **confirmed by research 2026-08-14** (see Addendum)
 - **Date:** 2026-08-14
 - **Deciders:** maintainer
 - **Related:** NFR-OVR-1, ADR-0003, `03-rating-engine.md`
@@ -40,3 +40,28 @@ OQ-RATE-1; debugging crosses a Python/Rust boundary.
 
 **Neutral** — the `pricing-core` facade means a future swap of engines is a contained
 change, at the cost of maintaining the translation layer.
+
+---
+
+## Addendum — 2026-08-14: decision confirmed by research
+
+The "Negative" section above flagged that JDM's numeric semantics had to be checked against
+FR-OVR-7, tracked as OQ-RATE-1 and identified as the highest-risk unknown in the suite.
+
+**That check has now been done, and the decision holds.** `zen-types` represents
+`Variable::Number` as `rust_decimal::Decimal` — a 96-bit-mantissa fixed-point decimal, not
+`f64` — and all node inputs, outputs and expression results use that type system. Monetary
+arithmetic inside JDM expressions is exact. The integer-minor-units workaround contemplated
+in OQ-RATE-1's original recommendation is not required for correctness.
+
+**This addendum does not change the decision** and does not supersede the ADR. It records
+that a named risk was tested and did not materialise, and that the risk *moved* rather than
+disappeared:
+
+| Residual risk | Now specified as |
+|---|---|
+| `rust_decimal` serialises float-like by default; exact JSON needs the arbitrary-precision feature | `03` FR-RATE-56 |
+| `maths-nopanic` (which `zen-engine` enables) returns `0` on invalid input instead of raising | `03` FR-RATE-57 |
+| Decimal scale is capped at 28 | `03` FR-RATE-58 |
+
+Evidence: [`docs/research/track-a-findings.md`](../research/track-a-findings.md) F1.

@@ -1,6 +1,6 @@
 # ADR-0005 — Polars + DuckDB as the data engine, not pandas
 
-- **Status:** accepted
+- **Status:** accepted · **reinforced by research 2026-08-14** (see Addendum)
 - **Date:** 2026-08-14
 - **Deciders:** maintainer
 - **Related:** NFR-OVR-2, NFR-OVR-3, `01-data-management.md`
@@ -35,3 +35,25 @@ Polars idioms — a `skills-map.md` entry.
 
 **Neutral** — two data engines to reason about, mitigated by a clear split: Polars for
 row-level transformation inside a fit, DuckDB for aggregation over stored parquet.
+
+---
+
+## Addendum — 2026-08-14: the split is load-bearing for a reason we did not anticipate
+
+This ADR assigns *row-level transformation* to Polars and *aggregation* to DuckDB, argued
+at the time on ergonomics and on not loading a dataset to profile it.
+
+Research found a second, stronger justification. Polars' new streaming engine carries an
+**open, unresolved memory regression** ([pola-rs/polars#25607](https://github.com/pola-rs/polars/issues/25607)):
+a simple group-by over Parquet consumes more than 6 GB of RAM on 1.35.2 where the previous
+streaming engine did not.
+
+Because profiling, one-way summaries, PSI and dislocation — every heavy group-by in the
+platform — are assigned to DuckDB by this ADR, **none of them touches the affected path**.
+A design chosen for clarity turns out to also route around a live upstream defect.
+
+The practical consequence is a rule worth stating explicitly: *a new heavy aggregation
+belongs in DuckDB by default*, and moving one into Polars requires checking the state of
+that issue first.
+
+Evidence: [`docs/research/track-a-findings.md`](../research/track-a-findings.md) F10.

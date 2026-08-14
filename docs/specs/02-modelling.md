@@ -131,11 +131,12 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 |---|---|
 | **FR-MODEL-25** | XGBoost is the primary GBM backend, LightGBM the secondary. Both are configured through one common `GbmSpec` contract; backend-specific parameters live in a namespaced `backend_params` block so the contract does not fork. |
 | **FR-MODEL-26** | Insurance objectives are supported directly: `count:poisson`, `reg:gamma`, `reg:tweedie` (with `tweedie_variance_power`), `binary:logistic`, or a reference to an approved Custom Objective. |
-| **FR-MODEL-27** | **Exposure is handled via `base_margin` (XGBoost) / `init_score` (LightGBM) set to `log(exposure)`**, never by passing exposure as a feature and never by weighting when the objective is a count. The platform constructs this automatically from the declared offset and refuses a frequency GBM spec that has neither an offset nor an explicit acknowledgement of why not. |
+| **FR-MODEL-27** | **Exposure is handled via `base_margin` (XGBoost) / `init_score` (LightGBM) set to `log(exposure)`**, never by passing exposure as a feature and never by weighting when the objective is a count. The platform constructs this automatically from the declared offset and refuses a frequency GBM spec that has neither an offset nor an explicit acknowledgement of why not. The raw score handed to a custom objective **already includes** `base_margin` (verified against XGBoost 3.4.0 — [`research`](../research/track-a-findings.md) F5), so an objective must not add the offset again. |
 | **FR-MODEL-28** | **Monotone constraints** are derived automatically from Factor monotonic directions (FR-MODEL-4) and passed to the backend, with the resulting constraint vector persisted alongside the feature order so it is reproducible and reviewable. |
 | **FR-MODEL-29** | Interaction constraints are supported, allowing an actuary to permit interactions only within declared groups of factors — the practical tool for keeping a GBM's structure explainable. |
 | **FR-MODEL-30** | Early stopping requires a declared holdout or CV scheme; the chosen iteration count, the full evaluation curve, and the metric used are persisted. Early stopping on the training set is refused. |
 | **FR-MODEL-31** | The booster is exported in the backend's JSON/text model format, stored content-addressed, and accompanied by feature order, dtype expectations, categorical encoding maps, `base_margin` construction, and pinned library version (ADR-0003). Pickling is refused at the persistence layer, not merely discouraged. |
+| **FR-MODEL-71** | The `base_margin` / `init_score` construction is persisted with the booster and **asserted at load time**, because omitting it at scoring time fails *silently*: XGBoost substitutes `base_score` in its place and returns a confidently wrong prediction with no error. Verified empirically — see [`research/track-a-findings.md`](../research/track-a-findings.md) F5. Loading a GBM artifact whose offset cannot be reconstructed is a hard failure, never a warning. |
 | **FR-MODEL-32** | Categorical handling is explicit: either the Factor supplies a grouping/encoding, or the backend's native categorical support is used with its parameters recorded. Silent label-encoding of an unordered categorical is refused. |
 
 ### 3.6 Transparency (non-GLM models)
@@ -157,6 +158,9 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-40** | `expression` objectives let the user write the **per-observation loss** `L(y, f, w)` (where `f` is the raw score / linear predictor) in the restricted grammar of §4.6. The gradient and hessian are derived **symbolically at authoring time** (SymPy), stored as expressions in the artifact, reviewed as part of approval, and compiled to vectorised NumPy/Polars at fit time. User code is never executed at fit time; only the platform's own compiled expression tree is. |
 | **FR-MODEL-41** | The restricted grammar admits only: numeric literals, the bound symbols `y`, `f`, `w`, declared parameters, arithmetic (`+ - * / **`), and the whitelisted functions `log`, `exp`, `sqrt`, `abs`, `min`, `max`, `clip`, `where`, `log1p`, `expm1`. No names, attributes, calls, comprehensions, loops, conditionals, or indexing beyond `where`. AST nodes are capped (default 200). Parsing is by explicit AST walk with an allow-list, never `eval`. |
 | **FR-MODEL-42** | Every objective must pass the **Objective Certificate** checks of §4.7 before it can be submitted for approval: symbolic-vs-numeric derivative agreement, hessian non-negativity over the sampled domain, boundary/finiteness behaviour, and a smoke fit on a synthetic dataset that recovers known parameters. The certificate is persisted and attached to the approval request. |
+| **FR-MODEL-68** | The derivative-agreement check must **exclude sampled points within the finite-difference step `h` of a `Piecewise` branch boundary**, and report the excluded count. A central difference straddling a kink is invalid, so without this exclusion the check fails every `where()`-based objective for a reason that has nothing to do with correctness (verified empirically — see [`research/track-a-findings.md`](../research/track-a-findings.md) F3). |
+| **FR-MODEL-69** | Branch boundaries are themselves a **reported finding**, not merely an exclusion: the certificate records where the gradient or hessian is discontinuous and over what share of the sampled domain. A discontinuous hessian affects boosting stability and an approver must see it. |
+| **FR-MODEL-70** | Derivative-agreement tolerances are **step-aware**. Truncation error alone reaches ~4e-04 at `h = 1e-6` on a steeply-curved loss, so a fixed tight tolerance is not meaningful. Richardson extrapolation is used where the loss is smooth; the achieved tolerance and the method are recorded on the certificate. |
 | **FR-MODEL-43** | A non-convex objective (hessian negative anywhere in the sampled domain) is not refused outright — some legitimate pricing losses are non-convex — but is flagged `convexity: violated`, requires the hessian clipping strategy to be declared (`clip_to_min`, `abs`, `gauss_newton`), and requires an additional Approver. |
 | **FR-MODEL-44** | Objectives declare their **applicability**: which responses (`claim_count`, `claim_severity`, `burning_cost`, …), which backends (`xgboost`, `lightgbm`, `glm`), whether an offset is required, and the valid range of `y`. A Model Spec pairing an objective with an inapplicable response is refused at spec validation, before any compute is spent. |
 | **FR-MODEL-45** | Custom eval metrics (`feval`) follow the same lifecycle and grammar as objectives, declared separately so that a metric can be reused across objectives. |
@@ -397,9 +401,9 @@ Example `expression` objective — under-pricing penalised twice as hard, on a l
   ],
   "loss": "w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2",
   "derived": {
-    "gradient": "-2 * w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) * exp(f)",
-    "hessian":  "2 * w * where(exp(f) < y, w_under, w_over) * exp(f) * (2*exp(f) - y)",
-    "derivation_tool": "sympy", "derivation_version": "1.13.x",
+    "gradient": "where(y > exp(f), 2*w*w_under*(exp(f) - y)*exp(f), 2*w*w_over*(exp(f) - y)*exp(f))",
+    "hessian":  "where(y > exp(f), 2*w*w_under*(2*exp(f) - y)*exp(f), 2*w*w_over*(2*exp(f) - y)*exp(f))",
+    "derivation_tool": "sympy", "derivation_version": "1.14.0",
     "derived_at": "2026-08-14T11:02:00Z"
   },
   "hessian_strategy": "clip_to_min",
@@ -414,8 +418,14 @@ Example `expression` objective — under-pricing penalised twice as hard, on a l
 ```
 
 The `derived` block is generated by the platform, never hand-written, and is what a
-reviewer reads. Note this example's hessian is negative for `exp(f) < y/2` — it is
-non-convex, so it needs `hessian_strategy` and a second Approver (FR-MODEL-43).
+reviewer reads. The form shown is the **canonical** one SymPy produces — the branch is
+lifted outside the arithmetic. An algebraically equivalent form with the branch as an inner
+factor is *not* what the tool emits, and the certificate records the canonical form so that
+two reviewers reading the same objective read the same text.
+
+Note this example's hessian is negative wherever `exp(f) < y/2` — it is non-convex, so it
+needs `hessian_strategy` and a second Approver (FR-MODEL-43). It also has a **kink** at
+`exp(f) = y`, which FR-MODEL-68/69 exist to handle.
 
 ### 4.7 `ObjectiveCertificate`
 
@@ -426,12 +436,15 @@ Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-
   "custom_objective_id": "uuid", "objective_version": 1,
   "checks": [
     {"name": "symbolic_vs_numeric_gradient", "status": "pass",
-     "detail": "max relative error 3.1e-9 over 10,000 sampled (y,f,w) points"},
-    {"name": "symbolic_vs_numeric_hessian", "status": "pass", "detail": "max relative error 7.4e-8"},
+     "detail": "max relative error 8.9e-7 over 9,959 sampled (y,f,w) points (41 excluded near the branch boundary); h=1e-6, Richardson-extrapolated"},
+    {"name": "symbolic_vs_numeric_hessian", "status": "pass",
+     "detail": "max relative error 3.8e-4, within the step-aware tolerance for h=1e-6 on a loss of this curvature (FR-MODEL-70)"},
     {"name": "finiteness", "status": "pass",
      "detail": "no NaN/inf for y ∈ [0, 1e7], f ∈ [-20, 20], w ∈ (0, 1e4]"},
     {"name": "convexity", "status": "violated",
-     "detail": "hessian < 0 on 12.3% of the sampled domain (exp(f) < y/2); mitigated by hessian_strategy=clip_to_min"},
+     "detail": "hessian < 0 wherever exp(f) < y/2 — 63.9% of this sampling grid; strongly dependent on y_range/f_range, so the share is only meaningful alongside the sampling block below. Mitigated by hessian_strategy=clip_to_min"},
+    {"name": "branch_discontinuity", "status": "warn",
+     "detail": "gradient and hessian are discontinuous at the branch boundary exp(f) = y; 41 of 10,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-MODEL-68/69)"},
     {"name": "minimum_at_truth", "status": "pass",
      "detail": "loss minimised at f = log(y) for w_under=w_over"},
     {"name": "monotone_loss", "status": "pass", "detail": "loss increases with |exp(f) − y|"},
@@ -443,6 +456,7 @@ Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-
   "sampling": {"n_points": 10000, "seed": 20260814,
                "y_range": [0, 10000000], "f_range": [-20, 20], "w_range": [0.001, 10000]},
   "overall": "certified_with_findings",
+  "_note": "Figures above are illustrative of the shape of a real certificate. The convexity share and error magnitudes are those measured for this objective on this sampling grid (research/track-a-findings.md F3/F4); they are not constants.",
   "library_versions": {"sympy": "1.13.x", "numpy": "2.x", "xgboost": "2.x"}
 }
 ```
@@ -639,7 +653,7 @@ def make_xgb_objective(fns: ObjectiveFns, base_margin: np.ndarray | None):
     def objective(preds: np.ndarray, dtrain: xgb.DMatrix):
         y = dtrain.get_label()
         w = dtrain.get_weight() if dtrain.get_weight().size else np.ones_like(y)
-        f = preds if base_margin is None else preds        # base_margin already in preds
+        f = preds                       # base_margin is already in preds (verified, research F5)
         g, h = fns.grad(y, f, w), fns.hess(y, f, w)
         if not (np.isfinite(g).all() and np.isfinite(h).all()):
             raise NonFiniteDerivative(...)                 # FR-MODEL-48
@@ -722,7 +736,7 @@ Custom objective path: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-0
 
 | Component | Used for | Notes for `skills-map.md` |
 |---|---|---|
-| **glum** | All GLM fitting (FR-MODEL-18..24) | `GeneralizedLinearRegressor`, Tweedie/Poisson/Gamma, offsets vs weights, elastic-net CV paths, extracting the covariance matrix for standard errors |
+| **glum** | All GLM fitting (FR-MODEL-18..24) | `GeneralizedLinearRegressor`; `std_errors()` and `covariance_matrix()` (non-robust, robust HC-1, clustered) and the coefficient table with CIs and p-values satisfy FR-MODEL-21 directly — verified to exist, not assumed; Tweedie/Poisson/Gamma, native offset handling, elastic-net CV paths |
 | **statsmodels** | Fallback/cross-check diagnostics (FR-MODEL-51) | Type-III deviance tests, residual diagnostics, coefficient cross-validation against glum |
 | **XGBoost** | Primary GBM (FR-MODEL-25..32) | Custom objective `(grad, hess)` signature, `base_margin`, `monotone_constraints`, `interaction_constraints`, JSON model IO, `QuantileDMatrix` for memory |
 | **LightGBM** | Secondary GBM | `fobj`/`feval`, `init_score` as the offset, monotone constraint methods (`basic`/`intermediate`/`advanced`), native categoricals |

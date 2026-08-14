@@ -58,14 +58,18 @@ sequenceable after the build list because they shape first-sprint decisions:
 **requirement traceability**, the **walking skeleton** (§5 below is literally its output),
 and **reproducibility auditing**. Start them in parallel.
 
-### Track B — Two spikes that need code
+### Track B — Spikes that need code
+
+**Track A research (2026-08-14) has already run four spikes** and closed the substance of
+S1 — see [`research/track-a-findings.md`](research/track-a-findings.md). Remaining:
 
 | Spike | Question | Why it cannot wait |
 |---|---|---|
-| **S1 — ZEN decimal semantics** | OQ-RATE-1 | If JDM evaluates money in binary float, FR-OVR-7 breaks on the p99 path and **ADR-0004 is reopened**. This changes Phase 2's foundation. Highest-risk unknown in the suite. |
-| **S2 — `exact`-mode GBM latency** | OQ-RATE-2 | Determines whether production rating can ever call the model directly, which silently resolves OQ-MODEL-3. Changes what the DAG designer must offer. |
+| **S1 (re-scoped)** | FR-RATE-56/57 | ~~Does the engine do decimal?~~ **It does** — `rust_decimal`, ADR-0004 stands. Now: does arbitrary precision survive the Python binding in both directions, and can a rateable path reach a `maths-nopanic` sink that returns `0` instead of raising? Both failure modes are **silent**. |
+| **S2 — `exact`-mode GBM latency** | OQ-RATE-2 | Now the highest-risk remaining unknown. Determines whether production rating can ever call the model directly, which silently resolves OQ-MODEL-3. |
+| **S3 (new) — LightGBM `init_score`** | FR-MODEL-27/71 | XGBoost's offset semantics are now verified; LightGBM's are **assumed symmetric**. Research showed this exact class of assumption hides a silent wrong-answer failure. |
 
-Both are small — days, not weeks — and both are cheap insurance against a Phase 2 rewrite.
+All three are small — days, not weeks — and cheap insurance against a Phase 2 rewrite.
 
 ### Track C — The decision backlog, sequenced
 
@@ -210,7 +214,7 @@ dislocation, and serves a live quote inside the latency budget.
 
 | Risk | Mitigation |
 |---|---|
-| **OQ-RATE-1** — ZEN decimal semantics invalidates ADR-0004 | S1 spike before any W9 work. Design toward integer minor units so the engine's numeric type is a non-issue |
+| ~~OQ-RATE-1 — ZEN decimal semantics invalidates ADR-0004~~ **retired 2026-08-14**: the engine uses `rust_decimal`, so this risk did not materialise. Replaced by two silent-failure risks at the boundary (FR-RATE-56/57) | Re-scoped S1 before W9; integer-minor-units is no longer needed as a mitigation |
 | NFR-RATE-1 (p99 < 50 ms) missed and expensive to recover | Build the latency harness in W11 alongside the evaluator, not after |
 | DAG designer is under-estimated | It is a graph editor with live validation — treat as its own project with its own spike |
 | Rate table scale (vehicle × area = millions of cells) | OQ-RATE-3; the recommendation already sets a spill threshold |
@@ -277,12 +281,18 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | **Before Phase 1** | OQ-OVR-2, OQ-OVR-5, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2, OQ-MODEL-1, OQ-MODEL-5 | 7 |
-| **Before Phase 2** | **OQ-RATE-1**, OQ-RATE-2, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 |
+| **Before Phase 2** | ~~OQ-RATE-1~~ ✔ *decided 2026-08-14*, **OQ-RATE-2**, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (6 open) |
 | **Before Phase 3** | OQ-GOV-1..5, OQ-OVR-1, OQ-MODEL-7 | 7 |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, OQ-DATA-4 | 12 |
 | **Deferred / any time** | OQ-OVR-3, OQ-OVR-4, OQ-DATA-3, OQ-DATA-5, OQ-DATA-6, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
 
-Only **OQ-RATE-1** has the power to invalidate an accepted ADR.
+**OQ-RATE-1 was the one question able to invalidate an accepted ADR. It has been answered**
+— by a spike, not an opinion — and ADR-0004 survived
+([`research/track-a-findings.md`](research/track-a-findings.md) F1).
+
+The successor is **OQ-RATE-2**: whether an `exact`-mode GBM call fits the 50 ms p99 budget.
+It cannot invalidate an ADR, but it decides OQ-MODEL-3 by force rather than by choice, and
+it is likewise only answerable with code.
 
 ---
 
