@@ -1,0 +1,57 @@
+name: python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'backend/**'          # arrives in Phase 1a W2
+      - 'pipelines/**'        # arrives in Phase 1a W4
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.importlinter'
+      - 'scripts/req-coverage.py'
+      - '.github/workflows/python.yml'
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'backend/**'
+      - 'pipelines/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.importlinter'
+      - 'scripts/req-coverage.py'
+      - '.github/workflows/python.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ruff · mypy · import-linter · pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: {enable-cache: true}
+      - run: uv sync --all-packages --dev
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: mypy --strict
+        run: uv run mypy
+
+      # ADR-0001 is only worth having if it is checked. A forbidden import in
+      # pricing-core fails the build here rather than being noticed in review.
+      - name: Architecture contracts (ADR-0001 / ADR-0002 / DEP-3)
+        run: uv run lint-imports
+
+      - name: Tests
+        run: uv run pytest -q
+
+      # skills-map §9.1: requirement coverage is reported, so drift between the
+      # specification and what is actually tested is visible rather than assumed.
+      - name: Requirement coverage
+        run: uv run python scripts/req-coverage.py

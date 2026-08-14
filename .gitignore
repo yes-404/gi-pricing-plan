@@ -1,0 +1,77 @@
+# Generated per .claude/skills/git-hygiene.
+#
+# The rule that catches people out: uv.lock is NOT ignored. It is a lockfile, not an
+# environment, and committing it is what makes builds reproducible (FR-OVR-8). Ignoring it
+# alongside .venv/ is the most common uv mistake.
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- Environments (never the lockfile) ----
+.venv/
+venv/
+env/
+.python-version
+
+# ---- Tooling caches ----
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+
+# ---- Generated API client types (FR-OVR-6: generated, never hand-written) ----
+frontend/src/api/generated/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# ---- Local stack state ----
+# docker compose volumes are named, so nothing lands here — but a stray bind mount would.
+deploy/.env
+deploy/data/
+
+# ---- Data never belongs in git ----
+# Dataset Versions live in the content-addressed blob store (ID-4). A parquet file in the
+# tree means someone bypassed ingestion, which is a governance problem before a size one.
+*.parquet
+*.feather
+*.duckdb
+*.duckdb.wal
+examples/data/
+!examples/data/README.md
+
+# ---- Secrets: referenced, never stored (07 FR-PLAT-25/26) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/tests/**/*.key
+secrets/
+
+# ---- Editor / OS ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# ---- Claude Code local state (skills and settings ARE committed) ----
+.claude/settings.local.json

@@ -28,6 +28,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent / "docs"
+_ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 REQUIRED_SECTIONS = [
     "Purpose & scope", "Concepts & glossary", "Functional requirements",
     "Data contracts", "Interfaces", "Workflows", "Cross-module dependencies",
@@ -110,7 +111,7 @@ def main() -> int:
                 fail(f"{f.name} missing required section: {name}")
 
     # 7. JSON schemas
-    def no_dupes(pairs):
+    def no_dupes(pairs: list[tuple[str, object]]) -> dict[str, object]:
         seen = collections.Counter(k for k, _ in pairs)
         dupes = [k for k, c in seen.items() if c > 1]
         if dupes:
@@ -127,7 +128,6 @@ def main() -> int:
             fail(f"{f.relative_to(ROOT)}: {exc}")
 
     # 8. $ref resolution
-    ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 
     def resolve_pointer(doc: object, fragment: str) -> bool:
         """Resolve a JSON Pointer fragment such as '/$defs/QuoteContext'."""
@@ -141,8 +141,8 @@ def main() -> int:
         return True
 
     def check_ref(ref: str, src: pathlib.Path) -> None:
-        if ref.startswith(ABS_PREFIX):
-            tail = ref[len(ABS_PREFIX):]
+        if ref.startswith(_ABS_PREFIX):
+            tail = ref[len(_ABS_PREFIX):]
         elif ref.startswith("#"):
             if len(ref) > 1 and not resolve_pointer(loaded[src], ref[1:]):
                 fail(f"{src.relative_to(ROOT)}: local $ref {ref} does not resolve")
@@ -152,7 +152,7 @@ def main() -> int:
         else:
             tail = ref
         target, _, fragment = tail.partition("#")
-        path = (schema_root / target) if ref.startswith(ABS_PREFIX) else (src.parent / target)
+        path = (schema_root / target) if ref.startswith(_ABS_PREFIX) else (src.parent / target)
         path = path.resolve()
         if path not in loaded:
             fail(f"{src.relative_to(ROOT)}: $ref {ref} -> missing {target}")
@@ -177,7 +177,7 @@ def main() -> int:
     notes.append(f"{len(loaded)} JSON schemas parsed, $refs checked")
 
     # ------------------------------------------------------------------ 9-14
-    SPEC_BY_CODE = {
+    spec_by_code = {
         "00": "00-overview.md", "01": "01-data-management.md",
         "02": "02-modelling.md", "03": "03-rating-engine.md",
         "04": "04-optimisation.md", "05": "05-monitoring.md",
@@ -190,13 +190,16 @@ def main() -> int:
     for f in md:
         for m in sec_re.finditer(f.read_text()):
             code, sec = m.group(1), m.group(2)
-            target = SPEC_BY_CODE[code]
+            target = spec_by_code[code]
             body = spec_text.get(target, "")
             top = sec.split(".")[0]
             # a heading "## N." must exist; sub-sections may be "### N.M"
             if not re.search(rf"^#{{2,4}} {re.escape(sec)}[.\s]", body, re.M) and \
                not re.search(rf"^#{{2,4}} {re.escape(top)}\.", body, re.M):
-                fail(f"{f.relative_to(ROOT)}: reference to {code} §{sec} — no such section in {target}")
+                fail(
+                    f"{f.relative_to(ROOT)}: reference to {code} §{sec} — "
+                    f"no such section in {target}"
+                )
 
     # 10. error-code ownership is exclusive
     owner: dict[str, str] = {}
@@ -211,20 +214,23 @@ def main() -> int:
             if reraised:
                 continue  # explicitly borrowed from the owning module
             if code in owner and owner[code] != f.name:
-                fail(f"error code {code} claimed by both {owner[code]} and {f.name} "
-                     f"— annotate one as '(re-raised from `NN`)' or give ownership to one module")
+                fail(
+                    f"error code {code} claimed by both {owner[code]} and "
+                    f"{f.name} — annotate one as '(re-raised from `NN`)' or "
+                    "give ownership to one module"
+                )
             owner.setdefault(code, f.name)
     notes.append(f"{len(owner)} error codes, ownership exclusive")
 
     # 11. DEP-1 build order: a module must not consume from a module to its right
-    ORDER = ["PLAT", "GOV", "DATA", "MODEL", "RATE", "OPT", "MON"]
-    CODE_OF = {"01": "DATA", "02": "MODEL", "03": "RATE", "04": "OPT",
+    order = ["PLAT", "GOV", "DATA", "MODEL", "RATE", "OPT", "MON"]
+    code_of = {"01": "DATA", "02": "MODEL", "03": "RATE", "04": "OPT",
                "05": "MON", "06": "GOV", "07": "PLAT"}
     for f in specs:
         code = f.name[:2]
-        if code not in CODE_OF:
+        if code not in code_of:
             continue
-        me = CODE_OF[code]
+        me = code_of[code]
         body = f.read_text()
         m = re.search(r"### 7\.1 (?:This module )?[Cc]onsumes(.*?)### 7\.2", body, re.S)
         if not m:
@@ -233,21 +239,27 @@ def main() -> int:
             if not row.startswith("| `"):
                 continue
             src = re.match(r"\| `(\d\d)", row)
-            if not src or src.group(1) not in CODE_OF:
+            if not src or src.group(1) not in code_of:
                 continue
-            other = CODE_OF[src.group(1)]
-            if ORDER.index(other) <= ORDER.index(me):
+            other = code_of[src.group(1)]
+            if order.index(other) <= order.index(me):
                 continue
             # DEP-1a: GOV's audit sink and permission check are cross-cutting interfaces
             if other == "GOV" and re.search(r"audit|permission|authoris|authoriz|RBAC", row, re.I):
                 continue
-            fail(f"{f.name}: DEP-1 violation — {me} consumes from {other}, which is to its right")
+            fail(
+                f"{f.name}: DEP-1 violation — {me} consumes from {other}, "
+                "which is to its right"
+            )
 
     # 12. money discipline: *_minor fields must never be fractional
     money_re = re.compile(r'"(\w*_minor)"\s*:\s*(-?\d+\.\d+)')
     for f in list(md) + schemas:
         for m in money_re.finditer(f.read_text()):
-            fail(f"{f.relative_to(ROOT)}: {m.group(1)} written as fractional {m.group(2)} (FR-OVR-7)")
+            fail(
+                f"{f.relative_to(ROOT)}: {m.group(1)} written as fractional "
+                f"{m.group(2)} (FR-OVR-7)"
+            )
 
     # 13. glossary terms not redefined downstream
     def terms(body: str, section: str) -> set[str]:
@@ -260,7 +272,10 @@ def main() -> int:
         if f.name == "00-overview.md":
             continue
         for t in terms(f.read_text(), "2") & canon:
-            fail(f"{f.name}: glossary term '{t}' is already defined in 00-overview.md §2 — reference it, do not redefine")
+            fail(
+                f"{f.name}: glossary term '{t}' is already defined in "
+                "00-overview.md §2 — reference it, do not redefine"
+            )
 
     # 14. workflow coverage per module
     #
@@ -269,7 +284,7 @@ def main() -> int:
     # So raw orphan count is not a defect signal. What IS a defect is a module no
     # workflow exercises at all, or coverage collapsing for one module while others
     # hold. The floor catches both; it is deliberately low.
-    COVERAGE_FLOOR = 0.10
+    coverage_floor = 0.10
     wf_text = "\n".join(f.read_text() for f in ROOT.glob("workflows/*.md"))
     per_mod: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0])
     for rid in defined:
@@ -284,9 +299,9 @@ def main() -> int:
         hit, tot = per_mod[mod]
         ratio = hit / tot if tot else 1.0
         summary.append(f"{mod} {ratio:.0%}")
-        if ratio < COVERAGE_FLOOR:
+        if ratio < coverage_floor:
             fail(f"workflow coverage for {mod} is {ratio:.0%} ({hit}/{tot}), below the "
-                 f"{COVERAGE_FLOOR:.0%} floor — no user journey exercises this module")
+                 f"{coverage_floor:.0%} floor — no user journey exercises this module")
     notes.append("workflow coverage: " + ", ".join(summary))
 
     for note in notes:

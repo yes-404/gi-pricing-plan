@@ -50,19 +50,109 @@ the maths.
 
 ## 2. Repository Layout (Monorepo)
 
+`✔` exists · `◐` partial · `…` arrives in the phase shown.
+
 ```
 /
-├── docs/                     # ★ PRIMARY WORKSPACE THIS PHASE — see §4
-├── frontend/                 # Vue 3 SPA (Vite + TypeScript + Pinia)      [later]
-├── backend/                  # FastAPI application                        [later]
+├── CLAUDE.md                 ✔ this file — phase, conventions, roadmap
+├── LICENSE                   ✔ Apache-2.0 (OQ-OVR-2)
+├── .gitignore                ✔ see .claude/skills/git-hygiene
+├── pyproject.toml            ✔ uv workspace root; ruff, mypy, pytest config
+├── uv.lock                   ✔ COMMITTED — a lockfile, not an environment
+├── .importlinter             ✔ ADR-0001/0002/DEP-3 contracts, enforced in CI
+│
+├── docs/                     ✔ the specification suite — still authoritative
+│   ├── specs/                ✔ 00–07, the contract code is written against
+│   ├── workflows/            ✔ wf-01…05, the end-to-end journeys
+│   ├── adr/                  ✔ architecture decisions
+│   ├── contracts/            ✔ JSON Schema + OpenAPI (generated from Phase 1)
+│   ├── research/             ✔ spike findings, with what each one changed
+│   ├── roadmap.md            ✔ phases, workstreams, decision gates
+│   └── open-questions.md     ✔ every unresolved choice, gated by phase
+│
 ├── packages/
-│   ├── pricing-core/         # Pure Python actuarial engine — no web/db deps
-│   └── model-schema/         # Pydantic + JSON Schema shared contracts
-├── pipelines/                # Ingestion, preparation, batch scoring (Dagster)
-├── examples/                 # Synthetic + freMTPL2 demo datasets, notebooks
-├── deploy/                   # docker-compose.yml, k8s/Helm later
-└── .github/workflows/        # CI (path-filtered per component)
+│   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)
+│   └── pricing-core/         ◐ all actuarial computation (ADR-0001)
+│
+├── backend/                  … FastAPI: orchestration, persistence, API   [1a W2]
+├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
+├── frontend/                 … Vue 3 SPA                                  [1a W6a]
+├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
+│
+├── deploy/                   ✔ docker-compose.yml; Helm later             [3]
+├── scripts/                  ✔ audit-docs.py, req-coverage.py
+└── .claude/skills/           ✔ procedures for this repo (§12)
 ```
+
+### Component map — who owns what, and what CI runs
+
+This is a **polyglot monorepo**: Python and TypeScript live side by side, and neither is
+the "main" language. The root `pyproject.toml` configures Python tooling only; it does not
+make the repository a Python project.
+
+| Component | Language | Governed by | Tooling config | CI workflow |
+|---|---|---|---|---|
+| `packages/model-schema` | Python | `00` §4.3, FR-OVR-1/6/7 | root `pyproject.toml` | `python.yml` |
+| `packages/pricing-core` | Python | `02`–`05` — the maths | root `pyproject.toml` | `python.yml` |
+| `backend/` *(W2)* | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
+| `pipelines/` *(W4)* | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
+| `frontend/` *(W6a)* | TypeScript | each spec's §5.3 views | `frontend/package.json`, `tsconfig.json` | `frontend.yml` *(add with the code)* |
+| `docs/` | Markdown | itself — the specification | — | `docs.yml` |
+| `scripts/`, `.github/`, `deploy/`, `.claude/` | mixed | operational | — | as their target |
+
+**CI is path-filtered per component.** GitHub applies `paths:` at workflow level, not per
+job, so each component gets its own workflow file. A docs-only change must not spend two
+minutes resolving Python dependencies, and once the frontend lands neither side should wait
+on the other's toolchain.
+
+> **If branch protection is ever enabled**, do not mark a path-filtered workflow as a
+> required check. A required check that does not run on a given PR blocks it forever. Add a
+> always-running aggregator job instead.
+
+### The seam between backend and frontend
+
+One contract joins them, and it flows in one direction:
+
+```
+packages/model-schema      ← the single source of truth (ADR-0002)
+        │  generated
+        ▼
+docs/contracts/            ← JSON Schema + OpenAPI 3.1, committed; CI fails on drift
+        │  consumed                                        (FR-PLAT-48)
+        ▼
+frontend/src/api/generated ← openapi-typescript output, git-ignored, never hand-written
+```
+
+`docs/contracts/` living under `docs/` is deliberate rather than accidental: the contract
+is a **published specification artifact** that external consumers read, not merely a build
+output. FR-PLAT-48 pins it there. The frontend generates from it; it never defines types of
+its own (`CLAUDE.md` §3).
+
+**The rule that keeps this honest:** nobody hand-writes a shape that already exists in
+`model-schema`. Not the backend, not the frontend, not a test fixture. A shape defined
+twice will diverge, and in a pricing platform a diverged shape is a mispricing.
+
+### How code and documents relate
+
+They are not parallel tracks that occasionally sync. **The specification is the contract
+the code is written against.** Two scripts keep that honest rather than aspirational:
+
+- **`scripts/audit-docs.py`** — 14 checks over the suite: requirement IDs, cross-references,
+  dependency direction, glossary single-sourcing, money discipline, schema validity.
+- **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
+  requirements the suite covers, failing when a test claims one that does not exist.
+
+**When code and spec disagree, stop and resolve it** (§0). Which is wrong is a real
+question: five specification defects were found by running spikes against the specs, so the
+document is not automatically the authority — but neither is the code, and quietly changing
+one to match the other destroys the record of which was believed.
+
+### Working rhythm
+
+A change that spans both lands as **one commit**: the spec change, the code, the tests, and
+any skill update that captures a non-obvious procedure (§12). Splitting them means the spec
+merges and the code does not, or vice versa — and the audit then reports a consistency the
+repository does not have.
 
 Standing architecture rules (already decided — do not reopen without an ADR):
 - `pricing-core` stays importable standalone with zero FastAPI/SQLAlchemy/Redis deps.

@@ -35,6 +35,19 @@ Pure-Python packages (`sympy`, `mpmath`, `pydantic`, `narwhals`) need `py3-none-
 compiled ones (`numpy`, `scipy`, `pydantic_core`, `xgboost`, `lightgbm`) need the matching
 manylinux wheel — note `lightgbm` ships as `py3-none-manylinux`, not `cp313`.
 
+**A tool's own dependencies are not optional.** `mypy` 2.x imports `librt` and
+`ast-serialize`; fetching only the `mypy` wheel gives `ModuleNotFoundError: No module
+named 'librt'`, which reads like a broken wheel but is a missing dependency. Read
+`requires_dist` from the PyPI JSON and fetch what it names, rather than guessing:
+
+```python
+d = json.load(urllib.request.urlopen("https://pypi.org/pypi/mypy/json"))
+print(d["info"]["requires_dist"])   # librt, ast-serialize, pathspec, mypy_extensions …
+```
+
+The compiled (`cp313`) and pure (`py3-none-any`) wheels of the same package can differ in
+what they need — try the pure one when the compiled one will not load.
+
 **Missing system libraries.** A wheel may import fine and then fail on a shared object the
 OS does not have — `lightgbm` needs `libgomp.so.1` (OpenMP), which is absent here. Rather
 than give up, check whether another wheel already bundled it:

@@ -1,0 +1,55 @@
+# ADR-0001 / DEP-3, enforced rather than trusted.
+#
+# CI runs `lint-imports`. A forbidden import fails the build — the point of the ADR is that
+# `pricing-core` is verifiable outside the platform, and that is only true if nothing has
+# quietly reached for a database client "just this once".
+
+[importlinter]
+root_packages =
+    model_schema
+    pricing_core
+# Required because the forbidden lists name external packages (fastapi, sqlalchemy, …)
+# rather than only first-party modules.
+include_external_packages = True
+
+[importlinter:contract:core-has-no-infrastructure]
+name = pricing-core imports no web, database, queue or cloud client (ADR-0001)
+type = forbidden
+source_modules = pricing_core
+forbidden_modules =
+    fastapi
+    starlette
+    sqlalchemy
+    alembic
+    celery
+    redis
+    boto3
+    botocore
+    httpx
+    requests
+    psycopg
+    asyncpg
+allow_indirect_imports = false
+
+[importlinter:contract:schema-depends-on-pydantic-only]
+name = model-schema imports nothing but pydantic (ADR-0002)
+type = forbidden
+source_modules = model_schema
+forbidden_modules =
+    fastapi
+    sqlalchemy
+    celery
+    redis
+    boto3
+    polars
+    pandas
+    numpy
+    pricing_core
+allow_indirect_imports = false
+
+[importlinter:contract:layering]
+name = model-schema sits below pricing-core and never depends on it (DEP-3)
+type = layers
+layers =
+    pricing_core
+    model_schema
