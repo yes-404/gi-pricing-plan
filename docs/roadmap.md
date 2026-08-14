@@ -230,7 +230,13 @@ drives the version to `validated` — with the report and profile visible. This 
 | **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
 
-**W1 closure evidence** (all re-verified 2026-08-14):
+Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
+deliverable re-verified against its row above, the gate run locally, each new check proven
+to fail on broken input, NFRs measured against their budget, and what was *not* delivered
+stated explicitly. A closure record without those is an assertion, not evidence.
+
+**W1 closure evidence** (re-verified 2026-08-14, and again on the rebuilt instance the same
+day — `uv` had to be reinstalled durably, and the gate was re-run from a clean sync):
 
 | Deliverable | Evidence |
 |---|---|

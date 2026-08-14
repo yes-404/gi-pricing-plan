@@ -326,13 +326,14 @@ lazy validation reports).
 - **Phase 4 — Optimisation & Monitoring**: demand models, constrained optimisation,
   drift monitoring, GIPP consistency.
 
-## 10. How You (Claude) Work in This Phase
+## 10. How You (Claude) Work
 
-- Deliverable of almost every task = updated/new documents in `docs/`. Ask before
-  writing application code.
-- Before editing any doc, read `00-overview.md`, the target spec, and any workflow docs
-  that reference it. After editing, check cross-references in both directions and update
-  `skills-map.md` and `open-questions.md` in the same PR.
+§0 decides the deliverable for a given request. The rules below apply to whichever it is.
+
+- **Documents.** Before editing a spec, read `00-overview.md`, the target spec, and any
+  workflow that references it.
+  After editing, check cross-references in both directions and update `skills-map.md` and
+  `open-questions.md` in the same PR.
 - Keep terminology exactly consistent with §7; if a new term is needed, add it to the
   glossary in `00-overview.md` first.
 - Prefer precise, implementation-ready language: named entities, typed fields, numbered
@@ -343,18 +344,37 @@ lazy validation reports).
   decided now).
 - Small illustrative snippets (an XGBoost custom objective signature, a pandera schema,
   a JSON contract example) inside specs are encouraged; full implementations are not.
-- Docs PRs follow the same conventions: Conventional Commits (`docs:` prefix),
-  short-lived branches, squash-merge, branch auto-delete.
+- **Code.** `.claude/skills/python-package` and `python-test` hold the conventions. Run the
+  full gate locally before pushing — `.claude/skills/reproducing-ci-locally` explains why
+  "CI will tell me" is the expensive way to find out.
+- All PRs: Conventional Commits, short-lived branches from `main`, squash-merge, branch
+  auto-delete. `.claude/skills/git-hygiene` covers the traps.
 
-## 11. Commands Reference (for when coding phases begin)
+## 11. Commands Reference
 
 ```bash
-uv sync && pnpm install --dir frontend      # deps
-docker compose up                            # full local stack
-uv run ruff check . && uv run mypy packages/ && uv run pytest
+# Setup. --all-packages is not optional: the root sets `package = false` and depends on no
+# member, so a plain `uv sync` installs the dev tools and none of the workspace packages —
+# mypy and pytest then fail on `No module named 'pydantic'` in a venv that looks fine.
+uv sync --all-packages --dev
+
+# The gate. Same commands CI runs (.github/workflows/python.yml), in the same order.
+uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
+python3 scripts/audit-docs.py                # 14 checks over docs/
+uv run python scripts/req-coverage.py        # requirement traceability
+
+# Local infrastructure (deploy/README.md has the credentials and ports).
+docker compose -f deploy/docker-compose.yml up -d --wait
+docker compose -f deploy/docker-compose.yml down
+```
+
+Arriving with the workstream that needs them:
+
+```bash
+pnpm install --dir frontend                  # W6a
 pnpm --dir frontend lint && pnpm --dir frontend test && pnpm --dir frontend type-check
 pnpm --dir frontend generate:api             # regenerate TS types from OpenAPI
-uv run alembic upgrade head
+uv run alembic upgrade head                  # W2
 ```
 
 ## 12. Skills
@@ -363,8 +383,8 @@ Project-specific procedures live in `.claude/skills/`, versioned with the repo s
 travel with it. `.claude/skills/README.md` is the index — read it when starting work on an
 unfamiliar part of the suite.
 
-**Written for this repo:** `spec-change`, `docs-audit`, `adr-write`, `contract-schema`,
-`library-spike`, `git-hygiene`, `python-package`, `python-test`.
+**Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`, `adr-write`,
+`contract-schema`, `library-spike`, `git-hygiene`, `python-package`, `python-test`.
 
 **Vendored** from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills) (MIT,
 security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,
@@ -388,3 +408,71 @@ excluded from `ruff`.
   maintainer's approval**.
 - Never modify skills under `~/.claude/skills/` (personal/global) as part of project work;
   project knowledge belongs in `.claude/skills/` so it travels with the repo.
+
+## 13. Workstream Closure Standard
+
+A workstream is closed only when every item below is true **and recorded in
+`docs/roadmap.md`**. Closing without this produces a roadmap that reports progress the
+repository does not have.
+
+The procedure is in `.claude/skills/close-workstream`; this section is the standard it
+implements.
+
+### 1. Deliverables — audited against the definition, not memory
+
+Re-read the workstream's row in `roadmap.md` §6 and check each named deliverable **exists
+and works**. Those are different claims: W1's compose file existed for days before anyone
+ran it, and NFR-PLAT-4 was unverified the whole time.
+
+### 2. Gates — all green, run locally with the real toolchain
+
+```bash
+uv sync --all-packages --dev                 # see §11 — a plain `uv sync` is not enough
+uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
+python3 scripts/audit-docs.py && uv run python scripts/req-coverage.py
+```
+
+Run them **locally**, not merely "CI passed". CI proves the runner; local proves the result
+is reproducible and that you can debug it.
+
+### 3. Enforcement is proven, not assumed
+
+Any check the workstream introduces must be shown to **fail on deliberately broken input**
+before it is trusted. A silently-passing check is worse than no check, because it is
+mistaken for coverage.
+
+*This is not hypothetical.* The import-linter config was dead for a day — `root_packages`
+was comma-separated on one line, so the parser split it into characters — and it reported
+success the whole time, while the contract enforcing ADR-0001 checked nothing.
+
+### 4. NFRs — measured, not asserted
+
+If the workstream claims an NFR, record **the measurement and the budget**: "21 s cold
+start against NFR-PLAT-4's 300 s", never "starts quickly". An unmeasured NFR is an opinion.
+
+### 5. Scope honesty — state what was *not* delivered
+
+Especially against §5 of the roadmap, the retrofit list. Say which items landed, which are
+type-level only, and which workstream owns the remainder.
+
+**"W1 closed" must not be readable as "the retrofit list is handled."** It was not, and
+that list is the one thing this project cannot fix cheaply later.
+
+### 6. Documents updated in the same PR
+
+The roadmap status table and closure evidence; `CLAUDE.md` §2's layout marks; and any spec
+the implementation proved wrong — when code and spec disagree, resolve it rather than
+quietly changing one (§0).
+
+### 7. Repository clean
+
+No open PRs for the workstream; no tracked build artifacts; branch deleted after merge —
+**verify by content** (`git diff --stat main <branch>`), because squash-merge rewrites
+history and `git branch -d` refuses even when the work is fully merged.
+
+### Tests that must exist before closing
+
+- A **negative test for every invariant** the workstream introduced. For a governed system
+  the suite must prove the wrong thing *cannot* happen, not that the right thing can.
+- A `@pytest.mark.req` marker on each test, naming the requirement it satisfies.
+- A round-trip or property test wherever the workstream persists or transforms data.

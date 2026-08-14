@@ -41,6 +41,31 @@ Two settings whose absence fails `uv sync` before any check runs:
   A root-level `[tool.uv.sources]` does **not** cover a member's dependencies — uv resolves
   `model-schema` from PyPI, where it does not exist.
 
+- **`uv sync` alone installs almost nothing you need.** Because the root sets
+  `package = false` and declares no dependency on any member, a plain `uv sync` gives you
+  the dev tools and neither workspace package. The venv looks healthy; then mypy and pytest
+  fail with `No module named 'pydantic'` on files that import it correctly, which reads
+  like a broken install rather than an incomplete sync. Always:
+  ```bash
+  uv sync --all-packages --dev
+  ```
+  This is what `.github/workflows/python.yml` runs, which is why CI stayed green while the
+  local gate reported ten mypy errors and four collection failures on the same commit.
+
+## Getting `uv` itself
+
+`uv` is not preinstalled and is not a Debian package here. If a session unpacked it into a
+scratchpad directory, **that directory is ephemeral** — the binary vanishes and the next
+session finds no `uv` at all. Put it somewhere durable:
+
+```bash
+cp <unpacked>/uv <unpacked>/uvx ~/.local/bin/ && chmod +x ~/.local/bin/uv*
+```
+
+`~/.profile` already prepends `~/.local/bin` when that directory exists, so a login shell
+picks it up — but only from the next shell, so `export PATH="$HOME/.local/bin:$PATH"` for
+the current one.
+
 ## Adding a dependency
 
 Add it to the *package's* `pyproject.toml`, not the root. Then check it against
@@ -83,6 +108,11 @@ Ruff, line length 100. Match the surrounding code. Comments explain *why* — th
 the spec, and a comment restating the code is noise that rots.
 
 ## Verified
+
+2026-08-14 — re-verified on the rebuilt instance. Full gate green after
+`uv sync --all-packages --dev`: ruff clean, mypy 7 files clean, import-linter 3 kept /
+0 broken, 21 tests pass. The ADR-0001 contract was re-proven non-trivial by injecting
+`import fastapi` into `pricing_core.money` (2 kept, 1 broken) and reverting.
 
 2026-08-14 — W1. `MoneyMinor` strictness, `DecimalStr` schema pinning, and envelope
 freezing are all covered by passing tests, including negative ones asserting a float is
