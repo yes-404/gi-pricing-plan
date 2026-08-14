@@ -97,15 +97,15 @@ about them.
 
 ### Track C — The decision backlog, sequenced
 
-You do not need to answer 46 questions. Since the 1a/1b split was accepted, you need
-**4 before Phase 1a starts** — the other 3 can wait for 1b:
+**All four Phase 1a gates were decided on 2026-08-14** — Apache-2.0, Celery, fit-time
+large-loss treatment, and full-snapshot ingestion. Three remain before 1b:
 
 | Question | Gates | Why it blocks |
 |---|---|---|
-| **OQ-PLAT-1** Celery vs a transactional Postgres queue | **1a** | Job submission is in the first sprint, and transactional enqueue interacts directly with the audit rule (`06` R2) |
-| **OQ-DATA-1** large-loss capping: dataset or model? | **1a** | It *is* the 1a/1b boundary — deferring it makes it a contract change rather than a decision |
-| **OQ-DATA-2** append ingestion vs full snapshots | **1a** | W4, and only if the first real dataset is large enough that full snapshots hurt |
-| **OQ-OVR-2** project licence | **1a** | Blocks nothing technically; blocks every external contribution and the public-repo story |
+| **OQ-PLAT-1** Celery vs a transactional Postgres queue | **1a** ✔ *decided* | Job submission is in the first sprint, and transactional enqueue interacts directly with the audit rule (`06` R2) |
+| **OQ-DATA-1** large-loss capping: dataset or model? | **1a** ✔ *decided* | It *is* the 1a/1b boundary — deferring it makes it a contract change rather than a decision |
+| **OQ-DATA-2** append ingestion vs full snapshots | **1a** ✔ *decided* | W4, and only if the first real dataset is large enough that full snapshots hurt |
+| **OQ-OVR-2** project licence | **1a** ✔ *decided* | Blocks nothing technically; blocks every external contribution and the public-repo story |
 | **OQ-MODEL-1** expression objectives in 1b? | 1b | Decides whether the AST parser and SymPy derivation are in scope — a material slice of W5 |
 | **OQ-MODEL-5** credibility standard | 1b | Needed to implement `credibility_weighted` grouping |
 | **OQ-OVR-5** notebook escape hatch | 1b | Affects whether a client library is in scope |
@@ -122,11 +122,11 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 
 | # | Task | Kind | Owner | Blocks |
 |---|---|---|---|---|
-| **1** | **OQ-OVR-2** — project licence | decision | maintainer | **1a** — public contribution, not code |
+| ~~1~~ | ~~**OQ-OVR-2**~~ ✔ — project licence | decision | maintainer | **1a** — public contribution, not code |
 | **2** | **OQ-OVR-5** — notebook escape hatch | decision | maintainer | **1b** — client library scope |
-| **3** | **OQ-PLAT-1** — Celery vs a transactional Postgres queue | decision | maintainer | **1a** — W2, first sprint |
-| **4** | **OQ-DATA-1** — where large-loss capping lives | decision | maintainer | **1a** — it *is* the 1a/1b boundary; a contract change if deferred |
-| **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | **1a** — W4, only if the first dataset is large |
+| ~~3~~ | ~~**OQ-PLAT-1**~~ ✔ — Celery vs a transactional Postgres queue | decision | maintainer | **1a** — W2, first sprint |
+| ~~4~~ | ~~**OQ-DATA-1**~~ ✔ — where large-loss capping lives | decision | maintainer | **1a** — it *is* the 1a/1b boundary; a contract change if deferred |
+| ~~5~~ | ~~**OQ-DATA-2**~~ ✔ — append ingestion vs full snapshots | decision | maintainer | **1a** — W4, only if the first dataset is large |
 | **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1b? | decision | maintainer | **1b** — W5 scope, materially |
 | **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | **1b** — W5 grouping implementation |
 | ~~8~~ | ~~**S3** — LightGBM `init_score`~~ ✔ **done** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
@@ -143,7 +143,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
 audit are complete and passing; the remaining Phase 0 work is entirely decisions and
-spikes — **four decisions before 1a can start**, and three more before 1b. The spike backlog is empty.
+spikes — **nothing before 1a can start** — all four gating decisions were made on 2026-08-14. Three decisions remain before 1b, and the spike backlog is empty.
 
 ---
 
@@ -386,7 +386,7 @@ you never block on a decision you have not reached.
 
 | Gate | Questions | Count |
 |---|---|---|
-| **Before Phase 1a** | OQ-OVR-2, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2 | 4 |
+| ~~**Before Phase 1a**~~ ✔ **all decided 2026-08-14** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ | 4 (0 open) |
 | **Before Phase 1b** | OQ-OVR-5, OQ-MODEL-1, OQ-MODEL-5 | 3 |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |

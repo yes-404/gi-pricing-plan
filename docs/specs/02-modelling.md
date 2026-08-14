@@ -133,6 +133,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-30** | Early stopping requires a declared holdout or CV scheme; the chosen iteration count, the full evaluation curve, and the metric used are persisted. Early stopping on the training set is refused. |
 | **FR-MODEL-31** | The booster is exported in the backend's JSON/text model format, stored content-addressed, and accompanied by feature order, dtype expectations, categorical encoding maps, `base_margin` construction, and pinned library version (ADR-0003). Pickling is refused at the persistence layer, not merely discouraged. |
 | **FR-MODEL-71** | The `base_margin` / `init_score` construction is persisted with the booster and **asserted at load time**, because omitting it at scoring time fails *silently* on **both** backends — differently. Loading a GBM artifact whose offset cannot be reconstructed is a hard failure, never a warning. Verified empirically for XGBoost (F5) and LightGBM (F13). |
+| **FR-MODEL-73** | **Large-loss treatment is a modelling decision applied at fit time, not a property baked into the dataset** (OQ-DATA-1, decided 2026-08-14). A Model Spec carries a `loss_treatment` — `none`, `capped` (cap plus the restoration loading that restores the mean), `spliced`, or `excess` — which is applied to the response as the model is fitted, and which forms part of `spec_hash`. Dataset Versions stay assumption-free, so one validated dataset serves many capping assumptions without re-ingestion or re-validation. `01` VR-ACT-10 flags large losses in the data but never removes them. |
+| **FR-MODEL-74** | Because the dataset is uncapped and the model is not, **reconciliation must account for the treatment**: the Peril Structure's reconciliation (FR-MODEL-60) compares modelled burning cost *after* restoration against observed uncapped burning cost, and the generated dossier states the treatment alongside the reconciliation. Without this, a capped model reconciling to uncapped data looks like a modelling error rather than an intended adjustment. |
 | **FR-MODEL-72** | **The offset is symmetric at fit time and asymmetric at scoring time; the scoring path must be implemented per backend.** Both backends include the offset in the raw score handed to a custom objective, so FR-MODEL-27 holds for both. But at prediction time: XGBoost re-applies the offset when it is set on the prediction `DMatrix`, whereas **LightGBM's `Booster.predict()` has no offset parameter at all** — it returns tree contributions only, and the caller must add `init_score` back to the raw score itself. A single "apply the offset" implementation written against XGBoost's API would **silently do nothing** on LightGBM and under-predict by exactly the offset. `pricing-core` therefore implements the scoring-side offset per backend, and a round-trip test asserts that `predict(fit_data)` reproduces the fitted raw score on **each** backend independently (F13). |
 | **FR-MODEL-32** | Categorical handling is explicit: either the Factor supplies a grouping/encoding, or the backend's native categorical support is used with its parameters recorded. Silent label-encoding of an unordered categorical is refused. |
 
@@ -291,10 +293,16 @@ Common block:
   "weight": {"kind": "none"},
   "factors": [{"factor_id": "uuid", "factor_version": 3}],
   "filter": null,
+  "loss_treatment": {"kind": "capped", "cap_minor": 2_500_000,
+                     "restoration_loading": 1.043, "evidence_blob": "blob:sha256:…"},
   "seed": 20260814,
   "model_type": "glm | xgboost | lightgbm | ebm"
 }
 ```
+
+`loss_treatment` is part of the spec — and therefore of `spec_hash` — because capping is
+applied to the **response at fit time** (FR-MODEL-73). Two models differing only in their
+cap are different models, and must not collide on `spec_hash`.
 
 `GlmSpec` adds:
 
