@@ -40,6 +40,9 @@ from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
 
 __all__ = [
     "ApiKeyRow",
+    "ApprovalDecisionRow",
+    "ApprovalPolicyRow",
+    "ApprovalRequestRow",
     "AuditEventRow",
     "BlobRow",
     "JobLogRow",
@@ -552,4 +555,86 @@ class RoleAssignmentRow(Base):
             "NOT break_glass OR (expires_at IS NOT NULL AND reason IS NOT NULL)",
             name="break_glass_is_time_boxed_and_justified",
         ),
+    )
+
+
+class ApprovalRequestRow(Base):
+    """An artifact submitted for approval (`06` §4.3, FR-GOV-9).
+
+    `artifact_ref` is the canonical `{type}:{slug}@{version}` string, which is what makes
+    approvals pinned without a staleness check (FR-GOV-14): artifacts are immutable
+    (FR-OVR-1), so a changed artifact is a *different* reference and this row does not
+    describe it.
+    """
+
+    __tablename__ = "approval_requests"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    artifact_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    artifact_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    environment: Mapped[str | None] = mapped_column(String(32))
+
+    submitted_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    change_summary: Mapped[str] = mapped_column(Text, nullable=False)
+
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    approvers_required: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    withdrawn_reason: Mapped[str | None] = mapped_column(Text)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # One open request per artifact version. A second would let two reviews of the same
+        # thing reach different answers, with nothing to say which one deployment obeys.
+        Index(
+            "uq_approval_requests_open_artifact",
+            "workspace_id",
+            "artifact_ref",
+            unique=True,
+            postgresql_where=status.in_(("draft", "review")),
+        ),
+        Index("ix_approval_requests_workspace_status", "workspace_id", "status"),
+        CheckConstraint("approvers_required >= 1", name="approvers_required_positive"),
+    )
+
+
+class ApprovalDecisionRow(Base):
+    """One approver's decision on one request (FR-GOV-11).
+
+    The unique constraint on `(request, approver)` is separation of duties made structural:
+    "where two approvals are required they must be distinct Principals" is not a rule the
+    service can forget, because a second decision from the same person cannot be stored.
+    """
+
+    __tablename__ = "approval_decisions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    request_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    approver_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    decision: Mapped[str] = mapped_column(String(32), nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text)
+    at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("request_id", "approver_id", name="uq_approval_decisions_one_each"),
+        Index("ix_approval_decisions_request", "request_id"),
+    )
+
+
+class ApprovalPolicyRow(Base):
+    """The workspace's approval policy (FR-GOV-12). One row per workspace."""
+
+    __tablename__ = "approval_policies"
+
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    policy: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
