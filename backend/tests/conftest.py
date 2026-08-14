@@ -53,6 +53,7 @@ def _isolate_probes():
 from backend.tests.conftest_db import (  # noqa: E402,F401
     blob_store,
     database,
+    grant,
     principal,
     workspace_id,
 )

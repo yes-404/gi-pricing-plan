@@ -551,6 +551,58 @@
         "title": "KeyView",
         "type": "object"
       },
+      "Me": {
+        "additionalProperties": false,
+        "description": "The current principal, its roles, and its effective permissions.",
+        "properties": {
+          "display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display"
+          },
+          "permissions": {
+            "default": [],
+            "description": "Workspace-wide effective permissions. Scoped assignments appear under `roles`; a permission held only on one artifact is not listed here, because a control enabled by it would be wrong on every other artifact.",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "principal_id": {
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "principal_kind": {
+            "$ref": "#/components/schemas/ActorKind"
+          },
+          "roles": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RoleAssignmentView"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_kind",
+          "principal_id",
+          "workspace_id"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
       "Page_JobLogLine_": {
         "additionalProperties": false,
         "properties": {
@@ -622,6 +674,37 @@
         ],
         "title": "Page[Job]",
         "type": "object"
+      },
+      "Permission": {
+        "description": "Every permission the platform checks. Closed by design.\n\nA free-string permission is one nobody can enumerate, so no screen can list what a role\ngrants and no test can assert a role does not grant something.",
+        "enum": [
+          "dataset:read",
+          "dataset:write",
+          "dataset:validate",
+          "dataset:acknowledge_warning",
+          "model:read",
+          "model:fit",
+          "model:submit",
+          "rating:read",
+          "rating:write",
+          "rating:submit",
+          "rating:compile",
+          "approval:decide",
+          "deployment:promote",
+          "audit:read",
+          "score:execute",
+          "score:batch",
+          "job:read",
+          "job:cancel",
+          "settings:read",
+          "admin:manage_roles",
+          "admin:manage_settings",
+          "admin:manage_environments",
+          "admin:manage_service_accounts",
+          "admin:break_glass"
+        ],
+        "title": "Permission",
+        "type": "string"
       },
       "Principal": {
         "additionalProperties": false,
@@ -854,6 +937,52 @@
           }
         },
         "title": "RetryState",
+        "type": "object"
+      },
+      "RoleAssignmentView": {
+        "additionalProperties": false,
+        "properties": {
+          "break_glass": {
+            "default": false,
+            "title": "Break Glass",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id"
+          },
+          "scope_type": {
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "scope_type"
+        ],
+        "title": "RoleAssignmentView",
         "type": "object"
       },
       "ServiceAccountView": {
@@ -1649,6 +1778,57 @@
         "summary": "Captured log lines (FR-PLAT-10)",
         "tags": [
           "jobs"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "get_me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          }
+        },
+        "summary": "Current principal, roles and effective permissions",
+        "tags": [
+          "governance"
         ]
       }
     },

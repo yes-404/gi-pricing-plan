@@ -17,18 +17,21 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.api.deps import Caller, require_caller
+from app.api.authz import requires
+from app.api.deps import Caller
 from app.api.responses import problems
 from app.db.session import Database
 from app.platform import audit
 from app.platform import settings as setting_service
 from model_schema import JobSource, SettingResolution
+from model_schema import Permission as Perm
 
 __all__ = ["router"]
 
 router = APIRouter(prefix="/settings", tags=["platform"])
 
-CallerDep = Annotated[Caller, Depends(require_caller)]
+ReadSettings = Annotated[Caller, Depends(requires(Perm.SETTINGS_READ))]
+ManageSettings = Annotated[Caller, Depends(requires(Perm.ADMIN_MANAGE_SETTINGS))]
 
 
 def _database(request: Request) -> Database:
@@ -58,7 +61,7 @@ class UpdateSettings(BaseModel):
     responses=problems(401, 403),
 )
 async def get_settings(
-    caller: CallerDep, database: DatabaseDep, request: Request
+    caller: ReadSettings, database: DatabaseDep, request: Request
 ) -> list[SettingResolution]:
     async with database.session() as session:
         return await setting_service.resolve_all(
@@ -73,7 +76,7 @@ async def get_settings(
     responses=problems(401, 403, 404, 422),
 )
 async def update_settings(
-    body: UpdateSettings, caller: CallerDep, database: DatabaseDep, request: Request
+    body: UpdateSettings, caller: ManageSettings, database: DatabaseDep, request: Request
 ) -> list[SettingResolution]:
     """Validate, write and audit each change in one transaction (`06` R2, FR-PLAT-31)."""
     async with database.unit_of_work() as session:

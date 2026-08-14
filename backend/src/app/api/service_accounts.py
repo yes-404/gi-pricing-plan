@@ -22,7 +22,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, require_caller
+from app.api.authz import requires
+from app.api.deps import Caller
 from app.api.responses import problems
 from app.auth.api_keys import generate_key
 from app.db.models import ApiKeyRow, ServiceAccountRow
@@ -30,12 +31,13 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import audit
 from model_schema import JobSource
+from model_schema import Permission as Perm
 
 __all__ = ["router"]
 
 router = APIRouter(prefix="/service-accounts", tags=["platform"])
 
-CallerDep = Annotated[Caller, Depends(require_caller)]
+ManageAccounts = Annotated[Caller, Depends(requires(Perm.ADMIN_MANAGE_SERVICE_ACCOUNTS))]
 
 #: FR-PLAT-3 scopes service accounts to scoring. A key that could fit a model or approve a
 #: rating version would be a standing credential with an actuary's authority.
@@ -142,7 +144,7 @@ def _check_permissions(requested: list[str]) -> None:
     responses=problems(401, 403, 409, 422),
 )
 async def create_service_account(
-    body: CreateServiceAccount, caller: CallerDep, database: DatabaseDep
+    body: CreateServiceAccount, caller: ManageAccounts, database: DatabaseDep
 ) -> CreatedServiceAccount:
     """Create the account and its first key. The key is in this response and nowhere else."""
     _check_permissions(body.permissions)
@@ -214,7 +216,7 @@ async def create_service_account(
 )
 async def rotate_key(
     account_id: UUID,
-    caller: CallerDep,
+    caller: ManageAccounts,
     database: DatabaseDep,
     overlap_days: Annotated[int, Field(ge=0, le=90)] = DEFAULT_ROTATION_OVERLAP_DAYS,
 ) -> CreatedServiceAccount:
@@ -277,7 +279,7 @@ async def rotate_key(
     responses=problems(401, 403, 404, 422),
 )
 async def revoke_key(
-    account_id: UUID, prefix: str, caller: CallerDep, database: DatabaseDep
+    account_id: UUID, prefix: str, caller: ManageAccounts, database: DatabaseDep
 ) -> ServiceAccountView:
     async with database.unit_of_work() as session:
         account = await _load_scoped(session, account_id, caller)

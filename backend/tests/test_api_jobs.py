@@ -8,6 +8,7 @@ provider is a **refusal** rather than an omission.
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
@@ -40,8 +41,23 @@ def api_settings() -> Settings:
     )
 
 
+@pytest_asyncio.fixture
+async def caller_headers(workspace_id, principal, grant) -> dict[str, str]:
+    """An authenticated caller *with* the permissions these routes require.
+
+    Granted explicitly rather than implied by authentication: FR-GOV-2 is only tested if
+    the test could fail when the grant is missing, and `test_a_caller_without_the_role_is
+    _forbidden` asserts exactly that.
+    """
+    await grant("analyst")
+    return {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        DEV_WORKSPACE_HEADER: str(workspace_id),
+    }
+
+
 @pytest.fixture
-def caller_headers(workspace_id, principal) -> dict[str, str]:
+def unprivileged_headers(workspace_id, principal) -> dict[str, str]:
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
         DEV_WORKSPACE_HEADER: str(workspace_id),
@@ -320,3 +336,36 @@ def test_the_routes_appear_in_the_generated_contract() -> None:
         "/api/v1/jobs/{job_id}/cancel",
         "/api/v1/jobs/{job_id}/events",
     } <= set(paths)
+
+
+@pytest.mark.req("FR-GOV-2")
+def test_a_caller_without_the_role_is_forbidden(
+    client: TestClient, unprivileged_headers
+) -> None:
+    """Negative: authentication is not authorisation.
+
+    Without this the suite would pass whether or not the permission check existed, because
+    every other test grants a role first.
+    """
+    response = client.get("/api/v1/jobs", headers=unprivileged_headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-GOV-2")
+async def test_read_permission_does_not_confer_cancel(
+    client: TestClient, database, workspace_id, principal, grant, caller_headers
+) -> None:
+    """`auditor` reads everything and writes nothing (FR-GOV-5)."""
+    job = await _submit(database, workspace_id, principal)
+    other = new_uuid7()
+    await grant("auditor", principal_id=other)
+    auditor_headers = {
+        DEV_PRINCIPAL_HEADER: str(other),
+        DEV_WORKSPACE_HEADER: str(workspace_id),
+    }
+
+    assert client.get("/api/v1/jobs", headers=auditor_headers).status_code == 200
+    denied = client.post(f"/api/v1/jobs/{job.id}/cancel", headers=auditor_headers)
+    assert denied.status_code == 403
+    assert denied.json()["code"] == "PERMISSION_DENIED"

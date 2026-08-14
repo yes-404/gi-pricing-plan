@@ -32,7 +32,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 
-from app.api.deps import Caller, require_caller
+from app.api.authz import requires
+from app.api.deps import Caller
 from app.api.pagination import (
     COUNT_CAP,
     DEFAULT_LIMIT,
@@ -49,6 +50,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import jobs as job_service
 from model_schema import Job, JobKind, JobStatus
+from model_schema import Permission as Perm
 
 __all__ = ["router"]
 
@@ -56,7 +58,9 @@ _log = get_logger("app.api.jobs")
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
-CallerDep = Annotated[Caller, Depends(require_caller)]
+#: FR-GOV-2: the permission is part of the route definition, not buried in a handler.
+ReadJobs = Annotated[Caller, Depends(requires(Perm.JOB_READ))]
+CancelJobs = Annotated[Caller, Depends(requires(Perm.JOB_CANCEL))]
 
 
 def _database(request: Request) -> Database:
@@ -100,7 +104,7 @@ async def _load_scoped(database: Database, job_id: UUID, caller: Caller) -> JobR
 
 @router.get("", summary="List jobs", responses=problems(400, 401, 403, 422))
 async def list_jobs(
-    caller: CallerDep,
+    caller: ReadJobs,
     database: DatabaseDep,
     stall_seconds: StallDep,
     status_filter: Annotated[JobStatus | None, Query(alias="status")] = None,
@@ -158,7 +162,7 @@ async def list_jobs(
     responses=problems(401, 403, 404, 422),
 )
 async def get_job(
-    job_id: UUID, caller: CallerDep, database: DatabaseDep, stall_seconds: StallDep
+    job_id: UUID, caller: ReadJobs, database: DatabaseDep, stall_seconds: StallDep
 ) -> Job:
     return job_service.to_schema(
         await _load_scoped(database, job_id, caller), stall_seconds=stall_seconds
@@ -172,7 +176,7 @@ async def get_job(
 )
 async def get_job_logs(
     job_id: UUID,
-    caller: CallerDep,
+    caller: ReadJobs,
     database: DatabaseDep,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
@@ -232,7 +236,7 @@ async def get_job_logs(
     status_code=status.HTTP_200_OK,
     responses=problems(401, 403, 404, 409, 422),
 )
-async def cancel_job(job_id: UUID, caller: CallerDep, database: DatabaseDep) -> Job:
+async def cancel_job(job_id: UUID, caller: CancelJobs, database: DatabaseDep) -> Job:
     """Cancel a Job.
 
     A `queued` Job is cancelled outright; a `running` one is *marked* and stops at its next
@@ -254,7 +258,7 @@ async def cancel_job(job_id: UUID, caller: CallerDep, database: DatabaseDep) -> 
 )
 async def stream_job_events(
     job_id: UUID,
-    caller: CallerDep,
+    caller: ReadJobs,
     database: DatabaseDep,
     request: Request,
 ) -> Response:

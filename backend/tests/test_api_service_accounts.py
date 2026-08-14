@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -32,8 +33,17 @@ def client(api_settings: Settings) -> TestClient:
         yield c
 
 
+@pytest_asyncio.fixture
+async def headers(workspace_id, principal, grant) -> dict[str, str]:
+    await grant("admin")
+    return {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        DEV_WORKSPACE_HEADER: str(workspace_id),
+    }
+
+
 @pytest.fixture
-def headers(workspace_id, principal) -> dict[str, str]:
+def unprivileged_headers(workspace_id, principal) -> dict[str, str]:
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
         DEV_WORKSPACE_HEADER: str(workspace_id),
@@ -171,13 +181,45 @@ async def test_key_lifecycle_is_audited_by_prefix_never_by_value(
 
 
 @pytest.mark.req("FR-OVR-13")
-def test_another_workspaces_account_is_404(client: TestClient, headers, workspace_id) -> None:
-    from model_schema import new_uuid7
+async def test_another_workspaces_account_is_404_not_403(
+    client: TestClient, headers, database, principal
+) -> None:
+    """Tenancy non-disclosure, tested where it still bites.
+
+    The caller is an admin in the second workspace too, so it is *authorised* there and the
+    404 is about the account belonging to someone else — not about the caller being
+    refused. Without the second grant this returns 403 and asserts nothing about tenancy.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import RoleAssignmentRow, RoleRow
+    from app.platform import rbac
+    from model_schema import ScopeType, new_uuid7
 
     created = _create(client, headers).json()
-    other_headers = dict(headers)
-    other_headers[DEV_WORKSPACE_HEADER] = str(new_uuid7())
 
+    other_workspace = new_uuid7()
+    async with database.unit_of_work() as session:
+        await rbac.seed_builtin_roles(session, other_workspace)
+        role = (
+            await session.execute(
+                select(RoleRow).where(
+                    RoleRow.workspace_id == other_workspace, RoleRow.slug == "admin"
+                )
+            )
+        ).scalar_one()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=other_workspace,
+                principal_kind="user",
+                principal_id=principal.id,
+                role_id=role.id,
+                scope_type=ScopeType.WORKSPACE.value,
+            )
+        )
+
+    other_headers = dict(headers)
+    other_headers[DEV_WORKSPACE_HEADER] = str(other_workspace)
     response = client.post(
         f"/api/v1/service-accounts/{created['account']['id']}/rotate", headers=other_headers
     )
@@ -191,3 +233,16 @@ def test_service_account_routes_require_authentication() -> None:
         response = client.post("/api/v1/service-accounts", json={})
         assert response.status_code == 401
         assert response.json()["code"] == "UNAUTHENTICATED"
+
+
+@pytest.mark.req("FR-GOV-2")
+def test_creating_a_service_account_needs_the_admin_permission(
+    client: TestClient, unprivileged_headers
+) -> None:
+    """Negative: a service account is a standing credential; minting one is an admin act."""
+    response = client.post(
+        "/api/v1/service-accounts",
+        json={"slug": "sneaky", "environments": ["prod"], "permissions": ["score:execute"]},
+        headers=unprivileged_headers,
+    )
+    assert response.status_code == 403

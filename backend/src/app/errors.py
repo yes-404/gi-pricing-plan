@@ -22,6 +22,7 @@ from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
 
 __all__ = [
+    "GOVERNANCE_ERROR_CODES",
     "PLATFORM_ERROR_CODES",
     "PlatformError",
     "install_error_handlers",
@@ -55,12 +56,33 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
     }
 )
 
+#: Error codes owned by `06 — Governance` (§5.1).
+GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {
+        "PERMISSION_DENIED",
+        "SCOPE_DENIED",
+        "SUBMITTER_CANNOT_APPROVE",
+        "DUPLICATE_APPROVER",
+        "EVIDENCE_INCOMPLETE",
+        "CHECKLIST_INCOMPLETE",
+        "ARTIFACT_FLAGGED",
+        "APPROVAL_PINNED_ARTIFACT_CHANGED",
+        "APPROVAL_ALREADY_DECIDED",
+        "WITHDRAW_AFTER_DEPLOY_FORBIDDEN",
+        "BREAK_GLASS_REASON_REQUIRED",
+        "AUDIT_CHAIN_BROKEN",
+        "ATTESTATION_OVERDUE",
+    }
+)
+
 #: Codes raised by the shared request machinery rather than owned by one module.
 _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {"VALIDATION_FAILED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR"}
 )
 
-_KNOWN_CODES: Final[frozenset[str]] = PLATFORM_ERROR_CODES | _GENERIC_ERROR_CODES
+_KNOWN_CODES: Final[frozenset[str]] = (
+    PLATFORM_ERROR_CODES | GOVERNANCE_ERROR_CODES | _GENERIC_ERROR_CODES
+)
 
 
 def _type_uri(code: str) -> str:
