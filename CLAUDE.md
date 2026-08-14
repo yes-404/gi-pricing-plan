@@ -192,9 +192,19 @@ lazy validation reports).
   the §5 standard, all five workflow docs are complete, contracts drafted, and
   open-questions is empty or explicitly deferred. Exit criteria: an engineer could start
   Phase 1 from docs alone.
-- **Phase 1 — Modelling Workbench**: dataset upload + validation + profiling, GLM and
-  XGBoost fitting (incl. custom objectives), factor management, diagnostics, model
-  versioning. Demo on freMTPL2.
+- **Phase 1a — Data Workbench**: dataset upload, preparation, the four-layer validation
+  gate, profiling, reference data. Exit: a freMTPL2 dataset version reaches `validated`,
+  having been through the failure loop at least once. The cross-cutting foundations that
+  cannot be retrofitted (audit-in-transaction, artifact immutability, the Job model,
+  decimal money, `model-schema` as SSOT) land here.
+- **Phase 1b — Modelling Workbench**: factor management incl. bandings and groupings, GLM
+  and XGBoost fitting (incl. custom objectives), diagnostics, transparency artifacts, model
+  versioning. Exit: `wf-01` end to end on freMTPL2.
+
+  *(Phase 1 was split on the `DATA`/`MODEL` boundary — accepted 2026-08-14. As one phase it
+  was ~47 % of the platform's requirement surface with no intermediate demo. The split costs
+  nothing structurally and means only 4 of the 7 Phase 1 decisions gate the start of work.
+  See `docs/roadmap.md` §6.)*
 - **Phase 2 — Rating Engine**: DAG designer, rate tables, reference data, real-time +
   batch scoring, dislocation.
 - **Phase 3 — Governance**: RBAC, approvals, audit UI, model documentation generation.

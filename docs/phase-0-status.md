@@ -9,10 +9,9 @@ documents alone.*
 
 ## 1. Exit criteria
 
-> **Track A research is closed and all three spikes have run** (2026-08-14). Remaining
-> Phase 0 work is **7 decisions plus the Phase 1 split recommendation** — no code-answerable
-> question is outstanding. See [`roadmap.md`](roadmap.md) §3 "Outstanding work —
-> consolidated".
+> **Track A closed, all three spikes run, and the Phase 1a/1b split accepted** (2026-08-14).
+> Remaining Phase 0 work is **4 decisions before Phase 1a can start** (3 more before 1b).
+> No code-answerable question is outstanding. See [`roadmap.md`](roadmap.md) §3.
 
 | Criterion | Status | Note |
 |---|---|---|
@@ -22,9 +21,8 @@ documents alone.*
 | `open-questions.md` empty or explicitly deferred | **open** | 46 questions: 39 `open`, 6 `deferred`, **1 `decided`** (OQ-RATE-1, closed by Track A research). Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
-**Remaining before Phase 1 can start:** resolve or explicitly defer the open questions
-(§4), and close the two spikes (§5). Both are maintainer decisions; nothing in the
-document suite blocks on further writing.
+**Remaining before Phase 1a can start:** four decisions (OQ-OVR-2, OQ-PLAT-1, OQ-DATA-1,
+OQ-DATA-2). Nothing in the document suite blocks on further writing, and no spike remains.
 
 ---
 
@@ -141,7 +139,7 @@ confusing failures rather than as design decisions.
 |---|---|
 | New to the project | `specs/00-overview.md` → `workflows/wf-01` → the spec you will work on |
 | Researching the stack (the maintainer's next step) | `skills-map.md` §7 research priority, then each component's row |
-| Planning Phase 1 | `workflows/wf-01`, `specs/01`, `specs/02`, and the timing tables at the end of each workflow |
+| Planning Phase 1a/1b | `workflows/wf-01`, `specs/01` (1a), `specs/02` (1b), and the timing tables at the end of each workflow |
 | Assessing risk | This page §5, then `open-questions.md` |
 | Implementing a module | That module's spec end to end, plus `docs/contracts/` for the shapes |
 
