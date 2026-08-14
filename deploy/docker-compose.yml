@@ -1,0 +1,52 @@
+# Local full stack (NFR-OVR-9: no cloud dependency).
+#
+# Phase 1a brings up only what W2/W4 need. Services arrive as the workstreams that use
+# them do — an unused container in the compose file is a claim the platform does not yet
+# support, and it makes `docker compose up` slower for no benefit.
+
+name: gi-pricing
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gipricing
+      POSTGRES_PASSWORD: gipricing            # local only; production uses a secret ref
+      POSTGRES_DB: gipricing
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gipricing"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Content-addressed blob store (ID-4). MinIO keeps NFR-OVR-9 honest — the same S3 API
+  # locally as in production, so the storage path is never "works on my machine".
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: gipricing
+      MINIO_ROOT_PASSWORD: gipricing
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["miniodata:/data"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
+  miniodata:

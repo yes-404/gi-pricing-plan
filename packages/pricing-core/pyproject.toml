@@ -1,0 +1,14 @@
+[project]
+name = "pricing-core"
+version = "0.1.0"
+description = "Pure actuarial engine — no web, no database, no I/O (ADR-0001)"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+dependencies = ["model-schema"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pricing_core"]
