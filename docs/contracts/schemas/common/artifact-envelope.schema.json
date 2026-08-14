@@ -4,21 +4,82 @@
   "title": "ArtifactEnvelope",
   "description": "Fields carried by every persisted entity. See 00-overview.md §4.3.",
   "type": "object",
-  "required": ["id", "workspace_id", "slug", "version", "status", "created_at", "created_by"],
+  "required": [
+    "id",
+    "workspace_id",
+    "slug",
+    "version",
+    "status",
+    "created_at",
+    "created_by"
+  ],
   "properties": {
-    "id": {"type": "string", "format": "uuid"},
-    "workspace_id": {"type": "string", "format": "uuid"},
-    "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
-    "version": {"type": "integer", "minimum": 1},
-    "status": {"type": "string"},
-    "created_at": {"type": "string", "format": "date-time"},
-    "created_by": {"type": "string", "format": "uuid"},
-    "updated_at": {"type": "string", "format": "date-time"},
-    "archived_at": {"type": ["string", "null"], "format": "date-time"},
-    "parent_id": {"type": ["string", "null"], "format": "uuid"},
-    "labels": {"type": "object", "additionalProperties": {"type": "string"}},
-    "description": {"type": ["string", "null"]},
-    "schema_version": {"type": "integer", "minimum": 1,
-      "description": "Contract version of this artifact body; readers must accept every historical value (ADR-0002)."}
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workspace_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "archived_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "parent_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Contract version of this artifact body; readers must accept every historical value (ADR-0002)."
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "ISO 4217 code for the workspace's single currency (OQ-OVR-3). Recorded on every artifact so multi-currency in Phase 4 is additive."
+    }
   }
 }

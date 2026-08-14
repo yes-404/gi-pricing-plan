@@ -109,11 +109,13 @@ def _define(*definitions: SettingDefinition) -> dict[str, SettingDefinition]:
 #: windows, and feature flags.
 REGISTRY: dict[str, SettingDefinition] = _define(
     SettingDefinition(
-        key="display.currency",
+        key="workspace.currency",
         type=SettingType.STRING,
         default="GBP",
-        description="ISO 4217 currency for display. Money is stored in minor units "
-        "regardless (FR-OVR-7); this only decides how it is rendered.",
+        description="The workspace's single operating currency, ISO 4217 (FR-OVR-7, "
+        "OQ-OVR-3). Not a display preference: money is stored in minor units of *this* "
+        "currency and every artifact records it, so multi-currency in Phase 4 adds FX "
+        "effective-dating rather than migrating every monetary column.",
         constraints={"enum": ["GBP", "EUR", "USD", "CHF", "SEK", "NOK", "DKK", "PLN"]},
     ),
     SettingDefinition(

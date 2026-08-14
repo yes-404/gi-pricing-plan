@@ -367,6 +367,17 @@ uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on d
 # Closure audit (§13 step 1): expected scope from the specs, then evidence.
 uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
 
+# ADR-0001's promise, made usable (OQ-OVR-4, decided 2026-08-14). `pricing-core` is not
+# published to PyPI in Phase 1 — publishing would force semver stability on an API still
+# being discovered — so this is how a reviewer runs the maths outside the platform.
+# From Phase 2 it publishes as `0.x` with an explicit no-stability-guarantee notice.
+uv venv .venv-review && uv pip install --python .venv-review/bin/python \
+    -e packages/pricing-core               # a reviewer's own venv or notebook kernel
+#
+# `uv venv` ships no pip, so a bare `pip install -e` fails with "No such file or
+# directory" — use `uv pip install --python <venv>/bin/python`, or a `python -m venv`
+# environment if pip is wanted inside it.
+
 # Local infrastructure (deploy/README.md has the credentials and ports).
 docker compose -f deploy/docker-compose.yml up -d --wait
 docker compose -f deploy/docker-compose.yml down

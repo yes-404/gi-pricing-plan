@@ -51,6 +51,7 @@ The following are explicitly **not** built by this platform, in any phase:
 | Claims handling, reserving, capital modelling | Adjacent actuarial domains with their own tooling |
 | Reinsurance pricing and treaty structures | Different maths, different data model |
 | General-purpose BI / ad-hoc reporting | DuckDB + notebook escape hatch is provided instead |
+| An **embedded** notebook server | A client library is provided instead (OQ-OVR-5, decided 2026-08-14). Embedding JupyterLab would put arbitrary code execution inside the platform's security and audit boundary — the same problem custom objectives pose, and not one to solve twice. Revisited in Phase 4 once that sandboxing exists |
 | Customer PII storage as a system of record | Datasets are pseudonymised snapshots (see FR-OVR-9) |
 | Regulatory filing document *submission* | We generate documentation; humans file it |
 | Broker/aggregator connectivity, panel management | Downstream of the scoring API |
@@ -208,7 +209,7 @@ System-level requirements that no single module owns. Module codes are defined i
 | **FR-OVR-4** | Every state transition of a governed Artifact emits an Audit Event (see `06-governance.md`). Audit writes are in the same transaction as the state change. |
 | **FR-OVR-5** | All pricing computation lives in `pricing-core` and is callable without the backend. The backend orchestrates and persists; it never contains actuarial maths. |
 | **FR-OVR-6** | All shared data shapes are defined once in `packages/model-schema` and generated into (a) JSON Schema in `docs/contracts/schemas/`, (b) OpenAPI, (c) frontend TypeScript. No shape is hand-written twice. |
-| **FR-OVR-7** | Monetary values are integer minor units (pence/cents) or `Decimal` throughout the rating path and all persisted rate tables. Floats are permitted only inside model fitting and diagnostics, never in a quoted premium. |
+| **FR-OVR-7** | Monetary values are integer minor units (pence/cents) or `Decimal` throughout the rating path and all persisted rate tables. Floats are permitted only inside model fitting and diagnostics, never in a quoted premium. **One workspace, one currency** (OQ-OVR-3, decided 2026-08-14): the code is a workspace setting and is carried on every artifact's envelope, so multi-currency in Phase 4 adds FX effective-dating rather than migrating every monetary column. |
 | **FR-OVR-8** | Determinism: given identical inputs and pinned artifact versions, model fitting and scoring reproduce identical outputs. All stochastic operations take an explicit persisted `random_seed`. |
 | **FR-OVR-9** | Datasets are treated as pseudonymised. The platform stores no direct identifiers (name, address line, email, exact DOB) as modelling columns; ingestion rejects columns tagged `direct_identifier` unless explicitly configured as a passthrough key that is excluded from all Factors. |
 | **FR-OVR-10** | Every long-running operation (validate, fit, score-batch, optimise, monitor) is a **Job** with a uniform lifecycle, progress, cancellation, log, and result reference (see `07-platform.md`). |
@@ -277,6 +278,7 @@ Every persisted entity carries the envelope below (defined once in `model-schema
   "slug": "string, ^[a-z0-9][a-z0-9-]{1,62}$",
   "version": 1,
   "status": "string (entity-specific enum)",
+  "currency": "ISO 4217, e.g. GBP — the workspace's single currency (OQ-OVR-3)",
   "created_at": "timestamptz",
   "created_by": "uuid (user)",
   "updated_at": "timestamptz",
@@ -508,6 +510,6 @@ Mirrored in `docs/open-questions.md`.
 |---|---|
 | **OQ-OVR-1** | Is the workspace the tenancy boundary, or do we also need per-workspace physical isolation for hosted use? |
 | **OQ-OVR-2** | Project licence: Apache-2.0 (permissive, adoption) vs AGPL-3.0 (protects against closed SaaS forks). |
-| **OQ-OVR-3** | Do we support multiple currencies in one workspace in Phase 2, or defer multi-currency to Phase 4? |
-| **OQ-OVR-4** | Is `pricing-core` published to PyPI as a standalone library from Phase 1, which would constrain its API stability earlier than otherwise needed? |
-| **OQ-OVR-5** | Where does the notebook escape hatch live — an embedded JupyterLab in the platform, or a documented client library only? |
+| ~~**OQ-OVR-3**~~ ✔ | ~~Do we support multiple currencies in one workspace in Phase 2, or defer multi-currency to Phase 4? |~~ **Decided 2026-08-14: deferred to Phase 4; one currency per workspace, recorded on every artifact envelope now (FR-OVR-7, §4.3).**
+| ~~**OQ-OVR-4**~~ ✔ | ~~Is `pricing-core` published to PyPI as a standalone library from Phase 1, which would constrain its API stability earlier than otherwise needed? |~~ **Decided 2026-08-14: editable install in Phase 1, publish as `0.x` from Phase 2 with a no-stability notice.**
+| ~~**OQ-OVR-5**~~ ✔ | ~~Where does the notebook escape hatch live — an embedded JupyterLab in the platform, or a documented client library only? |~~ **Decided 2026-08-14: client library in Phase 1; embedded notebooks revisited in Phase 4 (§1.2).**

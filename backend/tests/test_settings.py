@@ -18,10 +18,15 @@ FLAG = "features.expression_objectives_enabled"
 
 @pytest.mark.req("FR-PLAT-45")
 def test_the_registry_covers_every_category_the_requirement_names() -> None:
-    """FR-PLAT-45 enumerates what workspace settings must include."""
+    """FR-PLAT-45 enumerates what workspace settings must include.
+
+    `workspace.currency` rather than `display.currency`: OQ-OVR-3 makes it the workspace's
+    single operating currency, not a rendering preference, and FR-PLAT-45 lists currency
+    separately from "locale/timezone **for display**".
+    """
     keys = set(svc.REGISTRY)
     for required in (
-        "display.currency",
+        "workspace.currency",
         "display.locale",
         "display.timezone",
         "validation.psi_warn_threshold",
