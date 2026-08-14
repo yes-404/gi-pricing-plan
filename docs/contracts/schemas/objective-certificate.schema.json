@@ -36,7 +36,7 @@
     "overall": {"enum": ["certified", "certified_with_findings", "failed"]},
     "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
   },
-  "allOf_invariants": [
+  "invariants": [
     "overall == 'failed' blocks submission entirely (FR-MODEL-42)",
     "convexity status 'violated' requires the objective to declare a hessian_strategy and escalates to two approvers (FR-MODEL-43)"
   ]

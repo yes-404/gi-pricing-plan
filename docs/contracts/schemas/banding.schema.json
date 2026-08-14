@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/banding.schema.json",
+  "title": "Banding",
+  "description": "Versioned mapping of a continuous column to ordered intervals. Carries the derivation method and the per-band evidence a reviewer needs (02 FR-MODEL-8..12, §4.2).",
+  "type": "object",
+  "required": ["column", "method", "method_params", "derived_on_dataset_version_id",
+               "boundaries", "closed", "labels", "null_level", "below_range", "above_range"],
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "properties": {
+    "column": {"type": "string"},
+    "method": {"enum": ["manual", "equal_width", "quantile", "exposure_quantile", "tree", "credibility"]},
+    "method_params": {"type": "object"},
+    "derived_on_dataset_version_id": {"type": "string", "format": "uuid"},
+    "boundaries": {
+      "type": "array", "minItems": 2,
+      "items": {"type": "number"},
+      "description": "Strictly increasing; bands are exhaustive over the observed range."
+    },
+    "closed": {"enum": ["left", "right"]},
+    "labels": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "null_level": {"type": ["string", "null"], "description": "Label for nulls, or null to reject them."},
+    "below_range": {"enum": ["error", "clamp_to_first", "null_level"]},
+    "above_range": {"enum": ["error", "clamp_to_last", "null_level"]},
+    "band_stats": {
+      "type": "array",
+      "description": "Evidence as of derivation, so a reviewer need not re-run anything (FR-MODEL-10).",
+      "items": {
+        "type": "object",
+        "required": ["label", "exposure_years", "claim_count"],
+        "properties": {
+          "label": {"type": "string"},
+          "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+          "claim_count": {"type": "integer", "minimum": 0},
+          "frequency": {"type": "number", "minimum": 0},
+          "frequency_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+          "severity_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+          "burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
+        }
+      }
+    },
+    "minimums": {
+      "type": "object",
+      "properties": {
+        "min_exposure_per_band": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+        "min_claims_per_band": {"type": "integer", "minimum": 0},
+        "on_violation": {"enum": ["warn", "fail"], "default": "warn"}
+      },
+      "description": "An empty band always fails regardless of this setting (FR-MODEL-11)."
+    }
+  },
+  "invariants": [
+    "boundaries strictly increasing",
+    "len(labels) == len(boundaries) - 1",
+    "no empty band (FR-MODEL-11)"
+  ]
+}

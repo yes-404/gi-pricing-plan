@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/regression-suite.schema.json",
+  "title": "RegressionSuite and RegressionRun",
+  "description": "Golden quotes plus generated property assertions, run as a promotion gate (03 FR-RATE-43..45, §4.7).",
+  "$defs": {
+    "RegressionSuite": {
+      "type": "object",
+      "required": ["slug", "golden_quotes", "properties", "generation"],
+      "properties": {
+        "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
+        "golden_quotes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "context", "expected", "tolerance"],
+            "properties": {
+              "name": {"type": "string"},
+              "context": {"$ref": "scoring.schema.json#/$defs/QuoteContext"},
+              "expected": {
+                "type": "object",
+                "required": ["outcome"],
+                "properties": {
+                  "outcome": {"enum": ["quoted", "declined"]},
+                  "payable_premium_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+                  "decline_reasons": {"type": "array", "items": {"type": "string"}}
+                }
+              },
+              "tolerance": {
+                "type": "object",
+                "properties": {"money_minor": {"type": "integer", "minimum": 0, "default": 0}},
+                "description": "Default exact for money (FR-RATE-43)."
+              },
+              "note": {"type": ["string", "null"],
+                "description": "Why an expected value was last changed; a golden quote is only updated deliberately."}
+            }
+          }
+        },
+        "properties": {
+          "type": "array",
+          "description": "Evaluated over generated contexts (FR-RATE-44).",
+          "items": {
+            "type": "object",
+            "required": ["name", "assertion"],
+            "properties": {
+              "name": {"type": "string"},
+              "assertion": {"type": "string"},
+              "kind": {"enum": ["positivity", "monotonicity", "reconciliation", "bounds", "non_null", "custom"]}
+            }
+          }
+        },
+        "generation": {
+          "type": "object",
+          "required": ["cases", "seed", "strategy"],
+          "properties": {
+            "cases": {"type": "integer", "minimum": 1},
+            "seed": {"type": "integer"},
+            "strategy": {"const": "input_contract_sampling"}
+          }
+        }
+      }
+    },
+    "RegressionRun": {
+      "type": "object",
+      "required": ["suite_slug", "rating_version_ref", "bundle_hash", "started_at", "overall", "golden_results", "property_results"],
+      "properties": {
+        "suite_slug": {"type": "string"},
+        "rating_version_ref": {"$ref": "common/artifact-ref.schema.json"},
+        "bundle_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "job_id": {"type": "string", "format": "uuid"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "finished_at": {"type": "string", "format": "date-time"},
+        "overall": {"enum": ["pass", "fail"]},
+        "golden_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "properties": {
+              "name": {"type": "string"},
+              "status": {"enum": ["pass", "fail"]},
+              "expected_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+              "actual_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+              "difference_minor": {"type": "integer"}
+            }
+          }
+        },
+        "property_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status", "cases_run"],
+            "properties": {
+              "name": {"type": "string"},
+              "status": {"enum": ["pass", "fail"]},
+              "cases_run": {"type": "integer", "minimum": 0},
+              "counterexample": {
+                "type": ["object", "null"],
+                "description": "Shrunk to a minimal case an actuary can read (FR-RATE-44)."
+              }
+            }
+          }
+        }
+      },
+      "invariants": [
+        "overall == 'fail' blocks promotion (FR-RATE-43)"
+      ]
+    }
+  }
+}

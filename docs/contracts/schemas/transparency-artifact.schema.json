@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/transparency-artifact.schema.json",
+  "title": "TransparencyArtifact",
+  "description": "Mandatory explanation of a non-GLM model. Fitting a black box is allowed; pricing with an unexplained one is not (02 R3, FR-MODEL-33..37, §4.9).",
+  "type": "object",
+  "required": ["model_id", "kinds", "fidelity_statement"],
+  "properties": {
+    "model_id": {"type": "string", "format": "uuid"},
+    "kinds": {
+      "type": "array", "minItems": 1,
+      "items": {"enum": ["glm_approximation", "shap_summary", "ebm_shape_functions"]}
+    },
+    "glm_approximation": {
+      "type": ["object", "null"],
+      "required": ["approximating_model_id", "target", "r_squared", "deviance_explained"],
+      "description": "A GLM fitted to the GBM's own predictions — what turns a GBM into something rateable as a table (FR-MODEL-34).",
+      "properties": {
+        "approximating_model_id": {"type": "string", "format": "uuid"},
+        "target": {"const": "gbm_prediction"},
+        "r_squared": {"type": "number", "minimum": 0, "maximum": 1},
+        "deviance_explained": {"type": "number", "minimum": 0, "maximum": 1},
+        "worst_regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description", "exposure_share", "mean_abs_error_pct"],
+            "properties": {
+              "description": {"type": "string"},
+              "exposure_share": {"type": "number", "minimum": 0, "maximum": 1},
+              "mean_abs_error_pct": {"type": "number", "minimum": 0}
+            }
+          }
+        },
+        "relativity_table_blob": {"type": ["string", "null"]}
+      }
+    },
+    "shap_summary": {
+      "type": ["object", "null"],
+      "required": ["sample_rows", "seed", "algorithm", "mean_abs_contribution"],
+      "description": "FR-MODEL-35; computed on a reproducible sample with a persisted seed.",
+      "properties": {
+        "sample_rows": {"type": "integer", "minimum": 1},
+        "seed": {"type": "integer"},
+        "algorithm": {"enum": ["tree_shap", "tree_shap_interventional", "kernel_shap"]},
+        "mean_abs_contribution": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["factor", "value"],
+            "properties": {"factor": {"type": "string"}, "value": {"type": "number", "minimum": 0}}
+          }
+        },
+        "dependence_blob": {"type": ["string", "null"]},
+        "top_interactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pair", "strength"],
+            "properties": {
+              "pair": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
+              "strength": {"type": "number"}
+            }
+          }
+        }
+      }
+    },
+    "ebm_shape_functions": {
+      "type": ["object", "null"],
+      "description": "EBMs are transparent by construction; their term shape functions export directly as rateable tables (FR-MODEL-37).",
+      "properties": {"terms_blob": {"type": "string"}}
+    },
+    "fidelity_statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "How well the approximation reproduces the model, WHERE it does not, and the exposure share of that region. Surfaced at rating-version approval (FR-MODEL-36)."
+    },
+    "monotonicity_verified": {"type": "boolean"}
+  },
+  "invariants": [
+    "'glm_approximation' in kinds implies the glm_approximation block is present (and likewise for the other kinds)",
+    "a non-GLM Model cannot reach approved without this artifact (02 R3)"
+  ]
+}

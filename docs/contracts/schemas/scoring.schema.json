@@ -56,7 +56,7 @@
         "trace": {"oneOf": [{"$ref": "#/$defs/Trace"}, {"type": "null"}]},
         "timing_ms": {"type": "object", "additionalProperties": {"type": "number"}}
       },
-      "allOf_invariants": [
+      "invariants": [
         "applying every rung's recorded operation to risk_premium reproduces payable_premium exactly (FR-RATE-32)",
         "a traced call and an untraced call return identical premiums (03 R3)"
       ]

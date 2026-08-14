@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/profile.schema.json",
+  "title": "Profile",
+  "description": "Descriptive statistics and one-way summaries for a Dataset Version. Computed once at ingestion and read thereafter; the UI never recomputes one (01 FR-DATA-25..27).",
+  "type": "object",
+  "required": ["dataset_version_id", "computed_at", "columns", "one_ways"],
+  "properties": {
+    "dataset_version_id": {"type": "string", "format": "uuid"},
+    "computed_at": {"type": "string", "format": "date-time"},
+    "job_id": {"type": "string", "format": "uuid"},
+    "weight_column": {"type": "string", "default": "exposure_years"},
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "semantic_type", "dtype", "null_count", "null_rate", "distinct_count"],
+        "properties": {
+          "name": {"type": "string"},
+          "semantic_type": {"enum": ["identifier", "categorical", "ordinal", "continuous", "date", "money", "boolean"]},
+          "dtype": {"type": "string", "description": "Arrow dtype as stored."},
+          "null_count": {"type": "integer", "minimum": 0},
+          "null_rate": {"type": "number", "minimum": 0, "maximum": 1},
+          "distinct_count": {"type": "integer", "minimum": 0},
+          "min": {},
+          "max": {},
+          "mean": {"type": ["number", "null"]},
+          "std": {"type": ["number", "null"]},
+          "quantiles": {
+            "type": ["object", "null"],
+            "properties": {
+              "p1": {}, "p5": {}, "p25": {}, "p50": {}, "p75": {}, "p95": {}, "p99": {}
+            }
+          },
+          "histogram": {
+            "type": ["object", "null"],
+            "required": ["edges", "counts"],
+            "properties": {
+              "edges": {"type": "array", "items": {"type": "number"}},
+              "counts": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+              "exposure": {"type": "array", "items": {"$ref": "common/money.schema.json#/$defs/Decimal"}}
+            }
+          },
+          "top_levels": {
+            "type": ["array", "null"],
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "required": ["level", "count"],
+              "properties": {
+                "level": {"type": ["string", "null"]},
+                "count": {"type": "integer", "minimum": 0},
+                "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "one_ways": {
+      "type": "array",
+      "description": "The single source consumed by the factor workbench; 02 reads these and never recomputes them (01 §7.3).",
+      "items": {
+        "type": "object",
+        "required": ["column", "rows"],
+        "properties": {
+          "column": {"type": "string"},
+          "banding": {"type": ["string", "null"], "description": "Banding used for a continuous column, or null for categorical."},
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["level", "exposure_years", "claim_count"],
+              "properties": {
+                "level": {"type": ["string", "null"]},
+                "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+                "claim_count": {"type": "integer", "minimum": 0},
+                "claim_amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+                "frequency": {"type": "number", "minimum": 0},
+                "frequency_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"},
+                  "description": "Exact Poisson interval; not a normal approximation (01 §8)."},
+                "severity_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+                "severity_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer"}},
+                "burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

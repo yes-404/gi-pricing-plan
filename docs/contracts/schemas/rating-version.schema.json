@@ -45,7 +45,7 @@
     },
     "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
   },
-  "allOf_invariants": [
+  "invariants": [
     "status >= approved requires every evidence item the workspace policy demands (FR-RATE-40, 06 §3.3)",
     "every pin resolves to an artifact whose status is approved or better (FR-OVR-14)",
     "bundle.content_hash is reproducible from the pins (NFR-RATE-7)"

@@ -9,6 +9,7 @@ Checks (all non-destructive, exit 1 on any failure):
   5. Every referenced ADR file exists.
   6. Every spec has the ten sections required by CLAUDE.md §5.
   7. Every JSON Schema parses and has no duplicate keys.
+  8. Every JSON Schema $ref resolves, including cross-file pointers into $defs.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -110,13 +111,64 @@ def main() -> int:
             raise ValueError(f"duplicate keys {dupes}")
         return dict(pairs)
 
+    schema_root = ROOT / "contracts" / "schemas"
     schemas = sorted((ROOT / "contracts").rglob("*.json"))
+    loaded: dict[pathlib.Path, object] = {}
     for f in schemas:
         try:
-            json.load(f.open(), object_pairs_hook=no_dupes)
+            loaded[f] = json.load(f.open(), object_pairs_hook=no_dupes)
         except ValueError as exc:
             fail(f"{f.relative_to(ROOT)}: {exc}")
-    notes.append(f"{len(schemas)} JSON schemas parsed")
+
+    # 8. $ref resolution
+    ABS_PREFIX = "https://contracts.gi-pricing.dev/"
+
+    def resolve_pointer(doc: object, fragment: str) -> bool:
+        """Resolve a JSON Pointer fragment such as '/$defs/QuoteContext'."""
+        cur = doc
+        for part in fragment.lstrip("/").split("/"):
+            part = part.replace("~1", "/").replace("~0", "~")
+            if isinstance(cur, dict) and part in cur:
+                cur = cur[part]
+            else:
+                return False
+        return True
+
+    def check_ref(ref: str, src: pathlib.Path) -> None:
+        if ref.startswith(ABS_PREFIX):
+            tail = ref[len(ABS_PREFIX):]
+        elif ref.startswith("#"):
+            if len(ref) > 1 and not resolve_pointer(loaded[src], ref[1:]):
+                fail(f"{src.relative_to(ROOT)}: local $ref {ref} does not resolve")
+            return
+        elif ref.startswith(("http://", "https://")):
+            return  # external, not our concern
+        else:
+            tail = ref
+        target, _, fragment = tail.partition("#")
+        path = (schema_root / target) if ref.startswith(ABS_PREFIX) else (src.parent / target)
+        path = path.resolve()
+        if path not in loaded:
+            fail(f"{src.relative_to(ROOT)}: $ref {ref} -> missing {target}")
+        elif fragment and not resolve_pointer(loaded[path], fragment):
+            fail(f"{src.relative_to(ROOT)}: $ref {ref} -> fragment does not resolve")
+
+    def walk(node: object, src: pathlib.Path) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key == "$ref" and isinstance(value, str):
+                    check_ref(value, src)
+                else:
+                    walk(value, src)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, src)
+
+    loaded = {f.resolve(): doc for f, doc in loaded.items()}
+    for f in schemas:
+        if f.resolve() in loaded:
+            walk(loaded[f.resolve()], f.resolve())
+    notes.append(f"{len(loaded)} JSON schemas parsed, $refs checked")
 
     for note in notes:
         print(f"  {note}")

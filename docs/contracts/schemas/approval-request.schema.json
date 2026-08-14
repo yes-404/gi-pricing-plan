@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/approval-request.schema.json",
+  "title": "ApprovalRequest",
+  "description": "Submission of one governed artifact for review, carrying its pinned evidence bundle and checklist (06 FR-GOV-9..19, §4.3).",
+  "type": "object",
+  "required": ["artifact_ref", "artifact_type", "submitted_by", "submitted_at",
+               "change_summary", "evidence_bundle", "checklist", "status",
+               "approvers_required", "approvers_recorded"],
+  "properties": {
+    "artifact_ref": {"$ref": "common/artifact-ref.schema.json"},
+    "artifact_type": {
+      "enum": ["dataset_version", "validation_rule", "custom_objective", "custom_metric",
+               "model", "peril_structure", "rate_table", "rating_version",
+               "optimisation_run", "deployment"]
+    },
+    "submitted_by": {"type": "string", "format": "uuid"},
+    "submitted_at": {"type": "string", "format": "date-time"},
+    "change_summary": {"type": "string", "minLength": 1},
+    "expedited": {
+      "type": "boolean", "default": false,
+      "description": "Same evidence required; policy may permit fewer approvers, and every expedited approval is reported in the standing exception log (FR-GOV-35)."
+    },
+    "expedited_reason": {"type": ["string", "null"]},
+    "evidence_bundle": {
+      "type": "object",
+      "description": "Resolved and pinned at submission. If a referenced artifact changes, the approval does not carry over (FR-GOV-14).",
+      "additionalProperties": {
+        "oneOf": [
+          {"type": "string"},
+          {"type": "array", "items": {"type": "string"}},
+          {"type": "null"}
+        ]
+      }
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "checked"],
+        "properties": {
+          "item": {"type": "string"},
+          "checked": {"type": "boolean"},
+          "by": {"type": ["string", "null"], "format": "uuid"},
+          "auto_verified": {"type": "boolean", "default": false}
+        }
+      }
+    },
+    "flags": {
+      "type": "array",
+      "description": "Propagated in from other modules; a flagged artifact cannot be approved until cleared or overridden by an Admin with a recorded justification (FR-GOV-17).",
+      "items": {
+        "enum": ["dataset_invalidated", "transparency_artifact_missing",
+                 "custom_objective_not_approved", "gipp_failing", "attestation_overdue"]
+      }
+    },
+    "flag_overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["flag", "overridden_by", "at", "justification"],
+        "properties": {
+          "flag": {"type": "string"},
+          "overridden_by": {"type": "string", "format": "uuid"},
+          "at": {"type": "string", "format": "date-time"},
+          "justification": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "status": {"enum": ["draft", "review", "approved", "rejected", "changes_requested", "withdrawn"]},
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["approver_id", "decision", "at", "comment"],
+        "properties": {
+          "approver_id": {"type": "string", "format": "uuid"},
+          "decision": {"enum": ["approved", "rejected", "changes_requested"]},
+          "at": {"type": "string", "format": "date-time"},
+          "comment": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "approvers_required": {"type": "integer", "minimum": 1},
+    "approvers_recorded": {"type": "integer", "minimum": 0},
+    "withdrawn": {
+      "type": ["object", "null"],
+      "required": ["by", "at", "reason"],
+      "properties": {
+        "by": {"type": "string", "format": "uuid"},
+        "at": {"type": "string", "format": "date-time"},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "description": "Permitted before deployment only; after that the correct action is a rollback or a new version (FR-GOV-15)."
+    }
+  },
+  "invariants": [
+    "submitted_by never appears in decisions[].approver_id — enforced in the backend and not configurable (06 R1)",
+    "decisions[].approver_id are distinct where approvers_required > 1 (FR-GOV-11)",
+    "status == 'approved' requires approvers_recorded >= approvers_required",
+    "every evidence item required for artifact_type by the Approval Policy is present (06 §3.3, R4)",
+    "expedited == true requires expedited_reason"
+  ]
+}

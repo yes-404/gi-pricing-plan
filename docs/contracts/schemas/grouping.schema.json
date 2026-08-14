@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/grouping.schema.json",
+  "title": "Grouping",
+  "description": "Versioned mapping of many source levels onto fewer target levels. A first-class auditable modelling decision, not a convenience (02 FR-MODEL-13..17, §4.3).",
+  "type": "object",
+  "required": ["column", "method", "method_params", "derived_on_dataset_version_id",
+               "mapping", "unseen_level_behaviour"],
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "properties": {
+    "column": {"type": "string"},
+    "method": {"enum": ["manual", "credibility_weighted", "hierarchical_clustering", "tree", "reference_hierarchy"]},
+    "method_params": {
+      "type": "object",
+      "properties": {
+        "credibility_standard_claims": {"type": "integer", "minimum": 1},
+        "credibility_model": {"enum": ["limited_fluctuation", "buhlmann_straub"],
+          "description": "Recorded per grouping; it is a modelling judgement, not a platform constant (OQ-MODEL-5)."},
+        "merge_tolerance_relativity": {"type": "number", "exclusiveMinimum": 0},
+        "reference_table_ref": {"$ref": "common/artifact-ref.schema.json"}
+      }
+    },
+    "derived_on_dataset_version_id": {"type": "string", "format": "uuid"},
+    "mapping": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "description": "Exhaustive over observed source levels (FR-MODEL-13)."
+    },
+    "unseen_level_behaviour": {
+      "enum": ["error", "map_to_default", "map_to_base"],
+      "description": "Mandatory; there is no implicit default (FR-MODEL-13)."
+    },
+    "default_target_level": {"type": ["string", "null"]},
+    "parent_grouping_id": {
+      "type": ["string", "null"], "format": "uuid",
+      "description": "Set for a hierarchical chain, e.g. outcode -> area -> region (FR-MODEL-17)."
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["source_level_count", "target_level_count"],
+      "description": "Grouping must be defensible as a modelling decision (FR-MODEL-15).",
+      "properties": {
+        "source_level_count": {"type": "integer", "minimum": 1},
+        "target_level_count": {"type": "integer", "minimum": 1},
+        "deviance_before": {"type": "number"},
+        "deviance_after": {"type": "number"},
+        "df_saved": {"type": "integer"},
+        "chi2_p_value": {"type": "number", "minimum": 0, "maximum": 1},
+        "source_level_stats": {"type": "array", "items": {"type": "object"}},
+        "target_level_stats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["level", "exposure_years", "claim_count"],
+            "properties": {
+              "level": {"type": "string"},
+              "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+              "claim_count": {"type": "integer", "minimum": 0},
+              "relativity": {"type": "number"}
+            }
+          }
+        }
+      }
+    },
+    "rationale": {"type": "string", "description": "Appears verbatim in the generated dossier (06 §4.4 §4)."}
+  },
+  "invariants": [
+    "unseen_level_behaviour == 'map_to_default' implies default_target_level is set",
+    "mapping covers every level observed on derived_on_dataset_version_id"
+  ]
+}
