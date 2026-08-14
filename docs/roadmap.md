@@ -41,7 +41,8 @@ Three tracks that can run concurrently and mostly do not need each other.
 
 ### Track A — Skills research (the maintainer's stated next step, `CLAUDE.md` §8)
 
-Follow `skills-map.md` §7, which is ordered by risk × unfamiliarity:
+[`skills-map.md`](skills-map.md) covers two axes. **Build** (§1–§6) is ordered by
+risk × unfamiliarity in its §7:
 
 1. Custom objectives end to end — restricted AST parsing, SymPy derivation, certification,
    XGBoost/LightGBM `base_margin`
@@ -51,6 +52,11 @@ Follow `skills-map.md` §7, which is ordered by risk × unfamiliarity:
 5. Pydantic v2 discriminated unions → JSON Schema
 6. Vue Flow custom nodes
 7. Low-latency Python serving
+
+**Run** (§8–§9) covers delivery practice and audit. Three of those items are not
+sequenceable after the build list because they shape first-sprint decisions:
+**requirement traceability**, the **walking skeleton** (§5 below is literally its output),
+and **reproducibility auditing**. Start them in parallel.
 
 ### Track B — Two spikes that need code
 
