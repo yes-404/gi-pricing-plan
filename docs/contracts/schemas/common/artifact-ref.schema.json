@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/common/artifact-ref.schema.json",
+  "title": "ArtifactRef",
+  "description": "Canonical external reference: {type}:{slug}@{version} (00-overview.md ID-3).",
+  "type": "string",
+  "pattern": "^(dataset|dataset_version|validation_rule|validation_rule_set|reference_table|factor|banding|grouping|model|custom_objective|custom_metric|peril_structure|rating_algorithm|sub_graph|rate_table|rating_version|optimisation_run|gipp_check|monitor|dossier):[a-z0-9][a-z0-9-]{1,62}@[0-9]+$",
+  "examples": ["model:motor-ad-frequency@7", "rating_version:motor-gb@27"]
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/model.schema.json",
+  "title": "Model",
+  "description": "A fitted model for one (peril, response) pair. Immutable once fitted. See 02-modelling.md §4.8.",
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "type": "object",
+  "required": ["model_family_slug", "version", "status", "spec", "spec_hash"],
+  "properties": {
+    "model_family_slug": {"type": "string"},
+    "status": {"enum": ["draft", "fitted", "review", "approved", "superseded", "archived"]},
+    "spec": {"$ref": "model-spec.schema.json"},
+    "spec_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "fit_result": {
+      "type": "object",
+      "required": ["model_type", "converged", "fit_seconds", "library_versions"],
+      "properties": {
+        "model_type": {"enum": ["glm", "xgboost", "lightgbm", "ebm"]},
+        "converged": {"type": "boolean"},
+        "iterations": {"type": ["integer", "null"], "minimum": 0},
+        "fit_seconds": {"type": "number", "minimum": 0},
+        "coefficients": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["term", "estimate", "std_error"],
+            "properties": {
+              "term": {"type": "string"},
+              "estimate": {"type": "number"},
+              "std_error": {"type": "number", "minimum": 0},
+              "z": {"type": "number"},
+              "p_value": {"type": "number", "minimum": 0, "maximum": 1},
+              "ci_95": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+              "relativity": {"type": "number"},
+              "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"}
+            }
+          }
+        },
+        "dispersion": {"type": ["number", "null"]},
+        "covariance_blob": {"type": ["string", "null"]},
+        "booster_blob": {"oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}],
+          "description": "Backend JSON/text model format only; pickles are refused (ADR-0003, FR-MODEL-31)."},
+        "feature_order": {"type": "array", "items": {"type": "string"}},
+        "monotone_constraint_vector": {"type": "array", "items": {"enum": [-1, 0, 1]}},
+        "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "diagnostics_id": {"type": ["string", "null"], "format": "uuid"},
+    "transparency_artifact_id": {"type": ["string", "null"], "format": "uuid"},
+    "custom_objective_ref": {"type": ["string", "null"]},
+    "parent_model_id": {"type": ["string", "null"], "format": "uuid"},
+    "change_reason": {
+      "type": ["string", "null"],
+      "enum": ["refit_new_data", "respecified", "rebanded", "regrouped",
+               "hyperparameter_change", "objective_change", "bug_fix", null]
+    },
+    "flags": {"type": "array", "items": {"enum": ["dataset_invalidated", "objective_deprecated", "attestation_overdue"]}},
+    "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
+  },
+  "allOf_invariants": [
+    "status in {fitted, review, approved} implies diagnostics_id is set (FR-MODEL-64)",
+    "fit_result.model_type != 'glm' and status == 'approved' implies transparency_artifact_id is set (02 R3)",
+    "custom_objective_ref set and status == 'approved' implies that objective version is approved (02 R4)",
+    "booster_blob present iff model_type in {xgboost, lightgbm}"
+  ]
+}

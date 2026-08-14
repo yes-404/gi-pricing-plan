@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/dataset-version.schema.json",
+  "title": "DatasetVersion",
+  "description": "Immutable snapshot of policy/claims/exposure data. See 01-data-management.md §4.2.",
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "type": "object",
+  "required": ["dataset_id", "version", "status", "kind", "tables", "totals"],
+  "properties": {
+    "dataset_id": {"type": "string", "format": "uuid"},
+    "status": {"enum": ["draft", "validating", "validated", "failed", "archived"]},
+    "kind": {"enum": ["ingested", "derived"]},
+    "tables": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "record_grain", "row_count", "blob"],
+        "properties": {
+          "name": {"type": "string"},
+          "record_grain": {"enum": ["policy_exposure", "claim", "reference", "quarantine"]},
+          "primary_key": {"type": "array", "items": {"type": "string"}},
+          "row_count": {"type": "integer", "minimum": 0},
+          "blob": {"$ref": "common/blob-ref.schema.json"},
+          "pandera_schema_ref": {"type": "string"},
+          "arrow_schema": {"type": "object", "additionalProperties": {"type": "string"}}
+        }
+      }
+    },
+    "source_id": {"type": ["string", "null"], "format": "uuid"},
+    "source_fingerprint": {
+      "type": "object",
+      "required": ["kind", "value", "extracted_at"],
+      "properties": {
+        "kind": {"enum": ["file_sha256", "query_hash", "asset_partition"]},
+        "value": {"type": "string"},
+        "extracted_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "preparation_recipe_id": {"type": ["string", "null"], "format": "uuid"},
+    "ingestion_run_id": {"type": ["string", "null"], "format": "uuid"},
+    "period_covered": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {"from": {"type": "string", "format": "date"}, "to": {"type": "string", "format": "date"}}
+    },
+    "totals": {
+      "type": "object",
+      "required": ["exposure_years", "claim_count", "claim_amount_minor"],
+      "properties": {
+        "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+        "claim_count": {"type": "integer", "minimum": 0},
+        "claim_amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
+      }
+    },
+    "validation_report_id": {"type": ["string", "null"], "format": "uuid"},
+    "profile_id": {"type": ["string", "null"], "format": "uuid"},
+    "derived_from": {
+      "type": ["object", "null"],
+      "required": ["parent_version_id", "operation", "params"],
+      "properties": {
+        "parent_version_id": {"type": "string", "format": "uuid"},
+        "operation": {"enum": ["sample", "split", "filter", "union"]},
+        "params": {"type": "object"}
+      }
+    },
+    "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
+  },
+  "allOf_invariants": [
+    "status == 'validated' implies validation_report_id is set and that report's overall is pass or pass_with_warnings (FR-DATA-17)",
+    "kind == 'derived' implies derived_from is set (FR-DATA-33)",
+    "totals.exposure_years > 0"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/rate-table.schema.json",
+  "title": "RateTableVersion",
+  "description": "Immutable typed rate table. See 03-rating-engine.md §4.2.",
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "type": "object",
+  "required": ["rateable", "keys", "value", "rows", "change_note"],
+  "properties": {
+    "rateable": {"type": "boolean", "description": "Only rateable tables may feed the premium ladder (FR-RATE-21)."},
+    "keys": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {"type": "string"},
+          "type": {"enum": ["string", "int", "decimal", "date"]},
+          "banding_ref": {"oneOf": [{"$ref": "common/artifact-ref.schema.json"}, {"type": "null"}]}
+        }
+      }
+    },
+    "value": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {"type": "string"},
+        "type": {"enum": ["relativity", "money_minor", "percentage", "count"]},
+        "min": {"type": "number"}, "max": {"type": "number"}
+      }
+    },
+    "default_row": {"type": ["object", "null"]},
+    "rows": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object"},
+      "description": "Values are decimal strings or integer minor units; never fractional JSON numbers (03 R2)."
+    },
+    "seeded_from": {
+      "type": ["object", "null"],
+      "required": ["model_ref", "seeded_at"],
+      "properties": {
+        "model_ref": {"$ref": "common/artifact-ref.schema.json"},
+        "seeded_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "change_note": {"type": "string", "minLength": 1},
+    "bulk_operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "params", "applied_by", "applied_at"],
+        "properties": {
+          "kind": {"enum": ["uplift", "floor", "cap", "rebase"]},
+          "params": {"type": "object"},
+          "applied_by": {"type": "string", "format": "uuid"},
+          "applied_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "description": "Recorded as parameterised operations, not as anonymous cell edits (FR-RATE-18)."
+    },
+    "diff_vs_previous": {"type": ["object", "null"]},
+    "diff_vs_seed": {"type": ["object", "null"]}
+  }
+}

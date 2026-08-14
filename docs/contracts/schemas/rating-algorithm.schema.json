@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/rating-algorithm.schema.json",
+  "title": "RatingAlgorithm",
+  "description": "DAG of rating steps. Exactly seven step types exist. See 03-rating-engine.md §3.2 and §4.1.",
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "type": "object",
+  "required": ["input_contract", "outputs", "steps"],
+  "properties": {
+    "input_contract": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "nullable"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z_][a-z0-9_]*$"},
+          "type": {"enum": ["int", "decimal", "string", "date", "bool", "enum"]},
+          "nullable": {"type": "boolean"},
+          "min": {"type": "number"}, "max": {"type": "number"},
+          "pattern": {"type": "string"},
+          "domain": {"type": "array", "items": {"type": "string"}},
+          "description": {"type": "string"}
+        }
+      }
+    },
+    "outputs": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "required"],
+        "properties": {
+          "name": {"type": "string"},
+          "type": {"type": "string"},
+          "required": {"type": "boolean"}
+        }
+      }
+    },
+    "steps": {
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["step_id", "type", "label"],
+        "properties": {
+          "step_id": {"type": "string", "pattern": "^s_[a-z0-9_]+$"},
+          "type": {"enum": ["input", "lookup", "table", "expression", "model_call", "constraint", "output"]},
+          "label": {"type": "string"},
+          "note": {"type": ["string", "null"]},
+          "consumes": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+          "produces": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+          "result_type": {"enum": ["int", "decimal", "money_minor", "relativity", "percentage", "string", "date", "bool", "map", "ladder"]}
+        },
+        "allOf": [
+          {"if": {"properties": {"type": {"const": "lookup"}}, "required": ["type"]},
+           "then": {"required": ["reference_table_ref", "key_expr", "as_at", "on_miss"],
+                    "properties": {
+                      "reference_table_ref": {"$ref": "common/artifact-ref.schema.json"},
+                      "key_expr": {"type": "array", "items": {"type": "string"}},
+                      "as_at": {"type": "string", "description": "A derived value or input name; never 'now' (FR-RATE-9)."},
+                      "on_miss": {"enum": ["error", "default"]}}}},
+          {"if": {"properties": {"type": {"const": "table"}}, "required": ["type"]},
+           "then": {"required": ["rate_table_ref", "key_expr", "on_miss"],
+                    "properties": {
+                      "rate_table_ref": {"$ref": "common/artifact-ref.schema.json"},
+                      "key_expr": {"type": "array", "items": {"type": "string"}},
+                      "on_miss": {"enum": ["error", "default"]},
+                      "interpolation": {"enum": ["none", "linear"]}}}},
+          {"if": {"properties": {"type": {"const": "model_call"}}, "required": ["type"]},
+           "then": {"required": ["mode", "feature_map"],
+                    "properties": {
+                      "model_ref": {"$ref": "common/artifact-ref.schema.json"},
+                      "peril_structure_ref": {"$ref": "common/artifact-ref.schema.json"},
+                      "mode": {"enum": ["exact", "approximation"]},
+                      "feature_map": {"type": "object", "additionalProperties": {"type": "string"}}}}},
+          {"if": {"properties": {"type": {"const": "constraint"}}, "required": ["type"]},
+           "then": {"required": ["condition", "on_violation", "reason_code"],
+                    "properties": {
+                      "condition": {"type": "string"},
+                      "on_violation": {"enum": ["clamp", "decline", "error"]},
+                      "clamp_bounds": {"type": "object"},
+                      "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}}}},
+          {"if": {"properties": {"type": {"const": "output"}}, "required": ["type"]},
+           "then": {"required": ["output_name", "rounding"],
+                    "properties": {
+                      "output_name": {"type": "string"},
+                      "rounding": {"$ref": "common/money.schema.json#/$defs/Rounding"}}}}
+        ]
+      }
+    },
+    "sub_graphs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "mount_point"],
+        "properties": {"ref": {"$ref": "common/artifact-ref.schema.json"}, "mount_point": {"type": "string"}}
+      }
+    }
+  },
+  "allOf_invariants": [
+    "DAG is acyclic (FR-RATE-1)",
+    "every consumed name is produced by exactly one upstream step",
+    "every declared output has a corresponding output step",
+    "a step whose result_type is monetary must be money_minor or decimal (03 R2, FR-RATE-13)"
+  ]
+}

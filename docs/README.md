@@ -20,6 +20,7 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 | `adr/` | Architecture decision records (numbered, immutable once accepted) |
 | `skills-map.md` | Stack component → where used → skills to research → resources |
 | `open-questions.md` | Unresolved design questions, owner, status |
+| `phase-0-status.md` | Exit-criteria progress, requirement inventory, contract coverage, spikes |
 
 ## Reading order for a newcomer
 
@@ -27,6 +28,16 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 2. `workflows/wf-01-dataset-to-model.md` — the shortest end-to-end story.
 3. The module spec you are about to work on.
 4. `contracts/` for the exact shapes referenced by that spec.
+
+## Checking the suite
+
+```bash
+python3 scripts/audit-docs.py
+```
+
+Verifies broken links, requirement-ID integrity and numbering, open-question mirroring,
+ADR references, the ten-section spec standard, and JSON Schema validity. Run it before
+committing a docs change.
 
 ## Conventions
 

@@ -1,0 +1,538 @@
+openapi: 3.1.0
+info:
+  title: GI Pricing Platform API
+  version: 0.1.0-draft
+  summary: Open-source general insurance pricing platform
+  description: |
+    Draft OpenAPI stub for Phase 0. From Phase 1 this document is **generated** by FastAPI
+    from the `packages/model-schema` Pydantic models (ADR-0002, FR-OVR-6, FR-PLAT-48) and
+    CI fails on drift against the committed copy.
+
+    Conventions (see `docs/specs/00-overview.md` §5):
+      * Base path `/api/v1`; breaking changes bump to `/api/v2`.
+      * Long-running operations return `202` with a `Job` body and a `Location` header.
+      * Cursor pagination everywhere.
+      * Errors are RFC 9457 `application/problem+json` with a stable machine `code`.
+      * Mutating requests on versioned entities require `If-Match`.
+      * Creating endpoints accept `Idempotency-Key`.
+      * Money is integer minor units or a decimal string — never a fractional JSON number.
+  license:
+    name: TBD
+    identifier: Apache-2.0
+    # See open-questions.md OQ-OVR-2.
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host: {default: localhost:8000}
+
+tags:
+  - {name: datasets,     description: "Sources, dataset versions, validation, profiling (spec 01)"}
+  - {name: reference,    description: "Effective-dated reference tables (spec 01)"}
+  - {name: modelling,    description: "Factors, bandings, groupings, models, diagnostics (spec 02)"}
+  - {name: objectives,   description: "Custom objectives and metrics (spec 02)"}
+  - {name: rating,       description: "Rating algorithms, rate tables, rating versions (spec 03)"}
+  - {name: scoring,      description: "Real-time and batch scoring (spec 03)"}
+  - {name: optimisation, description: "Demand, optimisation, GIPP (spec 04)"}
+  - {name: monitoring,   description: "Monitors, results, alerts (spec 05)"}
+  - {name: governance,   description: "Approvals, audit, dossiers (spec 06)"}
+  - {name: platform,     description: "Jobs, environments, settings (spec 07)"}
+
+security:
+  - oidc: []
+  - apiKey: []
+
+paths:
+  # ---------------------------------------------------------------- datasets
+  /datasets:
+    get:
+      tags: [datasets]
+      summary: List datasets
+      parameters: [{$ref: '#/components/parameters/limit'}, {$ref: '#/components/parameters/cursor'}]
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/DatasetPage'}}}}
+        default: {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [datasets]
+      summary: Create a dataset (metadata + data dictionary)
+      responses:
+        '201': {description: Created}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /datasets/{slug}/versions:
+    post:
+      tags: [datasets]
+      summary: Start an ingestion run
+      description: FR-DATA-2. Returns a Job; the Dataset Version appears only on successful commit (NFR-DATA-10).
+      parameters: [{$ref: '#/components/parameters/slug'}, {$ref: '#/components/parameters/idempotencyKey'}]
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /dataset-versions/{id}/validate:
+    post:
+      tags: [datasets]
+      summary: Run validation
+      description: FR-DATA-15. Executes all four layers and produces one immutable Validation Report.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /validation-reports/{id}:
+    get:
+      tags: [datasets]
+      summary: Full validation report
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: 'https://contracts.gi-pricing.dev/validation-report.schema.json'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /validation-reports/{id}/results/{ruleId}/acknowledge:
+    post:
+      tags: [datasets]
+      summary: Acknowledge a warning
+      description: |
+        FR-DATA-17/18. Requires the Pricing Actuary role and a non-empty justification.
+        Scoped to (dataset_version, rule, report) — it never carries forward.
+      parameters:
+        - {$ref: '#/components/parameters/id'}
+        - {name: ruleId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [justification]
+              properties: {justification: {type: string, minLength: 1}}
+      responses:
+        '200': {description: Acknowledged}
+        '403': {$ref: '#/components/responses/Problem', description: 'ACKNOWLEDGE_FORBIDDEN_ROLE'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /dataset-versions/{id}/transition:
+    post:
+      tags: [datasets]
+      summary: Transition a dataset version
+      description: 'Enforces: zero fails, zero errors, every warn acknowledged (FR-DATA-17).'
+      parameters: [{$ref: '#/components/parameters/id'}, {$ref: '#/components/parameters/ifMatch'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties: {to: {enum: [validated, archived]}}
+      responses:
+        '200': {description: Transitioned}
+        '409': {$ref: '#/components/responses/Problem', description: 'VALIDATION_HAS_FAILURES | WARN_NOT_ACKNOWLEDGED'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # --------------------------------------------------------------- modelling
+  /model-specs/validate:
+    post:
+      tags: [modelling]
+      summary: Validate a model spec without fitting
+      description: FR-MODEL-44. Catches unresolvable factors, missing offsets, and inapplicable objectives before any compute is spent.
+      responses:
+        '200': {description: 'Valid, or a list of issues'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /models:
+    post:
+      tags: [modelling]
+      summary: Fit a model
+      description: FR-MODEL-66. Returns the existing model on a spec_hash match unless force_refit is set.
+      parameters: [{$ref: '#/components/parameters/idempotencyKey'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: 'https://contracts.gi-pricing.dev/model-spec.schema.json'}
+      responses:
+        '200': {description: 'Existing model returned (spec_hash match)'}
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /models/{id}/transparency:
+    post:
+      tags: [modelling]
+      summary: Build a transparency artifact
+      description: FR-MODEL-33..36. Required before a non-GLM model can be referenced by a Rating Version.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # -------------------------------------------------------------- objectives
+  /custom-objectives:
+    post:
+      tags: [objectives]
+      summary: Create a custom objective
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: 'https://contracts.gi-pricing.dev/custom-objective.schema.json'}
+      responses:
+        '201': {description: Created in draft}
+        '422': {$ref: '#/components/responses/Problem', description: 'OBJECTIVE_GRAMMAR_VIOLATION'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /custom-objectives/{id}/derive:
+    post:
+      tags: [objectives]
+      summary: Derive gradient and hessian symbolically
+      description: |
+        FR-MODEL-40. The platform differentiates the user's loss expression and stores the
+        derivatives as reviewable expressions. The user never writes a derivative, and
+        their text is never executed.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200': {description: Derivatives stored on the artifact}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /custom-objectives/{id}/certify:
+    post:
+      tags: [objectives]
+      summary: Run the certificate checks
+      description: FR-MODEL-42. A failed certificate blocks submission entirely.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /custom-objectives/{id}/usage:
+    get:
+      tags: [objectives]
+      summary: Blast radius
+      description: FR-MODEL-47. Models, peril structures, rating versions, and live deployments using this objective version.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200': {description: OK}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ------------------------------------------------------------------ rating
+  /rating-versions/{id}/compile:
+    post:
+      tags: [rating]
+      summary: Compile and validate the bundle
+      description: |
+        FR-RATE-25. Validates DAG structure, reference resolvability, artifact maturity,
+        type compatibility, and that no control-intent factor or unapproved custom
+        objective is transitively reachable.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /rate-tables/{slug}/seed-from-model:
+    post:
+      tags: [rating]
+      summary: Seed a rate table from a model's relativities
+      description: FR-RATE-16. Records the source model so the diff-vs-technical-seed stays answerable.
+      parameters: [{$ref: '#/components/parameters/slug'}]
+      responses:
+        '201': {description: New rate table version created}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ----------------------------------------------------------------- scoring
+  /score:
+    post:
+      tags: [scoring]
+      summary: Score a single quote
+      description: |
+        FR-RATE-34. Target p99 < 50 ms server-side (NFR-RATE-1). A declined quote is a
+        successful response with `outcome: declined`, not an HTTP error (FR-RATE-39).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: 'https://contracts.gi-pricing.dev/scoring.schema.json#/$defs/QuoteContext'}
+      responses:
+        '200':
+          description: Scored, declined, or a per-quote error
+          content:
+            application/json:
+              schema: {$ref: 'https://contracts.gi-pricing.dev/scoring.schema.json#/$defs/ScoringResult'}
+        '422': {$ref: '#/components/responses/Problem', description: 'INPUT_CONTRACT_VIOLATION'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /score/batch:
+    post:
+      tags: [scoring]
+      summary: Batch re-rate a portfolio
+      description: FR-RATE-36/37. Uses the identical compiled bundle and evaluator as real-time scoring.
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /dislocation-runs:
+    post:
+      tags: [rating]
+      summary: Dislocation baseline vs candidate
+      description: FR-RATE-46..49, including attribution decomposing the change into its causes.
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /environments/{env}/deployments:
+    post:
+      tags: [rating]
+      summary: Deploy an approved rating version
+      description: FR-RATE-50/51. Atomic switchover after cache pre-warming; promotion order enforced (FR-PLAT-29).
+      parameters: [{name: env, in: path, required: true, schema: {type: string}}]
+      responses:
+        '201': {description: Deployed}
+        '409': {$ref: '#/components/responses/Problem', description: 'DEPLOY_REQUIRES_APPROVAL | PROMOTION_ORDER_VIOLATION'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ------------------------------------------------------------ optimisation
+  /optimisation-runs:
+    post:
+      tags: [optimisation]
+      summary: Launch an optimisation run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: 'https://contracts.gi-pricing.dev/optimisation-run.schema.json'}
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        '422': {$ref: '#/components/responses/Problem', description: 'CONSTRAINT_SET_INFEASIBLE (names the mutually exclusive constraints)'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /optimisation-runs/{id}/materialise:
+    post:
+      tags: [optimisation]
+      summary: Materialise proposals into rate table edits
+      description: FR-OPT-25/26. Returns a cell-level diff for confirmation; acceptance is per segment and audited.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200': {description: Diff preview or created rate table versions}
+        '409': {$ref: '#/components/responses/Problem', description: 'MATERIALISATION_REQUIRES_CONVERGED_RUN'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /gipp-checks:
+    post:
+      tags: [optimisation]
+      summary: Run a GIPP check
+      description: FR-OPT-18. Scores each renewal risk twice through the same production bundle.
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ------------------------------------------------------------- monitoring
+  /monitors:
+    post:
+      tags: [monitoring]
+      summary: Create a monitor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: 'https://contracts.gi-pricing.dev/monitoring.schema.json#/$defs/Monitor'}
+      responses:
+        '201': {description: Created}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /monitors/{id}/rebaseline:
+    post:
+      tags: [monitoring]
+      summary: Rebaseline a monitor
+      description: FR-MON-3. Requires a reason; a silently moving baseline is how drift stops being detected.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: {reason: {type: string, minLength: 1}}
+      responses:
+        '200': {description: Rebaselined}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /alerts/{id}/acknowledge:
+    post:
+      tags: [monitoring]
+      summary: Acknowledge an alert
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200': {description: Acknowledged}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # ------------------------------------------------------------- governance
+  /approval-requests:
+    get:
+      tags: [governance]
+      summary: Approvals inbox
+      parameters:
+        - {name: assigned_to, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {enum: [draft, review, approved, rejected, changes_requested]}}
+      responses:
+        '200': {description: OK}
+        default: {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [governance]
+      summary: Submit an artifact for approval
+      description: FR-GOV-10. Evidence bundle and checklist completeness are validated at submission.
+      responses:
+        '201': {description: Submitted}
+        '422': {$ref: '#/components/responses/Problem', description: 'EVIDENCE_INCOMPLETE | CHECKLIST_INCOMPLETE | ARTIFACT_FLAGGED'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /approval-requests/{id}/decide:
+    post:
+      tags: [governance]
+      summary: Approve, reject, or request changes
+      description: FR-GOV-11. The submitter can never approve; this is enforced in the backend and is not configurable.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, comment]
+              properties:
+                decision: {enum: [approve, reject, request_changes]}
+                comment: {type: string, minLength: 1}
+      responses:
+        '200': {description: Decision recorded}
+        '403': {$ref: '#/components/responses/Problem', description: 'SUBMITTER_CANNOT_APPROVE | DUPLICATE_APPROVER'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /audit:
+    get:
+      tags: [governance]
+      summary: Query the audit log
+      parameters:
+        - {name: actor, in: query, schema: {type: string}}
+        - {name: entity, in: query, schema: {type: string}}
+        - {name: action, in: query, schema: {type: string}}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - {name: q, in: query, schema: {type: string}, description: Free text over justifications}
+        - {$ref: '#/components/parameters/limit'}
+        - {$ref: '#/components/parameters/cursor'}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: 'https://contracts.gi-pricing.dev/audit-event.schema.json'}
+                  next_cursor: {type: [string, 'null']}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /dossiers:
+    post:
+      tags: [governance]
+      summary: Generate a dossier
+      description: FR-GOV-27/30. Assembled from persisted artifacts only; regenerable as at any historical point.
+      responses:
+        '202': {$ref: '#/components/responses/JobAccepted'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  # --------------------------------------------------------------- platform
+  /jobs/{id}:
+    get:
+      tags: [platform]
+      summary: Job detail with progress and result
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: 'https://contracts.gi-pricing.dev/job.schema.json'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /jobs/{id}/cancel:
+    post:
+      tags: [platform]
+      summary: Cancel a job
+      description: FR-PLAT-9. Cooperative; a cancelled job leaves no partially-visible artifact.
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200': {description: Cancellation requested}
+        '409': {$ref: '#/components/responses/Problem', description: 'JOB_NOT_CANCELLABLE'}
+        default: {$ref: '#/components/responses/Problem'}
+
+  /jobs/{id}/events:
+    get:
+      tags: [platform]
+      summary: Server-sent progress stream
+      parameters: [{$ref: '#/components/parameters/id'}]
+      responses:
+        '200': {description: 'text/event-stream of progress updates', content: {text/event-stream: {}}}
+
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://idp.example/.well-known/openid-configuration
+    apiKey:
+      type: http
+      scheme: bearer
+      description: Service Account key. Scoring permissions only, scoped to named environments (FR-GOV-6).
+
+  parameters:
+    id: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    slug: {name: slug, in: path, required: true, schema: {type: string, pattern: '^[a-z0-9][a-z0-9-]{1,62}$'}}
+    limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+    cursor: {name: cursor, in: query, schema: {type: string}, description: Opaque cursor}
+    ifMatch: {name: If-Match, in: header, required: true, schema: {type: string}, description: 'ETag; mismatch yields CONFLICT_STALE_WRITE'}
+    idempotencyKey: {name: Idempotency-Key, in: header, schema: {type: string}, description: 'A repeat within 24 h returns the original result'}
+
+  responses:
+    Problem:
+      description: RFC 9457 problem detail
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    JobAccepted:
+      description: Accepted; work continues asynchronously
+      headers:
+        Location: {schema: {type: string}, description: '/api/v1/jobs/{job_id}'}
+      content:
+        application/json:
+          schema: {$ref: 'https://contracts.gi-pricing.dev/job.schema.json'}
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string, description: 'Stable machine code, namespaced per module'}
+        detail: {type: string}
+        instance: {type: string}
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: {type: string}
+              code: {type: string}
+              message: {type: string}
+        trace_id: {type: string}
+    DatasetPage:
+      type: object
+      properties:
+        items: {type: array, items: {type: object}}
+        next_cursor: {type: [string, 'null']}
+        total_estimate: {type: integer}
