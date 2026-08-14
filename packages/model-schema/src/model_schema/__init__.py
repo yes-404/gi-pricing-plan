@@ -59,6 +59,15 @@ from model_schema.permissions import (
     role_permissions,
 )
 from model_schema.problem import FieldError, ProblemDetail
+from model_schema.profiles import (
+    ColumnComparison,
+    ColumnProfile,
+    OneWayRow,
+    OneWaySummary,
+    Profile,
+    ProfileComparison,
+    SemanticType,
+)
 from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
 from model_schema.settings import (
     SettingCandidate,
@@ -103,6 +112,8 @@ __all__ = [
     "AuditEvent",
     "AuditEventCore",
     "BlobRef",
+    "ColumnComparison",
+    "ColumnProfile",
     "Currency",
     "DatasetKind",
     "DatasetStatus",
@@ -119,10 +130,14 @@ __all__ = [
     "JobSource",
     "JobStatus",
     "MoneyMinor",
+    "OneWayRow",
+    "OneWaySummary",
     "OverallOutcome",
     "Permission",
     "Principal",
     "ProblemDetail",
+    "Profile",
+    "ProfileComparison",
     "Progress",
     "Relativity",
     "ResourceBudget",
@@ -132,6 +147,7 @@ __all__ = [
     "RuleResult",
     "RuleSetEntry",
     "ScopeType",
+    "SemanticType",
     "SettingCandidate",
     "SettingResolution",
     "SettingSource",
