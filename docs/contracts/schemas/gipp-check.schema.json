@@ -2,52 +2,164 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/gipp-check.schema.json",
   "title": "GippCheck",
-  "description": "FCA PS21/5 evidence: renewal price vs equivalent new business price. See 04-optimisation.md §4.3.",
+  "description": "FCA PS21/5 evidence: renewal price vs equivalent new business price. See 04-optimisation.md \u00a74.3.",
   "type": "object",
-  "required": ["rating_version_ref", "renewal_population_dataset_version_id", "policy_count",
-               "method", "channel_mapping", "tolerance_pct", "distribution", "worst_case_ratio", "verdict"],
+  "required": [
+    "rating_version_ref",
+    "renewal_population_dataset_version_id",
+    "policy_count",
+    "method",
+    "tolerance_pct",
+    "distribution",
+    "worst_case_ratio",
+    "verdict",
+    "product_scope",
+    "channel_basis"
+  ],
   "properties": {
-    "rating_version_ref": {"$ref": "common/artifact-ref.schema.json"},
-    "renewal_population_dataset_version_id": {"type": "string", "format": "uuid"},
-    "policy_count": {"type": "integer", "minimum": 0},
-    "method": {"const": "rescore_as_new_business",
-      "description": "Each risk is scored twice through the same production bundle; no formula approximates the ENBP (04 §5.2)."},
-    "channel_mapping": {
-      "type": "array", "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": ["renewal_channel", "equivalent_nb_channel"],
-        "properties": {
-          "renewal_channel": {"type": "string"},
-          "equivalent_nb_channel": {"type": "string"}
-        }
-      },
-      "description": "Explicit, reviewed, documented — never inferred (OQ-OPT-6)."
+    "rating_version_ref": {
+      "$ref": "common/artifact-ref.schema.json"
     },
-    "tolerance_pct": {"type": "number", "minimum": 0},
-    "distribution": {"type": "array", "items": {"type": "object"}},
-    "worst_case_ratio": {"type": "number", "minimum": 0},
-    "verdict": {"enum": ["pass", "fail"]},
+    "renewal_population_dataset_version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "policy_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "method": {
+      "const": "rescore_as_new_business",
+      "description": "Each risk is scored twice through the same production bundle; no formula approximates the ENBP (04 \u00a75.2)."
+    },
+    "tolerance_pct": {
+      "type": "number",
+      "minimum": 0
+    },
+    "distribution": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "worst_case_ratio": {
+      "type": "number",
+      "minimum": 0
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
     "failing_population": {
       "type": "object",
       "properties": {
-        "policies": {"type": "integer", "minimum": 0},
-        "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
-        "max_ratio": {"type": ["number", "null"]}
+        "policies": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exposure_years": {
+          "$ref": "common/money.schema.json#/$defs/Decimal"
+        },
+        "max_ratio": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
       }
     },
     "price_walking": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["tenure_years", "mean_price_over_technical"],
+        "required": [
+          "tenure_years",
+          "mean_price_over_technical"
+        ],
         "properties": {
-          "tenure_years": {"type": "integer", "minimum": 0},
-          "mean_price_over_technical": {"type": "number"}
+          "tenure_years": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mean_price_over_technical": {
+            "type": "number"
+          }
         }
       }
     },
-    "price_walking_finding": {"type": ["string", "null"]},
-    "evidence_blob": {"type": ["string", "null"]}
-  }
+    "price_walking_finding": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidence_blob": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "product_scope": {
+      "type": "object",
+      "required": [
+        "in_icobs_6b_scope",
+        "products"
+      ],
+      "properties": {
+        "in_icobs_6b_scope": {
+          "type": "boolean"
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "ICOBS 6B covers home and motor (plus combined packages and connected add-ons). Outside that scope the check is voluntary good practice and must be labelled as such (FR-OPT-30)."
+    },
+    "channel_basis": {
+      "type": "object",
+      "required": [
+        "rule",
+        "primary",
+        "fallback"
+      ],
+      "properties": {
+        "rule": {
+          "const": "icobs_6b_2_5r"
+        },
+        "primary": {
+          "const": "original_purchase_channel",
+          "description": "The channel used at FIRST purchase, not at renewal (ICOBS 6B.2.5R(1))."
+        },
+        "fallback": {
+          "const": "most_common_new_business_channel",
+          "description": "Used only where the original channel is unavailable or unidentifiable (ICOBS 6B.2.5R(2))."
+        },
+        "fallback_channel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policies_on_fallback": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fallback_share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "description": "Which limb of the rule produced each ENBP. A large fallback share is a data-quality finding, not a compliance result (FR-OPT-29)."
+    }
+  },
+  "invariants": [
+    "ENBP is computed through the original purchase channel; falling back only per ICOBS 6B.2.5R(2) (FR-OPT-18/29)",
+    "verdict reflects ICOBS 6B.2.1R: no renewal price may exceed its ENBP"
+  ]
 }

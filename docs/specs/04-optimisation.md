@@ -21,8 +21,9 @@ proves the result is defensible:
    fairness constraints.
 4. **Scenario analysis** — what-if comparison of several optimisation configurations and
    their efficient frontier.
-5. **GIPP checks** — automated FCA PS21/5 evidence that renewal pricing is not worse than
-   equivalent new business.
+5. **GIPP checks** — automated **ICOBS 6B** evidence that renewal pricing is not worse than
+   equivalent new business. (PS21/5 and PS21/11 announced those rules; ICOBS 6B is the
+   binding text, and it is what a supervisor holds the firm to.)
 6. **Proposal materialisation** — turning an accepted optimisation result into concrete
    rate table edits or an adjustment step in a Rating Version.
 
@@ -106,7 +107,9 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 | ID | Requirement |
 |---|---|
-| **FR-OPT-18** | **GIPP check**: for a declared renewal population, the platform computes each risk's actual renewal price and its **Equivalent New Business Price** (re-scoring with `purpose = new_business` through the same channel), and reports the distribution of `renewal_price / ENBP`. |
+| **FR-OPT-18** | **GIPP check**: for a declared renewal population, the platform computes each risk's actual renewal price and its **Equivalent New Business Price**, and reports the distribution of `renewal_price / ENBP`. ENBP is obtained by re-scoring with `purpose = new_business` through **the channel the customer used when they first purchased the policy** — not the channel they are renewing through (ICOBS 6B.2.5R(1)). |
+| **FR-OPT-29** | Where the original purchase channel is **no longer available or not identifiable**, ENBP is computed through **the channel most commonly used by new-business customers** (ICOBS 6B.2.5R(2)). Which limb was applied is recorded per policy, and the check reports how many policies fell to the fallback — a large fallback share is a data-quality finding, not a compliance result. |
+| **FR-OPT-30** | The GIPP check records the **product scope** it was run for. ICOBS 6B applies to home and motor insurance, including combined packages and connected add-ons; running the check outside that scope is permitted as voluntary good practice but is labelled as such, so evidence is never presented as discharging a rule that does not apply. |
 | **FR-OPT-19** | The GIPP verdict is `pass` when no renewing customer's price exceeds their ENBP beyond a declared tolerance (default: zero tolerance, i.e. renewal ≤ ENBP), and `fail` otherwise, with the failing population quantified by count, exposure, and worst-case ratio. |
 | **FR-OPT-20** | GIPP evidence is a persisted artifact attached to the Rating Version's approval request and retained for the audit period (NFR-OVR-6) — the platform's answer to "show me how you evidenced compliance in October 2026" (R4). |
 | **FR-OPT-21** | The optimiser can take GIPP as a **hard constraint**, so proposals that would breach it are never generated, rather than generated and then rejected. |
@@ -154,7 +157,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
     {"kind": "expected_loss_ratio", "max": 0.72},
     {"kind": "smoothness", "over_factor": "driver_age_band", "max_adjacent_diff_pct": 3.0},
     {"kind": "gipp", "mode": "hard", "tolerance_pct": 0.0,
-     "rationale": "FCA PS21/5 — renewal price must not exceed equivalent new business price."},
+     "rationale": "ICOBS 6B.2.1R — a firm must not set a renewal price higher than the equivalent new business price."},
     {"kind": "minimum_premium", "value_minor": 28_000}
   ],
   "solver": {"name": "scipy.optimize.minimize", "method": "SLSQP",
@@ -213,7 +216,15 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
   "renewal_population_dataset_version_id": "uuid",
   "policy_count": 842_118,
   "method": "rescore_as_new_business",
-  "channel_mapping": [{"renewal_channel": "direct_renewal", "equivalent_nb_channel": "direct"}],
+  "product_scope": {"in_icobs_6b_scope": true, "products": ["motor"]},
+  "channel_basis": {
+    "rule": "icobs_6b_2_5r",
+    "primary": "original_purchase_channel",
+    "fallback": "most_common_new_business_channel",
+    "fallback_channel": "aggregator",
+    "policies_on_fallback": 4_182,
+    "fallback_share": 0.0050
+  },
   "tolerance_pct": 0.0,
   "distribution": [
     {"band": "renewal < 0.90 × ENBP", "policies": 212_884, "exposure_share": 0.253},
@@ -283,7 +294,9 @@ def price_walking(renewal_population: pl.LazyFrame,
 
 `gipp_check` scores each renewal risk twice through the same compiled bundle from `03`
 (once with `purpose = renewal`, once with `purpose = new_business`) — it does not
-approximate the ENBP with a formula.
+approximate the ENBP with a formula. The new-business pass uses the **original purchase
+channel** per policy (FR-OPT-18), falling back per FR-OPT-29 where that is unavailable, so
+the renewal population dataset must carry that column.
 
 ### 5.3 Frontend views
 
@@ -355,7 +368,8 @@ Full journey: [`wf-03-rate-change-impact.md`](../workflows/wf-03-rate-change-imp
 
 New skills this spec adds to `skills-map.md`: constrained optimisation formulation and
 feasibility diagnosis; price elasticity estimation and its identifiability problems;
-FCA PS21/5 (GIPP) rules and what evidence a reviewer expects.
+**ICOBS 6B** — the binding pricing rules (PS21/5 and PS21/11 are the policy statements
+announcing them) and what evidence a reviewer expects.
 
 ---
 
@@ -384,4 +398,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-OPT-3** | Is `expected_profit` computed with the platform's own risk models, or should it accept an externally-supplied expected loss cost? Insurers often have a separate reserving-derived view that will not match our models, and the mismatch will be noticed. |
 | **OQ-OPT-4** | How is the demand model's endogeneity problem handled? Historic prices were set by a rating structure that already conditioned on risk, so a naive elasticity estimate is biased. Do we specify instrumental variables, a randomised price-test capability, or simply document the caveat prominently? |
 | **OQ-OPT-5** | Should the platform support **price testing** (randomised price variation on a slice of live traffic) to generate the variation FR-OPT-2 needs? It is the correct answer to OQ-OPT-4 and is operationally and ethically loaded. |
-| **OQ-OPT-6** | For GIPP, what is the correct treatment of channel differences — is a direct-renewal customer's ENBP the direct new-business price, the cheapest new-business price across channels, or the price in the channel they would realistically use? The regulation admits reading; the platform must pick a defensible default. |
+| **OQ-OPT-6** | ~~For GIPP, what is the correct treatment of channel differences?~~ **RESOLVED 2026-08-14 — the rule prescribes it.** ICOBS 6B.2.5R(1) requires the channel the customer used when they *first purchased* the policy, with 6B.2.5R(2) falling back to the channel most commonly used by new-business customers. This is now FR-OPT-18/29, and it corrected a design that keyed off the *renewal* channel. |

@@ -59,8 +59,8 @@
 
 | # | Actor | Action | Refs |
 |---|---|---|---|
-| D1 | Pricing Actuary | `POST /gipp-checks` on the renewal population against the candidate structure, with the channel mapping declared explicitly. | `04` FR-OPT-18, OQ-OPT-6 |
-| D2 | Worker → pricing-core | Scores every renewal risk **twice through the same production bundle** — once as renewal, once as new business. No formula approximates the ENBP. | `04` §5.2 |
+| D1 | Pricing Actuary | `POST /gipp-checks` on the renewal population against the candidate structure. The channel basis is **not** a choice — ICOBS 6B.2.5R fixes it to the customer's original purchase channel, so the population must carry that column. | `04` FR-OPT-18, FR-OPT-29 |
+| D2 | Worker → pricing-core | Scores every renewal risk **twice through the same production bundle** — once as renewal, once as new business **through the original purchase channel**. No formula approximates the ENBP. Policies falling to the 6B.2.5R(2) fallback are counted and reported. | `04` §5.2, FR-OPT-29 |
 | D3 | Worker | Distribution of `renewal / ENBP`: worst case 0.998, zero policies above 1.0 → verdict `pass`. | `04` FR-OPT-19 |
 | D4 | Worker | Price-walking report by tenure: margin rises 1.4 pp from tenure 1 to 10. Within tolerance, but trending — surfaced as a finding even though the point-in-time check passes. | `04` FR-OPT-22 |
 | D5 | Pricing Actuary | Records the price-walking finding as a Commentary Block for the committee. A passing check with a trend is exactly the thing a supervisor asks about later. | `06` FR-GOV-28 |

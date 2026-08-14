@@ -173,7 +173,7 @@ term must be added here before it is used in any other document.**
 | **Demand Model** | A model of customer behaviour (conversion or retention) as a function of price and risk characteristics. A `Model` with response `conversion`/`retention`. |
 | **Price Elasticity** | ∂ log(demand) / ∂ log(price), derived from a Demand Model. |
 | **Optimisation Run** | A constrained search over candidate price adjustments maximising an objective (volume, profit, or a blend) subject to business and regulatory constraints. |
-| **GIPP** | General Insurance Pricing Practices (FCA PS21/5). Requires that a renewing customer is not quoted more than an equivalent new-business customer. |
+| **GIPP** | General Insurance Pricing Practices. The binding rules are **ICOBS 6B** (in force 2022-01-01), announced by FCA PS21/5 and amended by PS21/11. ICOBS 6B.2.1R: a firm must not set a renewal price higher than the equivalent new business price. Scope is home and motor insurance. |
 | **GIPP check** | An automated comparison of new-business and renewal price surfaces for equivalent risks, producing per-segment evidence and an overall verdict, attached to a Rating Version. |
 | **Drift** | Change over time in the live population's factor distribution (input drift) or in model performance (concept drift). |
 | **A/E** | Actual vs Expected — realised claims experience compared with model prediction, sliced by factor, cohort, and time. |
