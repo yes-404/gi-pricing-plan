@@ -90,26 +90,31 @@ async def create_rule(
     params: dict[str, Any] | None = None,
     message: str = "",
     rationale: str = "",
+    settings: Any = None,
 ) -> ValidationRuleRow:
     """Author a rule into `draft` (FR-DATA-21 step 1).
 
     Editing an approved rule is not an update — it allocates the next version, leaving the
     approved one exactly as the reports that cite it described.
     """
-    await rbac.require_permission(
-        session,
-        workspace_id=workspace_id,
-        principal=actor,
-        permission=Permission.DATASET_WRITE,
-    )
     if check == SQL_CHECK:
-        # OQ-DATA-3, decided 2026-08-14: Admin-authored only. The control that matters is
-        # how few people can write one, not how many must approve it.
+        await _refuse_sql_unless_enabled(session, workspace_id=workspace_id, settings=settings)
+        # OQ-DATA-3, decided 2026-08-14: Admin-authored, **instead of** the Analyst or
+        # Actuary who authors every other rule (`01` §4.5 step 5) — not in addition to
+        # them. Requiring both would leave no built-in role able to author one, which
+        # makes a decided capability unreachable rather than restricted.
         await rbac.require_permission(
             session,
             workspace_id=workspace_id,
             principal=actor,
             permission=Permission.ADMIN_MANAGE_SETTINGS,
+        )
+    else:
+        await rbac.require_permission(
+            session,
+            workspace_id=workspace_id,
+            principal=actor,
+            permission=Permission.DATASET_WRITE,
         )
 
     version = 1 + (
@@ -161,6 +166,35 @@ async def create_rule(
         after={"slug": slug, "version": version, "check": check, "status": DRAFT},
     )
     return row
+
+
+async def _refuse_sql_unless_enabled(
+    session: AsyncSession, *, workspace_id: UUID, settings: Any
+) -> None:
+    """`features.sql_validation_check_enabled`, which defaults to off (OQ-DATA-3).
+
+    A workspace that never needs the escape hatch never carries its risk. Checked when the
+    rule is *authored* rather than only when it runs: a draft `sql` rule sitting in a
+    workspace that has the flag off is a rule waiting for someone to turn the flag on for
+    an unrelated reason.
+    """
+    from app.platform import settings as settings_service
+
+    if settings is None:  # pragma: no cover — the API always supplies them
+        return
+    resolution = await settings_service.resolve(
+        session, settings, workspace_id, "features.sql_validation_check_enabled"
+    )
+    if not resolution.effective_value:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The sql validation check is disabled in this workspace",
+            409,
+            "`01` §4.5 gates the sql escape hatch behind "
+            "`features.sql_validation_check_enabled`, which defaults to off (OQ-DATA-3). "
+            "The declarative checks cover the great majority of real rules; this one is "
+            "deliberately expensive to reach for.",
+        )
 
 
 async def load_rule(

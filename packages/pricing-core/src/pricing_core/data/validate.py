@@ -388,6 +388,142 @@ def _volume_shift(
 # -- the engine ------------------------------------------------------------------------------
 
 
+#: The `sql` check's hard ceiling, independent of the rule budget. The engine's budget is
+#: checked *after* a check returns, which is fine for a Polars expression and useless
+#: against `SELECT * FROM a, b` — that has to be interrupted, not reported on afterwards.
+SQL_TIMEOUT_S: Final = 30.0
+
+#: DuckDB settings that make a user's query safe to run. Every one of them is load-bearing:
+#: without `enable_external_access` a query reads `/etc/passwd`, and without the extension
+#: settings it installs and loads one that does.
+_SQL_SANDBOX: Final[dict[str, str]] = {
+    "enable_external_access": "false",
+    "autoinstall_known_extensions": "false",
+    "autoload_known_extensions": "false",
+    "allow_unsigned_extensions": "false",
+    "lock_configuration": "true",
+}
+
+
+class SqlCheckError(RuntimeError):
+    """A `sql` check that could not be run safely. Never a pass (FR-DATA-19)."""
+
+
+def _reject_unless_single_select(query: str) -> None:
+    """`01` §4.5: a single `SELECT`, parsed rather than pattern-matched.
+
+    Parsed by DuckDB itself, because a regex over SQL is a guess. `SELECT 1; DROP TABLE t`
+    is two statements and a comment can hide the semicolon from anything but a parser.
+    """
+    import duckdb
+
+    try:
+        statements = duckdb.extract_statements(query)
+    except Exception as exc:
+        raise SqlCheckError(f"the query does not parse: {exc}") from exc
+
+    if len(statements) != 1:
+        raise SqlCheckError(
+            f"a sql check is exactly one statement; this is {len(statements)}. "
+            "`01` §4.5 permits a single SELECT."
+        )
+    kind = statements[0].type
+    # `==`, not `is`: DuckDB's `StatementType` comes from the `_duckdb` extension module
+    # and the value returned is not the same object as the one on the Python enum, so
+    # identity is always False and every query would be refused as "not a SELECT".
+    if kind != duckdb.StatementType.SELECT:
+        raise SqlCheckError(
+            f"a sql check must be a SELECT; this is {getattr(kind, 'name', kind)}. "
+            "A validation rule reads — one that writes would change the data it is "
+            "judging."
+        )
+
+
+@register_check("sql")
+def _sql(
+    rule: ValidationRule, tables: Mapping[str, pl.DataFrame], context: ValidationContext
+) -> CheckOutcome:
+    """The escape hatch, sandboxed (`01` §4.5, NFR-DATA-9, OQ-DATA-3).
+
+    Four controls, and the query is refused unless all four hold:
+
+    * **One `SELECT`**, established by DuckDB's own parser.
+    * **No filesystem and no extensions**, by connection configuration that is then locked.
+      The tables under test are registered as views from frames already in memory, so the
+      query has data to read without the connection having a path to anything else.
+    * **A hard timeout**, enforced by interrupting the connection from a watchdog thread.
+      The engine's per-rule budget is checked after a check returns, which cannot stop a
+      cartesian join.
+    * **A scalar result** — a count or a boolean. A rule reports a number of violating
+      rows; a query returning a table has not answered the question the rule asks.
+
+    Authoring is Admin-only and the whole check is behind a workspace flag that defaults to
+    off; both are enforced by the platform, because `pricing-core` has no notion of either
+    (ADR-0001).
+    """
+    import threading
+
+    import duckdb
+
+    query = str(rule.params.get("query", "")).strip()
+    if not query:
+        raise SqlCheckError("a sql check needs a `query` parameter")
+    _reject_unless_single_select(query)
+
+    timeout_s = float(rule.params.get("timeout_s", SQL_TIMEOUT_S))
+    connection = duckdb.connect(":memory:", config=dict(_SQL_SANDBOX))
+    watchdog = threading.Timer(timeout_s, connection.interrupt)
+    try:
+        for name, frame in tables.items():
+            # `register` takes the frame by reference; the view is the only thing the query
+            # can see, and it disappears with the connection.
+            connection.register(name, frame)
+        for name, frame in context.reference_frames.items():
+            connection.register(f"ref_{name}", frame)
+
+        watchdog.start()
+        try:
+            row = connection.execute(query).fetchone()
+        except duckdb.InterruptException as exc:
+            raise SqlCheckError(
+                f"the query exceeded its {timeout_s:g}s budget and was interrupted "
+                "(NFR-DATA-9). Recorded as an error, because an unrun rule is never a "
+                "pass (FR-DATA-19)."
+            ) from exc
+        except duckdb.Error as exc:
+            raise SqlCheckError(f"{type(exc).__name__}: {exc}") from exc
+    finally:
+        watchdog.cancel()
+        connection.close()
+
+    if row is None or len(row) != 1:
+        raise SqlCheckError(
+            "a sql check must return exactly one value — a violating-row count or a "
+            "boolean. `01` §4.5: the query answers the rule's question, it does not "
+            "produce a report of its own."
+        )
+
+    value = row[0]
+    if isinstance(value, bool):
+        # `true` means the assertion holds, so violations are zero.
+        return CheckOutcome(
+            violating_rows=0 if value else 1,
+            measured={"result": value},
+            detail=rule.message or "custom sql assertion",
+        )
+    if isinstance(value, int):
+        if value < 0:
+            raise SqlCheckError(f"a violating-row count cannot be negative; got {value}")
+        return CheckOutcome(
+            violating_rows=value,
+            measured={"violating_rows": value},
+            detail=rule.message or "custom sql count",
+        )
+    raise SqlCheckError(
+        f"a sql check returns a count or a boolean; got {type(value).__name__}"
+    )
+
+
 def run_validation(
     tables: Mapping[str, pl.DataFrame],
     rule_set: ValidationRuleSet,

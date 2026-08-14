@@ -8966,7 +8966,7 @@
     },
     "/api/v1/validation-rules": {
       "post": {
-        "description": "FR-DATA-21 step 1: authored → `draft`.",
+        "description": "FR-DATA-21 step 1: authored → `draft`.\n\nThe permission depends on the *check*, which is why it is not on the route: a\ndeclarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`\n**instead** (`01` §4.5 step 5). Requiring both would leave no built-in role able to\nauthor one. The service makes the choice, and it fails closed either way.",
         "operationId": "create_rule_api_v1_validation_rules_post",
         "requestBody": {
           "content": {

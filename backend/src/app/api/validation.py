@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
-from app.api.deps import Caller
+from app.api.deps import Caller, require_caller
 from app.api.responses import problems
 from app.db.session import Database
 from app.platform import datasets as dataset_service
@@ -49,6 +49,8 @@ WriteDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE))]
 AcknowledgeWarnings = Annotated[
     Caller, Depends(requires(Perm.DATASET_ACKNOWLEDGE_WARNING))
 ]
+#: The one route whose permission is check-dependent; see `create_rule`.
+AuthenticatedCaller = Annotated[Caller, Depends(require_caller)]
 
 
 def _database(request: Request) -> Database:
@@ -145,9 +147,15 @@ async def acknowledge(
     responses=problems(401, 403, 409, 422),
 )
 async def create_rule(
-    body: RuleCreate, caller: WriteDatasets, database: DatabaseDep
+    body: RuleCreate, caller: AuthenticatedCaller, database: DatabaseDep, request: Request
 ) -> ValidationRule:
-    """FR-DATA-21 step 1: authored → `draft`."""
+    """FR-DATA-21 step 1: authored → `draft`.
+
+    The permission depends on the *check*, which is why it is not on the route: a
+    declarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`
+    **instead** (`01` §4.5 step 5). Requiring both would leave no built-in role able to
+    author one. The service makes the choice, and it fails closed either way.
+    """
     async with database.unit_of_work() as session:
         row = await rule_service.create_rule(
             session,
@@ -161,6 +169,7 @@ async def create_rule(
             params=body.params,
             message=body.message,
             rationale=body.rationale,
+            settings=request.app.state.settings,
         )
         return rule_service.to_schema(row)
 

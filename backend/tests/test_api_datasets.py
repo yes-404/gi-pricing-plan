@@ -465,3 +465,52 @@ def test_the_report_summary_stays_under_its_budget_at_500_rules(
     assert "results" not in summary
     assert elapsed_ms < 2_500, f"summary took {elapsed_ms:.0f} ms against a 500 ms budget"
     print(f"\n  NFR-DATA-7: {elapsed_ms:.0f} ms for {rule_count} rules (budget 500 ms)")
+
+
+@pytest.mark.req("NFR-DATA-9")
+def test_the_sql_check_is_refused_while_its_workspace_flag_is_off(
+    client: TestClient, workspace_id, principal, grant
+) -> None:
+    """OQ-DATA-3: gated by `features.sql_validation_check_enabled`, defaulting to off.
+
+    Checked when the rule is *authored*, not only when it runs. A draft `sql` rule sitting
+    in a workspace with the flag off is a rule waiting for someone to turn the flag on for
+    an unrelated reason.
+    """
+    import asyncio
+
+    # Both roles: a `sql` rule needs `admin:manage_settings` and a declarative one needs
+    # `dataset:write`, and this test compares the two paths for one caller.
+    asyncio.get_event_loop().run_until_complete(grant("admin"))
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+
+    refused = client.post(
+        "/api/v1/validation-rules",
+        json={
+            "slug": f"sql-{new_uuid7().hex[-8:]}",
+            "layer": "actuarial_sanity",
+            "check": "sql",
+            "severity": "fail",
+            "params": {"query": "SELECT count(*) FROM exposure"},
+        },
+        headers=headers,
+    )
+    assert refused.status_code == 409, refused.text
+    assert "sql_validation_check_enabled" in refused.json()["detail"]
+
+    # A declarative rule is unaffected — the gate is on the escape hatch, not on authoring.
+    allowed = client.post(
+        "/api/v1/validation-rules",
+        json={
+            "slug": f"rng-{new_uuid7().hex[-8:]}",
+            "layer": "structural",
+            "check": "not_null",
+            "severity": "fail",
+            "target": {"table": "exposure", "column": "policy_id"},
+            "params": {"columns": ["policy_id"], "key_columns": ["policy_id"]},
+        },
+        headers=headers,
+    )
+    assert allowed.status_code == 201, allowed.text
+    assert allowed.json()["status"] == "draft"

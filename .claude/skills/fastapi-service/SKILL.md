@@ -305,6 +305,42 @@ Also record the baseline after imports. A Python process with `polars`, `duckdb`
 and `pydantic` loaded occupies ~140 MB before reading a byte, and a memory budget that
 ignores it is measuring the interpreter.
 
+## Sandboxing user SQL in DuckDB: three settings, a parser, and a watchdog
+
+`01` §4.5's `sql` escape hatch runs a user's query. Everything below was verified by
+attempting the attack, not by reading the configuration:
+
+```python
+duckdb.connect(":memory:", config={
+    "enable_external_access": "false",       # without it, SELECT reads /etc/passwd
+    "autoinstall_known_extensions": "false", # without these, it installs one that does
+    "autoload_known_extensions": "false",
+    "allow_unsigned_extensions": "false",
+    "lock_configuration": "true",            # the query cannot undo the above
+})
+```
+
+Register the frames as views (`connection.register(name, frame)`) so the query has data to
+read without the connection having a path to anything else.
+
+**Use DuckDB's parser, not a regex.** `duckdb.extract_statements(q)` returns one entry per
+statement with a `.type`; `SELECT 1 /* comment */ ; DROP TABLE t` is two, and a pattern
+match on `;` gets it wrong.
+
+**Compare `StatementType` with `==`, never `is`.** It comes from the `_duckdb` extension
+module and the returned value is not the same object as the Python enum member, so `is`
+is always `False`. Here that failed closed — every query was refused as "not a SELECT" —
+but the same mistake in an allow-check fails *open*.
+
+**A time budget must interrupt, not measure.** `run_validation` checks its per-rule budget
+*after* the check returns, which is fine for a Polars expression and useless against
+`SELECT count(*) FROM range(1e10)`. Start a `threading.Timer` that calls
+`connection.interrupt()` and catch `duckdb.InterruptException`.
+
+Prove each control by removing it and watching the test fail — dropping
+`enable_external_access` alone made three passing tests fail, which is what makes them
+tests of the sandbox rather than of DuckDB's defaults.
+
 ## `pytest.raises(match=...)` on a `PlatformError` tests the *detail*
 
 `PlatformError.__str__` is `detail or title`, so `match="requires a reason"` compares
@@ -436,3 +472,7 @@ a failing test asserting `trace_id` on the 500 path, not by reading Starlette's 
 attribute, the error-registry refusal and the `String(16)` truncation were each found by a
 failing run rather than by reading; the memory-measurement trap was found by the same
 number falling by 6× across three progressively cleaner measurements of unchanged code.
+
+2026-08-14 — W4 REST surface. 528 tests pass. The DuckDB sandbox controls were each proven
+by removal; the `StatementType` identity trap was found by every query being refused, which
+is the direction that failure mode is survivable in.
