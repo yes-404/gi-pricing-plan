@@ -61,19 +61,26 @@ is also the one intuition gets wrong.)
   fails rather than silently doing nothing.
 - Markers registered in the root `pyproject.toml`. Fixtures in `conftest.py`.
 
-## Running without pip
+## Running the real toolchain in a sandbox without pip
 
-This environment has no `pip` or `ensurepip`, so `uv run pytest` is unavailable. Fetch
-wheels directly and use `PYTHONPATH` — see the `library-spike` skill, which covers the
-wheel-fetching recipe, the version-pinning trap, and missing native libraries.
+`uv` itself installs from PyPI as a manylinux wheel, so the whole CI job runs locally even
+with no `pip` and no `ensurepip`:
 
 ```bash
-PYTHONPATH="$SP/libs:packages/model-schema/src:packages/pricing-core/src" \
-  python3 -m pytest packages -q -p no:cacheprovider
+# one-off: fetch the uv wheel and unzip it (see library-spike for the recipe)
+UV="$SP/libs/uv-*/data/scripts/uv"
+export UV_CACHE_DIR="$SP/uvcache" UV_PYTHON_INSTALL_DIR="$SP/uvpy"
+"$UV" sync --all-packages --dev
+"$UV" run ruff check . && "$UV" run mypy && "$UV" run lint-imports && "$UV" run pytest -q
 ```
 
-**What cannot be run here:** `uv`, `ruff`, `mypy`, `lint-imports`, `docker compose`. Say so
-rather than implying a clean run — CI is the first real check of those.
+**Prefer this over hand-fetched wheels.** It resolves the versions CI resolves, so a pass
+here means something. The `PYTHONPATH` approach in `library-spike` remains useful for a
+throwaway spike on one library, but it is not a substitute for the gate.
+
+**Still unavailable:** `docker compose` — no docker daemon, and 1 GB of RAM would not run
+Postgres, Redis and MinIO together anyway. Anything needing the local stack is first
+verified by CI.
 
 ## Verified
 
