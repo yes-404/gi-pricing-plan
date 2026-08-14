@@ -10,6 +10,91 @@
         "title": "ActorKind",
         "type": "string"
       },
+      "ApprovalPolicy": {
+        "additionalProperties": false,
+        "description": "A workspace's approval policy (FR-GOV-12).",
+        "properties": {
+          "policies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ApprovalPolicyEntry"
+            },
+            "title": "Policies",
+            "type": "array"
+          },
+          "submitter_may_approve": {
+            "default": false,
+            "title": "Submitter May Approve",
+            "type": "boolean"
+          }
+        },
+        "title": "ApprovalPolicy",
+        "type": "object"
+      },
+      "ApprovalPolicyEntry": {
+        "additionalProperties": false,
+        "description": "What a given artifact type requires (`06` §4.2).",
+        "properties": {
+          "approver_roles": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Approver Roles",
+            "type": "array"
+          },
+          "approvers_required": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Approvers Required",
+            "type": "integer"
+          },
+          "artifact_type": {
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rating Version deployments differ per target environment.",
+            "title": "Environment"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence",
+            "type": "array"
+          }
+        },
+        "required": [
+          "artifact_type",
+          "approvers_required",
+          "approver_roles"
+        ],
+        "title": "ApprovalPolicyEntry",
+        "type": "object"
+      },
+      "ApprovalStatus": {
+        "description": "FR-GOV-9. Post-approval states (`live`, `superseded`, `retired`) belong to the\nowning module — this machine stops at `approved`.",
+        "enum": [
+          "draft",
+          "review",
+          "approved",
+          "changes_requested",
+          "rejected",
+          "withdrawn"
+        ],
+        "title": "ApprovalStatus",
+        "type": "string"
+      },
       "AuditEventView": {
         "additionalProperties": false,
         "description": "An event as returned by the API (`06` §4.5).\n\nIncludes `event_hash` and `prev_event_hash`: an auditor exporting the log must be able\nto recompute the chain outside the platform, which is what makes it evidence rather\nthan a report (FR-GOV-24).",
@@ -306,6 +391,39 @@
         ],
         "title": "CreatedServiceAccount",
         "type": "object"
+      },
+      "Decide": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/DecisionKind"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "Decide",
+        "type": "object"
+      },
+      "DecisionKind": {
+        "enum": [
+          "approve",
+          "reject",
+          "request_changes"
+        ],
+        "title": "DecisionKind",
+        "type": "string"
       },
       "FieldError": {
         "additionalProperties": false,
@@ -882,6 +1000,43 @@
         "title": "Page[Job]",
         "type": "object"
       },
+      "Page_dict_str__Any__": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[dict[str, Any]]",
+        "type": "object"
+      },
       "Permission": {
         "description": "Every permission the platform checks. Closed by design.\n\nA free-string permission is one nobody can enumerate, so no screen can list what a role\ngrants and no test can assert a role does not grant something.",
         "enum": [
@@ -1348,6 +1503,38 @@
         "title": "SettingType",
         "type": "string"
       },
+      "SubmitApproval": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_ref": {
+            "description": "Canonical `{type}:{slug}@{version}` (ID-3).",
+            "title": "Artifact Ref",
+            "type": "string"
+          },
+          "change_summary": {
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          }
+        },
+        "required": [
+          "artifact_ref",
+          "change_summary"
+        ],
+        "title": "SubmitApproval",
+        "type": "object"
+      },
       "UpdateSettings": {
         "additionalProperties": false,
         "properties": {
@@ -1387,6 +1574,27 @@
         ],
         "title": "VersionInfo",
         "type": "object"
+      },
+      "Withdraw": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_is_live": {
+            "default": false,
+            "description": "Supplied by the caller: liveness belongs to the owning module (`03` for a Rating Version), not to governance. Governance owns the rule.",
+            "title": "Artifact Is Live",
+            "type": "boolean"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "Withdraw",
+        "type": "object"
       }
     }
   },
@@ -1396,6 +1604,701 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/approval-policy": {
+      "get": {
+        "operationId": "get_policy_api_v1_approval_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalPolicy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          }
+        },
+        "summary": "The workspace approval policy",
+        "tags": [
+          "governance"
+        ]
+      },
+      "put": {
+        "operationId": "put_policy_api_v1_approval_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalPolicy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Replace the workspace approval policy",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/api/v1/approval-requests": {
+      "get": {
+        "operationId": "list_requests_api_v1_approval_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ApprovalStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "artifact_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Artifact Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_dict_str__Any__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List approval requests",
+        "tags": [
+          "governance"
+        ]
+      },
+      "post": {
+        "description": "Anyone authenticated may submit; the policy decides who may approve.\n\nDeliberately not permission-gated beyond authentication: submitting is asking, and the\nmodule that owns the artifact has already decided whether this principal could create\nit. Gating the ask as well would mean an analyst who built a model could not put it\nforward.",
+        "operationId": "submit_for_approval_api_v1_approval_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Submit For Approval Api V1 Approval Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Submit an artifact for approval",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/api/v1/approval-requests/{request_id}": {
+      "get": {
+        "operationId": "get_request_api_v1_approval_requests__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Request Api V1 Approval Requests  Request Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "One request with its decisions",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/api/v1/approval-requests/{request_id}/decide": {
+      "post": {
+        "operationId": "decide_request_api_v1_approval_requests__request_id__decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decide"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decide Request Api V1 Approval Requests  Request Id  Decide Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Approve, reject or request changes",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/api/v1/approval-requests/{request_id}/withdraw": {
+      "post": {
+        "operationId": "withdraw_request_api_v1_approval_requests__request_id__withdraw_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Withdraw"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Withdraw Request Api V1 Approval Requests  Request Id  Withdraw Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Withdraw before deployment (FR-GOV-15)",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
     "/api/v1/audit": {
       "get": {
         "description": "Filtered and cursor-paginated (FR-GOV-23, `00` §5.2).\n\nOrdered by `sequence`, the per-workspace monotonic counter, rather than by `at`: events\nwritten in one transaction share a timestamp, and a log whose order cannot be\nreconstructed cannot be verified.",

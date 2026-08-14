@@ -245,6 +245,22 @@ For anything where **insertion order is the meaning** (log lines), use a databas
 follows with its per-workspace `sequence`; it just has to be applied everywhere order
 matters, not only where tamper-evidence does.
 
+## `pytest.raises(match=...)` on a `PlatformError` tests the *detail*
+
+`PlatformError.__str__` is `detail or title`, so `match="requires a reason"` compares
+against the long explanatory sentence, not the short title. It has produced a confusing
+failure twice. Assert the field you mean:
+
+```python
+with pytest.raises(PlatformError) as exc:
+    ...
+assert exc.value.code == "BREAK_GLASS_REASON_REQUIRED"
+assert exc.value.title == "Withdrawal requires a reason"
+```
+
+The `code` is the contract anyway — it is what a client branches on — so asserting it is
+both more correct and more stable than any substring of prose.
+
 ## Routes must fail closed
 
 `require_caller` returns **401** when no identity provider is configured, and

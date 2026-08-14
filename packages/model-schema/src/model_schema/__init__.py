@@ -5,6 +5,16 @@ Depends on Pydantic and nothing else. No SQLAlchemy, no FastAPI, no Polars — t
 this package un-generatable and un-shareable.
 """
 
+from model_schema.approvals import (
+    DEFAULT_POLICY,
+    VALID_APPROVAL_TRANSITIONS,
+    ApprovalDecision,
+    ApprovalPolicy,
+    ApprovalPolicyEntry,
+    ApprovalRequest,
+    ApprovalStatus,
+    DecisionKind,
+)
 from model_schema.audit import (
     AuditEvent,
     AuditEventCore,
@@ -50,10 +60,17 @@ from model_schema.settings import (
 __all__ = [
     "ARTIFACT_TYPES",
     "BUILTIN_ROLES",
+    "DEFAULT_POLICY",
     "READ_PERMISSIONS",
     "TERMINAL_STATUSES",
+    "VALID_APPROVAL_TRANSITIONS",
     "VALID_TRANSITIONS",
     "ActorKind",
+    "ApprovalDecision",
+    "ApprovalPolicy",
+    "ApprovalPolicyEntry",
+    "ApprovalRequest",
+    "ApprovalStatus",
     "ArtifactEnvelope",
     "ArtifactRef",
     "AuditEvent",
@@ -61,6 +78,7 @@ __all__ = [
     "BlobRef",
     "Currency",
     "DecimalStr",
+    "DecisionKind",
     "FieldError",
     "Job",
     "JobError",
