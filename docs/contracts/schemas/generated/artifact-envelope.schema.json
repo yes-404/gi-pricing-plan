@@ -25,6 +25,12 @@
       "title": "Created By",
       "type": "string"
     },
+    "currency": {
+      "default": "GBP",
+      "pattern": "^[A-Z]{3}$",
+      "title": "Currency",
+      "type": "string"
+    },
     "description": {
       "anyOf": [
         {

@@ -39,7 +39,7 @@ packages are not installed.
 ## Consequences
 
 **Positive** — independent verification and notebook use; fast unit tests with no
-fixtures; the option to publish `pricing-core` to PyPI (OQ-OVR-4); a clean seam for
+fixtures; publication of `pricing-core` to PyPI from Phase 2 as `0.x` (OQ-OVR-4, decided 2026-08-14; an editable install serves Phase 1); a clean seam for
 swapping fitting backends.
 
 **Negative** — the backend must materialise data before calling the core, so worker
