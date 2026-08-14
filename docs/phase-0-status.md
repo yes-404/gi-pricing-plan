@@ -91,22 +91,23 @@ Deferred items name their target phase.
 
 ## 5. Spikes to run before Phase 2
 
-Two questions could not be settled by reasoning. **Track A research (2026-08-14) settled
-the substance of the first**; what remains is smaller and better aimed.
+Two questions could not be settled by reasoning. **All three spikes have now run and all
+three are closed.** Every one changed the specification — none confirmed its assumption
+unchanged, which is the case for having run them rather than reasoned about them.
 
-1. **~~OQ-RATE-1 — ZEN Engine decimal semantics.~~ RESOLVED — S1 re-scoped, not cancelled.**
-   The engine represents numbers as `rust_decimal::Decimal`, so arithmetic is exact and
-   [ADR-0004](adr/0004-zen-engine-for-rating-execution.md) stands. **S1 now tests the two
-   risks the finding exposed:** whether arbitrary precision survives the Python binding in
-   *both* directions (FR-RATE-56), and whether any rateable path can reach a
-   `maths-nopanic` sink that returns `0` instead of raising (FR-RATE-57). Both failure
-   modes are silent, which is why they still warrant code before Phase 2.
-2. **OQ-RATE-2 — `exact`-mode GBM latency.** Unchanged and now the highest-risk remaining
-   unknown. Whether a `model_call` to a realistic booster (500 trees, 60 features) fits
-   inside the 50 ms p99 budget at 200 rps determines whether production rating can ever use
-   the exact model, and therefore resolves OQ-MODEL-3 by force rather than by choice.
-   Research sharpened the budget: Pydantic response validation alone costs ~1 ms, which
-   NFR-RATE-13 now removes from the hot path.
+1. **~~S1 — ZEN boundary.~~ CLOSED 2026-08-14.** Engine arithmetic is exact, but the
+   **Python binding has no decimal type** — a `Decimal` is rejected and everything returns
+   as `float`. F1's "workaround not required" was wrong; money now crosses as integer minor
+   units (FR-RATE-56). Also found `log`/`sqrt` don't exist in ZEN, so the old FR-RATE-57
+   guarded nothing, while **division by zero returns `null` silently** — rewritten.
+
+
+2. **~~S2 — `exact`-mode GBM latency.~~ CLOSED 2026-08-14.** **Comfortably viable**: p99
+   1.09 ms for 500 trees × 60 features, ~2 % of the 50 ms budget. OQ-MODEL-3 stays a real
+   design choice. `nthread=1` per request beats all-cores at the tail (NFR-RATE-14). A
+   sustained-load test moves to Phase 2 W11.
+
+
 3. **~~S3 — LightGBM `init_score`.~~ CLOSED 2026-08-14.** The assumption was **half wrong**.
    Symmetric at fit time — both backends include the offset in the raw score handed to a
    custom objective. **Asymmetric at scoring time**: `Booster.predict()` has no offset
@@ -117,17 +118,17 @@ the substance of the first**; what remains is smaller and better aimed.
 
 ## 5b. Research completed
 
-Track A ran on 2026-08-14 with four executable spikes against real library versions
+Track A ran on 2026-08-14 with seven executable spikes against real library versions
 (SymPy 1.14.0, XGBoost 3.4.0, Pydantic 2.13.4). Full log:
 [`research/track-a-findings.md`](research/track-a-findings.md).
 
 | Outcome | Count | Detail |
 |---|---|---|
-| Open questions closed | 1 | OQ-RATE-1 |
-| **Spec defects found and fixed** | **3** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5); the dual-backend scoring path assumed a symmetry that does not hold (F13) |
+| Open questions closed | 3 | OQ-RATE-1, OQ-RATE-2, OQ-OPT-6 |
+| **Spec defects found and fixed** | **5** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5); the dual-backend scoring path assumed a symmetry that does not hold (F13); the ZEN binding cannot carry decimals, contradicting an earlier conclusion (F14); FR-RATE-57 guarded functions that do not exist while real division-by-zero returned null silently (F14) |
 | **Fabricated figure corrected** | **1** | An invented convexity percentage presented as a measurement (F4) |
 | Designs confirmed | 5 | SymPy derivation, `base_margin` semantics, glum standard errors, pandera Polars, Pydantic discriminated unions |
-| New requirements | 9 | FR-MODEL-68..72, FR-RATE-56..58, NFR-RATE-13 |
+| New requirements | 11 | FR-MODEL-68..72, FR-RATE-56..59, NFR-RATE-13/14 |
 
 The two defects are the return on this work: both would have surfaced in Phase 1 as
 confusing failures rather than as design decisions.

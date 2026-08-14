@@ -313,6 +313,96 @@ each backend independently that `predict(fit_data)` reproduces the fitted raw sc
 
 **Spike S3 is closed.**
 
+---
+
+## F14 — ZEN binding precision (spike S1, zen-engine 0.53.0) ⚠
+
+**This corrects F1.** F1 established the engine's internal type is `rust_decimal` and I
+concluded the integer-minor-units workaround was "not required for correctness". S1 tested
+the whole path and found that conclusion **right about the engine and wrong about the
+system**.
+
+**Inside the engine — exact.** The decisive test passes:
+
+```
+0.1 + 0.2 == 0.3   ->  true          1.005 * 100  ->  100.5
+1.1 * 3   == 3.3   ->  true          2.675 * 100  ->  267.5
+```
+
+A float engine fails every one of these. ADR-0004 stands.
+
+**At the Python binding — no decimal type exists.**
+
+```
+Decimal("1.005")  ->  TypeError: argument 'ctx': unsupported type Decimal
+1/3               ->  0.33333333333333337        (Python float)
+36120 + 7         ->  36127.0                    (Python float)
+```
+
+Exactness cannot cross the boundary in either direction. Hence **FR-RATE-56 rewritten**:
+money crosses as integer minor units, which *are* exactly representable in `float64` up to
+2^53 (≈ £90 trillion in pence). The workaround is required after all — not because the
+engine is inexact, but because the binding is.
+
+### FR-RATE-57 was aimed at the wrong operation
+
+It guarded `ln`/`log10` under `maths-nopanic`. S1 found **`log` and `sqrt` do not exist in
+the ZEN expression language** — they fail to parse. The requirement guarded calls that
+cannot be made.
+
+The real hazard is **division**:
+
+```
+1/0  ->  None      0/0  ->  None      premium/0  ->  None     (no exception)
+(1/0) + 5  ->  RuntimeError vmError                            (raises only on USE)
+```
+
+A null propagates until something consumes it, and the error then names the *multiply*,
+not the division that produced it. Worse, a null reaching an `output` step would emit a
+null premium. Rewritten accordingly.
+
+### A third find
+
+`min(1,2)` / `max(1,2)` are **invalid function calls** in ZEN, yet `03` FR-RATE-28 lists
+`min` and `max` as available. `abs`, `round`, `floor`, `ceil`, `sum` do work. Added
+**FR-RATE-59**: resolve the function vocabulary against the real engine at compile time,
+so a graph cannot call something that exists only in our documentation.
+
+**Spike S1 closed.**
+
+---
+
+## F15 — `exact`-mode GBM latency (spike S2, XGBoost 3.4.0) ✓
+
+500 trees × 60 features, single-row raw-margin prediction — what a `model_call` does per
+quote. 3 000 iterations after warm-up:
+
+| Path | mean | p50 | p95 | **p99** | max |
+|---|---|---|---|---|---|
+| `nthread=1`, incl. `DMatrix` build | 0.377 | 0.345 | 0.476 | **1.088** | 4.501 |
+| `nthread=1`, predict only | 0.109 | 0.084 | 0.169 | **0.326** | 1.200 |
+| all cores, incl. build | 0.409 | 0.351 | 0.511 | **1.477** | 7.341 |
+| all cores, predict only | 0.101 | 0.079 | 0.146 | **0.356** | 19.897 |
+| `inplace_predict`, `nthread=1` | 0.350 | 0.302 | 0.526 | **0.773** | 4.618 |
+
+(ms; measured on a 2-core box.)
+
+**`exact` mode costs ~1 ms of a 50 ms budget — about 2 %.** OQ-RATE-2 resolves favourably,
+and importantly **OQ-MODEL-3 is not decided by force**: rating on the exact model or on its
+GLM approximation stays a genuine design choice.
+
+**Threading is the actionable finding.** All-cores is *worse* at the tail than single-thread
+— p99 1.48 vs 1.09 ms, and a 19.9 ms worst case against 4.5 ms — because thread-pool
+spin-up dominates a single-row prediction. Parallelism belongs across concurrent requests.
+Recorded as **NFR-RATE-14**.
+
+**Caveat:** this measures per-request latency on an unloaded 2-core machine, not p99 under
+200 rps sustained. The per-request measurement is the right unit for a single-threaded
+model call, and 50× headroom is robust to the caveat, but a load test still belongs in
+Phase 2.
+
+**Spike S2 closed.**
+
 ## What this changes
 
 | Document | Change |
