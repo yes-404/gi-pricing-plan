@@ -2,8 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/common/artifact-ref.schema.json",
   "title": "ArtifactRef",
-  "description": "Canonical external reference: {type}:{slug}@{version} (00-overview.md ID-3).",
+  "description": "Canonical external reference: {type}:{slug}@{version} (00-overview.md ID-3). The version is the ID-2 integer and starts at 1, so @0 is malformed. Pattern generated from model_schema.refs.REF_PATTERN.",
   "type": "string",
-  "pattern": "^(dataset|dataset_version|validation_rule|validation_rule_set|reference_table|factor|banding|grouping|model|custom_objective|custom_metric|peril_structure|rating_algorithm|sub_graph|rate_table|rating_version|optimisation_run|gipp_check|monitor|dossier):[a-z0-9][a-z0-9-]{1,62}@[0-9]+$",
-  "examples": ["model:motor-ad-frequency@7", "rating_version:motor-gb@27"]
+  "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+  "examples": [
+    "model:motor-ad-frequency@7",
+    "rating_version:motor-gb@27"
+  ]
 }

@@ -1,0 +1,195 @@
+{
+  "$defs": {
+    "ActorKind": {
+      "enum": [
+        "user",
+        "service_account",
+        "system"
+      ],
+      "title": "ActorKind",
+      "type": "string"
+    },
+    "JobSource": {
+      "enum": [
+        "ui",
+        "api",
+        "schedule",
+        "system"
+      ],
+      "title": "JobSource",
+      "type": "string"
+    },
+    "Principal": {
+      "additionalProperties": false,
+      "description": "An authenticated identity: User, Service Account, or the platform itself.",
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable label recorded at the time of the action.",
+          "title": "Display"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Null only for `system`, which has no principal row.",
+          "title": "Id"
+        },
+        "kind": {
+          "$ref": "#/$defs/ActorKind"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Principal",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One immutable record of a governed change (FR-GOV-21).\n\n`before`/`after` hold the changed state, not the whole entity: an audit log that\nduplicates every row is unreadable at the moment it is needed, and FR-GOV-26 forbids\nverbatim secrets and full quote inputs regardless.",
+  "properties": {
+    "action": {
+      "pattern": "^[a-z_]+\\.[a-z_]+$",
+      "title": "Action",
+      "type": "string"
+    },
+    "actor": {
+      "$ref": "#/$defs/Principal"
+    },
+    "after": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "After"
+    },
+    "at": {
+      "format": "date-time",
+      "title": "At",
+      "type": "string"
+    },
+    "before": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Before"
+    },
+    "entity_ref": {
+      "description": "Canonical `{type}:{slug}@{version}` form (ID-3).",
+      "title": "Entity Ref",
+      "type": "string"
+    },
+    "event_hash": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "title": "Event Hash",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The Job that caused this change, where one did (FR-GOV-25).",
+      "title": "Job Id"
+    },
+    "justification": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Justification"
+    },
+    "prev_event_hash": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Hash of the previous event in this workspace. Null for the first event — deliberately null rather than a sentinel, because a sentinel is indistinguishable from a real predecessor and would let a truncated chain verify.",
+      "title": "Prev Event Hash"
+    },
+    "source": {
+      "$ref": "#/$defs/JobSource"
+    },
+    "trace_id": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{32}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trace Id"
+    },
+    "workspace_id": {
+      "format": "uuid",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "workspace_id",
+    "at",
+    "actor",
+    "source",
+    "action",
+    "entity_ref",
+    "event_hash"
+  ],
+  "title": "AuditEvent",
+  "type": "object"
+}

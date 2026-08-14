@@ -261,7 +261,7 @@ Deployment    ──< ScoringTrace (sampled) ──< MonitoringAggregate
 |---|---|
 | **ID-1** | Every entity has a `uuid` primary key (`UUIDv7`, time-ordered) plus a human-readable `slug` unique within its parent scope. |
 | **ID-2** | Versioned entities carry `version: int` starting at 1, monotonically increasing per parent, and never reused — including after deletion of a draft. |
-| **ID-3** | The canonical external reference to any artifact is `{type}:{slug}@{version}` (e.g. `model:motor-ad-freq@7`, `rating_version:motor-gb@2026-04`). This string form appears in traces, documentation, and the audit log. |
+| **ID-3** | The canonical external reference to any artifact is `{type}:{slug}@{version}` (e.g. `model:motor-ad-freq@7`, `rating_version:motor-gb@27`). This string form appears in traces, documentation, and the audit log. The version is always the ID-2 integer — the earlier `motor-gb@2026-04` example contradicted ID-2 and the reference pattern, and was corrected 2026-08-14 when generation compared the two. |
 | **ID-4** | Content-addressed blobs (parquet, booster JSON, report PDFs) are stored at `blob/{sha256}` and referenced by hash + size + media type. Identical content is stored once. |
 | **ID-5** | Soft-delete only: entities gain `archived_at`; nothing is removed from the database. Physical purge is an Admin-only, audited, workspace-scoped operation used for GDPR erasure. |
 

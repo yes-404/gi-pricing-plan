@@ -2,20 +2,62 @@
 
 Draft machine-readable contracts for the specification suite.
 
-| Path | Contents |
-|---|---|
-| `schemas/` | JSON Schema (draft 2020-12) for the persisted artifacts |
-| `openapi/gi-pricing.yaml` | OpenAPI 3.1 stub for the `/api/v1` surface |
+| Path | Contents | Authored or generated |
+|---|---|---|
+| `schemas/` | JSON Schema (draft 2020-12) for the persisted artifacts | **hand-authored, Phase 0** |
+| `schemas/generated/` | The shapes `packages/model-schema` now owns | **generated** — do not edit |
+| `openapi/generated.json` | The API as it is today | **generated** — do not edit |
+| `openapi/gi-pricing.yaml` | Phase 0 design stub for the whole `/api/v1` surface | **hand-authored** |
+
+Regenerate with `uv run python scripts/generate-contracts.py`; CI runs it with `--check`
+and fails on drift (FR-PLAT-48).
+
+### Why the design stub is not overwritten
+
+`gi-pricing.yaml` describes the whole intended surface across eight modules.
+`generated.json` describes the routes that exist. Replacing the first with the second
+would delete a specification to make the tooling tidy. The generated document grows toward
+the stub as routes land, and the stub retires when it is reached — not before.
+
+### Why the generated schemas are validation-mode
+
+Research F7 below is only visible in validation mode: a bare `Decimal` renders as
+`anyOf: [number, string]` there, and as a plain string in serialization mode. A contract
+generated from the serialization schema would look compliant while the *request* side still
+accepted the lossy JSON number FR-OVR-7 forbids. The request side is where the hazard
+lives, so that is the schema that is committed.
 
 ## Status and authority
 
-These files are **drafts written by hand during Phase 0**. From Phase 1 they become
-*generated output*: `packages/model-schema` holds the Pydantic v2 models and both the JSON
-Schema and the OpenAPI document are generated from them, with CI failing on drift
+Generation began in **W2 (2026-08-14)** and is partial by design: `schemas/generated/` and
+`openapi/generated.json` are produced from the code, and the rest remain the Phase 0
+hand-authored drafts until the shapes they describe exist in `packages/model-schema`
 ([ADR-0002](../adr/0002-model-schema-single-source-of-truth.md), FR-OVR-6, FR-PLAT-48).
 
-Until then, treat the module specs as authoritative where they disagree with a schema, and
-fix the schema.
+For a shape with **both** an authored and a generated schema, the generated one is
+authoritative — the model is the source of truth — and `backend/tests/test_contracts.py`
+asserts the two agree on field names and enum values, so a divergence fails the build
+rather than being resolved by whichever file was edited last (`CLAUDE.md` §0).
+
+For a shape with only an authored schema, the module spec remains authoritative; where they
+disagree, fix the schema.
+
+*The first run of that comparison found three real divergences — see the changelog below.*
+
+## Changelog
+
+**2026-08-14 (W2).** Generation wired up. The comparison immediately found:
+
+1. `ArtifactRef` serialised as a **JSON object**, while ID-3 makes
+   `{type}:{slug}@{version}` the canonical external string. A frontend generated from the
+   model would have expected an object where every spec, trace and audit row carries a
+   string. Fixed in the model.
+2. `common/artifact-ref.schema.json` admitted `@0`, which the parser has always rejected
+   (ID-2 starts versions at 1). The contract was looser than the code, so a client could
+   have built something the platform refuses. The pattern is now generated from
+   `model_schema.refs.REF_PATTERN`.
+3. ID-3's own example `rating_version:motor-gb@2026-04` contradicted ID-2's `version: int`
+   and the reference pattern. Corrected in `00-overview.md`.
 
 ## Conventions
 

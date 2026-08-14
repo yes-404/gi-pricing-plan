@@ -11,6 +11,8 @@ on:
       - 'uv.lock'
       - '.importlinter'
       - 'scripts/req-coverage.py'
+      - 'scripts/generate-contracts.py'
+      - 'docs/contracts/**'
       - '.github/workflows/python.yml'
   pull_request:
     paths:
@@ -21,6 +23,8 @@ on:
       - 'uv.lock'
       - '.importlinter'
       - 'scripts/req-coverage.py'
+      - 'scripts/generate-contracts.py'
+      - 'docs/contracts/**'
       - '.github/workflows/python.yml'
 
 concurrency:
@@ -95,6 +99,12 @@ jobs:
           GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_BLOB_ENDPOINT_URL: http://localhost:9000
+
+      # FR-PLAT-48 / ADR-0002: the models are the source of truth, so the committed
+      # contract follows the code. A drift fails the build rather than being noticed when
+      # a generated frontend client stops matching the API.
+      - name: Generated contracts are current
+        run: uv run python scripts/generate-contracts.py --check
 
       # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.

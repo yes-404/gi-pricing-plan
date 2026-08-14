@@ -45,7 +45,42 @@ python3 scripts/audit-docs.py    # parses every schema, rejects duplicate keys, 
 Then update the coverage tables in `docs/contracts/README.md` and
 `docs/phase-0-status.md` §3 if you added a file.
 
+## Generation (from W2, FR-PLAT-48)
+
+`uv run python scripts/generate-contracts.py` writes the generated contracts;
+`--check` fails on drift and runs in CI. Both directions are covered — a changed model with
+a stale contract, and a hand-edited contract — and both were proven by injection.
+
+**Generate validation-mode schemas, not serialization-mode.** Research F7's hazard is only
+visible in validation mode: a bare `Decimal` renders as `anyOf: [number, string]` there and
+as a plain string in serialization mode. A contract generated from the serialization schema
+looks compliant while the *request* side still accepts the lossy JSON number FR-OVR-7
+forbids. The request side is where the hazard lives.
+
+**A Python-structured type may be a flat string on the wire.** `ArtifactRef` is three
+fields in Python and `{type}:{slug}@{version}` in JSON (ID-3). That needs three pieces —
+`model_validator(mode="before")` to parse, `model_serializer` to render, and
+`__get_pydantic_json_schema__` to emit `{"type": "string", "pattern": ...}`. Miss the last
+and the generated client expects an object where every spec, trace and audit row carries a
+string.
+
+**Do not overwrite a hand-authored design document with generated output.** The Phase 0
+`openapi/gi-pricing.yaml` describes eight modules; `openapi/generated.json` describes the
+routes that exist. They live side by side until the second reaches the first.
+
+**Where a shape has both an authored and a generated schema, assert they agree** — field
+names and enum values, in a test. That is what turns `CLAUDE.md` §0 ("when code and spec
+disagree, stop and resolve it") into a mechanism. The first run found three real
+divergences, one of them a wire-format error that would have reached the frontend.
+
+**Serialise deterministically** — sorted keys, fixed indent, trailing newline. A document
+that re-serialises differently each run reports drift that is not drift, and a check that
+cries wolf gets turned off.
+
 ## Verified
+
+2026-08-14 — W2. Generation wired up and the drift check proven in both directions.
+The generated/authored comparison found three real divergences on its first run.
 
 2026-08-14 — Confirmed by authoring 31 schemas. The duplicate-key trap is not
 hypothetical: `custom-objective.schema.json` and `validation-rule.schema.json` were each

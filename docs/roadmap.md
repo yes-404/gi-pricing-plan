@@ -225,7 +225,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | WS | Scope | Status |
 |---|---|---|
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
-| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23) and the blob store (#24) landed; OpenAPI generation, Celery worker, jobs REST routes and OIDC remain |
+| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23), the blob store (#24) and generated contracts (#25) landed; Celery worker, jobs REST routes and OIDC remain |
 | **W3** | Governance write path — audit log, RBAC, approval state machine | after W2 |
 | **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
@@ -255,7 +255,7 @@ runtime half:
 | §5 item | W1 | Lands in |
 |---|---|---|
 | Artifact immutability, versioning, `parent_id` | ✔ as types (`frozen=True`, `extra="forbid"`) | persistence in W3 |
-| `model-schema` as single source of truth | ✔ as a package | generation into `docs/contracts` in W2 |
+| `model-schema` as single source of truth | ✔ as a package | ✔ **generation + CI drift check delivered in W2** (#25) |
 | Decimal money discipline | ✔ as types + helpers | rating path in Phase 2 |
 | The Job model | — only the `ProgressCallback` protocol | ✔ **delivered in W2** (#23) |
 | Content-addressed blob store | — only the `BlobRef` type | ✔ **delivered in W2** (#24) — S3 + refcounts + conservative GC |

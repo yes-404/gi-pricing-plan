@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Generate the committed contracts from the code (FR-PLAT-48, ADR-0002).
+
+`packages/model-schema` is the single source of truth for every shape crossing a boundary.
+This script is what makes that claim checkable rather than aspirational: it writes the
+OpenAPI document and the JSON Schemas from the models, and `--check` fails when the
+committed copies no longer match.
+
+Two files matter and they are not the same kind of thing:
+
+* ``docs/contracts/openapi/generated.json`` — **generated**, the API as it is today.
+* ``docs/contracts/openapi/gi-pricing.yaml`` — the Phase 0 **design stub**, describing the
+  whole intended surface. It is not overwritten. Replacing a design document that covers
+  eight modules with generated output covering the routes built so far would delete the
+  specification to make the tooling tidy. The generated file grows toward the stub as
+  routes land, and the stub retires when it is reached.
+
+Run ``scripts/generate-contracts.py`` to write, ``--check`` to verify.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import pathlib
+import sys
+from typing import Any
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "backend" / "src"))
+
+OPENAPI_PATH = ROOT / "docs" / "contracts" / "openapi" / "generated.json"
+SCHEMA_DIR = ROOT / "docs" / "contracts" / "schemas" / "generated"
+
+#: Shapes model-schema owns. Each is written to `<slug>.schema.json`; the slug matches the
+#: hand-authored Phase 0 contract where one exists, so conformance is a file-to-file
+#: comparison rather than a guess about which schema describes what.
+GENERATED_SHAPES: dict[str, str] = {
+    "job": "Job",
+    "audit-event": "AuditEvent",
+    "problem-detail": "ProblemDetail",
+    "blob-ref": "BlobRef",
+    "artifact-ref": "ArtifactRef",
+    "artifact-envelope": "ArtifactEnvelope",
+}
+
+
+def _render(document: dict[str, Any]) -> str:
+    """Serialise deterministically.
+
+    Sorted keys and a fixed indent, because the whole point is a byte comparison in CI. A
+    document that re-serialises differently on every run reports drift that is not drift,
+    and a check that cries wolf is turned off.
+    """
+    return json.dumps(document, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
+def build_openapi() -> dict[str, Any]:
+    from app.config import Environment, Settings
+    from app.main import create_app
+
+    # A fixed settings object: the document must not depend on the environment that
+    # generated it, or CI and a developer machine produce different bytes.
+    # log_level ERROR: this script writes files, and a JSON log line on stdout makes
+    # its output harder to read in CI than the result it is reporting.
+    app = create_app(
+        Settings(environment=Environment.LOCAL, version="0.1.0", log_level="ERROR")
+    )
+    document: dict[str, Any] = app.openapi()
+    return document
+
+
+def build_schemas() -> dict[str, dict[str, Any]]:
+    import model_schema
+
+    out: dict[str, dict[str, Any]] = {}
+    for slug, name in GENERATED_SHAPES.items():
+        model = getattr(model_schema, name)
+        # Validation mode, deliberately. The hand-authored contracts describe documents
+        # to be *validated*, and — more importantly — research F7's hazard only appears
+        # here: a bare `Decimal` renders as `anyOf: [number, string]` in validation mode
+        # and as a plain string in serialization mode. Generating the serialization schema
+        # would produce a contract that looks compliant while the request side accepts the
+        # lossy float FR-OVR-7 forbids.
+        out[slug] = model.model_json_schema(mode="validation")
+    return out
+
+
+def _targets() -> dict[pathlib.Path, str]:
+    files = {OPENAPI_PATH: _render(build_openapi())}
+    for slug, schema in build_schemas().items():
+        files[SCHEMA_DIR / f"{slug}.schema.json"] = _render(schema)
+    return files
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Fail instead of writing when a committed file is out of date.",
+    )
+    args = parser.parse_args()
+
+    files = _targets()
+    stale: list[pathlib.Path] = []
+
+    for path, content in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        current = path.read_text(encoding="utf-8") if path.exists() else None
+        if current == content:
+            continue
+        if args.check:
+            stale.append(path)
+        else:
+            path.write_text(content, encoding="utf-8")
+            print(f"  wrote {path.relative_to(ROOT)}")
+
+    if args.check:
+        if stale:
+            print("  FAIL: committed contracts are out of date with the models:")
+            for path in stale:
+                print(f"      {path.relative_to(ROOT)}")
+            print("\n  Run `uv run python scripts/generate-contracts.py` and commit the result.")
+            print("  ADR-0002: the models are the source of truth, so the contract follows")
+            print("  the code — never the other way round.")
+            return 1
+        print(f"  {len(files)} generated contracts match the models")
+        return 0
+
+    print(f"  {len(files)} contracts up to date")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

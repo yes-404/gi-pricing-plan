@@ -1,0 +1,426 @@
+{
+  "$defs": {
+    "ActorKind": {
+      "enum": [
+        "user",
+        "service_account",
+        "system"
+      ],
+      "title": "ActorKind",
+      "type": "string"
+    },
+    "JobError": {
+      "additionalProperties": false,
+      "description": "A typed failure (FR-PLAT-11).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.",
+      "properties": {
+        "code": {
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "detail": {
+          "additionalProperties": true,
+          "title": "Detail",
+          "type": "object"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "title": "JobError",
+      "type": "object"
+    },
+    "JobKind": {
+      "description": "The typed operation a Job performs (`07` §2, job.schema.json).",
+      "enum": [
+        "dataset.ingest",
+        "dataset.validate",
+        "dataset.profile",
+        "dataset.derive",
+        "model.fit",
+        "model.transparency",
+        "model.backtest",
+        "model.compare",
+        "objective.certify",
+        "rating.compile",
+        "rating.regression",
+        "score.batch",
+        "dislocation.run",
+        "optimisation.run",
+        "gipp.check",
+        "monitor.run",
+        "dossier.generate",
+        "export.regulatory",
+        "blob.gc"
+      ],
+      "title": "JobKind",
+      "type": "string"
+    },
+    "JobQueue": {
+      "description": "Named Celery queues with independently sized worker pools (FR-PLAT-13).",
+      "enum": [
+        "default",
+        "compute",
+        "scoring",
+        "io"
+      ],
+      "title": "JobQueue",
+      "type": "string"
+    },
+    "JobResult": {
+      "additionalProperties": false,
+      "description": "Where a succeeded Job put its output.",
+      "properties": {
+        "kind": {
+          "pattern": "^(artifact|blob|none)$",
+          "title": "Kind",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "JobResult",
+      "type": "object"
+    },
+    "JobSource": {
+      "enum": [
+        "ui",
+        "api",
+        "schedule",
+        "system"
+      ],
+      "title": "JobSource",
+      "type": "string"
+    },
+    "JobStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ],
+      "title": "JobStatus",
+      "type": "string"
+    },
+    "Principal": {
+      "additionalProperties": false,
+      "description": "An authenticated identity: User, Service Account, or the platform itself.",
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable label recorded at the time of the action.",
+          "title": "Display"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Null only for `system`, which has no principal row.",
+          "title": "Id"
+        },
+        "kind": {
+          "$ref": "#/$defs/ActorKind"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Principal",
+      "type": "object"
+    },
+    "Progress": {
+      "additionalProperties": false,
+      "description": "Structured progress (FR-PLAT-8) — a fraction, a stage label, and counters.",
+      "properties": {
+        "counters": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counters",
+          "type": "object"
+        },
+        "fraction": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Fraction",
+          "type": "number"
+        },
+        "stage": {
+          "default": "",
+          "title": "Stage",
+          "type": "string"
+        }
+      },
+      "title": "Progress",
+      "type": "object"
+    },
+    "ResourceBudget": {
+      "additionalProperties": false,
+      "description": "Exceeding it yields a typed error naming the budget, not an opaque kill (FR-PLAT-16).",
+      "properties": {
+        "memory_gb": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Gb"
+        },
+        "wall_clock_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Clock S"
+        }
+      },
+      "title": "ResourceBudget",
+      "type": "object"
+    },
+    "RetryPolicy": {
+      "description": "`infrastructure_only` retries a lost worker, never a rejected input.\n\nRetrying a deterministic failure burns a worker pool to produce the same error, and on\na job that writes artifacts it risks producing them more than once.",
+      "enum": [
+        "infrastructure_only",
+        "none"
+      ],
+      "title": "RetryPolicy",
+      "type": "string"
+    },
+    "RetryState": {
+      "additionalProperties": false,
+      "properties": {
+        "attempted": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Attempted",
+          "type": "integer"
+        },
+        "max": {
+          "default": 3,
+          "minimum": 0,
+          "title": "Max",
+          "type": "integer"
+        },
+        "policy": {
+          "$ref": "#/$defs/RetryPolicy",
+          "default": "infrastructure_only"
+        }
+      },
+      "title": "RetryState",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A tracked asynchronous unit of work, as returned by the API (`07` §4.1).",
+  "properties": {
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JobError"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "finished_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Finished At"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Idempotency Key"
+    },
+    "kind": {
+      "$ref": "#/$defs/JobKind"
+    },
+    "parameters": {
+      "additionalProperties": true,
+      "title": "Parameters",
+      "type": "object"
+    },
+    "progress": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Progress"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "queue": {
+      "$ref": "#/$defs/JobQueue"
+    },
+    "queued_at": {
+      "format": "date-time",
+      "title": "Queued At",
+      "type": "string"
+    },
+    "resource_budget": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResourceBudget"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JobResult"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "retries": {
+      "$ref": "#/$defs/RetryState"
+    },
+    "source": {
+      "$ref": "#/$defs/JobSource"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "status": {
+      "$ref": "#/$defs/JobStatus"
+    },
+    "submitted_by": {
+      "$ref": "#/$defs/Principal"
+    },
+    "trace_id": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{32}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Trace Id"
+    },
+    "workspace_id": {
+      "format": "uuid",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "workspace_id",
+    "kind",
+    "status",
+    "queue",
+    "submitted_by",
+    "source",
+    "queued_at"
+  ],
+  "title": "Job",
+  "type": "object"
+}

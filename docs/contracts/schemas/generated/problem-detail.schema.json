@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "FieldError": {
+      "additionalProperties": false,
+      "description": "One field-level failure inside a problem response.\n\nPresent so that a rejected submission can be rendered against the form that produced\nit — FR-PLAT-11 requires deterministic failures to name the offending field rather\nthan only the operation.",
+      "properties": {
+        "code": {
+          "description": "Stable machine code for this field.",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "title": "Code",
+          "type": "string"
+        },
+        "field": {
+          "description": "Dotted path to the offending field, e.g. 'spec.family'.",
+          "title": "Field",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable explanation.",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "code",
+        "message"
+      ],
+      "title": "FieldError",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An RFC 9457 problem response.\n\n`code` is the contract, not `title` or `status`: titles are prose and several\nconditions share a status, so a client that branches on anything else is branching on\nsomething the platform is free to reword.",
+  "properties": {
+    "code": {
+      "description": "Stable machine-readable code, namespaced per module and enumerated in that module's spec. This is what clients branch on.",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "title": "Code",
+      "type": "string"
+    },
+    "detail": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Explanation specific to this occurrence.",
+      "title": "Detail"
+    },
+    "errors": {
+      "default": [],
+      "description": "Field-level errors, where the failure is field-attributable.",
+      "items": {
+        "$ref": "#/$defs/FieldError"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "instance": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Path of the failing request.",
+      "title": "Instance"
+    },
+    "status": {
+      "description": "HTTP status code.",
+      "maximum": 599,
+      "minimum": 100,
+      "title": "Status",
+      "type": "integer"
+    },
+    "title": {
+      "description": "Short human-readable summary, stable per type.",
+      "title": "Title",
+      "type": "string"
+    },
+    "trace_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "OpenTelemetry trace id for this request. Appears in every log line for the request, so a support conversation starts with an identifier (FR-PLAT-42).",
+      "title": "Trace Id"
+    },
+    "type": {
+      "default": "about:blank",
+      "description": "URI identifying the problem type; documentation lives at that URI.",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "status",
+    "code"
+  ],
+  "title": "ProblemDetail",
+  "type": "object"
+}

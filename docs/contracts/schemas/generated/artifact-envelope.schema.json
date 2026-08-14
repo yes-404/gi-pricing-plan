@@ -1,0 +1,115 @@
+{
+  "additionalProperties": false,
+  "description": "Common fields for every artifact.\n\n`frozen=True` is the type-level expression of FR-OVR-1: an artifact is immutable once\nit leaves `draft`, and corrections create a new version rather than editing in place.\nMaking the model mutable \"for convenience\" would put that invariant back into review\ncomments, where it does not survive.\n\n`extra=\"forbid\"` is deliberate too — ADR-0002 makes this package the single source of\ntruth, so a field that is not declared here does not exist, and silently accepting one\nwould let a shape drift into being without a contract change.",
+  "properties": {
+    "archived_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Archived At"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "created_by": {
+      "format": "uuid",
+      "title": "Created By",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Labels",
+      "type": "object"
+    },
+    "parent_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Id"
+    },
+    "schema_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "status": {
+      "title": "Status",
+      "type": "string"
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "workspace_id": {
+      "format": "uuid",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "workspace_id",
+    "slug",
+    "version",
+    "status",
+    "created_at",
+    "created_by"
+  ],
+  "title": "ArtifactEnvelope",
+  "type": "object"
+}
