@@ -26,6 +26,11 @@ grep -o 'FR-MODEL-[0-9]*' docs/specs/02-modelling.md | sort -t- -k3 -n | tail -1
 
 To retire a requirement, mark it `SUPERSEDED BY <id>` in place. Do not delete it.
 
+**A bolded ID *is* a definition.** The audit treats `**FR-PLAT-51**` as declaring that
+requirement, so bolding an ID when merely *referring* to it elsewhere creates a phantom
+second definition and fails the build. Reference IDs in backticks or plain text; reserve
+bold for the row that defines them.
+
 A new ID may sit anywhere in the document — position is free, the number is not. Placing
 FR-MODEL-68 next to FR-MODEL-42 because they are topically related is correct.
 
@@ -57,7 +62,9 @@ encouraged; full implementations are not.
 
 ## Verified
 
-2026-08-14 — Confirmed by applying Track A research findings across four specs: appended
+2026-08-14 — Confirmed again while recording four maintainer decisions: bolding
+`**FR-PLAT-51**` in an open-questions row created a duplicate-definition failure, caught by
+the audit. Originally confirmed by applying Track A research findings across four specs: appended
 FR-MODEL-68..71, FR-RATE-56..58 and NFR-RATE-13 (400 → 408 requirements) with
 `scripts/audit-docs.py` passing before and after. The append-only rule was verified the
 hard way: an initial attempt used `FR-MODEL-42a/42b/42c`, which the audit's

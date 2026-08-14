@@ -9,20 +9,21 @@ documents alone.*
 
 ## 1. Exit criteria
 
-> **Track A closed, all three spikes run, and the Phase 1a/1b split accepted** (2026-08-14).
-> Remaining Phase 0 work is **4 decisions before Phase 1a can start** (3 more before 1b).
-> No code-answerable question is outstanding. See [`roadmap.md`](roadmap.md) §3.
+> **Phase 1a is unblocked.** Track A closed, all three spikes run, the 1a/1b split accepted,
+> and **all four Phase 1a gating decisions made** — all on 2026-08-14. Three decisions remain
+> before Phase 1b. See [`roadmap.md`](roadmap.md) §3.
 
 | Criterion | Status | Note |
 |---|---|---|
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
 | All five workflow documents complete | **done** | wf-01 … wf-05, each with failure paths and traceability |
 | Contracts drafted | **done** | 31 JSON Schemas covering every persisted artifact, + OpenAPI stub |
-| `open-questions.md` empty or explicitly deferred | **open** | 46 questions: 39 `open`, 6 `deferred`, **1 `decided`** (OQ-RATE-1, closed by Track A research). Each has options, trade-offs, and a recommendation |
+| `open-questions.md` empty or explicitly deferred | **open** | 46 questions: 33 `open`, 6 `deferred`, **7 `decided`** (OQ-RATE-1/2, OQ-OPT-6 by spike; OQ-OVR-2, OQ-PLAT-1, OQ-DATA-1/2 by decision). Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
-**Remaining before Phase 1a can start:** four decisions (OQ-OVR-2, OQ-PLAT-1, OQ-DATA-1,
-OQ-DATA-2). Nothing in the document suite blocks on further writing, and no spike remains.
+**Remaining before Phase 1a can start: nothing.** Licence (Apache-2.0), job queue (Celery),
+large-loss treatment (fit time) and ingestion mode (full snapshots) are all decided. Three
+decisions remain before Phase 1b: OQ-MODEL-1, OQ-MODEL-5, OQ-OVR-5.
 
 ---
 

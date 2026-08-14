@@ -82,6 +82,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-6** | Ingestion records, per run: rows read, rows written, rows rejected with reject reason and a sample, bytes read, duration, source fingerprint (file sha256 / query text hash + extraction timestamp), and library versions. |
 | **FR-DATA-7** | Rows that cannot be parsed at all (malformed CSV, unparseable dates in a required date column) are **rejected to a quarantine table** stored with the version rather than dropped silently. A version with rejects can still be validated; a configurable rule (`ingest.reject_rate`) fails it above a threshold. |
 | **FR-DATA-8** | Ingestion is resumable and idempotent: re-running an Ingestion Run with the same `Idempotency-Key` and unchanged source fingerprint returns the original Dataset Version rather than creating another. |
+| **FR-DATA-40** | **Ingestion produces full snapshots** (OQ-DATA-2, decided 2026-08-14). A Dataset Version is always a complete, independently validatable body of data — never a delta against a predecessor. Should an `append` mode be added later (Phase 2), it must still **materialise a complete, content-addressed version** so that FR-OVR-1 immutability and the validation model are unaffected and only the *cost* of producing it changes. Content-addressing (ID-4) already deduplicates unchanged parquet parts across versions, so most of the storage saving is available without an append mode at all. |
 
 ### 3.2 Preparation
 
