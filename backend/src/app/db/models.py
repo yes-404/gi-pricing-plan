@@ -18,6 +18,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     DateTime,
     Enum,
@@ -35,7 +36,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from model_schema import JobKind, JobQueue, JobSource, JobStatus, new_uuid7
 
-__all__ = ["AuditEventRow", "JobRow", "OutboxRow", "OutboxStatus"]
+__all__ = ["AuditEventRow", "BlobRow", "JobRow", "OutboxRow", "OutboxStatus"]
 
 
 def _pg_enum(python_enum: type[enum.Enum], name: str, *, create: bool = True) -> Enum:
@@ -228,4 +229,42 @@ class OutboxRow(Base):
             "(status = 'published') = (published_at IS NOT NULL)",
             name="published_iff_timestamped",
         ),
+    )
+
+
+class BlobRow(Base):
+    """The PostgreSQL side of a content-addressed blob (FR-PLAT-18).
+
+    The object body lives in S3 at `blob/{sha256[:2]}/{sha256}`; size, media type and
+    **reference count** live here, because a reference count is a transactional quantity
+    and S3 has no transactions.
+
+    The primary key is the digest itself. That is what makes FR-PLAT-19 free rather than
+    something to remember: writing identical content twice is a primary-key conflict, not
+    a second object.
+    """
+
+    __tablename__ = "blobs"
+
+    sha256: Mapped[str] = mapped_column(String(64), primary_key=True)
+    bytes_: Mapped[int] = mapped_column("bytes", BigInteger, nullable=False)
+    media_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    part_count: Mapped[int | None] = mapped_column(Integer)
+
+    # FR-PLAT-20. Incremented when an artifact takes a reference, decremented when one is
+    # released. GC only ever considers rows at zero — and even then, only old ones.
+    ref_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint("sha256 ~ '^[a-f0-9]{64}$'", name="sha256_is_lowercase_hex"),
+        CheckConstraint("bytes >= 0", name="bytes_non_negative"),
+        # A negative reference count means a release without a matching retain — a bug
+        # that would otherwise surface as a deleted blob some weeks later, with nothing
+        # left to explain it.
+        CheckConstraint("ref_count >= 0", name="ref_count_non_negative"),
+        Index("ix_blobs_ref_count_created_at", "ref_count", "created_at"),
     )

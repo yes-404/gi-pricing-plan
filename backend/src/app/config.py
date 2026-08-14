@@ -14,7 +14,7 @@ from __future__ import annotations
 import enum
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
@@ -107,6 +107,22 @@ class Settings(BaseSettings):
     # S3-compatible blob store: MinIO locally, any S3 in production (FR-PLAT-18).
     blob_endpoint_url: str = "http://localhost:9000"
     blob_bucket: str = "gip-blobs"
+    blob_region: str = "us-east-1"
+
+    # SecretStr, not str: R3 keeps credentials out of logs, artifacts, audit events and
+    # API responses. Pydantic renders these as `**********` in every repr and model_dump,
+    # so an accidental `log.info("settings", extra={"settings": settings})` cannot leak
+    # them — the protection is in the type rather than in remembering.
+    blob_access_key: SecretStr = SecretStr("gipricing")
+    blob_secret_key: SecretStr = SecretStr("gipricing")
+
+    # FR-PLAT-20: a blob is deletable only when nothing references it *and* it is older
+    # than this. Conservative by default — an over-eager GC deletes a dataset.
+    blob_gc_grace_days: Annotated[int, Field(ge=1, le=3650)] = 30
+
+    # FR-PLAT-21: uploads above this size use presigned multipart, so dataset files do not
+    # transit the API process.
+    blob_multipart_threshold_mb: Annotated[int, Field(ge=1, le=1024)] = 64
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 

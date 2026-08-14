@@ -49,6 +49,20 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      # Deduplication is a primary-key behaviour and presigning is a signature behaviour.
+      # Neither is testable against a double, so CI runs a real S3-compatible store.
+      minio:
+        image: bitnami/minio:latest
+        env:
+          MINIO_ROOT_USER: gipricing
+          MINIO_ROOT_PASSWORD: gipricing
+        ports: ['9000:9000']
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -77,6 +91,7 @@ jobs:
         env:
           GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+          GIP_BLOB_ENDPOINT_URL: http://localhost:9000
 
       # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.

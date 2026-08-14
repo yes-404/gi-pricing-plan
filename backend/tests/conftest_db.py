@@ -22,6 +22,7 @@ from sqlalchemy import text
 
 from app.config import Settings
 from app.db.session import Database
+from app.platform.blobs import BlobStore
 from model_schema import ActorKind, Principal, new_uuid7
 
 DEFAULT_TEST_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
@@ -61,6 +62,21 @@ async def database() -> AsyncIterator[Database]:
 
     yield db
     await db.dispose()
+
+
+@pytest_asyncio.fixture
+async def blob_store() -> AsyncIterator[BlobStore]:
+    """A blob store against the compose MinIO, with its bucket ensured.
+
+    Skips when MinIO is unreachable, for the same reason the database fixture does — and
+    CI runs a MinIO service so the skip never hides a regression there.
+    """
+    store = BlobStore(Settings(blob_bucket=os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")))
+    try:
+        await store.ensure_bucket()
+    except Exception as exc:
+        pytest.skip(f"MinIO not reachable: {type(exc).__name__}")
+    yield store
 
 
 @pytest.fixture

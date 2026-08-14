@@ -25,6 +25,9 @@ dev = [
     "pytest-asyncio>=0.24",
     # Integration tests run against the real Postgres in deploy/docker-compose.yml.
     "psycopg[binary]>=3.2",
+    # boto3 ships no py.typed marker. Stubs rather than a blanket mypy override: the S3
+    # call signatures are precisely what --strict should be checking in this module.
+    "boto3-stubs[s3]>=1.35",
 ]
 
 # ---- Ruff: CLAUDE.md §3, line length 100 ----

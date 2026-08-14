@@ -25,8 +25,6 @@ from model_schema import (
     new_uuid7,
 )
 
-pytestmark = pytest.mark.asyncio
-
 
 async def _record(session, workspace_id, principal, action="job.submitted", **kw):
     return await audit.record(
