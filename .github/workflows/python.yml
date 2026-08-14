@@ -31,6 +31,24 @@ jobs:
   check:
     name: ruff · mypy · import-linter · pytest
     runs-on: ubuntu-latest
+    # The audit and outbox invariants are PostgreSQL behaviours — advisory locks, partial
+    # unique indexes, FOR UPDATE SKIP LOCKED, privilege grants, triggers. Without a real
+    # database those tests skip, and a skipped test for an invariant that cannot be
+    # retrofitted is indistinguishable from no test at all.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gipricing
+          POSTGRES_PASSWORD: gipricing
+          POSTGRES_DB: gipricing
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U gipricing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -48,8 +66,17 @@ jobs:
       - name: Architecture contracts (ADR-0001 / ADR-0002 / DEP-3)
         run: uv run lint-imports
 
+      # FR-PLAT-35: migrations are an explicit step, never run on application start.
+      - name: Migrate
+        run: uv run alembic upgrade head
+        env:
+          GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+
       - name: Tests
         run: uv run pytest -q
+        env:
+          GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
+          GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
 
       # skills-map §9.1: requirement coverage is reported, so drift between the
       # specification and what is actually tested is visible rather than assumed.

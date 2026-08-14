@@ -5,23 +5,68 @@ Depends on Pydantic and nothing else. No SQLAlchemy, no FastAPI, no Polars — t
 this package un-generatable and un-shareable.
 """
 
+from model_schema.audit import (
+    AuditEvent,
+    AuditEventCore,
+    canonical_payload,
+    compute_event_hash,
+)
 from model_schema.envelope import ArtifactEnvelope
+from model_schema.ids import new_uuid7, uuid7_timestamp_ms
+from model_schema.jobs import (
+    TERMINAL_STATUSES,
+    VALID_TRANSITIONS,
+    ActorKind,
+    Job,
+    JobError,
+    JobKind,
+    JobQueue,
+    JobResult,
+    JobSource,
+    JobStatus,
+    Principal,
+    Progress,
+    ResourceBudget,
+    RetryPolicy,
+    RetryState,
+)
 from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
 from model_schema.problem import FieldError, ProblemDetail
 from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
 
 __all__ = [
     "ARTIFACT_TYPES",
+    "TERMINAL_STATUSES",
+    "VALID_TRANSITIONS",
+    "ActorKind",
     "ArtifactEnvelope",
     "ArtifactRef",
+    "AuditEvent",
+    "AuditEventCore",
     "BlobRef",
     "Currency",
     "DecimalStr",
     "FieldError",
+    "Job",
+    "JobError",
+    "JobKind",
+    "JobQueue",
+    "JobResult",
+    "JobSource",
+    "JobStatus",
     "MoneyMinor",
+    "Principal",
     "ProblemDetail",
+    "Progress",
     "Relativity",
+    "ResourceBudget",
+    "RetryPolicy",
+    "RetryState",
     "Slug",
     "apply_factor",
+    "canonical_payload",
+    "compute_event_hash",
+    "new_uuid7",
     "to_minor",
+    "uuid7_timestamp_ms",
 ]

@@ -1,4 +1,8 @@
-"""Shared fixtures for the backend suite."""
+"""Shared fixtures for the backend suite.
+
+Database fixtures live in `conftest_db.py` and are re-exported here so pytest collects
+them for every test module without each one importing them.
+"""
 
 from __future__ import annotations
 
@@ -34,3 +38,11 @@ def client(app: FastAPI) -> TestClient:
 def _isolate_probes() -> None:
     """Readiness probes are process-global; a leak between tests is a flaky suite."""
     clear_probes()
+
+
+# Re-exported so pytest registers them as fixtures for the whole package.
+from backend.tests.conftest_db import (  # noqa: E402,F401
+    database,
+    principal,
+    workspace_id,
+)

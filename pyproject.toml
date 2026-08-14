@@ -23,6 +23,8 @@ dev = [
     # FastAPI's TestClient is an httpx transport; without httpx it imports but cannot run.
     "httpx>=0.27",
     "pytest-asyncio>=0.24",
+    # Integration tests run against the real Postgres in deploy/docker-compose.yml.
+    "psycopg[binary]>=3.2",
 ]
 
 # ---- Ruff: CLAUDE.md §3, line length 100 ----
@@ -44,6 +46,10 @@ ignore = ["ANN401"]
 # names it (07 §5.2), and cancellation is a control-flow signal rather than a failure.
 # Renaming would put the code and the specification out of step to satisfy a convention.
 "packages/pricing-core/src/pricing_core/progress.py" = ["N818"]
+# Alembic writes the bodies of migration files. Reformatting generated output to satisfy a
+# line-length rule makes every future autogenerate produce a diff against our hand-edits.
+# The hand-written sections are held to the rest of the rules.
+"backend/migrations/versions/*.py" = ["E501"]
 
 # ---- mypy --strict on packages/ (CLAUDE.md §3) ----
 [tool.mypy]
