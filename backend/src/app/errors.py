@@ -22,6 +22,7 @@ from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
 
 __all__ = [
+    "DATA_ERROR_CODES",
     "GOVERNANCE_ERROR_CODES",
     "PLATFORM_ERROR_CODES",
     "PlatformError",
@@ -56,6 +57,27 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
     }
 )
 
+#: Error codes owned by `01 — Data Management` (§5.1).
+DATA_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {
+        "DATASET_NOT_VALIDATED",
+        "DATASET_VERSION_IMMUTABLE",
+        "SCHEMA_INFERENCE_CONFLICT",
+        "COLUMN_NAME_COLLISION",
+        "DIRECT_IDENTIFIER_PRESENT",
+        "VALIDATION_HAS_FAILURES",
+        "WARN_NOT_ACKNOWLEDGED",
+        "ACKNOWLEDGE_FORBIDDEN_ROLE",
+        "RULE_NOT_APPROVED",
+        "RULE_SEVERITY_DOWNGRADE_FORBIDDEN",
+        "RULE_TIMEOUT",
+        "REFERENCE_INTERVAL_OVERLAP",
+        "REFERENCE_VERSION_NOT_PINNED",
+        "SOURCE_UNREACHABLE",
+        "REJECT_RATE_EXCEEDED",
+    }
+)
+
 #: Error codes owned by `06 — Governance` (§5.1).
 GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {
@@ -81,7 +103,7 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
 )
 
 _KNOWN_CODES: Final[frozenset[str]] = (
-    PLATFORM_ERROR_CODES | GOVERNANCE_ERROR_CODES | _GENERIC_ERROR_CODES
+    PLATFORM_ERROR_CODES | GOVERNANCE_ERROR_CODES | DATA_ERROR_CODES | _GENERIC_ERROR_CODES
 )
 
 

@@ -13,7 +13,7 @@ either a job exists, its audit event exists, and its publish intent exists — o
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +21,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     Enum,
     Identity,
@@ -45,6 +46,8 @@ __all__ = [
     "ApprovalRequestRow",
     "AuditEventRow",
     "BlobRow",
+    "DatasetRow",
+    "DatasetVersionRow",
     "JobLogRow",
     "JobRow",
     "OutboxRow",
@@ -52,6 +55,7 @@ __all__ = [
     "RoleAssignmentRow",
     "RoleRow",
     "ServiceAccountRow",
+    "SourceRow",
     "UserRow",
     "WorkspaceMemberRow",
     "WorkspaceSettingRow",
@@ -637,4 +641,117 @@ class ApprovalPolicyRow(Base):
     policy: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class SourceRow(Base):
+    """Where a Dataset's data comes from (FR-DATA-1).
+
+    `credentials_secret_ref` holds a `secret:<slug>` **reference**, never a value
+    (`07` FR-PLAT-25/26). The column is deliberately named for what it stores, so a future
+    reader cannot mistake it for somewhere a password may go.
+    """
+
+    __tablename__ = "sources"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    config: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    credentials_secret_ref: Mapped[str | None] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_sources_workspace_slug"),
+        # R3: a secret reference, not a secret. `secret:` is the only accepted form.
+        CheckConstraint(
+            "credentials_secret_ref IS NULL OR credentials_secret_ref LIKE 'secret:%'",
+            name="credentials_are_referenced_not_stored",
+        ),
+    )
+
+
+class DatasetRow(Base):
+    """A named body of data with versions (`01` §4.1)."""
+
+    __tablename__ = "datasets"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_datasets_workspace_slug"),
+    )
+
+
+class DatasetVersionRow(Base):
+    """An immutable snapshot (`01` §4.2, FR-DATA-2, FR-DATA-40).
+
+    Two constraints carry `01` §1.3 — *a Model may only be fitted on a `validated`
+    version* — down to where it cannot be argued with:
+
+    * `version` is unique per dataset and never reused (ID-2), so a reference to `@12`
+      means one body of data for ever.
+    * `validated` requires `validation_report_id`. The report's *contents* are checked by
+      the service; that it exists at all is checked here, because a validated version with
+      no report is the state that would let the gate be skipped by an UPDATE.
+    """
+
+    __tablename__ = "dataset_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False, default="ingested")
+
+    tables: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    source_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    source_fingerprint: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    ingestion_run_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    preparation_recipe_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    period_from: Mapped[date | None] = mapped_column(Date)
+    period_to: Mapped[date | None] = mapped_column(Date)
+    totals: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    validation_report_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    profile_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    derived_from: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    library_versions: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("dataset_id", "version", name="uq_dataset_versions_dataset_version"),
+        Index("ix_dataset_versions_workspace_status", "workspace_id", "status"),
+        CheckConstraint("version >= 1", name="version_starts_at_one"),
+        CheckConstraint(
+            "status <> 'validated' OR validation_report_id IS NOT NULL",
+            name="validated_names_its_report",
+        ),
+        CheckConstraint(
+            "kind <> 'derived' OR derived_from IS NOT NULL",
+            name="derived_names_its_parent",
+        ),
+        CheckConstraint(
+            "period_to IS NULL OR period_from IS NULL OR period_to >= period_from",
+            name="period_is_ordered",
+        ),
     )
