@@ -235,6 +235,12 @@ deliverable re-verified against its row above, the gate run locally, each new ch
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered
 stated explicitly. A closure record without those is an assertion, not evidence.
 
+*W1 was closed before `CLAUDE.md` §13 required a scope derivation (step 1), so the record
+below lists deliverables without an independent count of the requirements W1's areas
+contain. W1 delivered foundations rather than a requirement set, so the omission is small —
+but it is an omission, and a re-audit under the current standard would be the way to
+retire it.*
+
 **W1 closure evidence** (re-verified 2026-08-14, and again on the rebuilt instance the same
 day — `uv` had to be reinstalled durably, and the gate was re-run from a clean sync):
 

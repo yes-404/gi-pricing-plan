@@ -362,6 +362,10 @@ uv sync --all-packages --dev
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
 python3 scripts/audit-docs.py                # 14 checks over docs/
 uv run python scripts/req-coverage.py        # requirement traceability
+uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
+
+# Closure audit (§13 step 1): expected scope from the specs, then evidence.
+uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
 
 # Local infrastructure (deploy/README.md has the credentials and ports).
 docker compose -f deploy/docker-compose.yml up -d --wait
@@ -424,24 +428,63 @@ repository does not have.
 The procedure is in `.claude/skills/close-workstream`; this section is the standard it
 implements.
 
-### 1. Deliverables — audited against the definition, not memory
+### 1. Derive the expected scope from the specification — before looking at anything built
+
+**Enumerate what the specification requires, then search for evidence of each item.** In
+that order, and never the reverse.
+
+Auditing from what was built can only confirm what was built. It is silent about everything
+the workstream was supposed to cover and did not, which is precisely the part a closure
+record exists to state. The same applies to recollection: an audit that begins "I
+implemented jobs, blobs and settings" has already chosen its own answer.
+
+```bash
+# Sections a workstream's named areas cover, plus any individual requirements it owns.
+uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 \
+    --extra FR-PLAT-47,FR-PLAT-48
+```
+
+Both of its inputs are documents — requirements from `docs/specs/`, evidence from
+`@pytest.mark.req` markers — so the result does not depend on who runs it. It exits non-zero
+while any in-scope requirement lacks evidence.
+
+**It is a closure tool, not a CI gate.** Most of the 417 requirements belong to phases that
+have not started, so running it unscoped will always fail; that is the correct behaviour for
+an audit and the wrong behaviour for a build.
+
+**Reconcile the derived count against the roadmap's claim; a disagreement is itself a
+finding.** W2's row said "~35 of 60 `PLAT` requirements" and the sections it names total
+exactly 35 — but the spec holds 61, not 60, because FR-PLAT-51 was appended after that row
+was written.
+
+**Every requirement without evidence needs a verdict**, one of: delivered but untested,
+deferred with an owner, reassigned to another workstream, or not started. Silence is not
+one of them. An independent audit of W2 found six unevidenced in-scope requirements where
+the roadmap acknowledged two, and four of the six were mentioned nowhere in the
+documentation at all.
+
+**A marker is a claim, not a proof.** It says a test asserts *something* about a
+requirement, not that it covers it. Read the ones that matter.
+
+### 2. Deliverables — audited against the definition, not memory
 
 Re-read the workstream's row in `roadmap.md` §6 and check each named deliverable **exists
 and works**. Those are different claims: W1's compose file existed for days before anyone
 ran it, and NFR-PLAT-4 was unverified the whole time.
 
-### 2. Gates — all green, run locally with the real toolchain
+### 3. Gates — all green, run locally with the real toolchain
 
 ```bash
 uv sync --all-packages --dev                 # see §11 — a plain `uv sync` is not enough
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
+uv run python scripts/generate-contracts.py --check
 python3 scripts/audit-docs.py && uv run python scripts/req-coverage.py
 ```
 
 Run them **locally**, not merely "CI passed". CI proves the runner; local proves the result
 is reproducible and that you can debug it.
 
-### 3. Enforcement is proven, not assumed
+### 4. Enforcement is proven, not assumed
 
 Any check the workstream introduces must be shown to **fail on deliberately broken input**
 before it is trusted. A silently-passing check is worse than no check, because it is
@@ -451,26 +494,38 @@ mistaken for coverage.
 was comma-separated on one line, so the parser split it into characters — and it reported
 success the whole time, while the contract enforcing ADR-0001 checked nothing.
 
-### 4. NFRs — measured, not asserted
+**A generated artifact matching its source proves neither is correct.** W2's contract drift
+check passed while the published OpenAPI advertised an error model the platform never emits
+and omitted the one it does — the contract faithfully described the code, and both were
+wrong together. Check generated output against the **requirement**, not only against the
+thing it was generated from.
+
+### 5. NFRs — measured, not asserted
 
 If the workstream claims an NFR, record **the measurement and the budget**: "21 s cold
 start against NFR-PLAT-4's 300 s", never "starts quickly". An unmeasured NFR is an opinion.
 
-### 5. Scope honesty — state what was *not* delivered
+### 6. Scope honesty — state what was *not* delivered
 
-Especially against §5 of the roadmap, the retrofit list. Say which items landed, which are
+Every requirement from step 1 that has no evidence appears here with its verdict and its
+owner. So does §5 of the roadmap, the retrofit list: which items landed, which are
 type-level only, and which workstream owns the remainder.
+
+"Partial" is an acceptable verdict and often the honest one — but say *how* it is partial.
+FR-PLAT-14's retention window is a declared setting with the 13-month floor enforced, while
+nothing purges beyond it; the floor therefore holds by default rather than by design, and
+recording only "delivered" would have hidden that.
 
 **"W1 closed" must not be readable as "the retrofit list is handled."** It was not, and
 that list is the one thing this project cannot fix cheaply later.
 
-### 6. Documents updated in the same PR
+### 7. Documents updated in the same PR
 
 The roadmap status table and closure evidence; `CLAUDE.md` §2's layout marks; and any spec
 the implementation proved wrong — when code and spec disagree, resolve it rather than
 quietly changing one (§0).
 
-### 7. Repository clean
+### 8. Repository clean
 
 No open PRs for the workstream; no tracked build artifacts; branch deleted after merge —
 **verify by content** (`git diff --stat main <branch>`), because squash-merge rewrites

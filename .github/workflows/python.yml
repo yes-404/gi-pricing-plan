@@ -10,8 +10,10 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - '.importlinter'
-      - 'scripts/req-coverage.py'
-      - 'scripts/generate-contracts.py'
+      # scripts/** rather than named files: `ruff check .` and mypy cover this directory,
+      # so a new script that does not match the filter is linted by nothing. Adding
+      # scope-audit.py triggered only the docs workflow, which is how this was noticed.
+      - 'scripts/**'
       - 'docs/contracts/**'
       - '.github/workflows/python.yml'
   pull_request:
@@ -22,8 +24,10 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - '.importlinter'
-      - 'scripts/req-coverage.py'
-      - 'scripts/generate-contracts.py'
+      # scripts/** rather than named files: `ruff check .` and mypy cover this directory,
+      # so a new script that does not match the filter is linted by nothing. Adding
+      # scope-audit.py triggered only the docs workflow, which is how this was noticed.
+      - 'scripts/**'
       - 'docs/contracts/**'
       - '.github/workflows/python.yml'
 
