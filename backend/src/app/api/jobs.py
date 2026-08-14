@@ -42,6 +42,7 @@ from app.api.pagination import (
     decode_int_cursor,
     encode_cursor,
 )
+from app.api.responses import problems
 from app.db.models import JobLogRow, JobRow
 from app.db.session import Database
 from app.errors import PlatformError
@@ -63,7 +64,14 @@ def _database(request: Request) -> Database:
     return database
 
 
+def _stall_seconds(request: Request) -> int:
+    """The window after which a silent running Job is reported as stalled (NFR-PLAT-3)."""
+    seconds: int = request.app.state.settings.job_stall_seconds
+    return seconds
+
+
 DatabaseDep = Annotated[Database, Depends(_database)]
+StallDep = Annotated[int, Depends(_stall_seconds)]
 
 
 class JobLogLine(BaseModel):
@@ -90,10 +98,11 @@ async def _load_scoped(database: Database, job_id: UUID, caller: Caller) -> JobR
     return row
 
 
-@router.get("", summary="List jobs")
+@router.get("", summary="List jobs", responses=problems(400, 401, 403, 422))
 async def list_jobs(
     caller: CallerDep,
     database: DatabaseDep,
+    stall_seconds: StallDep,
     status_filter: Annotated[JobStatus | None, Query(alias="status")] = None,
     kind: JobKind | None = None,
     submitted_by: UUID | None = None,
@@ -135,18 +144,32 @@ async def list_jobs(
     page_rows = rows[:limit]
 
     return Page[Job](
-        items=[job_service.to_schema(row) for row in page_rows],
+        items=[
+            job_service.to_schema(row, stall_seconds=stall_seconds) for row in page_rows
+        ],
         next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
         total_estimate=total,
     )
 
 
-@router.get("/{job_id}", summary="Job detail with progress and result")
-async def get_job(job_id: UUID, caller: CallerDep, database: DatabaseDep) -> Job:
-    return job_service.to_schema(await _load_scoped(database, job_id, caller))
+@router.get(
+    "/{job_id}",
+    summary="Job detail with progress and result",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_job(
+    job_id: UUID, caller: CallerDep, database: DatabaseDep, stall_seconds: StallDep
+) -> Job:
+    return job_service.to_schema(
+        await _load_scoped(database, job_id, caller), stall_seconds=stall_seconds
+    )
 
 
-@router.get("/{job_id}/logs", summary="Captured log lines (FR-PLAT-10)")
+@router.get(
+    "/{job_id}/logs",
+    summary="Captured log lines (FR-PLAT-10)",
+    responses=problems(400, 401, 403, 404, 422),
+)
 async def get_job_logs(
     job_id: UUID,
     caller: CallerDep,
@@ -207,6 +230,7 @@ async def get_job_logs(
     "/{job_id}/cancel",
     summary="Request cooperative cancellation (FR-PLAT-9)",
     status_code=status.HTTP_200_OK,
+    responses=problems(401, 403, 404, 409, 422),
 )
 async def cancel_job(job_id: UUID, caller: CallerDep, database: DatabaseDep) -> Job:
     """Cancel a Job.
@@ -223,7 +247,11 @@ async def cancel_job(job_id: UUID, caller: CallerDep, database: DatabaseDep) -> 
         )
 
 
-@router.get("/{job_id}/events", summary="SSE stream of progress updates")
+@router.get(
+    "/{job_id}/events",
+    summary="SSE stream of progress updates",
+    responses=problems(401, 403, 404, 422),
+)
 async def stream_job_events(
     job_id: UUID,
     caller: CallerDep,

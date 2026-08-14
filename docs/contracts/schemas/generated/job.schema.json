@@ -337,6 +337,20 @@
       ],
       "default": null
     },
+    "progress_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Time of the last progress report (NFR-PLAT-3).",
+      "title": "Progress At"
+    },
     "queue": {
       "$ref": "#/$defs/JobQueue"
     },
@@ -372,6 +386,12 @@
     },
     "source": {
       "$ref": "#/$defs/JobSource"
+    },
+    "stalled": {
+      "default": false,
+      "description": "A running Job that has reported no progress within the configured window. Derived on read, never stored — a stored flag needs a sweeper to clear it and is wrong between sweeps (NFR-PLAT-3).",
+      "title": "Stalled",
+      "type": "boolean"
     },
     "started_at": {
       "anyOf": [

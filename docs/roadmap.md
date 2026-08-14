@@ -225,8 +225,8 @@ drives the version to `validated` — with the report and profile visible. This 
 | WS | Scope | Status |
 |---|---|---|
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
-| **W2** | Platform core — jobs, blobs, settings, auth, health, tracing | **in progress** — service foundations (#22), persistence (#23), the blob store (#24), generated contracts (#25), the Celery worker (#26), the jobs REST routes (#27) and OIDC with service accounts (#28) landed. **Not delivered:** the local development identity provider in the compose stack (FR-PLAT-1's last clause) and rate limiting (FR-PLAT-49); dev-header identity covers local work and is refused outside `local`/`dev` |
-| **W3** | Governance write path — audit log, RBAC, approval state machine | after W2 |
+| ~~**W2**~~ ✔ | Platform core — jobs, blobs, settings, auth, health, tracing | ✔ **closed 2026-08-14** — see the closure record below |
+| **W3** | Governance write path — audit log, RBAC, approval state machine | next |
 | **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
 
@@ -271,6 +271,73 @@ is not; W1 made it *cheap*, which was its job.
 **Exit:** a freMTPL2 dataset version reaches `validated`, including at least one deliberate
 round through the failure loop. The retrofit list (§5) is fully in place by the end of 1a —
 that is the phase's other, quieter deliverable.
+
+**W2 closure evidence** (2026-08-14). Closed under `CLAUDE.md` §13; the scope below was
+re-derived from `07` §3 rather than from the build log, after an independent audit found
+the earlier "not delivered" statement incomplete.
+
+**Scope.** W2's named areas (`07` §3.1 auth, §3.2 jobs, §3.3 storage, §3.7 observability,
+§3.8 configuration) plus FR-PLAT-47/48 total **35** requirements — which is what the
+roadmap's "~35 of 60" meant. FR-PLAT-28..31 belong to W14 and FR-PLAT-37 to W7.
+
+| Deliverable (roadmap §6) | Evidence |
+|---|---|
+| Jobs | Lifecycle, progress, cooperative cancellation, idempotency, queue routing; 5 REST endpoints |
+| Blobs | Content-addressed S3 store, reference counts, conservative dry-run-by-default GC |
+| Settings | Three-layer resolution with sources (`07` §4.4), typed registry, feature flags |
+| Auth | OIDC verification, service accounts with rotatable keys, workspace membership |
+| Health | `/healthz` / `/readyz` / `/version`, concurrent probes with per-probe timeout |
+| Tracing | W3C `trace_id` from edge to worker, in every log line, problem response and audit event |
+| Contracts | OpenAPI + JSON Schema generated from the models, CI fails on drift |
+
+**Gate (local):** ruff clean · mypy --strict on 49 files · import-linter 3 kept / 0 broken ·
+**246 tests** · generated contracts current · docs audit 14/14 · req-coverage 47 of 417.
+
+**Enforcement proven, not assumed** (§13 rule 3). Each check was shown to fail on
+deliberately broken input: the ADR-0001 and DEP-3 import contracts (injected `import
+fastapi` and `import app`); the contract drift check (both a changed model with a stale
+contract and a hand-edited contract); `req-coverage` against a bogus requirement id in a
+backend test; and the append-only audit table against `UPDATE`, `DELETE` and `TRUNCATE`.
+
+**NFRs measured** (§13 rule 4):
+
+| NFR | Budget | Measured |
+|---|---|---|
+| NFR-PLAT-2 — submit to pickup | 5 s | **1.24 s max** over 6 runs (median 1.02 s) against the compose stack with worker and beat running. The ~1 s floor is the relay interval. |
+| NFR-PLAT-3 — progress interval | 5 s | **1.02 s max** gap between persisted updates over a 12 s run |
+| NFR-PLAT-7 — no secrets in logs or dumps | — | asserted per credential in `test_no_credential_survives_a_settings_dump` |
+
+*Method note.* NFR-PLAT-2 measures submit until the Job **leaves `queued`**. No job handler
+exists yet — they arrive with W4 and W5 — so the worker dispatches and finds none. That
+path is submit → running plus the dispatch check, making the figure an upper bound on the
+requirement, not a proxy for it.
+
+**Requirement coverage: 32 of 35 in-scope requirements carry test evidence (91 %).**
+
+**What W2 did not deliver.** Stated explicitly, because "W2 closed" must not be read as
+"`07` is done":
+
+| Requirement | Status | Owner |
+|---|---|---|
+| FR-PLAT-15 — Dagster schedules and sensors | not started; blocked on **OQ-PLAT-2**, which is deferred | whichever phase resolves OQ-PLAT-2 |
+| FR-PLAT-23 — backups, PITR, tested restore | not started — an operational capability, not application code | **deployment, Phase 2** |
+| FR-PLAT-40 — Prometheus `/metrics` | not started | **W3 or an observability slice** |
+| FR-PLAT-14 — 13-month job retention | *partial*: the window is a declared setting with the 13-month floor enforced, but no sweeper purges beyond it. Nothing deletes job history today, so the floor holds by default rather than by design | W3 |
+| FR-PLAT-1 last clause — local development identity provider in the compose stack | not delivered; dev-header identity covers local work and is refused outside `local`/`dev` | deployment |
+| `00` §5.4 `If-Match` optimistic concurrency | **not applicable to W2** — no W2 resource is a versioned entity. `CONFLICT_STALE_WRITE` is not yet in the error registry | first workstream with versioned artifacts (**W4**) |
+| `00` §5.4 `Idempotency-Key` header | job submission is idempotent at the service layer (FR-PLAT-12), but no HTTP endpoint creates a Job — by design, since Jobs are created by domain actions | **W4** |
+| Out of W2 scope entirely | FR-PLAT-24..27 secrets backend, 28..31 environments (W14), 32..36 deployment, 37 demo seed (W7), 49 rate limiting, 50 webhooks | as noted |
+
+Nine of the ten `PLAT` NFRs remain unmeasured beyond the three above; NFR-PLAT-4 was
+measured in W1 (21 s against 300 s).
+
+**An audit finding worth recording.** The published contract described only success
+shapes: a client generated from it was typed against FastAPI's default
+`HTTPValidationError` — which the platform never emits — and had no type for the RFC 9457
+problem it does. The drift check could not catch it, because the contract faithfully
+described the code and both were wrong together. A generated artifact matching its source
+is not the same as either being correct, and the fix (`app/api/responses.py`) is now
+guarded by tests asserting the contract's error model directly.
 
 ### Phase 1b — Modelling Workbench
 

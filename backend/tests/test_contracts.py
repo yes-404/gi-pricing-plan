@@ -216,3 +216,52 @@ def test_the_phase_zero_design_stub_is_not_overwritten() -> None:
     stub = ROOT / "docs" / "contracts" / "openapi" / "gi-pricing.yaml"
     assert stub.exists()
     assert stub.stat().st_size > 10_000
+
+
+# -- the error model in the published contract (found missing by audit, 2026-08-14) --------
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_the_contract_publishes_the_problem_shape() -> None:
+    """The audit finding this guards against.
+
+    The contract described only success shapes, so a client generated from it was typed
+    against FastAPI's default `HTTPValidationError` — a shape the platform replaced and
+    never emits — and had no type for the RFC 9457 problem it does. The drift check could
+    not catch it: the contract faithfully described the code, and both were wrong.
+    """
+    schemas = _load(OPENAPI)["components"]["schemas"]
+    assert "ProblemDetail" in schemas
+    assert "FieldError" in schemas
+    assert "HTTPValidationError" not in schemas
+    assert "ValidationError" not in schemas
+
+
+@pytest.mark.req("FR-PLAT-47")
+def test_every_operation_documents_the_problems_it_returns() -> None:
+    """A client cannot handle a status the contract does not mention."""
+    paths = _load(OPENAPI)["paths"]
+    exempt = {"/healthz", "/readyz", "/version"}
+    for path, operations in paths.items():
+        if path in exempt:
+            continue
+        for method, operation in operations.items():
+            documented = set(operation["responses"])
+            assert "401" in documented, f"{method.upper()} {path}"
+            assert documented - {"200", "201"}, f"{method.upper()} {path}"
+
+
+@pytest.mark.req("FR-PLAT-47")
+def test_problem_responses_advertise_the_rfc_9457_media_type() -> None:
+    paths = _load(OPENAPI)["paths"]
+    cancel = paths["/api/v1/jobs/{job_id}/cancel"]["post"]["responses"]["409"]
+    assert "application/problem+json" in cancel["content"]
+    assert (
+        cancel["content"]["application/problem+json"]["schema"]["$ref"]
+        == "#/components/schemas/ProblemDetail"
+    )
+
+
+@pytest.mark.req("FR-PLAT-47")
+def test_the_settings_endpoints_are_published() -> None:
+    assert "/api/v1/settings" in _load(OPENAPI)["paths"]

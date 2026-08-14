@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import Caller, require_caller
+from app.api.responses import problems
 from app.auth.api_keys import generate_key
 from app.db.models import ApiKeyRow, ServiceAccountRow
 from app.db.session import Database
@@ -134,7 +135,12 @@ def _check_permissions(requested: list[str]) -> None:
         )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, summary="Create a service account")
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a service account",
+    responses=problems(401, 403, 409, 422),
+)
 async def create_service_account(
     body: CreateServiceAccount, caller: CallerDep, database: DatabaseDep
 ) -> CreatedServiceAccount:
@@ -201,7 +207,11 @@ async def create_service_account(
     return CreatedServiceAccount(account=view, key=generated.value)
 
 
-@router.post("/{account_id}/rotate", summary="Rotate the key with an overlap window")
+@router.post(
+    "/{account_id}/rotate",
+    summary="Rotate the key with an overlap window",
+    responses=problems(401, 403, 404, 422),
+)
 async def rotate_key(
     account_id: UUID,
     caller: CallerDep,
@@ -264,6 +274,7 @@ async def rotate_key(
     "/{account_id}/keys/{prefix}",
     status_code=status.HTTP_200_OK,
     summary="Revoke a key immediately",
+    responses=problems(401, 403, 404, 422),
 )
 async def revoke_key(
     account_id: UUID, prefix: str, caller: CallerDep, database: DatabaseDep

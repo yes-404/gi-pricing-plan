@@ -48,6 +48,7 @@ __all__ = [
     "ServiceAccountRow",
     "UserRow",
     "WorkspaceMemberRow",
+    "WorkspaceSettingRow",
 ]
 
 
@@ -439,4 +440,33 @@ class WorkspaceMemberRow(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "workspace_id", name="uq_workspace_members_user_workspace"),
         Index("ix_workspace_members_user_id", "user_id"),
+    )
+
+
+class WorkspaceSettingRow(Base):
+    """A workspace-level override for one setting (FR-PLAT-43, FR-PLAT-45).
+
+    The middle layer of the precedence chain: an environment variable still wins, and the
+    platform default still applies when no row exists. Only overrides are stored — writing
+    a row for every setting in every workspace would make the platform default
+    unchangeable in practice, because nothing would ever fall through to it.
+    """
+
+    __tablename__ = "workspace_settings"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    # JSONB rather than text: a setting is typed (FR-PLAT-44), and storing 0.10 as "0.10"
+    # would put the parsing — and the chance of parsing it differently in two places — on
+    # every reader.
+    value: Mapped[Any] = mapped_column(JSONB, nullable=False)
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "key", name="uq_workspace_settings_workspace_key"),
     )
