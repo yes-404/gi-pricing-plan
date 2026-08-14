@@ -35,6 +35,26 @@ fix the schema.
   implementers should not. Where an invariant *can* be expressed in schema
   (`if`/`then`, `required`, `pattern`), it is, and it does not appear in `invariants`.
 
+## Two findings that affect generation (research 2026-08-14)
+
+**1 — The generated shape differs from these drafts.** Pydantic emits tagged unions as
+`oneOf` + `discriminator` (`{"propertyName": ..., "mapping": {...}}`), verified against
+Pydantic 2.13.4. These hand-drafted schemas express variants as `allOf` + `if`/`then`.
+Both are valid JSON Schema and both validate the same documents, but **the drafted form is
+not the target** — when generation replaces these files in Phase 1, expect the shape to
+change and do not "fix" it back. A `Literal` covering two tags maps both onto one branch,
+which is exactly what `model-spec.schema.json` needs for `xgboost`/`lightgbm`.
+
+**2 — `Decimal` generates a permissive union, and that breaks FR-OVR-7.** Pydantic renders
+a `Decimal` field as `anyOf: [{"type": "number"}, {"type": "string", "pattern": ...}]`.
+Serialisation is safe — `model_dump_json()` emits an exact string — but the *schema* also
+admits `{"type": "number"}`, the lossy binary-float form the specification forbids. A
+payload could therefore satisfy the contract while violating the spec.
+
+**Monetary and relativity fields must be constrained to the string form in the generated
+schema**, not left as `anyOf`. This is a generation requirement, not a style preference.
+See [`research/track-a-findings.md`](../research/track-a-findings.md) F6–F7.
+
 ## Coverage
 
 **31 schemas, covering every persisted artifact the specs define.**

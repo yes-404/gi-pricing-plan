@@ -193,6 +193,19 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-RATE-54** | Optional **shadow scoring**: a proportion of live traffic is additionally scored against a candidate version, with results recorded but never returned to the caller — the pre-deployment safety net feeding `05-monitoring.md`. |
 | **FR-RATE-55** | Every deployment, rollback, and routing change emits an Audit Event and a notification to a configured channel. |
 
+### 3.11 Numeric precision at the engine boundary
+
+Research (2026-08-14) established that the ZEN Engine represents numbers as
+`rust_decimal::Decimal`, not `f64`, so arithmetic *inside* the engine is exact decimal and
+FR-OVR-7 holds through JDM expressions. The residual risk is at the boundaries, not in the
+arithmetic — see [`research/track-a-findings.md`](../research/track-a-findings.md) F1.
+
+| ID | Requirement |
+|---|---|
+| **FR-RATE-56** | Arbitrary-precision number handling must be verified active on **both** parse and serialise at every boundary the engine's values cross. `rust_decimal` serialises in a float-like format by default, so an exact internal value can still be degraded on the way out. A startup self-check asserts an exact decimal round-trips through the binding unchanged; failing it prevents the service starting, because the failure is otherwise silent. |
+| **FR-RATE-57** | No rateable path may reach an unguarded transcendental (`ln`, `log10`, and any other operation with a restricted domain). The engine is built with `maths-nopanic`, under which invalid input **returns `0` rather than raising** — which in a rating path means a silently wrong premium. Every such call site carries an explicit domain guard, and bundle compilation (FR-RATE-25) rejects a graph that reaches one without it. |
+| **FR-RATE-58** | Bundle compilation checks that no rate table value, constant, or intermediate requires a decimal scale beyond `rust_decimal`'s limit of 28, and fails with a named error rather than allowing a silent loss of precision deep in a ladder. |
+
 ---
 
 ## 4. Data contracts
@@ -565,7 +578,7 @@ Full journeys: [`wf-02-model-to-rating-version.md`](../workflows/wf-02-model-to-
 
 | Component | Used for | Notes for `skills-map.md` |
 |---|---|---|
-| **GoRules ZEN Engine** | DAG execution substrate (ADR-0004) | JDM graph format, decision tables, expression language limits, custom nodes for rate-table lookup and `model_call`, Python bindings performance, native trace output |
+| **GoRules ZEN Engine** | DAG execution substrate (ADR-0004) | JDM graph format, decision tables, `Variable::Number` is `rust_decimal` (exact decimal — verified); the `arbitrary_precision` serde feature and where it is *not* default; `maths-nopanic` returning 0 on invalid input; custom nodes for rate-table lookup and `model_call`; Python binding overhead at 200 rps; native trace output |
 | **Python `decimal`** | All monetary arithmetic (R2, FR-RATE-29) | Contexts, `ROUND_HALF_EVEN`, integer minor units, avoiding float contamination through JSON serialisation |
 | **Polars** | Batch scoring driver, dislocation aggregation, rate table storage in memory | Chunked lazy evaluation; joining portfolio rows to rate tables at scale |
 | **DuckDB** | Dislocation slicing and segment aggregation over scored parquet | Window functions for change-band distributions |
@@ -600,6 +613,7 @@ single-row GBM inference latency tuning; hypothesis strategies from a declarativ
 | **NFR-RATE-10** | Audit: algorithm edits, rate table versions, bulk operations, compilations, approvals, deployments, rollbacks, and routing changes all emit Audit Events with before/after state. |
 | **NFR-RATE-11** | Security: the scoring API authenticates per Consumer System with scoped credentials and per-client rate limits; quote inputs are never logged in full outside sampled traces, which are access-controlled. |
 | **NFR-RATE-12** | Trace storage: 1 % sampling of 50 M annual quotes stays under 200 GB/year with the sampled-trace schema. |
+| **NFR-RATE-13** | The scoring endpoint does **not** apply `response_model` validation to its response. Pydantic validation costs roughly 1 ms per request — 2 % of the 50 ms budget before any pricing work — and the response path otherwise runs three to five transformations. `ScoringResult` is constructed by `pricing-core` and is already trusted, so it is serialised directly with a C-speed encoder (`ORJSONResponse`). Inbound `QuoteContext` **is** validated: untrusted input must be checked, trusted output need not be. |
 
 ---
 
@@ -609,7 +623,7 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 
 | ID | Question |
 |---|---|
-| **OQ-RATE-1** | Does the ZEN Engine's expression evaluation preserve exact decimal semantics for money (FR-OVR-7)? If it evaluates in float internally, either monetary arithmetic must move out of JDM expressions into custom nodes, or ADR-0004 needs revisiting. **This is the single highest-risk unknown in the suite** and must be settled by a spike before Phase 2. |
+| **OQ-RATE-1** | ~~Does the ZEN Engine preserve exact decimal semantics for money?~~ **Resolved 2026-08-14** — it represents numbers as `rust_decimal::Decimal`, so engine arithmetic is exact and ADR-0004 stands. The risk moved to the boundaries and is now specified as FR-RATE-56/57/58; the S1 spike is re-scoped, not cancelled. See [`research`](../research/track-a-findings.md) F1. |
 | **OQ-RATE-2** | Is `model_call` in `exact` mode viable inside the 50 ms p99 budget for a GBM, or does production rating in practice always use `approximation` mode (tied to OQ-MODEL-3)? Needs a latency spike with a realistic booster. |
 | **OQ-RATE-3** | Should rate tables live in PostgreSQL as rows (queryable, diffable in SQL, joinable to exposure) or as content-addressed parquet blobs (consistent with datasets, cheaper for very large tables)? Large tables — vehicle × area — could reach millions of cells. |
 | **OQ-RATE-4** | How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path? Pro-rata and cancellation maths differs enough that one algorithm may be a false economy. |

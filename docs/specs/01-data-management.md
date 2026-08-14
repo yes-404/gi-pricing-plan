@@ -592,7 +592,7 @@ Rule authoring governance mirrors [`wf-05-custom-objective-lifecycle.md`](../wor
 |---|---|---|
 | **Polars** | Preparation recipe execution, row-level rules, exposure explosion | Lazy frames; strict dtypes are load-bearing (ADR-0005) |
 | **DuckDB** | Profiling, one-ways, PSI, `sql` custom checks, comparison queries | Runs directly over parquet; read-only connection for user SQL |
-| **pandera (Polars backend)** | Layer-1 structural schemas, stored with each version | Lazy validation to collect all errors in one pass; schema serialisation |
+| **pandera (Polars backend)** | Layer-1 structural schemas, stored with each version | Lazy validation to collect all errors in one pass; schema serialisation. Polars `DataFrame` and `LazyFrame` both supported since 0.19; **0.32+ ships an optional Narwhals-powered backend that keeps validation fully lazy** (`pandera[narwhals,polars]`) — adopt it, since NFR-DATA-2 requires the structural layer to fail fast in ≤ 2 min without materialising the dataset. See [`research`](../research/track-a-findings.md) F9 |
 | **Apache Parquet / Arrow** | Dataset Version storage, `decimal128` for money and exposure | Row groups sized for predicate pushdown; explicit schema persisted |
 | **Object storage (S3/MinIO)** | Content-addressed parquet blobs (ID-4) | Multipart upload for large versions |
 | **PostgreSQL 16** | Version metadata, reports, rule sets, lineage edges | JSONB for report bodies + GIN indexes; exclusion constraint for reference effective dating (FR-DATA-29) |

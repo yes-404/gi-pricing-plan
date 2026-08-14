@@ -20,6 +20,10 @@ phase discipline, and evidence as about Polars or XGBoost.
 - Whenever a working practice changes — a new gate, a new audit, a new standard the output
   must satisfy — update §8–§9 in the same PR, citing the artifact that changed.
 
+**Verified rows.** Entries marked **✔** were checked against a real library version during
+Track A research on 2026-08-14 ([`research/track-a-findings.md`](research/track-a-findings.md)),
+not inferred from documentation. Unmarked rows remain assumptions.
+
 **Depth key.** `★` working familiarity · `★★` competent, can debug · `★★★` deep, this is
 where the project's hard problems live.
 
@@ -31,7 +35,7 @@ where the project's hard problems live.
 |---|---|---|---|---|
 | Python 3.12+ / `uv` workspaces | Whole monorepo; `CLAUDE.md` §11 | ★★ | Workspace layout, lockfile & sync semantics, per-package deps, editable installs, `uv run` in CI | [uv docs — workspaces](https://docs.astral.sh/uv/concepts/projects/workspaces/) |
 | FastAPI | 00 §5, all module Interfaces sections | ★★ | Async endpoints, dependency injection for auth/session, `202 Accepted` + job pattern, OpenAPI customisation, streaming responses | [FastAPI docs](https://fastapi.tiangolo.com/), [Advanced OpenAPI](https://fastapi.tiangolo.com/advanced/extending-openapi/) |
-| Pydantic v2 | ADR-0002, FR-OVR-6 | ★★★ | Discriminated unions for artifact polymorphism, `model_json_schema()` output shaping, validators vs serialisers, `Decimal` handling, schema versioning & migration | [Pydantic v2 docs](https://docs.pydantic.dev/latest/), [JSON Schema generation](https://docs.pydantic.dev/latest/concepts/json_schema/) |
+| Pydantic v2 ✔ | ADR-0002, FR-OVR-6 | ★★★ | **Verified on 2.13.4:** discriminated unions emit `oneOf` + `discriminator` (not the `if`/`then` shape in the hand-drafted contracts), a two-value `Literal` maps both tags to one branch, and `Decimal` renders as a permissive `anyOf: [number, string]` that **must be constrained to string** or FR-OVR-7 is satisfiable by a lossy payload. | Discriminated unions for artifact polymorphism, `model_json_schema()` output shaping, validators vs serialisers, `Decimal` handling, schema versioning & migration | [Pydantic v2 docs](https://docs.pydantic.dev/latest/), [JSON Schema generation](https://docs.pydantic.dev/latest/concepts/json_schema/) |
 | SQLAlchemy 2.x (async) | FR-OVR-4, 07-platform | ★★ | 2.0 style `select()`, async sessions & unit of work, JSONB columns, transactional audit writes, optimistic locking with version counters | [SQLAlchemy 2.0 ORM](https://docs.sqlalchemy.org/en/20/orm/) |
 | Alembic | 07 FR-PLAT-35 | ★★ | Autogenerate limits, data migrations, migrating JSONB artifact `schema_version`, **forward-compatible migrations so a rolling deploy runs the previous app version against the new schema** | [Alembic docs](https://alembic.sqlalchemy.org/) |
 | OIDC / OAuth2 for SPAs | 07 FR-PLAT-1..4 | ★★ | Authorisation code + PKCE, refresh handling, why tokens stay out of `localStorage`, claim-to-role mapping, running Keycloak locally | [OAuth 2.0 for browser apps](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-browser-based-apps), [Keycloak docs](https://www.keycloak.org/documentation) |
@@ -45,7 +49,7 @@ where the project's hard problems live.
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| Polars | ADR-0005; 01, 02 | ★★★ | Lazy frames & query plans, expression API, strict dtypes, `group_by` aggregation idioms, joins at scale, memory profiling, Arrow interop | [Polars user guide](https://docs.pola.rs/) |
+| Polars ✔ | ADR-0005; 01, 02 | ★★★ | Lazy frames & query plans, expression API, strict dtypes, joins at scale, memory profiling, Arrow interop. **Caveat found:** the new streaming engine has an *open* group-by memory regression ([#25607](https://github.com/pola-rs/polars/issues/25607)) — which is precisely why ADR-0005 routes aggregation to DuckDB. Treat a new heavy `group_by` in Polars as requiring justification | [Polars user guide](https://docs.pola.rs/), [Streaming engine](https://deepwiki.com/pola-rs/polars/5.2-streaming-engine) |
 | DuckDB | ADR-0005; 01 FR-DATA-27/28, §4.5 `sql` check | ★★ | Querying parquet directly, `read_parquet` globbing, window functions for one-ways, `QUALIFY`, **read-only connections and disabling extension/filesystem access for user-supplied SQL (NFR-DATA-9)**, statement parsing to reject non-`SELECT` | [DuckDB docs](https://duckdb.org/docs/), [Securing DuckDB](https://duckdb.org/docs/operations_manual/securing_duckdb/overview) |
 | Apache Parquet / Arrow | ADR-0005, ID-4, 01 §4.2 | ★★ | Schema evolution, row groups & predicate pushdown, dictionary encoding, **`decimal128` logical types for money (FR-OVR-7) and exposure**, content-hashing a multi-part dataset deterministically | [Parquet format](https://parquet.apache.org/docs/), [Arrow Python](https://arrow.apache.org/docs/python/) |
 | Object storage (S3 / MinIO) | ID-4, NFR-OVR-9 | ★ | Content-addressed layout, presigned URLs, multipart upload, lifecycle rules | [MinIO docs](https://min.io/docs/minio/linux/index.html) |
@@ -55,17 +59,17 @@ where the project's hard problems live.
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| glum | 02 FR-MODEL-18..24 | ★★★ | `GeneralizedLinearRegressor` API, Tweedie/Poisson/Gamma families, log link, offsets vs weights (they are not interchangeable), elastic-net CV paths, categorical handling, **extracting the covariance matrix for standard errors (FR-MODEL-21)**, detecting rank deficiency and separation | [glum docs](https://glum.readthedocs.io/), [glum GLM tutorial](https://glum.readthedocs.io/en/latest/tutorials/glm_intro_tutorial/glm_intro.html) |
+| glum ✔ | 02 FR-MODEL-18..24 | ★★★ | **Verified:** `std_errors()` and `covariance_matrix()` (non-robust / robust HC-1 / clustered) plus a coefficient table with CIs and p-values exist and satisfy FR-MODEL-21 directly. | `GeneralizedLinearRegressor` API, Tweedie/Poisson/Gamma families, log link, offsets vs weights (they are not interchangeable), elastic-net CV paths, categorical handling, **extracting the covariance matrix for standard errors (FR-MODEL-21)**, detecting rank deficiency and separation | [glum docs](https://glum.readthedocs.io/), [glum GLM tutorial](https://glum.readthedocs.io/en/latest/tutorials/glm_intro_tutorial/glm_intro.html) |
 | statsmodels | 02 FR-MODEL-51 fallback diagnostics | ★ | GLM summary output, type-III deviance tests, residual types (deviance/Pearson/standardised), leverage and Cook's distance, cross-checking glum coefficients | [statsmodels GLM](https://www.statsmodels.org/stable/glm.html) |
-| XGBoost | 02 FR-MODEL-25..32, ADR-0003 | ★★★ | Custom objective `(grad, hess)` signature and its exact shape contract, `base_margin` for exposure offsets (FR-MODEL-27), `monotone_constraints` and `interaction_constraints`, `count:poisson`/`reg:gamma`/`reg:tweedie`, JSON model export, `DMatrix` vs `QuantileDMatrix` memory behaviour | [Custom objective tutorial](https://xgboost.readthedocs.io/en/stable/tutorials/custom_metric_obj.html), [Model IO](https://xgboost.readthedocs.io/en/stable/tutorials/saving_model.html), [Monotonic constraints](https://xgboost.readthedocs.io/en/stable/tutorials/monotonic.html) |
+| XGBoost ✔ | 02 FR-MODEL-25..32, ADR-0003 | ★★★ | **Verified on 3.4.0:** `predt` in a custom objective **does** include `base_margin`, and `base_margin` *replaces* `base_score` rather than adding to it — so omitting it at predict time silently substitutes `base_score` and returns a wrong number with no error (FR-MODEL-71). | Custom objective `(grad, hess)` signature and its exact shape contract, `base_margin` for exposure offsets (FR-MODEL-27), `monotone_constraints` and `interaction_constraints`, `count:poisson`/`reg:gamma`/`reg:tweedie`, JSON model export, `DMatrix` vs `QuantileDMatrix` memory behaviour | [Custom objective tutorial](https://xgboost.readthedocs.io/en/stable/tutorials/custom_metric_obj.html), [Model IO](https://xgboost.readthedocs.io/en/stable/tutorials/saving_model.html), [Monotonic constraints](https://xgboost.readthedocs.io/en/stable/tutorials/monotonic.html) |
 | LightGBM | 02 FR-MODEL-25..32 | ★★ | `fobj`/`feval` interface, `init_score` as the exposure offset, monotone constraint methods (`basic`/`intermediate`/`advanced`) and how they differ from XGBoost's, native categorical handling, text model dump | [LightGBM docs](https://lightgbm.readthedocs.io/), [Parameters](https://lightgbm.readthedocs.io/en/latest/Parameters.html) |
 | interpret (EBM) | 02 FR-MODEL-37 | ★ | `ExplainableBoostingRegressor`, term contributions as an additive structure, exporting shape functions directly as rateable tables | [InterpretML docs](https://interpret.ml/docs/) |
 | SHAP | 02 FR-MODEL-35 transparency artifact | ★★ | TreeSHAP for GBMs, interaction values and their cost, exposure-weighted dependence summaries, turning SHAP output into a factor summary an actuary will actually sign | [SHAP docs](https://shap.readthedocs.io/), [TreeSHAP paper](https://arxiv.org/abs/1802.03888) |
-| **SymPy** | 02 FR-MODEL-40 objective derivation | ★★★ | Symbolic differentiation, differentiating `Piecewise` (what `where()` compiles to), simplification that keeps expressions reviewable, code generation into our own expression tree rather than `lambdify` | [SymPy docs](https://docs.sympy.org/latest/index.html), [Piecewise](https://docs.sympy.org/latest/modules/functions/elementary.html#piecewise) |
+| **SymPy** ✔ | 02 FR-MODEL-40 objective derivation | ★★★ | **Verified on 1.14.0:** `diff` handles `Piecewise` twice over and lifts the branch *outward*, so the canonical derived form differs from a hand-written one — reviewers must see the canonical text. The real difficulty is downstream: a piecewise loss has a **kink**, and finite-difference validation is invalid across it at any step size (FR-MODEL-68..70). Learn `Piecewise` semantics, `simplify` behaviour on branches, and Richardson extrapolation | [SymPy docs](https://docs.sympy.org/latest/index.html), [Piecewise](https://docs.sympy.org/latest/modules/functions/elementary.html#piecewise) |
 | **Python `ast` / restricted parsing** | 02 §4.6 grammar; 01 FR-DATA-10 | ★★★ | Allow-list node walking, depth/size limits, why `eval`/`compile`/`literal_eval` on user input is not acceptable, position-accurate error reporting, sandbox threat modelling | [ast module](https://docs.python.org/3/library/ast.html), [Green Tree Snakes](https://greentreesnakes.readthedocs.io/) |
 | **NumPy (numerics discipline)** | 02 FR-MODEL-48 objective evaluation | ★★ | Vectorised allocation-conscious gradient/hessian evaluation, `np.errstate` around log/exp edges, detecting NaN/inf early, float64 vs float32 in boosting | [NumPy docs](https://numpy.org/doc/stable/) |
 | **Credibility theory** | 02 FR-MODEL-14, OQ-MODEL-5 | ★★ | Limited fluctuation (full/partial credibility standards) vs Bühlmann–Straub variance components; what a UK reviewer expects to see in a grouping justification | Klugman, Panjer & Willmot, *Loss Models*; CAS credibility study notes |
-| pandera | 01-data-management FR-DATA-16, VR-STR-* | ★★ | Polars-backed schemas, lazy validation to collect all errors in one pass, custom checks, serialising a schema to store with a Dataset Version | [pandera docs](https://pandera.readthedocs.io/), [Polars backend](https://pandera.readthedocs.io/en/stable/polars.html) |
+| pandera ✔ | 01 FR-DATA-16, VR-STR-* | ★★ | **Verified:** 0.29 is mature; Polars `DataFrame` and `LazyFrame` supported since 0.19; **0.32+ Narwhals backend keeps validation fully lazy** — adopt it for NFR-DATA-2. | Polars-backed schemas, lazy validation to collect all errors in one pass, custom checks, serialising a schema to store with a Dataset Version | [pandera docs](https://pandera.readthedocs.io/), [Polars backend](https://pandera.readthedocs.io/en/stable/polars.html) |
 | SciPy (stats) | 01 FR-DATA-26 one-way CIs | ★ | Exact Poisson and Gamma confidence intervals at low claim counts (not normal approximations) | [scipy.stats](https://docs.scipy.org/doc/scipy/reference/stats.html) |
 | PSI / KS / stability metrics | 01 VR-DST-*, 05-monitoring | ★★ | PSI binning choices and their sensitivity, exposure-weighted vs count-weighted PSI, KS for continuous columns, thresholds that mean something in a pricing book | Siddiqi, *Credit Risk Scorecards* (PSI); [Evidently drift docs](https://docs.evidentlyai.com/) as a reference implementation to compare against |
 | Actuarial GLM practice | 02, 07 (§7 defaults) | ★★★ | Frequency/severity vs Tweedie burning cost, offsets for exposure, base level choice, credibility-weighted grouping, one-way vs multivariate distortion, lift/gains and Gini for pricing | Ohlsson & Johansson, *Non-Life Insurance Pricing with GLMs*; CAS monographs; Institute & Faculty of Actuaries GI pricing material |
@@ -85,10 +89,10 @@ where the project's hard problems live.
 
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| GoRules ZEN Engine | ADR-0004, 03 FR-RATE-1..13 | ★★★ | JDM graph format, decision tables, expression language and its numeric semantics (**OQ-RATE-1**), custom node / loader extension points for rate-table lookup and `model_call`, Python binding overhead at 200 rps, native trace output | [ZEN Engine docs](https://gorules.io/docs/), [zen-engine-py](https://github.com/gorules/zen) |
+| GoRules ZEN Engine ✔ | ADR-0004, 03 FR-RATE-1..13, 56..58 | ★★★ | **Verified: `Variable::Number` is `rust_decimal::Decimal`, so engine arithmetic is exact — OQ-RATE-1 resolved.** Remaining study is the boundaries: the `arbitrary_precision` serde feature and where it is *not* default, and `maths-nopanic` returning `0` on invalid input instead of raising. | JDM graph format, decision tables, expression language and its numeric semantics (**OQ-RATE-1**), custom node / loader extension points for rate-table lookup and `model_call`, Python binding overhead at 200 rps, native trace output | [ZEN Engine docs](https://gorules.io/docs/), [zen-engine-py](https://github.com/gorules/zen) |
 | Decimal arithmetic | FR-OVR-7, 03 FR-RATE-29/32 | ★★ | `decimal.Decimal` contexts, `ROUND_HALF_EVEN` for money, integer minor units and their exact float64 range, avoiding float contamination through JSON serialisation, proving a premium ladder reconciles to the penny | [Python decimal](https://docs.python.org/3/library/decimal.html), [What Every Computer Scientist Should Know About Floating-Point](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html) |
 | **Redis (cache semantics)** | 03 FR-RATE-51, NFR-RATE-6 | ★★ | Cache warming before an atomic bundle switchover, content-hash keying, memory sizing for 500 MB bundles, eviction policy that must never evict the live bundle | [Redis docs](https://redis.io/docs/latest/) |
-| **Low-latency Python serving** | 03 NFR-RATE-1 | ★★★ | Where a 50 ms p99 budget actually goes: Pydantic validation cost on the hot path, single-row GBM inference, thread pinning and BLAS contention, async vs sync endpoints for CPU-bound work, GIL behaviour under 200 rps | [FastAPI concurrency](https://fastapi.tiangolo.com/async/), [XGBoost inference notes](https://xgboost.readthedocs.io/en/stable/prediction.html) |
+| **Low-latency Python serving** ✔ | 03 NFR-RATE-1, NFR-RATE-13 | ★★★ | **Measured elsewhere:** Pydantic validation costs ~1 ms/request — 2 % of the budget before any pricing work — and `response_model` forces outbound validation across 3–5 transformations. Hence NFR-RATE-13: validate inbound, never outbound, and encode with `ORJSONResponse`. | Where a 50 ms p99 budget actually goes: Pydantic validation cost on the hot path, single-row GBM inference, thread pinning and BLAS contention, async vs sync endpoints for CPU-bound work, GIL behaviour under 200 rps | [FastAPI concurrency](https://fastapi.tiangolo.com/async/), [XGBoost inference notes](https://xgboost.readthedocs.io/en/stable/prediction.html) |
 
 ## 5. Frontend
 
@@ -100,7 +104,7 @@ where the project's hard problems live.
 | Tailwind | frontend styling | ★ | Design tokens, dark mode, component extraction discipline | [Tailwind docs](https://tailwindcss.com/docs) |
 | ECharts / vue-echarts | 02 diagnostics, 05 dashboards | ★★ | Large-dataset rendering, dual-axis A/E charts, custom tooltips, accessible tabular fallback (NFR-OVR-10) | [Apache ECharts](https://echarts.apache.org/en/index.html), [vue-echarts](https://github.com/ecomfe/vue-echarts) |
 | TanStack Table | 03 rate table editor | ★★ | Virtualised rows, editable cells, column pinning, diffing edits against a baseline version | [TanStack Table](https://tanstack.com/table/latest) |
-| Vue Flow | 03 §5.3 DAG designer | ★★★ | Custom node components per step type, showing validation errors *on the node*, edge derivation from produces/consumes names rather than hand-drawn arrows, auto-layout, undo/redo, structural diff overlay | [Vue Flow docs](https://vueflow.dev/), [Custom nodes](https://vueflow.dev/guide/node.html) |
+| Vue Flow ✔ | 03 §5.3 DAG designer | ★★★ | **Verified:** `isValidConnection` (per-handle or global) is the mechanism behind FR-RATE-1's "invalid before save"; large graphs need memoised node components, and Web Workers are the escape hatch for layout at ~200 steps. | Custom node components per step type, showing validation errors *on the node*, edge derivation from produces/consumes names rather than hand-drawn arrows, auto-layout, undo/redo, structural diff overlay | [Vue Flow docs](https://vueflow.dev/), [Custom nodes](https://vueflow.dev/guide/node.html) |
 | openapi-typescript | FR-OVR-6 | ★ | Generation pipeline, `paths`/`components` typing, keeping generation in CI | [openapi-typescript](https://openapi-ts.dev/) |
 
 ## 5b. Governance & security
@@ -128,19 +132,26 @@ where the project's hard problems live.
 
 Ordered by *risk × unfamiliarity*, not by build order:
 
-1. **Custom objectives end-to-end** — the restricted AST parser, SymPy derivation of
-   gradients/hessians, and the certification checks (02 §4.6–4.7), plus XGBoost/LightGBM
-   `base_margin`/`init_score` mechanics. The platform's headline differentiator, the
-   easiest place to be subtly and expensively wrong, and the only place user input
-   reaches the numerical core.
-2. **ZEN Engine JDM + decimal semantics** — an external format on the p99-latency path
-   (ADR-0004, OQ-RATE-1).
-3. **glum GLM API and standard errors** — actuaries will check these numbers against
-   Emblem.
+> **Updated 2026-08-14 after Track A research.** Items 1–3 and 5 have been partially or
+> fully discharged; the ordering below now reflects what is *left*, with the settled parts
+> struck through. See [`research/track-a-findings.md`](research/track-a-findings.md).
+
+1. **Custom objectives end-to-end** — ~~SymPy derivation~~ ✔ and ~~XGBoost `base_margin`
+   mechanics~~ ✔ are settled. What remains is the **restricted AST parser** (untouched, and
+   the only place user input reaches the numerical core) and the **certification checks**,
+   which research showed were specified wrongly and are now FR-MODEL-68..70. **LightGBM's
+   `init_score` remains unverified** — the assumption of symmetry with XGBoost is exactly
+   the kind that F5 showed can hide a silent failure.
+2. **~~ZEN Engine decimal semantics~~ ✔ resolved — study the boundaries instead.** Engine
+   arithmetic is exact `rust_decimal`. The remaining risk is `arbitrary_precision` across
+   the binding and `maths-nopanic` returning `0` (FR-RATE-56/57).
+3. **~~glum standard errors~~ ✔ confirmed** — the API exists. Remaining: reconciling its
+   numbers against Emblem, which is a domain task, not a library one.
 4. **Polars lazy execution at 10 M+ rows** — everything downstream inherits its
    performance.
-5. **Pydantic v2 discriminated unions + JSON Schema** — the contract layer that all
-   generation depends on.
+5. **~~Pydantic v2 discriminated unions~~ ✔ confirmed**, with one gap to close: `Decimal`
+   generates a permissive `anyOf` that must be constrained to string, or FR-OVR-7 is
+   satisfiable by a lossy payload.
 6. **Vue Flow custom nodes** — the highest-effort frontend surface.
 7. **Low-latency Python serving** — the 50 ms p99 budget (NFR-RATE-1) is the one NFR
    that cannot be fixed later by adding hardware alone.

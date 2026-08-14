@@ -14,7 +14,7 @@ documents alone.*
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
 | All five workflow documents complete | **done** | wf-01 … wf-05, each with failure paths and traceability |
 | Contracts drafted | **done** | 31 JSON Schemas covering every persisted artifact, + OpenAPI stub |
-| `open-questions.md` empty or explicitly deferred | **open** | 45 questions: 39 `open`, 6 `deferred`. Each has options, trade-offs, and a recommendation |
+| `open-questions.md` empty or explicitly deferred | **open** | 45 questions: 38 `open`, 6 `deferred`, **1 `decided`** (OQ-RATE-1, closed by Track A research). Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
 **Remaining before Phase 1 can start:** resolve or explicitly defer the open questions
@@ -76,7 +76,7 @@ bare question.
 | OVR | 5 | 0 | OQ-OVR-2 licence choice — blocks nothing technically, blocks contribution socially |
 | DATA | 6 | 0 | OQ-DATA-1 where large-loss capping lives |
 | MODEL | 6 | 1 | OQ-MODEL-1 whether expression objectives ship in Phase 1 |
-| RATE | 5 | 1 | **OQ-RATE-1 ZEN Engine decimal semantics** — see §5 |
+| RATE | 4 (+1 decided) | 1 | ~~OQ-RATE-1~~ resolved; now **OQ-RATE-2 `exact`-mode GBM latency** — see §5 |
 | OPT | 4 | 2 | OQ-OPT-4 demand-model endogeneity |
 | MON | 4 | 1 | OQ-MON-1 whether A/E comes from traces or a full re-score |
 | GOV | 4 | 1 | OQ-GOV-3 whether Admin can override a flag |
@@ -88,19 +88,44 @@ Deferred items name their target phase.
 
 ## 5. Spikes to run before Phase 2
 
-Two questions cannot be settled by reasoning and need code:
+Two questions could not be settled by reasoning. **Track A research (2026-08-14) settled
+the substance of the first**; what remains is smaller and better aimed.
 
-1. **OQ-RATE-1 — ZEN Engine decimal semantics.** If JDM expressions evaluate in binary
-   float, FR-OVR-7 is violated on the p99 latency path and [ADR-0004](adr/0004-zen-engine-for-rating-execution.md)
-   needs revisiting. The proposed design (integer minor units, fractional factors applied
-   in a decimal-safe custom node) must be proven, not assumed. **This is the single
-   highest-risk unknown in the suite.**
-2. **OQ-RATE-2 — `exact`-mode GBM latency.** Whether a `model_call` to a realistic booster
-   (500 trees, 60 features) fits inside the 50 ms p99 budget at 200 rps determines whether
-   production rating can ever use the exact model, and therefore resolves OQ-MODEL-3 by
-   force rather than by choice.
+1. **~~OQ-RATE-1 — ZEN Engine decimal semantics.~~ RESOLVED — S1 re-scoped, not cancelled.**
+   The engine represents numbers as `rust_decimal::Decimal`, so arithmetic is exact and
+   [ADR-0004](adr/0004-zen-engine-for-rating-execution.md) stands. **S1 now tests the two
+   risks the finding exposed:** whether arbitrary precision survives the Python binding in
+   *both* directions (FR-RATE-56), and whether any rateable path can reach a
+   `maths-nopanic` sink that returns `0` instead of raising (FR-RATE-57). Both failure
+   modes are silent, which is why they still warrant code before Phase 2.
+2. **OQ-RATE-2 — `exact`-mode GBM latency.** Unchanged and now the highest-risk remaining
+   unknown. Whether a `model_call` to a realistic booster (500 trees, 60 features) fits
+   inside the 50 ms p99 budget at 200 rps determines whether production rating can ever use
+   the exact model, and therefore resolves OQ-MODEL-3 by force rather than by choice.
+   Research sharpened the budget: Pydantic response validation alone costs ~1 ms, which
+   NFR-RATE-13 now removes from the hot path.
+3. **S3 (new) — LightGBM `init_score`.** The dual-backend contract assumes `init_score` is
+   symmetric with XGBoost's `base_margin`. XGBoost's behaviour is now verified; LightGBM's
+   is **assumed**. Cheap to check, and the failure mode is the same silent one (F5).
 
 ---
+
+## 5b. Research completed
+
+Track A ran on 2026-08-14 with four executable spikes against real library versions
+(SymPy 1.14.0, XGBoost 3.4.0, Pydantic 2.13.4). Full log:
+[`research/track-a-findings.md`](research/track-a-findings.md).
+
+| Outcome | Count | Detail |
+|---|---|---|
+| Open questions closed | 1 | OQ-RATE-1 |
+| **Spec defects found and fixed** | **2** | Certification would have rejected every valid piecewise objective (F3); a silent GBM scoring failure was unspecified (F5) |
+| **Fabricated figure corrected** | **1** | An invented convexity percentage presented as a measurement (F4) |
+| Designs confirmed | 5 | SymPy derivation, `base_margin` semantics, glum standard errors, pandera Polars, Pydantic discriminated unions |
+| New requirements | 8 | FR-MODEL-68..71, FR-RATE-56..58, NFR-RATE-13 |
+
+The two defects are the return on this work: both would have surfaced in Phase 1 as
+confusing failures rather than as design decisions.
 
 ## 6. Reading paths
 
