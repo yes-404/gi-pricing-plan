@@ -26,8 +26,11 @@ ARTIFACT_TYPES: Final[frozenset[str]] = frozenset(
 )
 
 _SLUG = r"[a-z0-9][a-z0-9-]{1,62}"
+# Versions start at 1 (ID-2), so `@0` is a malformed reference rather than a valid
+# reference to an invalid version — rejecting it here keeps the error message consistent
+# with every other malformed form.
 _REF_RE: Final[re.Pattern[str]] = re.compile(
-    rf"^(?P<type>[a-z_]+):(?P<slug>{_SLUG})@(?P<version>\d+)$"
+    rf"^(?P<type>[a-z_]+):(?P<slug>{_SLUG})@(?P<version>[1-9][0-9]*)$"
 )
 
 Slug = Annotated[str, Field(pattern=rf"^{_SLUG}$")]
