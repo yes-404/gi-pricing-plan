@@ -62,12 +62,9 @@ auditor, or a regulator:
 | **Permission** | An atomic `(action, resource_type)` capability, e.g. `model:approve`, `dataset:acknowledge_warning`, `rating_version:deploy_prod`. |
 | **Scope** | The subset of artifacts a role assignment applies to: workspace-wide, or restricted to named Datasets, Model Families, or Rating Algorithms (e.g. a motor actuary who cannot approve home pricing). |
 | **Governed Artifact** | Any artifact with an approval-bearing lifecycle: Dataset Version, Validation Rule, Model, Custom Objective, Custom Metric, Peril Structure, Rate Table Version, Rating Version, Optimisation Run (when cited as evidence). |
-| **Approval Request** | The submission of one Governed Artifact for review, carrying its evidence bundle, a checklist, and a change summary. |
 | **Evidence Bundle** | The set of artifact references required for that artifact type (§3.3), resolved and pinned at submission time. |
 | **Approval Policy** | The workspace configuration stating, per artifact type and environment, how many approvers are needed, which roles may approve, and what evidence is required. |
 | **Approval Decision** | An approve / reject / request-changes act by an Approver, with a mandatory comment. |
-| **Audit Event** | Immutable record: `actor, at, action, entity_ref, before, after, justification, trace_id, source`. |
-| **Model Documentation** | A generated dossier for a Model, Peril Structure, or Rating Version. |
 | **Attestation** | A periodic, recorded confirmation by a named role that a live artifact remains fit for purpose (annual model review). |
 
 ---
@@ -397,7 +394,10 @@ governance-heavy: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-05-cus
 | From | What |
 |---|---|
 | `07-platform` | Authenticated principals, user directory/OIDC claims, notification channels, job identity for `system` audit events |
-| `01`–`05` | Artifact states, evidence artifacts, and flags that gate approval (FR-GOV-17) |
+
+**Not a dependency:** the artifact states, evidence artifacts and flags that gate approval
+(FR-GOV-17) are **pushed to** this module by `01`–`05` — they appear in those modules'
+§7.2. Governance does not read their tables, which is what keeps DEP-1 intact.
 
 ### 7.2 Provides
 

@@ -25,7 +25,7 @@ document suite blocks on further writing.
 
 ## 2. Requirement inventory
 
-400 numbered requirements, no gaps, no duplicates, no dangling references.
+408 numbered requirements, no gaps, no duplicates, no dangling references.
 
 | Module | Spec | Requirements |
 |---|---|---|
@@ -147,8 +147,16 @@ The counts and consistency checks on this page are reproducible:
 python3 scripts/audit-docs.py
 ```
 
-It verifies: no broken relative links; every referenced requirement ID is defined exactly
-once; no numbering gaps; every spec open question is mirrored into `open-questions.md`
-and vice versa; every referenced ADR exists; every spec has the ten §5 sections; every
-JSON Schema parses with no duplicate keys; and every schema `$ref` resolves, including
-cross-file pointers into `$defs`.
+**Bookkeeping checks (1–8):** no broken relative links; every referenced requirement ID
+defined exactly once; no numbering gaps; open questions mirrored in both directions; every
+referenced ADR exists; all ten §5 sections present; every JSON Schema parses with no
+duplicate keys; every `$ref` resolves including cross-file `$defs` pointers.
+
+**Structural checks (9–14)**, added 2026-08-14 because bookkeeping passing is not the same
+as the suite hanging together: cross-spec section references resolve; no error code is
+claimed by two modules unless annotated as re-raised; module dependencies respect DEP-1 and
+its DEP-1a carve-out; `*_minor` money fields are never fractional; no module glossary
+redefines a term `00-overview.md` already owns; and every module is exercised by at least
+one workflow above a coverage floor.
+
+Every structural check was proven against deliberately broken input before being trusted.

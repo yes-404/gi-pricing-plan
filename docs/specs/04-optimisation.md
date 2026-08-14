@@ -69,7 +69,6 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 | **Segment** | The granularity at which the optimiser acts, defined by a set of Factors (e.g. `driver_age_band × rating_area × channel`). Must be coarse enough to be credible and fine enough to be useful. |
 | **Efficient Frontier** | The set of non-dominated (volume, profit) outcomes across a sweep of objective weights. |
 | **Price Adjustment Proposal** | The optimiser's output for one segment: current price, proposed price, adjustment factor, expected volume and profit change, and which constraints bound it. |
-| **GIPP Check** | Comparison of the renewal price surface against the equivalent-new-business price surface, producing per-segment evidence and an overall verdict. |
 | **Equivalent New Business Price (ENBP)** | The price a renewing customer would be quoted as a new customer through the same channel, computed by re-scoring the renewal risk with `purpose = new_business`. |
 
 ---

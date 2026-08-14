@@ -58,7 +58,6 @@ The substrate every other module stands on:
 | **Queue** | A named Celery queue with its own worker pool and resource profile (`default`, `compute`, `scoring`, `io`). |
 | **Blob** | A content-addressed immutable object in the object store, keyed by sha256 (ID-4). |
 | **Secret** | A named credential held in the platform's secret backend, referenced by slug. |
-| **Environment** | A named runtime target (`dev`, `uat`, `prod`) owning its own live Rating Version deployments and service-account scopes. |
 | **Setting** | A typed configuration value resolved by precedence: environment variable → workspace setting → platform default. |
 
 ---
