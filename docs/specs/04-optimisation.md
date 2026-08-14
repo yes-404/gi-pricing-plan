@@ -21,8 +21,9 @@ proves the result is defensible:
    fairness constraints.
 4. **Scenario analysis** — what-if comparison of several optimisation configurations and
    their efficient frontier.
-5. **GIPP checks** — automated FCA PS21/5 evidence that renewal pricing is not worse than
-   equivalent new business.
+5. **GIPP checks** — automated **ICOBS 6B** evidence that renewal pricing is not worse than
+   equivalent new business. (PS21/5 and PS21/11 announced those rules; ICOBS 6B is the
+   binding text, and it is what a supervisor holds the firm to.)
 6. **Proposal materialisation** — turning an accepted optimisation result into concrete
    rate table edits or an adjustment step in a Rating Version.
 
