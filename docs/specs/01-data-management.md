@@ -479,6 +479,14 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 ### 5.2 `pricing-core` interfaces
 
 ```python
+# packages/pricing-core/src/pricing_core/data/ingest.py     (added W4, 2026-08-14)
+def normalise_column_name(name: str) -> str                  # FR-DATA-5
+def normalise_columns(names: list[str]) -> ColumnMapping     # raises on collision
+def infer_schema(frame: pl.DataFrame) -> InferredSchema      # FR-DATA-4
+def partition_rejects(
+    frame: pl.DataFrame, *, required_non_null: list[str] | None = None
+) -> RejectPartition                                          # FR-DATA-7
+
 # packages/pricing-core/src/pricing_core/data/prepare.py
 def apply_recipe(
     tables: dict[str, pl.LazyFrame],
@@ -518,6 +526,13 @@ def attach_claims(exposure: pl.DataFrame, claims: pl.DataFrame, spec: AttachClai
 
 All of these are pure: no I/O, no database, `parquet_uris` read through an injected
 filesystem object supplied by the caller (ADR-0001).
+
+`ingest.py` was added in W4. The §5.2 list originally began at preparation, but three
+ingestion decisions are deterministic functions of a frame — how a column name normalises,
+what the candidate schema is, which rows are unusable — and FR-DATA-5 requires the first of
+them to be *deterministic and collision-detecting*, which is a property of a function
+rather than of a service. Reading the file remains the caller's job; only the decisions
+moved.
 
 ### 5.3 Frontend views
 
