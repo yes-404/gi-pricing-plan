@@ -213,6 +213,7 @@ async def test_a_failed_authentication_is_audited(database: Database, workspace_
 
 
 @pytest.mark.req("NFR-PLAT-7")
+@pytest.mark.req("FR-GOV-26")
 async def test_no_audit_event_contains_a_key_secret(
     database: Database, workspace_id
 ) -> None:
