@@ -1,0 +1,126 @@
+"""Liveness, readiness and version (FR-PLAT-41).
+
+The distinction matters operationally. `/healthz` answers "is this process alive?" — if it
+fails, the orchestrator restarts the container. `/readyz` answers "can it serve?" and
+includes the database, Redis and the blob store; if it fails, the pod leaves the load
+balancer but is *not* restarted. Wiring dependency checks into liveness is how a brief
+database blip becomes a restart storm across every replica.
+
+Dependency probes register themselves, so adding the database check in the persistence
+sprint does not touch this module.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import enum
+from collections.abc import Awaitable, Callable
+from typing import Final
+
+from fastapi import APIRouter, Response, status
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.config import Settings
+from app.observability.logging import get_logger
+
+__all__ = ["ComponentStatus", "ReadinessReport", "clear_probes", "register_probe", "router"]
+
+_log = get_logger("app.health")
+
+router = APIRouter(tags=["platform"])
+
+#: A probe returns None when healthy, or a short reason when not. It must not raise, but
+#: is called defensively in case it does.
+Probe = Callable[[], Awaitable[str | None]]
+
+_probes: dict[str, Probe] = {}
+
+# A hung dependency must not hang the readiness endpoint — an unanswered probe is
+# indistinguishable to the orchestrator from a hung process, and gets the wrong remedy.
+_PROBE_TIMEOUT_S: Final = 2.0
+
+
+class ComponentStatus(enum.StrEnum):
+    UP = "up"
+    DOWN = "down"
+
+
+class ComponentHealth(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    status: ComponentStatus
+    detail: str | None = Field(default=None, description="Why it is down. Never a secret (R3).")
+
+
+class ReadinessReport(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: ComponentStatus
+    components: tuple[ComponentHealth, ...] = ()
+
+
+class VersionInfo(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    service: str
+    version: str
+    environment: str
+
+
+def register_probe(name: str, probe: Probe) -> None:
+    """Register a readiness probe for a named dependency."""
+    _probes[name] = probe
+
+
+def clear_probes() -> None:
+    """Remove all probes. For tests, and for application shutdown."""
+    _probes.clear()
+
+
+async def _run_probe(name: str, probe: Probe) -> ComponentHealth:
+    try:
+        async with asyncio.timeout(_PROBE_TIMEOUT_S):
+            reason = await probe()
+    except TimeoutError:
+        reason = f"did not respond within {_PROBE_TIMEOUT_S:g}s"
+    except Exception as exc:  # a broken probe is a down component, not a 500
+        _log.warning("readiness probe raised", extra={"component": name})
+        reason = f"probe failed: {type(exc).__name__}"
+    if reason is None:
+        return ComponentHealth(name=name, status=ComponentStatus.UP)
+    return ComponentHealth(name=name, status=ComponentStatus.DOWN, detail=reason)
+
+
+@router.get("/healthz", summary="Liveness — is the process alive?")
+async def healthz() -> ReadinessReport:
+    """Never touches a dependency. See the module docstring for why."""
+    return ReadinessReport(status=ComponentStatus.UP)
+
+
+@router.get("/readyz", summary="Readiness — can the process serve traffic?")
+async def readyz(response: Response) -> ReadinessReport:
+    """Probe every registered dependency concurrently (FR-PLAT-41)."""
+    results = await asyncio.gather(
+        *(_run_probe(name, probe) for name, probe in sorted(_probes.items()))
+    )
+    healthy = all(component.status is ComponentStatus.UP for component in results)
+    if not healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return ReadinessReport(
+        status=ComponentStatus.UP if healthy else ComponentStatus.DOWN,
+        components=tuple(results),
+    )
+
+
+def version_route(settings: Settings) -> Callable[[], VersionInfo]:
+    """Build the `/version` handler bound to the loaded settings."""
+
+    def version() -> VersionInfo:
+        return VersionInfo(
+            service=settings.service_name,
+            version=settings.version,
+            environment=settings.environment.value,
+        )
+
+    return version

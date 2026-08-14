@@ -44,10 +44,10 @@
         "message": {"type": "string"},
         "retryable": {"type": "boolean"},
         "detail": {"type": "object"},
-        "trace_id": {"type": "string"}
+        "trace_id": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "W3C/OpenTelemetry trace id: 32 lowercase hex characters (00 §5.3)."}
       }
     },
-    "trace_id": {"type": "string"},
+    "trace_id": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "W3C/OpenTelemetry trace id: 32 lowercase hex characters (00 §5.3)."},
     "queued_at": {"type": "string", "format": "date-time"},
     "started_at": {"type": ["string", "null"], "format": "date-time"},
     "finished_at": {"type": ["string", "null"], "format": "date-time"},

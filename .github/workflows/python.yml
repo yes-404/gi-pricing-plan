@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'packages/**'
-      - 'backend/**'          # arrives in Phase 1a W2
+      - 'backend/**'
       - 'pipelines/**'        # arrives in Phase 1a W4
       - 'pyproject.toml'
       - 'uv.lock'

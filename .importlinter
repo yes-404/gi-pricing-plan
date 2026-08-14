@@ -8,6 +8,7 @@
 root_packages =
     model_schema
     pricing_core
+    app
 # Required because the forbidden lists name external packages (fastapi, sqlalchemy, …)
 # rather than only first-party modules.
 include_external_packages = True
@@ -29,6 +30,7 @@ forbidden_modules =
     requests
     psycopg
     asyncpg
+    app
 allow_indirect_imports = false
 
 [importlinter:contract:schema-depends-on-pydantic-only]
@@ -45,11 +47,13 @@ forbidden_modules =
     pandas
     numpy
     pricing_core
+    app
 allow_indirect_imports = false
 
 [importlinter:contract:layering]
-name = model-schema sits below pricing-core and never depends on it (DEP-3)
+name = backend sits above pricing-core, which sits above model-schema (DEP-3)
 type = layers
 layers =
+    app
     pricing_core
     model_schema

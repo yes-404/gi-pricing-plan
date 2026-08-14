@@ -282,7 +282,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
   "before": {"status": "review", "approvers_recorded": 1},
   "after": {"status": "approved", "approvers_recorded": 2},
   "justification": "Dislocation within the agreed envelope; GIPP clean.",
-  "trace_id": "01J…",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
   "job_id": null,
   "prev_event_hash": "sha256:…",
   "event_hash": "sha256:…"

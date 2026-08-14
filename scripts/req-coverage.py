@@ -15,8 +15,27 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
+import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _test_roots() -> list[pathlib.Path]:
+    """The directories pytest collects from, read from pyproject rather than hardcoded.
+
+    This was `packages/` alone until W2 added `backend/`. A second code root did not make
+    the script fail — it made it silently under-report, and quietly stopped applying the
+    "claims a requirement that does not exist" check to every test in the new component.
+    Sourcing the list from pytest's own `testpaths` means a new component is covered by
+    adding it in one place, which is the place that already has to change.
+    """
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    testpaths = config["tool"]["pytest"]["ini_options"]["testpaths"]
+    roots = [ROOT / p for p in testpaths]
+    missing = [str(r) for r in roots if not r.is_dir()]
+    if missing:
+        raise SystemExit(f"testpaths names directories that do not exist: {missing}")
+    return roots
 
 
 def main() -> int:
@@ -25,9 +44,10 @@ def main() -> int:
         specified |= set(re.findall(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", spec.read_text()))
 
     claimed: dict[str, list[str]] = {}
-    for test in sorted((ROOT / "packages").rglob("test_*.py")):
-        for rid in re.findall(r'@pytest\.mark\.req\("([^"]+)"\)', test.read_text()):
-            claimed.setdefault(rid, []).append(str(test.relative_to(ROOT)))
+    for root in _test_roots():
+        for test in sorted(root.rglob("test_*.py")):
+            for rid in re.findall(r'@pytest\.mark\.req\("([^"]+)"\)', test.read_text()):
+                claimed.setdefault(rid, []).append(str(test.relative_to(ROOT)))
 
     unknown = sorted(set(claimed) - specified)
     print(f"  requirements specified : {len(specified)}")
