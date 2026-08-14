@@ -34,7 +34,7 @@ where the project's hard problems live.
 | DuckDB | ADR-0005; 01 FR-DATA-27/28, §4.5 `sql` check | ★★ | Querying parquet directly, `read_parquet` globbing, window functions for one-ways, `QUALIFY`, **read-only connections and disabling extension/filesystem access for user-supplied SQL (NFR-DATA-9)**, statement parsing to reject non-`SELECT` | [DuckDB docs](https://duckdb.org/docs/), [Securing DuckDB](https://duckdb.org/docs/operations_manual/securing_duckdb/overview) |
 | Apache Parquet / Arrow | ADR-0005, ID-4, 01 §4.2 | ★★ | Schema evolution, row groups & predicate pushdown, dictionary encoding, **`decimal128` logical types for money (FR-OVR-7) and exposure**, content-hashing a multi-part dataset deterministically | [Parquet format](https://parquet.apache.org/docs/), [Arrow Python](https://arrow.apache.org/docs/python/) |
 | Object storage (S3 / MinIO) | ID-4, NFR-OVR-9 | ★ | Content-addressed layout, presigned URLs, multipart upload, lifecycle rules | [MinIO docs](https://min.io/docs/minio/linux/index.html) |
-| Dagster | `pipelines/` | ★★ | Assets vs ops, partitioned assets by dataset version, schedules & sensors, resource configuration | [Dagster docs](https://docs.dagster.io/) |
+| Dagster | `pipelines/`; 05 FR-MON-2 | ★★ | Assets vs ops, partitioned assets by dataset version and by monitoring period, **backfilling a Monitor created after the fact (NFR-MON-8)**, schedules & sensors (deployment-triggered monitor creation), resource configuration | [Dagster docs](https://docs.dagster.io/), [Partitions & backfills](https://docs.dagster.io/guides/build/partitions-and-backfills) |
 
 ## 3. Actuarial / ML
 
@@ -54,6 +54,17 @@ where the project's hard problems live.
 | SciPy (stats) | 01 FR-DATA-26 one-way CIs | ★ | Exact Poisson and Gamma confidence intervals at low claim counts (not normal approximations) | [scipy.stats](https://docs.scipy.org/doc/scipy/reference/stats.html) |
 | PSI / KS / stability metrics | 01 VR-DST-*, 05-monitoring | ★★ | PSI binning choices and their sensitivity, exposure-weighted vs count-weighted PSI, KS for continuous columns, thresholds that mean something in a pricing book | Siddiqi, *Credit Risk Scorecards* (PSI); [Evidently drift docs](https://docs.evidentlyai.com/) as a reference implementation to compare against |
 | Actuarial GLM practice | 02, 07 (§7 defaults) | ★★★ | Frequency/severity vs Tweedie burning cost, offsets for exposure, base level choice, credibility-weighted grouping, one-way vs multivariate distortion, lift/gains and Gini for pricing | Ohlsson & Johansson, *Non-Life Insurance Pricing with GLMs*; CAS monographs; Institute & Faculty of Actuaries GI pricing material |
+
+## 3b. Optimisation & monitoring
+
+| Component | Used in | Depth | Skills to research | Resources |
+|---|---|---|---|---|
+| SciPy `optimize` | 04 FR-OPT-8..17 | ★★★ | Formulating segment adjustments as a bounded vector problem, SLSQP vs trust-constr, supplying Jacobians, **diagnosing infeasible constraint sets and naming the culprits (NFR-OPT-4)**, reading termination reasons honestly | [scipy.optimize](https://docs.scipy.org/doc/scipy/reference/optimize.html), [Constrained minimization](https://docs.scipy.org/doc/scipy/tutorial/optimize.html#constrained-minimization-of-multivariate-scalar-functions) |
+| cvxpy (contingency) | 04 OQ-OPT-1 | ★ | Convex reformulation of the pricing objective, conic solvers, dual values as shadow prices | [cvxpy docs](https://www.cvxpy.org/) |
+| Price elasticity estimation | 04 FR-OPT-1..7, OQ-OPT-4 | ★★★ | Demand modelling in GI, price terms (absolute vs relative to technical vs market position), **endogeneity and why naive elasticity is biased**, identifiability from observational price variation, extrapolation limits | Ohlsson & Johansson (demand chapter); CAS/IFoA pricing-optimisation papers; econometrics texts on IV estimation |
+| FCA PS21/5 (GIPP) | 04 FR-OPT-18..22 | ★★ | What the rules actually require, equivalent-new-business-price definition and channel treatment, price-walking, what evidence a supervisor expects to see retained | [FCA PS21/5](https://www.fca.org.uk/publications/policy-statements/ps21-5-general-insurance-pricing-practices-market-study), FCA finalised guidance on fair value |
+| Claims development / maturity | 05 R4, FR-MON-12; 01 VR-ACT-14 | ★★ | Development factors and patterns, earned vs written basis, why an immature A/E is misleading, applying a supplied pattern without doing reserving | IFoA GI reserving material (for the pattern concepts only — reserving itself is out of scope) |
+| Alerting design | 05 FR-MON-28..32 | ★ | Alert lifecycle (raise/ack/resolve/suppress), deduplication keys, consecutive-breach logic, escalation vs repetition, detecting mis-thresholded monitors | [Google SRE — Alerting on SLOs](https://sre.google/workbook/alerting-on-slos/) |
 
 ## 4. Rating execution
 
