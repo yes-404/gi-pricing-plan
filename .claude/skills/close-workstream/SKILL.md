@@ -74,6 +74,22 @@ Record the number and the budget it is measured against:
 
 not "the stack starts quickly". An unmeasured NFR is an opinion with an ID.
 
+## 4b. Re-derive the scope from the spec, not from the build log
+
+Count the requirements the workstream's named areas contain, in the spec, and compare that
+to what has evidence. Auditing against a list of what you built only ever confirms what you
+built.
+
+W2's roadmap row said "~35 of 60 `PLAT` requirements". Adding up the sections it names
+gives exactly 35 — and an independent count found **six** in-scope requirements with no
+evidence where the roadmap acknowledged two, four of them mentioned nowhere in the
+documentation at all.
+
+**A generated artifact matching its source proves neither is correct.** W2's contract drift
+check passed while the published contract advertised an error model the platform never
+emits and omitted the one it does. Check generated output against the *requirement*, not
+only against its source.
+
 ## 5. Write down what was *not* delivered
 
 Add a table mapping `docs/roadmap.md` §5 (the retrofit-impossible list) to where each item

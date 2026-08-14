@@ -76,3 +76,8 @@ Thumbs.db
 
 # ---- Claude Code local state (skills and settings ARE committed) ----
 .claude/settings.local.json
+
+# Celery beat's scheduler state. Written wherever beat is started, including the repo
+# root during an NFR measurement — it is runtime state, not source.
+celerybeat-schedule
+celerybeat.pid

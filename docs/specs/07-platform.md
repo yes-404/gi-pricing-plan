@@ -182,6 +182,8 @@ The substrate every other module stands on:
   "result": {"kind": "artifact", "ref": "model:motor-ad-frequency@7"},
   "error": null,
   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "progress_at": "2026-08-14T09:03:11Z",
+  "stalled": false,
   "queued_at": "2026-08-14T09:00:00Z",
   "started_at": "2026-08-14T09:00:04Z",
   "finished_at": null,
@@ -189,6 +191,13 @@ The substrate every other module stands on:
   "retries": {"attempted": 0, "max": 3, "policy": "infrastructure_only"}
 }
 ```
+
+`progress_at` and `stalled` were added in W2 (2026-08-14). NFR-PLAT-3 requires a running
+Job with no progress for the configured window to be *treated as stalled and flagged*, and
+§4.1 had nowhere for that flag to live. `progress_at` is the time of the last progress
+report — not `started_at`, which cannot answer "is it still saying anything" for a Job that
+has legitimately run for an hour. `stalled` is derived from it on read rather than stored,
+because a stored flag needs a sweeper to clear it and would be wrong between sweeps.
 
 Failure shape:
 

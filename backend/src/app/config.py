@@ -12,6 +12,7 @@ already names it so that adding the layer does not change this module's contract
 from __future__ import annotations
 
 import enum
+import os
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, SecretStr, ValidationError, field_validator
@@ -195,6 +196,16 @@ class Settings(BaseSettings):
                 "user can authenticate, and starting anyway would present a service that "
                 "rejects every request as though it were broken."
             )
+
+    @property
+    def setting_overrides(self) -> dict[str, str]:
+        """Environment overrides for registry settings, as `GIP_SETTING_<KEY>`.
+
+        Read from the process environment rather than declared as fields: the registry in
+        `app.platform.settings` is the list of settings, and duplicating it here would make
+        adding one a two-file change with a silent failure mode when only one is done.
+        """
+        return {k: v for k, v in os.environ.items() if k.startswith("GIP_SETTING_")}
 
     @property
     def oidc_configured(self) -> bool:

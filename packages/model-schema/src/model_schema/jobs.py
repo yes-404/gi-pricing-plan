@@ -219,6 +219,15 @@ class Job(BaseModel):
     result: JobResult | None = None
     error: JobError | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
+    progress_at: datetime | None = Field(
+        default=None, description="Time of the last progress report (NFR-PLAT-3)."
+    )
+    stalled: bool = Field(
+        default=False,
+        description="A running Job that has reported no progress within the configured "
+        "window. Derived on read, never stored — a stored flag needs a sweeper to clear "
+        "it and is wrong between sweeps (NFR-PLAT-3).",
+    )
     queued_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None

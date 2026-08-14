@@ -33,6 +33,12 @@ from model_schema.jobs import (
 from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
 from model_schema.problem import FieldError, ProblemDetail
 from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
+from model_schema.settings import (
+    SettingCandidate,
+    SettingResolution,
+    SettingSource,
+    SettingType,
+)
 
 __all__ = [
     "ARTIFACT_TYPES",
@@ -62,6 +68,10 @@ __all__ = [
     "ResourceBudget",
     "RetryPolicy",
     "RetryState",
+    "SettingCandidate",
+    "SettingResolution",
+    "SettingSource",
+    "SettingType",
     "Slug",
     "apply_factor",
     "canonical_payload",

@@ -282,7 +282,21 @@ async def request_cancellation(
     return to_schema(row)
 
 
-def to_schema(row: JobRow) -> Job:
+def is_stalled(row: JobRow, *, stall_seconds: int) -> bool:
+    """A running Job that has said nothing for longer than the window (NFR-PLAT-3).
+
+    Only `running` jobs can stall. A queued Job is waiting for a worker, which is a queue
+    depth problem with its own signal; a finished one has stopped on purpose.
+    """
+    if row.status is not JobStatus.RUNNING:
+        return False
+    last = row.progress_at or row.started_at
+    if last is None:
+        return False
+    return (datetime.now(UTC) - last).total_seconds() > stall_seconds
+
+
+def to_schema(row: JobRow, *, stall_seconds: int | None = None) -> Job:
     """Convert the ORM row to the API shape (`07` §4.1)."""
     return Job(
         id=row.id,
@@ -298,6 +312,11 @@ def to_schema(row: JobRow) -> Job:
         result=JobResult.model_validate(row.result) if row.result else None,
         error=JobError.model_validate(row.error) if row.error else None,
         trace_id=row.trace_id,
+        progress_at=row.progress_at,
+        stalled=(
+            is_stalled(row, stall_seconds=stall_seconds) if stall_seconds is not None
+            else False
+        ),
         queued_at=row.queued_at,
         started_at=row.started_at,
         finished_at=row.finished_at,

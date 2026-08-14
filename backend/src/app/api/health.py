@@ -98,7 +98,11 @@ async def healthz() -> ReadinessReport:
     return ReadinessReport(status=ComponentStatus.UP)
 
 
-@router.get("/readyz", summary="Readiness — can the process serve traffic?")
+@router.get(
+    "/readyz",
+    summary="Readiness — can the process serve traffic?",
+    responses={503: {"description": "A dependency is unreachable", "model": ReadinessReport}},
+)
 async def readyz(response: Response) -> ReadinessReport:
     """Probe every registered dependency concurrently (FR-PLAT-41)."""
     results = await asyncio.gather(

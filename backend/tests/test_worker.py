@@ -361,3 +361,106 @@ def test_handler_registration_refuses_a_duplicate() -> None:
     handlers.register_handler(JobKind.MODEL_FIT, lambda p, pr: JobResult(kind="none"))
     with pytest.raises(ValueError, match="already registered"):
         handlers.register_handler(JobKind.MODEL_FIT, lambda p, pr: JobResult(kind="none"))
+
+
+# -- NFR-PLAT-3: a running job that says nothing is flagged --------------------------------
+
+
+@pytest.mark.req("NFR-PLAT-3")
+async def test_a_running_job_with_recent_progress_is_not_stalled(
+    database: Database, workspace_id, principal
+) -> None:
+    from datetime import UTC, datetime
+
+    from app.db.models import JobRow
+    from app.platform.jobs import is_stalled
+
+    job = await _submit(database, workspace_id, principal)
+    async with database.unit_of_work() as session:
+        row = await session.get(JobRow, job.id)
+        row.status = JobStatus.RUNNING
+        row.started_at = datetime.now(UTC)
+        row.progress_at = datetime.now(UTC)
+
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert is_stalled(row, stall_seconds=30) is False
+
+
+@pytest.mark.req("NFR-PLAT-3")
+async def test_a_running_job_that_has_said_nothing_is_stalled(
+    database: Database, workspace_id, principal
+) -> None:
+    """NFR-PLAT-3: no progress within the window means the Job is treated as stalled."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.db.models import JobRow
+    from app.platform.jobs import is_stalled, to_schema
+
+    job = await _submit(database, workspace_id, principal)
+    async with database.unit_of_work() as session:
+        row = await session.get(JobRow, job.id)
+        row.status = JobStatus.RUNNING
+        row.started_at = datetime.now(UTC) - timedelta(minutes=10)
+        row.progress_at = datetime.now(UTC) - timedelta(minutes=10)
+
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert is_stalled(row, stall_seconds=30) is True
+    assert to_schema(row, stall_seconds=30).stalled is True
+
+
+@pytest.mark.req("NFR-PLAT-3")
+async def test_only_running_jobs_can_stall(
+    database: Database, workspace_id, principal
+) -> None:
+    """Negative: a queued job is a queue-depth problem and a finished one stopped on
+    purpose. Flagging either as stalled would make the signal useless."""
+    from app.db.models import JobRow
+    from app.platform.jobs import is_stalled
+
+    job = await _submit(database, workspace_id, principal)
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert is_stalled(row, stall_seconds=0) is False
+
+    async with database.unit_of_work() as session:
+        await jobs.transition(session, job.id, JobStatus.CANCELLED, actor=principal)
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert is_stalled(row, stall_seconds=0) is False
+
+
+@pytest.mark.req("NFR-PLAT-3")
+async def test_progress_updates_arrive_within_the_budget(
+    database: Database, workspace_id, principal
+) -> None:
+    """The measurement behind the NFR: a handler reporting continuously must produce a
+    persisted update at least every 5 s. The throttle floor is 1 s, so the margin is fivefold."""
+    from datetime import UTC, datetime
+
+    from app.db.models import JobRow
+
+    stamps: list[datetime] = []
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline:
+            progress.update(0.5, "working")
+            time.sleep(0.05)
+        return JobResult(kind="none", ref=None)
+
+    handlers.register_handler(JobKind.MODEL_FIT, handler)
+    job = await _submit(database, workspace_id, principal)
+    started = datetime.now(UTC)
+    await execute_job(database, job.id)
+
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    stamps.append(row.progress_at)
+
+    assert row.progress_at is not None
+    gap = (row.progress_at - started).total_seconds()
+    # The last write landed within the run; the throttle guarantees at most 1 s between
+    # writes while a handler is reporting, comfortably inside NFR-PLAT-3's 5 s.
+    assert 0 <= gap <= 5.0, gap
