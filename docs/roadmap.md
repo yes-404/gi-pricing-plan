@@ -27,7 +27,7 @@ Three things this document deliberately does not do:
 | | |
 |---|---|
 | **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 408 requirements |
-| **Blocking Phase 1** | 7 decisions and 1 spike (§3). Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
+| **Blocking Phase 1** | **7 decisions** (§3). Spike S3 closed 2026-08-14. Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
 | **Code written** | None, by design (`CLAUDE.md` §0) |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
@@ -63,7 +63,7 @@ Evidence: [`research/track-a-findings.md`](research/track-a-findings.md).
 | Fragment | New home | Why there |
 |---|---|---|
 | Restricted AST parser for the expression grammar | **Phase 1, W5** | Nothing left to research — `02` §4.6 specifies the grammar. This is build work, and the only place user input reaches the numerical core |
-| LightGBM `init_score` symmetry | **Spike S3** (Track B) | Unverified assumption of the exact class that hid a silent failure in F5 |
+| LightGBM `init_score` symmetry | ~~Spike S3~~ **run 2026-08-14** | Symmetric at fit, **asymmetric at scoring** — `predict()` has no offset parameter. Now FR-MODEL-72 (F13) |
 | Polars 10 M-row benchmark | **Phase 1, W4 acceptance** | It is NFR-DATA-1/3, measured against real data — an acceptance test, not reading |
 | Vue Flow depth | **Phase 2 on-ramp, W15** | Does not block Phase 1; belongs with the DAG designer it serves |
 | Low-latency measurement | **Spike S2** / Phase 2 W11 | Already partly discharged into NFR-RATE-13; the rest is measurement |
@@ -87,11 +87,13 @@ S1 — see [`research/track-a-findings.md`](research/track-a-findings.md). Remai
 
 | Spike | Question | Why it cannot wait |
 |---|---|---|
-| **S1 (re-scoped)** | FR-RATE-56/57 | ~~Does the engine do decimal?~~ **It does** — `rust_decimal`, ADR-0004 stands. Now: does arbitrary precision survive the Python binding in both directions, and can a rateable path reach a `maths-nopanic` sink that returns `0` instead of raising? Both failure modes are **silent**. |
-| **S2 — `exact`-mode GBM latency** | OQ-RATE-2 | Now the highest-risk remaining unknown. Determines whether production rating can ever call the model directly, which silently resolves OQ-MODEL-3. |
-| **S3 (new) — LightGBM `init_score`** | FR-MODEL-27/71 | XGBoost's offset semantics are now verified; LightGBM's are **assumed symmetric**. Research showed this exact class of assumption hides a silent wrong-answer failure. |
+| ~~**S1**~~ ✔ **CLOSED 2026-08-14** | FR-RATE-56/57/59 | Engine arithmetic is exact — but the **Python binding has no decimal type**, so F1's "workaround not required" was wrong. Money now crosses as integer minor units. Also found: `log`/`sqrt` don't exist in ZEN (the old requirement guarded nothing), while **division by zero returns `null` silently**. |
+| ~~**S2 — `exact`-mode GBM latency**~~ ✔ **CLOSED 2026-08-14** | OQ-RATE-2 | **Comfortably viable** — p99 1.09 ms, ~2 % of the 50 ms budget. OQ-MODEL-3 stays a real design choice rather than being forced. `nthread=1` per request (NFR-RATE-14). |
+| ~~**S3 — LightGBM `init_score`**~~ ✔ **CLOSED 2026-08-14** | FR-MODEL-72 | The assumption was **half wrong**: symmetric at fit time, but `Booster.predict()` has no offset parameter at all, so a scoring path ported from XGBoost silently omits the offset entirely. Fixed as FR-MODEL-72 (F13). |
 
-All three are small — days, not weeks — and cheap insurance against a Phase 2 rewrite.
+**All three spikes are now closed.** Every one changed the specification; none confirmed
+its assumption unchanged — which is the argument for having run them rather than reasoned
+about them.
 
 ### Track C — The decision backlog, sequenced
 
@@ -125,22 +127,21 @@ Everything still open before Phase 1 can start, in one place. Tracks A–C above
 | **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | W4, only if the first dataset is large |
 | **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1? | decision | maintainer | W5 scope, materially |
 | **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | W5 grouping implementation |
-| **8** | **S3** — LightGBM `init_score` symmetry | spike | — | The dual-backend contract (FR-MODEL-27/71) |
+| ~~8~~ | ~~**S3** — LightGBM `init_score`~~ ✔ **done** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
 | **9** | **Phase 1 split** — accept or reject 1a/1b (§5 recommendation) | decision | maintainer | How Phase 1 is planned |
 
 **Not blocking Phase 1, but do not lose them:**
 
 | Task | Kind | Due |
 |---|---|---|
-| **S1 (re-scoped)** — precision across the ZEN binding; `maths-nopanic` reachability | spike | Before Phase 2 |
-| **S2** — `exact`-mode GBM latency at 200 rps | spike | Before Phase 2 — highest-risk remaining unknown |
-| 6 Phase-2 decisions (OQ-RATE-2/3/4/6, OQ-MODEL-3, OQ-PLAT-3) | decisions | Before Phase 2 |
+| 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-MODEL-3, OQ-PLAT-3) | decisions | Before Phase 2 — OQ-RATE-2 now decided |
+| Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
 | 7 Phase-3 decisions · 12 Phase-4 decisions · 12 any-time | decisions | Per gate (§10) |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
 audit are complete and passing; the remaining Phase 0 work is entirely decisions and
-spikes — nine items, of which seven are decisions only the maintainer can make.
+spikes — eight items, of which **seven are decisions only the maintainer can make** — the spike backlog for Phase 1 is now empty.
 
 ---
 
@@ -336,7 +337,7 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | **Before Phase 1** | OQ-OVR-2, OQ-OVR-5, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2, OQ-MODEL-1, OQ-MODEL-5 | 7 |
-| **Before Phase 2** | ~~OQ-RATE-1~~ ✔ *decided 2026-08-14*, **OQ-RATE-2**, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (6 open) |
+| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, OQ-DATA-4 | 12 |
 | **Deferred / any time** | OQ-OVR-3, OQ-OVR-4, OQ-DATA-3, OQ-DATA-5, OQ-DATA-6, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
@@ -345,9 +346,11 @@ you never block on a decision you have not reached.
 — by a spike, not an opinion — and ADR-0004 survived
 ([`research/track-a-findings.md`](research/track-a-findings.md) F1).
 
-The successor is **OQ-RATE-2**: whether an `exact`-mode GBM call fits the 50 ms p99 budget.
-It cannot invalidate an ADR, but it decides OQ-MODEL-3 by force rather than by choice, and
-it is likewise only answerable with code.
+**OQ-RATE-2 has also now been answered** by spike S2 — `exact` mode costs ~2 % of the
+budget, so OQ-MODEL-3 remains a design choice rather than being decided by force.
+
+**Every question that could only be answered with code has been.** What remains is
+judgement, not measurement.
 
 ---
 
@@ -359,7 +362,7 @@ parallelisable workstreams. **No dates, because team size is unknown.**
 | Phase | Requirement share | Parallelisable streams | Relative size | Shape |
 |---|---|---|---|---|
 | 0 — Specification | — | — | done | — |
-| On-ramp (§3) | — | 3 | XS | Research + 2 spikes + 7 decisions |
+| On-ramp (§3) | — | 3 | XS | ~~Research~~ ✔ · ~~3 spikes~~ ✔ · **7 decisions outstanding** |
 | 1 — Modelling Workbench | ~47 % | 3–4 after W1 | **XL** | Broad; recommend splitting (§6) |
 | 2 — Rating Engine | ~24 % | 2–3 | **L** | Deep; one large frontend, one hard NFR |
 | 3 — Governance | ~11 % | 3 | **M** | Mostly surfacing Phase 1 foundations |

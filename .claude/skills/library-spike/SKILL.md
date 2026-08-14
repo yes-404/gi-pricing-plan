@@ -31,8 +31,26 @@ PY
 PYTHONPATH="$SP/libs" python3 spike.py
 ```
 
-Pure-Python packages (`sympy`, `mpmath`, `pydantic`) need `py3-none-any`; compiled ones
-(`numpy`, `scipy`, `pydantic_core`, `xgboost`) need the matching `cp313` manylinux wheel.
+Pure-Python packages (`sympy`, `mpmath`, `pydantic`, `narwhals`) need `py3-none-any`;
+compiled ones (`numpy`, `scipy`, `pydantic_core`, `xgboost`, `lightgbm`) need the matching
+manylinux wheel — note `lightgbm` ships as `py3-none-manylinux`, not `cp313`.
+
+**Missing system libraries.** A wheel may import fine and then fail on a shared object the
+OS does not have — `lightgbm` needs `libgomp.so.1` (OpenMP), which is absent here. Rather
+than give up, check whether another wheel already bundled it:
+
+```bash
+find "$SP/libs" -name '*.so*' | grep -i omp        # xgboost.libs/libgomp-<hash>.so.1.0.0
+mkdir -p "$SP/nativelibs"
+ln -sf "$SP/libs/xgboost.libs/libgomp-e985bcbb.so.1.0.0" "$SP/nativelibs/libgomp.so.1"
+LD_LIBRARY_PATH="$SP/nativelibs" PYTHONPATH="$SP/libs" python3 spike.py
+```
+
+manylinux wheels vendor their native dependencies into a `<pkg>.libs/` directory with a
+hash-suffixed filename; symlinking to the unsuffixed soname makes it loadable by any other
+package. **Transitive Python deps bite the same way** — `lightgbm` needs `narwhals`, which
+nothing else pulled in. Expect two or three rounds of "import, read the error, fetch one
+more wheel"; that is normal, not a sign the approach is wrong.
 
 **The version trap:** fetching "latest" for every package breaks pinned pairs. `pydantic`
 2.13.4 requires `pydantic-core` **2.46.4** exactly and raises `SystemError` against 2.48.0.
@@ -61,7 +79,16 @@ keep the fetch script alongside the spike.
 
 ## Verified
 
-2026-08-14 — Used for four spikes: SymPy 1.14.0 (Piecewise differentiation), XGBoost 3.4.0
+2026-08-14 — Used for six spikes: SymPy 1.14.0 (Piecewise differentiation), XGBoost 3.4.0
 (`base_margin` inclusion in `predt`), Pydantic 2.13.4 (discriminated unions and `Decimal`
-to JSON Schema), and a kink-isolation follow-up. Two produced specification changes. The
-`pydantic-core` version trap and the scratchpad wipe were both hit in that run.
+to JSON Schema), a kink-isolation follow-up, and **spike S3** (LightGBM 4.7.0 `init_score`
+symmetry, which found a real asymmetry → FR-MODEL-72). **Three produced specification
+changes.**
+
+Every trap documented above was hit for real in those runs: the `pydantic-core` version
+pin, the scratchpad being wiped mid-session, `lightgbm`'s missing `libgomp.so.1` (solved by
+borrowing XGBoost's bundled copy), and `narwhals` as an unexpected transitive dependency.
+
+The S3 run also demonstrates why the "take the artifact exactly as the spec writes it" rule
+matters: the contract *claimed* symmetry between two backends, and only running both side
+by side against the same assertion showed it held at fit time and failed at scoring time.

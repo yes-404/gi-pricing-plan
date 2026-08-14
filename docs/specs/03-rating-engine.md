@@ -137,7 +137,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-28** | `expression` steps use the same restricted grammar as `02` §4.6, extended with decimal-safe operators and these rating-specific functions: `round(x, mode, dp)`, `band(x, banding_ref)`, `coalesce(a, b)`, `date_diff_years(a, b)`, `min`, `max`, `clip`. No other functions. |
+| **FR-RATE-28** | `expression` steps use the same restricted grammar as `02` §4.6, extended with decimal-safe operators and these rating-specific functions: `round(x, mode, dp)`, `band(x, banding_ref)`, `coalesce(a, b)`, `date_diff_years(a, b)`, `min`, `max`, `clip`. No other functions. **Availability is verified against the engine at compile time (FR-RATE-59)** — S1 found the two-argument `min`/`max` forms are not valid ZEN calls, so this list states intent, not a guarantee. |
 | **FR-RATE-29** | Arithmetic on monetary values is evaluated in `Decimal` with an explicit context (28 significant digits, `ROUND_HALF_EVEN`), never in binary floating point (R2). Mixing a monetary value and a float-typed value in one expression is a compile-time error. |
 | **FR-RATE-30** | Expression steps cannot reference anything outside their declared inputs — no globals, no environment, no time-of-day. `now()` does not exist; a quote timestamp is an input. |
 
@@ -193,16 +193,28 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 
 ### 3.11 Numeric precision at the engine boundary
 
-Research (2026-08-14) established that the ZEN Engine represents numbers as
-`rust_decimal::Decimal`, not `f64`, so arithmetic *inside* the engine is exact decimal and
-FR-OVR-7 holds through JDM expressions. The residual risk is at the boundaries, not in the
-arithmetic — see [`research/track-a-findings.md`](../research/track-a-findings.md) F1.
+Spike **S1** (2026-08-14, `zen-engine` 0.53.0) tested this end to end. The result splits
+cleanly, and it **corrects an earlier conclusion of ours**
+([`research`](../research/track-a-findings.md) F14).
+
+**Inside the engine, arithmetic is exact.** `0.1 + 0.2 == 0.3` evaluates `true`;
+`1.005 * 100` gives `100.5`; `1.1 * 3 == 3.3` is `true`. ADR-0004 stands.
+
+**At the Python binding, there is no decimal type at all.** A Python `Decimal` is
+*rejected* (`TypeError: unsupported type Decimal`), and every value returned is a Python
+`float` — `1/3` comes back as `0.33333333333333337`. Exactness cannot be carried across the
+boundary in either direction.
+
+After F1 we recorded that the integer-minor-units workaround was "not required for
+correctness". **That was wrong** — right about the engine, wrong about the system. The
+engine is exact; the binding is not, and the binding is what the platform talks to.
 
 | ID | Requirement |
 |---|---|
-| **FR-RATE-56** | Arbitrary-precision number handling must be verified active on **both** parse and serialise at every boundary the engine's values cross. `rust_decimal` serialises in a float-like format by default, so an exact internal value can still be degraded on the way out. A startup self-check asserts an exact decimal round-trips through the binding unchanged; failing it prevents the service starting, because the failure is otherwise silent. |
-| **FR-RATE-57** | No rateable path may reach an unguarded transcendental (`ln`, `log10`, and any other operation with a restricted domain). The engine is built with `maths-nopanic`, under which invalid input **returns `0` rather than raising** — which in a rating path means a silently wrong premium. Every such call site carries an explicit domain guard, and bundle compilation (FR-RATE-25) rejects a graph that reaches one without it. |
-| **FR-RATE-58** | Bundle compilation checks that no rate table value, constant, or intermediate requires a decimal scale beyond `rust_decimal`'s limit of 28, and fails with a named error rather than allowing a silent loss of precision deep in a ladder. |
+| **FR-RATE-56** | **Money crosses the engine boundary only as integer minor units.** The binding accepts no decimal type and returns `float`, so exactness cannot survive the crossing as a fractional value. Integers up to 2^53 are exactly representable in `float64` (≈ £90 trillion in pence), which is why the integer form is safe where the fractional form is not. Fractional quantities — relativities, loadings, factors — may be *held* in rate tables and applied *inside* the engine, but any value returning to Python for further arithmetic is an integer minor unit or a string. A startup self-check asserts the round-trip; failing it prevents the service starting. |
+| **FR-RATE-57** | **Division is the guarded operation, not transcendentals.** S1 found `log` and `sqrt` do not exist in the ZEN expression language at all (they fail to parse), so the earlier requirement guarded operations that cannot be called. The real hazard is **division by zero, which returns `null` and does not raise**: `1/0`, `0/0` and `premium/0` all evaluate to `null` silently. The null then raises a `vmError` at the point it is *used*, reporting the multiply rather than the division that caused it. Every division in a rateable path carries an explicit zero guard, bundle compilation (FR-RATE-25) rejects an unguarded one, and **a `null` reaching an `output` step is a hard error** — otherwise a null premium can be emitted. |
+| **FR-RATE-58** | Bundle compilation checks that no rate table value, constant, or intermediate requires a decimal scale beyond `rust_decimal`'s limit of 28, and fails with a named error rather than allowing a silent loss of precision deep in a ladder. Confirmed relevant by S1: `(1/3) * 3 == 1` evaluates `false`, so repeated division loses exactness inside the engine too. |
+| **FR-RATE-59** | The `expression` step's function vocabulary (FR-RATE-28) is validated **against the engine actually in use**, not against this specification's list. S1 found `abs`, `round`, `floor`, `ceil` and `sum` available, but the two-argument `min(a, b)` / `max(a, b)` forms rejected as invalid function calls. Bundle compilation resolves every function name against the engine's real vocabulary and fails on a mismatch, so a graph cannot reference a function that exists only in our documentation. |
 
 ---
 
@@ -615,6 +627,7 @@ single-row GBM inference latency tuning; hypothesis strategies from a declarativ
 | **NFR-RATE-10** | Audit: algorithm edits, rate table versions, bulk operations, compilations, approvals, deployments, rollbacks, and routing changes all emit Audit Events with before/after state. |
 | **NFR-RATE-11** | Security: the scoring API authenticates per Consumer System with scoped credentials and per-client rate limits; quote inputs are never logged in full outside sampled traces, which are access-controlled. |
 | **NFR-RATE-12** | Trace storage: 1 % sampling of 50 M annual quotes stays under 200 GB/year with the sampled-trace schema. |
+| **NFR-RATE-14** | GBM `model_call` steps execute with **`nthread=1` per request**. Measured (S2): single-threading beats all-cores at the tail — p99 1.09 ms vs 1.48 ms, worst case 4.5 ms vs 19.9 ms — because thread-pool spin-up dominates a single-row prediction. Parallelism belongs across concurrent requests, not inside one. |
 | **NFR-RATE-13** | The scoring endpoint does **not** apply `response_model` validation to its response. Pydantic validation costs roughly 1 ms per request — 2 % of the 50 ms budget before any pricing work — and the response path otherwise runs three to five transformations. `ScoringResult` is constructed by `pricing-core` and is already trusted, so it is serialised directly with a C-speed encoder (`ORJSONResponse`). Inbound `QuoteContext` **is** validated: untrusted input must be checked, trusted output need not be. |
 
 ---
@@ -626,7 +639,7 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ID | Question |
 |---|---|
 | **OQ-RATE-1** | ~~Does the ZEN Engine preserve exact decimal semantics for money?~~ **Resolved 2026-08-14** — it represents numbers as `rust_decimal::Decimal`, so engine arithmetic is exact and ADR-0004 stands. The risk moved to the boundaries and is now specified as FR-RATE-56/57/58; the S1 spike is re-scoped, not cancelled. See [`research`](../research/track-a-findings.md) F1. |
-| **OQ-RATE-2** | Is `model_call` in `exact` mode viable inside the 50 ms p99 budget for a GBM, or does production rating in practice always use `approximation` mode (tied to OQ-MODEL-3)? Needs a latency spike with a realistic booster. |
+| **OQ-RATE-2** | ~~Is `model_call` in `exact` mode viable inside the 50 ms p99 budget?~~ **RESOLVED 2026-08-14 by spike S2 — comfortably yes.** A 500-tree × 60-feature booster scores a single row at **p99 1.09 ms** including `DMatrix` construction (0.33 ms predict-only) — about 2 % of the budget. `nthread=1` beat all-cores at the tail (p99 1.09 vs 1.48 ms; max 4.5 vs 19.9 ms), so per-request single-threading is correct. **OQ-MODEL-3 is therefore a genuine design choice, not one forced by latency.** |
 | **OQ-RATE-3** | Should rate tables live in PostgreSQL as rows (queryable, diffable in SQL, joinable to exposure) or as content-addressed parquet blobs (consistent with datasets, cheaper for very large tables)? Large tables — vehicle × area — could reach millions of cells. |
 | **OQ-RATE-4** | How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path? Pro-rata and cancellation maths differs enough that one algorithm may be a false economy. |
 | **OQ-RATE-5** | Do we support multi-product bundling (motor + home in one quote with a bundle discount) in Phase 2, or is each product a separate Rating Version with bundling left to the Consumer System? |
