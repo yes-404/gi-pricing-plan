@@ -134,7 +134,16 @@ class Settings(BaseSettings):
     # FR-PLAT-5 / NFR-OVR-8: the platform refuses to start in prod without TLS termination.
     tls_terminated: bool = False
 
-    # Development-only identity, until OIDC lands (FR-PLAT-1..4).
+    # OIDC (FR-PLAT-1). Empty issuer means no identity provider is configured, and every
+    # authenticated route then refuses rather than falling back to anything.
+    oidc_issuer: str = ""
+    oidc_audience: str = ""
+    oidc_jwks_url: str = ""
+    #: How long a fetched JWKS is trusted. Short enough that a rotated signing key is
+    #: picked up without a restart; long enough that the IdP is not fetched per request.
+    oidc_jwks_ttl_s: Annotated[int, Field(ge=30, le=86400)] = 300
+
+    # Development-only identity, an alternative to OIDC for local work (FR-PLAT-1..4).
     #
     # Defaults to False and is refused outright in `uat` and `prod` — see
     # `require_startable`. An endpoint that is open because a flag defaulted the wrong way
@@ -180,6 +189,17 @@ class Settings(BaseSettings):
                 "(set GIP_TLS_TERMINATED=true once the terminating proxy is in place). "
                 "FR-PLAT-5 / NFR-OVR-8: all API traffic is TLS 1.3."
             )
+        if self.environment is Environment.PROD and not self.oidc_issuer:
+            raise ConfigInvalidError(
+                "environment=prod requires an OIDC issuer (FR-PLAT-1). Without one no "
+                "user can authenticate, and starting anyway would present a service that "
+                "rejects every request as though it were broken."
+            )
+
+    @property
+    def oidc_configured(self) -> bool:
+        """True when an identity provider is usable. All three fields or none."""
+        return bool(self.oidc_issuer and self.oidc_audience and self.oidc_jwks_url)
 
     def resolve(self, key: str) -> SettingResolution[Any]:
         """Report a setting's effective value and the layer that supplied it.
