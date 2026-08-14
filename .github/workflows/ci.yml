@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push: {branches: [main]}
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The documentation suite is a deliverable in its own right and stays gated.
+  docs:
+    name: docs audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Audit the specification suite
+        run: python3 scripts/audit-docs.py
+
+  packages:
+    name: packages (ruff · mypy · import-linter · pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: {enable-cache: true}
+      - run: uv sync --all-packages --dev
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: mypy --strict
+        run: uv run mypy
+
+      # ADR-0001 is only worth having if it is checked. A forbidden import in
+      # pricing-core fails the build here rather than being noticed in review.
+      - name: Architecture contracts (ADR-0001 / ADR-0002 / DEP-3)
+        run: uv run lint-imports
+
+      - name: Tests
+        run: uv run pytest -q
+
+      # skills-map §9.1: requirement coverage is reported, so a drift between the
+      # specification and what is actually tested is visible rather than assumed.
+      - name: Requirement coverage
+        run: uv run python scripts/req-coverage.py
