@@ -94,6 +94,12 @@ class JobRow(Base):
     # has not.
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # NFR-PLAT-3: a running job with no progress for longer than the configured window is
+    # treated as stalled. That needs the time of the last *progress report*, which is not
+    # `started_at` and not `queued_at` — a job can run for an hour legitimately, and the
+    # question is whether it is still saying anything.
+    progress_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     __table_args__ = (
         # FR-PLAT-12: a repeat submission within the window returns the original job.
         # Partial, because most jobs carry no key — and NULLs never conflict in a unique

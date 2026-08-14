@@ -28,6 +28,9 @@ dev = [
     # boto3 ships no py.typed marker. Stubs rather than a blanket mypy override: the S3
     # call signatures are precisely what --strict should be checking in this module.
     "boto3-stubs[s3]>=1.35",
+    # Same reasoning for Celery: the task decorators are untyped without these, and
+    # --strict then treats every task function as untyped.
+    "celery-types>=0.22",
 ]
 
 # ---- Ruff: CLAUDE.md §3, line length 100 ----

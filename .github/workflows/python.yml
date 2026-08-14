@@ -53,6 +53,17 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      # The outbox's guarantee is about the seam between a transaction and a broker, so
+      # the broker in that test is a real one.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -99,6 +110,7 @@ jobs:
           GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_BLOB_ENDPOINT_URL: http://localhost:9000
+          GIP_REDIS_URL: redis://localhost:6379/0
 
       # FR-PLAT-48 / ADR-0002: the models are the source of truth, so the committed
       # contract follows the code. A drift fails the build rather than being noticed when

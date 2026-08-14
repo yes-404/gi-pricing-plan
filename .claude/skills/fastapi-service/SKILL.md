@@ -174,7 +174,47 @@ with an error that reads as a credentials problem.
 the type, not in remembering. And `collect_garbage(dry_run=True)` by default: a destructive
 sweep whose default is to destroy is one that gets run by accident.
 
-### Async fixtures are function-scoped
+### Worker: a sync protocol over an async data layer
+
+`pricing_core.progress.ProgressCallback` is **synchronous** — a fitting loop calls
+`update()` between rounds — while the data layer is async. Three options, only one works:
+
+| Approach | Outcome |
+|---|---|
+| `asyncio.run()` inside the callback | New loop per tick; the engine's connections detach from it |
+| A second, synchronous SQLAlchemy stack | Two implementations of the audit write — the split that produced a self-consistent, externally-invalid hash chain |
+| **Run the handler in a thread; marshal writes back with `run_coroutine_threadsafe`** | One data layer, one audit path |
+
+So: `await asyncio.to_thread(handler, params, progress)`, and the callback does
+`asyncio.run_coroutine_threadsafe(coro, loop).result(timeout=...)`. Throttle both the
+progress write and the cancellation poll — a tight loop otherwise turns a fit into a
+database benchmark.
+
+### The Celery app is a factory, not a module global
+
+Constructing it reads settings and opens a broker connection. Every test and tooling script
+imports worker code without wanting either. `entrypoint.py` holds the one module-level app,
+imported only when a worker is actually started.
+
+### `asyncio.run()` per task is correct here
+
+A long-lived loop shared across tasks binds the engine's connections to it, and a prefork
+child inherits a loop it must not use. Jobs are long-running by definition, so a connection
+per Job is not the cost that matters.
+
+### At-least-once means the consumer must be idempotent
+
+`task_acks_late` plus outbox redelivery means a Job can arrive twice. `execute_job` returns
+early unless the row is still `queued`. Test it by calling the task twice and asserting the
+handler ran once.
+
+### Never `pkill -f` a pattern your own command line contains
+
+`pkill -f "celery -A app.worker.entrypoint"` matches the shell running it and kills the
+session. The same trap makes `ps | grep -c 'entrypoint worker'` report phantom processes.
+Use `pgrep -x <name>`, or `awk '/pattern/ && !/awk/'`.
+
+## Async fixtures are function-scoped
 
 A `scope="session"` async engine binds connections to the loop that created it, while
 pytest-asyncio gives each test a fresh loop. The symptom is
@@ -189,6 +229,12 @@ session; only `Database.unit_of_work()` commits. If a service needs its own tran
 that is the bug — not the guard.
 
 ## Verified
+
+2026-08-14 — W2 Celery slice. 154 tests pass. The full seam was verified with a real
+worker process against the compose stack: submit in a transaction, relay after commit,
+broker hop, worker dispatch, typed failure, audit chain verified. No handlers are
+registered yet (they arrive with W4/W5), so the correct end state was
+`JOB_HANDLER_NOT_REGISTERED` — which still exercises every hop.
 
 2026-08-14 — W2 blob slice. 115 tests pass; blob behaviours verified against real MinIO,
 and the suite re-run to confirm it is repeatable rather than passing once.

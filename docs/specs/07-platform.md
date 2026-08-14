@@ -279,9 +279,17 @@ The key value itself appears exactly once, in the creation response (FR-PLAT-3).
 
 **Error codes owned by this module:** `UNAUTHENTICATED`, `TOKEN_EXPIRED`,
 `API_KEY_INVALID`, `API_KEY_EXPIRED`, `ENVIRONMENT_SCOPE_DENIED`, `JOB_NOT_CANCELLABLE`,
-`JOB_RESOURCE_BUDGET_EXCEEDED`, `IDEMPOTENCY_KEY_CONFLICT`, `RATE_LIMITED`,
-`BLOB_NOT_FOUND`, `SECRET_NOT_FOUND`, `SETTING_INVALID`, `PROMOTION_ORDER_VIOLATION`,
-`MIGRATION_REQUIRED`.
+`JOB_RESOURCE_BUDGET_EXCEEDED`, `JOB_HANDLER_NOT_REGISTERED`, `JOB_HANDLER_FAILED`,
+`IDEMPOTENCY_KEY_CONFLICT`,
+`RATE_LIMITED`, `BLOB_NOT_FOUND`, `SECRET_NOT_FOUND`, `SETTING_INVALID`,
+`PROMOTION_ORDER_VIOLATION`, `MIGRATION_REQUIRED`.
+
+`JOB_HANDLER_NOT_REGISTERED` and `JOB_HANDLER_FAILED` were added in W2 (2026-08-14). The worker dispatches on Job
+kind, and the platform is deployable before every kind has an implementation — the scoring
+service runs without the compute pool (FR-PLAT-34), and Phase 1a ships the Job machinery
+before the `model.*` handlers exist. A kind with no handler is a deployment error and must
+fail the Job with a code naming it, rather than leaving the Job `queued` for ever with
+nothing to explain why.
 
 ### 5.2 Backend interfaces
 
