@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import health, jobs, service_accounts
+from app.api import health, jobs, me, service_accounts
 from app.api import settings as settings_api
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
@@ -75,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(jobs.router, prefix=API_PREFIX)
     app.include_router(service_accounts.router, prefix=API_PREFIX)
     app.include_router(settings_api.router, prefix=API_PREFIX)
+    app.include_router(me.router, prefix=API_PREFIX)
     app.add_api_route(
         "/version",
         health.version_route(settings),

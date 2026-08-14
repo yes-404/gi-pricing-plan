@@ -31,6 +31,13 @@ from model_schema.jobs import (
     RetryState,
 )
 from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
+from model_schema.permissions import (
+    BUILTIN_ROLES,
+    READ_PERMISSIONS,
+    Permission,
+    ScopeType,
+    role_permissions,
+)
 from model_schema.problem import FieldError, ProblemDetail
 from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
 from model_schema.settings import (
@@ -42,6 +49,8 @@ from model_schema.settings import (
 
 __all__ = [
     "ARTIFACT_TYPES",
+    "BUILTIN_ROLES",
+    "READ_PERMISSIONS",
     "TERMINAL_STATUSES",
     "VALID_TRANSITIONS",
     "ActorKind",
@@ -61,6 +70,7 @@ __all__ = [
     "JobSource",
     "JobStatus",
     "MoneyMinor",
+    "Permission",
     "Principal",
     "ProblemDetail",
     "Progress",
@@ -68,6 +78,7 @@ __all__ = [
     "ResourceBudget",
     "RetryPolicy",
     "RetryState",
+    "ScopeType",
     "SettingCandidate",
     "SettingResolution",
     "SettingSource",
@@ -77,6 +88,7 @@ __all__ = [
     "canonical_payload",
     "compute_event_hash",
     "new_uuid7",
+    "role_permissions",
     "to_minor",
     "uuid7_timestamp_ms",
 ]

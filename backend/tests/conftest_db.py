@@ -79,6 +79,46 @@ async def blob_store() -> AsyncIterator[BlobStore]:
     yield store
 
 
+@pytest_asyncio.fixture
+async def grant(database: Database, workspace_id: UUID, principal: Principal):
+    """Seed the built-in roles and grant one to the test principal.
+
+    Route tests must grant explicitly, because development identity carries **no**
+    permissions. Treating the dev principal as an administrator would make every route test
+    pass without exercising a single permission check — coverage that is not coverage.
+
+        await grant("analyst")
+    """
+
+    async def _grant(role_slug: str, *, principal_id: UUID | None = None) -> None:
+        from sqlalchemy import select
+
+        from app.db.models import RoleAssignmentRow, RoleRow
+        from app.platform import rbac
+        from model_schema import ScopeType
+
+        async with database.unit_of_work() as session:
+            await rbac.seed_builtin_roles(session, workspace_id)
+            role = (
+                await session.execute(
+                    select(RoleRow).where(
+                        RoleRow.workspace_id == workspace_id, RoleRow.slug == role_slug
+                    )
+                )
+            ).scalar_one()
+            session.add(
+                RoleAssignmentRow(
+                    workspace_id=workspace_id,
+                    principal_kind="user",
+                    principal_id=principal_id or principal.id,
+                    role_id=role.id,
+                    scope_type=ScopeType.WORKSPACE.value,
+                )
+            )
+
+    return _grant
+
+
 @pytest.fixture
 def workspace_id() -> UUID:
     """A fresh workspace per test — the only isolation an append-only table permits."""

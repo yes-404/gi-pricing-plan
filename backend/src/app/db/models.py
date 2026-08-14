@@ -19,6 +19,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -45,6 +46,8 @@ __all__ = [
     "JobRow",
     "OutboxRow",
     "OutboxStatus",
+    "RoleAssignmentRow",
+    "RoleRow",
     "ServiceAccountRow",
     "UserRow",
     "WorkspaceMemberRow",
@@ -469,4 +472,84 @@ class WorkspaceSettingRow(Base):
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "key", name="uq_workspace_settings_workspace_key"),
+    )
+
+
+class RoleRow(Base):
+    """A role: a named set of permissions (FR-GOV-3).
+
+    Built-in roles are seeded per workspace from `model_schema.BUILTIN_ROLES` rather than
+    referenced by name, so a workspace can *see* what its Approver role grants and a custom
+    role sits beside them in the same table. Seeding a copy also means changing the shipped
+    defaults never silently changes what an existing workspace's approvers can do — which
+    would be a permission change with no audit event.
+    """
+
+    __tablename__ = "roles"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    permissions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("workspace_id", "slug", name="uq_roles_workspace_slug"),)
+
+
+class RoleAssignmentRow(Base):
+    """A role granted to a principal, within a scope (FR-GOV-4, FR-GOV-8).
+
+    Scope is what stops a motor actuary approving home pricing: an assignment is
+    workspace-wide only when someone chose that, and otherwise names one Dataset, Model
+    Family or Rating Algorithm.
+
+    **Break-glass is the same row with an expiry and a reason** (FR-GOV-8) rather than a
+    separate mechanism. One table means one place where expiry is checked; a parallel
+    emergency-grant table is a second path into the same decision, and the second path is
+    the one that gets forgotten when the check is tightened.
+    """
+
+    __tablename__ = "role_assignments"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    principal_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    principal_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    role_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    scope_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    granted_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # Break-glass (FR-GOV-8): time-boxed, reason-required, prominently flagged.
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reason: Mapped[str | None] = mapped_column(Text)
+    break_glass: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_role_assignments_principal", "workspace_id", "principal_id"),
+        # A scoped assignment names its resource; a workspace-wide one must not, or the
+        # scope means two different things depending on which column you read.
+        CheckConstraint(
+            "(scope_type = 'workspace') = (scope_id IS NULL)",
+            name="scope_id_iff_scoped",
+        ),
+        # FR-GOV-8: an emergency grant with no expiry is a permanent grant with a story.
+        CheckConstraint(
+            "NOT break_glass OR (expires_at IS NOT NULL AND reason IS NOT NULL)",
+            name="break_glass_is_time_boxed_and_justified",
+        ),
     )
