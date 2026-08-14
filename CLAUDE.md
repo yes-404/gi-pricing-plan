@@ -74,7 +74,7 @@ the maths.
 │   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1, W2]
 │   └── pricing-core/         ◐ skeleton only — progress + money        [W1]
 │
-├── backend/                  ◐ API + worker: jobs, audit, blobs, auth, settings [W2 ✔]
+├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals [W2✔ W3✔]
 ├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
 ├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]

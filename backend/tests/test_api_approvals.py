@@ -172,13 +172,17 @@ def test_a_malformed_artifact_reference_is_refused(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-GOV-16")
+@pytest.mark.req("FR-GOV-9")
 def test_requests_are_listable_and_filterable(
     client: TestClient, submitter_headers, approver_headers
 ) -> None:
-    """The inbox *query* (FR-GOV-16). Evidence inline is deferred — it needs the artifacts
-    W4 and W5 produce, and shipping a list under that name would claim the requirement
-    while delivering the easy half."""
+    """Listing and filtering, which the inbox will need.
+
+    Deliberately **not** marked FR-GOV-16: that requirement is about evidence rendered
+    inline — diffs, diagnostics, dislocation, GIPP — and none of those artifacts exist
+    before W4 and W5. A marker here would claim the requirement in the traceability record
+    while the closure record says it is deferred, and the two must not disagree.
+    """
     for i in (7, 8, 9):
         client.post(
             "/api/v1/approval-requests",

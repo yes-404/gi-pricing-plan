@@ -226,8 +226,8 @@ drives the version to `validated` — with the report and profile visible. This 
 |---|---|---|
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
 | ~~**W2**~~ ✔ | Platform core — jobs, blobs, settings, auth, health, tracing | ✔ **closed 2026-08-14** — see the closure record below |
-| **W3** | Governance write path — audit log, RBAC, approval state machine | next |
-| **W4** | Data — ingestion, preparation, validation, profiling, reference data | after W3 |
+| ~~**W3**~~ ✔ | Governance write path — audit log, RBAC, approval state machine | ✔ **closed 2026-08-14** — see the closure record below |
+| **W4** | Data — ingestion, preparation, validation, profiling, reference data | next |
 | **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
@@ -376,6 +376,67 @@ problem it does. The drift check could not catch it, because the contract faithf
 described the code and both were wrong together. A generated artifact matching its source
 is not the same as either being correct, and the fix (`app/api/responses.py`) is now
 guarded by tests asserting the contract's error model directly.
+
+**W3 closure evidence** (2026-08-14). Closed under `CLAUDE.md` §13, scope derived from
+`06` §3 before any code was read.
+
+**Scope.** W3's row reads *"Governance write path: audit log + hash chain, RBAC
+enforcement, approval state machine"* with the qualifier *"§5 — skeleton only, no
+governance UI"*. Mapped to the spec that is **23 requirements**: `06` §3.1 identity and
+permissions (8), §3.4 audit log (7), the state-machine subset of §3.2 (FR-GOV-9, 11, 12,
+13, 14, 15), and NFR-GOV-2 and NFR-GOV-8. **All 23 carry test evidence.**
+
+| Deliverable (roadmap §6) | Evidence |
+|---|---|
+| Audit log + hash chain | Delivered in W2 under DEP-1a; W3 adds the query, verify and export API (FR-GOV-23/24) |
+| RBAC enforcement | 23 permissions, six built-in roles, scoped assignments, route-level checks, break-glass |
+| Approval state machine | submit → decide → approved/rejected/changes_requested, withdrawal, per-workspace policy |
+
+**Gate (local):** ruff clean · mypy --strict on 57 files · import-linter 3 kept / 0 broken ·
+**318 tests** · contracts current · docs audit 14/14.
+
+**NFRs measured** (§13 rule 5):
+
+| NFR | Budget | Measured |
+|---|---|---|
+| NFR-GOV-1 — permission check overhead | 5 ms | **p95 1.74 ms**, median 1.36 ms over 200 checks — **but uncached** |
+| NFR-GOV-2 — audit writes never fail silently | — | a rollback discards the change and its event together |
+| NFR-GOV-8 — explicit negative tests in CI | — | asserted by name, not by count |
+
+*NFR-GOV-1 is **partial**.* The requirement specifies the budget *"using a cached
+effective-permission set invalidated on assignment changes"*. The budget is met without the
+cache at this scale; the named mechanism does not exist, and will be needed when a
+workspace has many assignments per principal. Recorded as met-on-measurement,
+not-met-on-mechanism rather than as a pass.
+
+**What W3 did not deliver.** W3 is the skeleton; `06` has 43 requirements and Phase 3
+(W17–W22) owns the rest:
+
+| Requirement | Status | Owner |
+|---|---|---|
+| FR-GOV-10 — Evidence Bundle completeness at submission | not started; the evidence artifacts do not exist yet | **W4/W5**, then Phase 3 |
+| FR-GOV-16 — Approvals inbox with evidence inline | list and filter exist; *inline evidence* does not | **Phase 3, W18** |
+| FR-GOV-17 — flags propagating into the approval surface | not started; the flags come from `01`/`02` | **Phase 3** |
+| FR-GOV-18 — attestation | not started | **Phase 3** |
+| FR-GOV-19 — required evidence per artifact type | not started; depends on FR-GOV-10 | **Phase 3** |
+| FR-GOV-27..32 — generated documentation and dossiers | not started | **Phase 3, W20** |
+| FR-GOV-33..35 — change control across the platform | not started | **Phase 3** |
+| NFR-GOV-3..7 | unmeasured; several depend on artifacts that do not exist | **Phase 3** |
+
+*A marker was removed during this audit rather than kept.* A test had been marked
+FR-GOV-16 while the closure record called the inbox deferred. The traceability record and
+the closure record must not disagree, and the record was the honest one.
+
+**Open questions.** OQ-GOV-1..6 are gated "Before Phase 3" and none blocked this
+skeleton — checked before starting, not assumed. OQ-GOV-2 (are platform roles authoritative,
+or IdP groups?) looked like a blocker for RBAC and is not: FR-GOV-3 and FR-GOV-4 already
+make roles and scoped assignments platform objects, and FR-PLAT-4 already specifies
+group-to-role mapping as configuration. Both answers to OQ-GOV-2 need the model W3 built;
+only the *source of assignments* is undecided.
+
+*OQ-GOV-1's first half is settled by implementation.* W2 chained per workspace, which is
+what the question's own recommendation says. The remaining half — optional external
+anchoring of the chain head — is untouched and stays open for Phase 3.
 
 ### Phase 1b — Modelling Workbench
 

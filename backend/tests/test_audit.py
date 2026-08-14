@@ -56,6 +56,7 @@ async def test_event_is_written_in_the_callers_transaction(
 
 
 @pytest.mark.req("FR-GOV-20")
+@pytest.mark.req("NFR-GOV-2")
 async def test_rollback_discards_the_change_and_its_audit_event_together(
     database: Database, workspace_id, principal
 ) -> None:

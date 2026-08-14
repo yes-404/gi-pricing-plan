@@ -92,3 +92,32 @@ def test_money_discipline_is_enforced_by_the_docs_audit() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "All checks passed" in result.stdout
+
+
+@pytest.mark.req("NFR-GOV-8")
+def test_the_governance_negative_tests_exist_in_ci() -> None:
+    """NFR-GOV-8: separation of duties, append-only audit and permission enforcement are
+    *covered by explicit negative tests in CI*.
+
+    A requirement about the test suite, so the suite is where it is checked. Asserting the
+    marker exists is weak on its own — what makes it meaningful is that each named test
+    asserts a refusal, which is why the names are matched rather than counted.
+    """
+    import re
+
+    suite = "\n".join(
+        path.read_text(encoding="utf-8")
+        for root in ("backend/tests", "packages", "tests")
+        for path in (ROOT / root).rglob("test_*.py")
+    )
+
+    required = {
+        "separation of duties": r"def test_the_submitter_cannot_approve",
+        "distinct approvers": r"def test_two_approvals_must_come_from_distinct_principals",
+        "append-only audit": r"def test_update_and_delete_are_rejected_by_the_database",
+        "no truncate": r"def test_truncate_is_rejected",
+        "permission enforcement": r"def test_a_caller_without_the_role_is_forbidden",
+        "no self-elevation": r"def test_a_user_cannot_grant_a_permission_they_do_not_hold",
+    }
+    missing = [name for name, pattern in required.items() if not re.search(pattern, suite)]
+    assert missing == [], f"negative tests missing for: {missing}"
