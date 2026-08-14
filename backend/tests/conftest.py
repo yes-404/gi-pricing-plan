@@ -35,8 +35,17 @@ def client(app: FastAPI) -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_probes() -> None:
-    """Readiness probes are process-global; a leak between tests is a flaky suite."""
+def _isolate_probes():
+    """Readiness probes are process-global; a leak between tests is a flaky suite.
+
+    Cleared on the way out as well as the way in. Clearing only on entry is not enough:
+    a test whose fixture starts an app (`with TestClient(...)`) registers probes during
+    setup, and whether that happens before or after this fixture runs depends on fixture
+    ordering pytest does not promise. Clearing both ends makes the outcome independent of
+    that ordering.
+    """
+    clear_probes()
+    yield
     clear_probes()
 
 

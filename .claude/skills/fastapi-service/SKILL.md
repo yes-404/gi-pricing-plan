@@ -174,7 +174,57 @@ with an error that reads as a credentials problem.
 the type, not in remembering. And `collect_garbage(dry_run=True)` by default: a destructive
 sweep whose default is to destroy is one that gets run by accident.
 
-### Worker: a sync protocol over an async data layer
+### Collection endpoints
+
+**Cursor, never offset** (`00` §5.2). With `OFFSET`, a row inserted while a client pages
+shifts everything after it — the client sees one row twice and misses another. On a jobs
+list refreshed while jobs are submitted, that is the normal case.
+
+Fetch `limit + 1` rows and return `limit`: the extra row answers "is there another page?"
+without a second query. The cursor is opaque so clients cannot come to depend on the sort
+key.
+
+**`total_estimate` is capped, not exact.** FR-PLAT-14 keeps 13 months of job history; an
+unbounded `COUNT(*)` scans the year to render one page.
+
+### UUIDv7 does not order within a millisecond
+
+It is a fine cursor for "newest first" and a poor one for "in the order these happened".
+Three log lines written in one transaction came back scrambled, because ids in the same
+millisecond have no defined order — and `at` ties too, since every row in a transaction
+shares its transaction timestamp.
+
+For anything where **insertion order is the meaning** (log lines), use a database-assigned
+`Identity()` column and order by it. This is the same rule the audit chain already
+follows with its per-workspace `sequence`; it just has to be applied everywhere order
+matters, not only where tamper-evidence does.
+
+## Routes must fail closed
+
+`require_caller` returns **401** when no identity provider is configured, and
+`Settings.require_startable` refuses to boot with development identity enabled in `uat` or
+`prod`. A route added later inherits the refusal by depending on it, rather than having to
+remember to ask for authentication.
+
+**Cross-tenant reads are 404, not 403.** A 403 confirms the id exists, which is a
+disclosure in a multi-tenant system even when the body says nothing else.
+
+## SSE: poll, do not subscribe
+
+`LISTEN`/`NOTIFY` holds a database connection per viewer; a jobs page open in three
+browsers exhausts the pool. Poll one row on an interval, emit only on change, and **close
+the stream when the job is terminal** — otherwise a client that forgets to unsubscribe
+holds the connection for ever. Send `X-Accel-Buffering: no`, or a proxy buffers the stream
+and the client sees nothing until the job ends, which looks exactly like a hung job.
+
+## Test fixtures must take the test DSN explicitly
+
+An app fixture built from a bare `Settings()` falls back to the packaged default DSN
+whenever `GIP_DATABASE_URL` is unset — true locally, false in CI. The tests then pass on
+the runner and fail on a developer machine. Source it from the same helper the database
+fixture uses.
+
+## Worker: a sync protocol over an async data layer
 
 `pricing_core.progress.ProgressCallback` is **synchronous** — a fitting loop calls
 `update()` between rounds — while the data layer is async. Three options, only one works:
@@ -229,6 +279,11 @@ session; only `Database.unit_of_work()` commits. If a service needs its own tran
 that is the bug — not the guard.
 
 ## Verified
+
+2026-08-14 — W2 jobs-routes slice. 173 tests pass; the full suite was run seven times to
+confirm it is repeatable, after one run failed two tests that did not reproduce. The
+likeliest cause — process-global readiness probes cleared only on fixture entry — was made
+order-independent rather than left to chance.
 
 2026-08-14 — W2 Celery slice. 154 tests pass. The full seam was verified with a real
 worker process against the compose stack: submit in a transaction, relay after commit,

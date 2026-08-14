@@ -134,6 +134,14 @@ class Settings(BaseSettings):
     # FR-PLAT-5 / NFR-OVR-8: the platform refuses to start in prod without TLS termination.
     tls_terminated: bool = False
 
+    # Development-only identity, until OIDC lands (FR-PLAT-1..4).
+    #
+    # Defaults to False and is refused outright in `uat` and `prod` — see
+    # `require_startable`. An endpoint that is open because a flag defaulted the wrong way
+    # is the failure this is shaped to prevent: with it off, every authenticated route
+    # returns 401 rather than silently trusting a header.
+    dev_auth_enabled: bool = False
+
     # NFR-PLAT-3 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
@@ -157,6 +165,15 @@ class Settings(BaseSettings):
 
     def require_startable(self) -> None:
         """Refuse to start when the environment's hard rules are unmet (FR-PLAT-5)."""
+        if self.dev_auth_enabled and self.environment in {
+            Environment.UAT,
+            Environment.PROD,
+        }:
+            raise ConfigInvalidError(
+                f"dev_auth_enabled must not be set in {self.environment.value}. It trusts "
+                "a request header as identity, which would let any caller act as any "
+                "principal in any workspace. Configure OIDC (FR-PLAT-1) instead."
+            )
         if self.environment is Environment.PROD and not self.tls_terminated:
             raise ConfigInvalidError(
                 "environment=prod requires TLS termination to be configured "
