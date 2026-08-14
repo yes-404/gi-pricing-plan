@@ -18,7 +18,7 @@ Three things this document deliberately does not do:
 - It does not re-order or rename the phases. That is `CLAUDE.md` §9's call.
 - It does not give dates. Sizing is relative and the assumption is stated in §10.
 - It does not resolve open questions. It says *which* ones block *what*, so you can answer
-  them in the order that unblocks work, rather than all 45 at once.
+  them in the order that unblocks work, rather than all 46 at once.
 
 ---
 
@@ -27,7 +27,7 @@ Three things this document deliberately does not do:
 | | |
 |---|---|
 | **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 408 requirements |
-| **Blocking Phase 1** | 7 decisions and 1 spike (§3). Track A research **closed**; 44 of 45 open questions remain but only 7 gate Phase 1 |
+| **Blocking Phase 1** | 7 decisions and 1 spike (§3). Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
 | **Code written** | None, by design (`CLAUDE.md` §0) |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
@@ -95,7 +95,7 @@ All three are small — days, not weeks — and cheap insurance against a Phase 
 
 ### Track C — The decision backlog, sequenced
 
-You do not need to answer 45 questions. You need to answer **7 before Phase 1 starts**:
+You do not need to answer 46 questions. You need to answer **7 before Phase 1 starts**:
 
 | Question | Why it blocks Phase 1 |
 |---|---|
@@ -337,7 +337,7 @@ you never block on a decision you have not reached.
 |---|---|---|
 | **Before Phase 1** | OQ-OVR-2, OQ-OVR-5, OQ-PLAT-1, OQ-DATA-1, OQ-DATA-2, OQ-MODEL-1, OQ-MODEL-5 | 7 |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔ *decided 2026-08-14*, **OQ-RATE-2**, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (6 open) |
-| **Before Phase 3** | OQ-GOV-1..5, OQ-OVR-1, OQ-MODEL-7 | 7 |
+| **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, OQ-DATA-4 | 12 |
 | **Deferred / any time** | OQ-OVR-3, OQ-OVR-4, OQ-DATA-3, OQ-DATA-5, OQ-DATA-6, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
 

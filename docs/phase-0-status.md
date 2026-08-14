@@ -17,7 +17,7 @@ documents alone.*
 | Every module spec meets the §5 ten-section standard | **done** | All 8 specs verified by the audit script |
 | All five workflow documents complete | **done** | wf-01 … wf-05, each with failure paths and traceability |
 | Contracts drafted | **done** | 31 JSON Schemas covering every persisted artifact, + OpenAPI stub |
-| `open-questions.md` empty or explicitly deferred | **open** | 45 questions: 38 `open`, 6 `deferred`, **1 `decided`** (OQ-RATE-1, closed by Track A research). Each has options, trade-offs, and a recommendation |
+| `open-questions.md` empty or explicitly deferred | **open** | 46 questions: 39 `open`, 6 `deferred`, **1 `decided`** (OQ-RATE-1, closed by Track A research). Each has options, trade-offs, and a recommendation |
 | `skills-map.md` covers every tech dependency | **done** | Every stack component cited by a spec has a row |
 
 **Remaining before Phase 1 can start:** resolve or explicitly defer the open questions
@@ -82,7 +82,7 @@ bare question.
 | RATE | 4 (+1 decided) | 1 | ~~OQ-RATE-1~~ resolved; now **OQ-RATE-2 `exact`-mode GBM latency** — see §5 |
 | OPT | 4 | 2 | OQ-OPT-4 demand-model endogeneity |
 | MON | 4 | 1 | OQ-MON-1 whether A/E comes from traces or a full re-score |
-| GOV | 4 | 1 | OQ-GOV-3 whether Admin can override a flag |
+| GOV | 5 | 1 | OQ-GOV-3 whether Admin can override a flag |
 | PLAT | 5 | 0 | OQ-PLAT-1 Celery vs a transactional Postgres queue |
 
 Deferred items name their target phase.
