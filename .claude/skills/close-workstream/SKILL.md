@@ -1,6 +1,6 @@
 ---
 name: close-workstream
-description: Audit a Phase 1a/1b workstream (W1, W2, …) before declaring it closed in docs/roadmap.md. Covers re-verifying deliverables against their roadmap definition, running the full local gate, proving new checks fail on broken input, measuring rather than asserting NFRs, stating what was not delivered, and updating the plan docs in the same PR. Use when asked to close, sign off, or confirm a workstream is complete — and before writing any "✔ closed" into the roadmap.
+description: Audit a workstream (W1, W2, …) before declaring it closed in docs/roadmap.md. Starts by deriving the expected scope from docs/specs/ with scripts/scope-audit.py and only then looks for evidence — never from recollection of what was built. Also covers running the gate locally, proving new checks fail on broken input, measuring rather than asserting NFRs, and giving every unevidenced requirement a verdict. Use when asked to close, sign off, or confirm a workstream is complete — and before writing any "✔ closed" into the roadmap.
 ---
 
 # Closing a workstream
@@ -11,14 +11,49 @@ The failure this guards against is not "we forgot a task". It is a roadmap that 
 progress the repository does not have — which is worse than no roadmap, because the next
 workstream is planned against it.
 
-## 0. Re-read the definition first
+## 0. Derive the scope from the specs first — then go looking for evidence
+
+Do this **before** opening any source file or recalling anything you built. The order is
+the method: enumerate what the specification requires, then search for evidence of each
+item. Reversed, an audit can only confirm what exists and is silent about what is missing —
+which is the half a closure record is for.
 
 ```bash
-sed -n '/^## 6/,/^## 7/p' docs/roadmap.md   # the workstream table
+sed -n '/^## 6/,/^## 7/p' docs/roadmap.md          # the workstream's named areas
+uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 \
+    --extra FR-PLAT-47,FR-PLAT-48
 ```
 
-Audit against **what the roadmap said the workstream would deliver**, not against what you
-remember building. These drift, and memory drifts toward "done".
+`scope-audit.py` reads requirements from `docs/specs/` and evidence from
+`@pytest.mark.req` markers. Both are documents; neither is your memory. It exits non-zero
+while anything in scope lacks evidence.
+
+**Map the workstream's named areas to spec sections yourself.** "Platform core: jobs, blobs,
+settings, OIDC auth, health, tracing" is `07` §3.1, §3.2, §3.3, §3.7, §3.8 — 33
+requirements — plus FR-PLAT-47/48 for the API conventions and the generated contract, which
+is 35, and 35 is what the roadmap's "~35" meant. Getting to that number *from the spec* is
+what makes the next step meaningful.
+
+**Then check for requirements assigned elsewhere**, so you neither claim nor blame them:
+
+```bash
+grep -nE '\| \*\*W[0-9]+' docs/roadmap.md | grep PLAT     # e.g. FR-PLAT-28..31 → W14
+```
+
+**Reconcile against the roadmap's own count.** A disagreement is a finding: W2's row said
+"of 60" where the spec now holds 61, because FR-PLAT-51 was appended afterwards.
+
+**Give every unevidenced requirement a verdict** — delivered but untested, deferred with an
+owner, reassigned, or not started. Silence is not one of the options, and it was the
+default for four of W2's six gaps until an audit went looking.
+
+## 0b. Read the markers that matter
+
+A marker is a *claim* that a test asserts something about a requirement, not proof that it
+covers it. For anything load-bearing — an authorisation boundary, an immutability rule —
+open the test and check the assertion is exact. W2 had a test accepting *either* of two
+error codes, which would have passed whether or not the environment check it named
+existed.
 
 ## 1. Each deliverable: exists *and* works
 
@@ -66,6 +101,15 @@ false positives here: a `✓` echoed on `head`'s exit code rather than the comma
 above it proved the opposite. **If a check has never printed a failure, you have not tested
 the check.**
 
+### A generated artifact matching its source proves neither is correct
+
+W2's contract drift check passed while the published OpenAPI advertised an error model the
+platform never emits and omitted the one it does. The contract faithfully described the
+code; both were wrong together, and no amount of comparing them would have said so.
+
+Check generated output against the **requirement** — open the spec clause and read the
+document — not only against the thing it was generated from.
+
 ## 4. Measure NFRs, don't assert them
 
 Record the number and the budget it is measured against:
@@ -73,22 +117,6 @@ Record the number and the budget it is measured against:
 > Cold start 21 s, warm 6 s, against NFR-PLAT-4's 300 s budget.
 
 not "the stack starts quickly". An unmeasured NFR is an opinion with an ID.
-
-## 4b. Re-derive the scope from the spec, not from the build log
-
-Count the requirements the workstream's named areas contain, in the spec, and compare that
-to what has evidence. Auditing against a list of what you built only ever confirms what you
-built.
-
-W2's roadmap row said "~35 of 60 `PLAT` requirements". Adding up the sections it names
-gives exactly 35 — and an independent count found **six** in-scope requirements with no
-evidence where the roadmap acknowledged two, four of them mentioned nowhere in the
-documentation at all.
-
-**A generated artifact matching its source proves neither is correct.** W2's contract drift
-check passed while the published contract advertised an error model the platform never
-emits and omitted the one it does. Check generated output against the *requirement*, not
-only against its source.
 
 ## 5. Write down what was *not* delivered
 
@@ -131,6 +159,9 @@ the history. Verify by content, not by what git says about ancestry — see `git
 ```markdown
 ### W<n> — <name>: closed <YYYY-MM-DD>
 
+**Scope**, derived from `<spec>` §… rather than from the build log: N requirements.
+Reconciles with the roadmap's claim of "~N" / *differs, because …*
+
 | Deliverable (roadmap §6) | Evidence |
 |---|---|
 | … | … |
@@ -138,5 +169,9 @@ the history. Verify by content, not by what git says about ancestry — see `git
 **Gate:** ruff clean · mypy --strict clean · N contracts kept, 0 broken · N tests pass ·
 docs audit 14/14 · req-coverage N requirements
 
-**Not delivered by W<n>:** <the §5 mapping table>
+**Requirement coverage:** X of N in-scope requirements carry test evidence (Y %).
+
+**Not delivered by W<n>:** every unevidenced requirement with a verdict — delivered but
+untested / deferred with an owner / reassigned / not started — plus the §5 retrofit
+mapping.
 ```
