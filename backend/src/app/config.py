@@ -99,10 +99,15 @@ class Settings(BaseSettings):
     version: str = "0.1.0"
 
     # Postgres holds all metadata, artifacts, the audit log and job records (FR-PLAT-17).
-    database_url: str = "postgresql+asyncpg://gip:gip@localhost:5432/gip"
+    #
+    # SecretStr because a DSN embeds a password. As a plain `str` it appeared verbatim in
+    # `model_dump()`, so any structured log line carrying settings would have published the
+    # database credentials — which is exactly what NFR-PLAT-7 forbids.
+    database_url: SecretStr = SecretStr("postgresql+asyncpg://gip:gip@localhost:5432/gip")
 
     # Redis is the Celery broker and a cache; nothing durable lives here (FR-PLAT-22).
-    redis_url: str = "redis://localhost:6379/0"
+    # SecretStr for the same reason as `database_url` — a Redis URL can carry a password.
+    redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
 
     # S3-compatible blob store: MinIO locally, any S3 in production (FR-PLAT-18).
     blob_endpoint_url: str = "http://localhost:9000"
@@ -137,13 +142,13 @@ class Settings(BaseSettings):
 
     @field_validator("database_url")
     @classmethod
-    def _database_must_be_async(cls, v: str) -> str:
+    def _database_must_be_async(cls, v: SecretStr) -> SecretStr:
         """SQLAlchemy picks its driver from the URL scheme.
 
         A sync driver in an async application does not fail loudly — it blocks the event
         loop, and the symptom is latency under concurrency rather than an error.
         """
-        if not v.startswith("postgresql+asyncpg://"):
+        if not v.get_secret_value().startswith("postgresql+asyncpg://"):
             raise ValueError(
                 "database_url must use the postgresql+asyncpg:// scheme; a sync driver "
                 "blocks the event loop instead of failing"

@@ -286,13 +286,29 @@ async def test_presign_rejects_zero_parts(blob_store: BlobStore) -> None:
 
 
 @pytest.mark.req("NFR-PLAT-7")
-async def test_credentials_are_not_in_the_settings_repr() -> None:
-    """R3: a settings object reaching a log line must not carry the secret with it."""
+async def test_no_credential_survives_a_settings_dump() -> None:
+    """R3 / NFR-PLAT-7: a settings object reaching a log line must not carry secrets.
+
+    Every credential is given a distinctive value, so the assertion is about the property
+    — no secret escapes — rather than about a substring that legitimately appears
+    elsewhere. The first version of this test asserted the store's *username* was absent
+    and passed locally only because CI, not the developer machine, sets `GIP_DATABASE_URL`.
+    """
+    from pydantic import SecretStr
+
     from app.config import Settings
 
-    settings = Settings()
-    assert "gipricing" not in repr(settings.blob_secret_key)
-    assert "gipricing" not in str(settings.model_dump())
+    settings = Settings(
+        database_url=SecretStr("postgresql+asyncpg://u:db-pw-alpha@localhost:5432/d"),
+        redis_url=SecretStr("redis://:redis-pw-bravo@localhost:6379/0"),
+        blob_access_key=SecretStr("blob-key-charlie"),
+        blob_secret_key=SecretStr("blob-pw-delta"),
+    )
+    secrets = ("db-pw-alpha", "redis-pw-bravo", "blob-key-charlie", "blob-pw-delta")
+
+    for rendered in (repr(settings), str(settings.model_dump()), settings.model_dump_json()):
+        for secret in secrets:
+            assert secret not in rendered
 
 
 async def _age_blob(database: Database, sha256: str, *, days: int) -> None:
