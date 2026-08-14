@@ -127,7 +127,7 @@ Everything still open before Phase 1 can start, in one place. Tracks A–C above
 | **5** | **OQ-DATA-2** — append ingestion vs full snapshots | decision | maintainer | W4, only if the first dataset is large |
 | **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1? | decision | maintainer | W5 scope, materially |
 | **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | W5 grouping implementation |
-| ~~8~~ | ~~**S3** — LightGBM `init_score` symmetry~~ ✔ **done 2026-08-14** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
+| ~~8~~ | ~~**S3** — LightGBM `init_score`~~ ✔ **done** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
 | **9** | **Phase 1 split** — accept or reject 1a/1b (§5 recommendation) | decision | maintainer | How Phase 1 is planned |
 
 **Not blocking Phase 1, but do not lose them:**
@@ -362,7 +362,7 @@ parallelisable workstreams. **No dates, because team size is unknown.**
 | Phase | Requirement share | Parallelisable streams | Relative size | Shape |
 |---|---|---|---|---|
 | 0 — Specification | — | — | done | — |
-| On-ramp (§3) | — | 3 | XS | Research + 2 spikes + 7 decisions |
+| On-ramp (§3) | — | 3 | XS | ~~Research~~ ✔ · ~~3 spikes~~ ✔ · **7 decisions outstanding** |
 | 1 — Modelling Workbench | ~47 % | 3–4 after W1 | **XL** | Broad; recommend splitting (§6) |
 | 2 — Rating Engine | ~24 % | 2–3 | **L** | Deep; one large frontend, one hard NFR |
 | 3 — Governance | ~11 % | 3 | **M** | Mostly surfacing Phase 1 foundations |
