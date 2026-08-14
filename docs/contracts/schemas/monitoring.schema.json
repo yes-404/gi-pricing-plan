@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/monitoring.schema.json",
+  "title": "Monitoring contracts",
+  "description": "Monitor, MonitoringResult, Alert. See 05-monitoring.md §4.",
+  "$defs": {
+    "Monitor": {
+      "type": "object",
+      "required": ["slug", "environment", "metric_family", "population", "baseline", "cadence", "thresholds", "routing"],
+      "properties": {
+        "slug": {"type": "string"},
+        "environment": {"type": "string"},
+        "metric_family": {"enum": ["input_drift", "model_ae", "demand", "price_portfolio", "operational", "shadow"]},
+        "population": {"type": "object"},
+        "baseline": {
+          "type": "object",
+          "required": ["kind", "pinned_at"],
+          "description": "Pinned to specific artifact versions, never 'the current model' (FR-MON-3).",
+          "properties": {
+            "kind": {"enum": ["model_fit", "dataset_profile", "prior_period"]},
+            "model_ref": {"$ref": "common/artifact-ref.schema.json"},
+            "profile_dataset_version_id": {"type": "string", "format": "uuid"},
+            "pinned_at": {"type": "string", "format": "date-time"},
+            "rebaseline_reason": {"type": ["string", "null"]}
+          }
+        },
+        "segments": {"type": "array", "items": {"type": "string"}},
+        "cadence": {"enum": ["hourly", "daily", "weekly", "monthly"]},
+        "maturity_policy": {
+          "type": "object",
+          "properties": {
+            "min_development_months": {"type": "integer", "minimum": 0},
+            "development_pattern_ref": {"type": ["string", "null"]},
+            "exclude_immature_from_alerts": {"type": "boolean", "default": true}
+          },
+          "description": "A/E is never displayed without its maturity (05 R4)."
+        },
+        "thresholds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["metric", "kind"],
+            "properties": {
+              "metric": {"type": "string"},
+              "kind": {"enum": ["absolute", "relative_ci"]},
+              "confidence": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+              "warn_above": {"type": "number"}, "breach_above": {"type": "number"},
+              "warn_below": {"type": "number"}, "breach_below": {"type": "number"},
+              "warn_outside": {"type": "number"}, "breach_outside": {"type": "number"},
+              "consecutive_required": {"type": "integer", "minimum": 1, "default": 1}
+            }
+          }
+        },
+        "routing": {"type": "array", "items": {"type": "object"}},
+        "enabled": {"type": "boolean", "default": true}
+      }
+    },
+    "MonitoringResult": {
+      "type": "object",
+      "required": ["monitor_id", "run_id", "period", "population", "metrics", "summary"],
+      "properties": {
+        "monitor_id": {"type": "string", "format": "uuid"},
+        "run_id": {"type": "string", "format": "uuid"},
+        "period": {"type": "object", "required": ["from", "to"],
+          "properties": {"from": {"type": "string", "format": "date"}, "to": {"type": "string", "format": "date"}}},
+        "population": {"type": "object"},
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "value", "status"],
+            "properties": {
+              "name": {"type": "string"},
+              "segment": {"type": "object"},
+              "value": {"type": "number"},
+              "expected": {"type": ["number", "null"]},
+              "ci_95": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+              "status": {"enum": ["ok", "warn", "breach", "excluded_immature"]},
+              "weighting": {"enum": ["exposure", "count", "claim_count"]},
+              "evidence": {"type": "object"}
+            }
+          }
+        },
+        "summary": {"type": "object"},
+        "alerts_raised": {"type": "array", "items": {"type": "string", "format": "uuid"}}
+      }
+    },
+    "Alert": {
+      "type": "object",
+      "required": ["monitor_id", "monitoring_result_id", "metric", "severity", "value", "threshold", "status", "raised_at"],
+      "properties": {
+        "monitor_id": {"type": "string", "format": "uuid"},
+        "monitoring_result_id": {"type": "string", "format": "uuid"},
+        "metric": {"type": "string"},
+        "segment": {"type": "object"},
+        "severity": {"enum": ["warn", "breach"]},
+        "value": {"type": "number"},
+        "threshold": {"type": "string"},
+        "trend": {"type": "array", "items": {"type": "number"}},
+        "affected": {"type": "object"},
+        "status": {"enum": ["raised", "acknowledged", "resolved", "suppressed"]},
+        "raised_at": {"type": "string", "format": "date-time"},
+        "acknowledged": {"type": ["object", "null"],
+          "required": ["user_id", "at", "note"],
+          "properties": {"user_id": {"type": "string", "format": "uuid"},
+                         "at": {"type": "string", "format": "date-time"},
+                         "note": {"type": "string", "minLength": 1}}},
+        "resolution": {"type": ["object", "null"]},
+        "suppression": {"type": ["object", "null"],
+          "required": ["until", "reason"],
+          "properties": {"until": {"type": "string", "format": "date-time"},
+                         "reason": {"type": "string", "minLength": 1}}},
+        "evidence_links": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

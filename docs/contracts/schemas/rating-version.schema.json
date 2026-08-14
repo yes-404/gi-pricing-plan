@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/rating-version.schema.json",
+  "title": "RatingVersion",
+  "description": "Immutable, fully-pinned deployable bundle. See 03-rating-engine.md §4.3.",
+  "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
+  "type": "object",
+  "required": ["status", "algorithm_ref", "pins", "model_reference_mode", "effective_from", "change_summary"],
+  "properties": {
+    "status": {"enum": ["draft", "review", "approved", "live", "retired"]},
+    "algorithm_ref": {"$ref": "common/artifact-ref.schema.json"},
+    "pins": {
+      "type": "object",
+      "required": ["rate_tables", "models", "reference_tables"],
+      "description": "Nothing resolves 'latest' at scoring time (03 R1, FR-RATE-22).",
+      "properties": {
+        "rate_tables": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
+        "models": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
+        "reference_tables": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
+        "custom_objectives": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}}
+      }
+    },
+    "model_reference_mode": {"enum": ["exact", "approximation"]},
+    "effective_from": {"type": "string", "format": "date"},
+    "effective_to": {"type": ["string", "null"], "format": "date"},
+    "bundle": {
+      "type": ["object", "null"],
+      "required": ["content_hash", "bytes", "compiled_at"],
+      "properties": {
+        "content_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "bytes": {"type": "integer", "minimum": 0},
+        "compiled_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "change_summary": {"type": "string", "minLength": 1},
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "regression_suite_run_id": {"type": ["string", "null"], "format": "uuid"},
+        "dislocation_run_id": {"type": ["string", "null"], "format": "uuid"},
+        "gipp_check_id": {"type": ["string", "null"], "format": "uuid"},
+        "optimisation_run_id": {"type": ["string", "null"], "format": "uuid"},
+        "structural_diff_blob": {"type": ["string", "null"]}
+      }
+    },
+    "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
+  },
+  "allOf_invariants": [
+    "status >= approved requires every evidence item the workspace policy demands (FR-RATE-40, 06 §3.3)",
+    "every pin resolves to an artifact whose status is approved or better (FR-OVR-14)",
+    "bundle.content_hash is reproducible from the pins (NFR-RATE-7)"
+  ]
+}

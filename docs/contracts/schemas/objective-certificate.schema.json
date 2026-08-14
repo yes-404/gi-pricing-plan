@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/objective-certificate.schema.json",
+  "title": "ObjectiveCertificate",
+  "description": "Mathematical evidence gating objective submission. See 02-modelling.md §4.7.",
+  "type": "object",
+  "required": ["custom_objective_id", "objective_version", "checks", "sampling", "overall"],
+  "properties": {
+    "custom_objective_id": {"type": "string", "format": "uuid"},
+    "objective_version": {"type": "integer", "minimum": 1},
+    "checks": {
+      "type": "array", "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "detail"],
+        "properties": {
+          "name": {"enum": ["symbolic_vs_numeric_gradient", "symbolic_vs_numeric_hessian",
+                            "finiteness", "convexity", "minimum_at_truth", "monotone_loss",
+                            "scale_behaviour", "smoke_fit"]},
+          "status": {"enum": ["pass", "warn", "violated", "fail"]},
+          "detail": {"type": "string"}
+        }
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "required": ["n_points", "seed", "y_range", "f_range", "w_range"],
+      "properties": {
+        "n_points": {"type": "integer", "minimum": 1000},
+        "seed": {"type": "integer"},
+        "y_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+        "f_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+        "w_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}
+      }
+    },
+    "overall": {"enum": ["certified", "certified_with_findings", "failed"]},
+    "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
+  },
+  "allOf_invariants": [
+    "overall == 'failed' blocks submission entirely (FR-MODEL-42)",
+    "convexity status 'violated' requires the objective to declare a hessian_strategy and escalates to two approvers (FR-MODEL-43)"
+  ]
+}

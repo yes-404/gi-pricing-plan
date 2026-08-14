@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/validation-report.schema.json",
+  "title": "ValidationReport",
+  "description": "Immutable result of one validation run. See 01-data-management.md §4.6.",
+  "type": "object",
+  "required": ["dataset_version_id", "rule_set_id", "rule_set_version", "job_id",
+               "started_at", "finished_at", "overall", "counts", "results"],
+  "properties": {
+    "dataset_version_id": {"type": "string", "format": "uuid"},
+    "rule_set_id": {"type": "string", "format": "uuid"},
+    "rule_set_version": {"type": "integer", "minimum": 1},
+    "job_id": {"type": "string", "format": "uuid"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "finished_at": {"type": "string", "format": "date-time"},
+    "overall": {"enum": ["pass", "pass_with_warnings", "fail", "error"]},
+    "counts": {
+      "type": "object",
+      "required": ["pass", "warn", "fail", "error", "skipped"],
+      "properties": {
+        "pass": {"type": "integer", "minimum": 0},
+        "warn": {"type": "integer", "minimum": 0},
+        "fail": {"type": "integer", "minimum": 0},
+        "error": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0}
+      }
+    },
+    "reference_dataset_version_id": {"type": ["string", "null"], "format": "uuid"},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "rule_slug", "rule_version", "layer", "severity", "outcome"],
+        "properties": {
+          "rule_id": {"type": "string", "format": "uuid"},
+          "rule_slug": {"type": "string"},
+          "rule_version": {"type": "integer", "minimum": 1},
+          "layer": {"enum": ["structural", "referential", "actuarial_sanity", "distributional"]},
+          "severity": {"enum": ["fail", "warn", "info"]},
+          "outcome": {"enum": ["pass", "warn", "fail", "error", "skipped"]},
+          "measured": {"type": ["object", "null"]},
+          "threshold": {"type": ["object", "null"]},
+          "affected_rows": {"type": ["integer", "null"], "minimum": 0},
+          "affected_exposure_fraction": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "detail": {"type": "string"},
+          "offending_sample": {"type": "array", "maxItems": 100, "items": {"type": "object"}},
+          "evidence_blob": {"type": ["string", "null"]},
+          "error_reason": {"type": ["string", "null"], "enum": ["timeout", "exception", "unavailable_dependency", null]},
+          "acknowledgement": {
+            "type": ["object", "null"],
+            "required": ["user_id", "at", "justification"],
+            "properties": {
+              "user_id": {"type": "string", "format": "uuid"},
+              "at": {"type": "string", "format": "date-time"},
+              "justification": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf_invariants": [
+    "overall == 'pass' iff counts.fail == 0 and counts.error == 0 and counts.warn == 0",
+    "overall == 'pass_with_warnings' iff counts.fail == 0 and counts.error == 0 and every warn result has an acknowledgement (FR-DATA-17)"
+  ]
+}

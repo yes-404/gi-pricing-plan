@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/job.schema.json",
+  "title": "Job",
+  "description": "Uniform lifecycle for every long-running operation. See 07-platform.md §4.1.",
+  "type": "object",
+  "required": ["id", "workspace_id", "kind", "status", "queue", "submitted_by", "source", "queued_at"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "workspace_id": {"type": "string", "format": "uuid"},
+    "kind": {
+      "enum": ["dataset.ingest", "dataset.validate", "dataset.profile", "dataset.derive",
+               "model.fit", "model.transparency", "model.backtest", "model.compare",
+               "objective.certify", "rating.compile", "rating.regression",
+               "score.batch", "dislocation.run", "optimisation.run", "gipp.check",
+               "monitor.run", "dossier.generate", "export.regulatory", "blob.gc"]
+    },
+    "status": {"enum": ["queued", "running", "succeeded", "failed", "cancelled"]},
+    "queue": {"enum": ["default", "compute", "scoring", "io"]},
+    "submitted_by": {"type": "object"},
+    "source": {"enum": ["ui", "api", "schedule", "system"]},
+    "idempotency_key": {"type": ["string", "null"]},
+    "parameters": {"type": "object"},
+    "progress": {
+      "type": ["object", "null"],
+      "properties": {
+        "fraction": {"type": "number", "minimum": 0, "maximum": 1},
+        "stage": {"type": "string"},
+        "counters": {"type": "object", "additionalProperties": {"type": "integer"}}
+      }
+    },
+    "result": {
+      "type": ["object", "null"],
+      "properties": {
+        "kind": {"enum": ["artifact", "blob", "none"]},
+        "ref": {"type": "string"}
+      }
+    },
+    "error": {
+      "type": ["object", "null"],
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": {"type": "string"},
+        "message": {"type": "string"},
+        "retryable": {"type": "boolean"},
+        "detail": {"type": "object"},
+        "trace_id": {"type": "string"}
+      }
+    },
+    "trace_id": {"type": "string"},
+    "queued_at": {"type": "string", "format": "date-time"},
+    "started_at": {"type": ["string", "null"], "format": "date-time"},
+    "finished_at": {"type": ["string", "null"], "format": "date-time"},
+    "resource_budget": {
+      "type": "object",
+      "properties": {
+        "memory_gb": {"type": "number", "exclusiveMinimum": 0},
+        "wall_clock_s": {"type": "integer", "exclusiveMinimum": 0}
+      },
+      "description": "Exceeding the budget yields a typed error naming it, not an opaque OOM kill (FR-PLAT-16)."
+    },
+    "retries": {
+      "type": "object",
+      "properties": {
+        "attempted": {"type": "integer", "minimum": 0},
+        "max": {"type": "integer", "minimum": 0},
+        "policy": {"enum": ["infrastructure_only", "none"]}
+      }
+    }
+  }
+}

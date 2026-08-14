@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/common/blob-ref.schema.json",
+  "title": "BlobRef",
+  "description": "Content-addressed object reference (00-overview.md ID-4).",
+  "type": "object",
+  "required": ["sha256", "bytes", "media_type"],
+  "properties": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "bytes": {"type": "integer", "minimum": 0},
+    "media_type": {"type": "string"},
+    "part_count": {"type": "integer", "minimum": 1}
+  }
+}

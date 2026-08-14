@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/common/money.schema.json",
+  "title": "Money and decimal primitives",
+  "description": "Money is integer minor units or a decimal string; never a fractional JSON number (FR-OVR-7).",
+  "$defs": {
+    "MoneyMinor": {
+      "type": "integer",
+      "description": "Amount in minor units (pence/cents) of the workspace currency."
+    },
+    "Decimal": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+      "description": "Exact decimal as a string, to avoid binary float representation."
+    },
+    "Currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "Rounding": {
+      "type": "object",
+      "required": ["mode", "dp"],
+      "properties": {
+        "mode": {"enum": ["half_even", "half_up", "ceiling", "floor", "down"]},
+        "dp": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

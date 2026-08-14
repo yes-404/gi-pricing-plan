@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/scoring.schema.json",
+  "title": "Scoring contracts",
+  "description": "Quote context, scoring result, premium ladder, trace. See 03-rating-engine.md §4.4 and §4.5.",
+  "$defs": {
+    "QuoteContext": {
+      "type": "object",
+      "required": ["purpose", "quoted_at", "effective_date", "inputs"],
+      "properties": {
+        "quote_id": {"type": "string"},
+        "purpose": {"enum": ["new_business", "renewal", "mid_term_adjustment", "what_if"]},
+        "quoted_at": {"type": "string", "format": "date-time"},
+        "effective_date": {"type": "string", "format": "date"},
+        "inputs": {"type": "object"},
+        "options": {
+          "type": "object",
+          "properties": {
+            "trace": {"type": "boolean", "default": false},
+            "rating_version_ref": {"oneOf": [{"$ref": "common/artifact-ref.schema.json"}, {"type": "null"}]}
+          }
+        }
+      }
+    },
+    "LadderRung": {
+      "type": "object",
+      "required": ["rung", "value_minor"],
+      "properties": {
+        "rung": {"enum": ["risk_premium", "expense_loading", "commission", "profit_loading",
+                          "office_premium", "optimisation_adjustment", "constraints",
+                          "instalment_loading", "ipt_and_fees", "payable_premium"]},
+        "value_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+        "operation": {
+          "type": ["object", "null"],
+          "properties": {
+            "kind": {"enum": ["multiply", "add", "round", "none"]},
+            "factor": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+            "amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+            "mode": {"type": "string"}, "dp": {"type": "integer"},
+            "applied": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "components": {"type": "object", "additionalProperties": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}}
+      }
+    },
+    "ScoringResult": {
+      "type": "object",
+      "required": ["outcome", "rating_version_ref", "bundle_hash", "premium_ladder", "outputs"],
+      "properties": {
+        "outcome": {"enum": ["quoted", "declined", "error"]},
+        "rating_version_ref": {"$ref": "common/artifact-ref.schema.json"},
+        "bundle_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "premium_ladder": {"type": "array", "items": {"$ref": "#/$defs/LadderRung"}},
+        "outputs": {"type": "object"},
+        "decline_reasons": {"type": "array", "items": {"type": "string"}},
+        "trace": {"oneOf": [{"$ref": "#/$defs/Trace"}, {"type": "null"}]},
+        "timing_ms": {"type": "object", "additionalProperties": {"type": "number"}}
+      },
+      "allOf_invariants": [
+        "applying every rung's recorded operation to risk_premium reproduces payable_premium exactly (FR-RATE-32)",
+        "a traced call and an untraced call return identical premiums (03 R3)"
+      ]
+    },
+    "Trace": {
+      "type": "object",
+      "required": ["rating_version_ref", "bundle_hash", "steps", "ladder_reconciled"],
+      "properties": {
+        "rating_version_ref": {"$ref": "common/artifact-ref.schema.json"},
+        "bundle_hash": {"type": "string"},
+        "quote_id": {"type": "string"},
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["step_id", "type", "consumed", "produced"],
+            "properties": {
+              "step_id": {"type": "string"},
+              "type": {"enum": ["input", "lookup", "table", "expression", "model_call", "constraint", "output"]},
+              "label": {"type": "string"},
+              "consumed": {"type": "object"},
+              "produced": {"type": "object"},
+              "matched": {"type": ["object", "null"]},
+              "violation": {"type": ["object", "null"]},
+              "elapsed_us": {"type": "integer", "minimum": 0}
+            }
+          }
+        },
+        "ladder_reconciled": {"type": "boolean"}
+      }
+    }
+  }
+}

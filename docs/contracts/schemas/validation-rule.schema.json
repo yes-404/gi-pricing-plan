@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.gi-pricing.dev/validation-rule.schema.json",
+  "title": "ValidationRule",
+  "description": "One named check. Tagged union on `check`. See 01-data-management.md §4.3 and §4.5.",
+  "type": "object",
+  "required": ["layer", "check", "severity", "target", "message", "rationale"],
+  "properties": {
+    "layer": {"enum": ["structural", "referential", "actuarial_sanity", "distributional"]},
+    "check": {
+      "enum": ["range", "set_membership", "regex", "uniqueness", "not_null", "relationship",
+               "expression", "aggregate", "reference_lookup", "distribution_compare", "sql"]
+    },
+    "severity": {"enum": ["fail", "warn", "info"]},
+    "status": {"enum": ["draft", "review", "approved", "deprecated"]},
+    "target": {
+      "type": "object",
+      "required": ["table"],
+      "properties": {
+        "table": {"type": "string"},
+        "column": {"type": ["string", "null"]},
+        "columns": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "params": {"type": "object"},
+    "scope": {
+      "type": "object",
+      "properties": {
+        "filter": {"type": ["string", "null"], "description": "Restricted expression (02-modelling.md §4.6)."},
+        "skip_on_derived": {"type": "boolean", "default": false}
+      }
+    },
+    "tolerance": {
+      "type": "object",
+      "properties": {
+        "max_violating_rows": {"type": "integer", "minimum": 0},
+        "max_violating_exposure_fraction": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "message": {"type": "string"},
+    "rationale": {"type": "string", "minLength": 1},
+    "owner": {"type": "string"},
+    "dry_run_result_id": {"type": ["string", "null"], "format": "uuid",
+      "description": "Required before submission (FR-DATA-21)."}
+  },
+  "allOf": [
+    {"$ref": "common/artifact-envelope.schema.json"},
+    {
+      "if": {"properties": {"check": {"const": "sql"}}, "required": ["check"]},
+      "then": {
+        "properties": {"params": {"type": "object", "required": ["query"],
+          "properties": {"query": {"type": "string", "pattern": "^\\s*(?i:SELECT)\\b"}}}},
+        "description": "A single read-only SELECT, executed in a sandboxed DuckDB connection (NFR-DATA-9)."
+      }
+    }
+  ]
+}
