@@ -64,11 +64,43 @@ async def test_publisher_puts_a_readable_message_on_the_named_queue(
 
 
 @pytest.mark.req("FR-PLAT-51")
+
+async def _drain(database: Database, celery_app: object) -> None:
+    """Publish any pending intents left by other work before measuring this test's effect.
+
+    The database is shared and long-lived. Anything that submitted a Job without running a
+    relay — the freMTPL2 seed drives `execute_job` directly, so it does exactly that —
+    leaves pending rows behind, and the next `relay_once` publishes the whole backlog. A
+    test that then compares a queue depth, or expects its own row to be reached inside one
+    batch, fails for a reason that has nothing to do with it.
+
+    Draining first is what makes the assertions below measure this test. It is the same
+    lesson as the blob suite's unique payloads: with a persistent database, isolation comes
+    from controlling the starting state, not from cleanup.
+
+    **Added after a failure that has not been reproduced.** Both tests in this module failed
+    once, immediately after the freMTPL2 seed had left fifteen pending intents behind — one
+    reporting its own row still `pending`, the other a queue depth of 20 against an expected
+    0. Recreating that backlog, with the same job kinds and queues, does not reproduce
+    either failure: the first test's own `relay_once` drains the backlog before the second
+    measures, so test order already covers the obvious case. The suite has since run clean
+    five times, three of this module and two full.
+
+    So this is a robustness change with a plausible cause, not a proven fix, and saying
+    otherwise would make it a check that has never printed a failure. If it recurs, the
+    thing to capture is the outbox contents at the moment of the failure.
+    """
+    while await outbox.relay_once(database, CeleryPublisher(celery_app)):
+        pass
+
 async def test_relay_publishes_a_committed_job_and_marks_it(
     database: Database, celery_app, settings: Settings, workspace_id, principal
 ) -> None:
     """End to end across the seam: submit in a transaction, relay after commit."""
     import redis
+
+    # A backlog ahead of this job would fill the relay's batch before reaching it.
+    await _drain(database, celery_app)
 
     async with database.unit_of_work() as session:
         job = await jobs.submit(
@@ -105,6 +137,7 @@ async def test_nothing_is_published_when_the_transaction_rolls_back(
     """
     import redis
 
+    await _drain(database, celery_app)
     client = redis.Redis.from_url(settings.redis_url.get_secret_value())
     before = client.llen(JobQueue.COMPUTE.value)
     rolled_back: dict[str, object] = {}

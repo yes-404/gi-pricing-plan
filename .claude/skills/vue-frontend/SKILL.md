@@ -188,6 +188,18 @@ curl -s -H "x-dev-principal-id: $P" -H "x-dev-workspace-id: $W" \
     localhost:8000/api/v1/datasets/<slug>/versions/1
 ```
 
+## A prop and a ref cannot share a name
+
+`vue/no-dupe-keys` is an **error**, not a style rule, and it earns it. A route prop
+`version` (the number) beside `const version = ref<DatasetVersion>()` (the object) makes
+`{{ version }}` ambiguous in the template — it renders one of them and type-checks against
+the other. Name the object for what it is (`detail`) and keep the prop for the route
+parameter.
+
+`pnpm exec eslint --fix` reformats as it goes, so a `python`/`sed` replacement written
+against the pre-fix layout can silently miss a line that has since moved onto its own.
+Re-read the file, or run the type-check afterwards — `vue-tsc` caught the one this missed.
+
 ## Setting it up (W6a, first time)
 
 - `pnpm`, not npm or yarn (§3). `frontend/` is **not** a uv workspace member — the root
