@@ -9319,6 +9319,28 @@
         ]
       }
     },
+    "/metrics": {
+      "get": {
+        "description": "FR-PLAT-40.\n\nUnauthenticated, like `/healthz` and `/readyz`, because a scraper is infrastructure and\nnot a principal — and reachable only from inside the deployment, which is where the\nboundary belongs. It carries no identifiers: every label is drawn from a bounded set\n(route template, method, status class, Job kind), so nothing here discloses which\ndatasets or policies exist.\n\nThe database-derived gauges are refreshed on scrape rather than on a timer. A timer\nwould keep a connection warm to compute numbers nobody is reading, and a scrape that\nfails is a metric that stops updating rather than one that silently goes stale.",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prometheus metrics",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/readyz": {
       "get": {
         "description": "Probe every registered dependency concurrently (FR-PLAT-41).",

@@ -21,6 +21,7 @@ dependencies = [
     "fastexcel>=0.12",
     "zstandard>=0.23",
     "python-multipart>=0.0.32",
+    "prometheus-client>=0.26.0",
 ]
 
 # A member's dependency on another member needs its own source mapping — the root's does

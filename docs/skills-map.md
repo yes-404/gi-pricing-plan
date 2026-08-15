@@ -43,6 +43,7 @@ where the project's hard problems live.
 | PostgreSQL 16 | FR-OVR-4, ID-1..ID-5, FR-DATA-29 | ★★ | JSONB indexing (GIN), `timestamptz` and half-open ranges, **exclusion constraints with `daterange` for reference-table effective dating**, append-only tables via privileges/triggers, partitioning the trace table | [PostgreSQL 16 docs](https://www.postgresql.org/docs/16/), [Exclusion constraints](https://www.postgresql.org/docs/16/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION) |
 | Celery + Redis | FR-OVR-10, 07 FR-PLAT-7..16 | ★★ | Queue routing by job kind, **revocation and cooperative cancellation**, progress reporting, result backends, idempotency keys, worker memory limits for large fits, and the enqueue-vs-transaction failure mode driving OQ-PLAT-1 | [Celery docs](https://docs.celeryq.dev/), [procrastinate](https://procrastinate.readthedocs.io/) (the Postgres-queue alternative) |
 | OpenTelemetry | 00 §5.3, NFR-OVR-5 | ★ | Trace propagation API→worker, span attributes for job/artifact ids, OTLP export | [OpenTelemetry Python](https://opentelemetry.io/docs/languages/python/) |
+| prometheus-client | 07 §5.1, FR-PLAT-40, FR-PLAT-52 | ★ | Label cardinality — a resolved path as a label is one time series per entity, and the failure is silent; a per-app `CollectorRegistry` rather than the process-global default; histogram buckets chosen around the budgets actually being watched | [prometheus-client](https://prometheus.github.io/client_python/); [metric naming](https://prometheus.io/docs/practices/naming/) |
 
 ## 2. Data engine
 

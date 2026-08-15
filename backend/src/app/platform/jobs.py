@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import JobRow
 from app.errors import PlatformError
+from app.observability.metrics import job_duration_seconds
 from app.observability.trace import current_trace_id
 from app.platform import audit, outbox
 from model_schema import (
@@ -218,6 +219,14 @@ async def transition(
         row.started_at = datetime.now(UTC)
     if to_status in TERMINAL_STATUSES:
         row.finished_at = datetime.now(UTC)
+        if row.started_at is not None:
+            # FR-PLAT-40. Observed here rather than in the worker so a Job that reaches a
+            # terminal state by any route — cancelled, failed, expired by the reaper — is
+            # counted. A histogram fed only by the happy path measures the runs that
+            # worked, which is the population least worth alerting on.
+            job_duration_seconds.labels(kind=row.kind.value).observe(
+                (row.finished_at - row.started_at).total_seconds()
+            )
     if progress is not None:
         row.progress = progress.model_dump(mode="json")
     if result is not None:
