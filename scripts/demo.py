@@ -179,6 +179,13 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
         # stale dev server with a different identity, answering happily. Observed exactly
         # once, which was enough.
         "pnpm", "--dir", "frontend", "dev", "--port", str(FRONTEND_PORT), "--strictPort",
+        # `--host 127.0.0.1` binds **both** loopback families; the default binds `[::1]`
+        # only, and nothing else changes — the external interface still refuses either way.
+        # It matters when the demo runs on a remote machine: `ssh -L 5173:localhost:5173`
+        # resolves `localhost` on the *server*, usually to 127.0.0.1 first, and the tunnel
+        # then fails with "connect failed: Connection refused" against a dev server that is
+        # running perfectly.
+        "--host", "127.0.0.1",
     ]
     frontend_env = {
         **env,
