@@ -261,6 +261,15 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
     async def store() -> UUID:
         async with progress.database.unit_of_work() as session:
+            if dry_run_rule_id is None:
+                # The run opens the state it later closes. A dry run validates a *rule*
+                # against a version and must not touch the version's status at all.
+                await dataset_service.begin_validation(
+                    session,
+                    workspace_id=workspace_id,
+                    actor=actor,
+                    version_id=UUID(str(report.dataset_version_id)),
+                )
             row = await validation_service.store_report(
                 session, workspace_id=workspace_id, actor=actor, report=report
             )
@@ -270,6 +279,17 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                     workspace_id=workspace_id,
                     rule_id=UUID(dry_run_rule_id),
                     report_id=row.id,
+                )
+            # FR-DATA-43. The job still does **not** promote — that is an actuary's act
+            # after reading the report (`01` §1.3) — but a version whose report failed will
+            # never be promoted, and leaving it in `validating` reads as "still running" on
+            # every screen. A dry run concludes nothing: it validates a rule, not a version.
+            elif not report.permits_validation:
+                await dataset_service.conclude_failed_validation(
+                    session,
+                    workspace_id=workspace_id,
+                    actor=actor,
+                    version_id=UUID(str(report.dataset_version_id)),
                 )
             return UUID(str(row.id))
 
