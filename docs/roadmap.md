@@ -235,7 +235,7 @@ deliverable re-verified against its row above, the gate run locally, each new ch
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered
 stated explicitly. A closure record without those is an assertion, not evidence.
 
-### W4 mid-workstream scope finding — 2026-08-14
+### W4 mid-workstream scope findings — 2026-08-14
 
 **W4 is roughly half delivered, and the requirement-coverage number said otherwise.**
 `scope-audit.py DATA` reported 44 of 50 requirements evidenced — 88 % — which reads as
@@ -271,6 +271,42 @@ closure record did not mention them, because nothing at the time compared the in
 table to the contract. They are reassigned to W4 (blobs, `/metrics`) and W14
 (environments), and the W2 closure record is amended below rather than rewritten — a
 closure record states what was known when it was written.
+
+#### Position after the REST and handler slices
+
+| Check | Then | Now |
+|---|---|---|
+| `scope-audit DATA` requirements | 44 / 50 | **48 / 50** |
+| `scope-audit DATA --endpoints` | 0 / 28 | **28 / 28** |
+| `scope-audit DATA --catalogue VR` | not measured | **12 / 38** |
+
+Two of those moved because work landed. The third is a **third finding**, and the same
+kind as the first two: a requirement can summarise a catalogue it does not enumerate.
+FR-DATA-16 says "validation covers four layers", which one test evidences honestly — while
+§4.4's catalogue of 38 named rules behind it is 12 implemented. The four layers work and
+the engine is right; two thirds of the rules an actuary would expect are absent, including
+every `reference_lookup` variant and the PSI rule the distributional layer mostly exists
+for.
+
+`--catalogue PREFIX` was added to `scope-audit.py` so the number is re-derivable rather
+than a one-off count, and it generalises: any spec declaring a catalogue of named ids can
+be checked the same way.
+
+**W4 is therefore not closeable yet.** What remains, with owners:
+
+| Item | Verdict |
+|---|---|
+| 26 of 38 built-in catalogue rules (§4.4) | **not started** — stays in W4; the largest remaining piece |
+| FR-DATA-24 streaming over parquet row groups | **not delivered** — the distributional half is done; the streaming half needs a real 10 M-row dataset to be designed against, so it is reassigned to **W7** alongside the freMTPL2 seed |
+| NFR-DATA-1, NFR-DATA-2 throughput | **measured, not tested** — `scripts/bench-data.py` at 2 M × 80, extrapolated to 10 M: parquet ingest+prepare 5.2 s / 900 s, CSV 29.6 s / 1800 s, validation 0.3 s / 600 s, structural alone 0.1 s / 120 s. A timing assertion on a shared runner fails for reasons unrelated to the code |
+| `GET /metrics` (FR-PLAT-40, reassigned from W2) | **not started** — needs a Prometheus client dependency and a `07` §8 entry, and several required series (scoring latency, cache hit rate) belong to later phases |
+| `POST /sources/{id}/preview` for `object_store` / `sql` sources | **partial** — implemented for uploaded bytes, the flow FR-DATA-4 is written around; the other source kinds need connectors W4 has not built |
+
+What *is* done and was not before: the `01` REST surface end to end, validation and
+profiling persistence, the four `dataset.*` job handlers, preparation recipes applied
+during ingestion, the sandboxed `sql` check, and **Phase 1a's exit criterion as a passing
+test** — `test_the_failure_loop_then_validated` ingests a file with a negative exposure,
+watches promotion refused, fixes the data rather than the verdict, and promotes.
 
 **W1 re-audited under §13, 2026-08-14.** W1 closed before the standard required a scope
 derivation, so it was audited again from the specifications rather than from its own
