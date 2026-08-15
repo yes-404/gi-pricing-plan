@@ -289,6 +289,7 @@ The key value itself appears exactly once, in the creation response (FR-PLAT-3).
 | `GET` | `/healthz`, `/readyz`, `/version` | Health and version (FR-PLAT-41) |
 | `GET` | `/openapi.json` | Generated OpenAPI 3.1 (FR-PLAT-48) |
 | `GET` | `/metrics` | Prometheus metrics (FR-PLAT-40) |
+| `GET` | `/api/v1/demo/guide` | What is testable today, derived (FR-PLAT-54). **404 unless `dev_auth_enabled`** |
 
 > **`/metrics` scope, 2026-08-15 (W4).** FR-PLAT-40 names five families. Three are emitted:
 > request rate/latency/error by route template, job queue depth and duration by kind, and

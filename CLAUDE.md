@@ -384,6 +384,16 @@ uv venv .venv-review && uv pip install --python .venv-review/bin/python \
 # directory" — use `uv pip install --python <venv>/bin/python`, or a `python -m venv`
 # environment if pip is wanted inside it.
 
+# The demo entrance (FR-PLAT-53). One command from a clean checkout to a browser: compose,
+# migrations, freMTPL2 seeded through the real Job path, the API and the frontend, with a
+# development identity for the seeded workspace. Ctrl-C stops everything it started.
+uv run python scripts/demo.py                # then open http://localhost:5173/demo
+uv run python scripts/demo.py --rows 60000   # a sample; the full seed is 678 013 rows
+#
+# It refuses outside local/dev, before starting anything — the whole path hangs off
+# `dev_auth_enabled`, which is False by default and raises at startup in a deployed
+# environment. There is no second switch to leave on.
+
 # Local infrastructure (deploy/README.md has the credentials and ports).
 docker compose -f deploy/docker-compose.yml up -d --wait
 docker compose -f deploy/docker-compose.yml down
@@ -586,10 +596,14 @@ The roadmap status table and closure evidence; `CLAUDE.md` §2's layout marks; a
 the implementation proved wrong — when code and spec disagree, resolve it rather than
 quietly changing one (§0).
 
-**And the demo guide** (FR-PLAT-54), once it exists. Its whole purpose is telling a person
-what is worth trusting, so a workstream that closes while the guide still describes the
-previous state has published a claim the repository does not support — the failure this
-whole section exists to prevent, in the one place a human actually reads.
+**And the demo guide** (FR-PLAT-54). It exists, and it is **derived at request time** from
+the specs' §5.3 view tables, the frontend router, the published contract and this
+roadmap's status table — so it cannot describe the previous state, and there is nothing to
+update. What a closure must do instead is *check that it still derives*: a renamed spec
+heading or a restructured status table breaks the derivation silently, and a guide that
+lost a section reads as a platform that lost a capability.
+
+`uv run pytest backend/tests/test_demo_guide.py` is that check, and it runs in the gate.
 
 ### 8. Repository clean
 

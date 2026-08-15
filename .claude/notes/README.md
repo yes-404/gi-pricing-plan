@@ -36,7 +36,7 @@ must say where it went.
 | Note | Title | Raised | Status | Deliverable |
 |---|---|---|---|---|
 | [NT-0001](0001-phase-boundary-plan-review.md) | Plan review at each phase boundary — completion, omission, skills, drift, shape | 2026-08-15 | `landed` | Standard → `CLAUDE.md` §14; trigger → `roadmap.md` |
-| [NT-0002](0002-demo-entrance-and-guide.md) | Demo entrance, with a guide to what is testable | 2026-08-15 | `accepted` | Spec landed (FR-PLAT-53/54); code in W7 |
+| [NT-0002](0002-demo-entrance-and-guide.md) | Demo entrance, with a guide to what is testable | 2026-08-15 | `landed` | Spec first (FR-PLAT-53/54), then the code as **W7b** — `scripts/demo.py`, `/demo`, and a guide derived on every request |
 
 ## What a note must contain
 

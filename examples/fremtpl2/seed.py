@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import io
+import json
 import sys
 import time
 from pathlib import Path
@@ -321,6 +322,20 @@ async def run(rows: int | None) -> int:
     print(f"  analyst  {analyst.display}\n  actuary  {actuary.display}\n")
     # The ids, not only the names: these are what the frontend's dev proxy needs, and a
     # seed that printed neither left the only way into the UI undiscoverable.
+    # Written as well as printed: `scripts/demo.py` needs these ids to start the frontend
+    # with, and parsing them back out of stdout would make the seed's print format a
+    # contract between two programs — the least visible kind there is.
+    (DATA_DIR / "last-seed.json").write_text(
+        json.dumps(
+            {
+                "workspace_id": str(workspace_id),
+                "analyst_id": str(analyst.id),
+                "actuary_id": str(actuary.id),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     print("  to open the frontend against this workspace:")
     print(f"    export GIP_DEV_PRINCIPAL_ID={analyst.id}")
     print(f"    export GIP_DEV_WORKSPACE_ID={workspace_id}")

@@ -36,6 +36,7 @@ from model_schema.datasets import (
     SourceKind,
     VersionTotals,
 )
+from model_schema.demo import DemoApiGroup, DemoGuide, DemoView, DemoWorkstream
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
 from model_schema.jobs import (
@@ -135,6 +136,10 @@ __all__ = [
     "DatasetVersion",
     "DecimalStr",
     "DecisionKind",
+    "DemoApiGroup",
+    "DemoGuide",
+    "DemoView",
+    "DemoWorkstream",
     "FieldError",
     "Job",
     "JobError",
