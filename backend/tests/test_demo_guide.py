@@ -176,3 +176,85 @@ def test_the_guide_is_served_where_the_demo_runs(tmp_path: Path) -> None:
     body = response.json()
     assert body["generated_from"], "the guide names the files it was derived from"
     assert any(view["route"] == "/data" and view["implemented"] for view in body["views"])
+
+
+@pytest.mark.req("FR-PLAT-54")
+def test_every_spec_that_declares_views_contributes_them() -> None:
+    """The guide cannot go stale; it *could* silently go empty.
+
+    `_spec_views` matches `### 5.3 Frontend views` exactly and returns nothing when the
+    heading moves — no error, docs audit green, suite green. Renaming `07`'s heading
+    dropped six views and the earlier test did not notice, because it asserted only that
+    `/data` and `/reference` exist: `01` and `02` were protected by accident and `03` to `07`
+    by nothing.
+
+    Derived from the files rather than from a list, so a *new* spec is covered too.
+    """
+    from app.demo.guide import _MODULES
+
+    root = repository_root()
+    declaring = {
+        spec.stem
+        for spec in sorted((root / "docs" / "specs").glob("*.md"))
+        if "### 5.3 Frontend views" in spec.read_text(encoding="utf-8")
+    }
+    assert declaring, "no spec declares a view table — the heading itself must have moved"
+
+    guide = build_guide(root)
+    contributing = {view.spec for view in guide.views}
+    assert declaring == contributing, (
+        f"specs declaring views but contributing none: {sorted(declaring - contributing)}"
+    )
+    # And the map that gates which specs are looked at must not silently drop one.
+    assert declaring <= set(_MODULES), f"not in _MODULES: {sorted(declaring - set(_MODULES))}"
+
+
+@pytest.mark.req("FR-PLAT-54")
+def test_the_roadmap_yields_workstreams_and_names_the_phases_it_omits() -> None:
+    """`_workstreams` matches `#### Phase … status` exactly and returns () when it moves.
+
+    Nothing asserted the real roadmap produced any workstream at all, so the section could
+    empty itself with every check green — and an empty section reads as a platform with no
+    workstreams rather than as a broken parser.
+    """
+    guide = build_guide(repository_root())
+    assert guide.workstreams, "the roadmap's status table produced nothing"
+    assert all(w.phase.startswith("Phase ") for w in guide.workstreams)
+    # The scoping fact the page renders: which phases have no status table yet. If this
+    # were empty, "N workstreams closed" would read as covering the whole project.
+    assert guide.phases_without_status
+
+
+@pytest.mark.req("FR-PLAT-54")
+def test_a_commented_out_route_is_not_built(tmp_path: Path) -> None:
+    """"Built" is a fact about the router, so it must not be a fact about its comments.
+
+    A `// TODO { path: "/rating" }` rendered a green badge for a view nobody had started,
+    on the page whose only job is saying what is worth clicking.
+    """
+    root = _fixture_repo(tmp_path)
+    (root / "frontend" / "src" / "router" / "index.ts").write_text(
+        'const routes = [\n'
+        '  { path: "/data" },\n'
+        '  // TODO one day: { path: "/rating" },\n'
+        '  /* { path: "/data/:slug/validation" } */\n'
+        "];\n",
+        encoding="utf-8",
+    )
+    by_route = {view.route: view for view in build_guide(root).views}
+    assert by_route["/data"].implemented is True
+    assert by_route["/rating"].implemented is False
+    assert by_route["/data/:slug/validation"].implemented is False
+
+
+@pytest.mark.req("FR-PLAT-54")
+def test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks() -> None:
+    """FR-PLAT-54's "not yet functional", applied to the API.
+
+    The page reported "63 endpoints published" and nothing else — true, and silent about
+    the declared routes that do not exist, which is the half the question asks about.
+    """
+    guide = build_guide(repository_root())
+    assert guide.unpublished_endpoints, "no module declares an unbuilt endpoint?"
+    modules = {endpoint.module for endpoint in guide.unpublished_endpoints}
+    assert {"MODEL", "RATE"} <= modules, modules

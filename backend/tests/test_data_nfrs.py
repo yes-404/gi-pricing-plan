@@ -48,6 +48,10 @@ def test_validation_is_deterministic() -> None:
 
     Determinism is what makes a report evidence. If two runs over identical data could
     disagree, a disputed failure would be settled by whoever re-ran it last.
+
+    **Several rules, in a deliberate order.** The fixture used to hold one, so the single
+    dimension a report body realistically drifts in — the order results come back in —
+    could not vary, and randomising `run_validation`'s output left the whole suite green.
     """
     from uuid import uuid4
 
@@ -60,15 +64,33 @@ def test_validation_is_deterministic() -> None:
     )
     from pricing_core.data.validate import run_validation
 
-    frame = pl.DataFrame({"policy_id": ["P1", "P2"], "exposure_years": [1.0, -0.5]})
-    rule = ValidationRule(
-        id=uuid4(), slug="exposure-positive", version=1,
-        layer=ValidationLayer.ACTUARIAL_SANITY, check="range", severity=Severity.FAIL,
-        target={"table": "t", "column": "exposure_years"},
-        params={"min_exclusive": 0, "key_columns": ["policy_id"]},
+    frame = pl.DataFrame(
+        {
+            "policy_id": ["P1", "P2", "P3"],
+            "exposure_years": [1.0, -0.5, 0.5],
+            "driv_age": [40, 17, None],
+        }
     )
-    rule_set = ValidationRuleSet(id=uuid4(), slug="s", version=1,
-                                 entries=(RuleSetEntry(rule=rule),))
+
+    def rule(slug: str, layer: ValidationLayer, check: str, **params: object) -> ValidationRule:
+        return ValidationRule(
+            id=uuid4(), slug=slug, version=1, layer=layer, check=check,
+            severity=Severity.FAIL if layer is ValidationLayer.STRUCTURAL else Severity.WARN,
+            target={"table": "t", "column": params.pop("column", "exposure_years")},
+            params={"key_columns": ["policy_id"], **params},
+        )
+
+    rules = (
+        rule("exposure-positive", ValidationLayer.ACTUARIAL_SANITY, "range", min_exclusive=0),
+        rule("driver-age-range", ValidationLayer.ACTUARIAL_SANITY, "range",
+             column="driv_age", min_inclusive=18),
+        rule("policy-id-present", ValidationLayer.STRUCTURAL, "not_null", column="policy_id"),
+        rule("driver-age-present", ValidationLayer.STRUCTURAL, "not_null", column="driv_age"),
+    )
+    rule_set = ValidationRuleSet(
+        id=uuid4(), slug="s", version=1,
+        entries=tuple(RuleSetEntry(rule=r) for r in rules),
+    )
     version_id = uuid4()
 
     def body(report) -> str:
@@ -77,6 +99,12 @@ def test_validation_is_deterministic() -> None:
     first = run_validation({"t": frame}, rule_set, dataset_version_id=version_id)
     second = run_validation({"t": frame}, rule_set, dataset_version_id=version_id)
     assert body(first) == body(second)
+
+    # The order itself, asserted rather than implied: results follow the rule set's own
+    # order, so a reader comparing two reports side by side is comparing like with like.
+    assert len(first.results) == len(rules)
+    assert [r.rule_slug for r in first.results] == [r.slug for r in rules]
+    assert [r.rule_slug for r in second.results] == [r.slug for r in rules]
 
 
 @pytest.mark.req("NFR-DATA-6")

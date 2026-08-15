@@ -20,6 +20,12 @@ const GUIDE = {
     },
   ],
   api: [{ tag: "datasets", endpoints: ["GET /api/v1/datasets", "POST /api/v1/datasets"] }],
+  unpublished_endpoints: [
+    { module: "MODEL", method: "POST", path: "/api/v1/models" },
+    { module: "MODEL", method: "GET", path: "/api/v1/models/{}" },
+    { module: "RATE", method: "GET", path: "/api/v1/rating" },
+  ],
+  phases_without_status: ["Phase 1b", "Phase 2"],
   workstreams: [
     { phase: "Phase 1a", workstream: "W4", scope: "Data", status: "✔ closed 2026-08-15",
       closed: true },
@@ -93,5 +99,23 @@ describe("the demo entrance", () => {
     expect(await screen.findByText("Views built")).toBeInTheDocument();
     const built = screen.getByText("Views built").closest("div")!;
     expect(built).toHaveTextContent("2/3");
+  });
+
+  it("counts published endpoints against declared, not on their own", async () => {
+    // "63 published" with no denominator says the platform has an API; it does not say
+    // that most of the declared surface does not exist, which is what a reader is asking.
+    render(DemoView, mounted);
+    const tile = (await screen.findByText("Endpoints published")).closest("div")!;
+    expect(tile).toHaveTextContent("2/5");
+    expect(screen.getByText(/Declared but not published — 3 endpoints/)).toBeInTheDocument();
+  });
+
+  it("scopes the workstream count to the phases that have a status table", async () => {
+    // An unscoped "7/7 closed" read as a finished project four phases from done.
+    render(DemoView, mounted);
+    expect(await screen.findByText("Phase 1a workstreams closed")).toBeInTheDocument();
+    expect(screen.getByText(/No status table exists yet for Phase 1b, Phase 2/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/those phases are ahead, not complete/)).toBeInTheDocument();
   });
 });

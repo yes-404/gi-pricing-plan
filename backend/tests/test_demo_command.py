@@ -87,3 +87,29 @@ def test_waiting_for_a_server_accepts_any_answer_at_all() -> None:
         # Port 1 is reserved and nothing listens on it.
         demo_script.wait_for("http://localhost:1/", step="nothing", timeout=1.0)
     assert "did not answer" in str(timed_out.value)
+
+
+@pytest.mark.req("FR-PLAT-53")
+def test_a_held_port_is_refused_before_anything_starts() -> None:
+    """The command reports only servers it started.
+
+    `wait_for` returns on any answer, so with a stale server on the port it printed
+    "Open http://localhost:5173/demo" while its own children were dead of
+    `[Errno 98] address already in use` — sending the reader to a different server with a
+    different identity. Checked before starting rather than after, because polling the
+    child races its own death: `pnpm` outlives the `vite` it spawned by a moment.
+    """
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as holder:
+        holder.bind(("127.0.0.1", 0))
+        holder.listen(1)
+        port = holder.getsockname()[1]
+
+        with pytest.raises(demo_script.DemoRefusedError) as refusal:
+            demo_script.require_free(port, step="the API")
+        assert "already in use" in str(refusal.value)
+        assert "did not start" in str(refusal.value)
+
+    # ...and the negative: the same port, once released, is not refused.
+    demo_script.require_free(port, step="the API")

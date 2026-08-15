@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "DemoApiGroup",
+    "DemoEndpoint",
     "DemoGuide",
     "DemoView",
     "DemoWorkstream",
@@ -47,6 +48,21 @@ class DemoApiGroup(BaseModel):
     endpoints: tuple[str, ...] = ()
 
 
+class DemoEndpoint(BaseModel):
+    """An endpoint a spec's §5.1 table declares and the published contract does not have.
+
+    The half of the API surface that matters here. A page reporting only "63 published"
+    tells a reader the platform has an API; it does not tell them that 105 declared
+    endpoints are absent, which is the question "what can I test?" actually asks.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    module: str
+    method: str
+    path: str
+
+
 class DemoWorkstream(BaseModel):
     """A row of the roadmap's phase status table, as written there."""
 
@@ -70,7 +86,13 @@ class DemoGuide(BaseModel):
     )
     views: tuple[DemoView, ...] = ()
     api: tuple[DemoApiGroup, ...] = ()
+    unpublished_endpoints: tuple[DemoEndpoint, ...] = ()
     workstreams: tuple[DemoWorkstream, ...] = ()
+    #: Phases the roadmap names that carry no status table yet. Stated so the workstream
+    #: section cannot be read as covering the whole project: it covered Phase 1a alone
+    #: while the page reported "7/7 closed", which is a 100 % signal for a plan four
+    #: phases from done.
+    phases_without_status: tuple[str, ...] = ()
 
     @property
     def implemented_views(self) -> tuple[DemoView, ...]:

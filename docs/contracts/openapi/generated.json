@@ -1259,6 +1259,31 @@
         "title": "DemoApiGroup",
         "type": "object"
       },
+      "DemoEndpoint": {
+        "additionalProperties": false,
+        "description": "An endpoint a spec's §5.1 table declares and the published contract does not have.\n\nThe half of the API surface that matters here. A page reporting only \"63 published\"\ntells a reader the platform has an API; it does not tell them that 105 declared\nendpoints are absent, which is the question \"what can I test?\" actually asks.",
+        "properties": {
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "module": {
+            "title": "Module",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module",
+          "method",
+          "path"
+        ],
+        "title": "DemoEndpoint",
+        "type": "object"
+      },
       "DemoGuide": {
         "additionalProperties": false,
         "description": "What is worth driving by hand today, and — the half that matters — what is not.",
@@ -1278,6 +1303,22 @@
               "type": "string"
             },
             "title": "Generated From",
+            "type": "array"
+          },
+          "phases_without_status": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Phases Without Status",
+            "type": "array"
+          },
+          "unpublished_endpoints": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DemoEndpoint"
+            },
+            "title": "Unpublished Endpoints",
             "type": "array"
           },
           "views": {
@@ -8415,7 +8456,7 @@
     },
     "/api/v1/reference-tables/{slug}/lookup": {
       "get": {
-        "description": "**For debugging** (FR-DATA-31).\n\nRating pins a reference version id (FR-DATA-32) and never resolves \"the latest\" at\nscoring time. This endpoint exists to answer \"what does this table say about this key\non this date?\" when a quote looks wrong.",
+        "description": "**For debugging** (FR-DATA-31).\n\nRating pins a reference version id (FR-DATA-30) and never resolves \"the latest\" at\nscoring time. This endpoint exists to answer \"what does this table say about this key\non this date?\" when a quote looks wrong.",
         "operationId": "lookup_api_v1_reference_tables__slug__lookup_get",
         "parameters": [
           {
@@ -8859,7 +8900,7 @@
     },
     "/api/v1/reference-tables/{slug}/versions/{version}/rows": {
       "get": {
-        "description": "`01` §5.3's effective-date viewer.\n\nAlways reads the **pinned** version named in the path. Omitting `as_at` returns the\nversion whole, which answers \"what changed?\"; supplying one answers \"what applied\nthen?\". Neither ever falls back to the latest version — that is the mistake\nFR-DATA-32 exists to prevent, and a viewer that made it would teach it.",
+        "description": "`01` §5.3's effective-date viewer.\n\nAlways reads the **pinned** version named in the path. Omitting `as_at` returns the\nversion whole, which answers \"what changed?\"; supplying one answers \"what applied\nthen?\". Neither ever falls back to the latest version — that is the mistake\nFR-DATA-30 exists to prevent, and a viewer that made it would teach it.",
         "operationId": "list_rows_api_v1_reference_tables__slug__versions__version__rows_get",
         "parameters": [
           {

@@ -351,6 +351,7 @@ def get(key: str, workspace_id: UUID) -> SettingResolution
 | Service accounts | `/admin/service-accounts` | Keys with prefix, expiry, last used; create/rotate/revoke with one-time key display |
 | Settings | `/admin/settings` | Effective values with their resolution source and constraints |
 | System status | `/admin/status` | Component health, queue depths, cache hit rates, blob store usage, schema version |
+| **Demo entrance** | `/demo` | What is testable today: views built against those a spec declares, endpoints published against those declared, workstream state, and the routes that can be opened without an id. Derived on every request (FR-PLAT-53, FR-PLAT-54); absent where `dev_auth_enabled` is false |
 
 ---
 

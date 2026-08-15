@@ -58,7 +58,7 @@ def test_a_table_with_only_drafts_reports_no_published_version(
     """The state that decides whether the table can be pinned at all.
 
     A list that showed a version number regardless would say a table is usable when
-    nothing in it has been published, and rating pins a published version (FR-DATA-32).
+    nothing in it has been published, and rating pins a published version (FR-DATA-30).
     """
     slug = _table(api_client, admin, publish=False)
     listed = api_client.get("/api/v1/reference-tables", headers=admin).json()
@@ -140,13 +140,13 @@ def test_the_effective_date_viewer_reads_the_interval_as_half_open(
     assert [(r["key"], r["payload"]["area"]) for r in on_the_boundary] == [("SW1A", 13)]
 
 
-@pytest.mark.req("FR-DATA-32")
+@pytest.mark.req("FR-DATA-30")
 def test_the_viewer_reads_the_pinned_version_and_never_falls_back(
     api_client: TestClient, admin: dict[str, str]
 ) -> None:
     """A version that does not exist is a 404, not the latest one.
 
-    Falling back would be the mistake FR-DATA-32 exists to prevent, taught by the one
+    Falling back would be the mistake FR-DATA-30 exists to prevent, taught by the one
     screen an actuary uses to understand reference data.
     """
     slug = _table(api_client, admin)
