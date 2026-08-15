@@ -21,6 +21,7 @@ project work (`CLAUDE.md` §12).
 | [`fastapi-service`](fastapi-service/SKILL.md) | Backend conventions and traps — app factory, RFC 9457 problem responses, the Starlette middleware-ordering trap that drops `trace_id` from 500s, liveness vs readiness, typed settings, and the persistence traps: three-layer append-only enforcement, Alembic ENUM cleanup, async fixture scope | self-written | 2026-08-14 |
 | [`python-test`](python-test/SKILL.md) | Testing discipline — requirement-traceability markers, the negative-test emphasis, pytest config, and running without pip | self-written | 2026-08-14 |
 | [`library-spike`](library-spike/SKILL.md) | Empirically verify library behaviour where pip is unavailable — wheel fetching, version pinning, missing native libs — then land the finding across the suite | self-written | 2026-08-14 |
+| [`vue-frontend`](vue-frontend/SKILL.md) | Frontend conventions specific to **this** platform — the generated-client seam, how money and exact decimals cross into TypeScript, the RFC 9457 error shape, cursor pagination, and the 202-plus-Job model | self-written | 2026-08-15 |
 
 ## External skills
 
@@ -39,6 +40,30 @@ the network.
 | [`testing-strategy`](testing-strategy/SKILL.md) | pytest technique — fixtures, parametrization, Hypothesis | Complements this repo's `python-test` |
 | [`code-quality`](code-quality/SKILL.md) | ruff/mypy depth and refactoring | Complements this repo's `python-package` |
 | [`secret-hygiene`](secret-hygiene/SKILL.md) | Secrets and build artifacts in git | **Renamed** from upstream `git-hygiene` to avoid colliding with this repo's own |
+
+Six vendored from [`yes-404/vue3-skills`](https://github.com/yes-404/vue3-skills), a fork
+of [`vuejs-ai/skills`](https://github.com/vuejs-ai/skills) (MIT, © 2025 hyf0 & SerKo) on
+2026-08-15, at the maintainer's request and after a security review: **markdown only** —
+no scripts, no executables, nothing under `skills/` that is not a `.md`. No instructions
+aimed at the agent beyond their subject; every outbound link points at `vuejs.org`,
+`github.com`, MDN, `vitest.dev`, `playwright.dev` or `nuxt.com`. The apparent
+credential hits are an example `useLogin` composable, and the apparent install commands are
+`npm install -D vitest` in prose.
+
+| Skill | Fills | Note |
+|---|---|---|
+| [`vue-best-practices`](vue-best-practices/SKILL.md) | Composition API, `<script setup>`, reactivity, SFC, Suspense/Teleport/Transition, list performance | The core reference; agrees with §3 on Composition API + TS |
+| [`vue-router-best-practices`](vue-router-best-practices/SKILL.md) | Router 4 guards, params, route-component lifecycle | |
+| [`vue-pinia-best-practices`](vue-pinia-best-practices/SKILL.md) | Store setup and reactivity with stores | §3 chose Pinia; `vue-frontend` records that so its "lightweight composables" option is not read as open |
+| [`vue-testing-best-practices`](vue-testing-best-practices/SKILL.md) | Vitest, Vue Test Utils, component testing, Playwright E2E | Matches §3's runner choices exactly |
+| [`vue-debug-guides`](vue-debug-guides/SKILL.md) | 140 diagnosis notes — hydration, async, reactivity, animation, form binding | The largest, and reference-only: the `SKILL.md` is an index and the notes load on demand |
+| [`create-adaptable-composable`](create-adaptable-composable/SKILL.md) | `MaybeRefOrGetter` inputs normalised with `toValue()` | Small and specific |
+
+**Two were deliberately not vendored.** `vue-jsx-best-practices` and
+`vue-options-api-best-practices` document approaches `CLAUDE.md` §3 has decided against
+(`<script setup lang="ts">` and the Composition API only). A skill that teaches a rejected
+approach is worse than a missing one, because an agent may follow it and the review that
+catches it is a human one.
 
 Vendored files are kept **as upstream wrote them** and are excluded from `ruff` — linting
 someone else's code to our rules produces churn and breaks that promise.
