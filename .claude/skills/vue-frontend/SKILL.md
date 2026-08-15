@@ -167,6 +167,27 @@ Assert the ordering on **document order**, not on the set of headings. "Above th
 a claim about sequence, and a test that only checks the sections exist passes with them in
 any order — verified by swapping two and watching it fail.
 
+## Mocked `fetch` proves the view, not the contract
+
+Every frontend test here stubs `fetch`. That is right for a component test and it cannot
+catch a backend that does not serve what the fixture claims — however carefully the fixture
+was shaped on a real response.
+
+`GET /datasets/{slug}/versions/{version}` returned **500 on every ingested version** and
+none of 575 tests noticed: the API tests never fetched an ingested version, the job tests
+read versions through the service rather than the route, and the frontend mocked the call.
+It surfaced the first time anything asked the live API for a real one.
+
+**Before believing a view works, curl the endpoints it calls against the seeded
+workspace.** It costs a minute:
+
+```bash
+GIP_DEV_AUTH_ENABLED=true uv run uvicorn app.main:create_app \
+    --factory --app-dir backend/src --port 8000 &
+curl -s -H "x-dev-principal-id: $P" -H "x-dev-workspace-id: $W" \
+    localhost:8000/api/v1/datasets/<slug>/versions/1
+```
+
 ## Setting it up (W6a, first time)
 
 - `pnpm`, not npm or yarn (§3). `frontend/` is **not** a uv workspace member — the root
