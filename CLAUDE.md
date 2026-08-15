@@ -77,7 +77,7 @@ the maths.
 ├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals,
 │                               datasets, validation, profiling, reference [W2✔ W3✔ W4✔]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
-├── frontend/                 … Vue 3 SPA                                  [1a W6a]
+├── frontend/                 ◐ Vue 3 SPA — shell, generated client, /data [W6a]
 ├── examples/                 ◐ freMTPL2 seed — data half done  [W7a✔] rest [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
@@ -394,9 +394,18 @@ Arriving with the workstream that needs them:
 celery -A app.worker.entrypoint worker --queues compute,default,io,scoring
 celery -A app.worker.entrypoint beat
 
-pnpm install --dir frontend                  # W6a
+# W6a. pnpm is not on this image and `corepack enable pnpm` fails on it, so the way in is
+# `npm config set prefix ~/.npm-global && npm i -g pnpm` with that bin on PATH.
+pnpm install --dir frontend
 pnpm --dir frontend lint && pnpm --dir frontend test && pnpm --dir frontend type-check
 pnpm --dir frontend generate:api             # regenerate TS types from OpenAPI
+pnpm --dir frontend dev                      # proxies /api to localhost:8000
+
+# The API the frontend talks to. Compose brings up postgres/redis/minio only — there is no
+# app container, because a Dockerfile for it is deployment (W14) rather than a dev loop.
+GIP_DEV_AUTH_ENABLED=true uv run uvicorn app.main:create_app \
+    --factory --reload --app-dir backend/src --port 8000
+
 uv run alembic upgrade head                  # W2
 ```
 

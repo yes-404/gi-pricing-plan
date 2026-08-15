@@ -1,0 +1,44 @@
+{
+  "name": "gi-pricing-frontend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --build && vite build",
+    "preview": "vite preview",
+    "generate:api": "openapi-typescript ../docs/contracts/openapi/generated.json -o src/api/generated/schema.d.ts",
+    "type-check": "vue-tsc --build --force",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "pinia": "^4.0.3",
+    "vue": "^3.5.41",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/user-event": "^14.6.4",
+    "@testing-library/vue": "^8.1.0",
+    "@types/node": "^26.2.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "eslint": "^10.8.1",
+    "eslint-plugin-vue": "^10.10.0",
+    "happy-dom": "^20.11.2",
+    "jiti": "^2.7.0",
+    "tailwindcss": "^4.3.3",
+    "typescript-eslint": "^8.67.0",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.9"
+  }
+}

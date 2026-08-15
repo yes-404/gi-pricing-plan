@@ -73,8 +73,12 @@ and the status alone cannot tell `VALIDATION_HAS_FAILURES` from `WARN_NOT_ACKNOW
 which are two different screens for the user (one is "fix the data", the other is "an
 actuary must sign this off").
 
-`trace_id` is on every response, success or failure. Put it where a user can copy it: a
-support conversation that starts with the trace id skips the reproduction step entirely.
+`trace_id` is **optional in the type, and correctly so.** The backend sets it at all four
+construction sites, but `current_trace_id()` returns `None` outside a traced operation and
+the platform declines to invent one — a fabricated id would assert a correlation that does
+not exist. In practice every problem from an HTTP request carries one. Put it where a user
+can copy it: a support conversation that starts with the trace id skips the reproduction
+step entirely.
 
 `errors[]` carries per-field problems with a dotted `field` path, for form binding.
 
@@ -116,6 +120,28 @@ State goes in **Pinia**, not in ad-hoc global composables. `vue-best-practices`'
 project has chosen Pinia (§3) for the devtools and plugin surface, and mixing both means
 two answers to "where does this live?".
 
+## The toolchain traps, each of which cost real time
+
+**`pnpm add -D typescript` resolves TypeScript 7**, the Go-native rewrite, whose JS API has
+no `ts.factory` — and `openapi-typescript` dies with
+`Cannot read properties of undefined (reading 'createKeywordTypeNode')`. Pin `^5.9`. The
+error names neither TypeScript nor the version, so it reads like a broken generator.
+
+**`corepack enable pnpm` fails on this image.** `npm config set prefix ~/.npm-global` and
+`npm i -g pnpm`, with `~/.npm-global/bin` on PATH.
+
+**`expectTypeOf` is erased at runtime.** A type assertion in a `*.test.ts` is a test that
+can never fail — proven by asserting `exposure_years` is a `number` and watching it pass.
+Type assertions go in `*.test-d.ts`, and `vitest.config.ts` needs:
+
+```ts
+typecheck: { enabled: true, include: ["src/**/*.test-d.ts"], tsconfig: "./tsconfig.app.json" }
+```
+
+**`exactOptionalPropertyTypes` rejects `{ body: undefined }`** where `RequestInit` wants the
+key absent. Spread conditionally — `...(body === undefined ? {} : { body })` — rather than
+assigning `undefined`, which is a different thing to this compiler and to `fetch`.
+
 ## Setting it up (W6a, first time)
 
 - `pnpm`, not npm or yarn (§3). `frontend/` is **not** a uv workspace member — the root
@@ -131,5 +157,11 @@ two answers to "where does this live?".
 
 2026-08-15 — written as W6a's groundwork, from the decided stack and the shapes the
 backend actually publishes; the `OneWayRow` float/integer split was read out of the
-generated contract rather than assumed. **Extend it once the frontend exists** — every
-claim here is about a contract, and none yet about a component.
+generated contract rather than assumed.
+
+2026-08-15 — W6a slice 1. The seam is real: `openapi-typescript` produces 6 269 lines from
+the 51-path contract, the 131 `anyOf`-null unions become clean `T | null`, `exposure_years`
+arrives as `string` carrying its own FR-OVR-7 warning, and the whole thing type-checks
+under `strict` + `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`. The four
+toolchain traps above were each found by hitting them. The `trace_id` claim was corrected:
+it is optional in the type, and the platform is right to leave it so.
