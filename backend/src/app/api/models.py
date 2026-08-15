@@ -5,9 +5,11 @@
 | `POST` | `/factors` | Create or version a Factor (FR-MODEL-1, FR-MODEL-7) |
 | `GET` | `/factors` | List factors, with intent and prohibition visible |
 | `POST` | `/bandings/propose` | Propose boundaries by method (FR-MODEL-9) — persists nothing |
+| `POST` | `/bandings/evaluate` | Recompute band stats for **edited** boundaries (FR-MODEL-75) |
 | `POST` | `/bandings` | Persist a Banding, editable boundaries and all (FR-MODEL-12) |
 | `GET` | `/bandings` | List bandings |
 | `POST` | `/groupings/propose` | Propose a mapping by method (FR-MODEL-14) |
+| `POST` | `/groupings/evaluate` | Change in fit for an **edited** mapping (FR-MODEL-75) |
 | `POST` | `/groupings` | Persist a Grouping (FR-MODEL-16) |
 | `GET` | `/groupings` | List groupings |
 | `POST` | `/models` | **202** Fit → Job; returns the existing model on `spec_hash` match |
@@ -36,12 +38,14 @@ from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore
 from model_schema import (
     Banding,
+    BandingEvaluation,
     BandingProposal,
     Factor,
     FactorIntent,
     FactorType,
     GlmSpec,
     Grouping,
+    GroupingEvaluation,
     GroupingProposal,
     Job,
     JobKind,
@@ -206,6 +210,33 @@ async def propose_banding(
 
 
 @router.post(
+    "/bandings/evaluate",
+    summary="Recompute band statistics for edited boundaries",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def evaluate_banding(
+    body: BandingEvaluation,
+    caller: FitModels,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+) -> Banding:
+    """FR-MODEL-75: what an edited boundary *did*, before the banding is saved.
+
+    `/propose` derives boundaries from a method and cannot accept one, so this is the only
+    route by which §5.3's interaction requirement can hold — band stats and CI widths that
+    update as the actuary drags a cut point rather than after they commit to it.
+    """
+    async with database.session() as session:
+        return await transform_service.evaluate_banding_for_version(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            blob_store=blob_store,
+            evaluation=body,
+        )
+
+
+@router.post(
     "/bandings",
     status_code=status.HTTP_201_CREATED,
     summary="Persist a Banding",
@@ -265,6 +296,33 @@ async def propose_grouping(
                 body.model_dump(exclude={"slug"})
             ),
             slug=body.slug,
+        )
+
+
+@router.post(
+    "/groupings/evaluate",
+    summary="Recompute the change in fit for an edited mapping",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def evaluate_grouping(
+    body: GroupingEvaluation,
+    caller: FitModels,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+) -> Grouping:
+    """FR-MODEL-75, and the half `02` §5.3 names outright.
+
+    Merging two levels shows the deviance/df trade-off *before* the grouping is saved. An
+    actuary should never have to fit a model to find out whether a grouping was sensible,
+    and computing the p-value only on save is computing it after the decision.
+    """
+    async with database.session() as session:
+        return await transform_service.evaluate_grouping_for_version(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            blob_store=blob_store,
+            evaluation=body,
         )
 
 

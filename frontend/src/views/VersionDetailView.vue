@@ -117,6 +117,18 @@ onMounted(() => void load());
         >
           Validation report
         </RouterLink>
+        <!--
+          The way into `02` §5.3's factor workbench. Shown only on a `validated` version,
+          because that is the only kind the platform will propose a banding against (`02`
+          R1) — offering the link on a draft would send the actuary to a 409.
+        -->
+        <RouterLink
+          v-if="detail.status === 'validated'"
+          :to="`/factors/${detail.id}`"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+        >
+          Factor workbench
+        </RouterLink>
       </div>
 
       <section

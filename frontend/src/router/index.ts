@@ -61,6 +61,15 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    // `02` §5.3 and `00` §5.6, both of which name this path exactly. Routed on the version
+    // **id** rather than slug-and-number, because a banding is derived against one specific
+    // version and the id is what every `/dataset-versions/{id}/…` route already takes.
+    path: "/factors/:datasetVersionId",
+    name: "factor-workbench",
+    component: () => import("@/views/FactorWorkbenchView.vue"),
+    props: true,
+  },
+  {
     path: "/reference",
     name: "reference",
     component: () => import("@/views/ReferenceView.vue"),

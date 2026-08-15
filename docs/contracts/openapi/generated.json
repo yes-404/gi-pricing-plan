@@ -385,6 +385,41 @@
         "title": "Banding",
         "type": "object"
       },
+      "BandingEvaluation": {
+        "additionalProperties": false,
+        "description": "What `POST /bandings/evaluate` asks for (FR-MODEL-75).\n\nA whole `Banding` rather than a list of boundaries, because the answer depends on all\nof it — `closed`, `null_level` and the two range policies each decide where rows land,\nand evaluating boundaries alone would report statistics for a banding nobody could save.",
+        "properties": {
+          "banding": {
+            "$ref": "#/components/schemas/Banding"
+          },
+          "claim_amount_column": {
+            "default": "claim_amount_minor",
+            "title": "Claim Amount Column",
+            "type": "string"
+          },
+          "claim_count_column": {
+            "default": "claim_count",
+            "title": "Claim Count Column",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "exposure_column": {
+            "default": "exposure_years",
+            "title": "Exposure Column",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_version_id",
+          "banding"
+        ],
+        "title": "BandingEvaluation",
+        "type": "object"
+      },
       "BandingMethod": {
         "description": "How a Banding's boundaries were arrived at (`02` §2, FR-MODEL-9).\n\nRecorded on the artifact because the method *is* the judgement. Two bandings with\nidentical boundaries, one hand-drawn and one from exposure quantiles, are different\nclaims about the same numbers, and a reviewer needs to know which one they are reading.",
         "enum": [
@@ -2372,6 +2407,41 @@
           "unseen_level_behaviour"
         ],
         "title": "Grouping",
+        "type": "object"
+      },
+      "GroupingEvaluation": {
+        "additionalProperties": false,
+        "description": "What `POST /groupings/evaluate` asks for (FR-MODEL-75).",
+        "properties": {
+          "claim_amount_column": {
+            "default": "claim_amount_minor",
+            "title": "Claim Amount Column",
+            "type": "string"
+          },
+          "claim_count_column": {
+            "default": "claim_count",
+            "title": "Claim Count Column",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "exposure_column": {
+            "default": "exposure_years",
+            "title": "Exposure Column",
+            "type": "string"
+          },
+          "grouping": {
+            "$ref": "#/components/schemas/Grouping"
+          }
+        },
+        "required": [
+          "dataset_version_id",
+          "grouping"
+        ],
+        "title": "GroupingEvaluation",
         "type": "object"
       },
       "GroupingEvidence": {
@@ -6825,6 +6895,113 @@
         ]
       }
     },
+    "/api/v1/bandings/evaluate": {
+      "post": {
+        "description": "FR-MODEL-75: what an edited boundary *did*, before the banding is saved.\n\n`/propose` derives boundaries from a method and cannot accept one, so this is the only\nroute by which §5.3's interaction requirement can hold — band stats and CI widths that\nupdate as the actuary drags a cut point rather than after they commit to it.",
+        "operationId": "evaluate_banding_api_v1_bandings_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BandingEvaluation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Banding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Recompute band statistics for edited boundaries",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/bandings/propose": {
       "post": {
         "description": "FR-MODEL-9: the platform proposes, the actuary edits, and **nothing is stored**.\n\nThe returned `Banding` carries a fresh id it does not own yet — `POST /bandings` is\nwhat allocates a version. Returning the whole artifact rather than a list of numbers is\nwhat makes \"always editable\" true: the caller can change a boundary and post back the\nsame shape.",
@@ -7104,6 +7281,100 @@
         "summary": "Download a blob",
         "tags": [
           "blobs"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}": {
+      "get": {
+        "description": "The resource `01` §5.1's nine `/dataset-versions/{id}/…` routes hang off.\n\nEvery one of them — profile, one-ways, compare, lineage, rejected, validate, transition,\nderive, validation-reports — is a child of a version that could not itself be fetched by\nid; the only detail route was `/datasets/{slug}/versions/{version}`. Anything holding a\nversion id and not its dataset slug therefore could not resolve it, which is exactly the\nposition `02` §5.3's factor workbench is in: its route is `/factors/:datasetVersionId`\nand it needs the `dataset_id` a Banding is keyed to.\n\nAdded 2026-08-15 (W5), by building the view that needed it.",
+        "operationId": "get_version_by_id_api_v1_dataset_versions__version_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Dataset version detail by id",
+        "tags": [
+          "datasets"
         ]
       }
     },
@@ -9573,6 +9844,113 @@
           }
         },
         "summary": "Persist a Grouping",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/groupings/evaluate": {
+      "post": {
+        "description": "FR-MODEL-75, and the half `02` §5.3 names outright.\n\nMerging two levels shows the deviance/df trade-off *before* the grouping is saved. An\nactuary should never have to fit a model to find out whether a grouping was sensible,\nand computing the p-value only on save is computing it after the decision.",
+        "operationId": "evaluate_grouping_api_v1_groupings_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupingEvaluation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Grouping"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Recompute the change in fit for an edited mapping",
         "tags": [
           "modelling"
         ]

@@ -34,8 +34,10 @@ from app.platform import audit, datasets, rbac
 from app.platform.blobs import BlobStore, to_ref
 from model_schema import (
     Banding,
+    BandingEvaluation,
     BandingProposal,
     Grouping,
+    GroupingEvaluation,
     GroupingProposal,
     JobSource,
     Permission,
@@ -43,6 +45,8 @@ from model_schema import (
 )
 from pricing_core.modelling import (
     ModellingError,
+    band_statistics,
+    grouping_evidence,
     propose_banding,
     propose_grouping,
 )
@@ -50,6 +54,8 @@ from pricing_core.modelling import (
 __all__ = [
     "create_banding",
     "create_grouping",
+    "evaluate_banding_for_version",
+    "evaluate_grouping_for_version",
     "list_bandings",
     "list_groupings",
     "load_bandings",
@@ -137,6 +143,110 @@ async def propose_grouping_for_version(
         return propose_grouping(frame, proposal, dataset_id=version.dataset_id, slug=slug)
     except ModellingError as exc:
         raise _refuse(exc, "The grouping could not be proposed") from exc
+
+
+async def evaluate_banding_for_version(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    blob_store: BlobStore,
+    evaluation: BandingEvaluation,
+) -> Banding:
+    """Recompute FR-MODEL-10's statistics for boundaries the actuary edited (FR-MODEL-75).
+
+    `/propose` derives boundaries from a **method** and cannot accept one, so without this
+    "the proposal is always editable" means editable but unmeasurable — and an actuary who
+    moves a boundary has to fit a model to find out what it did.
+
+    Persists nothing, and does not renumber or re-slug: what comes back is the banding that
+    went in, with `band_stats` and `derived_on_dataset_version_id` filled from this version.
+    """
+    await rbac.require_permission(
+        session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
+    )
+    version = await datasets.fittable_or_refuse(
+        session, workspace_id=workspace_id, version_id=evaluation.dataset_version_id
+    )
+    banding = evaluation.banding
+    frame = await _read_columns(
+        session,
+        blob_store,
+        version,
+        columns=(
+            banding.column,
+            evaluation.exposure_column,
+            evaluation.claim_count_column,
+            evaluation.claim_amount_column,
+        ),
+    )
+    try:
+        stats = band_statistics(
+            frame,
+            banding,
+            exposure_column=evaluation.exposure_column,
+            claim_count_column=evaluation.claim_count_column,
+            claim_amount_column=evaluation.claim_amount_column,
+        )
+    except ModellingError as exc:
+        raise _refuse(exc, "The banding could not be evaluated") from exc
+    return banding.model_copy(
+        update={
+            "band_stats": stats,
+            "derived_on_dataset_version_id": evaluation.dataset_version_id,
+        }
+    )
+
+
+async def evaluate_grouping_for_version(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    blob_store: BlobStore,
+    evaluation: GroupingEvaluation,
+) -> Grouping:
+    """Recompute FR-MODEL-15's evidence for a mapping the actuary edited (FR-MODEL-75).
+
+    This is the half §5.3 names explicitly: merging levels shows the deviance/df trade-off
+    *before* the grouping is saved. The p-value is the whole answer to "could these levels
+    be the same?", and computing it only on save is computing it after the decision.
+    """
+    await rbac.require_permission(
+        session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
+    )
+    version = await datasets.fittable_or_refuse(
+        session, workspace_id=workspace_id, version_id=evaluation.dataset_version_id
+    )
+    grouping = evaluation.grouping
+    frame = await _read_columns(
+        session,
+        blob_store,
+        version,
+        columns=(
+            grouping.column,
+            evaluation.exposure_column,
+            evaluation.claim_count_column,
+            evaluation.claim_amount_column,
+        ),
+    )
+    try:
+        evidence = grouping_evidence(
+            frame,
+            dict(grouping.mapping),
+            column=grouping.column,
+            exposure_column=evaluation.exposure_column,
+            claim_count_column=evaluation.claim_count_column,
+            claim_amount_column=evaluation.claim_amount_column,
+        )
+    except ModellingError as exc:
+        raise _refuse(exc, "The grouping could not be evaluated") from exc
+    return grouping.model_copy(
+        update={
+            "evidence": evidence,
+            "derived_on_dataset_version_id": evaluation.dataset_version_id,
+        }
+    )
 
 
 async def create_banding(

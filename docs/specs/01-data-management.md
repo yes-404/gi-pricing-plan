@@ -632,6 +632,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 | `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-DATA-2) |
 | `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail |
 | `PATCH` | `/api/v1/datasets/{slug}/versions/{version}/schema` | Correct the inferred schema while `draft` (FR-DATA-4) |
+| `GET` | `/api/v1/dataset-versions/{id}` | Dataset Version detail **by id** — the resource the nine routes below hang off |
 | `POST` | `/api/v1/dataset-versions/{id}/validate` | **202** Run validation → Job (FR-DATA-15) |
 | `GET` | `/api/v1/dataset-versions/{id}/validation-reports` | Report history |
 | `GET` | `/api/v1/validation-reports/{id}` | Full report |
@@ -664,6 +665,17 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 >
 > The rows route always reads the version named in the path and never falls back to the
 > latest, because FR-DATA-30 is the rule this screen is most likely to teach by example.
+
+> **`GET /dataset-versions/{id}` added 2026-08-15 (W5).** Nine routes in this table are
+> children of `/dataset-versions/{id}` — validate, transition, derive, profile, one-ways,
+> compare, lineage, rejected, validation-reports — and the parent was not among them. The
+> only version detail route was `/datasets/{slug}/versions/{version}`, so **anything holding
+> a version id and not its dataset slug could not resolve it at all.**
+>
+> Found by building `02` §5.3's factor workbench, whose route is `/factors/:datasetVersionId`
+> and which needs the `dataset_id` a Banding is keyed to. Not a new capability — the same
+> resource, addressed by its own id — so it carries no new requirement; it is the row this
+> table should always have had.
 
 > **`GET /datasets/{slug}/versions` added 2026-08-15 (W6a).** §5.3 requires the Dataset
 > detail view to render a **version timeline**, and §5.1 offered only `latest_version` and
