@@ -291,11 +291,19 @@ one rule, so randomising result order passed.
   the rule-format params corrected, the reference publish lifecycle declared, `06`'s
   authentication-only routes stated, §5.2's signatures corrected) and carry the two
   obligations the code does not meet as **FR-DATA-41** and **FR-DATA-42**, unevidenced and
-  owned by W6b.
+  owned by **W6b**. FR-DATA-42 is a §5 retrofit-list item landing in Phase 1b, which is
+  worth stating plainly: until it does, artifact immutability is a convention.
 
-**Tier 3 is outstanding: the closure records for W4, W6a and W7b overstate.** Each measured
-a proxy — a route exists, a marker exists, an id appears — and reported it as the thing.
-They are rewritten against what the audits establish, not re-derived from the same proxies.
+**Tier 3, done 2026-08-15: the closure records for W4, W6a and W7b are rewritten.** Each had
+measured a proxy — a route exists, a marker exists, an id appears — and reported it as the
+thing. The corrections are made *in place with the original claim shown*, not by quietly
+restating the record: W4's "38 of 38 catalogue rules" against what the check now reports,
+W6a's seven views against §5.3's twenty-seven Contents items, W7b's "a renamed heading
+breaks it loudly" against the auditor's rename that it did not catch.
+
+The old wording is kept beside the correction on purpose. A record that silently becomes
+right destroys the evidence of what was believed, which is the thing `CLAUDE.md` §0 says a
+governed system cannot afford to lose — and these records exist to be the evidence.
 
 `CLAUDE.md` §14 now makes the specification the plan review's main target at every stage
 boundary, for the reason this audit demonstrated: a divergence left in a spec is a defect
@@ -330,13 +338,29 @@ with another —
 | API | `docs/contracts/openapi/generated.json` | the published surface (FR-PLAT-48) |
 | Workstreams | this file's phase status tables | the roadmap's own words, not a second judgement |
 
-There is no stored copy, so there is no drift check to remember to run. What a closure
-must check instead is that the derivation still *works* — a renamed heading breaks it
-silently — and `backend/tests/test_demo_guide.py` is that check, in the gate.
+There is no stored copy, so there is no drift check to remember to run.
 
-Today it reports **7 of 50 views built**, 63 endpoints published, 6 workstreams closed.
-Naming the 43 that are not built is the point: a page showing only what works invites the
-reader to assume the rest works too.
+> **Corrected 2026-08-15, the day after this record was written.** The sentence that stood
+> here — "a renamed heading breaks it silently, and `test_demo_guide.py` is that check, in
+> the gate" — **was false.** An auditor renamed `07`'s §5.3 heading and the roadmap's
+> status heading: six views and *every* workstream vanished from the guide, with the docs
+> audit and the whole suite green. The test asserted that `/data` and `/reference` existed,
+> so `01` and `02` were protected by accident and `03` to `07` by nothing.
+>
+> The check is real now and derived from the files: every spec that declares a view table
+> must contribute one, and the roadmap must yield workstreams. Both injections fail loudly.
+>
+> Two more claims on this page were overstated the same way, and are fixed in the same
+> commit: the page reported "**63 endpoints published**" with no denominator while 85
+> declared routes did not exist, and "**7/7 workstreams closed**" — a 100 % signal for a
+> plan four phases from done, because only Phase 1a has a status table. It now reads 63 of
+> 148, names the phases with no status table, and does not count a route inside a `//`
+> comment as built.
+
+Today it reports **8 of 51 views built** (the entrance is now declared in `07` §5.3, so it
+appears in its own guide), 63 of 148 endpoints published, and Phase 1a's workstreams alone.
+Naming what is *not* built is the point: a page showing only what works invites the reader
+to assume the rest works too.
 
 **NFRs measured, not asserted** (NFR-PLAT-4: a usable seeded state in < 5 min).
 
@@ -344,6 +368,15 @@ reader to assume the rest works too.
 |---|---|---|
 | Cold — `compose down` first, images cached | **24 s** | 300 s |
 | Warm — containers already up | **19 s** | 300 s |
+
+> **Caveat, added 2026-08-15.** Both numbers were measured before `scripts/demo.py`
+> refused a held port, and the measurement path was not self-verifying: `wait_for` returned
+> on *any* answer, so a run could time a server the previous run had left behind. One such
+> false reading was caught during the work (a "5 s" that was a stale probe); these two were
+> taken with the ports verified free first, which is why they stand. The command now
+> refuses a held port before starting anything, so a repeat measurement cannot make that
+> mistake. NFR-PLAT-4 remains **measured, not tested**, and `scope-audit` correctly lists
+> it among PLAT's unevidenced requirements.
 
 Both include a 60 000-row seed through the real Job path, both versions, the validation
 failure loop and the acknowledgement. The full 678 013-row seed adds ~10 s (W7a's record).
@@ -475,16 +508,25 @@ visible, so its evidence is the views and their tests rather than markers. That 
 the closure below leans on the two audits that *are* derivable — endpoints and catalogue —
 and on what building the screens found in the API beneath them.
 
-| Deliverable (`01` §5.3) | Route | Evidence |
-|---|---|---|
-| App shell + generated client | — | `frontend.yml` green; client generated from the committed contract, drift-checked in CI; no hand-written shape anywhere in `src/` |
-| Dataset list | `/data` | status badge, latest version, last validated |
-| Dataset detail | `/data/:slug` | version timeline, data dictionary editor, rule set link in both its states, lineage |
-| Version detail | `/data/:slug/v/:version` | table inventory, totals, schema viewer, rejected-rows drawer |
-| **Validation report** | `…/validation` | four layer sections, measured-vs-threshold, offending sample, acknowledge dialog with mandatory justification, and the banner §5.3 makes the interaction requirement |
-| Profile | `…/profile` | per-column cards, one-way charts with CI bands, PSI selector |
-| Rule set editor | `/data/:slug/rules` | rules by layer, enable/disable, severity override, thresholds, custom-rule builder with dry-run |
-| Reference tables | `/reference` | table list, version timeline, effective-date viewer, lookup debugger |
+> **This table was rewritten on 2026-08-15**, after an independent auditor read `01` §5.3's
+> **Contents** column against the components. The version it replaces listed seven views
+> and, as their "evidence", restated the Contents column — including four items that are
+> not built. Every view is routed and none is a stub; that is a fact about the router, and
+> the record reported it as a fact about the screens.
+>
+> **Six of the twenty-seven Contents items are missing**, and three of the six have a
+> working backend endpoint and a dead client wrapper.
+
+| Deliverable (`01` §5.3) | Route | Built | Not built |
+|---|---|---|---|
+| App shell + generated client | — | client generated from the committed contract; no hand-written shape in `src/` | the CI drift check was inert until 2026-08-15 — it diffed a git-ignored path. `type-check` against the fresh client is the check now |
+| Dataset list | `/data` | name, line of business, territory, currency, latest version | **status badge**, **last validated**, **owner** — and `Dataset` carries none of the three, so §4.1 never defined what §5.3 asks to display |
+| Dataset detail | `/data/:slug` | version timeline (newest first, tested), rule set link in both states, data dictionary editor for `description` and `pii_class` | **lineage graph** — `getLineage()` exists, is typed, and is called by nothing while `GET …/lineage` serves it. `semantic_type` is read-only; `unit` and `reference_table` are not rendered |
+| Version detail | `/data/:slug/v/:version` | all five: table inventory, row counts, totals, schema viewer, rejected-rows drawer | — (the drawer's populated branch is untested: both fixtures have zero rejects) |
+| **Validation report** | `…/validation` | all six, and the interaction requirement genuinely holds — DOM order asserted, not presence | the offending sample is a `<ul>`, not the table §5.3 names; `empty_layers` is surfaced on the rule-set screen and not on this one |
+| Profile | `…/profile` | per-column cards; one-way charts with exact Poisson CI whiskers (ECharts) | **histograms** — and `ColumnProfile` has no `histogram` field while `01` §4.4 *and* the committed JSON schema define one. **PSI comparison selector** — `compareProfiles()` has no caller, and `psiBand(null)` colours the dtype label, which reads as PSI support and is not |
+| Rule set editor | `/data/:slug/rules` | rules by layer, enable/disable (full-membership round-trip tested), severity override, custom-rule builder with dry-run | **threshold editing** — thresholds render read-only; changing one means retyping the whole rule into the builder |
+| Reference tables | `/reference` | all four: table list, version timeline, effective-date viewer, lookup debugger | — **nothing wrong found in this view** |
 
 **Gate (local, 2026-08-15):** ruff clean · mypy --strict on 84 source files · import-linter
 3 kept / 0 broken · **591 python tests** · 7 generated contracts match · docs audit 20/20 ·
@@ -548,6 +590,8 @@ authentication is **OQ-PLAT-6**, open, recommendation recorded.
 | TanStack Table, Vue Flow | **Later phases** (`03` §5.3). Declared in `skills-map.md`, not installed |
 | Accessibility beyond semantics | **Partial.** Tables carry `aria-label`, alerts carry `role`, and every test queries by role or label — which keeps the semantics honest. NFR-OVR-10's tabular fallback for charts is **not** built; owner W6b |
 | `07` §5.1's six `PLAT` endpoints | Unchanged from W2's record — still owned by W14 |
+| **Six §5.3 Contents items** | **Added 2026-08-15.** Dataset status badge, last validated, owner; lineage graph; histograms; PSI comparison selector. Plus threshold editing in the rule set editor. The original record did not list them because it audited routes and not Contents. Owner: **W6b**, except the two blocked by a model/contract divergence (owner/status/validated, and `histogram`), which need a spec decision first — recorded as unresolved in `01`, not silently designed around |
+| **Two unresolved model/contract divergences** | **Added 2026-08-15.** `Dataset` has no status, validated-at or owner while §5.3 asks to display all three; `ColumnProfile` has no `histogram` while `01` §4.4 *and* `docs/contracts/schemas/profile.schema.json` both define one. Four other divergences from the same fortnight got dated amendment notes; these two were built around in silence, which is the `CLAUDE.md` §0 failure the notes exist to prevent |
 
 **Retrofit list (`docs/roadmap.md` §5):** unchanged by W6a. The frontend consumes the
 contract; it does not touch audit-in-transaction, artifact immutability, integer money or
@@ -630,7 +674,7 @@ carries the correction — a roadmap row states what was known when it was writt
 | Preparation recipes | Applied **during** ingestion and stored with the version; `explode_period` preserves exposure exactly; expressions compile to Polars through a restricted AST, never `eval` |
 | Parquet | Content-addressed blobs, deduplicated across versions by digest, presigned download |
 | Profiling | Aggregated in DuckDB; the frame and parquet paths produce identical Profiles; one-ways read from storage and never recomputed |
-| Four validation layers + built-in catalogue | **38 of 38** `01` §4.4 rules, each with a firing and a non-firing case; the `sql` escape hatch sandboxed |
+| Four validation layers + built-in catalogue | **38 check implementations**, each with a firing and a non-firing case; the `sql` escape hatch sandboxed. **Not 38 shipped rules** — corrected 2026-08-15, see below |
 | Reference tables | Effective-dated versions, half-open intervals, overlap refused by a `btree_gist` exclusion constraint, publish-then-pin |
 | *(reassigned from W2)* Blob endpoints, `/metrics` | Presigned upload and 307 download; Prometheus exposition with bounded label cardinality |
 
@@ -644,7 +688,7 @@ carries the correction — a roadmap row states what was known when it was writt
 |---|---|
 | requirements | **48 / 50** (96 %) |
 | `--endpoints` | **28 / 28** (100 %) |
-| `--catalogue VR` | **38 / 38** (100 %) |
+| `--catalogue VR` | **1 / 38** — the number this check reports since it was fixed on 2026-08-15. It read 38/38 by counting ids in **prose** |
 
 **Enforcement proven, not assumed** (§13 rule 3). Every check the workstream added was
 shown to fail on deliberately broken input, with the exit code read from the check itself
@@ -654,7 +698,23 @@ rather than from a `grep` in the pipeline after it:
 - `--catalogue VR` against a rule id removed from source → 37/38, exit 1. **This one was
   silently weak**: it scanned test files too, so a rule existing nowhere but in a test read
   as implemented. The broken run failed to notice the deletion, which is how the weakness
-  was found; the scan is now source-only.
+  was found; the scan was made source-only.
+
+  > **It was still weak, and the injection above is why the second weakness survived.**
+  > Deleting an id from a *docstring* also makes the count drop, so the proof passed while
+  > the check was measuring prose. An independent audit found the whole 38 were docstring
+  > mentions — and that one reading `VR-ACT-1/2/8` was slash-expanded into three, two of
+  > which (`VR-ACT-2`, `VR-ACT-8`) appear in no source file at all.
+  >
+  > Corrected 2026-08-15: the scan parses to an AST and counts ids a program **evaluates**.
+  > It reports **1 of 38**, and that one is an id inside an error message.
+  >
+  > **What W4 shipped is 38 reusable check implementations and no built-in rule
+  > catalogue.** `01` §4.4 says "Rule IDs here are stable and referenced by workflows and
+  > by the UI", which is a claim about data — `BUILTIN_ROLES` is what it looks like when it
+  > is true. The rules the freMTPL2 seed installs are constructed in `examples/`, not
+  > shipped by the platform. The capability §4.4 describes is **not delivered**; the
+  > checks behind it are.
 - The DuckDB sandbox: dropping `enable_external_access` makes three tests fail, and
   removing the interrupt watchdog hangs the timeout test rather than failing it.
 - The two profiling paths: reinstating either the tie-break or the quantile default breaks
@@ -701,6 +761,8 @@ than worked around:
 | `pipelines/` — Dagster | **Deferred to W7.** `CLAUDE.md` §2 assigned it to 1a W4; W4's own roadmap row never named it, and `pipeline` as a Source *kind* is registrable without a scheduler. The mark is corrected rather than the gap hidden |
 | `GET`/`POST /api/v1/environments`, `PUT .../settings` | **W14**, which owns `07` FR-PLAT-28..31 |
 | `00` §5.4 `If-Match` optimistic concurrency | **Not delivered, reassigned to W5.** W2 named W4 as "the first workstream with versioned artifacts", which was right — but W4's mutating endpoints act on a version's *status*, and the transition state machine already refuses every unsafe move by reading the current status under a row lock. An ETag would add a second, weaker guard over the same field. `CONFLICT_STALE_WRITE` is still absent from the error registry; the first genuine lost-update risk is a Model's editable metadata in W5, and it should be built there against a real one |
+| FR-DATA-13's refusal | **Not delivered, and not previously stated.** `DIRECT_IDENTIFIER_PRESENT` is registered and raised nowhere; `modelling_forbidden_columns` has no caller; all four FR-DATA-13 markers sit on `pseudonymise`, the other half of the requirement. Now **FR-DATA-41**, owned by W6b. Found by an independent audit 2026-08-15, not by this record |
+| pandera | **Not a dependency, and never was.** W4 delivered the structural layer over Polars while `01` named pandera as its mechanism in four places and `skills-map.md` marked it ★★ *Verified*. The spec is corrected (2026-08-15); the layer itself is delivered and tested |
 | `00` §5.4 `Idempotency-Key` header | **Delivered, after the audit found it wrong.** All four `202` endpoints accept it. It had been implemented as a *query parameter* on one of them — a retry is generated by an HTTP client that knows nothing about the endpoint's query string, and a key in the URL is also a key in every access log |
 
 **Retrofit list (§5) — where W4 leaves each item:**
@@ -708,7 +770,7 @@ than worked around:
 | Item | State after W4 |
 |---|---|
 | Append-only audit in the caller's transaction | **Delivered and used.** Every W4 mutation — version transitions, acknowledgements, dictionary edits, rule-set replacement, reference loads, schema corrections — writes through `audit.record` inside the caller's unit of work. 46 audit tests |
-| Artifact immutability + versioning + `parent_id` | **Delivered.** Every W4 artifact is `frozen=True`; versions are allocated under an advisory lock and never reused; `derived_from` carries lineage; a validated version cannot exist without its report, enforced by a check constraint against a raw `UPDATE` |
+| Artifact immutability + versioning + `parent_id` | ~~**Delivered.**~~ **Partial — corrected 2026-08-15.** Every W4 artifact is `frozen=True` *in Python*, versions are allocated under an advisory lock and never reused, and `derived_from` carries lineage. But **nothing stops the database being written directly**: only `audit_events` has append-only triggers, and an audit rewrote 190 stored reports from `fail` to `pass` in one statement. A `frozen` Pydantic model is a rule about one process; the retrofit list means the guarantee. Now **FR-DATA-42**, owned by W6b. The check constraint named here does hold — but see the note under W6a about the state FR-DATA-23 leaves it in |
 | `model-schema` as SSOT | **Delivered.** `Dataset`, `DataDictionaryEntry`, `PiiClass`, `RecordGrain`, `Profile`, `ValidationReport` and the rule shapes all live there; the contract regenerates and CI fails on drift |
 | Job model with progress and cancellation | **Delivered and exercised.** The four `dataset.*` handlers run through it; progress and cooperative cancellation are the `pricing-core` `ProgressCallback` |
 | Decimal money discipline | **Delivered.** `MoneyMinor` and `DecimalStr` throughout `01`'s shapes; one-way ratios derive from the stored Decimal so a published frequency equals published claims ÷ published exposure |
@@ -1021,7 +1083,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
 | **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project |
-| **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
+| **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).
