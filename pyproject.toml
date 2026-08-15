@@ -78,6 +78,10 @@ testpaths = [
     # `scripts/scope-audit.py` read this list, so adding a root here is all that is needed
     # for its markers to count as evidence.
     "tests",
+    # The demo seed. Its 36 MB of data is fetched rather than committed, so CI cannot run
+    # it end to end — but everything that decides whether it still works is pure: the ARFF
+    # reader, the recipe order, and the rule set's conformance to FR-DATA-16.
+    "examples/fremtpl2",
 ]
 # Each package owns a test module of the same name (test_money.py in both). The legacy
 # prepend import mode collides on the basename; importlib keeps them distinct without

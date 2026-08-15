@@ -56,6 +56,10 @@ deploy/data/
 examples/data/
 !examples/data/README.md
 
+# Fetched by examples/fremtpl2/fetch.py, never committed: 36 MB of third-party data does
+# not belong in a git history, and the checksums are pinned so re-fetching is exact.
+examples/fremtpl2/data/
+
 # ---- Secrets: referenced, never stored (07 FR-PLAT-25/26) ----
 .env
 .env.*
