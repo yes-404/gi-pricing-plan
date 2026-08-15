@@ -278,15 +278,15 @@ closure record states what was known when it was written.
 |---|---|---|
 | `scope-audit DATA` requirements | 44 / 50 | **48 / 50** |
 | `scope-audit DATA --endpoints` | 0 / 28 | **28 / 28** |
-| `scope-audit DATA --catalogue VR` | not measured | **12 / 38** |
+| `scope-audit DATA --catalogue VR` | not measured | **38 / 38** |
 
-Two of those moved because work landed. The third is a **third finding**, and the same
-kind as the first two: a requirement can summarise a catalogue it does not enumerate.
-FR-DATA-16 says "validation covers four layers", which one test evidences honestly — while
-§4.4's catalogue of 38 named rules behind it is 12 implemented. The four layers work and
-the engine is right; two thirds of the rules an actuary would expect are absent, including
-every `reference_lookup` variant and the PSI rule the distributional layer mostly exists
-for.
+Two of those moved because work landed. The third was a **third finding** of the same kind as the first two: a requirement can
+summarise a catalogue it does not enumerate. FR-DATA-16 says "validation covers four
+layers", which one test evidences honestly — while §4.4's catalogue of 38 named rules
+behind it stood at 12. **Since closed**: all 38 are implemented, and writing the tests
+found two defects in rules that already existed — `column_presence` passed when no columns
+were declared, and `development_maturity` could never pass, because it measures against
+the data's own latest period and the most recent rows are always immature.
 
 `--catalogue PREFIX` was added to `scope-audit.py` so the number is re-derivable rather
 than a one-off count, and it generalises: any spec declaring a catalogue of named ids can
@@ -296,7 +296,7 @@ be checked the same way.
 
 | Item | Verdict |
 |---|---|
-| 26 of 38 built-in catalogue rules (§4.4) | **not started** — stays in W4; the largest remaining piece |
+| 26 of 38 built-in catalogue rules (§4.4) | ~~not started~~ ✔ **delivered 2026-08-15** — all 38 implemented and tested, each with a case where it fires and one where it does not |
 | FR-DATA-24 streaming over parquet row groups | **not delivered** — the distributional half is done; the streaming half needs a real 10 M-row dataset to be designed against, so it is reassigned to **W7** alongside the freMTPL2 seed |
 | NFR-DATA-1, NFR-DATA-2 throughput | **measured, not tested** — `scripts/bench-data.py` at 2 M × 80, extrapolated to 10 M: parquet ingest+prepare 5.2 s / 900 s, CSV 29.6 s / 1800 s, validation 0.3 s / 600 s, structural alone 0.1 s / 120 s. A timing assertion on a shared runner fails for reasons unrelated to the code |
 | `GET /metrics` (FR-PLAT-40, reassigned from W2) | **not started** — needs a Prometheus client dependency and a `07` §8 entry, and several required series (scoring latency, cache hit rate) belong to later phases |

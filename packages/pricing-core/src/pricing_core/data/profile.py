@@ -12,7 +12,7 @@ or noise depending on the method. The exact interval costs a chi-square quantile
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Final
@@ -40,6 +40,7 @@ __all__ = [
     "poisson_frequency_interval",
     "profile_frame",
     "profile_parquet",
+    "psi_from_weights",
     "semantic_type_of",
 ]
 
@@ -552,16 +553,30 @@ def _psi(current: ColumnProfile, reference: ColumnProfile) -> float | None:
     Computed from the top-level counts both profiles already hold, which is what makes the
     distributional layer cheap enough to run on every validation (FR-DATA-24's intent).
     """
-    if not current.top_levels or not reference.top_levels:
+    return psi_from_weights(dict(current.top_levels), dict(reference.top_levels))
+
+
+def psi_from_weights(
+    current: Mapping[str, float], reference: Mapping[str, float]
+) -> float | None:
+    """PSI between two level-weight maps — counts, or exposure (VR-DST-1, VR-DST-8).
+
+    Public because the distributional validation layer needs exactly this and must not
+    have its own copy: a `VR-DST-*` verdict and the comparison screen an actuary reads
+    would then be able to disagree about the same two versions, which is the failure the
+    module docstring promises against.
+
+    Weights rather than counts, because VR-DST-8 asks for PSI on the **exposure** across a
+    factor and not on row counts — a book that writes the same number of policies with
+    half the exposure in young drivers has shifted, and counting rows would not see it.
+    """
+    current_total = sum(current.values())
+    reference_total = sum(reference.values())
+    if not current or not reference or not current_total or not reference_total:
         return None
 
-    current_total = sum(count for _, count in current.top_levels)
-    reference_total = sum(count for _, count in reference.top_levels)
-    if not current_total or not reference_total:
-        return None
-
-    current_share = {level: count / current_total for level, count in current.top_levels}
-    reference_share = {level: count / reference_total for level, count in reference.top_levels}
+    current_share = {level: value / current_total for level, value in current.items()}
+    reference_share = {level: value / reference_total for level, value in reference.items()}
 
     import math
 
