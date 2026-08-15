@@ -73,6 +73,12 @@ from model_schema.profiles import (
     ProfileComparison,
     SemanticType,
 )
+from model_schema.reference import (
+    ReferenceLookup,
+    ReferenceRow,
+    ReferenceTable,
+    ReferenceTableVersion,
+)
 from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
 from model_schema.settings import (
     SettingCandidate,
@@ -149,6 +155,10 @@ __all__ = [
     "ProfileComparison",
     "Progress",
     "RecordGrain",
+    "ReferenceLookup",
+    "ReferenceRow",
+    "ReferenceTable",
+    "ReferenceTableVersion",
     "Relativity",
     "ResourceBudget",
     "RetryPolicy",

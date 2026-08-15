@@ -19,6 +19,13 @@ import { RouterLink, RouterView } from "vue-router";
         >
           Data
         </RouterLink>
+        <RouterLink
+          to="/reference"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Reference
+        </RouterLink>
       </nav>
     </header>
     <main class="mx-auto max-w-6xl px-6 py-8">

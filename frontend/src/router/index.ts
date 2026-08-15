@@ -43,6 +43,11 @@ const routes: RouteRecordRaw[] = [
     // router — which is what makes it renderable in a test without a router at all.
     props: true,
   },
+  {
+    path: "/reference",
+    name: "reference",
+    component: () => import("@/views/ReferenceView.vue"),
+  },
 ];
 
 export const router = createRouter({

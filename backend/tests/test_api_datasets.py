@@ -13,30 +13,15 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
 from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
-from app.config import Environment, Settings
-from app.main import create_app
 from model_schema import new_uuid7
 
 
 @pytest.fixture
-def api_settings() -> Settings:
-    from backend.tests.conftest_db import test_database_url
-
-    return Settings(
-        environment=Environment.LOCAL,
-        version="test",
-        dev_auth_enabled=True,
-        database_url=SecretStr(test_database_url()),
-    )
-
-
-@pytest.fixture
-def client(api_settings: Settings) -> TestClient:
-    with TestClient(create_app(api_settings), raise_server_exceptions=False) as c:
-        yield c
+def client(api_client: TestClient) -> TestClient:
+    """The shared DB-backed client, under the name this module's tests already use."""
+    return api_client
 
 
 def _headers(principal_id, workspace_id) -> dict[str, str]:
