@@ -360,7 +360,8 @@ async def run(rows: int | None) -> int:
 
         await rule_service.replace_rule_set(
             session, workspace_id=workspace_id, actor=analyst, dataset_id=dataset_id,
-            slug=str(dataset_id), rule_ids=[UUID(r) for r in rule_ids],
+            slug=str(dataset_id),
+            members=[rule_service.RuleSetMember(rule_id=UUID(r)) for r in rule_ids],
         )
     print(f"  dataset {slug} with {len(RULES)} approved rules across four layers\n")
 
