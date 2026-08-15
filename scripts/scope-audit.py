@@ -13,6 +13,13 @@ written, which is what makes the result independent of whoever runs it.
     scripts/scope-audit.py PLAT                    # every PLAT requirement, by section
     scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 --extra FR-PLAT-47,FR-PLAT-48
     scripts/scope-audit.py DATA --endpoints        # also check the §5.1 endpoint table
+    scripts/scope-audit.py DATA --catalogue VR     # also check a declared catalogue
+
+**A requirement can also summarise a catalogue it does not enumerate.** `01` FR-DATA-16
+says "validation covers four layers", which one test can evidence — while §4.4's catalogue
+of 38 named rules behind it was 12 implemented. `--catalogue VR` compares the ids a spec
+declares against the ids the code names, which is the difference between "the layers work"
+and "the rules exist".
 
 **A requirement can be fully evidenced while the module is unreachable.** Requirement
 markers live on unit and service tests, so a module can pass every one of them and expose
@@ -88,6 +95,63 @@ def evidence() -> dict[str, list[str]]:
             for rid in _MARKER.findall(test.read_text(encoding="utf-8")):
                 claimed[rid].append(str(test.relative_to(ROOT)))
     return dict(claimed)
+
+
+#: `| `VR-STR-1` column-presence | fail | ... |` — a spec's catalogue rows.
+_CATALOGUE = re.compile(r"^\| `([A-Z]{2,4}-[A-Z]{2,4}-\d+)` ([a-z0-9-]+)")
+
+
+def report_catalogue(module: str, prefix: str) -> int:
+    """Compare a spec's declared catalogue against the ids the code names.
+
+    Coverage is claimed by a docstring naming the id, as `VR-ACT-1/2/8` does. That is a
+    claim rather than a proof, exactly like a `@pytest.mark.req` marker, and it is checked
+    the same way: by reading the ones that matter. What it catches reliably is the id
+    nothing mentions at all.
+    """
+    spec = owning_spec(module)
+    if spec is None:
+        print(f"\n  no spec owns module {module!r}")
+        return 0
+    text = spec.read_text(encoding="utf-8")
+    declared = [
+        (rid, name)
+        for line in text.splitlines()
+        for match in [_CATALOGUE.match(line)]
+        if match and (rid := match.group(1)).startswith(f"{prefix}-") and (name := match.group(2))
+    ]
+    if not declared:
+        print(f"\n  {spec.name} declares no {prefix}-* catalogue")
+        return 0
+
+    named: set[str] = set()
+    for source in sorted((ROOT / "packages").rglob("*.py")) + sorted(
+        (ROOT / "backend" / "src").rglob("*.py")
+    ):
+        for found in re.findall(rf"{prefix}-[A-Z]{{2,4}}-[\d/]+", source.read_text("utf-8")):
+            head, _, tail = found.rpartition("-")
+            for part in tail.split("/"):
+                named.add(f"{head}-{part}")
+
+    by_layer: dict[str, list[tuple[str, str, bool]]] = defaultdict(list)
+    for rid, name in declared:
+        by_layer[rid.split("-")[1]].append((rid, name, rid in named))
+
+    print(f"\n  {module} catalogue declared in {spec.name}\n")
+    missing: list[str] = []
+    for layer, rows in sorted(by_layer.items()):
+        have = sum(1 for *_, ok in rows if ok)
+        print(f"  {layer:<8} {have:>3} / {len(rows):<3} implemented")
+        missing.extend(f"{rid} {name}" for rid, name, ok in rows if not ok)
+
+    total = len(declared)
+    print(f"  {'TOTAL':<8} {total - len(missing):>3} / {total}")
+    if missing:
+        print(f"\n  NOT IMPLEMENTED — {len(missing)}:")
+        for entry in missing:
+            print(f"      {entry}")
+        return 1
+    return 0
 
 
 def owning_spec(module: str) -> pathlib.Path | None:
@@ -202,6 +266,11 @@ def main() -> int:
         action="store_true",
         help="Also check the spec's §5.1 endpoint table against the published contract",
     )
+    parser.add_argument(
+        "--catalogue",
+        metavar="PREFIX",
+        help="Also check a declared catalogue by id prefix, e.g. VR for `01` §4.4",
+    )
     args = parser.parse_args()
 
     by_section = requirements_by_section(args.module)
@@ -238,6 +307,9 @@ def main() -> int:
 
     missing = [r for r in in_scope if r not in claimed]
     endpoint_gap = report_endpoints(args.module) if args.endpoints else 0
+    catalogue_gap = (
+        report_catalogue(args.module, args.catalogue) if args.catalogue else 0
+    )
     print()
     print(f"  in scope        : {len(in_scope)}")
     print(f"  with evidence   : {len(in_scope) - len(missing)}", end="")
@@ -258,7 +330,7 @@ def main() -> int:
         return 1
 
     print("\n  every in-scope requirement has test evidence")
-    return endpoint_gap
+    return endpoint_gap or catalogue_gap
 
 
 if __name__ == "__main__":
