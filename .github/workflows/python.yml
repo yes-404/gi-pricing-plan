@@ -14,6 +14,11 @@ on:
       # so a new script that does not match the filter is linted by nothing. Adding
       # scope-audit.py triggered only the docs workflow, which is how this was noticed.
       - 'scripts/**'
+      # `examples/**` for the same reason as `scripts/**`: the seed, its loader and its
+      # test are Python that ruff, mypy and pytest all cover, so a change touching only
+      # this directory was checked by nothing. Noticed when W6a's closure edited the seed
+      # and the python workflow did not run.
+      - 'examples/**'
       - 'docs/contracts/**'
       - '.github/workflows/python.yml'
   pull_request:
@@ -28,6 +33,7 @@ on:
       # so a new script that does not match the filter is linted by nothing. Adding
       # scope-audit.py triggered only the docs workflow, which is how this was noticed.
       - 'scripts/**'
+      - 'examples/**'
       - 'docs/contracts/**'
       - '.github/workflows/python.yml'
 
