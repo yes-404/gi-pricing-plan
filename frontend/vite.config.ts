@@ -37,7 +37,36 @@ export default defineConfig({
     // depends on CORS being configured — and the deployed build, served behind one host,
     // behaves the same way as the dev server.
     proxy: {
-      "/api": { target: "http://localhost:8000", changeOrigin: true },
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        // **Development identity, injected here rather than in the client.** The platform
+        // refuses an unauthenticated request (`07` §3.7), and the SPA sends no credential
+        // — so before this the browser got 401 on every request while every view and its
+        // tests passed. The tests stub `fetch`; nothing exercised the real transport.
+        //
+        // It belongs in the proxy because a browser must never be able to choose its own
+        // principal: putting these headers in `client.ts` would ship a credential the user
+        // can edit in devtools, and the code path would then exist in the production
+        // bundle. Here it lives in the dev server only, and the deployed build has no way
+        // to reach it. Real OIDC in the SPA is a later workstream's work.
+        configure(proxy) {
+          const principal = process.env.GIP_DEV_PRINCIPAL_ID;
+          const workspace = process.env.GIP_DEV_WORKSPACE_ID;
+          if (!principal || !workspace) {
+            console.warn(
+              "\n  GIP_DEV_PRINCIPAL_ID / GIP_DEV_WORKSPACE_ID are unset — the API will"
+              + "\n  answer 401 to everything. `uv run python examples/fremtpl2/seed.py`"
+              + "\n  prints both.\n",
+            );
+            return;
+          }
+          proxy.on("proxyReq", (request) => {
+            request.setHeader("x-dev-principal-id", principal);
+            request.setHeader("x-dev-workspace-id", workspace);
+          });
+        },
+      },
     },
   },
 });

@@ -264,6 +264,52 @@ it; test the chart's own option-building separately if it earns it.
 - `.gitignore` already covers `frontend/src/api/generated/`, `node_modules/`, `dist/`,
   `.vite/`. Nothing else about the frontend is ignored — check before adding.
 
+## The dev server must inject an identity, or the browser gets 401 on everything
+
+The platform refuses an unauthenticated request (`07` §3.7). The SPA sends **no
+credential** — browser authentication is unspecified and open as OQ-PLAT-6 — so a real
+browser gets 401 from every endpoint while every view and every test passes: the tests stub
+`fetch`, and nothing exercises the transport.
+
+The way in is the **Vite proxy**, never `client.ts`:
+
+```ts
+proxy: {
+  "/api": {
+    target: "http://localhost:8000",
+    configure(proxy) {
+      const principal = process.env.GIP_DEV_PRINCIPAL_ID;
+      const workspace = process.env.GIP_DEV_WORKSPACE_ID;
+      if (!principal || !workspace) { console.warn("… will answer 401 to everything"); return; }
+      proxy.on("proxyReq", (r) => {
+        r.setHeader("x-dev-principal-id", principal);
+        r.setHeader("x-dev-workspace-id", workspace);
+      });
+    },
+  },
+}
+```
+
+**In the proxy because a browser must never choose its own principal.** Headers set in
+`client.ts` are a credential the user can edit in devtools, and the code path would ship in
+the production bundle. Here it exists only in the dev server; `grep GIP_DEV dist/assets/*`
+finds nothing.
+
+The two ids come from the seed, which prints them:
+
+```bash
+uv run python examples/fremtpl2/seed.py     # prints both export lines
+export GIP_DEV_PRINCIPAL_ID=… GIP_DEV_WORKSPACE_ID=…
+pnpm --dir frontend dev
+```
+
+Check it before believing a view works end to end — `curl -s -o /dev/null -w '%{http_code}'
+http://localhost:5173/api/v1/datasets` must be 200, and the same URL against port 8000
+must be 401. If both are 401, the env vars were not set in the shell that started Vite.
+
+**`localhost`, not `127.0.0.1`.** Vite binds IPv6 by default, so `curl 127.0.0.1:5173`
+gets connection-refused while the server is running perfectly.
+
 ## Verified
 
 2026-08-15 — written as W6a's groundwork, from the decided stack and the shapes the
@@ -292,3 +338,7 @@ freMTPL2's five rating factors: twelve of thirteen columns had no one-way at all
 selected from the semantic types the profiler infers now (FR-DATA-26's "candidate rating
 column"), and the same dataset yields `area`, `veh_power`, `veh_brand`, `veh_gas`,
 `region`.
+
+2026-08-15 — W6a close. The rule-set editor and `/reference` complete `01` §5.3's seven
+views. The dev-identity section above was written after a live check found that no browser
+could reach the API at all, six views into the workstream.

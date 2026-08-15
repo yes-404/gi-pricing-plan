@@ -94,6 +94,24 @@ Read the message rather than retrying. Two seen in this repo:
   `gh run list` — a *different* missing permission each time (Pull requests, Administration,
   Actions). Name the specific one when asking.
 
+## A `paths:` filter behaves differently on a PR than on a push
+
+`on.pull_request.paths` matches the **whole PR diff**, not the commit just pushed. So a
+workflow re-runs on every sync of a branch whose diff touches one of its paths, however
+unrelated the new commit is — and a green run on a PR proves nothing about whether that
+workflow would fire for a *push* of the same files.
+
+This bites in the direction that matters: **you cannot demonstrate a path-filter fix on the
+PR that contains it**, because the workflow file itself is in the diff and in its own
+filter. What a PR *can* show is the defect — a diff containing `examples/*.py` that ran
+docs and frontend and not python is conclusive, and is how the missing `examples/**` entry
+was found.
+
+Two filters here were each missing a directory of real Python — `scripts/**`, then
+`examples/**` — both found the same way, months apart. A filter enumerating directories
+grows one miss at a time; the standing plan (`CLAUDE.md` §2) is an always-running
+aggregator job once branch protection arrives.
+
 ## Verified
 
 2026-08-14 — Written after the trap fired twice. Confirmed: `git diff --stat main <branch>`
@@ -106,3 +124,6 @@ existed, so 12 `.pyc` files were already tracked; the new patterns did not untra
 and `git status` reported them as *modified*. `git rm -r --cached` cleared them. The
 failure landed in the gap between writing this skill and committing it, which is a fair
 demonstration that the same-commit rule above is a rule and not a preference.
+
+2026-08-15 — W6a close. The `pull_request` `paths:` behaviour above was learned by
+pushing a commit as a proof it could not be.
