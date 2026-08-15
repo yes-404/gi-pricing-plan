@@ -511,5 +511,6 @@ Mirrored in `docs/open-questions.md`.
 | **OQ-OVR-1** | Is the workspace the tenancy boundary, or do we also need per-workspace physical isolation for hosted use? |
 | **OQ-OVR-2** | Project licence: Apache-2.0 (permissive, adoption) vs AGPL-3.0 (protects against closed SaaS forks). |
 | ~~**OQ-OVR-3**~~ ✔ | ~~Do we support multiple currencies in one workspace in Phase 2, or defer multi-currency to Phase 4? |~~ **Decided 2026-08-14: deferred to Phase 4; one currency per workspace, recorded on every artifact envelope now (FR-OVR-7, §4.3).**
+| **OQ-OVR-6** | How are the five workflow journeys (`workflows/wf-01…05`) evidenced? No test cites one, and the "workflow coverage" figure the docs audit prints measures whether a journey *mentions* a requirement id — not whether it runs. Raised by plan review 2, 2026-08-15. |
 | ~~**OQ-OVR-4**~~ ✔ | ~~Is `pricing-core` published to PyPI as a standalone library from Phase 1, which would constrain its API stability earlier than otherwise needed? |~~ **Decided 2026-08-14: editable install in Phase 1, publish as `0.x` from Phase 2 with a no-stability notice.**
 | ~~**OQ-OVR-5**~~ ✔ | ~~Where does the notebook escape hatch live — an embedded JupyterLab in the platform, or a documented client library only? |~~ **Decided 2026-08-14: client library in Phase 1; embedded notebooks revisited in Phase 4 (§1.2).**

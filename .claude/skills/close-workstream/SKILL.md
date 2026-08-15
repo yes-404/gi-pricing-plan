@@ -121,6 +121,17 @@ false positives here: a `✓` echoed on `head`'s exit code rather than the comma
 above it proved the opposite. **If a check has never printed a failure, you have not tested
 the check.**
 
+### The injection must break what the check *claims* to measure
+
+A proof can pass for the wrong reason. `--catalogue VR` was shown to fail on broken input —
+an id was deleted and the count dropped — and the check was counting **docstrings** the
+whole time. The injection proved the counter could count; it never tested *what* was being
+counted. An independent audit later found all 38 "implemented" rules were prose mentions,
+two of them expanded from a single `VR-ACT-1/2/8` comment, and the honest count was 1.
+
+Before trusting an injection, ask **which claim it falsifies**. If the check says "this rule
+is implemented", break the *implementation* — not a comment that happens to name it.
+
 ### A generated artifact matching its source proves neither is correct
 
 W2's contract drift check passed while the published OpenAPI advertised an error model the
@@ -195,3 +206,8 @@ docs audit 15/15 · req-coverage N requirements
 untested / deferred with an owner / reassigned / not started — plus the §5 retrofit
 mapping.
 ```
+
+## Verified
+
+2026-08-15 — the injection lesson above came from plan review 2, after an independent
+audit found that this skill's own worked example had passed for the wrong reason.
