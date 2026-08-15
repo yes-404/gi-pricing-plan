@@ -41,12 +41,14 @@ def _test_roots() -> list[pathlib.Path]:
 def main() -> int:
     specified: set[str] = set()
     for spec in sorted((ROOT / "docs" / "specs").glob("*.md")):
-        specified |= set(re.findall(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", spec.read_text()))
+        body = spec.read_text(encoding="utf-8")
+        specified |= set(re.findall(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", body))
 
     claimed: dict[str, list[str]] = {}
     for root in _test_roots():
         for test in sorted(root.rglob("test_*.py")):
-            for rid in re.findall(r'@pytest\.mark\.req\("([^"]+)"\)', test.read_text()):
+            source = test.read_text(encoding="utf-8")
+            for rid in re.findall(r'@pytest\.mark\.req\("([^"]+)"\)', source):
                 claimed.setdefault(rid, []).append(str(test.relative_to(ROOT)))
 
     unknown = sorted(set(claimed) - specified)
