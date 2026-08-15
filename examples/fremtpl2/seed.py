@@ -278,7 +278,6 @@ async def run(rows: int | None) -> int:
     from app.worker.tasks import execute_job
     from model_schema import (
         ActorKind,
-        DatasetStatus,
         JobKind,
         JobStatus,
         Principal,
@@ -452,11 +451,8 @@ async def run(rows: int | None) -> int:
     first = await ingest("ingest", cleaned=False)
     first_report = await validate(first)
 
-    async with database.unit_of_work() as session:
-        await dataset_service.transition(
-            session, workspace_id=workspace_id, actor=actuary, version_id=first,
-            to_status=DatasetStatus.VALIDATING,
-        )
+    # No manual transition: `dataset.validate` opens `validating` and closes it. This
+    # version's report failed, so it is already `failed` (FR-DATA-43).
     try:
         async with database.unit_of_work() as session:
             await validation_service.promote_using_report(
@@ -466,7 +462,10 @@ async def run(rows: int | None) -> int:
         raise SystemExit("version 1 was promoted — the gate did not hold")
     except Exception as exc:
         code = getattr(exc, "code", type(exc).__name__)
-        print(f"    promotion refused: {code}\n")
+        print(f"    promotion refused: {code}")
+        async with database.session() as session:
+            row = await session.get(DatasetVersionRow, first)
+            print(f"    version 1 is {row.status} — not left mid-run (FR-DATA-43)\n")
 
     print("── version 2: one preparation step later " + "─" * 34)
     second = await ingest("ingest", cleaned=True)
@@ -493,11 +492,7 @@ async def run(rows: int | None) -> int:
                     )
             print(f"    {outstanding} warning(s) acknowledged by {actuary.display}")
 
-    async with database.unit_of_work() as session:
-        await dataset_service.transition(
-            session, workspace_id=workspace_id, actor=actuary, version_id=second,
-            to_status=DatasetStatus.VALIDATING,
-        )
+    # A passing report leaves the version `validating`; promotion is the actuary's act.
     async with database.unit_of_work() as session:
         promoted = await validation_service.promote_using_report(
             session, workspace_id=workspace_id, actor=actuary,

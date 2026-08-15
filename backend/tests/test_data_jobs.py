@@ -230,6 +230,7 @@ async def test_ingestion_produces_a_version_and_its_profile(
 
 
 @pytest.mark.req("FR-DATA-15")
+@pytest.mark.req("FR-DATA-43")
 async def test_the_failure_loop_then_validated(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
@@ -254,11 +255,13 @@ async def test_the_failure_loop_then_validated(
 
     from app.errors import PlatformError
 
-    async with database.unit_of_work() as session:
-        await dataset_service.transition(
-            session, workspace_id=workspace_id, actor=actuary,
-            version_id=bad_version, to_status=DatasetStatus.VALIDATING,
-        )
+    # No manual transition: `dataset.validate` opens `validating` and closes it. A failing
+    # report now leaves the version `failed` (FR-DATA-43) rather than resting in a
+    # transient state that reads as "still running".
+    async with database.session() as session:
+        row = await session.get(DatasetVersionRow, bad_version)
+        assert row.status == DatasetStatus.FAILED.value
+
     with pytest.raises(PlatformError) as excinfo:
         async with database.unit_of_work() as session:
             await validation_service.promote_using_report(
@@ -273,11 +276,12 @@ async def test_the_failure_loop_then_validated(
     )
     good_report = await _validate(database, blob_store, workspace_id, actuary, good_version)
 
-    async with database.unit_of_work() as session:
-        await dataset_service.transition(
-            session, workspace_id=workspace_id, actor=actuary,
-            version_id=good_version, to_status=DatasetStatus.VALIDATING,
-        )
+    # A passing report leaves the version `validating`: promotion is the actuary's act
+    # (`01` §1.3), and a job that promoted on a pass would make the gate automatic.
+    async with database.session() as session:
+        row = await session.get(DatasetVersionRow, good_version)
+        assert row.status == DatasetStatus.VALIDATING.value
+
     async with database.unit_of_work() as session:
         promoted = await validation_service.promote_using_report(
             session, workspace_id=workspace_id, actor=actuary,

@@ -480,6 +480,77 @@ async def promote_to_validated(
     )
 
 
+async def begin_validation(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    version_id: UUID,
+) -> DatasetVersionRow:
+    """Mark a version as being validated, if it is not already (`01` §4.2).
+
+    `validating` means *a validation is in flight*, and until now nothing in the platform
+    set it except the seed doing so explicitly — which is why a failing run could not
+    conclude: `draft → failed` is not a transition, and it should not be. The run has to
+    open the state it later closes.
+
+    Idempotent for a version already `validating`: a re-run of the same job must not fail
+    on a transition to the state it is already in.
+    """
+    row = await _load(session, workspace_id, version_id)
+    if DatasetStatus(row.status) is DatasetStatus.VALIDATING:
+        return row
+    return await _transition(
+        session, workspace_id=workspace_id, actor=actor, version_id=version_id,
+        to_status=DatasetStatus.VALIDATING,
+    )
+
+
+async def conclude_failed_validation(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    version_id: UUID,
+) -> DatasetVersionRow:
+    """Where a version goes when its report does not pass (FR-DATA-43, FR-DATA-23).
+
+    Two destinations, and which one depends on what the version *was*:
+
+    * A version being validated for the first time goes to **`failed`**. It never earned
+      any standing, and `FAILED → VALIDATING` exists so it can be re-validated once the
+      data or the rule set is corrected — which is the loop `01` §1.3 describes.
+    * A version that was already `validated` and is being re-validated goes back to
+      **`draft`**, which is FR-DATA-23 exactly: it *was* good, and returning it to `draft`
+      says so, while every Model fitted on it is flagged.
+
+    Until this existed nothing set `failed` at all — the enum and the transition map both
+    carried it and no code path reached it — so a failing version rested in `validating`,
+    which every screen showing a status reads as "still running". Found by exercising the
+    exit demo, where version 1 is the deliberate failure the whole criterion is about
+    (OQ-DATA-7, decided 2026-08-15).
+    """
+    row = await _load(session, workspace_id, version_id)
+    was_validated = row.validation_report_id is not None
+
+    if not was_validated:
+        return await _transition(
+            session, workspace_id=workspace_id, actor=actor, version_id=version_id,
+            to_status=DatasetStatus.FAILED,
+        )
+
+    # FR-DATA-23. The report reference is cleared with the status: left in place it names
+    # a *passing* report on a version that has just failed, and the
+    # `validated_names_its_report` constraint then stops biting on a forced `UPDATE` back
+    # to `validated` — a stale pointer that made a database-level guard decorative.
+    return await _transition(
+        session, workspace_id=workspace_id, actor=actor, version_id=version_id,
+        to_status=DatasetStatus.DRAFT,
+        extra_after={"validation_report_id": None},
+        also_set={"validation_report_id": None},
+    )
+
+
 async def archive_version(
     session: AsyncSession,
     *,
