@@ -90,8 +90,16 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {
         "FACTOR_PROHIBITED",
         "FACTOR_RESOLUTION_FAILED",
+        "BAND_EMPTY",
+        "BAND_BELOW_MIN_EXPOSURE",
+        "GROUPING_NOT_EXHAUSTIVE",
         "GLM_DID_NOT_CONVERGE",
         "GLM_RANK_DEFICIENT",
+        # Raised by `pricing-core` since the spine and **registered only now**: the fit
+        # handler maps a `GlmFitError`'s code straight into a `PlatformError`, so a
+        # perfectly separated fit raised `ValueError: unknown error code` from inside the
+        # error path instead of the named refusal FR-MODEL-23 promises.
+        "GLM_SEPARATION_DETECTED",
         "OFFSET_REQUIRED_FOR_FREQUENCY",
         "MODEL_IMMUTABLE",
     }

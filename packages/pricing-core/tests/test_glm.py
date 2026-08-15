@@ -199,14 +199,19 @@ def test_a_missing_column_fails_loudly_at_resolution() -> None:
 
 @pytest.mark.req("FR-MODEL-1")
 def test_a_factor_type_that_is_not_implemented_says_so() -> None:
-    """Silently treating a `banding` as its raw column would produce a fit nobody could
-    tell from a correct one."""
-    banded = Factor(
-        id=uuid4(), slug="age_banded", dataset_id=uuid4(), version=1,
-        type=FactorType.BANDING, source_columns=("driv_age",),
+    """Silently treating a `spline` as its raw column would produce a fit nobody could
+    tell from a correct one.
+
+    The example used to be `banding`, which now resolves. Changed rather than deleted: the
+    claim being tested is about the *unimplemented* arms of FR-MODEL-1's closed set, and
+    five of the eight are still unimplemented.
+    """
+    splined = Factor(
+        id=uuid4(), slug="age_spline", dataset_id=uuid4(), version=1,
+        type=FactorType.SPLINE, source_columns=("driv_age",),
     )
     with pytest.raises(FactorResolutionError, match="does not resolve yet"):
-        resolve_factors(_frequency_data(100), [banded])
+        resolve_factors(_frequency_data(100), [splined])
 
 
 @pytest.mark.req("FR-MODEL-4")

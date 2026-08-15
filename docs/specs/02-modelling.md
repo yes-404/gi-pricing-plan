@@ -233,7 +233,10 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
 
 ```json
 {
+  "id": "uuid",
   "slug": "driver-age-actuarial-v2",
+  "dataset_id": "uuid",
+  "version": 2,
   "column": "driver_age",
   "method": "exposure_quantile",
   "method_params": {"n_bands": 10, "min_claims_per_band": 200},
@@ -253,16 +256,33 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
 ```
 
 **Invariants** — boundaries strictly increasing; bands exhaustive over the observed range;
-`labels` length = `len(boundaries) - 1`; no empty band (FR-MODEL-11).
+`labels` length = `len(boundaries) - 1`; labels unique; `null_level`, where set, is not also
+a band; no empty band (FR-MODEL-11).
+
+The first five are enforced on the type and answer `422` at the edge. The **last is not**,
+and cannot be: emptiness is a fact about a Dataset Version, not about the artifact, so
+`check_banding` answers it at fit time and a banding that is fine on one version can be
+empty on the next.
+
+> **Where the last band ends (added 2026-08-15, W5).** Under `closed: "left"` band *i* is
+> `[bᵢ, bᵢ₊₁)` **except the last, which is `[bₙ₋₁, bₙ]`** — closed at both ends;
+> `closed: "right"` is the mirror image. Without that a banding derived from the observed
+> range declares its own maximum out of range, and every `exposure_quantile` proposal fails
+> on the data it was proposed from. The example's `999` upper bound is a sentinel chosen for
+> headroom, not a requirement.
 
 ### 4.3 `Grouping`
 
 ```json
 {
+  "id": "uuid",
   "slug": "vehicle-group-to-rating-group",
+  "dataset_id": "uuid",
+  "version": 1,
   "column": "abi_vehicle_group",
   "method": "credibility_weighted",
   "method_params": {"credibility_standard_claims": 1082, "merge_tolerance_relativity": 0.05},
+  "credibility_standard": "limited_fluctuation",
   "derived_on_dataset_version_id": "uuid",
   "mapping": {"1": "G1", "2": "G1", "3": "G1", "4": "G2", "…": "…"},
   "unseen_level_behaviour": "map_to_default",
@@ -276,6 +296,23 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
   }
 }
 ```
+
+> **Amended 2026-08-15 (W5).** Three corrections the implementation forced:
+>
+> * **`credibility_standard` is a field**, set only by `credibility_weighted`. OQ-MODEL-5
+>   asks which credibility theory applies and is open; naming the one that ran is what lets
+>   the answer arrive later without invalidating anything stored. `limited_fluctuation` is
+>   implemented; `buhlmann_straub` is refused by name rather than substituted.
+> * **`band_stats` and `target_level_stats` are `01`'s `OneWayRow`**, not a second shape of
+>   the same numbers. A band is a level, `01` FR-DATA-26 already defines a level's
+>   statistics with its intervals, and two implementations of "the frequency of this cell"
+>   would disagree in the fourth digit with nothing to say which screen was right. The
+>   example's `relativity` on a target level is therefore **not** a stored field — it is
+>   `claim_count / exposure_years`, derived where it is shown.
+> * **`deviance_before` and `deviance_after` are row-level Poisson deviances** of two
+>   one-factor fits against the same saturated model, so their difference is the
+>   likelihood-ratio statistic on `df_saved`. They are a *marginal* statement about this
+>   factor alone, not the deviance the eventual multi-factor model reports.
 
 ### 4.4 `ModelSpec` (tagged union on `model_type`)
 
@@ -577,9 +614,11 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/factors` | Create/version a Factor (FR-MODEL-1) |
 | `GET` | `/api/v1/factors?dataset={slug}` | List factors with intent, monotonic direction, prohibited flag |
 | `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-MODEL-9) |
-| `POST` | `/api/v1/bandings` | Persist a Banding (with editable boundaries) |
+| `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) |
+| `GET` | `/api/v1/bandings?dataset_id=` | List bandings, latest version first |
 | `POST` | `/api/v1/groupings/propose` | Propose a grouping by method (FR-MODEL-14) |
-| `POST` | `/api/v1/groupings` | Persist a Grouping |
+| `POST` | `/api/v1/groupings` | **201** Persist a Grouping |
+| `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
 | `POST` | `/api/v1/model-specs/validate` | Validate a spec without fitting: factors resolve, offsets sane, objective applicable (FR-MODEL-44) |
 | `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-MODEL-66) |
 | `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
@@ -613,6 +652,20 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 > transparency, backtests, comparison, prediction, custom objectives, metrics and peril
 > structures — is declared and unbuilt, and `scope-audit.py MODEL --endpoints` says so.
 
+> **Amended 2026-08-15 (W5, bandings and groupings).** The four banding and grouping routes
+> are now built, plus two the table did not declare:
+>
+> * `GET /api/v1/bandings?dataset_id=` and `GET /api/v1/groupings?dataset_id=` — **added to
+>   the table above.** The factor workbench (§5.3) has to list what already exists before it
+>   can offer to reuse one, and a surface that can only create is one every screen works
+>   around. This is the omission `01`'s reference lifecycle made in the other direction: an
+>   endpoint present in neither the spec nor the contract is invisible to the endpoint audit.
+> * `POST /bandings` and `POST /groupings` answer **201**, not 200. They allocate a version
+>   (FR-MODEL-12), which is a creation whatever the slug already was.
+>
+> Still declared and unbuilt after this slice: spec validation, diagnostics, transparency,
+> backtests, comparison, prediction, custom objectives, metrics and peril structures.
+
 > **Amended 2026-08-15, after three independent audits of the spine.** Four corrections
 > where the code was right and this document was not, and one where neither was:
 >
@@ -631,12 +684,21 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 > * **`progress` was dropped from `fit_glm` and should not have been.** `00` §5.5 requires
 >   the injected callback, and a long fit currently sits at 35 % for its whole duration.
 >   Recorded as a gap rather than quietly removed from the interface.
+>   **Closed 2026-08-15 (W5):** `fit_glm` takes `progress` again and reports six stages;
+>   `pricing_core.ScaledProgress` gives the handler a window to place them in, so the core
+>   reports its own `0..1` without knowing it is the middle of something.
 >
 > `02` §4's field sets (§4.1, §4.4, §4.8) still declare more than the spine implements —
 > `split_ref`, `loss_treatment`, `diagnostics_id` and others. That is a **larger divergence
 > awaiting a decision**, not an oversight: whether the spine grows to meet §4 or §4 narrows
 > to a staged contract is a design choice, recorded in `docs/open-questions.md` as
 > OQ-MODEL-8 rather than settled here.
+>
+> **Narrowed 2026-08-15 (W5):** §4.1's `banding_id` and `grouping_id` are now live fields
+> on `Factor`, because their slice landed — which is what OQ-MODEL-8's recommendation
+> ("re-widen it as the slices land") describes. `expression` remains declared and unbuilt.
+> The `spec_hash` precondition the same question named is delivered: the digest now reads
+> `v1:sha256:…` and `spec_hash_is_current` answers whether a stored one is still matchable.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
@@ -652,12 +714,29 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 
 ```python
 # pricing_core/modelling/factors.py
-def resolve_factors(df: pl.DataFrame, factors: Sequence[Factor]) -> FactorMatrix
-def propose_banding(df: pl.DataFrame, spec: BandingProposalSpec) -> Banding
-def propose_grouping(df: pl.DataFrame, spec: GroupingProposalSpec) -> Grouping
+def resolve_factors(df: pl.DataFrame, factors: Sequence[Factor], *,
+                    bandings: Mapping[UUID, Banding] | None = None,
+                    groupings: Mapping[UUID, Grouping] | None = None) -> FactorMatrix
+
+# pricing_core/modelling/bandings.py
+def propose_banding(df: pl.DataFrame, proposal: BandingProposal, *,
+                    dataset_id: UUID, slug: str) -> Banding
+def apply_banding(series: pl.Series, banding: Banding) -> pl.Series
+def check_banding(df: pl.DataFrame, banding: Banding, *, min_exposure: float = 0.0,
+                  min_claims: float = 0.0, fail_on_thin: bool = False) -> tuple[str, ...]
+
+# pricing_core/modelling/groupings.py
+def propose_grouping(df: pl.DataFrame, proposal: GroupingProposal, *,
+                     dataset_id: UUID, slug: str) -> Grouping
+def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series
+def grouping_evidence(df: pl.DataFrame, mapping: dict[str, str], *,
+                      column: str) -> GroupingEvidence
 
 # pricing_core/modelling/glm.py
-def fit_glm(data: pl.DataFrame, spec: GlmSpec, *, seed: int = 0,
+def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
+            seed: int = 0,
+            bandings: Mapping[UUID, Banding] | None = None,
+            groupings: Mapping[UUID, Grouping] | None = None,
             progress: ProgressCallback | None = None) -> GlmFitResult
 def predict_glm(model: Model, data: pl.DataFrame, *,
                 with_interval: bool = False) -> pl.DataFrame
@@ -790,8 +869,8 @@ Custom objective path: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-0
 | **SymPy** | Symbolic gradient/hessian derivation (FR-MODEL-40) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
 | **Python `ast`** | Restricted grammar parsing (§4.6) | Allow-list node walking, depth/size limits, why `eval`/`compile` on user input is never acceptable |
-| **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | Expression API for banding (`cut`), joins for grouping maps |
-| **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification | `scipy.optimize` for the profile grid, `scipy.stats` for CIs |
+| **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | `replace_strict` for grouping maps (it refuses an unmapped level rather than dropping it, which is FR-MODEL-13's whole point). **Banding is `numpy.searchsorted`, not `pl.cut`** — the artifact's `closed`, `null_level`, `below_range` and `above_range` policies decide where a value lands, and `cut` implements one fixed convention (added 2026-08-15, W5) |
+| **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification, hierarchical grouping | `scipy.optimize` for the profile grid, `scipy.stats` for CIs and the grouping likelihood-ratio χ², `scipy.cluster.hierarchy` (Ward linkage + `fcluster`) for FR-MODEL-14's `hierarchical_clustering` — exposure weighting by observation repetition, since the clusterer takes no sample weights (added 2026-08-15, W5) |
 | **ECharts (frontend)** | Relativity plots with CI bands, lift/gains, calibration, PD plots, convexity heatmap | Large-series performance; dual-axis A/E charts |
 | **TanStack Table (frontend)** | Coefficient, relativity, banding, and grouping grids | Inline editing for boundaries and level merges |
 
@@ -809,6 +888,7 @@ for grouping.
 | **NFR-MODEL-1** | GLM: 5 M rows × 60 factors converges in < 10 min on a 16-core worker (NFR-OVR-3). |
 | **NFR-MODEL-2** | GBM: 5 M rows × 60 factors × 500 trees fits in < 20 min; a custom `expression` objective adds no more than 25 % overhead versus the equivalent builtin. |
 | **NFR-MODEL-3** | Banding/grouping proposals return in < 5 s for a column with ≤ 10 000 distinct levels, computed from the stored Profile where possible. |
+| **NFR-MODEL-12** | A grouping proposal's evidence (FR-MODEL-15) is computed without summarising the source levels twice. Stated as a requirement rather than left as an implementation detail because it is where NFR-MODEL-3's budget actually goes: at 10 000 levels a one-way summary costs ~4 s in per-level interval quantiles, and doing it once instead of twice is most of the difference between meeting the budget and missing it. (Added 2026-08-15, W5.) |
 | **NFR-MODEL-4** | Diagnostics computation adds no more than 30 % to fit wall-clock. |
 | **NFR-MODEL-5** | Objective certification completes in < 3 min including the synthetic smoke fit. |
 | **NFR-MODEL-6** | Determinism: identical `spec_hash` + seed reproduces identical coefficients to 1e-10 (GLM) and an identical booster hash (GBM), on the same library versions (FR-OVR-8). |
@@ -817,6 +897,29 @@ for grouping.
 | **NFR-MODEL-9** | Audit: factor/banding/grouping creation and edit, fit start and completion, objective derivation/certification/approval, and every status transition emit Audit Events with before/after state. |
 | **NFR-MODEL-10** | Memory: fitting a 5 M × 60 dataset stays within 32 GB, using `QuantileDMatrix`/streaming construction rather than duplicating the design matrix. |
 | **NFR-MODEL-11** | Diagnostics artifacts stay under 50 MB per model; larger evidence (SHAP dependence, residual scatter) goes to content-addressed blobs referenced from the artifact. |
+
+> **NFR-MODEL-3 measured 2026-08-15 (W5), and it is met for three of the four methods
+> built.** 678 013 rows — freMTPL2's row count — with a 10 000-level categorical, on the
+> development machine, budget 5 s:
+>
+> | Proposal | Measured | Verdict |
+> |---|---|---|
+> | `propose_banding`, all four methods, 20 bands | 0.11 – 0.24 s | **met**, with two orders of magnitude of headroom |
+> | `propose_grouping`, `credibility_weighted`, 10 000 levels | 4.24 s | **met**, and only after NFR-MODEL-12 — it was 8.59 s while the source summary was computed twice |
+> | `propose_grouping`, `hierarchical_clustering`, 10 000 levels | 6.52 s | **not met** |
+>
+> The shortfall is Ward linkage, which is O(n²) in the level count and spends ~2.4 s of
+> those 6.52. It is stated rather than rounded away: at the 10 000 levels this requirement
+> names, the method is over budget by 30 %, and a proposal endpoint that takes six seconds
+> is one the factor workbench has to put a spinner on.
+>
+> Two routes out, neither taken here because both are design changes rather than tuning:
+> compute from the stored Profile, which this requirement's own wording already suggests
+> (`01` FR-DATA-26 holds the one-way summaries), or replace Ward with a contiguous 1-D
+> partition — legitimate, since the clusters are contiguous in rate order by construction,
+> but a different method under the same name. **Owner: the slice that builds the factor
+> workbench** (`00` §5.6's `/factors/:datasetVersionId`), which is the first caller that
+> will feel it.
 
 ---
 
@@ -833,4 +936,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-MODEL-5** | Credibility: which standard do we implement for `credibility_weighted` grouping — limited fluctuation (classical, simple, familiar to UK actuaries) or Bühlmann–Straub (more defensible, more parameters to explain)? |
 | **OQ-MODEL-6** | Should the platform enforce a maximum factor count or a minimum exposure-per-parameter ratio as a hard gate rather than a diagnostic warning? |
 | **OQ-MODEL-7** | How are protected-characteristic proxies detected? A `prohibited` flag (FR-MODEL-5) stops direct use, but proxy detection (e.g. postcode as an ethnicity proxy) needs a defined statistical test and a policy on what to do when it fires. |
-| **OQ-MODEL-8** | Does the GLM spine grow to meet §4's field sets, or does §4 narrow to a staged contract? §4.1, §4.4 and §4.8 declare fields the spine does not implement, and §4.8's `status ≥ fitted ⟹ diagnostics_id set` cannot be met while diagnostics do not exist. Found by auditing the spine, 2026-08-15. |
+| **OQ-MODEL-8** | Does the GLM spine grow to meet §4's field sets, or does §4 narrow to a staged contract? §4.1, §4.4 and §4.8 declare fields the spine does not implement, and §4.8's `status ≥ fitted ⟹ diagnostics_id set` cannot be met while diagnostics do not exist. Found by auditing the spine, 2026-08-15. **Partly answered by building 2026-08-15 (W5):** §4.1's `banding_id` and `grouping_id` are live, and the `spec_hash` version tag the question named as a precondition is in place. `expression`, `split_ref`, `loss_treatment` and `diagnostics_id` remain open. |
+| **OQ-MODEL-9** | Do `tree` banding boundaries (FR-MODEL-9) and `tree` grouping (FR-MODEL-14) justify adding a tree learner to `pricing-core`'s dependencies? Both are declared and both are refused by name today, because the only honest alternatives were a new dependency or a quantile cut recorded under the label `tree`. Raised by implementing the other methods, 2026-08-15. |

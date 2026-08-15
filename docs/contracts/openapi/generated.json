@@ -1,6 +1,16 @@
 {
   "components": {
     "schemas": {
+      "AboveRangePolicy": {
+        "description": "What a value at or above the last boundary does (FR-MODEL-8).",
+        "enum": [
+          "error",
+          "clamp_to_last",
+          "null_level"
+        ],
+        "title": "AboveRangePolicy",
+        "type": "string"
+      },
       "AcknowledgeRequest": {
         "additionalProperties": false,
         "properties": {
@@ -259,6 +269,231 @@
         ],
         "title": "AuditEventView",
         "type": "object"
+      },
+      "Banding": {
+        "additionalProperties": false,
+        "description": "A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).\n\nThe invariants below are `02` §4.2's, at the type. They are not tidiness: a banding\nwith overlapping intervals assigns one row to two levels, and a label list one short\ndoes not drop the last band — it renames every band after the gap. Both produce a model\nthat fits, reads correctly, and is wrong.\n\n**Versioned, never edited** (FR-MODEL-12). A Model pins the Banding version it was\nfitted with, so re-cutting a boundary allocates a new version and leaves every existing\nmodel describing what it actually did.",
+        "properties": {
+          "above_range": {
+            "$ref": "#/components/schemas/AboveRangePolicy",
+            "default": "error"
+          },
+          "band_stats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OneWayRow"
+            },
+            "title": "Band Stats",
+            "type": "array"
+          },
+          "below_range": {
+            "$ref": "#/components/schemas/BelowRangePolicy",
+            "default": "error"
+          },
+          "boundaries": {
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "title": "Boundaries",
+            "type": "array"
+          },
+          "closed": {
+            "default": "left",
+            "enum": [
+              "left",
+              "right"
+            ],
+            "title": "Closed",
+            "type": "string"
+          },
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "dataset_id": {
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "derived_on_dataset_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derived On Dataset Version Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Labels",
+            "type": "array"
+          },
+          "method": {
+            "$ref": "#/components/schemas/BandingMethod"
+          },
+          "method_params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Method Params",
+            "type": "object"
+          },
+          "null_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Null Level"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "dataset_id",
+          "version",
+          "column",
+          "method",
+          "boundaries",
+          "labels"
+        ],
+        "title": "Banding",
+        "type": "object"
+      },
+      "BandingMethod": {
+        "description": "How a Banding's boundaries were arrived at (`02` §2, FR-MODEL-9).\n\nRecorded on the artifact because the method *is* the judgement. Two bandings with\nidentical boundaries, one hand-drawn and one from exposure quantiles, are different\nclaims about the same numbers, and a reviewer needs to know which one they are reading.",
+        "enum": [
+          "manual",
+          "equal_width",
+          "quantile",
+          "exposure_quantile",
+          "tree",
+          "credibility"
+        ],
+        "title": "BandingMethod",
+        "type": "string"
+      },
+      "BandingProposalRequest": {
+        "additionalProperties": false,
+        "description": "A `BandingProposal` plus the slug the resulting artifact would carry.\n\nSeparate from the core shape because a proposal is not yet an artifact: `pricing-core`\nis handed the statistical question, and the name belongs to the platform that will one\nday store it.",
+        "properties": {
+          "above_range": {
+            "$ref": "#/components/schemas/AboveRangePolicy",
+            "default": "error"
+          },
+          "below_range": {
+            "$ref": "#/components/schemas/BelowRangePolicy",
+            "default": "error"
+          },
+          "claim_amount_column": {
+            "default": "claim_amount_minor",
+            "title": "Claim Amount Column",
+            "type": "string"
+          },
+          "claim_count_column": {
+            "default": "claim_count",
+            "title": "Claim Count Column",
+            "type": "string"
+          },
+          "closed": {
+            "default": "left",
+            "enum": [
+              "left",
+              "right"
+            ],
+            "title": "Closed",
+            "type": "string"
+          },
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "exposure_column": {
+            "default": "exposure_years",
+            "title": "Exposure Column",
+            "type": "string"
+          },
+          "method": {
+            "$ref": "#/components/schemas/BandingMethod"
+          },
+          "method_params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Method Params",
+            "type": "object"
+          },
+          "n_bands": {
+            "default": 10,
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "N Bands",
+            "type": "integer"
+          },
+          "null_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Null Level"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_version_id",
+          "column",
+          "method",
+          "slug"
+        ],
+        "title": "BandingProposalRequest",
+        "type": "object"
+      },
+      "BelowRangePolicy": {
+        "description": "What a value below the first boundary does (FR-MODEL-8).\n\nExplicit rather than defaulted: silently clamping a driver age of 3 into the 17-20 band\nis how a data defect becomes a price.",
+        "enum": [
+          "error",
+          "clamp_to_first",
+          "null_level"
+        ],
+        "title": "BelowRangePolicy",
+        "type": "string"
       },
       "BlobRef": {
         "description": "A content-addressed object reference (ID-4).",
@@ -732,6 +967,15 @@
         ],
         "title": "CreatedServiceAccount",
         "type": "object"
+      },
+      "CredibilityStandard": {
+        "description": "Which credibility theory `credibility_weighted` merging applies (OQ-MODEL-5).\n\nNamed on the artifact rather than fixed in the code because it is a modelling\njudgement, not a platform constant — and because the two standards disagree on thin\ncells, which is the only place the choice changes anything.",
+        "enum": [
+          "limited_fluctuation",
+          "buhlmann_straub"
+        ],
+        "title": "CredibilityStandard",
+        "type": "string"
       },
       "DataDictionaryEntry": {
         "additionalProperties": false,
@@ -1538,6 +1782,18 @@
         "additionalProperties": false,
         "description": "A named, versioned transformation over dataset columns (FR-MODEL-1, FR-MODEL-7).\n\nDefined against a **Dataset**, resolved against a specific **version** at fit time\n(FR-MODEL-2) — so a factor outlives the version it was first used on, and a column that\nchanged dtype fails loudly at resolution rather than quietly changing the model.",
         "properties": {
+          "banding_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banding Id"
+          },
           "base_level": {
             "anyOf": [
               {
@@ -1558,6 +1814,18 @@
             "format": "uuid",
             "title": "Dataset Id",
             "type": "string"
+          },
+          "grouping_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grouping Id"
           },
           "id": {
             "format": "uuid",
@@ -1634,10 +1902,34 @@
       "FactorCreate": {
         "additionalProperties": false,
         "properties": {
+          "banding_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Banding Id"
+          },
           "dataset_id": {
             "format": "uuid",
             "title": "Dataset Id",
             "type": "string"
+          },
+          "grouping_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grouping Id"
           },
           "intent": {
             "$ref": "#/components/schemas/FactorIntent",
@@ -1963,6 +2255,282 @@
           "response_column"
         ],
         "title": "GlmSpec",
+        "type": "object"
+      },
+      "Grouping": {
+        "additionalProperties": false,
+        "description": "Source Levels mapped to target Levels (`02` §4.3, FR-MODEL-13..17).\n\nExhaustive over the Levels observed when it was derived, and explicit about the ones it\nwas not: `unseen_level_behaviour` has no default, because the three answers price an\nunknown vehicle group very differently and none of them is obviously right.",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "credibility_standard": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredibilityStandard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dataset_id": {
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "default_target_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Target Level"
+          },
+          "derived_on_dataset_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derived On Dataset Version Id"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroupingEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "minProperties": 1,
+            "title": "Mapping",
+            "type": "object"
+          },
+          "method": {
+            "$ref": "#/components/schemas/GroupingMethod"
+          },
+          "method_params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Method Params",
+            "type": "object"
+          },
+          "parent_grouping_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Grouping Id"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "unseen_level_behaviour": {
+            "$ref": "#/components/schemas/UnseenLevelBehaviour"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "dataset_id",
+          "version",
+          "column",
+          "method",
+          "mapping",
+          "unseen_level_behaviour"
+        ],
+        "title": "Grouping",
+        "type": "object"
+      },
+      "GroupingEvidence": {
+        "additionalProperties": false,
+        "description": "The change in fit a Grouping implies (FR-MODEL-15).\n\nGrouping is a modelling decision and must be defensible as one, so the artifact carries\nwhat it cost: deviance before and after, the degrees of freedom saved, and the\nlikelihood-ratio p-value that says whether the collapse was affordable.",
+        "properties": {
+          "chi2_p_value": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chi2 P Value"
+          },
+          "deviance_after": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviance After"
+          },
+          "deviance_before": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviance Before"
+          },
+          "df_saved": {
+            "default": 0,
+            "title": "Df Saved",
+            "type": "integer"
+          },
+          "source_level_count": {
+            "minimum": 0.0,
+            "title": "Source Level Count",
+            "type": "integer"
+          },
+          "target_level_count": {
+            "minimum": 0.0,
+            "title": "Target Level Count",
+            "type": "integer"
+          },
+          "target_level_stats": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OneWayRow"
+            },
+            "title": "Target Level Stats",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_level_count",
+          "target_level_count"
+        ],
+        "title": "GroupingEvidence",
+        "type": "object"
+      },
+      "GroupingMethod": {
+        "description": "How Levels were merged (`02` §2, FR-MODEL-14).",
+        "enum": [
+          "manual",
+          "credibility_weighted",
+          "hierarchical_clustering",
+          "tree",
+          "reference_hierarchy"
+        ],
+        "title": "GroupingMethod",
+        "type": "string"
+      },
+      "GroupingProposalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_amount_column": {
+            "default": "claim_amount_minor",
+            "title": "Claim Amount Column",
+            "type": "string"
+          },
+          "claim_count_column": {
+            "default": "claim_count",
+            "title": "Claim Count Column",
+            "type": "string"
+          },
+          "column": {
+            "title": "Column",
+            "type": "string"
+          },
+          "credibility_standard": {
+            "$ref": "#/components/schemas/CredibilityStandard",
+            "default": "limited_fluctuation"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "default_target_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Target Level"
+          },
+          "exposure_column": {
+            "default": "exposure_years",
+            "title": "Exposure Column",
+            "type": "string"
+          },
+          "method": {
+            "$ref": "#/components/schemas/GroupingMethod"
+          },
+          "method_params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Method Params",
+            "type": "object"
+          },
+          "n_groups": {
+            "default": 8,
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "N Groups",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "unseen_level_behaviour": {
+            "$ref": "#/components/schemas/UnseenLevelBehaviour"
+          }
+        },
+        "required": [
+          "dataset_version_id",
+          "column",
+          "method",
+          "unseen_level_behaviour",
+          "slug"
+        ],
+        "title": "GroupingProposalRequest",
         "type": "object"
       },
       "Job": {
@@ -4436,6 +5004,16 @@
         "title": "TransitionRequest",
         "type": "object"
       },
+      "UnseenLevelBehaviour": {
+        "description": "What scoring does with a Level the Grouping has never seen (FR-MODEL-13).\n\nMandatory — the field carries no default anywhere in this module. A grouping that\nsilently drops an unseen level prices it as the base, which is the cheapest cell by\nconstruction, and nobody finds out before the loss ratio does.",
+        "enum": [
+          "error",
+          "map_to_default",
+          "map_to_base"
+        ],
+        "title": "UnseenLevelBehaviour",
+        "type": "string"
+      },
       "UpdateSettings": {
         "additionalProperties": false,
         "properties": {
@@ -6065,6 +6643,292 @@
         "summary": "Recompute the hash chain (FR-GOV-24)",
         "tags": [
           "governance"
+        ]
+      }
+    },
+    "/api/v1/bandings": {
+      "get": {
+        "operationId": "list_bandings_api_v1_bandings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Banding"
+                  },
+                  "title": "Response List Bandings Api V1 Bandings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List bandings",
+        "tags": [
+          "modelling"
+        ]
+      },
+      "post": {
+        "description": "FR-MODEL-12: an existing slug allocates the next version rather than editing.\n\nThe whole artifact is the request body — boundaries the caller may have moved, labels\nthey may have renamed, and the evidence the proposal came back with. `id` and `version`\nin the body are ignored; the platform allocates both.",
+        "operationId": "create_banding_api_v1_bandings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Banding"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Banding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Persist a Banding",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/bandings/propose": {
+      "post": {
+        "description": "FR-MODEL-9: the platform proposes, the actuary edits, and **nothing is stored**.\n\nThe returned `Banding` carries a fresh id it does not own yet — `POST /bandings` is\nwhat allocates a version. Returning the whole artifact rather than a list of numbers is\nwhat makes \"always editable\" true: the caller can change a boundary and post back the\nsame shape.",
+        "operationId": "propose_banding_api_v1_bandings_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BandingProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Banding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Propose banding boundaries",
+        "tags": [
+          "modelling"
         ]
       }
     },
@@ -8530,6 +9394,292 @@
           }
         },
         "summary": "Create or version a Factor",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/groupings": {
+      "get": {
+        "operationId": "list_groupings_api_v1_groupings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Grouping"
+                  },
+                  "title": "Response List Groupings Api V1 Groupings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List groupings",
+        "tags": [
+          "modelling"
+        ]
+      },
+      "post": {
+        "description": "FR-MODEL-16: creation is an audited event, because grouping is a modelling decision.",
+        "operationId": "create_grouping_api_v1_groupings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Grouping"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Grouping"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Persist a Grouping",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/groupings/propose": {
+      "post": {
+        "description": "FR-MODEL-14, with FR-MODEL-15's evidence attached and nothing persisted.",
+        "operationId": "propose_grouping_api_v1_groupings_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupingProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Grouping"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Propose a grouping",
         "tags": [
           "modelling"
         ]

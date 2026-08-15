@@ -20,21 +20,25 @@ from __future__ import annotations
 
 import time
 import warnings
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
+from uuid import UUID
 
 import numpy as np
 import polars as pl
 from scipy import stats
 
 from model_schema import (
+    Banding,
     Coefficient,
     Factor,
     GlmFitResult,
     GlmSpec,
+    Grouping,
     RelativityLevel,
 )
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = ["GlmFitError", "fit_glm"]
 
@@ -123,21 +127,33 @@ def fit_glm(
     factors: Sequence[Factor],
     *,
     seed: int = 0,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+    progress: ProgressCallback | None = None,
 ) -> GlmFitResult:
     """Fit `spec` over `data`, returning data rather than an estimator.
 
-    `factors` is passed explicitly rather than read from the spec's ids: `pricing-core`
-    resolves shapes, not references — looking a factor up would need a database, which
-    ADR-0001 forbids this package.
+    `factors`, `bandings` and `groupings` are passed explicitly rather than read from the
+    spec's ids: `pricing-core` resolves shapes, not references — looking one up would need
+    a database, which ADR-0001 forbids this package.
+
+    `progress` is `00` §5.5's injected callback. It was dropped from this signature during
+    the spine and a long fit then sat at one fraction for its whole duration, which is the
+    failure FR-PLAT-8 exists to prevent. The stages are the four that actually take time,
+    reported before each rather than after, so the label names what is happening now.
     """
     from glum import GeneralizedLinearRegressor  # type: ignore[import-untyped]
 
-    matrix = resolve_factors(data, factors)
+    report = progress or NullProgress()
+    report.check_cancelled()
+    report.update(0.05, "resolving factors")
+    matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
     exposure_series = (
         data[str(spec.offset.column)]
         if spec.offset.kind == "log_column" and spec.offset.column in data.columns
         else None
     )
+    report.update(0.15, "building the design matrix")
     design, levels = _design(matrix, exposure_series)
     if design.width == 0:
         raise GlmFitError(
@@ -185,6 +201,8 @@ def fit_glm(
         fit_intercept=True,
     )
 
+    report.check_cancelled()
+    report.update(0.30, f"fitting {spec.family} over {data.height:,} rows", terms=design.width)
     started = time.perf_counter()
     try:
         with warnings.catch_warnings(record=True) as caught:
@@ -212,13 +230,16 @@ def fit_glm(
             terms=design.columns,
         )
 
+    report.update(0.80, "standard errors and intervals")
     coefficients = _coefficients(
         estimator, design.columns, x, response,
         offset=offset, weights=weights, link=spec.link,
     )
     _refuse_separation(coefficients)
-    relativities = _relativities(matrix, levels, coefficients, data, spec, link=spec.link)
+    report.update(0.95, "relativity tables")
+    relativities = _relativities(matrix, levels, coefficients, spec, link=spec.link)
 
+    report.update(1.0, "fitted")
     return GlmFitResult(
         converged=True,
         iterations=int(getattr(estimator, "n_iter_", 0) or 0),
@@ -381,7 +402,6 @@ def _relativities(
     matrix: FactorMatrix,
     levels: dict[str, list[str]],
     coefficients: Sequence[Coefficient],
-    data: pl.DataFrame,
     spec: GlmSpec,
     *,
     link: str,
@@ -400,6 +420,10 @@ def _relativities(
     """
     by_term = {c.term: c for c in coefficients}
     exposure_column = spec.offset.column if spec.offset.kind == "log_column" else None
+    # The **resolved** frame, not the caller's. A banding contributes a column that exists
+    # only after resolution, and grouping the raw frame by it raises — or, worse, groups by
+    # the pre-banding column and reports exposure against the wrong levels.
+    data = matrix.frame
 
     tables: dict[str, tuple[RelativityLevel, ...]] = {}
     for slug, observed in levels.items():

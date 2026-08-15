@@ -10,7 +10,12 @@ number without the platform.
 """
 
 from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
-from pricing_core.progress import JobCancelled, NullProgress, ProgressCallback
+from pricing_core.progress import (
+    JobCancelled,
+    NullProgress,
+    ProgressCallback,
+    ScaledProgress,
+)
 
 __all__ = [
     "ROUNDING_MODES",
@@ -18,6 +23,7 @@ __all__ = [
     "NullProgress",
     "ProgressCallback",
     "RoundingMode",
+    "ScaledProgress",
     "apply_factor",
     "reconcile_ladder",
 ]
