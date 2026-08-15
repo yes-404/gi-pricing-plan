@@ -30,6 +30,7 @@ from uuid import UUID, uuid4
 import polars as pl
 
 from model_schema import (
+    Profile,
     RuleOutcome,
     RuleResult,
     Severity,
@@ -81,6 +82,11 @@ class ValidationContext:
     reference_tables: Mapping[str, pl.DataFrame]
     reference_frames: Mapping[str, pl.DataFrame]
     exposure_column: str = "exposure_years"
+    #: The reference version's stored Profile (FR-DATA-24). Distributional rules answer
+    #: from these aggregates rather than re-scanning the reference dataset — a null rate
+    #: and a row count are both already in a Profile, and loading ten million rows to
+    #: recompute one of them is the re-scan the requirement exists to avoid.
+    reference_profile: Profile | None = None
 
 
 CHECKS: dict[str, CheckFunction] = {}
@@ -346,12 +352,18 @@ def _null_rate_shift(
     frame = _table(tables, rule)
     name = rule.target["table"]
     column = rule.target["column"]
-    reference = ctx.reference_frames.get(name)
-    if reference is None or column not in reference.columns:
-        return CheckOutcome(skipped=True, skip_reason="no reference version to compare against")
-
     current = frame.get_column(column).null_count() / max(frame.height, 1)
-    before = reference.get_column(column).null_count() / max(reference.height, 1)
+
+    profiled = ctx.reference_profile.column(column) if ctx.reference_profile else None
+    if profiled is not None:
+        before = profiled.null_rate
+    else:
+        reference = ctx.reference_frames.get(name)
+        if reference is None or column not in reference.columns:
+            return CheckOutcome(
+                skipped=True, skip_reason="no reference version to compare against"
+            )
+        before = reference.get_column(column).null_count() / max(reference.height, 1)
     shift = abs(current - before)
     limit = float(rule.params.get("max_shift_pp", 5.0)) / 100.0
     return CheckOutcome(
@@ -370,15 +382,21 @@ def _volume_shift(
     """VR-DST-5: total row count or exposure moved more than X % against reference."""
     frame = _table(tables, rule)
     name = rule.target["table"]
-    reference = ctx.reference_frames.get(name)
-    if reference is None or reference.height == 0:
-        return CheckOutcome(skipped=True, skip_reason="no reference version to compare against")
+    if ctx.reference_profile is not None and ctx.reference_profile.row_count:
+        reference_rows = ctx.reference_profile.row_count
+    else:
+        reference = ctx.reference_frames.get(name)
+        if reference is None or reference.height == 0:
+            return CheckOutcome(
+                skipped=True, skip_reason="no reference version to compare against"
+            )
+        reference_rows = reference.height
 
-    ratio = frame.height / reference.height
+    ratio = frame.height / reference_rows
     limit = float(rule.params.get("max_shift_fraction", 0.2))
     return CheckOutcome(
         violating_rows=1 if abs(ratio - 1.0) > limit else 0,
-        measured={"rows": frame.height, "reference_rows": reference.height,
+        measured={"rows": frame.height, "reference_rows": reference_rows,
                   "ratio": round(ratio, 4)},
         threshold={"max_shift_fraction": limit},
         detail=f"row count is {ratio:.2f} times the reference version",
@@ -531,6 +549,7 @@ def run_validation(
     dataset_version_id: UUID,
     reference_tables: Mapping[str, pl.DataFrame] | None = None,
     reference_frames: Mapping[str, pl.DataFrame] | None = None,
+    reference_profile: Profile | None = None,
     exposure_column: str = "exposure_years",
     rule_budget_s: float = DEFAULT_RULE_BUDGET_S,
     progress: ProgressCallback | None = None,
@@ -544,6 +563,7 @@ def run_validation(
     context = ValidationContext(
         reference_tables=reference_tables or {},
         reference_frames=reference_frames or {},
+        reference_profile=reference_profile,
         exposure_column=exposure_column,
     )
     entries = rule_set.enabled_entries
