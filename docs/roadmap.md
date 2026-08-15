@@ -1531,7 +1531,7 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, **OQ-MODEL-8** | 6 (1 open) |
+| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, **OQ-MODEL-8**, **OQ-OVR-7**, **OQ-MODEL-9** | 9 (3 open) |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
@@ -1547,10 +1547,14 @@ budget, so OQ-MODEL-3 remains a design choice rather than being decided by force
 **Every question that could only be answered with code has been.** What remains is
 judgement, not measurement.
 
-The last four rows of the 1a/1b gates were raised *during* the phase rather than before it — by
-driving the exit demo (OQ-DATA-7), by plan review 2 (OQ-OVR-6, OQ-PLAT-6) and by auditing the
-GLM spine (OQ-MODEL-8) — and had not reached this table until 2026-08-15. A gate row is only
-as good as its habit of being written down.
+Six of the 1a/1b gate entries were raised *during* the phase rather than before it — by
+driving the exit demo (OQ-DATA-7), by plan review 2 (OQ-OVR-6, OQ-PLAT-6), by auditing the
+GLM spine (OQ-MODEL-8), and by building bandings and groupings (OQ-OVR-7, OQ-MODEL-9) — and
+none of them reached this table on the day it was raised. All six were added on 2026-08-15,
+the last two while resolving a rebase, which is not a reliable mechanism. **A question raised
+in a spec belongs in this table in the same commit** — the `spec-change` skill now says so,
+because `audit-docs.py` checks the spec ↔ register mirror and cannot see this table at all.
+A gate row is only as good as its habit of being written down.
 
 **2026-08-15 — the six `MODEL` judgement calls were taken**, and none of them enlarged Phase 1:
 expressions moved to Phase 2 while their certification machinery stayed here (OQ-MODEL-1);
