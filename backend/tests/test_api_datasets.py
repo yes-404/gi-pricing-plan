@@ -779,3 +779,49 @@ def test_an_override_may_raise_severity_but_never_lower_it(
         headers=headers,
     )
     assert raised.status_code == 200, raised.text
+
+
+@pytest.mark.req("FR-DATA-2")
+def test_the_dataset_list_carries_each_dataset_s_latest_version(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """`01` §5.3 names it as one of four columns the list must show.
+
+    It rendered empty for every row: the list called `to_schema(row)` with no version while
+    the detail route passed one, so a dataset with two versions read as having none. Found
+    by driving the demo entrance — the dataset list is its first screen — and not by any
+    test, because every test that cared about a version number asked the detail route.
+    """
+    import asyncio
+
+    from app.platform import datasets as dataset_service
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+
+    async def _dataset(slug: str, versions: int) -> None:
+        async with database.unit_of_work() as session:
+            row = await dataset_service.create_dataset(
+                session, workspace_id=workspace_id, actor=principal, slug=slug
+            )
+            for _ in range(versions):
+                await dataset_service.new_version(
+                    session, workspace_id=workspace_id, actor=principal, dataset_id=row.id
+                )
+
+    versioned, bare = f"ds-{new_uuid7().hex[-8:]}", f"ds-{new_uuid7().hex[-8:]}"
+    asyncio.get_event_loop().run_until_complete(_dataset(versioned, 2))
+    asyncio.get_event_loop().run_until_complete(_dataset(bare, 0))
+
+    listed = {
+        item["slug"]: item
+        for item in client.get("/api/v1/datasets", headers=headers).json()["items"]
+    }
+    assert listed[versioned]["latest_version"] == 2, "the list must agree with the detail route"
+    assert (
+        client.get(f"/api/v1/datasets/{versioned}", headers=headers).json()["latest_version"]
+        == 2
+    )
+    # A dataset with no versions reports null rather than 0 — "none yet" and "version zero"
+    # are different claims, and only one of them is true.
+    assert listed[bare]["latest_version"] is None

@@ -311,11 +311,42 @@ async def list_datasets(
 
     has_more = len(rows) > limit
     page_rows = rows[:limit]
+
+    async with database.session() as session:
+        latest = await _latest_versions(session, [row.id for row in page_rows])
+
     return Page[Dataset](
-        items=[service.to_schema(row) for row in page_rows],
+        items=[
+            service.to_schema(row, latest_version=latest.get(row.id)) for row in page_rows
+        ],
         next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
         total_estimate=int(total),
     )
+
+
+async def _latest_versions(
+    session: AsyncSession, dataset_ids: list[UUID]
+) -> dict[UUID, int]:
+    """The latest version of each dataset on a page, in one query.
+
+    The list rendered an empty "latest version" column for every row: it called
+    `to_schema(row)` with no version, while the detail route passed one. `01` §5.3 names
+    that column as one of four the dataset list must show, and a blank column reads as "no
+    versions" rather than "the list did not ask".
+
+    One query rather than one per row: a page of 50 datasets would otherwise be 51 round
+    trips to render a column.
+    """
+    if not dataset_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(DatasetVersionRow.dataset_id, func.max(DatasetVersionRow.version))
+            .where(DatasetVersionRow.dataset_id.in_(dataset_ids))
+            .group_by(DatasetVersionRow.dataset_id)
+        )
+    ).all()
+    return {dataset_id: version for dataset_id, version in rows}
 
 
 async def _latest_version(session: AsyncSession, dataset_id: UUID) -> int | None:
