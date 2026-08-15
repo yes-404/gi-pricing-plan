@@ -207,6 +207,26 @@ async def load_dataset(
     return row
 
 
+async def load_dataset_by_id(
+    session: AsyncSession, *, workspace_id: UUID, dataset_id: UUID
+) -> DatasetRow:
+    """A Dataset by id, workspace-scoped.
+
+    Ingestion holds an id rather than a slug, and a caller that fetched by id alone would
+    read another workspace's dataset — the id is a UUID, not a secret.
+    """
+    row = (
+        await session.execute(
+            select(DatasetRow).where(
+                DatasetRow.workspace_id == workspace_id, DatasetRow.id == dataset_id
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise PlatformError("NOT_FOUND", "Dataset not found", 404, f"No dataset {dataset_id}.")
+    return row
+
+
 async def update_dictionary(
     session: AsyncSession,
     *,

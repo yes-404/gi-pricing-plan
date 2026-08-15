@@ -171,6 +171,11 @@ async def ingest_upload(
                 "whose parquet does not match what its recipe says was done (FR-DATA-14).",
             ) from exc
 
+    await _refuse_direct_identifiers(
+        session, workspace_id=workspace_id, dataset_id=dataset_id,
+        columns=frame.columns, recipe=recipe,
+    )
+
     partition = partition_rejects(frame, required_non_null=required_non_null)
     schema = infer_schema(partition.clean)
 
@@ -455,3 +460,62 @@ async def correct_schema(
         after={"table": table, "arrow_schema": target["arrow_schema"]},
     )
     return version
+
+
+async def _refuse_direct_identifiers(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    dataset_id: UUID,
+    columns: Sequence[str],
+    recipe: Sequence[Mapping[str, Any]] | None,
+) -> None:
+    """FR-DATA-41: a column the dictionary classifies `direct_identifier` must be dropped
+    or pseudonymised, or ingestion fails (FR-DATA-13, FR-OVR-9).
+
+    **After the recipe, before the version.** After, because pseudonymising is one of the
+    two remedies and the check must see the frame the remedy produced. Before, because a
+    version written and then rejected has already put the identifier in object storage,
+    where refusing it afterwards is a deletion problem rather than a refusal.
+
+    "Dropped" is a column absent from the frame — the recipe has no drop verb, so a source
+    that must lose a column loses it upstream. "Pseudonymised" is a `pseudonymise` step
+    naming that column: the values are then workspace-scoped tokens, which is what
+    FR-DATA-13 asks for and why the column may stay.
+
+    `special_category` is refused on the same terms. `MODELLING_FORBIDDEN_PII` holds both,
+    and a special-category column sitting in a modelling dataset is the failure the
+    classification exists to name.
+    """
+    # Through `to_schema`, not off the row: `modelling_forbidden_columns` is a property of
+    # the *schema* type, derived from the dictionary rather than stored, so the two cannot
+    # disagree after an edit.
+    dataset = datasets.to_schema(
+        await datasets.load_dataset_by_id(
+            session, workspace_id=workspace_id, dataset_id=dataset_id
+        )
+    )
+    forbidden = set(dataset.modelling_forbidden_columns)
+    if not forbidden:
+        return
+
+    pseudonymised = {
+        str(step.get("params", {}).get("column"))
+        for step in (recipe or [])
+        if step.get("step") == "pseudonymise"
+    }
+    present = [c for c in columns if c in forbidden and c not in pseudonymised]
+    if not present:
+        return
+
+    classes = ", ".join(
+        f"{column} ({dataset.data_dictionary[column].pii_class.value})" for column in present
+    )
+    raise PlatformError(
+        "DIRECT_IDENTIFIER_PRESENT",
+        "The upload carries a column the dictionary forbids for modelling",
+        422,
+        f"{classes}. FR-DATA-13 requires such a column to be dropped before upload or "
+        "pseudonymised by a recipe step; no version was created. Reclassifying the column "
+        "in the Data Dictionary is the other way through, and is an audited change.",
+    )
