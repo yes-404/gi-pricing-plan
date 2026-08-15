@@ -1,0 +1,57 @@
+name: frontend
+
+# Path-filtered per component (`CLAUDE.md` §2). A docs-only change must not resolve a Node
+# toolchain, and once both sides are moving neither should wait on the other's.
+#
+# **If branch protection is ever enabled, do not mark this a required check.** A required
+# check that does not run on a given PR blocks it for ever; add an always-running
+# aggregator job instead.
+on:
+  push:
+    branches: [main]
+    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+      # The generated client is derived from the contract, so a contract change can break
+      # the frontend without touching a file under frontend/.
+      - "docs/contracts/openapi/**"
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # FR-OVR-6: the client is generated, never hand-written. Regenerating and diffing is
+      # the only thing that catches a contract change the frontend has not absorbed —
+      # `src/api/generated/` is git-ignored, so nothing else would notice.
+      - name: The generated client matches the committed contract
+        run: |
+          pnpm run generate:api
+          git diff --exit-code --stat -- src/api/generated || {
+            echo "::error::The generated API client is stale. Run 'pnpm --dir frontend generate:api'."
+            exit 1
+          }
+
+      - run: pnpm run lint
+      - run: pnpm run type-check
+      - run: pnpm run test
+      - run: pnpm run build

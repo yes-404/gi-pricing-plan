@@ -22,6 +22,7 @@ dependencies = [
     "zstandard>=0.23",
     "python-multipart>=0.0.32",
     "prometheus-client>=0.26.0",
+    "uvicorn[standard]>=0.52.3",
 ]
 
 # A member's dependency on another member needs its own source mapping — the root's does

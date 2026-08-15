@@ -85,3 +85,7 @@ Thumbs.db
 # root during an NFR measurement — it is runtime state, not source.
 celerybeat-schedule
 celerybeat.pid
+
+# pnpm's virtual store and vite/vitest caches — node_modules is already covered above.
+frontend/node_modules/.vite/
+frontend/coverage/
