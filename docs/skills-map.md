@@ -13,7 +13,7 @@ a governed system in a regulated domain, specified across 417 permanent requirem
 phase discipline, and evidence as about Polars or XGBoost.
 
 **Maintenance rules.**
-- *(CLAUDE.md §8)* Whenever a spec adds or changes a tech dependency, update §1–§6 in the
+- *(CLAUDE.md §10)* Whenever a spec adds or changes a tech dependency, update §1–§6 in the
   same PR. Every row's "Used in" column must cite at least one spec section or requirement
   ID.
 - Whenever a working practice changes — a new gate, a new audit, a new standard the output

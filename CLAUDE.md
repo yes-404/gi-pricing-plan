@@ -9,9 +9,9 @@ continuously and consistently. Read it fully before making changes.
 code is now the expected default** for work inside its scope (§9).
 
 The specification suite in `docs/` is the contract that Phase 1 builds against. It is
-finished, audited, and authoritative: 8 module specs, 5 workflow journeys, 5 ADRs, 31
-artifact contracts, 418 numbered requirements. **Read the relevant spec before writing the
-code that implements it** — the specs are precise enough that guessing is never the faster
+finished, audited, and authoritative: 8 module specs, 5 workflow journeys, 5 ADRs, and the
+artifact contracts and numbered requirements they define. **Read the relevant spec before
+writing the code that implements it** — the specs are precise enough that guessing is never the faster
 path, and a divergence between code and spec is a defect in whichever is wrong.
 
 ### What this means for the default deliverable
@@ -25,17 +25,26 @@ path, and a divergence between code and spec is a defect in whichever is wrong.
 
 When code and spec disagree, **stop and resolve it** rather than quietly making the code
 match or the spec match. Which one is wrong is a real question, and this project's history
-shows it is often the spec — five specification defects were found by running spikes against
-it, including one that would have rejected every valid custom objective.
+shows it is often the spec: five defects were found by running spikes against it — including
+one that would have rejected every valid custom objective — and implementation has since
+found more, among them a memory budget smaller than the interpreter and an invariant that
+left a report's ordinary state unnamed.
+
+Quietly changing one to match the other destroys the record of which was believed, which is
+the thing a governed system cannot afford to lose.
 
 ### The rules that survive the phase change
 
 - Requirement IDs are permanent (§5). Never renumber; append or mark superseded.
+- **Counts that change are not written here.** `uv run python scripts/req-coverage.py`
+  prints how many requirements exist and how many carry evidence. Two of the three totals
+  this file used to state were stale within a fortnight, from requirements added the same
+  afternoon — the same reason FR-PLAT-54 makes the demo guide derived rather than written.
 - Every spec change runs `python3 scripts/audit-docs.py` before commit (20 checks).
 - `.claude/skills/` holds the procedures for this repo; §12's maintenance rules apply.
 - The retrofit-impossible foundations (`docs/roadmap.md` §5) land in Phase 1a. Audit writes
   share the caller's transaction, artifacts are immutable, money is integer minor units,
-  `model-schema` is the single source of truth. **These are not deferrable to a later
+  `model-schema` is the single source of truth (§2). **These are not deferrable to a later
   phase** — retrofitting any of them is a rewrite, and Phase 1a is where they are cheap.
 
 ## 1. Project Mission
@@ -144,10 +153,8 @@ the code is written against.** Two scripts keep that honest rather than aspirati
 - **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
   requirements the suite covers, failing when a test claims one that does not exist.
 
-**When code and spec disagree, stop and resolve it** (§0). Which is wrong is a real
-question: five specification defects were found by running spikes against the specs, so the
-document is not automatically the authority — but neither is the code, and quietly changing
-one to match the other destroys the record of which was believed.
+**When code and spec disagree, stop and resolve it — §0 has the rule and the reason.** The
+document is not automatically the authority, and neither is the code.
 
 ### Working rhythm
 
@@ -179,7 +186,8 @@ Standing architecture rules (already decided — do not reopen without an ADR):
   define how a custom objective is declared, validated, versioned, and audited — an
   arbitrary-code objective is a governance risk, so the spec must cover sandboxing or
   a restricted expression form.
-- Dataset validation: `pandera` schemas + a dedicated validation module (see §6)
+- Dataset validation: `pandera` schemas + a dedicated validation module
+  (`01-data-management.md` §3.3, and §4.4's catalogue of 38 rules)
 - Rating execution: GoRules ZEN Engine (JSON decision graphs) wrapped by pricing-core
 - Ruff (line 100), mypy --strict on packages/, pytest + hypothesis
 
@@ -191,32 +199,31 @@ Standing architecture rules (already decided — do not reopen without an ADR):
 - API client generated from OpenAPI (`openapi-typescript`); never hand-written types
 - Vitest + Vue Testing Library; Playwright E2E later
 
-## 4. Documentation Suite (the deliverable of this phase)
+## 4. Documentation Suite — the module map
 
-```
-docs/
-├── adr/                        # Architecture decision records (numbered)
-├── specs/
-│   ├── 00-overview.md          # System context, module map, glossary
-│   ├── 01-data-management.md   # Ingestion, datasets, versioning, VALIDATION
-│   ├── 02-modelling.md         # GLM, XGBoost/LightGBM, custom objectives,
-│   │                           #   factors/bandings/groupings, diagnostics
-│   ├── 03-rating-engine.md     # Rating DAG, rate tables, scoring APIs
-│   ├── 04-optimisation.md      # Demand models, optimisation, GIPP checks
-│   ├── 05-monitoring.md        # Drift, PSI, A/E monitoring, dashboards
-│   ├── 06-governance.md        # RBAC, approvals, audit, model documentation
-│   └── 07-platform.md          # Auth, jobs, deployment, environments
-├── workflows/                  # ★ Cross-module, end-to-end user journeys
-│   ├── wf-01-dataset-to-model.md
-│   ├── wf-02-model-to-rating-version.md
-│   ├── wf-03-rate-change-impact.md
-│   ├── wf-04-deploy-and-monitor.md
-│   └── wf-05-custom-objective-lifecycle.md
-├── contracts/                  # Draft API + schema definitions (OpenAPI stubs,
-│                               #   JSON Schema for model/rating artifacts)
-├── skills-map.md               # Tech stack → skills/knowledge needed (see §8)
-└── open-questions.md           # Unresolved design questions, owner, status
-```
+**§2 has the layout.** This is what each document is *for*, which nothing else states in
+one place.
+
+| Spec | Covers |
+|---|---|
+| `00-overview.md` | System context, module map, glossary, the API conventions every module obeys |
+| `01-data-management.md` | Ingestion, datasets, versioning, **the four-layer validation gate** |
+| `02-modelling.md` | GLM, XGBoost/LightGBM, custom objectives, factors/bandings/groupings, diagnostics |
+| `03-rating-engine.md` | Rating DAG, rate tables, scoring APIs |
+| `04-optimisation.md` | Demand models, optimisation, GIPP checks |
+| `05-monitoring.md` | Drift, PSI, A/E monitoring, dashboards |
+| `06-governance.md` | RBAC, approvals, audit, model documentation |
+| `07-platform.md` | Auth, jobs, blobs, deployment, environments, observability |
+
+`workflows/wf-01…05` are the **cross-module journeys** — dataset-to-model, model-to-rating-
+version, rate-change impact, deploy-and-monitor, custom-objective lifecycle. A module spec
+says what one module does; a workflow says what actually happens, across all of them.
+
+`contracts/` holds JSON Schema and OpenAPI **generated from `model-schema`** and committed;
+CI fails on drift (FR-PLAT-48). It is a published artifact, not a draft — never hand-edit it.
+
+`skills-map.md` maps stack component → where it is used → skills to research (§10).
+`open-questions.md` carries every unresolved choice, gated by phase.
 
 ## 5. Spec Document Standard (every spec must contain these sections)
 
@@ -237,25 +244,18 @@ docs/
 
 Requirement IDs are permanent: never renumber, only append or mark superseded.
 
-## 6. Dataset Validation (spec priorities for 01-data-management.md)
+## 6. Dataset Validation — *superseded by `01-data-management.md`*
 
-Validation is a gate between ingestion and modelling: a dataset version must reach status
-`validated` before any model can be fitted on it. The spec must define these layers:
+This section was the **brief** for writing that spec, in the phase before it existed: "the
+spec must define these layers…". It is now written, with 40 `FR-DATA` requirements, the
+four layers in §3.3, and a catalogue of 38 named rules in §4.4 — all of them implemented.
 
-- **Structural**: column presence, dtypes, encodings, key uniqueness (policy id ×
-  exposure period), date parsing — expressed as pandera schemas stored with the dataset.
-- **Referential**: values resolve against reference tables (postcodes, vehicle groups,
-  occupation codes) with effective-date awareness.
-- **Actuarial sanity**: exposure > 0 and reasonable (period-consistent), claim dates
-  inside exposure periods, no negative claim counts, severity outliers flagged against
-  configurable thresholds, claim–policy linkage completeness.
-- **Distributional / stability**: one-way distributions and PSI vs a reference dataset
-  version, to catch mix shifts and broken feeds before they poison a model.
-- **Outcome model**: every run produces a persisted, versioned validation report
-  (pass / warn / fail per rule) attached to the dataset version and visible in the UI;
-  fails block modelling, warns require an actuary's explicit acknowledgement (audited).
-- **Extensibility**: users can define custom validation rules declaratively; the spec
-  must define that rule format and its governance (same review/audit trail as models).
+A brief that outlives its deliverable becomes a second, vaguer statement of the same thing,
+and the two drift. Read `docs/specs/01-data-management.md`.
+
+The number stays here rather than being reclaimed: **section numbers are cited from twelve
+other files** and behave like every other identifier in this repository (§5) — assigned
+once, never renumbered, never reused.
 
 ## 7. Domain Model (shared vocabulary — use these names in every doc)
 
@@ -286,47 +286,35 @@ Actuarial correctness defaults (specs must not contradict these):
 - Standard errors / uncertainty surfaced with every estimate; money is integer
   pence/cents or Decimal in the rating path, never float.
 
-## 8. skills-map.md (supports the maintainer's next step)
+## 8. skills-map.md — *folded into §10*
 
-Maintain `docs/skills-map.md` as a living table: **stack component → where it is used
-(spec/FR references) → skills to research → learning resources**. Whenever a spec adds
-or changes a tech dependency, update this file in the same PR. Example rows: glum (GLM
-API, formula interface, regularisation), XGBoost (custom objective gradient/hessian
-interface, base_margin, monotone constraints), ZEN Engine (JDM graph format, Python
-bindings), Vue Flow (custom nodes/edges, validation), pandera (schema definition,
-lazy validation reports).
+Its one binding instruction — **update `docs/skills-map.md` in the same PR as any spec
+change that adds or alters a tech dependency** — is stated in §10 among the other document
+rules, where a reader looking for "what must I update?" will actually find it. The examples
+that filled the rest of this section were the file's own content, restated.
 
-## 9. Roadmap
+## 9. Roadmap — *the plan lives in `docs/roadmap.md`*
 
-- **Phase 0 — Specification: COMPLETE (closed 2026-08-14)**. Every module spec meets the
-  §5 standard, all five workflow docs are complete, 31 contracts are drafted, and every
-  open question is **gated** — assigned to the phase that needs it (`docs/roadmap.md` §10).
-  Exit criterion met: an engineer could start Phase 1 from docs alone.
+**Phase 1a — Data Workbench is current.** Exit: a freMTPL2 dataset version reaches
+`validated`, having been through the failure loop at least once.
 
-  *Exit criterion amended 2026-08-14.* It previously required `open-questions.md` to be
-  "empty or explicitly deferred". That is now read as **gated rather than emptied**: each
-  question is answered before the phase that depends on it, not before any code is written.
-  Answering Phase 4 optimisation questions today would be speculation — and this project's
-  own record argues against it, since three of the questions that *were* answered by
-  reasoning had to be corrected once a spike tested them.
-- **Phase 1a — Data Workbench (CURRENT)**: dataset upload, preparation, the four-layer validation
-  gate, profiling, reference data. Exit: a freMTPL2 dataset version reaches `validated`,
-  having been through the failure loop at least once. The cross-cutting foundations that
-  cannot be retrofitted (audit-in-transaction, artifact immutability, the Job model,
-  decimal money, `model-schema` as SSOT) land here.
-- **Phase 1b — Modelling Workbench**: factor management incl. bandings and groupings, GLM
-  and XGBoost fitting (incl. custom objectives), diagnostics, transparency artifacts, model
-  versioning. Exit: `wf-01` end to end on freMTPL2.
+Everything else about the plan — the phase list, workstream rows, closure records, decision
+gates, the retrofit-impossible list, and which workstreams are closed — is in
+[`docs/roadmap.md`](docs/roadmap.md), and **only** there.
 
-  *(Phase 1 was split on the `DATA`/`MODEL` boundary — accepted 2026-08-14. As one phase it
-  was ~47 % of the platform's requirement surface with no intermediate demo. The split costs
-  nothing structurally and means only 4 of the 7 Phase 1 decisions gate the start of work.
-  See `docs/roadmap.md` §6.)*
-- **Phase 2 — Rating Engine**: DAG designer, rate tables, reference data, real-time +
-  batch scoring, dislocation.
-- **Phase 3 — Governance**: RBAC, approvals, audit UI, model documentation generation.
-- **Phase 4 — Optimisation & Monitoring**: demand models, constrained optimisation,
-  drift monitoring, GIPP consistency.
+This section used to restate it. It went stale within a fortnight: it still described Phase
+1a as though nothing had shipped, while the roadmap carried eight closure records it knew
+nothing about. Status duplicated in two places disagrees, and the copy nobody updates is the
+one that gets read first.
+
+The two things worth keeping here, because they change how you work rather than what is
+planned:
+
+- **The retrofit-impossible foundations land in Phase 1a** (`docs/roadmap.md` §5) —
+  audit-in-transaction, artifact immutability, integer money, the Job model,
+  `model-schema` as SSOT. Not deferrable: retrofitting any of them is a rewrite.
+- **Do not build ahead of the phase** (§0's table). A later phase's capability is a spec
+  change, not code.
 
 ## 10. How You (Claude) Work
 
@@ -334,8 +322,9 @@ lazy validation reports).
 
 - **Documents.** Before editing a spec, read `00-overview.md`, the target spec, and any
   workflow that references it.
-  After editing, check cross-references in both directions and update `skills-map.md` and
-  `open-questions.md` in the same PR.
+  After editing, check cross-references in both directions and update `open-questions.md`
+  in the same PR — and `docs/skills-map.md` whenever the change adds or alters a **tech
+  dependency**, with every row citing at least one spec section or requirement id.
 - Keep terminology exactly consistent with §7; if a new term is needed, add it to the
   glossary in `00-overview.md` first.
 - Prefer precise, implementation-ready language: named entities, typed fields, numbered
@@ -360,11 +349,24 @@ lazy validation reports).
 # mypy and pytest then fail on `No module named 'pydantic'` in a venv that looks fine.
 uv sync --all-packages --dev
 
-# The gate. Same commands CI runs (.github/workflows/python.yml), in the same order.
+# The gate — **both halves**. This repository is polyglot and CI runs two workflows;
+# a "gate" that covers only Python has been green while the frontend was red.
+#
+# Python (.github/workflows/python.yml) and docs (docs.yml):
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
 python3 scripts/audit-docs.py                # 20 checks over docs/ and .claude/notes/
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
+
+# Frontend (.github/workflows/frontend.yml). `--frozen-lockfile` from a clean
+# `node_modules` is what CI does, and a populated one hides a missing dependency.
+pnpm --dir frontend install --frozen-lockfile
+pnpm --dir frontend generate:api && git diff --exit-code -- frontend/src/api/generated
+pnpm --dir frontend lint && pnpm --dir frontend type-check
+pnpm --dir frontend test && pnpm --dir frontend build
+
+# Read each command's **own** exit code. `cmd | tail -1 && echo ok` reports tail's, and
+# has produced a false "clean" here more than once.
 
 # Closure audit (§13 step 1): expected scope from the specs, then evidence.
 uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
@@ -395,11 +397,9 @@ Arriving with the workstream that needs them:
 celery -A app.worker.entrypoint worker --queues compute,default,io,scoring
 celery -A app.worker.entrypoint beat
 
-# W6a. pnpm is not on this image and `corepack enable pnpm` fails on it, so the way in is
-# `npm config set prefix ~/.npm-global && npm i -g pnpm` with that bin on PATH.
-pnpm install --dir frontend
-pnpm --dir frontend lint && pnpm --dir frontend test && pnpm --dir frontend type-check
-pnpm --dir frontend generate:api             # regenerate TS types from OpenAPI
+# W6a setup. pnpm is not on this image and `corepack enable pnpm` fails on it, so the way
+# in is `npm config set prefix ~/.npm-global && npm i -g pnpm`, with that bin on PATH.
+# The frontend gate itself is above, with the rest of the gate.
 pnpm --dir frontend dev                      # proxies /api to localhost:8000
 
 # The API the frontend talks to. Compose brings up postgres/redis/minio only — there is no
@@ -480,7 +480,7 @@ Both of its inputs are documents — requirements from `docs/specs/`, evidence f
 `@pytest.mark.req` markers — so the result does not depend on who runs it. It exits non-zero
 while any in-scope requirement lacks evidence.
 
-**It is a closure tool, not a CI gate.** Most of the 418 requirements belong to phases that
+**It is a closure tool, not a CI gate.** Most requirements belong to phases that
 have not started, so running it unscoped will always fail; that is the correct behaviour for
 an audit and the wrong behaviour for a build.
 
@@ -537,15 +537,13 @@ ran it, and NFR-PLAT-4 was unverified the whole time.
 
 ### 3. Gates — all green, run locally with the real toolchain
 
-```bash
-uv sync --all-packages --dev                 # see §11 — a plain `uv sync` is not enough
-uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
-uv run python scripts/generate-contracts.py --check
-python3 scripts/audit-docs.py && uv run python scripts/req-coverage.py
-```
+**§11 has the commands**, both halves, and closing a workstream runs all of them — with
+`generate-contracts.py --check` rather than the plain regenerate, because at closure the
+question is whether the committed contract already matches, not whether it can be made to.
 
 Run them **locally**, not merely "CI passed". CI proves the runner; local proves the result
-is reproducible and that you can debug it.
+is reproducible and that you can debug it — and read each command's own exit code, for the
+reason §11 gives.
 
 ### 4. Enforcement is proven, not assumed
 
