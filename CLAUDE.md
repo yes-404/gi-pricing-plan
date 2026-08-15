@@ -194,8 +194,9 @@ Standing architecture rules (already decided — do not reopen without an ADR):
   define how a custom objective is declared, validated, versioned, and audited — an
   arbitrary-code objective is a governance risk, so the spec must cover sandboxing or
   a restricted expression form.
-- Dataset validation: `pandera` schemas + a dedicated validation module
-  (`01-data-management.md` §3.3, and §4.4's catalogue of 38 rules)
+- Dataset validation: a dedicated validation module over Polars
+  (`01-data-management.md` §3.3, and §4.4's catalogue of 38 rules). **Not pandera** —
+  §4.4 records why, and the repository depends on it nowhere
 - Rating execution: GoRules ZEN Engine (JSON decision graphs) wrapped by pricing-core
 - Ruff (line 100), mypy --strict on packages/, pytest + hypothesis
 
@@ -341,7 +342,7 @@ planned:
 - When a design choice is genuinely open, do not silently pick one: record options,
   trade-offs, and a recommendation in `open-questions.md` (or an ADR if it must be
   decided now).
-- Small illustrative snippets (an XGBoost custom objective signature, a pandera schema,
+- Small illustrative snippets (an XGBoost custom objective signature, a rule definition,
   a JSON contract example) inside specs are encouraged; full implementations are not.
 - **Code.** `.claude/skills/python-package` and `python-test` hold the conventions. Run the
   full gate locally before pushing — `.claude/skills/reproducing-ci-locally` explains why
@@ -663,8 +664,26 @@ mis-cut is expensive.
 3. **Skills and research.** Which entries `docs/skills-map.md` and `.claude/skills/README.md`
    are now missing, and which have gone stale against the code. **Re-run the gap analysis**
    rather than appending to a list — a list only ever grows.
-4. **Document drift.** Whether `docs/roadmap.md`, `docs/open-questions.md`, the module specs
-   and §2's layout marks still describe the repository as it is.
+4. **Specification accuracy — the review's main target, not a tidy-up.** Whether each
+   module spec still describes the code that was written against it: the §5.1 endpoint
+   tables *in both directions*, the §5.2 signatures, the §5.3 view Contents columns, the
+   named catalogues, and the params a caller would copy from the page. Then
+   `docs/roadmap.md`, `docs/open-questions.md` and §2's layout marks.
+
+   **The spec is where a stage's findings land**, because it is what the next stage is
+   built against: a divergence left in it is a defect the next workstream inherits and
+   builds on. The first audit to look found pandera named as the structural mechanism in
+   four places while being a dependency of nothing, a rule-format table whose params would
+   make an authored rule fail, and a reference publish lifecycle that existed in the
+   database, the API and no document — which is why the endpoint audit reported a complete
+   surface, since it compares the spec against the contract and an endpoint missing from
+   both is invisible to it.
+
+   **Resolve, never soften** (§0). Where the code is right, amend the spec with a dated
+   note saying which side was wrong and why. Where the *spec* is right and the code does
+   not meet it, the spec gains the precise obligation — an appended requirement, an owner,
+   and a verdict — rather than being edited down to what was built. FR-DATA-41 and
+   FR-DATA-42 are what that looks like.
 5. **Shape.** Whether the remaining phases, workstreams and requirements are still cut in
    the right place — split, merge, add, or supersede.
 

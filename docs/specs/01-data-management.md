@@ -94,6 +94,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-11** | `explode_period` splits a policy record spanning a mid-term change or a period boundary into multiple exposure rows with correctly apportioned exposure, preserving `sum(exposure)` exactly (checked as a post-condition, using `Decimal`). |
 | **FR-DATA-12** | `attach_claims` links the claim table to the policy-exposure table on a declared key and validates the linkage: every claim resolves to exactly one exposure row, and the claim's `date_of_loss` falls inside that row's exposure period. Unlinked claims and multi-linked claims are reported as counts and samples, and are individually rule-gated (see VR-ACT-6, VR-ACT-7). |
 | **FR-DATA-13** | `pseudonymise` replaces a declared identifier column with a stable HMAC (workspace-scoped key), so the same customer maps to the same token across versions but the token is meaningless outside the workspace. Columns classified `direct_identifier` in the Data Dictionary must be dropped or pseudonymised; otherwise ingestion fails (FR-OVR-9). |
+| **FR-DATA-41** | *(appended 2026-08-15, and numbered rather than suffixed — §5's ids are append-only)* The refusal in FR-DATA-13 is enforced **at ingestion**, before any row is written: a source whose columns include one the Data Dictionary classifies `direct_identifier`, and whose recipe neither drops nor pseudonymises it, is rejected with `DIRECT_IDENTIFIER_PRESENT`. `Dataset.modelling_forbidden_columns` names the classes that trigger it. **Not implemented as at 2026-08-15** — see the note below. |
 | **FR-DATA-14** | The Preparation Recipe is persisted with the Dataset Version and is replayable: `replay(recipe, source_bytes) == stored version` byte-for-byte on parquet content hash, given pinned library versions. |
 
 ### 3.3 Validation — the gate
@@ -101,6 +102,7 @@ used here unchanged. Additional terms owned by this module:
 | ID | Requirement |
 |---|---|
 | **FR-DATA-15** | Validation runs as a Job against a `draft` Dataset Version, executing every rule in the Dataset's Validation Rule Set and producing exactly one **Validation Report** per run. Reports are immutable and retained; re-validation creates a new report, it does not overwrite. |
+| **FR-DATA-42** | *(appended 2026-08-15)* "Immutable" is enforced **in the database**, not by convention: `validation_reports`, `profiles`, `validation_acknowledgements` and `blobs` carry append-only triggers refusing `UPDATE`, `DELETE` and `TRUNCATE`, as `audit_events` already does (`06` FR-GOV-22). **Only `audit_events` carries them as at 2026-08-15** — see the note below. |
 | **FR-DATA-16** | Validation covers four layers, all of which must be present in every Rule Set (a Rule Set with an empty layer is a configuration warning surfaced in the UI): **structural**, **referential**, **actuarial sanity**, **distributional/stability**. §4.4 enumerates the built-in rules. |
 | **FR-DATA-17** | Transition to `validated` requires: zero `fail` outcomes, zero `error` outcomes, and every `warn` outcome carrying an **Acknowledgement** by a Pricing Actuary with a non-empty justification (audited, FR-OVR-4). An Analyst cannot acknowledge. |
 | **FR-DATA-18** | An Acknowledgement is scoped to `(dataset_version_id, rule_id, report_id)`. It does not carry forward to the next version or the next report — each version's warnings are acknowledged on their own evidence. The UI **may pre-fill** the justification from the last acknowledgement of the same rule, but the act itself is always explicit and separately audited: fatigue is a UI problem, and a standing acknowledgement that goes stale hides the change it was meant to surface (OQ-DATA-6, decided 2026-08-14). |
@@ -110,6 +112,25 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-22** | A Rule Set is versioned. A Validation Report records the exact `rule_set_version` and each `rule_version` it executed, so an old report remains interpretable after rules change. |
 | **FR-DATA-23** | Validation is re-runnable on a `validated` version (e.g. after a rule set update). If the new report contains `fail`s, the version transitions **back** to `draft` and every Model fitted on it is flagged `dataset_invalidated` — models are not deleted, but the flag is surfaced on the model, on any Rating Version referencing it, and to the Approver. |
 | **FR-DATA-24** | Validation is incremental where sound: structural and actuarial rules stream over parquet row groups; distributional rules use pre-computed profile aggregates rather than re-scanning. |
+
+> **Two enforcement gaps, recorded 2026-08-15 after an independent audit.** Both are cases
+> where the requirement is right and the code does not yet meet it, so the spec gains the
+> precise obligation rather than being softened to match.
+>
+> **FR-DATA-13's refusal does not happen.** `DIRECT_IDENTIFIER_PRESENT` is registered in
+> the error catalogue and raised nowhere; `Dataset.modelling_forbidden_columns` has no
+> caller. All four `FR-DATA-13` test markers sit on `pseudonymise`, the requirement's
+> *other* half, and FR-OVR-9 — which states the same rule at system level — carries no
+> marker at all. A dataset carrying a direct identifier ingests today.
+>
+> **FR-DATA-15's immutability is convention.** Only `audit_events` has append-only
+> triggers. An audit rewrote 190 stored reports from `fail` to `pass` in one statement
+> (rolled back). `docs/roadmap.md` §5 lists artifact immutability among the things that
+> cannot be retrofitted cheaply, and Phase 1a was where it was meant to land.
+>
+> Both are owned by **W6b** as the next open workstream, and both need the deliberately-
+> broken-input proof `CLAUDE.md` §13 rule 4 requires — a trigger nobody has tried to
+> defeat is the same kind of claim these notes exist to stop.
 
 ### 3.4 Profiling
 
@@ -268,7 +289,25 @@ A Rule Set used by a Dataset feeding an `approved` Model must contain only `appr
 
 Rule IDs here are stable and referenced by workflows and by the UI.
 
-**Layer 1 — Structural** (executed via the stored pandera schema)
+**Layer 1 — Structural** (executed against the version's stored `DatasetTableSchema`)
+
+> **Amended 2026-08-15, after an independent audit.** This layer said "executed via the
+> stored **pandera** schema", §5.2 declared `compile_pandera_schema(...)`, and §8 tied
+> NFR-DATA-2's ≤ 2 min budget to pandera's lazy Narwhals backend. **pandera is not a
+> dependency of this repository** — it appears in no `pyproject.toml` and no lockfile —
+> and the structural checks are implemented directly over Polars in
+> `pricing_core.data.validate`.
+>
+> The code is the right side here. Every `VR-STR-*` rule below is implemented and tested;
+> what pandera would have added is schema *serialisation*, and the version already stores
+> its schema as a `DatasetTableSchema`. Adopting a second schema system to restate a shape
+> `model-schema` already owns would be the "shape defined twice" hazard `CLAUDE.md` §2
+> forbids.
+>
+> `DatasetTable.pandera_schema_ref` (§4.1) is therefore **unset by anything** and is
+> superseded rather than removed — field names are permanent for the same reason
+> requirement ids are. NFR-DATA-2's budget is met without it: 0.1 s for the structural
+> layer at 2 M rows, against 120 s.
 
 | Rule | Default severity | Check |
 |---|---|---|
@@ -317,35 +356,84 @@ Rule IDs here are stable and referenced by workflows and by the UI.
 
 | Rule | Default severity | Check |
 |---|---|---|
-| `VR-DST-1` psi-column | warn at PSI > 0.10, fail at > 0.25 | Per-column PSI against the reference version |
+| `VR-DST-1` psi-column | the rule's own severity, at `warn_above` | Per-column PSI against the reference version. **Categorical, ordinal and boolean columns only** — the reference weights come from the Profile's `top_levels`, which numeric columns do not carry |
 | `VR-DST-2` new-level | warn | Categorical levels present now, absent in reference |
 | `VR-DST-3` vanished-level | warn | Levels with material reference exposure now absent |
 | `VR-DST-4` null-rate-shift | warn | Null rate moved by more than X percentage points (a broken feed's clearest signal) |
-| `VR-DST-5` volume-shift | warn | Total exposure or row count moved more than X % vs reference, period-adjusted |
+| `VR-DST-5` volume-shift | warn | Row count against the reference version's row count |
 | `VR-DST-6` mean-shift | warn | Numeric column mean moved more than N reference standard errors |
 | `VR-DST-7` target-rate-shift | warn | Observed frequency / severity / burning cost moved more than X % vs reference |
 | `VR-DST-8` mix-shift-exposure | warn | Exposure distribution across a declared key factor moved (PSI on the exposure weights, not the row counts) |
 
 Thresholds are Rule Set configuration, not code. Every threshold shown is a default.
 
+> **Amended 2026-08-15, after an independent audit — a rule carries one severity.**
+>
+> `VR-DST-1` read "warn at PSI > 0.10, **fail at > 0.25**", and `VR-DST-5` read "total
+> exposure or row count, period-adjusted". Neither two-band form is reachable: a
+> `CheckOutcome` reports pass or fail against a single threshold, and `_run_one` then maps
+> that through the **rule's** static severity. A `warn` rule measuring PSI 0.90 reports
+> `warn`; there is no channel by which a check escalates itself.
+>
+> The spec is the wrong side here, and deliberately so: severity belongs to the Rule Set
+> entry, where `01` §4.3 lets a workspace *raise* it under review, and a check that could
+> escalate itself would route around that. **Two bands are two rules** — one `warn` at
+> 0.10 and one `fail` at 0.25, both in the set — which is also how an actuary sees which
+> threshold fired.
+>
+> `VR-DST-5` is corrected to what it does: row count. Exposure-weighted and period-adjusted
+> volume shift is **not implemented**, and is a spec change away from being a new rule
+> rather than a silent gap in this one.
+
 ### 4.5 Custom validation rule format
 
 Custom rules use the same tagged-union shape (§4.3) with `check` drawn from a fixed
-vocabulary — never arbitrary code (governance parity with custom objectives, ADR-0003):
+vocabulary — never arbitrary code (governance parity with custom objectives, ADR-0003).
+The vocabulary is enforced when the rule **runs**, not when it is authored: an unknown
+`check` produces an `error` outcome that FR-DATA-19 refuses to count as a pass, and the
+mandatory dry-run (step 2 below) is what stops it reaching approval.
 
-| `check` | Params | Meaning |
-|---|---|---|
-| `range` | `min_inclusive`, `min_exclusive`, `max_inclusive`, `max_exclusive` | Numeric bounds |
-| `set_membership` | `allowed[]`, `case_sensitive` | Value domain |
-| `regex` | `pattern` | String format (e.g. postcode) |
-| `uniqueness` | `columns[]` | Key uniqueness |
-| `not_null` | `columns[]` | Completeness |
-| `relationship` | `left`, `right`, `operator` | Cross-column comparison (`exposure_end > exposure_start`) |
-| `expression` | `expr` (restricted grammar), `expect` | Row-level boolean predicate |
-| `aggregate` | `agg` (`sum`/`mean`/`count`/`quantile`), `group_by[]`, `expect` | Group-level assertion |
-| `reference_lookup` | `reference_table`, `key_columns[]`, `as_at_column` | Referential resolution |
-| `distribution_compare` | `metric` (`psi`/`ks`/`mean_shift`), `column`, `weight_column`, `thresholds` | Stability vs the reference version |
-| `sql` | `query` (single `SELECT`, read-only, run in DuckDB against the version's parquet, must return a row count or a boolean) | Escape hatch for genuinely bespoke checks |
+**The column a check applies to is `target.column`**, not a param. Params configure the
+check; the target says where it points. Only `uniqueness` takes a list, because a composite
+key is one target with several columns.
+
+| `check` | Target | Params | Meaning |
+|---|---|---|---|
+| `range` | `column` | `min_inclusive`, `min_exclusive`, `max_inclusive`, `max_exclusive` | Numeric bounds |
+| `set_membership` | `column` | `allowed[]`, `case_sensitive` | Value domain (alias of the built-in `allowed_values`) |
+| `regex` | `column` | `pattern` | String format. **Unanchored** — a pattern matches anywhere in the value unless it carries its own `^` and `$` |
+| `uniqueness` | — | `columns[]` | Key uniqueness (alias of `unique_key`) |
+| `not_null` | `column` | `key_columns[]` for the offending sample | Completeness |
+| `relationship` | `column` | `left`, `right`, `operator` | Cross-column comparison (`exposure_end > exposure_start`) |
+| `expression` | `column` | `expr` (restricted grammar), `expect` | Row-level boolean predicate |
+| `aggregate` | `column` | `agg` (`sum`/`mean`/`count`/`quantile`/`min`/`max`), `group_by[]`, `quantile`, and a bound: `min`, `max` or `equals` | Group-level assertion |
+| `reference_lookup` | `column` | `reference_table`, `as_at_column` or `as_at` | Referential resolution against the **pinned** reference version |
+| `distribution_compare` | `column` | `metric` (`psi`/`mean_shift`), plus the delegate's params | Stability vs the reference version |
+| `sql` | — | `query` (single `SELECT`, read-only, run in DuckDB against the version's parquet, must return a row count or a boolean), `timeout_s` | Escape hatch for genuinely bespoke checks |
+
+> **Amended 2026-08-15, after an independent audit — this table did not describe the
+> implementation, and a rule authored exactly as it read would fail.**
+>
+> `not_null` and `reference_lookup` were documented as taking `columns[]` and
+> `key_columns[]`; both read `target.column`, so a rule written from this page raised
+> `KeyError` and became an `error` outcome — which FR-DATA-19 correctly refuses to treat as
+> a pass, so nothing was silently accepted, but the rule could never run either.
+>
+> Three params were declared and never read: `distribution_compare`'s `weight_column` and
+> `thresholds` (the delegated built-in owns both), and `aggregate`'s `expect` (it takes
+> `min`/`max`/`equals`). `aggregate` also implements `min` and `max` aggregations this
+> table did not list.
+>
+> **`metric: ks` is withdrawn.** KS needs the reference column's *values*; FR-DATA-24 says
+> a distributional rule reads the stored **Profile**, which keeps summaries and not values.
+> The check skips it with that reason, which is right — the spec was asking for something
+> the design excludes. Reinstating it would mean retaining reference values, and that is a
+> different requirement.
+>
+> `scope.filter`, `scope.skip_on_derived` and `tolerance.max_violating_exposure_fraction`
+> (§4.3) have **no reader** in the engine; `create_rule` stores `{}` for both. They are
+> retained in the artifact as declared-but-inert and named here so nobody writes a rule
+> that depends on them. `affected_exposure_fraction` *is* computed per result.
 
 **Governance of custom rules (FR-DATA-21):**
 
@@ -459,23 +547,55 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
 
 ### 4.8 `ReferenceTable` / `ReferenceTableVersion`
 
+A **table** declares what it is keyed by; a **version** holds effective-dated rows.
+
 ```json
 {
-  "slug": "ons-postcode-directory",
-  "key_columns": ["postcode_outcode"],
-  "payload_columns": ["rating_area", "urbanity", "region"],
-  "version": 7,
-  "effective_from": "2026-04-01",
-  "effective_to": null,
-  "row_count": 2987,
-  "blob": {"sha256": "…", "media_type": "application/vnd.apache.parquet"},
-  "status": "approved",
-  "source_note": "ONS NSPL Feb 2026 release, aggregated to outcode."
+  "table": {
+    "slug": "ons-postcode-directory",
+    "key_columns": ["postcode_outcode"],
+    "payload_columns": ["rating_area", "urbanity", "region"],
+    "latest_published_version": 7
+  },
+  "version": {
+    "slug": "ons-postcode-directory",
+    "version": 7,
+    "status": "published",
+    "row_count": 2987,
+    "covers_from": "2026-04-01",
+    "covers_to": null,
+    "source_note": "ONS NSPL Feb 2026 release, aggregated to outcode."
+  },
+  "row": {
+    "key": "SW1A",
+    "payload": {"rating_area": 12},
+    "effective_from": "2026-04-01",
+    "effective_to": null
+  }
 }
 ```
 
 **Invariants** — for a given key, validity intervals `[effective_from, effective_to)` across
-versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion constraint.
+versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion constraint. The
+interval is **half-open**: a row ending on a date does not cover that date, which is what
+lets consecutive versions abut without overlapping.
+
+**Lifecycle: `draft → published`.** A version is loaded whole into `draft` and made
+pinnable by publishing it. Validation and rating resolve a **published** version by id and
+never "the latest" (FR-DATA-30); a lookup against a table with no published version is
+refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
+
+> **Amended 2026-08-15, after an independent audit.** The example above described one flat
+> artifact carrying `effective_from`/`effective_to`/`blob`/`status: "approved"`, and the
+> word "publish" appeared nowhere in this document. What was built is relational — table,
+> version, and per-row intervals under the exclusion constraint — with **no blob**, and a
+> `draft → published` lifecycle realising FR-DATA-30's "independently approvable".
+>
+> The code is the right side: per-row intervals are what the exclusion constraint can
+> enforce, and a blob could not be. The gap was that the lifecycle existed in the
+> implementation, in the database and in two API routes while being declared in no spec —
+> which meant the endpoint audit, comparing §5.1 against the contract, reported a complete
+> surface. **An endpoint missing from both is invisible to it.**
 
 ---
 
@@ -512,9 +632,11 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 | `POST` | `/api/v1/validation-rules/{id}/submit` | Submit for approval |
 | `POST` | `/api/v1/validation-rules/{id}/approve` | Approve a rule in review — never its author (§4.5 step 3) |
 | `GET`/`PUT` | `/api/v1/datasets/{slug}/rule-set` | Read / replace the Rule Set (creates a new rule-set version) |
+| `POST` | `/api/v1/reference-tables` | Declare a Reference Table (`admin:manage_settings`) |
 | `GET` | `/api/v1/reference-tables` | List declared Reference Tables |
 | `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-DATA-29) |
 | `GET` | `/api/v1/reference-tables/{slug}/versions` | The version timeline, with each version's covered period |
+| `POST` | `/api/v1/reference-tables/{slug}/versions/{version}/publish` | `draft → published`; a version is pinnable only once published (FR-DATA-30) |
 | `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-DATA-30) |
 | `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-DATA-31) |
 
@@ -585,23 +707,32 @@ def run_validation(
     progress: ProgressCallback | None = None,
 ) -> ValidationReport
 
-def compile_pandera_schema(schema: DatasetTableSchema) -> pandera.polars.DataFrameSchema
-
-# packages/pricing-core/src/pricing_core/data/profile.py
-def profile_version(
-    parquet_uris: Mapping[str, list[str]],
-    schema: DatasetSchema,
+# packages/pricing-core/src/pricing_core/data/profile.py     (corrected 2026-08-15)
+def profile_frame(
+    tables: Mapping[str, pl.DataFrame],
     *,
-    one_way_columns: Sequence[str],
-    weight_column: str = "exposure_years",
-) -> Profile                        # DuckDB-backed (FR-DATA-27)
-
+    dataset_version_id: UUID,
+    exposure_column: str = "exposure_years",
+    one_way_columns: Sequence[str] | Literal["auto"] = "auto",
+) -> Profile
+def profile_parquet(...) -> Profile          # same shape, aggregated in DuckDB (FR-DATA-27)
 def compare_profiles(current: Profile, reference: Profile) -> ProfileComparison   # PSI etc.
+def candidate_rating_columns(columns, *, exposure_column="exposure_years") -> tuple[str, ...]
 
-# packages/pricing-core/src/pricing_core/data/exposure.py
+# packages/pricing-core/src/pricing_core/data/prepare.py     (corrected 2026-08-15)
 def explode_period(df: pl.DataFrame, spec: ExplodePeriodSpec) -> pl.DataFrame     # FR-DATA-11
 def attach_claims(exposure: pl.DataFrame, claims: pl.DataFrame, spec: AttachClaimsSpec) -> AttachResult
+
+# packages/pricing-core/src/pricing_core/data/expressions.py — the restricted AST that
+# compiles a recipe expression to Polars without `eval` (FR-DATA-9)
+# packages/pricing-core/src/pricing_core/data/reference.py   — effective-dated resolution
 ```
+
+> **Amended 2026-08-15, after an independent audit.** §5.2 declared `profile_version(...)`
+> with a `schema` argument and a `weight_column`, and put `explode_period`/`attach_claims`
+> in an `exposure.py` that does not exist. It was amended for `ingest.py` in W4 and not for
+> the rest, so it described the shape of the code as it was designed rather than as it was
+> written. Two modules it never mentioned are listed above.
 
 All of these are pure: no I/O, no database, `parquet_uris` read through an injected
 filesystem object supplied by the caller (ADR-0001).
@@ -687,7 +818,7 @@ Rule authoring governance mirrors [`wf-05-custom-objective-lifecycle.md`](../wor
 |---|---|---|
 | **Polars** | Preparation recipe execution, row-level rules, exposure explosion | Lazy frames; strict dtypes are load-bearing (ADR-0005) |
 | **DuckDB** | Profiling, one-ways, PSI, `sql` custom checks, comparison queries | Runs directly over parquet; read-only connection for user SQL |
-| **pandera (Polars backend)** | Layer-1 structural schemas, stored with each version | Lazy validation to collect all errors in one pass; schema serialisation. Polars `DataFrame` and `LazyFrame` both supported since 0.19; **0.32+ ships an optional Narwhals-powered backend that keeps validation fully lazy** (`pandera[narwhals,polars]`) — adopt it, since NFR-DATA-2 requires the structural layer to fail fast in ≤ 2 min without materialising the dataset. See [`research`](../research/track-a-findings.md) F9 |
+| ~~**pandera (Polars backend)**~~ | ~~Layer-1 structural schemas~~ — **not adopted** (2026-08-15) | The structural layer is implemented directly over Polars in `pricing_core.data.validate`, and the version already stores its schema as a `DatasetTableSchema`. Adopting pandera would restate a shape `model-schema` owns, which is the hazard `CLAUDE.md` §2 forbids; its serialisation is the only thing it would have added. NFR-DATA-2's ≤ 2 min structural budget is met without it — 0.1 s at 2 M rows. The research finding (F9) stands as a correct assessment of pandera; the decision went the other way. |
 | **Apache Parquet / Arrow** | Dataset Version storage, `decimal128` for money and exposure | Row groups sized for predicate pushdown; explicit schema persisted |
 | **Object storage (S3/MinIO)** | Content-addressed parquet blobs (ID-4) | Multipart upload for large versions |
 | **PostgreSQL 16** | Version metadata, reports, rule sets, lineage edges | JSONB for report bodies + GIN indexes; exclusion constraint for reference effective dating (FR-DATA-29) |
@@ -696,7 +827,7 @@ Rule authoring governance mirrors [`wf-05-custom-objective-lifecycle.md`](../wor
 | **SciPy** | Poisson/Gamma confidence intervals on one-ways (FR-DATA-26) | Exact CIs at low counts, not normal approximations |
 | **ECharts + TanStack Table (frontend)** | One-way charts with CI bands; report and rejected-row grids | Virtualised grids for large offending samples |
 
-New skills this spec adds to `skills-map.md`: pandera Polars backend + serialisation;
+New skills this spec adds to `skills-map.md`:
 DuckDB read-only sandboxing; PostgreSQL exclusion constraints for effective dating;
 PSI/KS implementation details; parquet decimal logical types.
 

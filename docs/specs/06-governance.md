@@ -307,6 +307,31 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline |
 | `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-GOV-11/13) |
 | `POST` | `/api/v1/approval-requests/{id}/withdraw` | Withdraw before deployment (FR-GOV-15) |
+
+> **Permissions on this table, stated 2026-08-15 after an independent audit.** Four of
+> these six require **authentication only**, and nothing said so — a route sweep found them
+> answering a principal holding no roles at all, which read as a hole until the handlers
+> were read.
+>
+> | Route | Requires |
+> |---|---|
+> | `POST /approval-requests` | authenticated |
+> | `GET /approval-requests` | authenticated |
+> | `GET /approval-requests/{id}` | authenticated |
+> | `GET /approval-policy` | authenticated |
+> | `POST …/decide`, `POST …/withdraw` | `approval:decide` |
+> | `PUT /approval-policy` | `admin:manage_roles` |
+>
+> **Submitting is asking.** The module owning the artifact has already decided whether this
+> principal could create it; gating the ask as well would stop an analyst who built a model
+> from putting it forward. Reading the queue and the policy follow from FR-GOV-16's purpose:
+> an approvals inbox that only approvers could see would hide from a submitter what is
+> waiting on whom, and the policy is the rule everyone is being held to.
+>
+> All four remain **workspace-scoped** — a caller sees their own workspace and no other —
+> and none of them decides anything. The deciding routes carry `approval:decide`, and
+> FR-GOV-11's separation of duties is enforced in three independent layers, database
+> constraint included.
 | `POST` | `/api/v1/attestations` | Record a periodic review (FR-GOV-18) |
 | `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-GOV-23) |
 | `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-GOV-24) |
