@@ -16,7 +16,7 @@ Each runs in a worker thread and marshals its async work back onto the loop with
 from __future__ import annotations
 
 import io
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 import polars as pl
@@ -41,9 +41,12 @@ __all__ = ["register_data_handlers"]
 
 _log = get_logger("app.worker.data")
 
-#: Columns a one-way is worth computing for by default. Overridden per job; the default
-#: exists so an ingestion produces a usable profile without anyone configuring one.
-_DEFAULT_ONE_WAYS = ("vehicle_group", "postcode_area", "driver_age", "region")
+#: One-ways are chosen from the semantic types the profiler infers (FR-DATA-26), not from
+#: a list of column names. The list this replaced was four English defaults and matched
+#: exactly one of freMTPL2's five rating factors — `area`, `veh_power`, `veh_brand`,
+#: `veh_gas` and `region` — so twelve of thirteen columns had no one-way and `02`'s factor
+#: workbench would have had almost nothing to read.
+_ONE_WAY_SELECTION: Final = "auto"
 
 
 def _bridge(progress: ProgressCallback) -> JobProgress:
@@ -162,9 +165,8 @@ def _profile_version(
             tables = await _read_tables(session, blob_store, version)
 
         first = next(iter(tables.values())) if tables else pl.DataFrame()
-        one_ways = [column for column in _DEFAULT_ONE_WAYS if column in first.columns]
         profile = profile_frame(
-            first, dataset_version_id=version_id, one_way_columns=one_ways
+            first, dataset_version_id=version_id, one_way_columns=_ONE_WAY_SELECTION
         )
         async with progress.database.unit_of_work() as session:
             stored = await profile_service.store_profile(

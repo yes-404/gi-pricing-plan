@@ -362,3 +362,65 @@ def test_the_parquet_profiler_never_materialises_the_dataset(
     )
     assert profile.row_count == 400
     assert profile.one_ways[0].rows
+
+
+@pytest.mark.req("FR-DATA-26")
+def test_one_way_columns_are_chosen_from_the_inferred_semantic_types() -> None:
+    """FR-DATA-26: one-ways go "per candidate rating column", decided from what the
+    profiler inferred rather than from a list of names.
+
+    Shaped on freMTPL2, whose rating factors are `area`, `veh_power`, `veh_brand`,
+    `veh_gas` and `region`. A list of English defaults matched exactly one of them, so
+    twelve of thirteen columns had no one-way and `02`'s factor workbench would have had
+    almost nothing to read.
+    """
+    rows = 400
+    frame = pl.DataFrame(
+        {
+            "policy_id": [f"P{i}" for i in range(rows)],
+            "exposure_years": [1.0] * rows,
+            "claim_count": [i % 2 for i in range(rows)],
+            "claim_amount_minor": [(i % 2) * 250_000 for i in range(rows)],
+            "area": [f"A{i % 6}" for i in range(rows)],
+            "veh_power": [4 + i % 12 for i in range(rows)],
+            "veh_brand": [f"B{i % 11}" for i in range(rows)],
+            "veh_gas": ["Diesel" if i % 2 else "Regular" for i in range(rows)],
+            "region": [f"R{i % 22}" for i in range(rows)],
+            "density": [float(i) for i in range(rows)],
+        }
+    )
+    profile = profile_frame(frame, dataset_version_id=uuid4(), one_way_columns="auto")
+    chosen = {summary.column for summary in profile.one_ways}
+
+    assert chosen == {"area", "veh_power", "veh_brand", "veh_gas", "region"}
+    # The measures are excluded: a one-way of claim count *by* claim count answers nothing.
+    assert "claim_count" not in chosen
+    assert "claim_amount_minor" not in chosen
+    assert "exposure_years" not in chosen
+    # An identifier has one row per level, and a continuous column needs banding first —
+    # which is `02`'s factor workbench, not this.
+    assert "policy_id" not in chosen
+    assert "density" not in chosen
+
+
+@pytest.mark.req("FR-DATA-26")
+def test_a_column_with_too_many_levels_is_not_a_rating_factor() -> None:
+    """A one-way is a summary. Two hundred bars is already unreadable, and a column with
+    more levels than that is not a factor anyone rates on without banding it first."""
+    from pricing_core.data.profile import MAX_ONE_WAY_LEVELS, candidate_rating_columns
+
+    rows = 600
+    frame = pl.DataFrame(
+        {
+            "exposure_years": [1.0] * rows,
+            "claim_count": [0] * rows,
+            # 300 distinct string levels: categorical by dtype, useless as a one-way.
+            "postcode": [f"PC{i % 300}" for i in range(rows)],
+            "region": [f"R{i % 12}" for i in range(rows)],
+        }
+    )
+    profile = profile_frame(frame, dataset_version_id=uuid4())
+    chosen = candidate_rating_columns(profile.columns)
+
+    assert "region" in chosen
+    assert "postcode" not in chosen, f"300 levels exceeds {MAX_ONE_WAY_LEVELS}"

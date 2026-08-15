@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Final
+from typing import Any, Final, Literal
 from uuid import UUID, uuid4
 
 import polars as pl
@@ -33,6 +33,9 @@ from model_schema import (
 
 __all__ = [
     "DEFAULT_QUANTILES",
+    "MAX_ONE_WAY_LEVELS",
+    "RATEABLE_TYPES",
+    "candidate_rating_columns",
     "compare_profiles",
     "gamma_severity_interval",
     "infer_semantic_type",
@@ -49,6 +52,18 @@ DEFAULT_QUANTILES: Final[tuple[float, ...]] = (0.01, 0.05, 0.25, 0.50, 0.75, 0.9
 #: FR-DATA-25 caps categorical detail at the top 20 levels. A high-cardinality column would
 #: otherwise put its entire domain into a persisted artifact.
 TOP_LEVELS: Final = 20
+
+#: Above this many levels a one-way stops being a summary. `01` §5.3 renders it as a chart
+#: and a table; 200 bars is already unreadable, and the artifact would carry every level of
+#: a column that is not really a rating factor.
+MAX_ONE_WAY_LEVELS: Final = 200
+
+#: The semantic types a one-way is meaningful for (FR-DATA-26, "candidate rating column").
+#: A continuous column needs banding first, which is `02`'s factor workbench; an identifier
+#: has one row per level; money is a measure rather than a factor.
+RATEABLE_TYPES: Final[frozenset[SemanticType]] = frozenset(
+    {SemanticType.CATEGORICAL, SemanticType.ORDINAL, SemanticType.BOOLEAN}
+)
 
 #: Quantiles are linearly interpolated in both profiling paths. Stated here because it is
 #: a definition rather than an implementation detail: `nearest` and `linear` give different
@@ -117,16 +132,50 @@ def semantic_type_of(
     return SemanticType.CATEGORICAL
 
 
+def candidate_rating_columns(
+    columns: Sequence[ColumnProfile],
+    *,
+    exposure_column: str = "exposure_years",
+    claim_count_column: str = "claim_count",
+    claim_amount_column: str = "claim_amount_minor",
+) -> tuple[str, ...]:
+    """The columns a one-way is worth computing for (FR-DATA-26).
+
+    "Per candidate rating column", decided from what the profiler has already inferred
+    rather than from a list of names. A hard-coded list is wrong for every dataset that
+    did not choose the same words: freMTPL2's rating factors are `area`, `veh_power`,
+    `veh_brand`, `veh_gas` and `region`, and a list of English defaults matched exactly one
+    of them — so twelve of thirteen columns had no one-way and the factor workbench would
+    have had nothing to show.
+
+    The measures are excluded because a one-way *of* claim count *by* claim count answers
+    nothing, and continuous columns are excluded because they need banding first — which is
+    `02`'s factor workbench, not this.
+    """
+    measures = {exposure_column, claim_count_column, claim_amount_column}
+    return tuple(
+        column.name
+        for column in columns
+        if column.semantic_type in RATEABLE_TYPES
+        and column.name not in measures
+        and column.distinct_count <= MAX_ONE_WAY_LEVELS
+    )
+
+
 def profile_frame(
     frame: pl.DataFrame,
     *,
     dataset_version_id: UUID,
-    one_way_columns: Sequence[str] = (),
+    one_way_columns: Sequence[str] | Literal["auto"] = (),
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
 ) -> Profile:
     """Profile a frame (FR-DATA-25, FR-DATA-26).
+
+    `one_way_columns="auto"` picks the candidate rating columns from the semantic types
+    this function has just inferred — which is what FR-DATA-26 asks for, and what a caller
+    naming columns by hand cannot do for a dataset it has not seen.
 
     The frame-based entry point exists so profiling is testable and notebook-runnable;
     `profile_parquet` is the DuckDB path FR-DATA-27 requires for real versions.
@@ -193,6 +242,16 @@ def profile_frame(
             )
         )
 
+    wanted = (
+        candidate_rating_columns(
+            columns,
+            exposure_column=exposure_column,
+            claim_count_column=claim_count_column,
+            claim_amount_column=claim_amount_column,
+        )
+        if one_way_columns == "auto"
+        else one_way_columns
+    )
     one_ways = tuple(
         one_way(
             frame,
@@ -201,7 +260,7 @@ def profile_frame(
             claim_count_column=claim_count_column,
             claim_amount_column=claim_amount_column,
         )
-        for column in one_way_columns
+        for column in wanted
         if column in frame.columns
     )
 
@@ -297,7 +356,7 @@ def profile_parquet(
     paths: Sequence[str],
     *,
     dataset_version_id: UUID,
-    one_way_columns: Sequence[str] = (),
+    one_way_columns: Sequence[str] | Literal["auto"] = (),
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
@@ -338,6 +397,16 @@ def profile_parquet(
             _profile_column(connection, name, dtype, row_count=row_count)
             for name, dtype in schema.items()
         ]
+        wanted = (
+            candidate_rating_columns(
+                columns,
+                exposure_column=exposure_column,
+                claim_count_column=claim_count_column,
+                claim_amount_column=claim_amount_column,
+            )
+            if one_way_columns == "auto"
+            else one_way_columns
+        )
         one_ways = tuple(
             _one_way_sql(
                 connection,
@@ -348,7 +417,7 @@ def profile_parquet(
                     claim_amount_column if claim_amount_column in schema else None
                 ),
             )
-            for column in one_way_columns
+            for column in wanted
             if column in schema
         )
     finally:

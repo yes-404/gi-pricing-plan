@@ -200,6 +200,27 @@ parameter.
 against the pre-fix layout can silently miss a line that has since moved onto its own.
 Re-read the file, or run the type-check afterwards — `vue-tsc` caught the one this missed.
 
+## ECharts belongs in its own chunk
+
+Bundled into the view that imports it, ECharts made `ProfileView` **610 kB**. In a
+`manualChunks` entry it is 7.7 kB of view and a 663 kB vendor chunk that `02`'s diagnostics
+and `05`'s dashboards will share — fetched once, cached, and only when a chart is opened,
+because the routes are lazy.
+
+`manualChunks` must be the **function** form: this Rollup types it as
+`ManualChunksFunction` and rejects the record shape outright.
+
+`chunkSizeWarningLimit` sits just above the ECharts chunk so that chunk stops warning while
+anything new crossing the line still does. A second heavy dependency deserves its own
+`manualChunks` entry, not another raise — a threshold nudged up per offender is one nobody
+reads.
+
+## Mock the chart, not the canvas
+
+`happy-dom` has no real canvas, so a view test that renders ECharts tests the DOM
+implementation rather than the view. Stub the chart component and assert the data reaching
+it; test the chart's own option-building separately if it earns it.
+
 ## Setting it up (W6a, first time)
 
 - `pnpm`, not npm or yarn (§3). `frontend/` is **not** a uv workspace member — the root
@@ -232,3 +253,10 @@ why: `RuleResult.acknowledgement` was in the contract and always null, because
 acknowledgements are rows written after the report is stored. `GET /validation-reports/{id}`
 now merges them at the read edge while `load_report` keeps returning the stored artifact
 byte for byte, which NFR-DATA-5 depends on.
+
+2026-08-15 — W6a slice 4, the profile view. The live check found the one-way columns were
+chosen from a hard-coded list of four English names, which matched exactly one of
+freMTPL2's five rating factors: twelve of thirteen columns had no one-way at all. They are
+selected from the semantic types the profiler infers now (FR-DATA-26's "candidate rating
+column"), and the same dataset yields `area`, `veh_power`, `veh_brand`, `veh_gas`,
+`region`.

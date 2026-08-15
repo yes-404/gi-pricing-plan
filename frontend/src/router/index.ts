@@ -18,6 +18,12 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: "/data/:slug/v/:version/profile",
+    name: "profile",
+    component: () => import("@/views/ProfileView.vue"),
+    props: true,
+  },
+  {
     path: "/data/:slug/v/:version/validation",
     name: "validation-report",
     component: () => import("@/views/ValidationReportView.vue"),
