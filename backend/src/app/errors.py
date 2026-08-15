@@ -24,6 +24,7 @@ from model_schema import FieldError, ProblemDetail
 __all__ = [
     "DATA_ERROR_CODES",
     "GOVERNANCE_ERROR_CODES",
+    "MODELLING_ERROR_CODES",
     "PLATFORM_ERROR_CODES",
     "PlatformError",
     "install_error_handlers",
@@ -79,6 +80,23 @@ DATA_ERROR_CODES: Final[frozenset[str]] = frozenset(
     }
 )
 
+#: Error codes owned by `02 — Modelling` (§5.1).
+#:
+#: **Only the ones something can raise.** `02` §5.1 declares twenty-two; registering all of
+#: them would repeat the mistake `01` made with `RULE_TIMEOUT` and `SOURCE_UNREACHABLE` —
+#: codes in the catalogue, raised nowhere, indistinguishable from codes that work. The rest
+#: arrive with the slices that raise them.
+MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {
+        "FACTOR_PROHIBITED",
+        "FACTOR_RESOLUTION_FAILED",
+        "GLM_DID_NOT_CONVERGE",
+        "GLM_RANK_DEFICIENT",
+        "OFFSET_REQUIRED_FOR_FREQUENCY",
+        "MODEL_IMMUTABLE",
+    }
+)
+
 #: Error codes owned by `06 — Governance` (§5.1).
 GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {
@@ -104,7 +122,11 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
 )
 
 _KNOWN_CODES: Final[frozenset[str]] = (
-    PLATFORM_ERROR_CODES | GOVERNANCE_ERROR_CODES | DATA_ERROR_CODES | _GENERIC_ERROR_CODES
+    PLATFORM_ERROR_CODES
+    | GOVERNANCE_ERROR_CODES
+    | DATA_ERROR_CODES
+    | MODELLING_ERROR_CODES
+    | _GENERIC_ERROR_CODES
 )
 
 

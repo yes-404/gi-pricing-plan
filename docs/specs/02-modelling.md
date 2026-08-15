@@ -582,7 +582,7 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/groupings` | Persist a Grouping |
 | `POST` | `/api/v1/model-specs/validate` | Validate a spec without fitting: factors resolve, offsets sane, objective applicable (FR-MODEL-44) |
 | `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-MODEL-66) |
-| `GET` | `/api/v1/models/{slug}@{version}` | Model artifact |
+| `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
 | `GET` | `/api/v1/models/{id}/diagnostics` | Diagnostics artifact |
 | `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-MODEL-33) |
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-MODEL-57) |
@@ -597,6 +597,21 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/custom-metrics` | Same lifecycle for eval metrics (FR-MODEL-45) |
 | `POST` | `/api/v1/peril-structures` | Create/version a Peril Structure (FR-MODEL-58) |
 | `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-MODEL-60) |
+
+> **Amended 2026-08-15 (W5, the GLM spine).** Two corrections, made by building it:
+>
+> * `GET /models/{slug}@{version}` becomes `GET /models/{slug}?version=`. An `@` in a path
+>   segment is legal but must be percent-encoded by every client, and `model-family@7` then
+>   arrives as `model-family%407` in logs, dashboards and support conversations. The
+>   version is an optional query parameter, defaulting to the latest.
+> * `POST /models` answers **202 with a Job** for a new fit and **200 with the Model** when
+>   the specification has already been fitted (FR-MODEL-66). The table said 202; the second
+>   case is not "work has started" and should not claim to be.
+>
+> What is built of this table as at 2026-08-15: `POST`/`GET /factors`, `POST /models`,
+> `GET /models/{slug}`. The rest — bandings, groupings, spec validation, diagnostics,
+> transparency, backtests, comparison, prediction, custom objectives, metrics and peril
+> structures — is declared and unbuilt, and `scope-audit.py MODEL --endpoints` says so.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,

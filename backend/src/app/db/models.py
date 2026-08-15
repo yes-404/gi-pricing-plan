@@ -1158,3 +1158,74 @@ class DatasetSplitRow(Base):
     __table_args__ = (
         UniqueConstraint("parent_version_id", "name", name="uq_dataset_splits_parent_name"),
     )
+
+
+class FactorRow(Base):
+    """A Factor definition, versioned independently of any Model (`02` FR-MODEL-1/7).
+
+    Keyed to a **Dataset**, not a version: FR-MODEL-2 makes resolution against a specific
+    version a fit-time act, so a factor outlives the version it was first used on.
+    """
+
+    __tablename__ = "factors"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", "version", name="uq_factors_slug_version"),
+        CheckConstraint("version >= 1", name="factor_version_starts_at_one"),
+        Index("ix_factors_dataset", "workspace_id", "dataset_id"),
+    )
+
+
+class ModelRow(Base):
+    """A fitted Model (`02` §4.8), immutable once fitted (R2).
+
+    `spec_hash` is unique per workspace: FR-MODEL-66 returns the existing model rather than
+    fitting the same specification twice, which is what makes a fit idempotent without an
+    idempotency key. `parent_model_id` carries the refit lineage — there is no operation
+    that edits a coefficient, so a change is always a new row.
+    """
+
+    __tablename__ = "models"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    model_family_slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+
+    dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    spec: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    spec_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    fit_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    parent_model_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    change_reason: Mapped[str | None] = mapped_column(Text)
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "model_family_slug", "version", name="uq_models_family_version"
+        ),
+        UniqueConstraint("workspace_id", "spec_hash", name="uq_models_spec_hash"),
+        CheckConstraint("version >= 1", name="model_version_starts_at_one"),
+        # `02` §4.8: a model at `fitted` or beyond carries its numbers. The type refuses it
+        # too; this is the layer that survives a direct `UPDATE`.
+        CheckConstraint(
+            "status IN ('draft', 'archived') OR fit_result IS NOT NULL",
+            name="fitted_model_has_a_fit_result",
+        ),
+        Index("ix_models_dataset_version", "workspace_id", "dataset_version_id"),
+    )

@@ -24,6 +24,7 @@ from app.api import (
     health,
     jobs,
     me,
+    models,
     reference_tables,
     service_accounts,
     validation,
@@ -94,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # `01` — Data. Order matters only for readability; FastAPI matches on the full path.
     app.include_router(blobs.router, prefix=API_PREFIX)
     app.include_router(demo.router, prefix=API_PREFIX)
+    app.include_router(models.router, prefix=API_PREFIX)
     app.include_router(datasets.router, prefix=API_PREFIX)
     app.include_router(dataset_versions.router, prefix=API_PREFIX)
     app.include_router(validation.router, prefix=API_PREFIX)

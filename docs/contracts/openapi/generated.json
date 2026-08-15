@@ -361,6 +361,70 @@
         "title": "ChainVerification",
         "type": "object"
       },
+      "Coefficient": {
+        "additionalProperties": false,
+        "description": "One fitted term, with the uncertainty `02` R5 requires of every estimate.",
+        "properties": {
+          "ci_95": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Ci 95",
+            "type": "array"
+          },
+          "estimate": {
+            "title": "Estimate",
+            "type": "number"
+          },
+          "p_value": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "P Value",
+            "type": "number"
+          },
+          "relativity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relativity"
+          },
+          "std_error": {
+            "minimum": 0.0,
+            "title": "Std Error",
+            "type": "number"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "z": {
+            "title": "Z",
+            "type": "number"
+          }
+        },
+        "required": [
+          "term",
+          "estimate",
+          "std_error",
+          "z",
+          "p_value",
+          "ci_95"
+        ],
+        "title": "Coefficient",
+        "type": "object"
+      },
       "ColumnComparison": {
         "additionalProperties": false,
         "description": "How one column moved between two versions (FR-DATA-28).",
@@ -1470,6 +1534,196 @@
         "title": "DryRunRequest",
         "type": "object"
       },
+      "Factor": {
+        "additionalProperties": false,
+        "description": "A named, versioned transformation over dataset columns (FR-MODEL-1, FR-MODEL-7).\n\nDefined against a **Dataset**, resolved against a specific **version** at fit time\n(FR-MODEL-2) — so a factor outlives the version it was first used on, and a column that\nchanged dtype fails loudly at resolution rather than quietly changing the model.",
+        "properties": {
+          "base_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Level"
+          },
+          "base_level_method": {
+            "default": "largest_exposure",
+            "title": "Base Level Method",
+            "type": "string"
+          },
+          "dataset_id": {
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/FactorIntent",
+            "default": "risk"
+          },
+          "monotonic_direction": {
+            "$ref": "#/components/schemas/MonotonicDirection",
+            "default": "none"
+          },
+          "monotonic_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonic Rationale"
+          },
+          "prohibited": {
+            "default": false,
+            "title": "Prohibited",
+            "type": "boolean"
+          },
+          "prohibited_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prohibited Reason"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "source_columns": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Source Columns",
+            "type": "array"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FactorType"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "dataset_id",
+          "version",
+          "type",
+          "source_columns"
+        ],
+        "title": "Factor",
+        "type": "object"
+      },
+      "FactorCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": {
+            "format": "uuid",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/FactorIntent",
+            "default": "risk"
+          },
+          "monotonic_direction": {
+            "$ref": "#/components/schemas/MonotonicDirection",
+            "default": "none"
+          },
+          "monotonic_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonic Rationale"
+          },
+          "prohibited": {
+            "default": false,
+            "title": "Prohibited",
+            "type": "boolean"
+          },
+          "prohibited_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prohibited Reason"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "source_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Columns",
+            "type": "array"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FactorType",
+            "default": "identity"
+          }
+        },
+        "required": [
+          "slug",
+          "dataset_id",
+          "source_columns"
+        ],
+        "title": "FactorCreate",
+        "type": "object"
+      },
+      "FactorIntent": {
+        "description": "What a factor is *for* (FR-MODEL-3).\n\n`control` is the load-bearing one: a variable present to absorb variance but never to\nbe rated on — year of account is the standard example. `03` refuses a `control` factor\nreaching a rate table, which only works because the intent is declared here rather than\ninferred later from a name.",
+        "enum": [
+          "risk",
+          "control",
+          "offset",
+          "diagnostic"
+        ],
+        "title": "FactorIntent",
+        "type": "string"
+      },
+      "FactorType": {
+        "description": "`02` FR-MODEL-1's closed set. No other types exist without a spec change.",
+        "enum": [
+          "identity",
+          "banding",
+          "grouping",
+          "interaction",
+          "spline",
+          "polynomial",
+          "offset",
+          "expression"
+        ],
+        "title": "FactorType",
+        "type": "string"
+      },
       "FieldError": {
         "additionalProperties": false,
         "description": "One field-level failure inside a problem response.\n\nPresent so that a rejected submission can be rendered against the form that produced\nit — FR-PLAT-11 requires deterministic failures to name the offending field rather\nthan only the operation.",
@@ -1497,6 +1751,218 @@
           "message"
         ],
         "title": "FieldError",
+        "type": "object"
+      },
+      "GlmFitResult": {
+        "additionalProperties": false,
+        "description": "What a fit returns and the Model stores (ADR-0003).\n\nData, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this\nmodule owns, and a Model must be re-scorable by a process that never ran `glum`.",
+        "properties": {
+          "coefficients": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Coefficient"
+            },
+            "title": "Coefficients",
+            "type": "array"
+          },
+          "converged": {
+            "title": "Converged",
+            "type": "boolean"
+          },
+          "deviance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviance"
+          },
+          "dispersion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispersion"
+          },
+          "fit_seconds": {
+            "minimum": 0.0,
+            "title": "Fit Seconds",
+            "type": "number"
+          },
+          "iterations": {
+            "minimum": 0.0,
+            "title": "Iterations",
+            "type": "integer"
+          },
+          "library_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Library Versions",
+            "type": "object"
+          },
+          "model_type": {
+            "const": "glm",
+            "default": "glm",
+            "title": "Model Type",
+            "type": "string"
+          },
+          "relativities": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/RelativityLevel"
+              },
+              "type": "array"
+            },
+            "title": "Relativities",
+            "type": "object"
+          },
+          "rows": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "converged",
+          "iterations",
+          "fit_seconds"
+        ],
+        "title": "GlmFitResult",
+        "type": "object"
+      },
+      "GlmSpec": {
+        "additionalProperties": false,
+        "description": "`02` §4.4's common block plus the `glm` arm.\n\nThe spec is what `spec_hash` is taken over, so every field here changes the identity of\nthe model. That is why `loss_treatment` belongs in the spec rather than beside it, and\nwhy two models differing only in a cap must not collide (FR-MODEL-66).",
+        "properties": {
+          "alpha": {
+            "default": 0.0,
+            "minimum": 0.0,
+            "title": "Alpha",
+            "type": "number"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "factors": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "family": {
+            "default": "poisson",
+            "enum": [
+              "poisson",
+              "negative_binomial",
+              "gamma",
+              "inverse_gaussian",
+              "tweedie",
+              "binomial",
+              "gaussian"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "family_params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Family Params",
+            "type": "object"
+          },
+          "l1_ratio": {
+            "default": 0.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "L1 Ratio",
+            "type": "number"
+          },
+          "link": {
+            "default": "log",
+            "enum": [
+              "log",
+              "logit",
+              "identity",
+              "inverse"
+            ],
+            "title": "Link",
+            "type": "string"
+          },
+          "max_iter": {
+            "default": 200,
+            "minimum": 1.0,
+            "title": "Max Iter",
+            "type": "integer"
+          },
+          "model_family_slug": {
+            "title": "Model Family Slug",
+            "type": "string"
+          },
+          "model_type": {
+            "const": "glm",
+            "default": "glm",
+            "title": "Model Type",
+            "type": "string"
+          },
+          "offset": {
+            "$ref": "#/components/schemas/OffsetSpec",
+            "default": {
+              "kind": "none"
+            }
+          },
+          "peril": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peril"
+          },
+          "response_column": {
+            "title": "Response Column",
+            "type": "string"
+          },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "tolerance": {
+            "default": 1e-08,
+            "exclusiveMinimum": 0.0,
+            "title": "Tolerance",
+            "type": "number"
+          },
+          "weight": {
+            "$ref": "#/components/schemas/WeightSpec",
+            "default": {
+              "kind": "none"
+            }
+          }
+        },
+        "required": [
+          "model_family_slug",
+          "dataset_version_id",
+          "response_column"
+        ],
+        "title": "GlmSpec",
         "type": "object"
       },
       "Job": {
@@ -1935,6 +2401,179 @@
           "workspace_id"
         ],
         "title": "Me",
+        "type": "object"
+      },
+      "Model": {
+        "additionalProperties": false,
+        "description": "A fitted model for one peril and response (`02` §4.8).\n\nImmutable once fitted (R2). Refitting produces a **new version** with\n`parent_model_id` set; there is no operation that edits a coefficient, which is what\nmakes a Rating Version's reference to a model version mean something.",
+        "properties": {
+          "change_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Reason"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "fit_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlmFitResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "flags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model_family_slug": {
+            "title": "Model Family Slug",
+            "type": "string"
+          },
+          "parent_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Model Id"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/GlmSpec"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ModelStatus",
+            "default": "draft"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "model_family_slug",
+          "version",
+          "spec",
+          "spec_hash",
+          "dataset_version_id"
+        ],
+        "title": "Model",
+        "type": "object"
+      },
+      "ModelCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "change_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Reason"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/GlmSpec"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "title": "ModelCreate",
+        "type": "object"
+      },
+      "ModelStatus": {
+        "enum": [
+          "draft",
+          "fitted",
+          "review",
+          "approved",
+          "superseded",
+          "archived"
+        ],
+        "title": "ModelStatus",
+        "type": "string"
+      },
+      "MonotonicDirection": {
+        "enum": [
+          "increasing",
+          "decreasing",
+          "none"
+        ],
+        "title": "MonotonicDirection",
+        "type": "string"
+      },
+      "OffsetSpec": {
+        "additionalProperties": false,
+        "description": "`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.",
+        "properties": {
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "kind": {
+            "default": "none",
+            "enum": [
+              "none",
+              "log_column",
+              "column",
+              "model"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Ref"
+          }
+        },
+        "title": "OffsetSpec",
         "type": "object"
       },
       "OneWayRow": {
@@ -2903,6 +3542,42 @@
           "version"
         ],
         "title": "ReferenceTableVersion",
+        "type": "object"
+      },
+      "RelativityLevel": {
+        "additionalProperties": false,
+        "description": "One level of a categorical factor, as an actuary reads it (FR-MODEL-21).",
+        "properties": {
+          "exposure": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure"
+          },
+          "is_base": {
+            "default": false,
+            "title": "Is Base",
+            "type": "boolean"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "relativity": {
+            "title": "Relativity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "level",
+          "relativity"
+        ],
+        "title": "RelativityLevel",
         "type": "object"
       },
       "ReportSummary": {
@@ -4217,6 +4892,34 @@
           "exposure_years"
         ],
         "title": "VersionTotals",
+        "type": "object"
+      },
+      "WeightSpec": {
+        "additionalProperties": false,
+        "description": "Severity weights by claim count, burning cost by exposure (FR-MODEL-19).",
+        "properties": {
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "kind": {
+            "default": "none",
+            "enum": [
+              "none",
+              "column"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "WeightSpec",
         "type": "object"
       },
       "Withdraw": {
@@ -7651,6 +8354,170 @@
         ]
       }
     },
+    "/api/v1/factors": {
+      "get": {
+        "operationId": "list_factors_api_v1_factors_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Factor"
+                  },
+                  "title": "Response List Factors Api V1 Factors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List factors",
+        "tags": [
+          "modelling"
+        ]
+      },
+      "post": {
+        "description": "FR-MODEL-7: an existing slug allocates the next version rather than editing.\n\nA Model Spec pins a factor *version*, so editing one in place would silently change\nwhat every model fitted on it was fitted on.",
+        "operationId": "create_factor_api_v1_factors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactorCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Factor"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create or version a Factor",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/jobs": {
       "get": {
         "description": "Filtered, cursor-paginated (`00` §5.2).",
@@ -8291,6 +9158,230 @@
         "summary": "Current principal, roles and effective permissions",
         "tags": [
           "governance"
+        ]
+      }
+    },
+    "/api/v1/models": {
+      "post": {
+        "description": "**202** with a Job for a new fit; **200** with the model when it already exists.\n\n`02` R1 is answered here rather than in the worker: a dataset version that is not\n`validated` is refused with a `409` before any Job exists, because learning it from a\nfailed job twenty seconds later is a worse answer to the same question.",
+        "operationId": "fit_model_api_v1_models_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Job"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Model"
+                    }
+                  ],
+                  "title": "Response Fit Model Api V1 Models Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Fit a model",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/{slug}": {
+      "get": {
+        "operationId": "get_model_api_v1_models__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Model"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Model artifact",
+        "tags": [
+          "modelling"
         ]
       }
     },
