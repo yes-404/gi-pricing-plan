@@ -32,6 +32,7 @@ from model_schema.profiles import OneWayRow
 __all__ = [
     "AboveRangePolicy",
     "Banding",
+    "BandingEvaluation",
     "BandingMethod",
     "BandingMinimums",
     "BandingProposal",
@@ -44,6 +45,7 @@ __all__ = [
     "GlmFitResult",
     "GlmSpec",
     "Grouping",
+    "GroupingEvaluation",
     "GroupingEvidence",
     "GroupingMethod",
     "GroupingProposal",
@@ -520,6 +522,35 @@ class GroupingProposal(BaseModel):
     claim_amount_column: str = "claim_amount_minor"
     unseen_level_behaviour: UnseenLevelBehaviour
     default_target_level: str | None = None
+
+
+class BandingEvaluation(BaseModel):
+    """What `POST /bandings/evaluate` asks for (FR-MODEL-75).
+
+    A whole `Banding` rather than a list of boundaries, because the answer depends on all
+    of it — `closed`, `null_level` and the two range policies each decide where rows land,
+    and evaluating boundaries alone would report statistics for a banding nobody could save.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_version_id: UUID
+    banding: Banding
+    exposure_column: str = "exposure_years"
+    claim_count_column: str = "claim_count"
+    claim_amount_column: str = "claim_amount_minor"
+
+
+class GroupingEvaluation(BaseModel):
+    """What `POST /groupings/evaluate` asks for (FR-MODEL-75)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_version_id: UUID
+    grouping: Grouping
+    exposure_column: str = "exposure_years"
+    claim_count_column: str = "claim_count"
+    claim_amount_column: str = "claim_amount_minor"
 
 
 class OffsetSpec(BaseModel):

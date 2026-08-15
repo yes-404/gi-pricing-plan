@@ -18,6 +18,18 @@ export function getVersion(slug: string, version: number): Promise<DatasetVersio
 }
 
 /**
+ * The same version by its own id — the resource `01` §5.1's nine `/dataset-versions/{id}/…`
+ * routes hang off, and which the table did not declare until 2026-08-15.
+ *
+ * A view routed on a version id and not a dataset slug has no other way to reach it. The
+ * factor workbench is exactly that: `/factors/:datasetVersionId`, needing the `dataset_id`
+ * a Banding is keyed to.
+ */
+export function getVersionById(versionId: string): Promise<DatasetVersion> {
+  return request<DatasetVersion>(`/dataset-versions/${versionId}`);
+}
+
+/**
  * FR-DATA-7's quarantine. A **404 is an ordinary answer**, not a failure: a derived
  * version has no ingestion run of its own, and the caller should say so rather than show
  * an error.

@@ -93,6 +93,34 @@ describe("the version detail view", () => {
     expect(await screen.findByText(/Every row was accepted/)).toBeInTheDocument();
   });
 
+  it("offers the factor workbench only once the version is validated", async () => {
+    // `02` R1: a banding is proposed against a `validated` version and nothing else, so a
+    // link on a `validating` one would send the actuary to a 409 the screen cannot explain.
+    stub();
+    render(VersionDetailView, { props, ...mounted });
+    expect(await screen.findByText(/Every row was accepted/)).toBeInTheDocument();
+    expect(screen.queryByText("Factor workbench")).not.toBeInTheDocument();
+  });
+
+  it("links to the workbench by version id, which is what its route takes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        const body = url.includes("/rejected")
+          ? REJECTED
+          : { ...VERSION, status: "validated" };
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    render(VersionDetailView, { props, ...mounted });
+    const link = await screen.findByText("Factor workbench");
+    expect(link.closest("a")!.getAttribute("to")).toBe(`/factors/${VERSION.id}`);
+  });
+
   it("treats a version with no ingestion run as an answer, not an error", async () => {
     // A derived version has no run of its own. FR-DATA-7's 404 here is ordinary.
     stub(

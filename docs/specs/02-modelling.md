@@ -99,6 +99,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-10** | Every Banding stores its method, parameters, the Dataset Version it was derived on, and a per-band summary (exposure, claim count, observed frequency/severity/burning cost with confidence intervals) as of derivation — the evidence a reviewer needs without re-running anything. |
 | **FR-MODEL-11** | A Banding validates against the Dataset Version at fit time: every band must meet configurable minimum exposure and minimum claim count, or fitting warns (default) or fails (if configured). Empty bands always fail. |
 | **FR-MODEL-12** | Bandings are versioned artifacts with lineage; editing a banding creates a new version and does not alter any Model already fitted with the old one. |
+| **FR-MODEL-83** | A Banding or Grouping can be **evaluated against a Dataset Version without being persisted**: the platform recomputes FR-MODEL-10's per-band statistics, or FR-MODEL-15's deviance/df evidence, for boundaries or a mapping the actuary has edited by hand. Added 2026-08-15 (W5), and numbered 83 rather than 75 because OQ-MODEL-1..7's decisions took 75..82 while this was in review — ids are permanent, so the later claimant moves (`CLAUDE.md` §5). §5.3's interaction requirement — that an edit's consequence is visible *before* it is saved — is otherwise unmeetable, because `/propose` derives a mapping from a *method* and has no way to accept one. Without it "the proposal is always editable" (FR-MODEL-9, FR-MODEL-14) means editable but unmeasurable, which is the state that makes an actuary fit a model to find out whether a grouping was sensible. |
 
 ### 3.3 Groupings
 
@@ -659,9 +660,11 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/factors` | Create/version a Factor (FR-MODEL-1) |
 | `GET` | `/api/v1/factors?dataset={slug}` | List factors with intent, monotonic direction, prohibited flag |
 | `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-MODEL-9) |
+| `POST` | `/api/v1/bandings/evaluate` | Recompute band statistics for **edited** boundaries, persisting nothing (FR-MODEL-83) |
 | `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) |
 | `GET` | `/api/v1/bandings?dataset_id=` | List bandings, latest version first |
 | `POST` | `/api/v1/groupings/propose` | Propose a grouping by method (FR-MODEL-14) |
+| `POST` | `/api/v1/groupings/evaluate` | Recompute the deviance/df evidence for an **edited** mapping (FR-MODEL-83) |
 | `POST` | `/api/v1/groupings` | **201** Persist a Grouping |
 | `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
 | `POST` | `/api/v1/model-specs/validate` | Validate a spec without fitting: factors resolve, offsets sane, objective applicable (FR-MODEL-44) |
@@ -848,6 +851,30 @@ def make_xgb_objective(fns: ObjectiveFns, base_margin: np.ndarray | None):
 edit before it is saved — band stats and CI widths update live, and merging levels shows
 the deviance/df trade-off (FR-MODEL-15). An actuary should never have to fit a model to
 find out whether a grouping was sensible.
+
+> **Built 2026-08-15 (W5).** The factor workbench is routed at `/factors/:datasetVersionId`
+> and reachable from a `validated` version's detail view — only a validated one, because
+> `02` R1 means a link on a draft leads to a `409` the screen cannot explain.
+>
+> The interaction requirement is met through **FR-MODEL-75's `/evaluate` routes**, which
+> this view is the reason for: every edit is recomputed by the platform, on the same code
+> path a fit would use, and nothing is approximated in the browser. Building it is what
+> found that the requirement was unmeetable — `/propose` derives from a *method* and cannot
+> accept an edited one.
+>
+> **Two departures from the Contents column, both stated rather than quietly dropped:**
+>
+> * **Boundaries are numeric inputs, not drag handles.** The requirement they serve is that
+>   the consequence is visible before saving, and an input meets it — while also expressing
+>   a cut point the mouse cannot land on. Drag is polish, and it is not built.
+> * **No merge-tolerance slider on the grouping editor.** Tolerance is a parameter of
+>   `credibility_weighted` *proposal*, and re-proposing on every drag would re-derive the
+>   mapping and discard the actuary's edits. The editor moves levels between targets
+>   instead, which is the operation §5.3's "relativity-ordered levels" is really about.
+>
+> Also not built: the column list's inline profile one-ways (the `/profile` view has them),
+> and the monotonic-direction and intent controls — those belong with creating the Factor
+> that *pins* a banding, which is the next slice.
 
 ---
 

@@ -251,6 +251,179 @@ async def test_a_grouping_proposal_carries_its_change_in_fit(
     assert proposed.evidence.chi2_p_value < 0.01
 
 
+@pytest.mark.req("FR-MODEL-83")
+async def test_evaluating_edited_boundaries_moves_the_band_statistics(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-83: what an edited boundary *did*, before the banding is saved.
+
+    The assertion that matters is that the numbers **change with the cut**. A stub that
+    echoed the request, or one that recomputed against the wrong column, would return
+    plausible statistics for both bandings — so the test compares two cuts of the same
+    column and requires them to disagree, and requires each to reconcile with its own rows.
+    """
+    from model_schema import BandingEvaluation
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+
+    async def _stats(cut: float) -> dict[str, tuple[float, int]]:
+        banding = Banding(
+            id=uuid4(), slug="amt", dataset_id=dataset_id, version=1,
+            column="claim_amount_minor", method=BandingMethod.MANUAL,
+            boundaries=(0.0, cut, 300_000.0), labels=("low", "high"),
+        )
+        async with database.session() as session:
+            evaluated = await transform_service.evaluate_banding_for_version(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                blob_store=blob_store,
+                evaluation=BandingEvaluation(
+                    dataset_version_id=version_id, banding=banding
+                ),
+            )
+        assert evaluated.derived_on_dataset_version_id == version_id
+        return {
+            row.level: (float(row.exposure_years), row.claim_count)
+            for row in evaluated.band_stats
+        }
+
+    # `BOOK` puts 100 000 minor units on three quarters of the rows and 200 000 on the rest.
+    # A cut at 150 000 splits them; a cut at 250 000 puts everything in `low`.
+    split = await _stats(150_000.0)
+    lumped = await _stats(250_000.0)
+
+    assert set(split) == {"low", "high"}
+    assert split["low"][1] > 0
+    assert split["high"][1] > 0
+    assert set(lumped) == {"low"}, "moving the cut past every value empties the top band"
+    assert split != lumped, "the statistics must follow the boundary, not the request"
+
+
+@pytest.mark.req("FR-MODEL-83")
+async def test_evaluating_an_edited_mapping_moves_the_evidence(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """`02` §5.3: merging levels shows the deviance/df trade-off before it is saved.
+
+    Urban carries twice the frequency of rural in `BOOK`, so collapsing them costs real
+    deviance and the p-value has to say so — while mapping each to its own target costs
+    nothing and must not.
+    """
+    from model_schema import Grouping, GroupingEvaluation
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+
+    async def _evidence(mapping: dict[str, str]):
+        grouping = Grouping(
+            id=uuid4(), slug="area", dataset_id=dataset_id, version=1, column="area",
+            method=GroupingMethod.MANUAL, mapping=mapping,
+            unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+        )
+        async with database.session() as session:
+            evaluated = await transform_service.evaluate_grouping_for_version(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                blob_store=blob_store,
+                evaluation=GroupingEvaluation(
+                    dataset_version_id=version_id, grouping=grouping
+                ),
+            )
+        assert evaluated.evidence is not None
+        return evaluated.evidence
+
+    collapsed = await _evidence({"urban": "ALL", "rural": "ALL"})
+    kept = await _evidence({"urban": "U", "rural": "R"})
+
+    assert collapsed.target_level_count == 1
+    assert collapsed.df_saved == 1
+    assert collapsed.chi2_p_value is not None
+    assert collapsed.chi2_p_value < 0.01, "merging two genuinely different rates is not free"
+
+    assert kept.target_level_count == 2
+    assert kept.df_saved == 0
+    assert kept.chi2_p_value is None, "no degrees of freedom saved, so no test to report"
+
+
+@pytest.mark.req("FR-MODEL-83")
+async def test_evaluating_needs_a_validated_version_too(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """R1 does not stop applying because the caller is only previewing."""
+    from backend.tests.test_data_jobs import _ingest
+
+    from model_schema import BandingEvaluation
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    draft = await _ingest(database, blob_store, workspace_id, actor, dataset_id, BOOK)
+
+    with pytest.raises(PlatformError) as refused:
+        async with database.session() as session:
+            await transform_service.evaluate_banding_for_version(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                blob_store=blob_store,
+                evaluation=BandingEvaluation(
+                    dataset_version_id=draft,
+                    banding=Banding(
+                        id=uuid4(), slug="amt", dataset_id=dataset_id, version=1,
+                        column="claim_amount_minor", method=BandingMethod.MANUAL,
+                        boundaries=(0.0, 150_000.0, 300_000.0), labels=("low", "high"),
+                    ),
+                ),
+            )
+    assert refused.value.code == "DATASET_NOT_VALIDATED"
+
+
+@pytest.mark.req("FR-MODEL-83")
+async def test_evaluating_persists_nothing(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """A preview that quietly saved would make every dragged boundary a stored version."""
+    from model_schema import BandingEvaluation
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+
+    async with database.session() as session:
+        await transform_service.evaluate_banding_for_version(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            blob_store=blob_store,
+            evaluation=BandingEvaluation(
+                dataset_version_id=version_id,
+                banding=Banding(
+                    id=uuid4(), slug="amt", dataset_id=dataset_id, version=1,
+                    column="claim_amount_minor", method=BandingMethod.MANUAL,
+                    boundaries=(0.0, 150_000.0, 300_000.0), labels=("low", "high"),
+                ),
+            ),
+        )
+
+    async with database.session() as session:
+        stored = (
+            await session.execute(
+                select(BandingRow).where(BandingRow.workspace_id == workspace_id)
+            )
+        ).scalars().all()
+    assert stored == []
+
+
 @pytest.mark.req("FR-MODEL-8")
 async def test_a_model_fits_through_a_stored_banding(
     database: Database, blob_store: BlobStore, workspace_id

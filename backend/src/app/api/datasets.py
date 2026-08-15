@@ -530,6 +530,37 @@ async def get_version(
         return _version_schema(row)
 
 
+@router.get(
+    "/dataset-versions/{version_id}",
+    summary="Dataset version detail by id",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_version_by_id(
+    version_id: UUID, caller: ReadDatasets, database: DatabaseDep
+) -> DatasetVersion:
+    """The resource `01` §5.1's nine `/dataset-versions/{id}/…` routes hang off.
+
+    Every one of them — profile, one-ways, compare, lineage, rejected, validate, transition,
+    derive, validation-reports — is a child of a version that could not itself be fetched by
+    id; the only detail route was `/datasets/{slug}/versions/{version}`. Anything holding a
+    version id and not its dataset slug therefore could not resolve it, which is exactly the
+    position `02` §5.3's factor workbench is in: its route is `/factors/:datasetVersionId`
+    and it needs the `dataset_id` a Banding is keyed to.
+
+    Added 2026-08-15 (W5), by building the view that needed it.
+    """
+    async with database.session() as session:
+        row = await session.get(DatasetVersionRow, version_id)
+        if row is None or row.workspace_id != caller.workspace_id:
+            raise PlatformError(
+                "NOT_FOUND",
+                "Dataset version not found",
+                404,
+                f"No dataset version {version_id}.",
+            )
+        return _version_schema(row)
+
+
 def _version_schema(row: DatasetVersionRow) -> DatasetVersion:
     return DatasetVersion.model_validate(
         {

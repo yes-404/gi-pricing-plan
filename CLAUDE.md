@@ -92,8 +92,8 @@ the maths.
 │                               the demo guide, factors/bandings/groupings/models
 │                                                     [W2✔ W3✔ W4✔ W7b✔ W5]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
-├── frontend/                 ◐ Vue 3 SPA — `01` §5.3's 7 views routed, plus `/demo`;
-│                               6 of their 27 Contents items unbuilt  [W6a✔ W7b✔ W6b]
+├── frontend/                 ◐ Vue 3 SPA — `01` §5.3's 7 views routed, plus `/demo`
+│                               and `02` §5.3's factor workbench     [W6a✔ W7b✔ W5 W6b]
 ├── examples/                 ◐ freMTPL2 seed — data half done  [W7a✔] rest [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
