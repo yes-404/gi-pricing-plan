@@ -19,7 +19,7 @@ from __future__ import annotations
 import hashlib
 import time
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 import polars as pl
@@ -32,7 +32,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, datasets, rbac
 from app.platform.blobs import BlobStore
-from model_schema import BlobRef, DatasetKind, JobSource, Permission, Principal
+from model_schema import BlobRef, DatasetKind, JobSource, Permission, Principal, new_uuid7
 from pricing_core.data.ingest import (
     ColumnNameCollisionError,
     infer_schema,
@@ -208,7 +208,14 @@ async def ingest_upload(
     )
     version.library_versions = library_versions()
 
+    # Allocated here rather than read back off the row. `IngestionRunRow.id` carries a
+    # Python-side `default=new_uuid7`, which SQLAlchemy applies **at flush** — so
+    # `run.id` immediately after `session.add(run)` is `None`, and the version was written
+    # with a null link to its own run. Every ingested version 404'd on
+    # `GET /dataset-versions/{id}/rejected` as a result.
+    run_id = new_uuid7()
     run = IngestionRunRow(
+        id=run_id,
         workspace_id=workspace_id,
         dataset_id=dataset_id,
         dataset_version_id=version.id,
@@ -225,7 +232,8 @@ async def ingest_upload(
         library_versions=library_versions(),
     )
     session.add(run)
-    version.ingestion_run_id = run.id
+    version.ingestion_run_id = run_id
+    version.totals = _totals(partition.clean)
     await session.flush()
 
     await audit.record(
@@ -290,6 +298,33 @@ async def _store_table(
         "arrow_schema": {c: str(t) for c, t in zip(frame.columns, frame.dtypes, strict=True)},
         "source_names": source_names,
     }
+
+
+#: The columns `01` §4.2's `VersionTotals` is computed from, when they are present.
+_TOTAL_COLUMNS: Final = ("exposure_years", "claim_count", "claim_amount_minor")
+
+
+def _totals(frame: pl.DataFrame) -> dict[str, Any] | None:
+    """`01` §4.2's headline numbers, computed once at ingestion.
+
+    Exposure is summed as `Decimal` through strings and stored as a string (FR-OVR-7):
+    summing 678 013 floats and comparing the result to anything is the bug this discipline
+    exists to prevent, and these are the numbers a validation report and a profile are both
+    checked against.
+
+    `None` when the columns are not present — a version whose grain is not policy-exposure
+    has no exposure to total, and a zero would be a claim rather than an absence.
+    """
+    from pricing_core.data.prepare import decimal_sum
+
+    if "exposure_years" not in frame.columns:
+        return None
+
+    totals: dict[str, Any] = {"exposure_years": str(decimal_sum(frame, "exposure_years"))}
+    for column in ("claim_count", "claim_amount_minor"):
+        if column in frame.columns:
+            totals[column] = int(frame.get_column(column).cast(pl.Int64).sum() or 0)
+    return totals
 
 
 def _reject_sample(rejected: pl.DataFrame) -> list[dict[str, Any]]:

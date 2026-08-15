@@ -10,6 +10,7 @@ test, and what these need to prove is what the handlers do.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import UUID
 
 import pytest
@@ -58,10 +59,13 @@ CAST_RECIPE = [
     }
 ]
 
+#: `0.07` rather than a round number on purpose. Summed as binary floats, 300 of them give
+#: 21.000000000000004; summed as `Decimal`, exactly 21.00. A totals test over `1.0` cannot
+#: tell the two apart, and FR-OVR-7 is the difference.
 CLEAN = (
     b"Policy ID,Exposure Years,Claim Count,Claim Amount Minor,Vehicle Group\n"
     + b"".join(
-        f"P{i},1.0,{i % 2},{(i % 2) * 250000},G{i % 5}\n".encode() for i in range(300)
+        f"P{i},0.07,{i % 2},{(i % 2) * 250000},G{i % 5}\n".encode() for i in range(300)
     )
 )
 #: One row with negative exposure — the failure the loop is supposed to catch.
@@ -408,3 +412,59 @@ async def test_an_ingested_version_reads_back_over_http(
     table = body["tables"][0]
     assert table["source_names"], "the source headers did not survive the round trip"
     assert table["row_count"] > 0
+
+
+@pytest.mark.req("FR-DATA-6")
+async def test_a_version_links_to_the_ingestion_run_that_made_it(
+    database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
+) -> None:
+    """FR-DATA-6 keeps the run whether it succeeded or failed — and the version must point
+    at it, or "why is my row count short?" has no answer.
+
+    `IngestionRunRow.id` carries a Python-side `default=new_uuid7`, which SQLAlchemy
+    applies **at flush**. Reading `run.id` straight after `session.add(run)` therefore gave
+    `None`, and every ingested version was written with a null link. Nothing noticed until
+    `GET /dataset-versions/{id}/rejected` 404'd on a version that had demonstrably been
+    ingested.
+    """
+    from app.db.models import IngestionRunRow
+
+    dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, actuary)
+    version_id = await _ingest(
+        database, blob_store, workspace_id, actuary, dataset_id, CLEAN
+    )
+
+    async with database.session() as session:
+        version = await session.get(DatasetVersionRow, version_id)
+        assert version.ingestion_run_id is not None, "the version does not name its run"
+        run = await session.get(IngestionRunRow, version.ingestion_run_id)
+
+    assert run is not None
+    assert run.dataset_version_id == version_id, "the link does not point back"
+    assert run.rows_read == run.rows_written + run.rows_rejected
+
+
+@pytest.mark.req("FR-DATA-40")
+async def test_ingestion_computes_the_version_totals_exactly(
+    database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
+) -> None:
+    """`01` §4.2's headline numbers, computed once and stored with the version.
+
+    Exposure is summed as `Decimal` and stored as a string (FR-OVR-7). The fixture is 300
+    rows at 0.07 years, chosen because binary floats sum them to 21.000000000000004 while
+    `Decimal` gives exactly 21.00 — a totals test over round numbers cannot tell the two
+    apart, and this one is the difference between the discipline holding and being decorative.
+    """
+    dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, actuary)
+    version_id = await _ingest(
+        database, blob_store, workspace_id, actuary, dataset_id, CLEAN
+    )
+
+    async with database.session() as session:
+        version = await session.get(DatasetVersionRow, version_id)
+
+    assert version.totals is not None, "an ingested version has no totals"
+    assert version.totals["exposure_years"] == "21.000000", version.totals
+    assert Decimal(version.totals["exposure_years"]) == Decimal("21")
+    assert version.totals["claim_count"] == 150
+    assert version.totals["claim_amount_minor"] == 150 * 250_000

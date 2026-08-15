@@ -42,6 +42,7 @@ __all__ = [
     "RecipeError",
     "apply_recipe",
     "attach_claims",
+    "decimal_sum",
     "explode_period",
     "pseudonymise",
 ]
@@ -212,7 +213,7 @@ def explode_period(
     if frame.height == 0:
         return frame
 
-    total_before = _decimal_sum(frame, exposure_column)
+    total_before = decimal_sum(frame, exposure_column)
     rows: list[dict[str, Any]] = []
 
     for record in frame.iter_rows(named=True):
@@ -251,7 +252,7 @@ def explode_period(
             )
 
     exploded = pl.DataFrame(rows, schema=frame.schema)
-    total_after = _decimal_sum(exploded, exposure_column)
+    total_after = decimal_sum(exploded, exposure_column)
     if total_before != total_after:
         raise RecipeError(
             f"explode_period changed total exposure from {total_before} to {total_after}. "
@@ -261,7 +262,7 @@ def explode_period(
     return exploded
 
 
-def _decimal_sum(frame: pl.DataFrame, column: str) -> Decimal:
+def decimal_sum(frame: pl.DataFrame, column: str) -> Decimal:
     """Sum in `Decimal` via strings. Summing floats and comparing is the bug being caught."""
     return sum(
         (Decimal(str(v)) for v in frame.get_column(column).to_list() if v is not None),
