@@ -543,3 +543,51 @@ def test_a_repeated_submission_with_one_idempotency_key_starts_one_job(
 
     without = client.post(f"/api/v1/datasets/{slug}/versions", json=body, headers=analyst)
     assert without.json()["id"] != first.json()["id"]
+
+
+@pytest.mark.req("FR-DATA-2")
+def test_the_version_timeline_is_newest_first_and_paginated(
+    client: TestClient, analyst: dict[str, str], database, workspace_id, principal
+) -> None:
+    """`01` §5.3 renders a version timeline, and §5.1 offered no way to fetch one — only
+    `latest_version` and per-version detail, so a client had to issue one request per
+    version and could not show a status without fetching them all.
+
+    Newest first, because a timeline is read from the top: a dataset refreshed monthly for
+    ten years has a hundred and twenty versions.
+    """
+    import asyncio
+
+    from app.platform import datasets as service
+
+    slug = _slug()
+
+    async def seed() -> None:
+        async with database.unit_of_work() as session:
+            dataset = await service.create_dataset(
+                session, workspace_id=workspace_id, actor=principal, slug=slug
+            )
+            for _ in range(4):
+                await service.new_version(
+                    session, workspace_id=workspace_id, actor=principal,
+                    dataset_id=dataset.id,
+                )
+
+    asyncio.get_event_loop().run_until_complete(seed())
+
+    first = client.get(
+        f"/api/v1/datasets/{slug}/versions", params={"limit": 3}, headers=analyst
+    )
+    assert first.status_code == 200, first.text
+    page = first.json()
+    assert [item["version"] for item in page["items"]] == [4, 3, 2]
+    assert page["total_estimate"] == 4
+    assert page["next_cursor"]
+
+    second = client.get(
+        f"/api/v1/datasets/{slug}/versions",
+        params={"limit": 3, "cursor": page["next_cursor"]},
+        headers=analyst,
+    )
+    assert [item["version"] for item in second.json()["items"]] == [1]
+    assert second.json()["next_cursor"] is None

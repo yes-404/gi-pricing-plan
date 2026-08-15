@@ -46,6 +46,7 @@ from app.api.pagination import (
     MAX_LIMIT,
     Page,
     decode_cursor,
+    decode_int_cursor,
     encode_cursor,
 )
 from app.api.responses import problems
@@ -422,6 +423,65 @@ async def _load_version(
             f"Dataset {slug!r} has no version {version}.",
         )
     return row
+
+
+@router.get(
+    "/datasets/{slug}/versions",
+    summary="Version timeline",
+    responses=problems(400, 401, 403, 404, 422),
+)
+async def list_versions(
+    slug: str,
+    caller: ReadDatasets,
+    database: DatabaseDep,
+    cursor: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+) -> Page[DatasetVersion]:
+    """The timeline `01` §5.3's dataset view renders.
+
+    Newest first, because a timeline is read from the top and a dataset refreshed monthly
+    for ten years has a hundred and twenty versions. Cursor-paginated on the version number
+    rather than the id: version is unique per dataset, monotonic, and the thing a reader is
+    actually ordering by.
+    """
+    async with database.session() as session:
+        dataset = await service.load_dataset(
+            session, workspace_id=caller.workspace_id, slug=slug
+        )
+        conditions = [DatasetVersionRow.dataset_id == dataset.id]
+        if cursor is not None:
+            after = decode_int_cursor(cursor)
+            if after is not None:
+                conditions.append(DatasetVersionRow.version < after)
+
+        rows = list(
+            (
+                await session.execute(
+                    select(DatasetVersionRow)
+                    .where(*conditions)
+                    .order_by(DatasetVersionRow.version.desc())
+                    .limit(limit + 1)
+                )
+            ).scalars()
+        )
+        total = (
+            await session.execute(
+                select(func.count()).select_from(
+                    select(DatasetVersionRow.id)
+                    .where(DatasetVersionRow.dataset_id == dataset.id)
+                    .limit(COUNT_CAP)
+                    .subquery()
+                )
+            )
+        ).scalar_one()
+
+    has_more = len(rows) > limit
+    page = rows[:limit]
+    return Page[DatasetVersion](
+        items=[_version_schema(row) for row in page],
+        next_cursor=encode_cursor(page[-1].version) if has_more and page else None,
+        total_estimate=int(total),
+    )
 
 
 @router.get(

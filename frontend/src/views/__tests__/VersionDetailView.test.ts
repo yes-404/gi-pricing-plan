@@ -56,18 +56,23 @@ function stub(rejected: unknown = REJECTED, rejectedStatus = 200): void {
 afterEach(() => vi.unstubAllGlobals());
 
 const props = { slug: "fremtpl2", version: "1", currency: "EUR" };
+//: `RouterLink: true` renders `<router-link-stub>` and **discards the default slot**, so
+//: any assertion on a link's text fails against an empty element.
+const mounted = {
+  global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } },
+};
 
 describe("the version detail view", () => {
   it("shows exposure exactly as the backend summed it", async () => {
     stub();
-    render(VersionDetailView, { props, global: { stubs: { RouterLink: true } } });
+    render(VersionDetailView, { props, ...mounted });
     // 339006.5, not 339006.49999999994 — formatted from the string, never parsed.
     expect(await screen.findByText(/339,006\.5/)).toBeInTheDocument();
   });
 
   it("shows incurred in the dataset's currency", async () => {
     stub();
-    render(VersionDetailView, { props, global: { stubs: { RouterLink: true } } });
+    render(VersionDetailView, { props, ...mounted });
     // €4,075,400.56 from 407540056 minor units — a French book, not a British one.
     expect(await screen.findByText(/4,075,400\.56/)).toBeInTheDocument();
   });
@@ -76,7 +81,7 @@ describe("the version detail view", () => {
     // FR-DATA-5. `IDpol` normalises to `i_dpol`, and without the original a user cannot
     // tell which of their columns a rule is talking about.
     stub();
-    render(VersionDetailView, { props, global: { stubs: { RouterLink: true } } });
+    render(VersionDetailView, { props, ...mounted });
     const schema = await screen.findByRole("table");
     expect(within(schema).getByText("IDpol")).toBeInTheDocument();
     expect(within(schema).getByText("Exposure")).toBeInTheDocument();
@@ -84,7 +89,7 @@ describe("the version detail view", () => {
 
   it("reports a clean ingestion rather than an empty drawer", async () => {
     stub();
-    render(VersionDetailView, { props, global: { stubs: { RouterLink: true } } });
+    render(VersionDetailView, { props, ...mounted });
     expect(await screen.findByText(/Every row was accepted/)).toBeInTheDocument();
   });
 
@@ -94,7 +99,7 @@ describe("the version detail view", () => {
       { title: "This version has no ingestion run", status: 404, code: "NOT_FOUND", errors: [] },
       404,
     );
-    render(VersionDetailView, { props, global: { stubs: { RouterLink: true } } });
+    render(VersionDetailView, { props, ...mounted });
     expect(await screen.findByText(/derived from another/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

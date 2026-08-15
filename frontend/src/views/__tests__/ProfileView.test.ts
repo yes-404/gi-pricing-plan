@@ -78,7 +78,12 @@ beforeEach(() => stub());
 afterEach(() => vi.unstubAllGlobals());
 
 const props = { slug: "fremtpl2", version: "2", currency: "EUR" };
-const mounted = { global: { stubs: { RouterLink: true } } };
+//: `RouterLink: true` renders `<router-link-stub>` and **discards the default slot**, so
+//: any assertion on a link's text fails against an empty element. This stub keeps the
+//: content, which is what the view actually renders.
+const mounted = {
+  global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } },
+};
 
 describe("the profile view", () => {
   it("offers exactly the columns that have a stored one-way", async () => {

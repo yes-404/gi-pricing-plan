@@ -12,6 +12,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/DatasetListView.vue"),
   },
   {
+    path: "/data/:slug",
+    name: "dataset-detail",
+    component: () => import("@/views/DatasetDetailView.vue"),
+    props: true,
+  },
+  {
     path: "/data/:slug/v/:version",
     name: "version-detail",
     component: () => import("@/views/VersionDetailView.vue"),

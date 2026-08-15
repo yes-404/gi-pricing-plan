@@ -25,7 +25,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ValidationRuleRow, ValidationRuleSetRow
+from app.db.models import DatasetRow, ValidationRuleRow, ValidationRuleSetRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, rbac
@@ -434,6 +434,13 @@ async def replace_rule_set(
     )
     session.add(row)
     await session.flush()
+
+    # `01` §4.1's `validation_rule_set_id`, which nothing set: the row carried
+    # `dataset_id` and the dataset never pointed back, so §5.3's "rule set link" had
+    # nothing to link to and a reader could not tell a dataset with rules from one without.
+    dataset = await session.get(DatasetRow, dataset_id)
+    if dataset is not None:
+        dataset.validation_rule_set_id = row.id
 
     await audit.record(
         session,

@@ -3,6 +3,9 @@ import type { components } from "./generated/schema";
 
 export type Dataset = components["schemas"]["Dataset"];
 export type DatasetPage = components["schemas"]["Page_Dataset_"];
+export type VersionPage = components["schemas"]["Page_DatasetVersion_"];
+export type DataDictionaryEntry = components["schemas"]["DataDictionaryEntry"];
+export type PiiClass = components["schemas"]["PiiClass"];
 
 /**
  * `01` §5.1 `GET /datasets`.
@@ -23,4 +26,55 @@ export function listDatasets(options: {
       line_of_business: options.lineOfBusiness,
     },
   });
+}
+
+export function getDataset(slug: string): Promise<Dataset> {
+  return request<Dataset>(`/datasets/${encodeURIComponent(slug)}`);
+}
+
+/** The version timeline, newest first (`01` §5.3). */
+export function listVersions(
+  slug: string,
+  options: { cursor?: string | undefined; limit?: number | undefined } = {},
+): Promise<VersionPage> {
+  return request<VersionPage>(`/datasets/${encodeURIComponent(slug)}/versions`, {
+    query: { cursor: options.cursor, limit: options.limit },
+  });
+}
+
+/**
+ * Replace the Data Dictionary (audited, before and after — NFR-DATA-8).
+ *
+ * A **replace**, not a merge: the dictionary decides which columns may be modelled at all
+ * (FR-OVR-9), so "who removed the special-category marking from this column?" must be
+ * answerable — and a merge would make a removal indistinguishable from an omission.
+ */
+export function putDictionary(
+  slug: string,
+  entries: Record<string, DataDictionaryEntry>,
+): Promise<Dataset> {
+  return request<Dataset>(`/datasets/${encodeURIComponent(slug)}/dictionary`, {
+    method: "PUT",
+    body: { data_dictionary: entries },
+  });
+}
+
+export function getLineage(versionId: string): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(`/dataset-versions/${versionId}/lineage`);
+}
+
+/**
+ * The classes FR-OVR-9 and FR-DATA-13 refuse for modelling.
+ *
+ * Shown as a refusal rather than a warning, because that is what the platform does: a
+ * column marked either of these cannot be fitted on, and a UI that presented it as advice
+ * would be describing a different system.
+ */
+export const MODELLING_FORBIDDEN: readonly PiiClass[] = [
+  "direct_identifier",
+  "special_category",
+];
+
+export function forbidsModelling(entry: DataDictionaryEntry | undefined): boolean {
+  return entry?.pii_class ? MODELLING_FORBIDDEN.includes(entry.pii_class) : false;
 }
