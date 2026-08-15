@@ -94,7 +94,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-11** | `explode_period` splits a policy record spanning a mid-term change or a period boundary into multiple exposure rows with correctly apportioned exposure, preserving `sum(exposure)` exactly (checked as a post-condition, using `Decimal`). |
 | **FR-DATA-12** | `attach_claims` links the claim table to the policy-exposure table on a declared key and validates the linkage: every claim resolves to exactly one exposure row, and the claim's `date_of_loss` falls inside that row's exposure period. Unlinked claims and multi-linked claims are reported as counts and samples, and are individually rule-gated (see VR-ACT-6, VR-ACT-7). |
 | **FR-DATA-13** | `pseudonymise` replaces a declared identifier column with a stable HMAC (workspace-scoped key), so the same customer maps to the same token across versions but the token is meaningless outside the workspace. Columns classified `direct_identifier` in the Data Dictionary must be dropped or pseudonymised; otherwise ingestion fails (FR-OVR-9). |
-| **FR-DATA-41** | *(appended 2026-08-15, and numbered rather than suffixed — §5's ids are append-only)* The refusal in FR-DATA-13 is enforced **at ingestion**, before any row is written: a source whose columns include one the Data Dictionary classifies `direct_identifier`, and whose recipe neither drops nor pseudonymises it, is rejected with `DIRECT_IDENTIFIER_PRESENT`. `Dataset.modelling_forbidden_columns` names the classes that trigger it. **Not implemented as at 2026-08-15** — see the note below. |
+| **FR-DATA-41** | *(appended 2026-08-15, and numbered rather than suffixed — §5's ids are append-only)* The refusal in FR-DATA-13 is enforced **at ingestion**, before any row is written: a source whose columns include one the Data Dictionary classifies `direct_identifier`, and whose recipe neither drops nor pseudonymises it, is rejected with `DIRECT_IDENTIFIER_PRESENT`. `Dataset.modelling_forbidden_columns` names the classes that trigger it, and `special_category` is refused on the same terms. **Delivered 2026-08-15.** |
 | **FR-DATA-14** | The Preparation Recipe is persisted with the Dataset Version and is replayable: `replay(recipe, source_bytes) == stored version` byte-for-byte on parquet content hash, given pinned library versions. |
 
 ### 3.3 Validation — the gate
@@ -102,7 +102,7 @@ used here unchanged. Additional terms owned by this module:
 | ID | Requirement |
 |---|---|
 | **FR-DATA-15** | Validation runs as a Job against a `draft` Dataset Version, executing every rule in the Dataset's Validation Rule Set and producing exactly one **Validation Report** per run. Reports are immutable and retained; re-validation creates a new report, it does not overwrite. |
-| **FR-DATA-42** | *(appended 2026-08-15)* "Immutable" is enforced **in the database**, not by convention: `validation_reports`, `profiles`, `validation_acknowledgements` and `blobs` carry append-only triggers refusing `UPDATE`, `DELETE` and `TRUNCATE`, as `audit_events` already does (`06` FR-GOV-22). **Only `audit_events` carries them as at 2026-08-15** — see the note below. |
+| **FR-DATA-42** | *(appended 2026-08-15)* "Immutable" is enforced **in the database**, not by convention: `validation_reports`, `profiles` and `validation_acknowledgements` carry append-only triggers refusing `UPDATE`, `DELETE` and `TRUNCATE`, as `audit_events` already does (`06` FR-GOV-22), together with `SELECT, INSERT`-only privileges for the application role. `blobs` is **not** append-only — see the amendment below — but its content columns (`sha256`, `bytes`, `media_type`) may never change. **Delivered 2026-08-15.** |
 | **FR-DATA-16** | Validation covers four layers, all of which must be present in every Rule Set (a Rule Set with an empty layer is a configuration warning surfaced in the UI): **structural**, **referential**, **actuarial sanity**, **distributional/stability**. §4.4 enumerates the built-in rules. |
 | **FR-DATA-17** | Transition to `validated` requires: zero `fail` outcomes, zero `error` outcomes, and every `warn` outcome carrying an **Acknowledgement** by a Pricing Actuary with a non-empty justification (audited, FR-OVR-4). An Analyst cannot acknowledge. |
 | **FR-DATA-18** | An Acknowledgement is scoped to `(dataset_version_id, rule_id, report_id)`. It does not carry forward to the next version or the next report — each version's warnings are acknowledged on their own evidence. The UI **may pre-fill** the justification from the last acknowledgement of the same rule, but the act itself is always explicit and separately audited: fatigue is a UI problem, and a standing acknowledgement that goes stale hides the change it was meant to surface (OQ-DATA-6, decided 2026-08-14). |
@@ -113,9 +113,12 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-23** | Validation is re-runnable on a `validated` version (e.g. after a rule set update). If the new report contains `fail`s, the version transitions **back** to `draft` and every Model fitted on it is flagged `dataset_invalidated` — models are not deleted, but the flag is surfaced on the model, on any Rating Version referencing it, and to the Approver. |
 | **FR-DATA-24** | Validation is incremental where sound: structural and actuarial rules stream over parquet row groups; distributional rules use pre-computed profile aggregates rather than re-scanning. |
 
-> **Two enforcement gaps, recorded 2026-08-15 after an independent audit.** Both are cases
-> where the requirement is right and the code does not yet meet it, so the spec gains the
-> precise obligation rather than being softened to match.
+> **Two enforcement gaps, recorded 2026-08-15 after an independent audit — and closed the
+> same day.** Both were cases where the requirement was right and the code did not meet it,
+> so the spec gained the precise obligation rather than being softened to match. The record
+> of what was wrong stays below; what changed is that FR-DATA-41 and FR-DATA-42 are now
+> delivered, each with the deliberately-broken-input proof `CLAUDE.md` §13 rule 4 requires —
+> five injections, five caught.
 >
 > **FR-DATA-13's refusal does not happen.** `DIRECT_IDENTIFIER_PRESENT` is registered in
 > the error catalogue and raised nowhere; `Dataset.modelling_forbidden_columns` has no
@@ -128,9 +131,21 @@ used here unchanged. Additional terms owned by this module:
 > (rolled back). `docs/roadmap.md` §5 lists artifact immutability among the things that
 > cannot be retrofitted cheaply, and Phase 1a was where it was meant to land.
 >
-> Both are owned by **W6b** as the next open workstream, and both need the deliberately-
-> broken-input proof `CLAUDE.md` §13 rule 4 requires — a trigger nobody has tried to
-> defeat is the same kind of claim these notes exist to stop.
+> **Amended when FR-DATA-42 was built, 2026-08-15: `blobs` is not one of the append-only
+> tables.** As first written the requirement named it, and building it found why it cannot
+> be: `ref_count` is updated on every reference and release (FR-PLAT-22), and
+> reference-counted garbage collection *deletes* unreferenced rows. A blob's **content** is
+> immutable for a stronger reason than a trigger — the row is keyed by the sha256 of its
+> bytes, so changed content is a different row. What the trigger adds there is a guard that
+> `sha256`, `bytes` and `media_type` can never be updated, leaving the lifecycle columns
+> free. The requirement is corrected rather than the table quietly dropped from the
+> migration.
+>
+> They were owned by W6b and delivered in Phase 1a as a gate on its exit demo (plan review
+> 2, accepted 2026-08-15). The proofs: the refusal removed, the recipe remedy ignored, the
+> row trigger dropped, the statement trigger dropped, and `UPDATE` granted back to the
+> application role — a trigger nobody has tried to defeat is the same kind of claim these
+> notes exist to stop.
 
 ### 3.4 Profiling
 

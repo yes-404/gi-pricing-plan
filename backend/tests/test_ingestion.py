@@ -19,7 +19,15 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets, rbac
 from app.platform.blobs import BlobStore
-from model_schema import ActorKind, DatasetStatus, Principal, ScopeType, new_uuid7
+from model_schema import (
+    ActorKind,
+    DataDictionaryEntry,
+    DatasetStatus,
+    PiiClass,
+    Principal,
+    ScopeType,
+    new_uuid7,
+)
 
 CSV = b"Policy ID,Exposure Start,Exposure Years\nP1,2026-01-01,1.0\nP2,2026-02-01,0.5\n"
 
@@ -362,3 +370,113 @@ async def test_the_run_is_queryable_after_the_fact(
         ).scalars().all()
     assert len(runs) == 1
     assert runs[0].status == "succeeded"
+
+
+# -- FR-DATA-41: a direct identifier is refused at ingestion ------------------------------
+
+PII_CSV = (
+    b"policy_id,customer_email,exposure_start,exposure_years\n"
+    b"P1,alice@example.com,2026-01-01,1.0\n"
+    b"P2,bob@example.com,2026-01-01,1.0\n"
+)
+
+
+async def _dataset_with_pii_dictionary(database: Database, workspace_id, actor):
+    """A dataset whose dictionary classifies `customer_email` a direct identifier."""
+    async with database.unit_of_work() as session:
+        row = await datasets.create_dataset(
+            session, workspace_id=workspace_id, actor=actor, slug=f"ds-{new_uuid7().hex[-8:]}"
+        )
+        await datasets.update_dictionary(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            slug=row.slug,
+            entries={
+                "customer_email": DataDictionaryEntry(
+                    description="The policyholder's email address",
+                    pii_class=PiiClass.DIRECT_IDENTIFIER,
+                )
+            },
+        )
+        return row.id
+
+
+@pytest.mark.req("FR-DATA-41")
+async def test_a_direct_identifier_column_is_refused_at_ingestion(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """FR-DATA-13's other half, which nothing enforced until now.
+
+    `DIRECT_IDENTIFIER_PRESENT` was registered in the error catalogue and raised nowhere;
+    `modelling_forbidden_columns` had no caller. A dataset carrying an email address
+    ingested cleanly, and every FR-DATA-13 marker sat on `pseudonymise`.
+    """
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset_with_pii_dictionary(database, workspace_id, actor)
+
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await ingest_upload(
+                session, blob_store,
+                workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+                data=PII_CSV, filename="exposure.csv",
+            )
+    assert refused.value.code == "DIRECT_IDENTIFIER_PRESENT"
+    assert "customer_email" in refused.value.detail
+
+    # Refused *before* the version: an identifier in object storage is a deletion problem,
+    # not a refusal.
+    async with database.session() as session:
+        from app.db.models import DatasetVersionRow
+
+        versions = (
+            await session.execute(
+                select(DatasetVersionRow).where(DatasetVersionRow.dataset_id == dataset_id)
+            )
+        ).scalars().all()
+    assert versions == []
+
+
+@pytest.mark.req("FR-DATA-41")
+async def test_pseudonymising_the_column_lets_the_upload_through(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """The remedy FR-DATA-13 names, and the reason the check runs *after* the recipe.
+
+    Checked before it, a pseudonymise step could never satisfy the rule it exists for.
+    """
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset_with_pii_dictionary(database, workspace_id, actor)
+
+    async with database.unit_of_work() as session:
+        outcome = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            data=PII_CSV, filename="exposure.csv",
+            recipe=[
+                {
+                    "step": "pseudonymise",
+                    "params": {"column": "customer_email", "key": "workspace-secret"},
+                }
+            ],
+        )
+    assert outcome.version.version == 1
+    assert outcome.run.rows_written == 2
+
+
+@pytest.mark.req("FR-DATA-41")
+async def test_a_column_the_dictionary_does_not_forbid_is_not_refused(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """The negative of the rule: without it, the check could refuse everything and pass."""
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset(database, workspace_id, actor)
+
+    async with database.unit_of_work() as session:
+        outcome = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            data=PII_CSV, filename="exposure.csv",
+        )
+    assert outcome.run.rows_written == 2
