@@ -202,10 +202,31 @@ def _unique_key(
 def _allowed_values(
     rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
 ) -> CheckOutcome:
-    """VR-STR-7: categorical columns contain only declared values."""
+    """VR-STR-7 / `set_membership`: categorical columns contain only declared values.
+
+    `allowed` is the name `01` §4.5 gives the parameter; `values` is accepted because the
+    first implementation used it and rule sets may already carry it.
+
+    **Skips when no domain is declared, rather than failing every row.** It read the wrong
+    parameter name for its whole life, so the declared domain was always empty and every
+    value was "outside" it — a rule that refuses an entire dataset while naming, as
+    offenders, values the author had explicitly allowed. Found by seeding freMTPL2.
+    """
     frame = _table(tables, rule)
     column = rule.target["column"]
-    allowed = set(rule.params.get("values", []))
+    declared = rule.params.get("allowed", rule.params.get("values"))
+    if not declared:
+        return CheckOutcome(
+            skipped=True,
+            skip_reason=(
+                "no allowed values declared — an empty domain would refuse every row "
+                "(`01` §4.5 names this parameter `allowed`)"
+            ),
+        )
+    allowed = {str(value) for value in declared}
+    if not rule.params.get("case_sensitive", True):
+        allowed = {value.casefold() for value in allowed}
+        frame = frame.with_columns(pl.col(column).str.to_lowercase().alias(column))
     offending = frame.filter(
         pl.col(column).is_not_null() & ~pl.col(column).is_in(list(allowed))
     )
@@ -1691,6 +1712,217 @@ def _mix_shift_exposure(
         threshold={"warn_above": warn_above},
         detail=f"exposure mix across {column!r} has a PSI of {psi:.4f}",
     )
+
+# -- `01` §4.5's custom-rule vocabulary ------------------------------------------------
+#
+# FR-DATA-21 lets a user author a rule with `check` drawn from a fixed list, and §4.5 is
+# that list. Seven of its eleven names were unregistered — a rule authored exactly as the
+# spec documents produced `unknown_check`, which the engine reports as an `error`. The
+# `--catalogue VR` audit could not see it: that check covers the built-in *rule ids*, and
+# this is the *check vocabulary*. Found by seeding freMTPL2.
+
+
+def _alias(name: str, target: str) -> None:
+    """Register `name` as another way to spell an existing check.
+
+    `01` §4.4 names the built-in rules and §4.5 names the checks a custom rule may use, and
+    the two spellings for the same behaviour predate each other. Both resolve here rather
+    than one being renamed, because a rule set already citing either must keep working —
+    a rule is what a report's verdict *means*.
+    """
+    CHECKS[name] = CHECKS[target]
+
+
+@register_check("regex")
+def _regex(
+    rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
+) -> CheckOutcome:
+    """`01` §4.5 `regex`: a string column matches a declared pattern.
+
+    Nulls are not violations — a missing postcode is `not_null`'s business, and a rule that
+    reported both would double-count the same row in two layers.
+    """
+    frame = _table(tables, rule)
+    column = rule.target["column"]
+    pattern = rule.params.get("pattern")
+    if not pattern:
+        return CheckOutcome(skipped=True, skip_reason="no pattern declared")
+
+    offending = frame.filter(
+        pl.col(column).is_not_null()
+        & ~pl.col(column).cast(pl.String).str.contains(pattern)
+    )
+    return CheckOutcome(
+        violating_rows=offending.height,
+        measured={"violating_rows": offending.height},
+        threshold={"pattern": pattern},
+        detail=f"{offending.height} value(s) of {column!r} do not match {pattern!r}",
+        offending_sample=_sample(offending, rule.params.get("key_columns", [])),
+    )
+
+
+#: The comparisons `relationship` permits between two columns. A closed set, because the
+#: alternative is `eval` on a user-supplied operator.
+_OPERATORS: Final[dict[str, Any]] = {
+    ">": lambda a, b: a > b,
+    ">=": lambda a, b: a >= b,
+    "<": lambda a, b: a < b,
+    "<=": lambda a, b: a <= b,
+    "==": lambda a, b: a == b,
+    "!=": lambda a, b: a != b,
+}
+
+
+@register_check("relationship")
+def _relationship(
+    rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
+) -> CheckOutcome:
+    """`01` §4.5 `relationship`: a comparison between two columns holds on every row.
+
+    `exposure_end > exposure_start` is the motivating case, and the general form is worth
+    having: `sum_insured >= excess`, `date_reported >= date_of_loss`.
+    """
+    frame = _table(tables, rule)
+    left, right = rule.params.get("left"), rule.params.get("right")
+    operator = rule.params.get("operator", ">")
+    if not left or not right:
+        return CheckOutcome(skipped=True, skip_reason="`left` and `right` are both required")
+    if operator not in _OPERATORS:
+        raise ValueError(
+            f"{operator!r} is not a permitted comparison; `01` §4.5 allows "
+            f"{sorted(_OPERATORS)}"
+        )
+
+    holds = _OPERATORS[operator](pl.col(left), pl.col(right))
+    offending = frame.filter(
+        pl.col(left).is_not_null() & pl.col(right).is_not_null() & ~holds
+    )
+    return CheckOutcome(
+        violating_rows=offending.height,
+        measured={"violating_rows": offending.height},
+        threshold={"rule": f"{left} {operator} {right}"},
+        detail=f"{offending.height} row(s) where `{left} {operator} {right}` does not hold",
+        offending_sample=_sample(offending, rule.params.get("key_columns", [])),
+    )
+
+
+@register_check("expression")
+def _expression(
+    rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
+) -> CheckOutcome:
+    """`01` §4.5 `expression`: a row-level predicate in the restricted grammar.
+
+    The **same** grammar `derive_expression` uses in a Preparation Recipe — compiled from
+    an AST into Polars, never `eval`. One grammar, so a user who has written a derivation
+    can write a rule without learning a second language, and neither can reach the
+    interpreter.
+    """
+    from pricing_core.data.expressions import compile_expression
+
+    frame = _table(tables, rule)
+    expression = rule.params.get("expr") or rule.params.get("expression")
+    if not expression:
+        return CheckOutcome(skipped=True, skip_reason="no expression declared")
+
+    predicate = compile_expression(str(expression))
+    expect = bool(rule.params.get("expect", True))
+    offending = frame.filter(predicate.not_() if expect else predicate)
+    return CheckOutcome(
+        violating_rows=offending.height,
+        measured={"violating_rows": offending.height},
+        threshold={"expr": expression, "expect": expect},
+        detail=f"{offending.height} row(s) where `{expression}` is not {expect}",
+        offending_sample=_sample(offending, rule.params.get("key_columns", [])),
+    )
+
+
+@register_check("aggregate")
+def _aggregate(
+    rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
+) -> CheckOutcome:
+    """`01` §4.5 `aggregate`: a group-level assertion.
+
+    Counts *groups* that breach the bound, not rows. "Three vehicle groups have a mean
+    premium above the cap" is the finding; "four hundred thousand rows belong to a group
+    that does" is the same fact, told in a way nobody can act on.
+    """
+    frame = _table(tables, rule)
+    column = rule.target.get("column")
+    how = rule.params.get("agg", "sum")
+    group_by = [g for g in rule.params.get("group_by", []) if g in frame.columns]
+    if column is None or column not in frame.columns:
+        return CheckOutcome(skipped=True, skip_reason=f"{column!r} is not present")
+
+    aggregations = {
+        "sum": pl.col(column).cast(pl.Float64).sum(),
+        "mean": pl.col(column).cast(pl.Float64).mean(),
+        "count": pl.col(column).count(),
+        "min": pl.col(column).cast(pl.Float64).min(),
+        "max": pl.col(column).cast(pl.Float64).max(),
+    }
+    if how == "quantile":
+        aggregations["quantile"] = pl.col(column).cast(pl.Float64).quantile(
+            float(rule.params.get("quantile", 0.5)), interpolation="linear"
+        )
+    if how not in aggregations:
+        raise ValueError(
+            f"{how!r} is not a permitted aggregate; §4.5 allows {sorted(aggregations)}"
+        )
+
+    measure = aggregations[how].alias("_value")
+    grouped = frame.group_by(group_by).agg(measure) if group_by else frame.select(measure)
+
+    predicate = pl.lit(False)
+    if (bound := rule.params.get("min")) is not None:
+        predicate = predicate | (pl.col("_value") < bound)
+    if (bound := rule.params.get("max")) is not None:
+        predicate = predicate | (pl.col("_value") > bound)
+    if (bound := rule.params.get("equals")) is not None:
+        predicate = predicate | (pl.col("_value") != bound)
+
+    offending = grouped.filter(predicate)
+    return CheckOutcome(
+        violating_rows=offending.height,
+        measured={
+            "groups": grouped.height,
+            "breaching_groups": offending.height,
+            "agg": how,
+        },
+        threshold={k: v for k, v in rule.params.items() if k in ("min", "max", "equals")},
+        detail=(
+            f"{offending.height} of {grouped.height} group(s) breach the {how} bound on "
+            f"{column!r}"
+        ),
+        offending_sample=_sample(offending, group_by),
+    )
+
+
+@register_check("distribution_compare")
+def _distribution_compare(
+    rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
+) -> CheckOutcome:
+    """`01` §4.5 `distribution_compare`: PSI, KS or mean shift against the reference.
+
+    A façade over the built-in distributional checks rather than a fourth implementation of
+    the same statistic — `metric: psi` is VR-DST-1 and `metric: mean_shift` is VR-DST-6, so
+    a custom rule and a built-in one cannot report different numbers for the same column.
+    """
+    metric = rule.params.get("metric", "psi")
+    delegate = {"psi": "psi_column", "mean_shift": "mean_shift"}.get(metric)
+    if delegate is None:
+        return CheckOutcome(
+            skipped=True,
+            skip_reason=(
+                f"metric {metric!r} is not implemented; `psi` and `mean_shift` are. KS "
+                "needs the reference column's values, which a stored Profile does not keep "
+                "(FR-DATA-24 reads aggregates, not rows)"
+            ),
+        )
+    return CHECKS[delegate](rule, tables, ctx)
+
+
+_alias("set_membership", "allowed_values")
+_alias("uniqueness", "unique_key")
 
 # -- the engine ------------------------------------------------------------------------------
 

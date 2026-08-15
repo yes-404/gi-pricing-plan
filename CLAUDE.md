@@ -78,7 +78,7 @@ the maths.
 │                               datasets, validation, profiling, reference [W2✔ W3✔ W4✔]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
-├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
+├── examples/                 ◐ freMTPL2 seed — data half done  [W7a✔] rest [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
 ├── scripts/                  ✔ audit-docs.py, req-coverage.py

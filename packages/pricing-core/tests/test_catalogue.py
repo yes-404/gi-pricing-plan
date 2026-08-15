@@ -782,14 +782,66 @@ def test_no_check_passes_when_it_has_nothing_to_check() -> None:
 
     Every registered check, run against a frame holding none of what it needs. A check that
     silently passes when its column is absent is worse than no check, because it is
-    mistaken for coverage — and this is the single assertion that would have caught it in
-    any of the thirty-seven.
+    mistaken for coverage.
     """
     barren = pl.DataFrame({"unrelated": [1, 2, 3]})
     #: `reject_rate` is exempt and correctly so: a version with no `_rejected` table had
     #: nothing quarantined, and reporting that as a pass is the right answer rather than a
     #: vacuous one. Named here so the exemption is a decision rather than a gap.
     legitimately_passes = {"reject_rate"}
+    report = _probe(barren, column="absent", skip=legitimately_passes)
+
+    passed = [r.rule_slug for r in report.results if r.outcome.value == "pass"]
+    assert not passed, f"these checks passed with nothing to check: {passed}"
+
+
+@pytest.mark.req("FR-DATA-19")
+def test_no_check_condemns_the_data_when_it_has_no_configuration() -> None:
+    """The other direction, and the one that went unnoticed for longer.
+
+    Here the column **exists** and the rule carries no thresholds, domain or pattern — the
+    state a half-configured rule set is in. `allowed_values` read the wrong parameter name,
+    so its declared domain was always empty and it failed *every* row, naming as offenders
+    the very values the author had allowed. Seeding freMTPL2 surfaced it.
+
+    A vacuous fail is worse than a vacuous pass: it blocks a dataset rather than waving one
+    through, and it reads exactly like a genuine finding.
+
+    The first version of this test reused the absent-column frame above, so every check
+    errored before it could condemn anything and the assertion never bit — which is why the
+    column is present here and the two cases are separate tests.
+    """
+    populated = pl.DataFrame(
+        {
+            "policy_id": [f"P{i}" for i in range(20)],
+            "value": [f"V{i % 4}" for i in range(20)],
+            "exposure_years": [1.0] * 20,
+            "claim_count": [0] * 20,
+            "claim_amount_minor": [0] * 20,
+        }
+    )
+    #: Checks that legitimately report on an unconfigured rule, each for a stated reason.
+    expected = {
+        # No `_rejected` table means nothing was quarantined — a real pass, not a vacuous
+        # one, and it is asserted in the test above.
+        "reject_rate",
+        # A whole-table shape check: with nothing declared, every column present is by
+        # definition undeclared. Reporting that is the point of the rule.
+        "no_unexpected_columns",
+    }
+    report = _probe(populated, column="value", skip=expected)
+
+    condemned = [
+        r.rule_slug for r in report.results if r.outcome.value in ("fail", "warn")
+    ]
+    assert not condemned, (
+        f"these checks condemned the data with no configuration: {condemned}. A check "
+        "whose thresholds, domain or pattern are absent must skip, not refuse a dataset."
+    )
+
+
+def _probe(frame: pl.DataFrame, *, column: str, skip: set[str]) -> Any:
+    """Run every registered check against one frame with an otherwise empty rule."""
     entries = tuple(
         RuleSetEntry(
             rule=ValidationRule(
@@ -799,21 +851,19 @@ def test_no_check_passes_when_it_has_nothing_to_check() -> None:
                 layer=ValidationLayer.STRUCTURAL,
                 check=name,
                 severity=Severity.FAIL,
-                target={"table": "t", "column": "absent"},
-                # The sql probe must reference the absent column too, or it is a valid
-                # query over a real column and passing is the correct answer.
-                params={"query": "SELECT count(*) FROM t WHERE absent IS NULL"},
+                target={"table": "t", "column": column},
+                # The sql probe needs a query to be a query at all; it references the
+                # target column so it shares the fate of every other check here.
+                params={"query": f"SELECT count(*) FROM t WHERE {column} IS NULL"},
             )
         )
         for name in sorted(CHECKS)
-        if name not in legitimately_passes
+        if name not in skip
     )
     report = run_validation(
-        {"t": barren},
+        {"t": frame},
         ValidationRuleSet(id=uuid4(), slug="probe", version=1, entries=entries),
         dataset_version_id=uuid4(),
     )
-
-    assert len(report.results) == len(CHECKS) - len(legitimately_passes)
-    passed = [r.rule_slug for r in report.results if r.outcome.value == "pass"]
-    assert not passed, f"these checks passed with nothing to check: {passed}"
+    assert len(report.results) == len(CHECKS) - len(skip)
+    return report
