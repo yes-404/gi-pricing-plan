@@ -173,7 +173,7 @@ describe("the factor workbench", () => {
     expect(healthy.className).not.toContain("amber");
   });
 
-  it("re-evaluates against the platform when a boundary moves (FR-MODEL-75)", async () => {
+  it("re-evaluates against the platform when a boundary moves (FR-MODEL-83)", async () => {
     const user = userEvent.setup();
     render(FactorWorkbenchView, { props, ...mounted });
     await user.click(await screen.findByRole("button", { name: "Propose" }));
@@ -263,7 +263,7 @@ describe("the factor workbench", () => {
     expect(verdict.className).toContain("red");
   });
 
-  it("re-evaluates the evidence when a level is pointed elsewhere (FR-MODEL-75)", async () => {
+  it("re-evaluates the evidence when a level is pointed elsewhere (FR-MODEL-83)", async () => {
     const user = userEvent.setup();
     render(FactorWorkbenchView, { props, ...mounted });
     await user.click(await screen.findByRole("tab", { name: "grouping" }));

@@ -6,7 +6,7 @@
  * outright: the banding and grouping editors must show the *consequence* of an edit before
  * it is saved. An actuary should never have to fit a model to find out whether a grouping
  * was sensible. So every edit here re-evaluates against the real dataset version through
- * FR-MODEL-75's `/evaluate` routes — the numbers on screen are the platform's, computed on
+ * FR-MODEL-83's `/evaluate` routes — the numbers on screen are the platform's, computed on
  * the same code path a fit would use, never approximated in the browser.
  *
  * What is deliberately *not* here: drag handles on the boundaries. §5.3 asks for draggable
@@ -139,7 +139,7 @@ async function runBandingProposal(): Promise<void> {
 }
 
 /**
- * FR-MODEL-75. The edit's consequence, from the platform, before anything is saved.
+ * FR-MODEL-83. The edit's consequence, from the platform, before anything is saved.
  *
  * An invalid move — a boundary crossing its neighbour — is marked and **not** sent: the
  * platform would refuse it correctly with a 422, and a 422 per keystroke is not an editor.
@@ -205,7 +205,7 @@ async function runGroupingProposal(): Promise<void> {
   }
 }
 
-/** FR-MODEL-75: re-merge, and show what it cost, before the grouping is saved. */
+/** FR-MODEL-83: re-merge, and show what it cost, before the grouping is saved. */
 async function moveLevel(level: string, target: string): Promise<void> {
   if (!grouping.value) return;
   groupingBusy.value = true;
@@ -394,7 +394,7 @@ defineExpose({ isProblem });
           <p class="mt-5 text-sm text-slate-600">
             <span class="font-medium">{{ banding.labels.length }}</span> bands by
             <span class="font-mono text-xs">{{ banding.method }}</span>. Edit a boundary and
-            the statistics below are recomputed against the version (FR-MODEL-75).
+            the statistics below are recomputed against the version (FR-MODEL-83).
           </p>
 
           <div class="mt-3 flex flex-wrap gap-2">

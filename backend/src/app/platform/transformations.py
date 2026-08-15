@@ -153,7 +153,7 @@ async def evaluate_banding_for_version(
     blob_store: BlobStore,
     evaluation: BandingEvaluation,
 ) -> Banding:
-    """Recompute FR-MODEL-10's statistics for boundaries the actuary edited (FR-MODEL-75).
+    """Recompute FR-MODEL-10's statistics for boundaries the actuary edited (FR-MODEL-83).
 
     `/propose` derives boundaries from a **method** and cannot accept one, so without this
     "the proposal is always editable" means editable but unmeasurable — and an actuary who
@@ -206,7 +206,7 @@ async def evaluate_grouping_for_version(
     blob_store: BlobStore,
     evaluation: GroupingEvaluation,
 ) -> Grouping:
-    """Recompute FR-MODEL-15's evidence for a mapping the actuary edited (FR-MODEL-75).
+    """Recompute FR-MODEL-15's evidence for a mapping the actuary edited (FR-MODEL-83).
 
     This is the half §5.3 names explicitly: merging levels shows the deviance/df trade-off
     *before* the grouping is saved. The p-value is the whole answer to "could these levels

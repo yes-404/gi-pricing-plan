@@ -31,7 +31,7 @@ import polars as pl
 from scipy import stats
 
 from model_schema import (
-    CredibilityStandard,
+    CredibilityModel,
     Grouping,
     GroupingEvidence,
     GroupingMethod,
@@ -46,10 +46,16 @@ from pricing_core.modelling.errors import FactorResolutionError, GroupingError
 
 __all__ = ["apply_grouping", "grouping_evidence", "propose_grouping"]
 
-#: The classical full-credibility standard: the claim count at which a Poisson estimate is
-#: within ±5 % of its mean with 90 % probability, `(1.645 / 0.05)²`. OQ-MODEL-5's default,
-#: overridable per grouping through `method_params`.
-_FULL_CREDIBILITY_CLAIMS = 1082.0
+def _full_credibility_claims(p: float, k: float) -> float:
+    """The claim count at which a Poisson estimate is within ±`k` with probability `p`.
+
+    `(z_{(1+p)/2} / k)²` — 1 082 at the classical `p = 0.90, k = 0.05`. **Derived, not
+    tabulated**: FR-MODEL-80 stores the `(p, k)` pair beside the count precisely so a
+    reviewer can check one against the other, and a hard-coded 1 082 sitting next to a
+    stored `(0.99, 0.01)` would be exactly the unattributable number the requirement
+    objects to.
+    """
+    return float((stats.norm.ppf((1.0 + p) / 2.0) / k) ** 2)
 
 
 def propose_grouping(
@@ -133,12 +139,7 @@ def propose_grouping(
         version=1,
         column=proposal.column,
         method=proposal.method,
-        method_params={key: float(value) for key, value in proposal.method_params.items()},
-        credibility_standard=(
-            proposal.credibility_standard
-            if proposal.method is GroupingMethod.CREDIBILITY_WEIGHTED
-            else None
-        ),
+        method_params=_method_params(proposal),
         derived_on_dataset_version_id=proposal.dataset_version_id,
         mapping=mapping,
         unseen_level_behaviour=proposal.unseen_level_behaviour,
@@ -157,6 +158,24 @@ def propose_grouping(
             source=source,
         ),
     )
+
+
+def _method_params(proposal: GroupingProposal) -> dict[str, object]:
+    """What the grouping records about how it was derived (`grouping.schema.json`).
+
+    The credibility settings go **in** `method_params` rather than beside them, which is
+    where the contract has carried `credibility_model` since Phase 0. `credibility_pk` and
+    the count it implies are written together, so the two cannot drift apart.
+    """
+    params: dict[str, object] = dict(proposal.method_params)
+    if proposal.method is GroupingMethod.CREDIBILITY_WEIGHTED:
+        params["credibility_model"] = proposal.credibility_model.value
+        params["credibility_pk"] = {"p": proposal.credibility_p, "k": proposal.credibility_k}
+        params.setdefault(
+            "credibility_standard_claims",
+            round(_full_credibility_claims(proposal.credibility_p, proposal.credibility_k)),
+        )
+    return params
 
 
 def _target_name(index: int) -> str:
@@ -199,17 +218,22 @@ def _credibility_weighted(
     Shrinkage before merging is the whole point: without it, a level with three claims has a
     rate estimated to ±60 % and is merged — or not — on noise.
     """
-    if proposal.credibility_standard is not CredibilityStandard.LIMITED_FLUCTUATION:
+    if proposal.credibility_model is not CredibilityModel.LIMITED_FLUCTUATION:
         raise GroupingError(
             "GROUPING_NOT_EXHAUSTIVE",
-            f"credibility standard {proposal.credibility_standard.value!r} is not "
-            "implemented (OQ-MODEL-5 is open on whether it should be). Bühlmann-Straub "
-            "needs variance components this build does not estimate, and substituting "
-            "limited fluctuation would record a standard that was not applied.",
+            f"credibility model {proposal.credibility_model.value!r} is specified "
+            "(FR-MODEL-80) and not implemented: Bühlmann-Straub needs the EVPV and VHM "
+            "variance components this build does not estimate, and `credibility_components` "
+            "would come back null for a model that is supposed to persist them. Refused "
+            "rather than substituted — recording a model that did not run is the one thing "
+            "FR-MODEL-80 exists to prevent.",
         )
 
     full = float(
-        proposal.method_params.get("credibility_standard_claims", _FULL_CREDIBILITY_CLAIMS)
+        proposal.method_params.get(
+            "credibility_standard_claims",
+            _full_credibility_claims(proposal.credibility_p, proposal.credibility_k),
+        )
     )
     tolerance = float(proposal.method_params.get("merge_tolerance_relativity", 0.05))
     total_exposure = sum(float(row.exposure_years) for row in source)

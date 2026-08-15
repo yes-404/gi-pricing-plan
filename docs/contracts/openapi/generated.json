@@ -351,6 +351,14 @@
             "title": "Method Params",
             "type": "object"
           },
+          "minimums": {
+            "$ref": "#/components/schemas/BandingMinimums",
+            "default": {
+              "min_claims_per_band": 0,
+              "min_exposure_per_band": "0",
+              "on_violation": "warn"
+            }
+          },
           "null_level": {
             "anyOf": [
               {
@@ -432,6 +440,36 @@
         ],
         "title": "BandingMethod",
         "type": "string"
+      },
+      "BandingMinimums": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-11's thresholds, stored **on the artifact** (`banding.schema.json`).\n\nOn the banding rather than passed to the check, because \"configurable\" means a reviewer\ncan see what was configured. Held at the call site instead, the choice persists nowhere\nand two fits of the same banding could apply different floors.\n\nAn empty band always fails regardless of these, which is why there is no setting for it.",
+        "properties": {
+          "min_claims_per_band": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Min Claims Per Band",
+            "type": "integer"
+          },
+          "min_exposure_per_band": {
+            "default": "0",
+            "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Min Exposure Per Band",
+            "type": "string"
+          },
+          "on_violation": {
+            "default": "warn",
+            "enum": [
+              "warn",
+              "fail"
+            ],
+            "title": "On Violation",
+            "type": "string"
+          }
+        },
+        "title": "BandingMinimums",
+        "type": "object"
       },
       "BandingProposalRequest": {
         "additionalProperties": false,
@@ -1003,13 +1041,13 @@
         "title": "CreatedServiceAccount",
         "type": "object"
       },
-      "CredibilityStandard": {
-        "description": "Which credibility theory `credibility_weighted` merging applies (OQ-MODEL-5).\n\nNamed on the artifact rather than fixed in the code because it is a modelling\njudgement, not a platform constant — and because the two standards disagree on thin\ncells, which is the only place the choice changes anything.",
+      "CredibilityModel": {
+        "description": "Which credibility theory `credibility_weighted` merging applies (FR-MODEL-80).\n\nRecorded per grouping rather than fixed in the code because it is a modelling\njudgement, not a platform constant — and because the two disagree on thin cells, which\nis the only place the choice changes anything.\n\nIt lives in `method_params` under `credibility_model`, which is where\n`grouping.schema.json` has carried it since Phase 0. It was briefly a top-level\n`credibility_standard` field on `Grouping`; that contradicted the committed contract,\nand the contract was right.",
         "enum": [
           "limited_fluctuation",
           "buhlmann_straub"
         ],
-        "title": "CredibilityStandard",
+        "title": "CredibilityModel",
         "type": "string"
       },
       "DataDictionaryEntry": {
@@ -2300,16 +2338,6 @@
             "title": "Column",
             "type": "string"
           },
-          "credibility_standard": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CredibilityStandard"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "dataset_id": {
             "format": "uuid",
             "title": "Dataset Id",
@@ -2365,9 +2393,7 @@
             "$ref": "#/components/schemas/GroupingMethod"
           },
           "method_params": {
-            "additionalProperties": {
-              "type": "number"
-            },
+            "additionalProperties": true,
             "title": "Method Params",
             "type": "object"
           },
@@ -2382,6 +2408,17 @@
               }
             ],
             "title": "Parent Grouping Id"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
           },
           "slug": {
             "title": "Slug",
@@ -2460,6 +2497,20 @@
               }
             ],
             "title": "Chi2 P Value"
+          },
+          "credibility_components": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credibility Components"
           },
           "deviance_after": {
             "anyOf": [
@@ -2543,9 +2594,22 @@
             "title": "Column",
             "type": "string"
           },
-          "credibility_standard": {
-            "$ref": "#/components/schemas/CredibilityStandard",
+          "credibility_k": {
+            "default": 0.05,
+            "exclusiveMinimum": 0.0,
+            "title": "Credibility K",
+            "type": "number"
+          },
+          "credibility_model": {
+            "$ref": "#/components/schemas/CredibilityModel",
             "default": "limited_fluctuation"
+          },
+          "credibility_p": {
+            "default": 0.9,
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Credibility P",
+            "type": "number"
           },
           "dataset_version_id": {
             "format": "uuid",
@@ -2572,9 +2636,7 @@
             "$ref": "#/components/schemas/GroupingMethod"
           },
           "method_params": {
-            "additionalProperties": {
-              "type": "number"
-            },
+            "additionalProperties": true,
             "title": "Method Params",
             "type": "object"
           },
@@ -6897,7 +6959,7 @@
     },
     "/api/v1/bandings/evaluate": {
       "post": {
-        "description": "FR-MODEL-75: what an edited boundary *did*, before the banding is saved.\n\n`/propose` derives boundaries from a method and cannot accept one, so this is the only\nroute by which §5.3's interaction requirement can hold — band stats and CI widths that\nupdate as the actuary drags a cut point rather than after they commit to it.",
+        "description": "FR-MODEL-83: what an edited boundary *did*, before the banding is saved.\n\n`/propose` derives boundaries from a method and cannot accept one, so this is the only\nroute by which §5.3's interaction requirement can hold — band stats and CI widths that\nupdate as the actuary drags a cut point rather than after they commit to it.",
         "operationId": "evaluate_banding_api_v1_bandings_evaluate_post",
         "requestBody": {
           "content": {
@@ -9851,7 +9913,7 @@
     },
     "/api/v1/groupings/evaluate": {
       "post": {
-        "description": "FR-MODEL-75, and the half `02` §5.3 names outright.\n\nMerging two levels shows the deviance/df trade-off *before* the grouping is saved. An\nactuary should never have to fit a model to find out whether a grouping was sensible,\nand computing the p-value only on save is computing it after the decision.",
+        "description": "FR-MODEL-83, and the half `02` §5.3 names outright.\n\nMerging two levels shows the deviance/df trade-off *before* the grouping is saved. An\nactuary should never have to fit a model to find out whether a grouping was sensible,\nand computing the p-value only on save is computing it after the decision.",
         "operationId": "evaluate_grouping_api_v1_groupings_evaluate_post",
         "requestBody": {
           "content": {

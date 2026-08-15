@@ -251,11 +251,11 @@ async def test_a_grouping_proposal_carries_its_change_in_fit(
     assert proposed.evidence.chi2_p_value < 0.01
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-MODEL-83")
 async def test_evaluating_edited_boundaries_moves_the_band_statistics(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
-    """FR-MODEL-75: what an edited boundary *did*, before the banding is saved.
+    """FR-MODEL-83: what an edited boundary *did*, before the banding is saved.
 
     The assertion that matters is that the numbers **change with the cut**. A stub that
     echoed the request, or one that recomputed against the wrong column, would return
@@ -304,7 +304,7 @@ async def test_evaluating_edited_boundaries_moves_the_band_statistics(
     assert split != lumped, "the statistics must follow the boundary, not the request"
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-MODEL-83")
 async def test_evaluating_an_edited_mapping_moves_the_evidence(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -354,7 +354,7 @@ async def test_evaluating_an_edited_mapping_moves_the_evidence(
     assert kept.chi2_p_value is None, "no degrees of freedom saved, so no test to report"
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-MODEL-83")
 async def test_evaluating_needs_a_validated_version_too(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -386,7 +386,7 @@ async def test_evaluating_needs_a_validated_version_too(
     assert refused.value.code == "DATASET_NOT_VALIDATED"
 
 
-@pytest.mark.req("FR-MODEL-75")
+@pytest.mark.req("FR-MODEL-83")
 async def test_evaluating_persists_nothing(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:

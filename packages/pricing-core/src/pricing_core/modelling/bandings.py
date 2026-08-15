@@ -434,18 +434,27 @@ def check_banding(
     frame: pl.DataFrame,
     banding: Banding,
     *,
-    min_exposure: float = 0.0,
-    min_claims: float = 0.0,
+    min_exposure: float | None = None,
+    min_claims: float | None = None,
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
-    fail_on_thin: bool = False,
+    fail_on_thin: bool | None = None,
 ) -> tuple[str, ...]:
     """FR-MODEL-11, against a specific Dataset Version.
 
-    **An empty band always raises**, whatever `fail_on_thin` says: a level no row reaches
+    **An empty band always raises**, whatever the configuration says: a level no row reaches
     contributes no information and gets a coefficient anyway, estimated from nothing. Thin
     bands warn by default and fail when configured, which is the requirement's own wording.
+
+    The thresholds default to the **banding's own** `minimums` (`banding.schema.json`), so
+    the configured floor is a property of the artifact a reviewer can read rather than an
+    argument at one call site. The keyword arguments override it, which is what a
+    what-if evaluation needs.
     """
+    minimums = banding.minimums
+    min_exposure = float(minimums.min_exposure_per_band) if min_exposure is None else min_exposure
+    min_claims = minimums.min_claims_per_band if min_claims is None else min_claims
+    fail_on_thin = (minimums.on_violation == "fail") if fail_on_thin is None else fail_on_thin
     stats = band_statistics(
         frame,
         banding,

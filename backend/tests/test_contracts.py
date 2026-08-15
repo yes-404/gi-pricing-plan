@@ -107,10 +107,28 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     money_like = re.compile(r"(_minor$|relativity|premium|exposure)", re.I)
     offenders: list[str] = []
 
+    #: `01` FR-DATA-26's one-way row carries a **mean** severity and a **mean** burning
+    #: cost. They are statistics, not amounts: `01` keeps them as floats deliberately,
+    #: because rounding a mean to whole minor units would lose the precision the confidence
+    #: interval beside it is expressing.
+    #:
+    #: The `_minor` suffix is what makes the scan flag them, and the suffix is the part that
+    #: is wrong — FR-OVR-7 reserves it for integer minor units. Excluded here by name rather
+    #: than by weakening the pattern, and **raised as OQ-OVR-7** rather than settled: the
+    #: rename touches `01`'s published profile contract and every screen that reads it.
+    #:
+    #: Nothing else is excluded. These two surfaced only when `banding` and `grouping` began
+    #: generating (they embed the one-way row); the scan had never reached them before.
+    ratio_statistics = {"severity_minor", "burning_cost_minor"}
+
     def walk(node: object, path: str = "") -> None:
         if isinstance(node, dict):
             for key, value in node.items():
-                if money_like.search(key) and isinstance(value, dict):
+                if (
+                    money_like.search(key)
+                    and key not in ratio_statistics
+                    and isinstance(value, dict)
+                ):
                     branches = value.get("anyOf", [value])
                     if any(b.get("type") == "number" for b in branches):
                         offenders.append(f"{path}.{key}")
@@ -185,6 +203,48 @@ def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
     assert set(generated["properties"]) == set(authored["properties"])
+
+
+#: Fields the `ArtifactEnvelope` contributes, which a hand-authored schema carries through
+#: `allOf` rather than listing (`00` §4.3). They appear in the generated shape and not in
+#: the authored one's `properties`, and that is not a divergence.
+ENVELOPE_FIELDS = frozenset({"id", "slug", "version", "dataset_id"})
+
+
+@pytest.mark.req("FR-OVR-6")
+@pytest.mark.parametrize("slug", ["banding", "grouping"])
+def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:
+    """Both directions, for the shapes with a hand-authored Phase-0 contract.
+
+    `generate-contracts --check` compares the *generated* files against the models and is
+    therefore silent about the twenty hand-written ones — so nothing compared the shape the
+    code produces against the shape the contract promises. Four divergences accumulated in
+    `Banding` and `Grouping` before anything noticed, and `main` moving is what surfaced
+    them rather than any check:
+
+    * a top-level `credibility_standard` the contract never had (it says
+      `method_params.credibility_model`);
+    * `band_stats` keyed by `label` in one schema and `level` in another, for the same
+      statistics from the same requirement;
+    * no `minimums` on the Banding, which the contract declares;
+    * no `rationale` on the Grouping, which FR-MODEL-16 requires and the dossier prints
+      verbatim.
+
+    A missing field is a promise the platform breaks. An extra one is a shape defined twice,
+    which `CLAUDE.md` §2 forbids because the two will diverge — and here a diverged shape is
+    a mispricing.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    declared, produced = set(authored["properties"]), set(generated["properties"])
+    assert not declared - produced, (
+        f"the contract declares fields the model lacks: {sorted(declared - produced)}"
+    )
+    assert not produced - declared - ENVELOPE_FIELDS, (
+        "the model produces fields the contract does not declare: "
+        f"{sorted(produced - declared - ENVELOPE_FIELDS)}"
+    )
 
 
 @pytest.mark.req("FR-OVR-6")

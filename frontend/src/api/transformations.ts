@@ -31,7 +31,7 @@ export function proposeBanding(body: {
 }
 
 /**
- * FR-MODEL-75. What an edited boundary *did*, before the banding is saved.
+ * FR-MODEL-83. What an edited boundary *did*, before the banding is saved.
  *
  * The whole banding goes over the wire rather than a list of numbers, because the answer
  * depends on all of it — see the module note above.
@@ -67,7 +67,7 @@ export function proposeGrouping(body: {
   return request<Grouping>("/groupings/propose", { method: "POST", body });
 }
 
-/** FR-MODEL-75, and the half `02` §5.3 names: the deviance/df trade-off before saving. */
+/** FR-MODEL-83, and the half `02` §5.3 names: the deviance/df trade-off before saving. */
 export function evaluateGrouping(
   datasetVersionId: string,
   grouping: Grouping,

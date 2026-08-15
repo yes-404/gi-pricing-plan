@@ -42,6 +42,11 @@ GENERATED_SHAPES: dict[str, str] = {
     "blob-ref": "BlobRef",
     "artifact-ref": "ArtifactRef",
     "artifact-envelope": "ArtifactEnvelope",
+    # Added 2026-08-15 (W5). Both had hand-authored Phase-0 contracts and no generated
+    # counterpart, so nothing compared the shape the code produces against the shape the
+    # contract promises — and three divergences went unnoticed until `main` moved.
+    "banding": "Banding",
+    "grouping": "Grouping",
 }
 
 

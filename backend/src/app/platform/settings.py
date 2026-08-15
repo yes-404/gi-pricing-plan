@@ -180,9 +180,12 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         key="features.expression_objectives_enabled",
         type=SettingType.BOOL,
         default=False,
-        description="Custom objectives written as expressions (`02` OQ-MODEL-1, wf-05). "
-        "Off by default: an arbitrary-code objective is a governance risk, so the safe "
-        "value is the one that does not evaluate user input.",
+        description="Custom objectives written as expressions (`02` FR-MODEL-75, wf-05 "
+        "Route B). Off by default: an arbitrary-code objective is a governance risk, so "
+        "the safe value is the one that does not evaluate user input. OQ-MODEL-1 was "
+        "decided on 2026-08-15 — expressions ship in Phase 2, so through Phase 1 this "
+        "flag has nothing to enable and stays off; the certification machinery it will "
+        "front is built now against templates.",
         feature_flag=True,
     ),
     SettingDefinition(

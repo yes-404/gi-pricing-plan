@@ -45,6 +45,21 @@ directions.
 **Never silently pick a side on an open design choice.** Record options and a
 recommendation; do not resolve it in prose (`CLAUDE.md` §10).
 
+**A new `OQ-` also goes into `docs/roadmap.md` §10's decision-gate table, in the same
+commit.** `audit-docs.py` does not check this — it verifies the spec ↔ register mirror and
+stops there — so a question can be raised, mirrored, and still be invisible to the plan.
+Four were: OQ-DATA-7, OQ-OVR-6, OQ-PLAT-6 and OQ-MODEL-8 were all raised inside Phase 1a,
+all mirrored correctly, and none reached the gate table until 2026-08-15. The `docs-audit`
+skill carries the script that catches it; run it whenever you add or decide a question.
+
+**Deciding one is the same edit in three places**, and the register's own precedent shows
+the shape: strike the question and prefix `**DECIDED <date>: …**`; leave the options column
+as it was, because it records what was believed at the time; rewrite the recommendation
+column as the decision, naming the requirements it became; set the status. Then the spec's
+§10 row gets the same strike and a one-line pointer to those requirements, and the
+obligation itself lands in §3 as an appended `FR-`. **A decision that appends no
+requirement usually has not been applied** — it is still a recommendation.
+
 ## After editing
 
 ```bash
@@ -61,6 +76,10 @@ explicit status enums. Avoid "the system should handle…". Small illustrative s
 encouraged; full implementations are not.
 
 ## Verified
+
+2026-08-15 — Confirmed while recording six maintainer decisions (OQ-MODEL-1, 2, 4, 5, 6, 7)
+as FR-MODEL-75..82. The gate-table rule above was learnt from the failure, not from
+foresight: the invariant was already broken on `main` when this work started.
 
 2026-08-14 — Confirmed again while recording four maintainer decisions: bolding
 `**FR-PLAT-51**` in an open-questions row created a duplicate-definition failure, caught by
