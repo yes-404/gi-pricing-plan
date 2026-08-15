@@ -255,6 +255,52 @@ authority.
 The first run happened at **W6a's close** — it is [below](#plan-review-1--at-w6as-close-2026-08-15),
 with the maintainer acceptance line each of its proposals needs.
 
+### Independent audit — 2026-08-15, and what it changed
+
+Five auditors ran over Phase 1a's closed work, none of them allowed to read the closure
+records they were auditing: each derived what should exist from the specs and then went
+looking. The maintainer asked for it after noticing that every audit so far had been a
+self-audit — every one of these five PRs merged with **zero reviews**.
+
+**No security holes.** Separation of duties holds in three independent layers, workspace
+isolation refuses cross-tenant ids indistinguishably from missing ones, secrets are never
+returned, the dev identity grants no permissions and never reaches the production bundle.
+
+**The finding was consistent across all five: the code mostly does what it says; the
+records and checks claimed more than they establish.**
+
+| Claim | What was true |
+|---|---|
+| "38 of 38 catalogue rules" | the check counted ids **in prose**; one docstring reading `VR-ACT-1/2/8` became three, two of which appear in no source file. The truthful count is 1, and that one is an error message |
+| "all 7 of `01` §5.3's views" | true of the router; **6 of their 27 Contents items** are missing — lineage graph, histograms, PSI selector, status badge, last validated, owner |
+| the frontend contract-drift check | ran `git diff` on a git-ignored path that CI creates in the same step. It could not fail |
+| "a renamed heading breaks the guide loudly, and the test is in the gate" | it did not: two specs were covered by accident, five and the roadmap by nothing |
+| FR-DATA-13's refusal, FR-DATA-15's immutability | specified, cited, and enforced nowhere |
+| pandera as the Layer-1 mechanism | named in four places; a dependency of nothing |
+
+**Three tests proved nothing**, shown by injection: authorisation was tested on three of
+fifty-nine operations and a downgraded permission left all 609 green; the acknowledge route
+had no HTTP test and swapping its two path parameters passed; the determinism fixture held
+one rule, so randomising result order passed.
+
+**What it changed**, in two commits:
+
+- **Tier 1** (`fix/audit-tier-1`) — the checks that could not fail, and the tests that
+  proved nothing. Each fix demonstrated against the injection that used to pass.
+- **Tier 2** — this spec upgrade. The specs now describe what was built (pandera withdrawn,
+  the rule-format params corrected, the reference publish lifecycle declared, `06`'s
+  authentication-only routes stated, §5.2's signatures corrected) and carry the two
+  obligations the code does not meet as **FR-DATA-41** and **FR-DATA-42**, unevidenced and
+  owned by W6b.
+
+**Tier 3 is outstanding: the closure records for W4, W6a and W7b overstate.** Each measured
+a proxy — a route exists, a marker exists, an id appears — and reported it as the thing.
+They are rewritten against what the audits establish, not re-derived from the same proxies.
+
+`CLAUDE.md` §14 now makes the specification the plan review's main target at every stage
+boundary, for the reason this audit demonstrated: a divergence left in a spec is a defect
+the next workstream inherits and builds on.
+
 ### W7b — The demo entrance: closed 2026-08-15
 
 **Scope, derived from `07` §3.9 before writing anything: two requirements** — FR-PLAT-53
