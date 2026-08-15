@@ -265,7 +265,6 @@ async def run(rows: int | None) -> int:
         RoleAssignmentRow,
         RoleRow,
         ValidationRuleRow,
-        ValidationRuleSetRow,
     )
     from app.db.session import Database
     from app.platform import datasets as dataset_service
@@ -353,11 +352,15 @@ async def run(rows: int | None) -> int:
             session.add(row)
             await session.flush()
             rule_ids.append(str(row.id))
-        session.add(
-            ValidationRuleSetRow(
-                workspace_id=workspace_id, dataset_id=dataset_id, slug=str(dataset_id),
-                version=1, body={"rule_ids": rule_ids}, status="approved",
-            )
+    # Through the service, not a direct insert: `replace_rule_set` is what points the
+    # dataset at its rule set (`01` §4.1's `validation_rule_set_id`), and a seed that
+    # bypassed it would produce a workspace the platform itself would not.
+    async with database.unit_of_work() as session:
+        from app.platform import validation_rules as rule_service
+
+        await rule_service.replace_rule_set(
+            session, workspace_id=workspace_id, actor=analyst, dataset_id=dataset_id,
+            slug=str(dataset_id), rule_ids=[UUID(r) for r in rule_ids],
         )
     print(f"  dataset {slug} with {len(RULES)} approved rules across four layers\n")
 

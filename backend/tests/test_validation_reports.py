@@ -454,3 +454,51 @@ async def test_the_presented_report_says_which_warning_was_acknowledged(
 
     # And the artifact itself is unchanged, which NFR-DATA-5 compares byte for byte.
     assert all(result.acknowledgement is None for result in stored.results)
+
+
+@pytest.mark.req("FR-DATA-22")
+async def test_replacing_a_rule_set_points_the_dataset_at_it(
+    database: Database, workspace_id
+) -> None:
+    """`01` §4.1 declares `validation_rule_set_id` and §5.3 renders a link to it.
+
+    The rule-set row carried `dataset_id` and the dataset never pointed back, so the field
+    was null on every dataset the platform had itself configured — and a reader could not
+    tell one with rules from one without. Found by building the dataset detail view.
+    """
+    from app.db.models import DatasetRow, ValidationRuleRow
+    from app.platform import validation_rules as rule_service
+    from model_schema import ValidationLayer
+
+    actor = await _principal_with_role(database, workspace_id, "analyst")
+    async with database.unit_of_work() as session:
+        dataset = await datasets.create_dataset(
+            session, workspace_id=workspace_id, actor=actor, slug=f"ds-{new_uuid7().hex[-8:]}"
+        )
+        dataset_id = dataset.id
+        rule = ValidationRuleRow(
+            workspace_id=workspace_id, slug=f"r-{new_uuid7().hex[-6:]}", version=1,
+            layer=ValidationLayer.STRUCTURAL.value, check="not_null",
+            severity=Severity.FAIL.value,
+            body={"target": {"table": "t", "column": "a"}, "params": {"columns": ["a"]},
+                  "scope": {}, "tolerance": {}, "message": "", "rationale": ""},
+            status="approved", authored_by=actor.id, approved_by=new_uuid7(),
+            dry_run_report_id=new_uuid7(),
+        )
+        session.add(rule)
+        await session.flush()
+        rule_id = rule.id
+
+    async with database.session() as session:
+        before = await session.get(DatasetRow, dataset_id)
+        assert before.validation_rule_set_id is None
+
+    async with database.unit_of_work() as session:
+        rule_set = await rule_service.replace_rule_set(
+            session, workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            slug=str(dataset_id), rule_ids=[rule_id],
+        )
+
+    async with database.session() as session:
+        after = await session.get(DatasetRow, dataset_id)
+    assert after.validation_rule_set_id == rule_set.id, "the dataset does not name its rules"

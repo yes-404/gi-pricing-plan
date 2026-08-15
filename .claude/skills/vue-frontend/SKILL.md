@@ -215,6 +215,38 @@ anything new crossing the line still does. A second heavy dependency deserves it
 `manualChunks` entry, not another raise — a threshold nudged up per offender is one nobody
 reads.
 
+## `structuredClone` throws on a reactive value
+
+A `ref`'s contents are a Proxy, and a Proxy is not structured-cloneable. `structuredClone`
+on one raises `DataCloneError: #<Object> could not be cloned`, which names the object
+rather than the reactivity and reads like bad data. `structuredClone(toRaw(value))`.
+
+This matters wherever an editor takes a working copy: a *shallow* copy leaves a cancelled
+edit visible on screen, so the deep copy is the point.
+
+## `stubs: { RouterLink: true }` discards the slot
+
+The auto-stub renders `<router-link-stub>` with **no children**, so any assertion on a
+link's text fails against an empty element — and the failure reads as "the view did not
+render it". Stub with something that keeps the content:
+
+```ts
+global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } }
+```
+
+## A view that loads in two steps renders between them
+
+`findByRole("table")` resolves as soon as the *first* fetch populates the container — the
+second is still in flight, and the table is empty. Wait for the content, not the container:
+
+```ts
+const table = await screen.findByRole("table", { name: "Versions" });
+await waitFor(() => expect(within(table).getAllByRole("row")).toHaveLength(3));
+```
+
+Give every table an `aria-label` while you are there. Two unnamed tables on one page make
+`getByRole("table")` ambiguous, and naming them is what a screen reader needs anyway.
+
 ## Mock the chart, not the canvas
 
 `happy-dom` has no real canvas, so a view test that renders ECharts tests the DOM

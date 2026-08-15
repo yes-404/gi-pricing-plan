@@ -484,6 +484,7 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 | `GET` | `/api/v1/datasets` | List / filter datasets |
 | `GET` | `/api/v1/datasets/{slug}` | Dataset detail incl. `latest_version` |
 | `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) |
+| `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated |
 | `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-DATA-2) |
 | `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail |
 | `PATCH` | `/api/v1/datasets/{slug}/versions/{version}/schema` | Correct the inferred schema while `draft` (FR-DATA-4) |
@@ -504,6 +505,16 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 | `GET`/`PUT` | `/api/v1/datasets/{slug}/rule-set` | Read / replace the Rule Set (creates a new rule-set version) |
 | `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-DATA-29) |
 | `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-DATA-31) |
+
+> **`GET /datasets/{slug}/versions` added 2026-08-15 (W6a).** §5.3 requires the Dataset
+> detail view to render a **version timeline**, and §5.1 offered only `latest_version` and
+> per-version detail — so a client had to issue one request per version to draw it, and
+> could not show a status without fetching them all. Found by building the view against the
+> table.
+>
+> Newest first and cursor-paginated like every other collection (`00` §5.2): a dataset
+> refreshed monthly for ten years has a hundred and twenty versions, and a timeline is read
+> from the top.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED`, `DATASET_VERSION_IMMUTABLE`,
 `SCHEMA_INFERENCE_CONFLICT`, `COLUMN_NAME_COLLISION`, `DIRECT_IDENTIFIER_PRESENT`,
