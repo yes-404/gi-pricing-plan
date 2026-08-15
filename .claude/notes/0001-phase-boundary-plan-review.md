@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-15, maintainer |
-| **Status** | `open` |
+| **Status** | `landed` 2026-08-15 — `CLAUDE.md` §14 |
 | **Deliverable** | A written review, landing as edits to `docs/roadmap.md` and `docs/open-questions.md`. Spec changes only where the review proves one. **No code.** |
 | **Owner** | Claude drafts · maintainer accepts |
 | **Lands in** | `docs/roadmap.md` §6–§12 · `docs/open-questions.md` · eventually `.claude/skills/phase-review` |
@@ -69,10 +69,26 @@ Four corrections before it is run:
 - Every proposed change is either accepted with a date, or recorded in
   `docs/open-questions.md` with options and a recommendation.
 
+## Where it went
+
+Accepted by the maintainer 2026-08-15 and merged into the suite, which is where it is now
+authoritative:
+
+| Outcome | Landed in |
+|---|---|
+| The standard — when it runs, the five questions, the four rules | `CLAUDE.md` §14 |
+| The trigger, and that its output is a proposal on that page | `docs/roadmap.md`, beside the §13 closure paragraph |
+
+All four corrections from the assessment survived into §14: reuse `scope-audit.py` rather
+than building a parallel audit, the output is a proposal never a change, requirement IDs are
+permanent so "remove" means *mark superseded*, and a later phase's finding is a spec change
+only.
+
 ## Next step
 
-Run it once at W6a's close. After a second run, the procedure becomes
-`.claude/skills/phase-review`, alongside `close-workstream` (`CLAUDE.md` §12).
+Run it once at W6a's close — the first run is now recorded as due in `docs/roadmap.md`.
+After a second run, the procedure becomes `.claude/skills/phase-review`, alongside
+`close-workstream` (`CLAUDE.md` §12).
 
 ## Original wording
 

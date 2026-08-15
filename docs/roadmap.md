@@ -243,6 +243,16 @@ deliverable re-verified against its row above, the gate run locally, each new ch
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered
 stated explicitly. A closure record without those is an assertion, not evidence.
 
+**And a plan review runs at the same moment** (`CLAUDE.md` §14, from `NT-0001` accepted
+2026-08-15). §13 asks whether a workstream did what it said; §14 asks whether the plan still
+says the right thing — omission, skills drift, document drift, and whether the remaining
+phases are cut in the right place. It runs at **each workstream close and again before a
+phase's exit demo**, and its output is a proposal on this page, never an edit made on its own
+authority.
+
+The first run is due at **W6a's close**. Its findings, and the maintainer's acceptance of
+each, land in this section and in `open-questions.md`.
+
 ### W7a — freMTPL2 data seed: closed 2026-08-15
 
 The data half of W7 (`07` FR-PLAT-37), taken before W6a so the frontend has real data to
@@ -708,7 +718,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 |---|---|---|---|
 | **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics | W5 | `02` §5.3's interaction requirement — an edit's consequence visible before saving |
-| **W7** | freMTPL2 demo seed | W5, W6b | `07` FR-PLAT-37 — one command to a working system |
+| **W7** | freMTPL2 demo seed **and the demo entrance** | W5, W6b | `07` FR-PLAT-37 — one command to a working system — plus FR-PLAT-53/54, the entrance and its derived guide (`NT-0002`, accepted 2026-08-15). The data half closed early as **W7a** |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).
 
@@ -737,7 +747,7 @@ XGBoost model, compares them, and gets one approved — i.e. **`wf-01` executed 
 | ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
 | **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 | All 78 `MODEL` requirements — the largest single workstream |
 | **W6** | Frontend: app shell, dataset views, **validation report view**, **factor workbench**, model detail, diagnostics | W4, W5 | The two bolded views are where `01` §5.3 and `02` §5.3 place their interaction requirements |
-| **W7** | freMTPL2 demo seed | W4, W5, W6 | `07` FR-PLAT-37 — one command to a working system |
+| **W7** | freMTPL2 demo seed **and the demo entrance** | W4, W5, W6 | `07` FR-PLAT-37, plus FR-PLAT-53/54 (`NT-0002`). The data half closed early as **W7a** |
 
 W4 and W5 are sequential in contract terms but their *frontend* work (W6) can start as soon
 as the contracts are frozen, which is a Phase 1 parallelisation opportunity worth taking.

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-15, maintainer |
-| **Status** | `open` — blocked on W6a |
+| **Status** | `accepted` 2026-08-15 — spec change landed, code blocked on W6a |
 | **Deliverable** | **Spec change first, then code.** The capability is not currently specified (`CLAUDE.md` §0) |
 | **Owner** | maintainer |
 | **Lands in** | `docs/specs/07-platform.md` beside FR-PLAT-37 · then `frontend/`, `deploy/`, `examples/` |
@@ -66,10 +66,28 @@ Four things to settle before building it:
 - Phase 1a's exit criterion — including the validation-failure loop — is drivable by hand,
   start to finish, from that page.
 
+## Where it went
+
+Accepted by the maintainer 2026-08-15. The deliverable was **spec change first**, and that
+half is done:
+
+| Outcome | Landed in |
+|---|---|
+| The entrance, extending FR-PLAT-37 and gated on `dev_auth_enabled` | `07` FR-PLAT-53 |
+| The guide, derived from the contract and the roadmap rather than written | `07` FR-PLAT-54 |
+| Keeping the guide current as a closure step | `CLAUDE.md` §13 step 7 |
+| The work itself, sequenced | `docs/roadmap.md`, W7 |
+
+All four points from the assessment are carried by the requirements rather than left here:
+it extends FR-PLAT-37 instead of inventing a surface, the capability list is derived from
+`docs/contracts/` and the roadmap, the whole path hangs off the refusal that already exists,
+and the "not yet functional" column comes from the status table.
+
 ## Next step
 
-Nothing until W6a closes. Building the guide now would mean writing it against views that do
-not exist yet.
+**Code only after W6a closes.** Building the guide now would mean writing it against views
+that do not exist yet — and against a roadmap row the plan review (`CLAUDE.md` §14) has not
+yet re-tested.
 
 ## Original wording
 

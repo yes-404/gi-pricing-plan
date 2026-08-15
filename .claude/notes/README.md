@@ -35,8 +35,8 @@ must say where it went.
 
 | Note | Title | Raised | Status | Deliverable |
 |---|---|---|---|---|
-| [NT-0001](0001-phase-boundary-plan-review.md) | Plan review at each phase boundary — completion, omission, skills, drift, shape | 2026-08-15 | `open` | Review → `roadmap.md`, `open-questions.md` |
-| [NT-0002](0002-demo-entrance-and-guide.md) | Demo entrance, with a guide to what is testable | 2026-08-15 | `open` — blocked on W6a | Spec change first, then code |
+| [NT-0001](0001-phase-boundary-plan-review.md) | Plan review at each phase boundary — completion, omission, skills, drift, shape | 2026-08-15 | `landed` | Standard → `CLAUDE.md` §14; trigger → `roadmap.md` |
+| [NT-0002](0002-demo-entrance-and-guide.md) | Demo entrance, with a guide to what is testable | 2026-08-15 | `accepted` | Spec landed (FR-PLAT-53/54); code in W7 |
 
 ## What a note must contain
 

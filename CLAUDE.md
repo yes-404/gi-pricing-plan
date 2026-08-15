@@ -588,6 +588,11 @@ The roadmap status table and closure evidence; `CLAUDE.md` §2's layout marks; a
 the implementation proved wrong — when code and spec disagree, resolve it rather than
 quietly changing one (§0).
 
+**And the demo guide** (FR-PLAT-54), once it exists. Its whole purpose is telling a person
+what is worth trusting, so a workstream that closes while the guide still describes the
+previous state has published a claim the repository does not support — the failure this
+whole section exists to prevent, in the one place a human actually reads.
+
 ### 8. Repository clean
 
 No open PRs for the workstream; no tracked build artifacts; branch deleted after merge —
@@ -600,3 +605,64 @@ history and `git branch -d` refuses even when the work is fully merged.
   the suite must prove the wrong thing *cannot* happen, not that the right thing can.
 - A `@pytest.mark.req` marker on each test, naming the requirement it satisfies.
 - A round-trip or property test wherever the workstream persists or transforms data.
+
+---
+
+## 14. Phase Review Standard
+
+§13 audits **one workstream against its own scope**. Nothing there audits **the plan** —
+whether the phase boundaries, the workstream cuts and the requirement set still make sense
+now that some of the work is real.
+
+The roadmap was written before any application code existed, and code has since contradicted
+it more than once: W4's `pipelines/` mark, six `PLAT` endpoints missing from a closed
+workstream, a spec that required a version timeline and offered no way to fetch one. Treat
+the plan as a working hypothesis and re-test it **while the phase is still open**, early
+enough that the answer can change what the phase does.
+
+*(Raised by the maintainer as `NT-0001`, 2026-08-15. The note is the raw material; this
+section is the standard.)*
+
+### When
+
+At **each workstream close**, and again **before a phase's exit demo**. A fixed trigger, not
+"sometime" — a review that happens when someone remembers is one that happens after the
+mis-cut is expensive.
+
+### The five questions, in this order
+
+1. **Completion.** Which of the phase's planned tasks are actually done — derived from the
+   specs, then evidenced, never from recollection. **This is §13's machinery, not a second
+   audit:** `scope-audit.py` with `--sections`, `--endpoints` and `--catalogue`, plus
+   `req-coverage.py`. If it disagrees with the roadmap, the disagreement is the finding.
+2. **Omission.** What the phase plainly needs that no workstream row names. Distinct from
+   unfinished work: `pipelines/` was marked 1a W4 and belonged to W7; the blob endpoints
+   were declared in `07` §5.1 and owned by nobody. Both were absent from the plan rather
+   than behind schedule.
+3. **Skills and research.** Which entries `docs/skills-map.md` and `.claude/skills/README.md`
+   are now missing, and which have gone stale against the code. **Re-run the gap analysis**
+   rather than appending to a list — a list only ever grows.
+4. **Document drift.** Whether `docs/roadmap.md`, `docs/open-questions.md`, the module specs
+   and §2's layout marks still describe the repository as it is.
+5. **Shape.** Whether the remaining phases, workstreams and requirements are still cut in
+   the right place — split, merge, add, or supersede.
+
+### Four rules that keep a review a review
+
+- **The output is a proposal, never a change.** Recommendation, rationale, and an explicit
+  maintainer acceptance line with a date — the precedent the 1a/1b split set. A review that
+  edits the roadmap on its own authority is re-planning, not reviewing.
+- **Requirement IDs are permanent** (§5). "Remove a requirement" means *mark superseded*;
+  renumbering is never the answer. An accepted ADR is amended by addendum, not edited.
+- **A later phase's finding is a spec change only** (§0's table). It does not become work
+  now because a review noticed it — mid-phase re-planning is how scope churn and building
+  ahead of the phase both start.
+- **Every question gets a written answer, "no change" included.** A silent question is
+  indistinguishable from one nobody asked.
+
+### Output
+
+Proposals land in `docs/roadmap.md` and `docs/open-questions.md`, each either accepted with
+a date or recorded as an open question with options and a recommendation. After this has run
+twice, the procedure becomes `.claude/skills/phase-review` alongside `close-workstream`
+(§12).
