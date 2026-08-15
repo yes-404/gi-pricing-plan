@@ -67,3 +67,19 @@ plausibility rule for reasons entirely the sampler's fault. It takes every nth r
 Nine rules rather than the ~50 NFR-DATA-2 is written against, so the validation figure is
 a floor. It replaces nothing in the W4 closure record; it corroborates it on data nobody
 generated.
+
+## Opening the frontend against the seeded workspace
+
+The seed prints the two ids the dev server needs. The SPA sends no credential of its own —
+browser authentication is unspecified and open as OQ-PLAT-6 — so the Vite proxy injects a
+**development identity**, and without these two variables the API answers 401 to
+everything:
+
+```bash
+uv run python examples/fremtpl2/seed.py     # prints both export lines
+export GIP_DEV_PRINCIPAL_ID=… GIP_DEV_WORKSPACE_ID=…
+pnpm --dir frontend dev                     # http://localhost:5173/data
+```
+
+The headers exist in the dev server only; they are not in the production bundle and cannot
+be set from the browser. `.claude/skills/vue-frontend` has the reasoning and the check.
