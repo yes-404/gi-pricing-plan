@@ -3548,6 +3548,17 @@
         "additionalProperties": false,
         "description": "One level of a categorical factor, as an actuary reads it (FR-MODEL-21).",
         "properties": {
+          "estimate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate"
+          },
           "exposure": {
             "anyOf": [
               {
@@ -3569,13 +3580,19 @@
             "type": "string"
           },
           "relativity": {
-            "title": "Relativity",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relativity"
           }
         },
         "required": [
-          "level",
-          "relativity"
+          "level"
         ],
         "title": "RelativityLevel",
         "type": "object"

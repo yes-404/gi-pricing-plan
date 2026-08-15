@@ -38,9 +38,13 @@ from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 
 __all__ = ["GlmFitError", "fit_glm"]
 
-#: Above this, `glum`'s own convergence report is not to be trusted as "fine" — a fit that
-#: used every iteration it was given has usually not converged, it has run out of budget.
-_CONDITION_WARN = 1e10
+#: The exact two-sided 97.5 % normal quantile. Spelled out because 1.96 is a rounding of
+#: it, and a rounded interval is a different interval.
+_NORMAL_975 = 1.959963984540054
+
+#: |β| past which a fit is separation rather than an effect. `exp(20)` is 4.9e8 — a
+#: relativity no book contains.
+_SEPARATION_ETA = 20.0
 
 
 class GlmFitError(RuntimeError):
@@ -56,8 +60,40 @@ class GlmFitError(RuntimeError):
         self.terms = tuple(terms)
 
 
-def _design(matrix: FactorMatrix) -> tuple[pl.DataFrame, dict[str, list[str]]]:
-    """One-hot the categoricals, first level as base, and keep the mapping.
+def _levels(series: pl.Series, exposure: pl.Series | None) -> list[str]:
+    """A factor's levels, **base first**, chosen by `largest_exposure` (`02` §4.1).
+
+    The base was "first alphabetically", which the schema's own `base_level_method` says it
+    is not. It matters beyond tidiness: every other level's relativity is expressed against
+    the base, so a base holding 5 % of the exposure gives every relativity the standard
+    error of a thin cell. With no exposure column the largest **count** is the same idea
+    with the only weight available.
+
+    `cast(pl.String)` throughout rather than Python's `str()`: polars renders a boolean as
+    `"true"`, `str(True)` gives `"True"`, and the two never matched — a boolean factor
+    produced an all-zero dummy and was then reported as collinear.
+    """
+    text = series.cast(pl.String)
+    observed = [v for v in text.unique().sort().to_list() if v is not None]
+    if not observed:
+        return []
+
+    weights: dict[str, float] = {}
+    for level in observed:
+        mask = text == level
+        weights[level] = (
+            float(exposure.cast(pl.Float64).filter(mask).sum())
+            if exposure is not None
+            else float(mask.sum())
+        )
+    base = max(observed, key=lambda level: (weights[level], level))
+    return [base, *[level for level in observed if level != base]]
+
+
+def _design(
+    matrix: FactorMatrix, exposure: pl.Series | None
+) -> tuple[pl.DataFrame, dict[str, list[str]]]:
+    """One-hot the categoricals, base level excluded, and keep the mapping.
 
     Built here rather than handed to `glum`'s formula interface so the base level is a
     decision this module makes and records — FR-MODEL-21 requires the base to be *marked*,
@@ -70,10 +106,11 @@ def _design(matrix: FactorMatrix) -> tuple[pl.DataFrame, dict[str, list[str]]]:
     for slug, column in matrix.terms.items():
         series = frame[column]
         if column in matrix.categorical:
-            observed = [str(v) for v in series.unique().sort().to_list() if v is not None]
+            observed = _levels(series, exposure)
             levels[slug] = observed
-            for level in observed[1:]:  # first is the base
-                columns[f"{slug}[{level}]"] = (series.cast(pl.String) == level).cast(pl.Float64)
+            text = series.cast(pl.String)
+            for level in observed[1:]:  # index 0 is the base
+                columns[f"{slug}[{level}]"] = (text == level).cast(pl.Float64)
         else:
             columns[slug] = series.cast(pl.Float64)
 
@@ -96,7 +133,12 @@ def fit_glm(
     from glum import GeneralizedLinearRegressor  # type: ignore[import-untyped]
 
     matrix = resolve_factors(data, factors)
-    design, levels = _design(matrix)
+    exposure_series = (
+        data[str(spec.offset.column)]
+        if spec.offset.kind == "log_column" and spec.offset.column in data.columns
+        else None
+    )
+    design, levels = _design(matrix, exposure_series)
     if design.width == 0:
         raise GlmFitError(
             "GLM_RANK_DEFICIENT",
@@ -125,18 +167,13 @@ def fit_glm(
     if spec.weight.kind == "column":
         weights = data[str(spec.weight.column)].cast(pl.Float64).to_numpy()
 
-    # `glum` takes the Tweedie power in the family string, e.g. `tweedie(p=1.5)`.
+    # `glum` takes the power **positionally**: `tweedie(1.5)`. Written `tweedie(p=1.5)` it
+    # parses the power by calling `float("p=1.5")`, so every burning cost fit raised a bare
+    # `ValueError` from inside the library — not even a named `GlmFitError`, and the whole
+    # family was dead. The range is `GlmSpec`'s to check: it is a fact about the spec.
     family: str = spec.family
     if family == "tweedie":
-        power = float(spec.family_params.get("power", 1.5))
-        if not 1.0 < power < 2.0:
-            raise GlmFitError(
-                "GLM_DID_NOT_CONVERGE",
-                f"Tweedie power {power} is outside (1, 2). `CLAUDE.md` §7: burning cost is "
-                "Tweedie with 1 < p < 2; outside that it is a different family, not a "
-                "differently-tuned one.",
-            )
-        family = f"tweedie(p={power})"
+        family = f"tweedie({float(spec.family_params.get('power', 1.5))})"
 
     estimator = GeneralizedLinearRegressor(
         family=family,
@@ -176,9 +213,11 @@ def fit_glm(
         )
 
     coefficients = _coefficients(
-        estimator, design.columns, x, response, offset=offset, weights=weights, link=spec.link
+        estimator, design.columns, x, response,
+        offset=offset, weights=weights, link=spec.link,
     )
-    relativities = _relativities(matrix, levels, coefficients, data, spec)
+    _refuse_separation(coefficients)
+    relativities = _relativities(matrix, levels, coefficients, data, spec, link=spec.link)
 
     return GlmFitResult(
         converged=True,
@@ -186,6 +225,7 @@ def fit_glm(
         fit_seconds=round(elapsed, 3),
         coefficients=coefficients,
         relativities=relativities,
+        dispersion=_dispersion(estimator, x, response, weights=weights, offset=offset),
         deviance=None,
         rows=data.height,
         library_versions=_versions(),
@@ -204,62 +244,137 @@ def _coefficients(
 ) -> tuple[Coefficient, ...]:
     """Estimates with the uncertainty `02` R5 makes non-optional.
 
-    Standard errors come from the observed information matrix — `glum` does not return
-    them, and a coefficient without one is exactly the half-result R5 exists to refuse. If
-    the matrix is singular the fit is rank deficient, which FR-MODEL-23 names rather than
-    letting a `NaN` standard error travel onward as though it meant something.
+    **The standard errors come from `glum`.** They used to be computed here from a working
+    weight derived from the *link* — `W = mu` for a log link, `1` otherwise — which is the
+    Fisher information for Poisson and for nothing else. It ignores the family's variance
+    function and the dispersion φ, so a Gamma severity model over amounts in minor units
+    reported intervals roughly **forty-eight times too narrow**: a nominal 95 % interval
+    with measured coverage of 7 %. `02` §8 had already recorded that glum's `std_errors()`
+    was "verified to exist, not assumed"; this hand-rolled a replacement for a verified
+    path and got it wrong for every family the spec supports except one.
+
+    `robust=False` is explicit because **glum's default is `True`** — the HC-1 sandwich.
+    That is a defensible estimator and a different one, and FR-MODEL-21 asks for the
+    model-based standard error that pairs with the z and p-value beside it.
+
+    The ordering is glum's: index 0 is the intercept, then the design columns in order.
+    Verified rather than assumed — a column with a hundredth of the variance of its
+    neighbour carries the correspondingly larger standard error at the expected index.
     """
-    coef = np.asarray(estimator.coef_, dtype=float)
+    coef = np.asarray(estimator.coef_, dtype=np.float64)
     intercept = float(getattr(estimator, "intercept_", 0.0))
-    design = np.column_stack([np.ones(len(y)), x])
     beta = np.concatenate([[intercept], coef])
     names = ["intercept", *terms]
 
-    eta = design @ beta + (offset if offset is not None else 0.0)
-    mu = np.exp(eta) if link == "log" else eta
-    w = mu if link == "log" else np.ones_like(mu)
-    if weights is not None:
-        w = w * weights
-
-    information = design.T @ (design * w[:, None])
     try:
-        covariance = np.linalg.inv(information)
-    except np.linalg.LinAlgError as exc:
+        std_errors = np.asarray(
+            estimator.std_errors(
+                x, y, sample_weight=weights, offset=offset, robust=False
+            ),
+            dtype=np.float64,
+        )
+    except (np.linalg.LinAlgError, ValueError) as exc:
         raise GlmFitError(
             "GLM_RANK_DEFICIENT",
-            "the information matrix is singular: two or more terms are collinear, so their "
-            "coefficients are not separately identified. FR-MODEL-23 names this rather "
-            "than returning a fit with meaningless standard errors.",
+            "the standard errors could not be computed: the information matrix is "
+            "singular, so two or more terms are collinear and their coefficients are not "
+            "separately identified.",
             terms=names,
         ) from exc
 
-    variances = np.diag(covariance)
-    if np.any(~np.isfinite(variances)) or np.any(variances < 0):
+    if len(std_errors) != len(beta):
         raise GlmFitError(
             "GLM_RANK_DEFICIENT",
-            "a coefficient has a non-finite variance, which means the fit did not identify "
-            "it. Reported rather than returned as an estimate with no uncertainty (R5).",
-            terms=[n for n, v in zip(names, variances, strict=True) if not np.isfinite(v)],
+            f"the estimator returned {len(std_errors)} standard errors for {len(beta)} "
+            "coefficients. Pairing them by position would attach an interval to the wrong "
+            "term, which is worse than reporting none.",
+            terms=names,
+        )
+
+    unidentified = [
+        name
+        for name, error in zip(names, std_errors, strict=True)
+        if not np.isfinite(error) or error < 0
+    ]
+    if unidentified:
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            "a coefficient has no finite standard error, which means the fit did not "
+            "identify it. Reported rather than returned as an estimate with no uncertainty "
+            "(`02` R5).",
+            terms=unidentified,
         )
 
     out: list[Coefficient] = []
-    for name, estimate, variance in zip(names, beta, variances, strict=True):
-        std_error = float(np.sqrt(variance))
-        z = float(estimate / std_error) if std_error > 0 else 0.0
+    for name, estimate, std_error in zip(names, beta, std_errors, strict=True):
+        error = float(std_error)
+        z = float(estimate / error) if error > 0 else 0.0
         p_value = float(2.0 * stats.norm.sf(abs(z)))
-        half = 1.959963984540054 * std_error
+        half = _NORMAL_975 * error
         out.append(
             Coefficient(
                 term=name,
                 estimate=float(estimate),
-                std_error=std_error,
+                std_error=error,
                 z=z,
                 p_value=min(max(p_value, 0.0), 1.0),
                 ci_95=(float(estimate - half), float(estimate + half)),
+                # A relativity is `exp(β)`, which is a reading of a **multiplicative**
+                # model. Under `logit` or `identity` the level's effect is additive on the
+                # link scale and there is no relativity to report.
                 relativity=float(np.exp(estimate)) if link == "log" else None,
             )
         )
     return tuple(out)
+
+
+def _refuse_separation(coefficients: Sequence[Coefficient]) -> None:
+    """FR-MODEL-23 names separation; nothing detected it.
+
+    A perfectly separated logit returned `converged=True` with a coefficient of **640** and
+    p=0 — a degenerate fit presented as a result, which is the failure the requirement
+    exists to forbid. The threshold is on the linear predictor: `exp(20)` is 4.9 x 10⁸, a
+    relativity no book contains, so a coefficient past it is a boundary the optimiser walked
+    to rather than an effect the data supports.
+    """
+    extreme = [c.term for c in coefficients if abs(c.estimate) > _SEPARATION_ETA]
+    if extreme:
+        raise GlmFitError(
+            "GLM_SEPARATION_DETECTED",
+            f"{', '.join(extreme)} reached |β| > {_SEPARATION_ETA}, which means the "
+            "response is perfectly (or nearly perfectly) predicted by those terms and the "
+            "likelihood has no interior maximum. The estimate is where the optimiser "
+            "stopped, not an effect size — drop the term, merge the level, or penalise.",
+            terms=extreme,
+        )
+
+
+def _dispersion(
+    estimator: Any,
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    weights: np.ndarray | None,
+    offset: np.ndarray | None,
+) -> float | None:
+    """The scale parameter φ, where the family has one to estimate.
+
+    Poisson and binomial fix it at 1; Gamma, Gaussian, inverse-Gaussian and Tweedie do not,
+    and it is the factor the old standard errors were missing. Persisted because `02` §4.8
+    carries it in the Model artifact, and because a reader cannot tell a Gamma fit's
+    intervals from a Poisson's without it.
+    """
+    try:
+        value = float(
+            estimator.family_instance.dispersion(
+                y,
+                estimator.predict(x, offset=offset),
+                sample_weight=weights,
+            )
+        )
+    except Exception:  # an estimate the family cannot supply is reported as absent
+        return None
+    return value if np.isfinite(value) else None
 
 
 def _relativities(
@@ -268,18 +383,28 @@ def _relativities(
     coefficients: Sequence[Coefficient],
     data: pl.DataFrame,
     spec: GlmSpec,
+    *,
+    link: str,
 ) -> dict[str, tuple[RelativityLevel, ...]]:
     """The table an actuary reads: one row per level, base marked (FR-MODEL-21).
 
-    The base level carries relativity 1.0 by construction — it is the level everything else
-    is expressed against, and showing it as blank is how a reader ends up thinking a factor
-    has one fewer level than it has.
+    The base carries relativity 1.0 by construction — it is what everything else is
+    expressed against, and showing it blank is how a reader ends up thinking a factor has
+    one fewer level than it has.
+
+    **Only under a multiplicative link.** A missing coefficient used to fall back to 1.0,
+    and `Coefficient.relativity` is `None` for any non-log link — so a logit model produced
+    a table of 1.0s for a factor spanning eighteen log-odds, reported as no effect
+    anywhere. Now the estimate is carried instead and the relativity left absent, which is
+    the true statement.
     """
     by_term = {c.term: c for c in coefficients}
     exposure_column = spec.offset.column if spec.offset.kind == "log_column" else None
 
     tables: dict[str, tuple[RelativityLevel, ...]] = {}
     for slug, observed in levels.items():
+        if not observed:
+            continue
         column = matrix.terms[slug]
         exposures: dict[str, float] = {}
         if exposure_column and exposure_column in data.columns:
@@ -292,7 +417,10 @@ def _relativities(
 
         rows = [
             RelativityLevel(
-                level=observed[0], relativity=1.0, is_base=True,
+                level=observed[0],
+                relativity=1.0 if link == "log" else None,
+                estimate=0.0,
+                is_base=True,
                 exposure=exposures.get(observed[0]),
             )
         ]
@@ -301,8 +429,8 @@ def _relativities(
             rows.append(
                 RelativityLevel(
                     level=level,
-                    relativity=coefficient.relativity if coefficient and coefficient.relativity
-                    else 1.0,
+                    relativity=coefficient.relativity if coefficient else None,
+                    estimate=coefficient.estimate if coefficient else None,
                     is_base=False,
                     exposure=exposures.get(level),
                 )

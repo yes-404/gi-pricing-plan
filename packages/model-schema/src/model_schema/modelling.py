@@ -185,6 +185,24 @@ class GlmSpec(BaseModel):
     seed: int = 0
 
     @model_validator(mode="after")
+    def _a_tweedie_power_lies_between_the_two_families_it_spans(self) -> GlmSpec:
+        """`CLAUDE.md` §7: burning cost is Tweedie with 1 < p < 2.
+
+        Outside that it is a different family — Poisson at 1, Gamma at 2 — not a
+        differently-tuned one. Checked here rather than at fit time because it is a fact
+        about the specification, and a spec that cannot be fitted should not be storable.
+        """
+        if self.family == "tweedie":
+            power = float(self.family_params.get("power", 1.5))
+            if not 1.0 < power < 2.0:
+                raise ValueError(
+                    f"tweedie power {power} is outside (1, 2). At 1 it is Poisson and at 2 "
+                    "it is Gamma; between them it is the compound-Poisson-Gamma that "
+                    "burning cost needs."
+                )
+        return self
+
+    @model_validator(mode="after")
     def _frequency_declares_its_exposure(self) -> GlmSpec:
         """FR-MODEL-19: a Poisson frequency model without an offset is a rate model that
         thinks it is a count model.
@@ -208,7 +226,13 @@ class RelativityLevel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     level: str
-    relativity: float
+    #: `None` where the link is not multiplicative. A relativity is `exp(β)` — meaningful
+    #: under a log link and nothing under `logit` or `identity`, where the level's effect
+    #: is additive on the link scale. Reporting 1.0 there said "no effect" for a factor
+    #: spanning eighteen log-odds, which is worse than reporting nothing.
+    relativity: float | None = None
+    #: The coefficient itself, which every link has.
+    estimate: float | None = None
     is_base: bool = False
     exposure: float | None = None
 
@@ -255,6 +279,9 @@ class GlmFitResult(BaseModel):
     fit_seconds: float = Field(ge=0.0)
     coefficients: tuple[Coefficient, ...] = ()
     relativities: dict[str, tuple[RelativityLevel, ...]] = Field(default_factory=dict)
+    #: The scale parameter φ. Estimated for Gamma, Gaussian, inverse-Gaussian and
+    #: Tweedie; fixed at 1 for Poisson and binomial, where it is not a free parameter.
+    #: `None` only if the estimator could not supply one.
     dispersion: float | None = None
     deviance: float | None = None
     rows: int = Field(default=0, ge=0)

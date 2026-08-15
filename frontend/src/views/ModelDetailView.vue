@@ -248,7 +248,7 @@ onMounted(async () => {
                   scope="col"
                   class="py-2 font-medium"
                 >
-                  Relativity
+                  Effect
                 </th>
                 <th
                   scope="col"
@@ -273,8 +273,22 @@ onMounted(async () => {
                     class="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-700"
                   >base</span>
                 </td>
+                <!-- A relativity is `exp(β)` — a reading of a multiplicative model, and
+                     absent under `logit` or `identity`. Showing 1.000 there said "no
+                     effect" for a factor spanning eighteen log-odds; the coefficient is
+                     what those links have. -->
                 <td class="py-2 font-mono text-xs">
-                  {{ level.relativity.toFixed(3) }}
+                  <template v-if="level.relativity != null">
+                    {{ level.relativity.toFixed(3) }}
+                  </template>
+                  <template v-else-if="level.estimate != null">
+                    {{ level.estimate.toFixed(4) }}
+                    <span class="text-slate-400">on the link scale</span>
+                  </template>
+                  <span
+                    v-else
+                    class="text-slate-400"
+                  >—</span>
                 </td>
                 <td class="py-2 font-mono text-xs text-slate-600">
                   {{ level.exposure != null ? level.exposure.toFixed(1) : "—" }}

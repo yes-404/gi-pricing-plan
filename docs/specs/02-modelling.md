@@ -613,6 +613,31 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 > transparency, backtests, comparison, prediction, custom objectives, metrics and peril
 > structures — is declared and unbuilt, and `scope-audit.py MODEL --endpoints` says so.
 
+> **Amended 2026-08-15, after three independent audits of the spine.** Four corrections
+> where the code was right and this document was not, and one where neither was:
+>
+> * **§4.1's `base_level_method: largest_exposure` is now what the code does.** It chose
+>   the first level alphabetically. Every other level's relativity is expressed against the
+>   base, so a base holding 5 % of the exposure gave every relativity the standard error of
+>   a thin cell.
+> * **A relativity does not exist under every link.** `RelativityLevel.relativity` is
+>   `float | None`, with `estimate` beside it. Reporting `exp(β)` as 1.0 for a `logit`
+>   model said "no effect" for a factor spanning eighteen log-odds.
+> * **The Tweedie power is validated on the spec, not at fit time.** It is a fact about the
+>   specification, and a spec that cannot be fitted should not be storable.
+> * **§5.2's `fit_glm` signature takes `factors` explicitly.** `spec.factors` holds ids and
+>   resolving them needs a database, which ADR-0001 forbids `pricing-core`. The spec's
+>   signature is unimplementable as written; `00` §5.5 carries the same correction.
+> * **`progress` was dropped from `fit_glm` and should not have been.** `00` §5.5 requires
+>   the injected callback, and a long fit currently sits at 35 % for its whole duration.
+>   Recorded as a gap rather than quietly removed from the interface.
+>
+> `02` §4's field sets (§4.1, §4.4, §4.8) still declare more than the spine implements —
+> `split_ref`, `loss_treatment`, `diagnostics_id` and others. That is a **larger divergence
+> awaiting a decision**, not an oversight: whether the spine grows to meet §4 or §4 narrows
+> to a staged contract is a design choice, recorded in `docs/open-questions.md` as
+> OQ-MODEL-8 rather than settled here.
+
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
 `GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_DID_NOT_CONVERGE`,
@@ -808,3 +833,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-MODEL-5** | Credibility: which standard do we implement for `credibility_weighted` grouping — limited fluctuation (classical, simple, familiar to UK actuaries) or Bühlmann–Straub (more defensible, more parameters to explain)? |
 | **OQ-MODEL-6** | Should the platform enforce a maximum factor count or a minimum exposure-per-parameter ratio as a hard gate rather than a diagnostic warning? |
 | **OQ-MODEL-7** | How are protected-characteristic proxies detected? A `prohibited` flag (FR-MODEL-5) stops direct use, but proxy detection (e.g. postcode as an ethnicity proxy) needs a defined statistical test and a policy on what to do when it fires. |
+| **OQ-MODEL-8** | Does the GLM spine grow to meet §4's field sets, or does §4 narrow to a staged contract? §4.1, §4.4 and §4.8 declare fields the spine does not implement, and §4.8's `status ≥ fitted ⟹ diagnostics_id set` cannot be met while diagnostics do not exist. Found by auditing the spine, 2026-08-15. |

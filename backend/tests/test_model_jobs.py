@@ -27,6 +27,7 @@ from sqlalchemy import select
 from app.db.models import ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import rbac
@@ -36,6 +37,7 @@ from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
     ActorKind,
+    DatasetStatus,
     Factor,
     FactorType,
     GlmSpec,
@@ -58,9 +60,13 @@ register_model_handlers()
 #: a right answer: urban rows carry roughly twice the frequency of rural ones.
 #: `claim_amount_minor` is carried because the shared ingest helper's recipe casts it —
 #: the seed's own shape, and a book without it is not a book this platform ingests.
+#:
+#: **Rural carries three quarters of the exposure**, so it is unambiguously the base level
+#: (`02` §4.1's `largest_exposure`). An even split left the base decided by a tie-break and
+#: the expected term name unknowable — which is a bad fixture rather than a bad rule.
 BOOK = b"policy_id,exposure_years,area,claim_count,claim_amount_minor\n" + b"".join(
-    f"P{i},1.0,{'urban' if i % 2 else 'rural'},{2 if i % 2 else 1},"
-    f"{200000 if i % 2 else 100000}\n".encode()
+    f"P{i},1.0,{'urban' if i % 4 == 0 else 'rural'},{2 if i % 4 == 0 else 1},"
+    f"{200000 if i % 4 == 0 else 100000}\n".encode()
     for i in range(1, 401)
 )
 
@@ -152,11 +158,11 @@ async def test_a_model_fits_through_the_job_and_stores_its_coefficients(
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
 
     async with database.unit_of_work() as session:
-        row, created = await model_service.reserve_model(
+        row, should_fit = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor,
             spec=_spec(version_id, (area,)),
         )
-        assert created is True
+        assert should_fit is True
         model_id = row.id
         job = await job_service.submit(
             session,
@@ -215,7 +221,7 @@ async def test_an_unvalidated_version_cannot_be_fitted_on(
         ).scalars().all() == []
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-MODEL-66")
 async def test_the_same_specification_does_not_fit_twice(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -234,29 +240,36 @@ async def test_the_same_specification_does_not_fit_twice(
     spec = _spec(version_id, (area,))
 
     async with database.unit_of_work() as session:
-        first, created_first = await model_service.reserve_model(
+        first, _ = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor, spec=spec
         )
-    async with database.unit_of_work() as session:
-        second, created_second = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor, spec=spec
+        first_id = first.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(first_id)},
+            actor, workspace_id=workspace_id,
         )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
 
-    assert created_first is True
-    assert created_second is False
-    assert first.id == second.id
+    async with database.unit_of_work() as session:
+        second, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=spec
+        )
+        assert second.id == first_id, "one specification, one model row"
+        assert should_fit is False, "it is already fitted; there is nothing to queue"
 
     # ...and a spec differing anywhere at all is a different model.
     async with database.unit_of_work() as session:
-        other, created_other = await model_service.reserve_model(
+        other, other_should_fit = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor,
             spec=_spec(version_id, (area,), seed=7),
         )
-    assert created_other is True
-    assert other.id != first.id
+    assert other_should_fit is True
+    assert other.id != first_id
 
 
-@pytest.mark.req("FR-MODEL-18")
+@pytest.mark.req("FR-MODEL-65")
 async def test_a_fitted_model_cannot_be_refitted(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
@@ -298,3 +311,212 @@ async def test_a_fitted_model_cannot_be_refitted(
                 model_id=model_id, fit_result=fitted.fit_result,
             )
     assert refused.value.code == "MODEL_IMMUTABLE"
+
+
+# -- What three independent audits found the first version could not catch ----------------
+
+
+@pytest.mark.req("FR-MODEL-18")
+async def test_a_version_that_loses_its_standing_before_the_job_runs_is_refused(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """`02` R1, at the moment of the fit rather than the moment of the request.
+
+    Checking it at reservation answers "may this be queued?". `validated → validating →
+    failed` are both legal transitions and the analyst who fits can also validate, so a
+    version can lose its standing while the Job sits in the queue. Without the second
+    check a model reached `fitted` on a `failed` dataset version — proven by an audit,
+    not by this suite.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=_spec(version_id, (area,))
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+
+    # The version fails a re-validation between the queue and the worker.
+    async with database.unit_of_work() as session:
+        await dataset_service.transition(
+            session, workspace_id=workspace_id, actor=actor,
+            version_id=version_id, to_status=DatasetStatus.VALIDATING,
+        )
+    async with database.unit_of_work() as session:
+        await dataset_service.conclude_failed_validation(
+            session, workspace_id=workspace_id, actor=actor, version_id=version_id
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+
+    async with database.session() as session:
+        model = model_service.to_model(await session.get(ModelRow, model_id))
+    assert model.fit_result is None, "a model must not be fitted on a version that failed"
+    assert model.status is ModelStatus.DRAFT
+
+
+@pytest.mark.req("FR-MODEL-5")
+async def test_a_prohibited_factor_is_refused_at_the_attempt(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-5, with its own error code, before anything is queued.
+
+    It was enforced inside `pricing-core` at fit time — after a model row, a version
+    number, a `spec_hash` slot, an audit event saying `model.reserved` and a queued Job all
+    existed. A refusal that arrives as a failed job is a record of the attempt succeeding.
+    `FACTOR_PROHIBITED` was a registered code that nothing raised.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+
+    async with database.unit_of_work() as session:
+        row = await model_service.create_factor(
+            session, workspace_id=workspace_id, actor=actor,
+            factor=Factor(
+                id=uuid4(), slug="postcode", dataset_id=dataset_id, version=1,
+                type=FactorType.IDENTITY, source_columns=("area",),
+                prohibited=True,
+                prohibited_reason="Proxy for a protected characteristic; board decision.",
+            ),
+        )
+        prohibited_id = row.id
+
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor,
+                spec=_spec(version_id, (prohibited_id,)),
+            )
+    assert refused.value.code == "FACTOR_PROHIBITED"
+
+    async with database.session() as session:
+        rows = (
+            await session.execute(select(ModelRow).where(ModelRow.workspace_id == workspace_id))
+        ).scalars().all()
+    assert rows == [], "no model row, no version number, no spec_hash slot"
+
+
+@pytest.mark.req("FR-MODEL-2")
+async def test_a_factor_from_another_dataset_is_refused(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-2 defines a Factor against a **Dataset**.
+
+    Nothing compared the factor's dataset to the version being fitted, so a factor declared
+    on dataset A fitted a version of dataset B whenever the column names coincided — which
+    in this domain is the norm rather than the exception.
+    """
+    actor = await _actuary(database, workspace_id)
+    ours = await _dataset(database, blob_store, workspace_id, actor)
+    theirs = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, ours)
+    foreign = await _factor(database, workspace_id, actor, theirs, "area", "area")
+
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor,
+                spec=_spec(version_id, (foreign,)),
+            )
+    assert refused.value.code == "FACTOR_RESOLUTION_FAILED"
+
+
+@pytest.mark.req("FR-MODEL-66")
+async def test_a_reservation_whose_fit_failed_can_be_retried(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-66 deduplicates *fitted* models, not reservations.
+
+    A fit that failed — an unreachable blob, a worker that died — left the row behind, and
+    every resubmission of the identical spec was told "your model exists" for a model that
+    had no numbers and could never get any. The `spec_hash` slot was poisoned for good.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    spec = _spec(version_id, (area,))
+
+    async with database.unit_of_work() as session:
+        first, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=spec
+        )
+        assert should_fit is True
+        first_id = first.id
+
+    # No fit happens. The same spec comes back.
+    async with database.unit_of_work() as session:
+        again, should_fit_again = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=spec
+        )
+    assert again.id == first_id, "still one row — FR-MODEL-66 holds"
+    assert should_fit_again is True, "and it still needs a Job, because it has no numbers"
+
+
+@pytest.mark.req("FR-MODEL-65")
+async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """`02` R2 below the application, where `01`'s artifacts already live.
+
+    An audit rewrote a stored coefficient to zero with a raw `UPDATE`, and deleted a fitted
+    model outright — one migration after three other artifact tables were given exactly
+    this protection.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=_spec(version_id, (area,))
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+
+    with pytest.raises(DBAPIError) as rewritten:
+        async with database.unit_of_work() as session:
+            await session.execute(
+                text("UPDATE models SET fit_result = '{}'::jsonb WHERE id = :id"),
+                {"id": model_id},
+            )
+    assert "immutable" in str(rewritten.value)
+
+    with pytest.raises(DBAPIError) as deleted:
+        async with database.unit_of_work() as session:
+            await session.execute(text("DELETE FROM models WHERE id = :id"), {"id": model_id})
+    assert "cannot be deleted" in str(deleted.value)
+
+    # ...and the lifecycle stays writable: a fitted model can still change status.
+    async with database.unit_of_work() as session:
+        await session.execute(
+            text("UPDATE models SET status = 'review' WHERE id = :id"), {"id": model_id}
+        )

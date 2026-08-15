@@ -184,15 +184,24 @@ async def reserve_model(
 ) -> tuple[ModelRow, bool]:
     """Allocate the model row a fit will populate, or return the one that exists.
 
-    Returns `(row, created)`. **R1 is checked here**, before a Job is queued: refusing
-    after the queue hop would mean a worker discovers the dataset is not validated, and the
-    caller learns it from a failed job instead of a `409`.
+    Returns `(row, should_fit)` — **not** `(row, created)`. The two came apart when a
+    failed fit was found to poison its `spec_hash` slot for ever: the row exists, so
+    nothing new is created, and a Job must still be queued because the row has no numbers.
+    Callers want to know whether to queue, which is the question this answers.
+
+    **R1 is checked here**, before a Job is queued: refusing after the queue hop would mean
+    a worker discovers the dataset is not validated and the caller learns it from a failed
+    job instead of a `409`. It is checked *again* in the handler, because the version can
+    lose its standing while the Job sits in the queue.
     """
     await rbac.require_permission(
         session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
     )
-    await datasets.fittable_or_refuse(
+    dataset_version = await datasets.fittable_or_refuse(
         session, workspace_id=workspace_id, version_id=spec.dataset_version_id
+    )
+    await _refuse_unusable_factors(
+        session, workspace_id=workspace_id, spec=spec, dataset_id=dataset_version.dataset_id
     )
 
     digest = spec_hash(spec)
@@ -207,7 +216,13 @@ async def reserve_model(
         # FR-MODEL-66. Not an error: the caller asked for a model with this specification
         # and that model exists. Fitting it again would burn a worker to produce the same
         # numbers under a new id, and leave two versions nobody can choose between.
-        return existing, False
+        #
+        # **Unless it never got any numbers.** A fit that failed — an unreachable blob, a
+        # rank-deficient design, a worker that died — used to leave the row behind and
+        # every resubmission was told "your model exists" for a model that could never
+        # have coefficients. An unfitted reservation is returned as *not* created, so the
+        # caller queues another Job against the same row.
+        return existing, existing.fit_result is None
 
     version = 1 + (
         await session.execute(
@@ -257,6 +272,52 @@ async def reserve_model(
     return row, True
 
 
+async def _refuse_unusable_factors(
+    session: AsyncSession, *, workspace_id: UUID, spec: GlmSpec, dataset_id: UUID
+) -> None:
+    """FR-MODEL-5 and FR-MODEL-2, at the attempt rather than in the worker.
+
+    Both were enforced inside `pricing-core` at fit time, which is after a model row, a
+    version number, a `spec_hash` slot, an audit event and a queued Job already exist. A
+    prohibited factor is meant to be *refused*, and a refusal that arrives as a failed job
+    is a record of the attempt succeeding.
+
+    `FACTOR_PROHIBITED` is raised here — it was a registered code that nothing raised, in
+    the same commit whose registry says it holds only codes something can raise.
+    """
+    if not spec.factors:
+        return
+
+    factors = await load_factors(session, workspace_id=workspace_id, factor_ids=list(spec.factors))
+
+    prohibited = [f for f in factors if f.prohibited]
+    if prohibited:
+        detail = ", ".join(f"{f.slug} ({f.prohibited_reason})" for f in prohibited)
+        raise PlatformError(
+            "FACTOR_PROHIBITED",
+            "The spec names a prohibited factor",
+            409,
+            f"{detail}. FR-MODEL-5: a prohibited Factor cannot be added to any Model Spec. "
+            "Lifting a prohibition is a change to the Factor, not to the model that wanted "
+            "it.",
+        )
+
+    # FR-MODEL-2: a Factor is defined against a **Dataset**. A factor from another dataset
+    # fits whenever the column names happen to coincide — which in this domain is the norm
+    # rather than the exception, and the resulting model cites a factor that was never
+    # about this data.
+    foreign = [f for f in factors if f.dataset_id != dataset_id]
+    if foreign:
+        detail = ", ".join(f"{f.slug} (dataset {f.dataset_id})" for f in foreign)
+        raise PlatformError(
+            "FACTOR_RESOLUTION_FAILED",
+            "The spec names factors defined against a different dataset",
+            409,
+            f"{detail} against dataset {dataset_id}. FR-MODEL-2 defines a Factor against a "
+            "Dataset; matching column names elsewhere do not make it the same variable.",
+        )
+
+
 async def record_fit(
     session: AsyncSession,
     *,
@@ -272,7 +333,15 @@ async def record_fit(
     fitted, and "refit" means a new version, not new coefficients on the old one. Without
     this the rule would hold only for callers who remembered it.
     """
-    row = await session.get(ModelRow, model_id)
+    # `FOR UPDATE`, not a plain read. This is a check-then-act, and two Jobs naming one
+    # model — nothing forbids submitting two — both read `fit_result IS NULL` and both
+    # wrote, the second silently overwriting a fitted model's coefficients. R2 held only
+    # for callers who arrived one at a time.
+    row = (
+        await session.execute(
+            select(ModelRow).where(ModelRow.id == model_id).with_for_update()
+        )
+    ).scalar_one_or_none()
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError("NOT_FOUND", "Model not found", 404, f"No model {model_id}.")
     if row.fit_result is not None:

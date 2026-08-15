@@ -30,8 +30,8 @@ const MODEL = {
     ],
     relativities: {
       area: [
-        { level: "rural", relativity: 1.0, is_base: true, exposure: 200.0 },
-        { level: "urban", relativity: 2.0, is_base: false, exposure: 200.0 },
+        { level: "rural", relativity: 1.0, estimate: 0.0, is_base: true, exposure: 300.0 },
+        { level: "urban", relativity: 2.0, estimate: 0.6931, is_base: false, exposure: 100.0 },
       ],
     },
     library_versions: { glum: "3.4.1", polars: "1.35.0" },
@@ -106,5 +106,27 @@ describe("the model detail view", () => {
     // A coefficient is only reproducible against the version that produced it.
     render(ModelDetailView, { props, ...mounted });
     expect(await screen.findByText(/glum 3.4.1, polars 1.35.0/)).toBeInTheDocument();
+  });
+
+  it("shows the coefficient where a link has no relativity", async () => {
+    // `exp(β)` is a reading of a multiplicative model. Under `logit` there is none, and
+    // rendering 1.000 said "no effect" for a factor spanning eighteen log-odds.
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        relativities: {
+          area: [
+            { level: "rural", relativity: null, estimate: 0.0, is_base: true, exposure: 300 },
+            { level: "urban", relativity: null, estimate: 1.2, is_base: false, exposure: 100 },
+          ],
+        },
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const table = await screen.findByRole("table", { name: "area relativities" });
+    expect(within(table).getByText(/1.2000/)).toBeInTheDocument();
+    expect(within(table).getAllByText(/on the link scale/).length).toBeGreaterThan(0);
+    expect(within(table).queryByText("1.000")).toBeNull();
   });
 });

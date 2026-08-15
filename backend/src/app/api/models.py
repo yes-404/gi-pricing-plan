@@ -135,16 +135,16 @@ async def fit_model(
     failed job twenty seconds later is a worse answer to the same question.
     """
     async with database.unit_of_work() as session:
-        row, created = await service.reserve_model(
+        row, should_fit = await service.reserve_model(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
             spec=body.spec,
             change_reason=body.change_reason,
         )
-        if not created:
-            # FR-MODEL-66. The caller asked for a model with this specification and it
-            # exists; fitting it again would produce the same numbers under a new id.
+        if not should_fit:
+            # FR-MODEL-66. The caller asked for a model with this specification and it is
+            # fitted; fitting it again would produce the same numbers under a new id.
             response.status_code = status.HTTP_200_OK
             return service.to_model(row)
 

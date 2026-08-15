@@ -17,8 +17,9 @@ from uuid import UUID
 
 import polars as pl
 
-from app.db.models import BlobRow, DatasetVersionRow, ModelRow
+from app.db.models import BlobRow, ModelRow
 from app.errors import PlatformError
+from app.platform import datasets as dataset_service
 from app.platform import modelling as model_service
 from app.platform.blobs import to_ref
 from app.worker.data_handlers import _actor, _bridge, _workspace
@@ -54,12 +55,15 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 session, workspace_id=workspace_id, factor_ids=list(spec.factors)
             )
 
-            version = await session.get(DatasetVersionRow, spec.dataset_version_id)
-            if version is None:
-                raise PlatformError(
-                    "NOT_FOUND", "Dataset version not found", 404,
-                    f"No version {spec.dataset_version_id}.",
-                )
+            # **R1 again, here.** Checking it at reservation answers "may this be
+            # queued?"; this answers "may this be fitted?", and they are different
+            # questions with a queue between them. `validated → validating → failed` are
+            # both legal transitions and the analyst who can fit can also validate, so a
+            # version can lose its standing after the Job is submitted and before it runs.
+            # Without this a model reached `fitted` on a `failed` version.
+            version = await dataset_service.fittable_or_refuse(
+                session, workspace_id=workspace_id, version_id=spec.dataset_version_id
+            )
             # One table for the spine: `02` §4.4 fits over a single record grain, and a
             # join across tables is a Preparation Recipe's job (`01` FR-DATA-12), done
             # before the version exists.
