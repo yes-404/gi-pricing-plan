@@ -225,7 +225,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W2**~~ ✔ | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | **Closed 2026-08-14** — ~35 of 61 `PLAT` requirements |
 | ~~**W3**~~ ✔ | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | **Closed 2026-08-14** — §5 skeleton only, no governance UI |
 | ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
-| **W6a** | Frontend: app shell, dataset views, **validation report view** | W4 ✔ | **next** — `01` §5.3 puts its interaction requirement here — "why can I not fit a model on this?" answerable in one screen |
+| ~~**W6a**~~ ✔ | Frontend: app shell, dataset views, **validation report view** | W4 ✔ | **Closed 2026-08-15** — all **7** of `01` §5.3's views, 75 frontend tests |
 
 #### Phase 1a status
 
@@ -236,7 +236,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W3**~~ ✔ | Governance write path — audit log, RBAC, approval state machine | ✔ **closed 2026-08-14** — see the closure record below |
 | ~~**W4**~~ ✔ | Data — ingestion, preparation, validation, profiling, reference data | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W7a**~~ ✔ | freMTPL2 data seed — the demo dataset through the real Job path | ✔ **closed 2026-08-15** — see the closure record below |
-| **W6a** | Frontend — app shell, dataset views, validation report view | **next**, now with real data to render |
+| ~~**W6a**~~ ✔ | Frontend — app shell, dataset views, validation report view | ✔ **closed 2026-08-15** — see the closure record below |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
@@ -250,8 +250,184 @@ phases are cut in the right place. It runs at **each workstream close and again 
 phase's exit demo**, and its output is a proposal on this page, never an edit made on its own
 authority.
 
-The first run is due at **W6a's close**. Its findings, and the maintainer's acceptance of
-each, land in this section and in `open-questions.md`.
+The first run happened at **W6a's close** — it is [below](#plan-review-1--at-w6as-close-2026-08-15),
+with the maintainer acceptance line each of its proposals needs.
+
+### Plan review 1 — at W6a's close, 2026-08-15
+
+The first run of `CLAUDE.md` §14, raised as `NT-0001`. §13 asks whether a workstream did
+what it said; this asks whether the plan still says the right thing. Five questions, in
+order, each with a written answer — **"no change" included**, because a silent question is
+indistinguishable from one nobody asked.
+
+**1. Completion — what is actually done, derived from the specs.**
+
+`scope-audit.py` and `req-coverage.py`, not recollection. Phase 1a's workstreams W1, W2,
+W3, W4, W7a and W6a are closed with records on this page. `DATA` stands at 48/50
+requirements (the two are measured NFRs), **33/33** endpoints and **38/38** catalogue
+rules; `PLAT` is unchanged since W2 at ~35 of 61 with six endpoints owned by W14.
+
+One disagreement with the plan, and it is the finding: the W6a row said "app shell,
+dataset views, validation report view" — three items — while `01` §5.3 names **seven**
+views. The row was written before the spec's view table was read against it. All seven
+shipped, so the plan under-described the work rather than the work under-delivering; the
+row is left as written and the closure record carries the correction, as W2's and W4's do.
+
+**2. Omission — what the phase needs that no row names.**
+
+*Browser authentication.* No workstream row mentions it. `07` §3.7 specifies the API side
+completely and the client side not at all, and the gap was invisible from either end: the
+backend's tests authenticate through dependency overrides, the frontend's stub `fetch`.
+A real browser got 401 on everything. Raised as **OQ-PLAT-6** with a recommendation
+(PKCE), fixed for the dev loop only.
+
+*The pattern behind it.* Three of this workstream's six API findings — the version
+timeline, the approve route, the reference read routes — were endpoints the spec's §5.1
+table never declared. `scope-audit.py --endpoints` compares that table against the
+published contract, so **an endpoint missing from both reads as complete coverage**. This
+is the same shape as §13's "requirement coverage is not interface coverage", one level up,
+and the honest mitigation is the one used here: derive the surface from what §5.3's views
+must *do*, not from what §5.1 lists.
+
+*Not an omission:* `pipelines/` remains correctly assigned to W7, and Playwright E2E is
+deferred to W7 for a stated reason rather than forgotten.
+
+**3. Skills and research — re-run, not appended to.**
+
+`docs/skills-map.md`'s frontend rows survive contact with the code: Vue 3, Router, Pinia,
+Tailwind, ECharts, openapi-typescript and Vitest are all cited and all still accurate.
+`.claude/skills/vue-frontend` gains the development-identity procedure, which is exactly
+the kind of non-obvious dev-loop step §12 exists to capture — it cost an entire workstream
+before anyone noticed.
+
+Two rows are now *ahead* of the code rather than behind it: TanStack Table and Vue Flow
+are declared and not installed, which is right for their phases. One is behind: Pinia is
+installed and registered with no store, because nothing has yet needed to outlive a route.
+No skill has gone stale. No new external skill is proposed — and none would be installed
+without the maintainer's approval in any case.
+
+**4. Document drift.**
+
+`CLAUDE.md` §2's `frontend/` mark and its "add with the code" note on `frontend.yml` were
+both stale and are corrected in this PR. `01` §5.1 now carries four dated amendments from
+W6a's findings. `open-questions.md` gains OQ-PLAT-6. The roadmap's own Phase 1a percentage
+("~26 %") is an estimate from before any code existed and is left alone: it is a planning
+figure, and re-deriving it per workstream would make it a second progress table
+disagreeing with the one above it.
+
+**5. Shape — are the remaining phases still cut in the right place?**
+
+Yes, with one proposal.
+
+*No change* to the 1a/1b split, to W5–W7, or to any phase boundary. Taking W7a (the data
+seed) before W6a was the right call and the reason W6a rendered real data from day one;
+nothing suggests a second such reordering is needed.
+
+*Proposal — `W6b` is not yet a row and should be.* Three items now have "W6b" as their
+owner in closure records (NFR-OVR-10's tabular chart fallback, browser authentication once
+OQ-PLAT-6 is decided, and the frontend half of governance surfacing) without a workstream
+row existing to hold them. An owner naming a workstream that does not exist is how work
+becomes nobody's.
+
+> **Recommendation:** add `W6b — Frontend platform: authentication, accessibility,
+> workspace selection` to Phase 1b, depending on W6a and on OQ-PLAT-6 being decided. It is
+> a spec/plan change only; no code follows from this review (`CLAUDE.md` §14 rule 3).
+>
+> **Maintainer acceptance:** _pending_ — recorded here for decision, not applied.
+
+### W6a — Frontend Data Workbench: closed 2026-08-15
+
+**Scope, derived from `01` §5.3 before opening any frontend file: seven views**, plus the
+one seam `CLAUDE.md` §2 defines — `model-schema` → `docs/contracts/` → generated client —
+and the API conventions `00` §5 requires every caller to honour (the single error shape,
+cursor pagination, `202`-plus-Job, the idempotency key).
+
+W6a owns no `FR` of its own: the frontend is where other modules' requirements become
+visible, so its evidence is the views and their tests rather than markers. That is also why
+the closure below leans on the two audits that *are* derivable — endpoints and catalogue —
+and on what building the screens found in the API beneath them.
+
+| Deliverable (`01` §5.3) | Route | Evidence |
+|---|---|---|
+| App shell + generated client | — | `frontend.yml` green; client generated from the committed contract, drift-checked in CI; no hand-written shape anywhere in `src/` |
+| Dataset list | `/data` | status badge, latest version, last validated |
+| Dataset detail | `/data/:slug` | version timeline, data dictionary editor, rule set link in both its states, lineage |
+| Version detail | `/data/:slug/v/:version` | table inventory, totals, schema viewer, rejected-rows drawer |
+| **Validation report** | `…/validation` | four layer sections, measured-vs-threshold, offending sample, acknowledge dialog with mandatory justification, and the banner §5.3 makes the interaction requirement |
+| Profile | `…/profile` | per-column cards, one-way charts with CI bands, PSI selector |
+| Rule set editor | `/data/:slug/rules` | rules by layer, enable/disable, severity override, thresholds, custom-rule builder with dry-run |
+| Reference tables | `/reference` | table list, version timeline, effective-date viewer, lookup debugger |
+
+**Gate (local, 2026-08-15):** ruff clean · mypy --strict on 84 source files · import-linter
+3 kept / 0 broken · **591 python tests** · 7 generated contracts match · docs audit 20/20 ·
+req-coverage · eslint `--max-warnings 0` · `vue-tsc --build` · **75 frontend tests** ·
+`pnpm build`.
+
+| `scope-audit.py DATA …` | At W4's close | Now |
+|---|---|---|
+| requirements | 48 / 50 | **48 / 50** (NFR-DATA-1/2 measured, not tested — W4's verdict stands) |
+| `--endpoints` | 28 / 28 | **33 / 33** |
+| `--catalogue VR` | 38 / 38 | **38 / 38** |
+
+**What building the screens found in the API — six defects, none in a view.** This is the
+workstream's most useful output and the reason a frontend is not merely a rendering of a
+finished backend:
+
+| Found | Was |
+|---|---|
+| `GET /datasets/{slug}/versions` | §5.3 requires a version timeline; §5.1 offered only `latest_version`, so a client drew it one request per version |
+| `source_names` on `DatasetTable` | The table inventory could not name its sources |
+| `empty_layers` on `ValidationRuleSet` | A plain `@property`, so it never reached the contract — FR-DATA-16's warning had nothing to surface, while `ValidationReport` beside it carried the same list as a field |
+| `POST /validation-rules/{id}/approve` | Absent. A rule could be authored, dry-run and submitted, then sit in `review` for ever — and a Rule Set refuses anything not `approved`, so nothing authored through the API could ever be used |
+| `rules` in the rule-set replace body | Took bare ids, so `enabled` and `severity_override` were unreachable and the "an override may only raise" invariant guarded something no caller could attempt |
+| Three reference read routes | The surface was write-plus-lookup; §5.3's table list, timeline and effective-date viewer had nothing to call |
+
+Each landed as a spec change **and** the code, in one commit, with the amendment dated in
+`01` §5.1 — because which of the two was wrong is the thing a governed system cannot
+afford to lose (`CLAUDE.md` §0).
+
+**Enforcement proven, not assumed** (§13 rule 4). Every claim a test makes was broken on
+purpose first:
+
+- the rule-set editor's carry-through — rebuilding the replace body from ids alone
+  re-enables every other disabled entry; the test goes red
+- `waitForJob` — returning the first poll instead of looping makes the builder submit a
+  rule whose dry run had not finished
+- the severity-downgrade guard — removing it turns a 409 into a 500 from
+  `RuleSetEntry`'s own validator, which is *why* the service-level refusal exists
+- `covers_to` — computed as `max(effective_to)` it reports a table that never expires as
+  expiring in July
+- the reference view's opening version — the newest rather than the newest **published**
+  shows a draft no quote can have used
+
+**The one thing that had never been exercised: the browser could not authenticate.** The
+SPA sends no credential, and the platform refuses an unauthenticated request (`07` §3.7),
+so a real browser got 401 on every request while all seven views and their tests passed —
+the tests stub `fetch`, and nothing touched the transport. Confirmed against a live server
+(`401` direct), fixed for the dev loop by injecting the development identity headers in the
+**Vite proxy** — never in `client.ts`, because a header the browser sets is a credential the
+user can edit in devtools and a code path that would ship in the production bundle
+(`grep` of `dist/`: zero occurrences). The seed now prints the two ids. Real browser
+authentication is **OQ-PLAT-6**, open, recommendation recorded.
+
+**Not delivered by W6a:**
+
+| Item | Verdict |
+|---|---|
+| Browser authentication | **Not started, and correctly so** — OQ-PLAT-6 is open and unanswered. The dev proxy is a dev loop, named so it cannot be mistaken for a mechanism |
+| Playwright E2E | **Deferred to W7.** `01` §5.3's journeys are worth one E2E each *once the demo entrance exists*; before that an E2E asserts a fixture |
+| Pinia stores | **Registered, unused.** No state has yet needed to outlive a route: every view takes props and fetches its own data. The first store arrives when something must survive navigation — the PSI comparison selector, or a workspace selector once OQ-PLAT-6 lands |
+| TanStack Table, Vue Flow | **Later phases** (`03` §5.3). Declared in `skills-map.md`, not installed |
+| Accessibility beyond semantics | **Partial.** Tables carry `aria-label`, alerts carry `role`, and every test queries by role or label — which keeps the semantics honest. NFR-OVR-10's tabular fallback for charts is **not** built; owner W6b |
+| `07` §5.1's six `PLAT` endpoints | Unchanged from W2's record — still owned by W14 |
+
+**Retrofit list (`docs/roadmap.md` §5):** unchanged by W6a. The frontend consumes the
+contract; it does not touch audit-in-transaction, artifact immutability, integer money or
+the Job model. Money crossing into TypeScript is handled the one way `vue-frontend`
+records: minor units are integers formatted at the edge, exact decimals stay strings and
+are never parsed, and the two `_minor` fields that are float **ratios** are rendered as
+statistics rather than currency — with a type-level test, because `expectTypeOf` erased at
+runtime and passed while asserting the wrong thing.
 
 ### W7a — freMTPL2 data seed: closed 2026-08-15
 

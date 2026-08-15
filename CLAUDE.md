@@ -86,7 +86,7 @@ the maths.
 ├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals,
 │                               datasets, validation, profiling, reference [W2✔ W3✔ W4✔]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
-├── frontend/                 ◐ Vue 3 SPA — shell, generated client, /data [W6a]
+├── frontend/                 ✔ Vue 3 SPA — all 7 of `01` §5.3's views     [W6a]
 ├── examples/                 ◐ freMTPL2 seed — data half done  [W7a✔] rest [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
@@ -106,7 +106,7 @@ make the repository a Python project.
 | `packages/pricing-core` | Python | `02`–`05` — the maths | root `pyproject.toml` | `python.yml` |
 | `backend/` | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
 | `pipelines/` *(deferred to W7)* | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
-| `frontend/` *(W6a)* | TypeScript | each spec's §5.3 views | `frontend/package.json`, `tsconfig.json` | `frontend.yml` *(add with the code)* |
+| `frontend/` | TypeScript | each spec's §5.3 views | `frontend/package.json`, `tsconfig.json` | `frontend.yml` |
 | `docs/` | Markdown | itself — the specification | — | `docs.yml` |
 | `scripts/`, `.github/`, `deploy/`, `.claude/` | mixed | operational | — | as their target |
 

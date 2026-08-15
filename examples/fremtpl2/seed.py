@@ -319,6 +319,12 @@ async def run(rows: int | None) -> int:
 
     print(f"\nworkspace {workspace_id}")
     print(f"  analyst  {analyst.display}\n  actuary  {actuary.display}\n")
+    # The ids, not only the names: these are what the frontend's dev proxy needs, and a
+    # seed that printed neither left the only way into the UI undiscoverable.
+    print("  to open the frontend against this workspace:")
+    print(f"    export GIP_DEV_PRINCIPAL_ID={analyst.id}")
+    print(f"    export GIP_DEV_WORKSPACE_ID={workspace_id}")
+    print("    pnpm --dir frontend dev\n")
 
     payload = build_csv(rows)
     print(f"  {len(payload) / 1e6:.1f} MB CSV, {payload.count(chr(10).encode()) - 1:,} rows\n")
