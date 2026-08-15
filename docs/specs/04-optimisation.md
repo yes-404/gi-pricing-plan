@@ -115,7 +115,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 | **FR-OPT-21** | The optimiser can take GIPP as a **hard constraint**, so proposals that would breach it are never generated, rather than generated and then rejected. |
 | **FR-OPT-22** | **Price walking detection**: the platform reports, per renewal cohort by tenure, the trend in `price / technical_premium`. A systematically increasing margin with tenure is surfaced as a finding regardless of whether the point-in-time GIPP check passes. |
 | **FR-OPT-23** | Fairness constraints are supported as first-class declared constraints (e.g. "no segment's adjustment exceeds +10 %", "the adjustment must be monotone in the technical loss ratio"), each carrying a written rationale that appears in the generated documentation. |
-| **FR-OPT-24** | Where an insurer supplies a reference dataset containing protected characteristics (which the platform never stores as modelling data — FR-OVR-9), an optional **outcome disparity report** compares proposed price changes across groups. It produces evidence for human judgement and never an automated block (see `02` OQ-MODEL-7). |
+| **FR-OPT-24** | Where an insurer supplies a reference dataset containing protected characteristics (which the platform never stores as modelling data — FR-OVR-9), an optional **outcome disparity report** compares proposed price changes across groups. It produces evidence for human judgement and never an automated block — the same principle `02` FR-MODEL-82 applies to Factors. |
 
 ### 3.4 Materialisation
 
