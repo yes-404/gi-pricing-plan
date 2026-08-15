@@ -99,7 +99,7 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 22 skills — 11 written here, 11 vendored (§12)
+└── .claude/skills/           ✔ 23 skills — 12 written here, 11 vendored (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -436,9 +436,9 @@ Project-specific procedures live in `.claude/skills/`, versioned with the repo s
 travel with it. `.claude/skills/README.md` is the index — read it when starting work on an
 unfamiliar part of the suite.
 
-**Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`, `adr-write`,
-`contract-schema`, `library-spike`, `git-hygiene`, `python-package`, `python-test`,
-`fastapi-service`, `vue-frontend`.
+**Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`, `phase-review`,
+`adr-write`, `contract-schema`, `library-spike`, `git-hygiene`, `python-package`,
+`python-test`, `fastapi-service`, `vue-frontend`.
 
 **Vendored** from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills) (MIT,
 security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,
@@ -703,6 +703,9 @@ mis-cut is expensive.
 ### Output
 
 Proposals land in `docs/roadmap.md` and `docs/open-questions.md`, each either accepted with
-a date or recorded as an open question with options and a recommendation. After this has run
-twice, the procedure becomes `.claude/skills/phase-review` alongside `close-workstream`
-(§12).
+a date or recorded as an open question with options and a recommendation.
+
+It has now run twice — reviews 1 and 2, both 2026-08-15 — so the procedure **is**
+`.claude/skills/phase-review`, alongside `close-workstream` (§12). This section stays the
+standard; the skill is how to satisfy it, including what each of the two runs actually
+found, which was in neither case what the question's author expected.
