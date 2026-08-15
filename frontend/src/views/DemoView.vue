@@ -2,7 +2,13 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
-import { byModule, getGuide, isOpenable, type DemoGuide } from "@/api/demo";
+import {
+  byModule,
+  getGuide,
+  isOpenable,
+  unpublishedByModule,
+  type DemoGuide,
+} from "@/api/demo";
 import { isProblem, ProblemError } from "@/api/problem";
 
 /**
@@ -25,6 +31,17 @@ const pending = computed(() => (guide.value?.views ?? []).filter((view) => !view
 const closed = computed(() => (guide.value?.workstreams ?? []).filter((w) => w.closed));
 const endpoints = computed(() =>
   (guide.value?.api ?? []).reduce((total, group) => total + (group.endpoints?.length ?? 0), 0),
+);
+const unpublished = computed(() => guide.value?.unpublished_endpoints ?? []);
+const unpublishedGroups = computed(() =>
+  guide.value ? unpublishedByModule(guide.value) : [],
+);
+/**
+ * The phase the workstream section actually covers. It covered Phase 1a alone while the
+ * page reported "7/7 closed" — a 100 % signal for a plan four phases from done.
+ */
+const statusPhases = computed(() =>
+  [...new Set((guide.value?.workstreams ?? []).map((w) => w.phase))].join(", "),
 );
 
 onMounted(async () => {
@@ -102,12 +119,14 @@ onMounted(async () => {
             Endpoints published
           </dt>
           <dd class="mt-1 text-2xl font-semibold">
-            {{ endpoints }}
+            {{ endpoints }}<span
+              class="text-base text-slate-400"
+            >/{{ endpoints + unpublished.length }}</span>
           </dd>
         </div>
         <div class="rounded-md border border-slate-200 p-3">
           <dt class="text-xs uppercase tracking-wide text-slate-500">
-            Workstreams closed
+            {{ statusPhases }} workstreams closed
           </dt>
           <dd class="mt-1 text-2xl font-semibold">
             {{ closed.length }}<span class="text-base text-slate-400">/{{ guide.workstreams?.length ?? 0 }}</span>
@@ -224,8 +243,39 @@ onMounted(async () => {
 
       <section class="mt-8">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Declared but not published — {{ unpublished.length }} endpoints
+        </h2>
+        <p class="mt-1 text-xs text-slate-500">
+          Each is a route a spec's §5.1 table declares and the published contract does not
+          carry. The count above reads {{ endpoints }} of
+          {{ endpoints + unpublished.length }} for that reason.
+        </p>
+        <ul class="mt-2 flex flex-wrap gap-2">
+          <li
+            v-for="group in unpublishedGroups"
+            :key="group.module"
+            class="rounded border border-slate-200 px-2 py-1 text-xs"
+          >
+            <span class="font-medium">{{ group.module }}</span>
+            <span class="ml-1 text-slate-500">{{ group.count }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Workstreams, as the roadmap states them
         </h2>
+        <!-- Scoped, because the roadmap gives a status table to some phases and not
+             others. An unscoped "7/7 closed" read as a finished project. -->
+        <p
+          v-if="(guide.phases_without_status ?? []).length"
+          class="mt-1 text-xs text-amber-800"
+        >
+          {{ statusPhases }} only. No status table exists yet for
+          {{ (guide.phases_without_status ?? []).join(", ") }} — those phases are ahead,
+          not complete.
+        </p>
         <ul class="mt-2 space-y-1 text-sm">
           <li
             v-for="workstream in guide.workstreams"

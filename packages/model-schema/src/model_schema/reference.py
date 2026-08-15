@@ -6,7 +6,7 @@ the shapes here:
 
 * A **version** is immutable and independently approvable. Validation and rating pin an id;
   neither ever resolves "the latest", because "latest" evaluated at scoring time is a
-  different answer each month (FR-DATA-32).
+  different answer each month (FR-DATA-30).
 * A row's `[effective_from, effective_to)` interval is **half-open**, and non-overlapping
   per key. Overlap would give a lookup two answers, and which one a quote got would depend
   on row order — a rating difference nobody could reproduce.

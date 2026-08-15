@@ -6,7 +6,7 @@ on:
     paths:
       - 'packages/**'
       - 'backend/**'
-      - 'pipelines/**'        # arrives in Phase 1a W4
+      - 'pipelines/**'        # arrives in W7, not W4 (CLAUDE.md §2)
       - 'pyproject.toml'
       - 'uv.lock'
       - '.importlinter'

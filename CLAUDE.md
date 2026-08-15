@@ -74,23 +74,31 @@ the maths.
 │   ├── specs/                ✔ 00–07, the contract code is written against
 │   ├── workflows/            ✔ wf-01…05, the end-to-end journeys
 │   ├── adr/                  ✔ architecture decisions
-│   ├── contracts/            ✔ JSON Schema + OpenAPI (generated from Phase 1)
+│   ├── contracts/            ◐ JSON Schema + OpenAPI. `openapi/generated.json` and 6
+│   │                           schemas are generated; ~20 are Phase-0 hand-written
 │   ├── research/             ✔ spike findings, with what each one changed
 │   ├── roadmap.md            ✔ phases, workstreams, decision gates
-│   └── open-questions.md     ✔ every unresolved choice, gated by phase
+│   ├── open-questions.md     ✔ every unresolved choice, gated by phase
+│   ├── skills-map.md         ✔ stack component → where used → skills (§10)
+│   └── phase-0-status.md     ✔ what the specification phase closed with
 │
 ├── packages/
 │   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1, W2, W4]
 │   └── pricing-core/         ◐ progress + money + the `data/` maths      [W1, W4]
 │
 ├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals,
-│                               datasets, validation, profiling, reference [W2✔ W3✔ W4✔]
+│                               datasets, validation, profiling, reference,
+│                               the demo guide            [W2✔ W3✔ W4✔ W7b✔]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
-├── frontend/                 ✔ Vue 3 SPA — all 7 of `01` §5.3's views     [W6a]
+├── frontend/                 ◐ Vue 3 SPA — `01` §5.3's 7 views routed, plus `/demo`;
+│                               6 of their 27 Contents items unbuilt  [W6a✔ W7b✔ W6b]
 ├── examples/                 ◐ freMTPL2 seed — data half done  [W7a✔] rest [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
-├── scripts/                  ✔ audit-docs.py, req-coverage.py
+├── tests/                    ✔ repository invariants — enforcement the audit can see
+├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
+│                               contracts · bench-data · demo (§11 runs them)
+├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
 └── .claude/skills/           ✔ 22 skills — 11 written here, 11 vendored (§12)
 ```
 
@@ -361,7 +369,8 @@ uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on d
 # Frontend (.github/workflows/frontend.yml). `--frozen-lockfile` from a clean
 # `node_modules` is what CI does, and a populated one hides a missing dependency.
 pnpm --dir frontend install --frozen-lockfile
-pnpm --dir frontend generate:api && git diff --exit-code -- frontend/src/api/generated
+pnpm --dir frontend generate:api        # then type-check: the client is git-ignored,
+                                        # so a diff against it can never fail
 pnpm --dir frontend lint && pnpm --dir frontend type-check
 pnpm --dir frontend test && pnpm --dir frontend build
 

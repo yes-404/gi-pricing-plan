@@ -40,16 +40,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # FR-OVR-6: the client is generated, never hand-written. Regenerating and diffing is
-      # the only thing that catches a contract change the frontend has not absorbed —
-      # `src/api/generated/` is git-ignored, so nothing else would notice.
-      - name: The generated client matches the committed contract
-        run: |
-          pnpm run generate:api
-          git diff --exit-code --stat -- src/api/generated || {
-            echo "::error::The generated API client is stale. Run 'pnpm --dir frontend generate:api'."
-            exit 1
-          }
+      # FR-OVR-6: the client is generated, never hand-written.
+      #
+      # There used to be a `git diff --exit-code -- src/api/generated` here, claiming to be
+      # "the only thing that catches a contract change the frontend has not absorbed". It
+      # could not fail: `src/api/generated/` is git-ignored (`.gitignore:38`), so the diff
+      # is always empty — and in CI the directory does not even exist until this step
+      # creates it, so there is nothing it could be compared against.
+      #
+      # **`type-check` against the freshly generated client is the real check**, and it is
+      # a stronger one: a field the contract dropped or renamed becomes a type error at
+      # every site that reads it. That is why generation runs before it, and why the two
+      # steps must stay in this order.
+      - run: pnpm run generate:api
 
       - run: pnpm run lint
       - run: pnpm run type-check

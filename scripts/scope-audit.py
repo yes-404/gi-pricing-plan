@@ -38,6 +38,7 @@ run this and stop.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import pathlib
 import re
@@ -59,9 +60,14 @@ _NFR_HEADING = re.compile(r"^#{2,3} \d+(?:\.\d+)?\.?\s+Non-functional requiremen
 _MARKER = re.compile(r'@pytest\.mark\.req\("([^"]+)"\)')
 # `| \`GET\` | \`/api/v1/datasets\` | ... |` — the §5.1 interface tables. The method cell
 # may hold several (`GET`/`PUT`), and paths carry `{placeholders}`.
-_ENDPOINT = re.compile(
-    r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|\s*`([^`]+)`\s*\|"
-)
+_ENDPOINT = re.compile(r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|([^|]+)\|")
+#: Every backticked token in the path cell. The cell may hold **several** paths —
+#: `07` §5.1's health row is ``| `GET` | `/healthz`, `/readyz`, `/version` | …``. Capturing
+#: one backticked token matched that row not at all, so three published, working endpoints
+#: were audited in neither direction and PLAT's declared count understated its own table by
+#: three. A check that silently sees less than the spec says is the failure this script
+#: exists to catch, one level up.
+_PATH_IN_CELL = re.compile(r"`([^`]+)`")
 
 
 def requirements_by_section(module: str) -> dict[str, list[str]]:
@@ -101,13 +107,55 @@ def evidence() -> dict[str, list[str]]:
 _CATALOGUE = re.compile(r"^\| `([A-Z]{2,4}-[A-Z]{2,4}-\d+)` ([a-z0-9-]+)")
 
 
-def report_catalogue(module: str, prefix: str) -> int:
-    """Compare a spec's declared catalogue against the ids the code names.
+def _ids_in_code(source: pathlib.Path, pattern: str) -> set[str]:
+    """Catalogue ids that appear **as data**, not in a comment or a docstring.
 
-    Coverage is claimed by a docstring naming the id, as `VR-ACT-1/2/8` does. That is a
-    claim rather than a proof, exactly like a `@pytest.mark.req` marker, and it is checked
-    the same way: by reading the ones that matter. What it catches reliably is the id
-    nothing mentions at all.
+    The scan used to be a plain `re.findall` over the file text, which counted every
+    mention — and since nothing in this repository stores catalogue ids as data, every
+    count came from prose. One docstring reading `VR-ACT-1/2/8` was expanded into three
+    "implemented" rules, two of which appear in no source file at all.
+
+    Parsing to an AST drops comments (they never reach it) and docstrings (skipped
+    explicitly below), leaving string literals a program actually evaluates. An id in a
+    registry counts; an id in a sentence does not.
+    """
+    try:
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return set()
+
+    docstrings: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):
+            first = node.body[0] if node.body else None
+            if (
+                isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)
+            ):
+                docstrings.add(id(first.value))
+
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if id(node) in docstrings:
+                continue
+            for match in re.findall(pattern, node.value):
+                head, _, tail = match.rpartition("-")
+                for part in tail.split("/"):
+                    found.add(f"{head}-{part}")
+    return found
+
+
+def report_catalogue(module: str, prefix: str) -> int:
+    """Compare a spec's declared catalogue against the ids the code carries **as data**.
+
+    `01` §4.4 says "Rule IDs here are stable and referenced by workflows and by the UI",
+    which is a claim about data: something must name `VR-ACT-1` for anything to reference
+    it. `BUILTIN_ROLES` is what that looks like when it is true.
+
+    Counting mentions instead — the first version of this check — reported 38 of 38 while
+    the number of built-in rules the code could name was zero. Every hit was a docstring.
     """
     spec = owning_spec(module)
     if spec is None:
@@ -136,10 +184,7 @@ def report_catalogue(module: str, prefix: str) -> int:
         if "tests" not in path.parts
     ]
     for source in sources:
-        for found in re.findall(rf"{prefix}-[A-Z]{{2,4}}-[\d/]+", source.read_text("utf-8")):
-            head, _, tail = found.rpartition("-")
-            for part in tail.split("/"):
-                named.add(f"{head}-{part}")
+        named |= _ids_in_code(source, rf"{prefix}-[A-Z]{{2,4}}-[\d/]+")
 
     by_layer: dict[str, list[tuple[str, str, bool]]] = defaultdict(list)
     for rid, name in declared:
@@ -189,11 +234,10 @@ def declared_endpoints(module: str) -> set[tuple[str, str]]:
             match = _ENDPOINT.match(line)
             if not match:
                 continue
-            path = match.group(2)
-            if not path.startswith("/"):
-                continue
-            for method in re.split(r"`?/`?", match.group(1)):
-                declared.add((method.strip("`"), _normalise_path(path)))
+            paths = [p for p in _PATH_IN_CELL.findall(match.group(2)) if p.startswith("/")]
+            for path in paths:
+                for method in re.split(r"`?/`?", match.group(1)):
+                    declared.add((method.strip("`"), _normalise_path(path)))
     return declared
 
 

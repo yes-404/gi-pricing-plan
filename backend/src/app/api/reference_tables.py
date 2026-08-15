@@ -16,7 +16,7 @@ so the endpoint audit, which compares the spec's table against the published con
 saw a complete surface. An endpoint missing from **both** is invisible to it.
 
 The lookup endpoint is **for debugging**, and its docstring says so where a reader will
-see it. Rating resolves a reference through a pinned version id (FR-DATA-32); an endpoint
+see it. Rating resolves a reference through a pinned version id (FR-DATA-30); an endpoint
 that answers "what does the latest table say?" is the wrong thing to build a rating on,
 because "latest" is a different answer each month.
 """
@@ -188,7 +188,7 @@ async def lookup(
 ) -> ReferenceLookup:
     """**For debugging** (FR-DATA-31).
 
-    Rating pins a reference version id (FR-DATA-32) and never resolves "the latest" at
+    Rating pins a reference version id (FR-DATA-30) and never resolves "the latest" at
     scoring time. This endpoint exists to answer "what does this table say about this key
     on this date?" when a quote looks wrong.
     """
@@ -257,7 +257,7 @@ async def list_rows(
     Always reads the **pinned** version named in the path. Omitting `as_at` returns the
     version whole, which answers "what changed?"; supplying one answers "what applied
     then?". Neither ever falls back to the latest version — that is the mistake
-    FR-DATA-32 exists to prevent, and a viewer that made it would teach it.
+    FR-DATA-30 exists to prevent, and a viewer that made it would teach it.
     """
     async with database.session() as session:
         return await service.rows_as_at(

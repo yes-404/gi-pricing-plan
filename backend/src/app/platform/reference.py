@@ -6,7 +6,7 @@ in-force policy retroactively, and nothing in the quote records which table it u
 
 Two rules carry that, and both are enforced below rather than documented:
 
-* **A version is loaded whole and pinned by id** (FR-DATA-32). A rating version names the
+* **A version is loaded whole and pinned by id** (FR-DATA-30). A rating version names the
   reference version it was built against; "the latest" is not a reference, it is a race.
 * **Intervals for one key never overlap** (FR-DATA-31), enforced by a `btree_gist`
   exclusion constraint. Two rows covering one date give a lookup two answers, and which
@@ -252,7 +252,7 @@ async def lookup(
     """Point lookup, as at a date (FR-DATA-31).
 
     `version=None` reads the highest published version — acceptable for the debugging
-    endpoint this serves, and **not** how rating resolves one. FR-DATA-32 requires a rating
+    endpoint this serves, and **not** how rating resolves one. FR-DATA-30 requires a rating
     version to pin an id, because "latest" evaluated at scoring time is a different answer
     each month.
     """

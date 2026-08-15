@@ -24,7 +24,13 @@ import json
 import re
 from pathlib import Path
 
-from model_schema import DemoApiGroup, DemoGuide, DemoView, DemoWorkstream
+from model_schema import (
+    DemoApiGroup,
+    DemoEndpoint,
+    DemoGuide,
+    DemoView,
+    DemoWorkstream,
+)
 
 __all__ = ["GuideSourceMissingError", "build_guide", "repository_root"]
 
@@ -46,6 +52,17 @@ _TABLE_ROW = re.compile(r"^\|(?!-)(.+)\|\s*$")
 _ROUTE_IN_BACKTICKS = re.compile(r"`([^`]+)`")
 _ROUTER_PATH = re.compile(r'path:\s*"([^"]+)"')
 _STATUS_TABLE = re.compile(r"^#### (Phase [0-9a-z]+) status\s*$")
+#: The roadmap heads Phase 1a/1b at `###` and Phases 2 to 4 at `## 7.`-style numbered
+#: headings. Matching only one form would have reported "every phase has a status table"
+#: by seeing two phases out of five.
+_PHASE_HEADING = re.compile(r"^#{2,3} (?:\d+\. )?(Phase [0-9a-z]+) — (.+?)\s*$")
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+#: `| `GET`/`PUT` | `/api/v1/datasets` | … |` — a spec's §5.1 interface table. Duplicated
+#: from `scripts/scope-audit.py` rather than shared: that is a script and this is the
+#: application, and neither may import the other. Two readers of one table is a smell; a
+#: backend importing from `scripts/` would be worse.
+_SPEC_ENDPOINT = re.compile(r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|([^|]+)\|")
+_PATH_IN_CELL = re.compile(r"`([^`]+)`")
 
 
 class GuideSourceMissingError(RuntimeError):
@@ -105,7 +122,15 @@ def _spec_views(spec: Path) -> list[tuple[str, str, str]]:
 
 
 def _routed_paths(router: Path) -> set[str]:
-    return set(_ROUTER_PATH.findall(router.read_text(encoding="utf-8")))
+    """Route paths the router actually declares.
+
+    Comments are stripped first. A `// TODO: { path: "/jobs" }` matched the bare regex and
+    rendered a green "built" badge for a view nobody had started — on the page whose only
+    job is saying what is worth clicking.
+    """
+    text = _BLOCK_COMMENT.sub("", router.read_text(encoding="utf-8"))
+    lines = [line for line in text.splitlines() if not line.lstrip().startswith("//")]
+    return set(_ROUTER_PATH.findall("\n".join(lines)))
 
 
 def _views(root: Path) -> tuple[DemoView, ...]:
@@ -155,6 +180,67 @@ def _api(root: Path) -> tuple[DemoApiGroup, ...]:
         DemoApiGroup(tag=tag, endpoints=tuple(sorted(set(endpoints))))
         for tag, endpoints in sorted(grouped.items())
     )
+
+
+def _normalise_path(path: str) -> str:
+    """`/datasets/{slug}` and `/datasets/{dataset_slug}` are one endpoint."""
+    return re.sub(r"\{[^}]*\}", "{}", path.split("?")[0].rstrip("/"))
+
+
+def _unpublished(root: Path) -> tuple[DemoEndpoint, ...]:
+    """Endpoints a spec's §5.1 table declares that the published contract does not carry.
+
+    FR-PLAT-54's "what is present but **not** yet functional" applied to the API. Without
+    it the page reported "63 endpoints published" and stopped — true, and silent about the
+    105 declared endpoints that do not exist, which is the half a reader is asking about.
+    """
+    contract = root / "docs" / "contracts" / "openapi" / "generated.json"
+    specs = root / "docs" / "specs"
+    if not contract.is_file() or not specs.is_dir():
+        raise GuideSourceMissingError(f"No contract at {contract} or no specs at {specs}.")
+
+    document = json.loads(contract.read_text(encoding="utf-8"))
+    published = {
+        (method.upper(), _normalise_path(path))
+        for path, operations in document.get("paths", {}).items()
+        for method in operations
+        if method.upper() in {"GET", "POST", "PUT", "PATCH", "DELETE"}
+    }
+
+    missing: list[DemoEndpoint] = []
+    for spec in sorted(specs.glob("*.md")):
+        module = _MODULES.get(spec.stem)
+        if module is None:
+            continue
+        for line in spec.read_text(encoding="utf-8").splitlines():
+            match = _SPEC_ENDPOINT.match(line)
+            if not match:
+                continue
+            for path in _PATH_IN_CELL.findall(match.group(2)):
+                if not path.startswith("/"):
+                    continue
+                for method in re.split(r"`?/`?", match.group(1)):
+                    key = (method.strip("`"), _normalise_path(path))
+                    if key not in published:
+                        missing.append(
+                            DemoEndpoint(module=module, method=key[0], path=key[1])
+                        )
+    return tuple(sorted(set(missing), key=lambda e: (e.module, e.path, e.method)))
+
+
+def _phases_without_status(root: Path) -> tuple[str, ...]:
+    """Phases the roadmap names but does not yet give a status table.
+
+    Stated so the workstream section cannot be read as covering the project: it covered
+    Phase 1a alone while the page reported "7/7 closed".
+    """
+    text = (root / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    named = {m.group(1) for line in text.splitlines() if (m := _PHASE_HEADING.match(line))}
+    with_status = {m.group(1) for line in text.splitlines() if (m := _STATUS_TABLE.match(line))}
+    # "Phase 1" is the umbrella over 1a and 1b and has no status of its own; listing it
+    # beside them would report the same work twice under a name nothing tracks.
+    umbrellas = {name for name in named if any(o != name and o.startswith(name) for o in named)}
+    return tuple(sorted(named - with_status - umbrellas))
 
 
 def _workstreams(root: Path) -> tuple[DemoWorkstream, ...]:
@@ -207,5 +293,7 @@ def build_guide(root: Path | None = None) -> DemoGuide:
         ),
         views=_views(root),
         api=_api(root),
+        unpublished_endpoints=_unpublished(root),
         workstreams=_workstreams(root),
+        phases_without_status=_phases_without_status(root),
     )

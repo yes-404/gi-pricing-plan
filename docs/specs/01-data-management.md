@@ -515,7 +515,7 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 | `GET` | `/api/v1/reference-tables` | List declared Reference Tables |
 | `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-DATA-29) |
 | `GET` | `/api/v1/reference-tables/{slug}/versions` | The version timeline, with each version's covered period |
-| `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-DATA-32) |
+| `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-DATA-30) |
 | `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-DATA-31) |
 
 > **Three reference read routes added 2026-08-15 (W6a).** §5.3 asks the `/reference` view
@@ -525,7 +525,7 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 > the same blind spot §13 records for requirement markers, one level up.
 >
 > The rows route always reads the version named in the path and never falls back to the
-> latest, because FR-DATA-32 is the rule this screen is most likely to teach by example.
+> latest, because FR-DATA-30 is the rule this screen is most likely to teach by example.
 
 > **`GET /datasets/{slug}/versions` added 2026-08-15 (W6a).** §5.3 requires the Dataset
 > detail view to render a **version timeline**, and §5.1 offered only `latest_version` and

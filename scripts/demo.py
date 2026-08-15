@@ -26,6 +26,7 @@ import json
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -106,8 +107,44 @@ def read_seed_record(path: Path = SEED_RECORD) -> dict[str, str]:
     return record
 
 
+def require_free(port: int, *, step: str) -> None:
+    """Refuse before starting anything if something already holds the port.
+
+    This command promises to report only servers it started. `wait_for` returns on **any**
+    answer, so with a stale server on 5173 it printed "Open http://localhost:5173/demo"
+    while both its children were dead of `[Errno 98] address already in use` — sending the
+    reader to a different server with a different identity.
+
+    Checked up front rather than after the fact: polling the child after `wait_for` races
+    the child's own death (`pnpm` outlives the `vite` it spawned by a moment, so
+    `poll()` was still `None` when the stale server had already answered). A port that is
+    free before the child starts and answering after it does is the child's.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.settimeout(1.0)
+        if probe.connect_ex(("127.0.0.1", port)) != 0:
+            return
+    raise DemoRefusedError(
+        f"Port {port} is already in use, so {step} cannot start there and this command "
+        f"would end up reporting a server it did not start. Stop the process holding it "
+        f"(`ss -ltnp | grep {port}` names it), or use --no-frontend."
+    )
+
+
+def _still_running(process: subprocess.Popen[bytes], *, step: str) -> None:
+    """Backstop for the case `require_free` cannot see: a child that dies of its own accord.
+
+    A short settle first, because `pnpm` exits a moment after the `vite` it spawned.
+    """
+    with suppress(subprocess.TimeoutExpired):
+        process.wait(timeout=2.0)
+        raise DemoRefusedError(f"{step} exited with {process.returncode} instead of serving.")
+
+
 @contextmanager
-def background(command: list[str], *, step: str, env: dict[str, str]) -> Iterator[None]:
+def background(
+    command: list[str], *, step: str, env: dict[str, str]
+) -> Iterator[subprocess.Popen[bytes]]:
     """Start a long-running child and stop it — **and its children** — on the way out.
 
     `start_new_session=True` plus `killpg`, not `Popen.send_signal`. The frontend is
@@ -119,7 +156,7 @@ def background(command: list[str], *, step: str, env: dict[str, str]) -> Iterato
     print(f"\n── {step} " + "─" * max(0, 60 - len(step)), flush=True)
     process = subprocess.Popen(command, cwd=ROOT, env=env, start_new_session=True)
     try:
-        yield
+        yield process
     finally:
         print(f"   stopping {step}…", flush=True)
         _stop_group(process)
@@ -179,6 +216,13 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
         # stale dev server with a different identity, answering happily. Observed exactly
         # once, which was enough.
         "pnpm", "--dir", "frontend", "dev", "--port", str(FRONTEND_PORT), "--strictPort",
+        # `--host 127.0.0.1` binds **both** loopback families; the default binds `[::1]`
+        # only, and nothing else changes — the external interface still refuses either way.
+        # It matters when the demo runs on a remote machine: `ssh -L 5173:localhost:5173`
+        # resolves `localhost` on the *server*, usually to 127.0.0.1 first, and the tunnel
+        # then fails with "connect failed: Connection refused" against a dev server that is
+        # running perfectly.
+        "--host", "127.0.0.1",
     ]
     frontend_env = {
         **env,
@@ -194,14 +238,20 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
         )
         frontend = False
 
-    with background(api, step=f"API on :{API_PORT}", env=env):
+    require_free(API_PORT, step="the API")
+    with background(api, step=f"API on :{API_PORT}", env=env) as api_process:
+        _still_running(api_process, step="the API")
         wait_for(f"http://localhost:{API_PORT}/api/v1/demo/guide", step="API")
         if not frontend:
             print(f"\n   API ready: http://localhost:{API_PORT}/docs", flush=True)
             print("   Ctrl-C to stop.\n", flush=True)
             _wait_for_interrupt()
             return 0
-        with background(frontend_command, step=f"frontend on :{FRONTEND_PORT}", env=frontend_env):
+        require_free(FRONTEND_PORT, step="the frontend")
+        with background(
+            frontend_command, step=f"frontend on :{FRONTEND_PORT}", env=frontend_env
+        ) as frontend_process:
+            _still_running(frontend_process, step="the frontend")
             wait_for(f"http://localhost:{FRONTEND_PORT}/", step="frontend")
             print(
                 f"\n{'═' * 62}\n"
