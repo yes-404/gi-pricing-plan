@@ -51,6 +51,7 @@ AcknowledgeWarnings = Annotated[
 ]
 #: The one route whose permission is check-dependent; see `create_rule`.
 AuthenticatedCaller = Annotated[Caller, Depends(require_caller)]
+DecideApprovals = Annotated[Caller, Depends(requires(Perm.APPROVAL_DECIDE))]
 
 
 def _database(request: Request) -> Database:
@@ -86,10 +87,28 @@ class DryRunRequest(BaseModel):
     dataset_version_id: UUID
 
 
-class RuleSetReplace(BaseModel):
+class RuleSetMemberWrite(BaseModel):
+    """One rule's membership, with the two things `01` §4.3 lets a set say about it."""
+
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    rule_ids: list[UUID]
+    rule_id: UUID
+    enabled: bool = True
+    severity_override: Severity | None = None
+
+
+class RuleSetReplace(BaseModel):
+    """FR-DATA-22's replace body.
+
+    `rules` rather than a bare id list: `01` §4.3 gives an entry an `enabled` flag and a
+    `severity_override`, and a body carrying only ids could express neither — so a rule
+    could be turned off nowhere but in the database, and the "may only raise" invariant
+    guarded something no caller could reach.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rules: list[RuleSetMemberWrite]
     reference_dataset_version_id: UUID | None = None
 
 
@@ -234,6 +253,35 @@ async def submit_rule(
         return rule_service.to_schema(row)
 
 
+@router.post(
+    "/validation-rules/{rule_id}/approve",
+    summary="Approve a rule in review",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def approve_rule(
+    rule_id: UUID, caller: DecideApprovals, database: DatabaseDep
+) -> ValidationRule:
+    """FR-DATA-21 step 3: `review` → `approved`, by someone other than the author.
+
+    The separation is the control, and it is enforced in three places rather than trusted
+    here: this route requires `approval:decide`, the service refuses when the approver is
+    the author, and the table's check constraint refuses an approved row whose approver
+    matches. A rule decides whether data may be modelled on — one person deciding both what
+    it says and that it is right is not a review.
+
+    Approval **policies** — quorum, escalation, evidence bundles — are `06`'s (W17). This is
+    the module's own step, in the terms `01` §4.5 states it.
+    """
+    async with database.unit_of_work() as session:
+        row = await rule_service.approve_rule(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            rule_id=rule_id,
+        )
+        return rule_service.to_schema(row)
+
+
 @router.get(
     "/datasets/{slug}/rule-set",
     summary="Read a dataset's rule set",
@@ -274,6 +322,13 @@ async def put_rule_set(
             actor=caller.principal,
             dataset_id=dataset.id,
             slug=slug,
-            rule_ids=body.rule_ids,
+            members=[
+                rule_service.RuleSetMember(
+                    rule_id=member.rule_id,
+                    enabled=member.enabled,
+                    severity_override=member.severity_override,
+                )
+                for member in body.rules
+            ],
             reference_dataset_version_id=body.reference_dataset_version_id,
         )

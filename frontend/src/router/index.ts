@@ -18,6 +18,12 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: "/data/:slug/rules",
+    name: "rule-set",
+    component: () => import("@/views/RuleSetView.vue"),
+    props: true,
+  },
+  {
     path: "/data/:slug/v/:version",
     name: "version-detail",
     component: () => import("@/views/VersionDetailView.vue"),

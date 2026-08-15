@@ -496,7 +496,8 @@ async def test_replacing_a_rule_set_points_the_dataset_at_it(
     async with database.unit_of_work() as session:
         rule_set = await rule_service.replace_rule_set(
             session, workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
-            slug=str(dataset_id), rule_ids=[rule_id],
+            slug=str(dataset_id),
+            members=[rule_service.RuleSetMember(rule_id=rule_id)],
         )
 
     async with database.session() as session:

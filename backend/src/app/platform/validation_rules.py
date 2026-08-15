@@ -18,6 +18,8 @@ caller can route around:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -42,6 +44,7 @@ from model_schema import (
 )
 
 __all__ = [
+    "RuleSetMember",
     "approve_rule",
     "attach_dry_run",
     "create_rule",
@@ -329,6 +332,41 @@ async def rule_set_for(
     return await _to_rule_set(session, row, workspace_id=workspace_id)
 
 
+@dataclass(frozen=True, slots=True)
+class RuleSetMember:
+    """What a caller asks for: a rule id, and the two things a set may say about it.
+
+    Distinct from `RuleSetEntry`, which carries the resolved rule. A caller has the id;
+    only the service can turn it into a rule, and only after checking it is approved.
+    """
+
+    rule_id: UUID
+    enabled: bool = True
+    severity_override: Severity | None = None
+
+
+def _members(row: ValidationRuleSetRow) -> list[RuleSetMember]:
+    """Read the stored artifact.
+
+    `01` §4.4 stores `rules` with the per-entry fields. Rows written before that shape
+    existed carry a bare `rule_ids` list; they are read as all-enabled with no override,
+    which is exactly what they meant.
+    """
+    stored = row.body.get("rules")
+    if stored is None:
+        return [RuleSetMember(rule_id=UUID(value)) for value in row.body.get("rule_ids", [])]
+    return [
+        RuleSetMember(
+            rule_id=UUID(entry["rule_id"]),
+            enabled=bool(entry.get("enabled", True)),
+            severity_override=(
+                Severity(entry["severity_override"]) if entry.get("severity_override") else None
+            ),
+        )
+        for entry in stored
+    ]
+
+
 async def _to_rule_set(
     session: AsyncSession, row: ValidationRuleSetRow, *, workspace_id: UUID
 ) -> ValidationRuleSet:
@@ -337,18 +375,24 @@ async def _to_rule_set(
     The set stores ids rather than copies. A copy would let the set and the rule disagree
     about a rule's severity, and the report cites both.
     """
-    rule_ids = [UUID(value) for value in row.body.get("rule_ids", [])]
+    members = _members(row)
     rules = (
         await session.execute(
             select(ValidationRuleRow).where(
                 ValidationRuleRow.workspace_id == workspace_id,
-                ValidationRuleRow.id.in_(rule_ids),
+                ValidationRuleRow.id.in_([m.rule_id for m in members]),
             )
         )
     ).scalars().all()
     by_id = {rule.id: rule for rule in rules}
     entries = tuple(
-        RuleSetEntry(rule=to_schema(by_id[rule_id])) for rule_id in rule_ids if rule_id in by_id
+        RuleSetEntry(
+            rule=to_schema(by_id[member.rule_id]),
+            enabled=member.enabled,
+            severity_override=member.severity_override,
+        )
+        for member in members
+        if member.rule_id in by_id
     )
     return ValidationRuleSet(
         id=row.id,
@@ -368,7 +412,7 @@ async def replace_rule_set(
     actor: Principal,
     dataset_id: UUID,
     slug: str,
-    rule_ids: list[UUID],
+    members: Sequence[RuleSetMember],
     reference_dataset_version_id: UUID | None = None,
 ) -> ValidationRuleSet:
     """Create the next rule-set version (FR-DATA-22).
@@ -385,6 +429,7 @@ async def replace_rule_set(
         resource=rbac.ResourceRef(scope_type=ScopeType.DATASET, scope_id=dataset_id),
     )
 
+    rule_ids = [member.rule_id for member in members]
     rules = (
         await session.execute(
             select(ValidationRuleRow).where(
@@ -393,7 +438,8 @@ async def replace_rule_set(
             )
         )
     ).scalars().all()
-    found = {rule.id for rule in rules}
+    by_id = {rule.id: rule for rule in rules}
+    found = set(by_id)
     missing = [str(rule_id) for rule_id in rule_ids if rule_id not in found]
     if missing:
         raise PlatformError(
@@ -414,6 +460,25 @@ async def replace_rule_set(
             "nobody reviewed (FR-DATA-21).",
         )
 
+    # `01` §4.3: an override may only *raise*. `RuleSetEntry` enforces it too, but that
+    # would surface here as a 500 — the caller asked for something the platform refuses,
+    # which is a 409, and the refusal has to say why.
+    lowered = sorted(
+        by_id[m.rule_id].slug
+        for m in members
+        if m.severity_override is Severity.WARN
+        and Severity(by_id[m.rule_id].severity) is Severity.FAIL
+    )
+    if lowered:
+        raise PlatformError(
+            "RULE_SEVERITY_DOWNGRADE_FORBIDDEN",
+            "An override may only raise severity",
+            409,
+            f"Would lower fail to warn: {', '.join(lowered)}. Deciding a failure is "
+            "acceptable is a change to the rule, and goes through the rule's own review "
+            "(FR-DATA-21) where someone sees it.",
+        )
+
     version = 1 + (
         await session.execute(
             select(func.coalesce(func.max(ValidationRuleSetRow.version), 0)).where(
@@ -428,7 +493,22 @@ async def replace_rule_set(
         dataset_id=dataset_id,
         slug=slug,
         version=version,
-        body={"rule_ids": [str(rule_id) for rule_id in rule_ids]},
+        body={
+            "rules": [
+                {
+                    "rule_id": str(member.rule_id),
+                    # Informational: a rule version is a row of its own, so the id already
+                    # pins the version. Stored so the artifact reads as `01` §4.4 shows it
+                    # and a reviewer sees which version without a second lookup.
+                    "rule_version": by_id[member.rule_id].version,
+                    "enabled": member.enabled,
+                    "severity_override": (
+                        member.severity_override.value if member.severity_override else None
+                    ),
+                }
+                for member in members
+            ]
+        },
         reference_dataset_version_id=reference_dataset_version_id,
         status=APPROVED,
     )
@@ -449,6 +529,15 @@ async def replace_rule_set(
         source=JobSource.API,
         action="validation_rule_set.replaced",
         entity_ref=f"validation_rule_set:{slug}@{version}",
-        after={"version": version, "rule_ids": [str(r) for r in rule_ids]},
+        after={
+            "version": version,
+            "rule_ids": [str(r) for r in rule_ids],
+            "disabled": [str(m.rule_id) for m in members if not m.enabled],
+            "overridden": {
+                str(m.rule_id): m.severity_override.value
+                for m in members
+                if m.severity_override is not None
+            },
+        },
     )
     return await _to_rule_set(session, row, workspace_id=workspace_id)

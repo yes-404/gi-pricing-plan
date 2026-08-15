@@ -256,6 +256,14 @@ A rule is a tagged union on `layer` + `check`:
 it; lowering requires editing the rule itself, which is a reviewed change (FR-DATA-21).
 A Rule Set used by a Dataset feeding an `approved` Model must contain only `approved` rules.
 
+> **Amended 2026-08-15 (W6a).** `PUT /datasets/{slug}/rule-set` takes `rules` — the entries
+> above — and not a bare list of rule ids. The first implementation took ids, so neither
+> `enabled` nor `severity_override` could be expressed by any caller: a rule could be turned
+> off nowhere but in the database, and the "may only raise" invariant guarded something
+> unreachable. A downgrade attempt is refused with `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`
+> (409). Found by building §5.3's rule-set editor against the API and having nothing to
+> bind its enable/disable control to.
+
 ### 4.4 Built-in rule catalogue
 
 Rule IDs here are stable and referenced by workflows and by the UI.
@@ -502,6 +510,7 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 | `POST` | `/api/v1/validation-rules` | Create a custom rule → `draft` (FR-DATA-21) |
 | `POST` | `/api/v1/validation-rules/{id}/dry-run` | **202** Execute against a chosen version |
 | `POST` | `/api/v1/validation-rules/{id}/submit` | Submit for approval |
+| `POST` | `/api/v1/validation-rules/{id}/approve` | Approve a rule in review — never its author (§4.5 step 3) |
 | `GET`/`PUT` | `/api/v1/datasets/{slug}/rule-set` | Read / replace the Rule Set (creates a new rule-set version) |
 | `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-DATA-29) |
 | `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-DATA-31) |
@@ -515,6 +524,16 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 > Newest first and cursor-paginated like every other collection (`00` §5.2): a dataset
 > refreshed monthly for ten years has a hundred and twenty versions, and a timeline is read
 > from the top.
+
+> **`POST /validation-rules/{id}/approve` added 2026-08-15 (W6a).** §4.5 step 3 describes
+> the step — "submitted → `review` → approved by an Approver (never the author)" — and the
+> service enforced it, but §5.1 exposed no route. A rule could be authored, dry-run and
+> submitted, and then sat in `review` with no way out; since a Rule Set refuses any rule
+> that is not `approved` (FR-DATA-21), nothing authored through the API could ever be used.
+> Found by walking the chain the rule-set editor needs.
+>
+> Approval **policies** — quorum, escalation, evidence bundles — remain `06`'s (FR-GOV-9..19,
+> W17). This is the module's own step in the module's own terms, which is what §4.5 states.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED`, `DATASET_VERSION_IMMUTABLE`,
 `SCHEMA_INFERENCE_CONFLICT`, `COLUMN_NAME_COLLISION`, `DIRECT_IDENTIFIER_PRESENT`,

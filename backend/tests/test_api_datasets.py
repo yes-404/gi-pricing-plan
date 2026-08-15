@@ -8,6 +8,8 @@ the transition a caller wants.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -591,3 +593,204 @@ def test_the_version_timeline_is_newest_first_and_paginated(
     )
     assert [item["version"] for item in second.json()["items"]] == [1]
     assert second.json()["next_cursor"] is None
+
+
+@pytest.mark.req("FR-DATA-21")
+def test_a_rule_walks_draft_to_approved_and_never_by_its_author(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """FR-DATA-21's chain, over HTTP: author → dry-run → submit → approve.
+
+    §5.1 exposed no approve route, so a rule could be authored, dry-run and submitted and
+    then sat in `review` with no way out — and since a Rule Set refuses any rule that is
+    not `approved`, nothing authored through the API could ever be used. Found by walking
+    the chain the rule-set editor needs.
+
+    The separation is the control: `01` §4.5 step 3 says "approved by an Approver (never
+    the author)", and it holds even when one person has both roles.
+    """
+    import asyncio
+
+    from app.db.models import ValidationRuleRow
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    asyncio.get_event_loop().run_until_complete(grant("approver"))
+    headers = _headers(principal.id, workspace_id)
+
+    created = client.post(
+        "/api/v1/validation-rules",
+        json={
+            "slug": f"rng-{new_uuid7().hex[-8:]}",
+            "layer": "actuarial_sanity",
+            "check": "range",
+            "severity": "warn",
+            "target": {"table": "policy_exposure", "column": "driv_age"},
+            "params": {"min_inclusive": 18, "key_columns": ["policy_id"]},
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    rule_id = created.json()["id"]
+    assert created.json()["status"] == "draft"
+
+    # Step 2: no dry run, no submission. An approver reading JSON cannot tell whether a
+    # rule selects three rows or three million.
+    refused = client.post(f"/api/v1/validation-rules/{rule_id}/submit", headers=headers)
+    assert refused.status_code == 409
+    assert refused.json()["code"] == "RULE_NOT_APPROVED"
+
+    async def attach_dry_run() -> None:
+        async with database.unit_of_work() as session:
+            row = await session.get(ValidationRuleRow, UUID(rule_id))
+            row.dry_run_report_id = new_uuid7()
+
+    asyncio.get_event_loop().run_until_complete(attach_dry_run())
+
+    submitted = client.post(f"/api/v1/validation-rules/{rule_id}/submit", headers=headers)
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["status"] == "review"
+
+    # Step 3: this principal authored it, and holds `approval:decide`. The role is not the
+    # control — the separation is.
+    self_approved = client.post(
+        f"/api/v1/validation-rules/{rule_id}/approve", headers=headers
+    )
+    assert self_approved.status_code == 409
+    assert self_approved.json()["code"] == "SUBMITTER_CANNOT_APPROVE"
+
+    approver = new_uuid7()
+    asyncio.get_event_loop().run_until_complete(
+        grant("approver", principal_id=approver)
+    )
+    approved = client.post(
+        f"/api/v1/validation-rules/{rule_id}/approve",
+        headers=_headers(approver, workspace_id),
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "approved"
+
+
+def _approved_rule(client, headers, approver_headers, database, **over) -> str:
+    """Walk a rule to `approved` — the only state a Rule Set will accept."""
+    import asyncio
+
+    from app.db.models import ValidationRuleRow
+
+    body = {
+        "slug": f"rng-{new_uuid7().hex[-8:]}",
+        "layer": "actuarial_sanity",
+        "check": "range",
+        "severity": "warn",
+        "target": {"table": "policy_exposure", "column": "driv_age"},
+        "params": {"min_inclusive": 18, "key_columns": ["policy_id"]},
+    }
+    body.update(over)
+    created = client.post("/api/v1/validation-rules", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    rule_id = created.json()["id"]
+
+    async def attach() -> None:
+        async with database.unit_of_work() as session:
+            row = await session.get(ValidationRuleRow, UUID(rule_id))
+            row.dry_run_report_id = new_uuid7()
+
+    asyncio.get_event_loop().run_until_complete(attach())
+    assert client.post(
+        f"/api/v1/validation-rules/{rule_id}/submit", headers=headers
+    ).status_code == 200
+    assert client.post(
+        f"/api/v1/validation-rules/{rule_id}/approve", headers=approver_headers
+    ).status_code == 200
+    return rule_id
+
+
+@pytest.mark.req("FR-DATA-22")
+def test_a_rule_set_entry_carries_its_enabled_flag_and_override(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """`01` §4.3's entry fields, over HTTP.
+
+    The replace body took a bare list of rule ids, so neither field could be expressed by
+    any caller: a rule could be turned off nowhere but in the database, and the "may only
+    raise" invariant guarded something unreachable. Found by building §5.3's rule-set
+    editor against the API and having nothing to bind the enable/disable control to.
+    """
+    import asyncio
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+    approver = new_uuid7()
+    asyncio.get_event_loop().run_until_complete(grant("approver", principal_id=approver))
+    approver_headers = _headers(approver, workspace_id)
+
+    slug = f"ds-{new_uuid7().hex[-8:]}"
+    assert client.post(
+        "/api/v1/datasets", json={"slug": slug, "name": "Entry fields"}, headers=headers
+    ).status_code == 201
+
+    kept = _approved_rule(client, headers, approver_headers, database)
+    parked = _approved_rule(
+        client, headers, approver_headers, database, layer="structural", check="not_null",
+        params={"key_columns": ["policy_id"]},
+    )
+
+    put = client.put(
+        f"/api/v1/datasets/{slug}/rule-set",
+        json={
+            "rules": [
+                {"rule_id": kept, "severity_override": "fail"},
+                {"rule_id": parked, "enabled": False},
+            ]
+        },
+        headers=headers,
+    )
+    assert put.status_code == 200, put.text
+
+    got = client.get(f"/api/v1/datasets/{slug}/rule-set", headers=headers).json()
+    entries = {entry["rule"]["id"]: entry for entry in got["entries"]}
+    assert entries[kept]["severity_override"] == "fail"
+    assert entries[parked]["enabled"] is False
+    # A disabled entry is still *in* the set — it is not a deletion — but it does not
+    # cover its layer, so FR-DATA-16's warning names that layer.
+    assert "structural" in got["empty_layers"]
+    assert "actuarial_sanity" not in got["empty_layers"]
+
+
+@pytest.mark.req("FR-DATA-22")
+def test_an_override_may_raise_severity_but_never_lower_it(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """`01` §4.3: `warn → fail` is a workspace tightening a shipped rule and needs no review.
+
+    `fail → warn` is a workspace deciding a failure is acceptable — a change to the rule,
+    which goes through the rule's own review (FR-DATA-21) where somebody sees it. Allowing
+    it here would be a way to pass validation without changing anything a reviewer reads.
+    """
+    import asyncio
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+    approver = new_uuid7()
+    asyncio.get_event_loop().run_until_complete(grant("approver", principal_id=approver))
+    approver_headers = _headers(approver, workspace_id)
+
+    slug = f"ds-{new_uuid7().hex[-8:]}"
+    client.post("/api/v1/datasets", json={"slug": slug, "name": "Overrides"}, headers=headers)
+    strict = _approved_rule(client, headers, approver_headers, database, severity="fail")
+
+    lowered = client.put(
+        f"/api/v1/datasets/{slug}/rule-set",
+        json={"rules": [{"rule_id": strict, "severity_override": "warn"}]},
+        headers=headers,
+    )
+    assert lowered.status_code == 409, lowered.text
+    assert lowered.json()["code"] == "RULE_SEVERITY_DOWNGRADE_FORBIDDEN"
+
+    # ...and the refusal is specific to the direction, not to overrides.
+    lenient = _approved_rule(client, headers, approver_headers, database, severity="warn")
+    raised = client.put(
+        f"/api/v1/datasets/{slug}/rule-set",
+        json={"rules": [{"rule_id": lenient, "severity_override": "fail"}]},
+        headers=headers,
+    )
+    assert raised.status_code == 200, raised.text

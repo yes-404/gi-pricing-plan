@@ -109,6 +109,16 @@ onMounted(() => void load());
           · {{ dataset.territory }}
         </template>
         · {{ dataset.currency }}
+        <!-- `01` §5.3's rule set link. `validation_rule_set_id` is what tells a reader a
+             dataset has rules at all; without it a dataset with none looks identical to
+             one whose rules nobody has opened. -->
+        ·
+        <RouterLink
+          :to="`/data/${slug}/rules`"
+          class="hover:underline"
+        >
+          {{ dataset.validation_rule_set_id ? "Rule set" : "No rule set" }}
+        </RouterLink>
       </p>
     </header>
 

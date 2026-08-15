@@ -36,7 +36,7 @@ const VERSIONS = {
   total_estimate: 2,
 };
 
-function stub(putStatus = 200): void {
+function stub(putStatus = 200, dataset: Record<string, unknown> = DATASET): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL, init?: RequestInit) => {
@@ -49,7 +49,7 @@ function stub(putStatus = 200): void {
           status: putStatus, headers: { "Content-Type": "application/json" },
         });
       }
-      const body = url.includes("/versions") ? VERSIONS : DATASET;
+      const body = url.includes("/versions") ? VERSIONS : dataset;
       return new Response(JSON.stringify(body), {
         status: 200, headers: { "Content-Type": "application/json" },
       });
@@ -134,5 +134,16 @@ describe("the dataset detail view", () => {
     await user.click(await screen.findByRole("button", { name: "Edit" }));
     await user.click(screen.getByRole("button", { name: "Save dictionary" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Not permitted");
+  });
+
+  it("says whether the dataset has a rule set, and links to it either way", async () => {
+    // FR-DATA-16: a version cannot be validated until one is defined, so "none" is the
+    // fact a reader most needs — and the link is where they go to fix it.
+    render(DatasetDetailView, { props, ...mounted });
+    expect(await screen.findByText("Rule set")).toBeInTheDocument();
+
+    stub(200, { ...DATASET, validation_rule_set_id: null });
+    render(DatasetDetailView, { props, ...mounted });
+    expect(await screen.findByText("No rule set")).toBeInTheDocument();
   });
 });

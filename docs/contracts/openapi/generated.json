@@ -2861,8 +2861,40 @@
         "title": "RuleSetEntry",
         "type": "object"
       },
+      "RuleSetMemberWrite": {
+        "additionalProperties": false,
+        "description": "One rule's membership, with the two things `01` §4.3 lets a set say about it.",
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "rule_id": {
+            "format": "uuid",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity_override": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Severity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rule_id"
+        ],
+        "title": "RuleSetMemberWrite",
+        "type": "object"
+      },
       "RuleSetReplace": {
         "additionalProperties": false,
+        "description": "FR-DATA-22's replace body.\n\n`rules` rather than a bare id list: `01` §4.3 gives an entry an `enabled` flag and a\n`severity_override`, and a body carrying only ids could express neither — so a rule\ncould be turned off nowhere but in the database, and the \"may only raise\" invariant\nguarded something no caller could reach.",
         "properties": {
           "reference_dataset_version_id": {
             "anyOf": [
@@ -2876,17 +2908,16 @@
             ],
             "title": "Reference Dataset Version Id"
           },
-          "rule_ids": {
+          "rules": {
             "items": {
-              "format": "uuid",
-              "type": "string"
+              "$ref": "#/components/schemas/RuleSetMemberWrite"
             },
-            "title": "Rule Ids",
+            "title": "Rules",
             "type": "array"
           }
         },
         "required": [
-          "rule_ids"
+          "rules"
         ],
         "title": "RuleSetReplace",
         "type": "object"
@@ -3579,6 +3610,15 @@
             ],
             "title": "Dataset Id"
           },
+          "empty_layers": {
+            "description": "FR-DATA-16: every layer must be present; an empty one is a configuration warning.\n\nA warning rather than an error because a dataset with no reference tables genuinely\nhas nothing referential to check — but silence would let a rule set lose its whole\ndistributional layer in an edit and look complete.\n\n**Computed, so it reaches the API.** A plain `@property` is not serialised, so the\ncontract carried no such field and the screen FR-DATA-16 names as the place to\nsurface the warning had nothing to surface — while `ValidationReport` beside it\ncarried the same list as an ordinary field. A client deriving it from `entries`\nwould be a second implementation of the rule, which is what `CLAUDE.md` §2 forbids.\n\nSorted, and a tuple rather than a set, because a JSON array has an order and an\nunordered one would make two identical rule sets serialise differently.",
+            "items": {
+              "$ref": "#/components/schemas/ValidationLayer"
+            },
+            "readOnly": true,
+            "title": "Empty Layers",
+            "type": "array"
+          },
           "entries": {
             "default": [],
             "items": {
@@ -3622,7 +3662,8 @@
         "required": [
           "id",
           "slug",
-          "version"
+          "version",
+          "empty_layers"
         ],
         "title": "ValidationRuleSet",
         "type": "object"
@@ -9274,6 +9315,115 @@
           }
         },
         "summary": "Create a custom validation rule",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/api/v1/validation-rules/{rule_id}/approve": {
+      "post": {
+        "description": "FR-DATA-21 step 3: `review` → `approved`, by someone other than the author.\n\nThe separation is the control, and it is enforced in three places rather than trusted\nhere: this route requires `approval:decide`, the service refuses when the approver is\nthe author, and the table's check constraint refuses an approved row whose approver\nmatches. A rule decides whether data may be modelled on — one person deciding both what\nit says and that it is right is not a review.\n\nApproval **policies** — quorum, escalation, evidence bundles — are `06`'s (W17). This is\nthe module's own step, in the terms `01` §4.5 states it.",
+        "operationId": "approve_rule_api_v1_validation_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Approve a rule in review",
         "tags": [
           "validation"
         ]

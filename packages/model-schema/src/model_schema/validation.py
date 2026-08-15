@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Any, Final
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 __all__ = [
     "ALL_LAYERS",
@@ -146,15 +146,25 @@ class ValidationRuleSet(BaseModel):
     def covered_layers(self) -> frozenset[ValidationLayer]:
         return frozenset(e.rule.layer for e in self.enabled_entries)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
-    def empty_layers(self) -> frozenset[ValidationLayer]:
+    def empty_layers(self) -> tuple[ValidationLayer, ...]:
         """FR-DATA-16: every layer must be present; an empty one is a configuration warning.
 
         A warning rather than an error because a dataset with no reference tables genuinely
         has nothing referential to check — but silence would let a rule set lose its whole
         distributional layer in an edit and look complete.
+
+        **Computed, so it reaches the API.** A plain `@property` is not serialised, so the
+        contract carried no such field and the screen FR-DATA-16 names as the place to
+        surface the warning had nothing to surface — while `ValidationReport` beside it
+        carried the same list as an ordinary field. A client deriving it from `entries`
+        would be a second implementation of the rule, which is what `CLAUDE.md` §2 forbids.
+
+        Sorted, and a tuple rather than a set, because a JSON array has an order and an
+        unordered one would make two identical rule sets serialise differently.
         """
-        return ALL_LAYERS - self.covered_layers
+        return tuple(sorted(ALL_LAYERS - self.covered_layers))
 
 
 class Acknowledgement(BaseModel):
