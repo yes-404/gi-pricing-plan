@@ -687,7 +687,7 @@ def make_xgb_objective(fns: ObjectiveFns, base_margin: np.ndarray | None):
 |---|---|---|
 | Factor workbench | `/factors/:datasetVersionId` | Column list with profile one-ways (`01` FR-DATA-26), banding editor with draggable boundaries and live band stats, grouping editor with relativity-ordered levels and merge tolerance slider, monotonic-direction and intent controls |
 | Model spec builder | `/models/new` | Dataset/split pickers, response & offset/weight, factor multi-select, model-type tabs, objective picker (builtin or approved custom), hyperparameters, live spec validation (FR-MODEL-44) |
-| Model detail | `/models/:slug@:version` | Spec summary, coefficient/relativity tables with CI bars, fit metadata, lineage strip, flags |
+| Model detail | `/models/:slug` | Spec summary, coefficient/relativity tables with CI bars, fit metadata, lineage strip, flags. `?version=` selects one; the latest by default |
 | Diagnostics | `/models/:slug@:version/diagnostics` | Train/holdout side-by-side throughout; A/E by factor, lift & double-lift, calibration, residuals, GBM eval curves and importances, CV fold dispersion |
 | Model comparison | `/models/compare?ids=` | Aligned metric table, double-lift chart, factor-by-factor relativity diff |
 | Custom objective library | `/objectives` | List with status, applicability, usage count; editor with live parse errors, derived gradient/hessian display, loss-curve preview at chosen parameter values |

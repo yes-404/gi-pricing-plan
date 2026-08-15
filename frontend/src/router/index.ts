@@ -52,6 +52,15 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    // `02` §5.3. `?version=` selects one; the latest by default. Not `@version` in the
+    // path: an `@` must be percent-encoded by every client, and `family@7` then reads as
+    // `family%407` in every log and support conversation.
+    path: "/models/:slug",
+    name: "model-detail",
+    component: () => import("@/views/ModelDetailView.vue"),
+    props: true,
+  },
+  {
     path: "/reference",
     name: "reference",
     component: () => import("@/views/ReferenceView.vue"),
