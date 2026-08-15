@@ -132,7 +132,7 @@ auditor, or a regulator:
 
 | ID | Requirement |
 |---|---|
-| **FR-GOV-27** | The platform generates a **Model Dossier** for any Model, Peril Structure, or Rating Version, assembled entirely from persisted artifacts (R3). Sections are specified in §4.4. |
+| **FR-GOV-27** | The platform generates a **Model Dossier** for any Model, Peril Structure, or Rating Version, assembled entirely from persisted artifacts (R3). Sections are specified in §4.4, and the dossier states the platform build that produced the figures (`00` FR-OVR-16) — under ADR-0006 each tenant runs its own deployment, so the build is not inferable from the date. |
 | **FR-GOV-28** | Human commentary is supported as named, versioned, attributed **Commentary Blocks** slotted into defined positions in the dossier. Commentary is clearly distinguished from generated content in the rendered output. |
 | **FR-GOV-29** | Dossiers render to HTML and PDF, and are exportable as a self-contained bundle (document plus the referenced artifact JSON) so an external reviewer can verify a figure without platform access. |
 | **FR-GOV-30** | A dossier is generated **as at a point in time** and can be regenerated for any historical state — "produce the model documentation as it stood when version 27 went live" is a supported operation, not an archaeology exercise. |
@@ -478,7 +478,7 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 
 | ID | Question |
 |---|---|
-| **OQ-GOV-1** | Should the audit hash chain be per workspace or global, and is a chain sufficient without external anchoring (e.g. periodically publishing the chain head somewhere the platform operator cannot alter)? A chain an operator controls end-to-end detects storage tampering but not a determined operator. |
+| **OQ-GOV-1** | Should the audit hash chain be per workspace or global — **"global" now means "per deployment", since ADR-0006 gives every tenant its own** — and is a chain sufficient without external anchoring (e.g. periodically publishing the chain head somewhere the platform operator cannot alter)? A chain an operator controls end-to-end detects storage tampering but not a determined operator. |
 | **OQ-GOV-2** | Are platform roles authoritative, or should group membership from the identity provider be? IdP-authoritative is better for large insurers' joiner/leaver processes; platform-authoritative is far clearer for scoped, artifact-level permissions. |
 | **OQ-GOV-3** | Should Admin be able to override a flag (FR-GOV-17) at all? Allowing it creates a bypass of every gate in the platform; disallowing it means a genuine false-positive flag blocks a legitimate change with no recourse. |
 | **OQ-GOV-4** | Do we need a formal "model risk tiering" concept (tier 1 models needing more approvers, more frequent attestation), or is per-artifact-type policy plus scoped roles sufficient? Tiering is standard in UK insurer model governance. |

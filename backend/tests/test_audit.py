@@ -127,7 +127,7 @@ async def test_chain_links_each_event_to_its_predecessor(
 async def test_chains_are_independent_per_workspace(
     database: Database, principal
 ) -> None:
-    """Two workspaces must not interleave, or one tenant's writes reorder another's chain."""
+    """Two workspaces must not interleave, or one workspace's writes reorder another's chain."""
     a, b = new_uuid7(), new_uuid7()
     async with database.unit_of_work() as session:
         first_a = await _record(session, a, principal)

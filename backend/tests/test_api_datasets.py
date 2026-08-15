@@ -1,7 +1,7 @@
 """The data API over HTTP (`01` §5.1).
 
 The service tests already prove the rules. What these prove is that the rules are still
-enforced *when reached through a route* — that a permission is checked, a cross-tenant id
+enforced *when reached through a route* — that a permission is checked, a cross-workspace id
 is indistinguishable from a missing one, and the gate cannot be walked round by posting
 the transition a caller wants.
 """
@@ -229,7 +229,7 @@ def test_a_version_cannot_be_validated_without_naming_its_report(
 def test_a_version_in_another_workspace_is_a_404(
     client: TestClient, analyst: dict[str, str]
 ) -> None:
-    """A 403 would confirm the id exists, which is a disclosure in a multi-tenant system
+    """A 403 would confirm the id exists, which discloses another workspace's work
     even when the body says nothing else."""
     response = client.get(
         f"/api/v1/dataset-versions/{new_uuid7()}/profile", headers=analyst

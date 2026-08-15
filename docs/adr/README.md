@@ -16,3 +16,4 @@ or has already been made and needs recording. Otherwise use `docs/open-questions
 | [0003](0003-declarative-json-artifacts-no-pickles.md) | Model and rating definitions are declarative JSON artifacts | accepted |
 | [0004](0004-zen-engine-for-rating-execution.md) | GoRules ZEN Engine executes rating DAGs | accepted |
 | [0005](0005-polars-duckdb-over-pandas.md) | Polars + DuckDB as the data engine, not pandas | accepted |
+| [0006](0006-tenant-isolation-is-a-deployment-boundary.md) | Tenant isolation is a deployment boundary, not a `workspace_id` | accepted |

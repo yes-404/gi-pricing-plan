@@ -121,7 +121,7 @@ async def test_membership_grants_exactly_one_workspace(
 async def test_membership_of_several_workspaces_requires_a_choice(
     database: Database,
 ) -> None:
-    """Negative: the platform must not pick a tenant on the caller's behalf."""
+    """Negative: the platform must not pick a workspace on the caller's behalf."""
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")

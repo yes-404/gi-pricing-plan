@@ -140,7 +140,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 |---|---|---|
 | 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-MODEL-3, OQ-PLAT-3) | decisions | Before Phase 2 — OQ-RATE-2 now decided |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
-| 7 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6 and 7 came off this list on 2026-08-15 |
+| 6 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
@@ -345,6 +345,12 @@ the thing its name suggests, and nobody had looked.
 > journey where one slice is covered. A journey belongs to the workstream that completes
 > the last module it touches, so `wf-01` is W5's to finish. Phase 1a's exit demo walks its
 > data half and is that half's first evidence.
+>
+> **Accepted 2026-08-15**, unchanged, as **FR-OVR-17**. Writing it down sharpened two things:
+> the audit's real content is **endpoint and `pricing-core` function** citations, because
+> requirement ids and `§` references are already checked; and the ownership rule needs no
+> new machinery, since "the workstream that completes the last module" is in every case the
+> phase whose exit criterion names that journey (§12).
 
 *Two model/contract divergences have no owner.* `Dataset` carries no status, validated-at or
 owner while `01` §5.3 asks the dataset list to display all three; `ColumnProfile` has no
@@ -1372,7 +1378,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: the GLM spine is in — see below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78) |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: the GLM spine is in — see below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the journey test and, before it, the citation audit that gives the claim something to stand on (FR-OVR-17) |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
@@ -1445,7 +1451,7 @@ dislocation, and serves a live quote inside the latency budget.
 | **W11** | Scoring: real-time, batch, trace, one shared evaluator | FR-RATE-34..42; NFR-RATE-1 is the hard target |
 | **W12** | Testing: golden quotes, property assertions, regression runs | FR-RATE-43..45 |
 | **W13** | Dislocation with attribution | FR-RATE-46..49 |
-| **W14** | Deployment: environments, atomic switchover, rollback, shadow | FR-RATE-50..55; `07` FR-PLAT-28..31 |
+| **W14** | Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-0006 requires** | FR-RATE-50..55; `07` FR-PLAT-28..31, and added 2026-08-15 by OQ-OVR-1's decision: **FR-PLAT-56** (a deployment refuses to start against another tenant's database) and **FR-OVR-16** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-OVR-16's column rather than wait for this |
 | **W15** | Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project |
 | **W30** | **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` | Added 2026-08-15 by OQ-MODEL-1's decision, which moved this work out of W5 rather than deleting it: `02` FR-MODEL-40/41, FR-MODEL-75, §4.6, and `wf-05` Route B. It depends on nothing in W9–W15 and could equally be pulled into 1b if W5 finishes early — but it must not start before the certification machinery it fronts (FR-MODEL-76) has run for a phase, which is the whole point of the decision |
 
@@ -1525,9 +1531,9 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔ *all 2026-08-15*, **OQ-OVR-6**, **OQ-MODEL-8** | 6 (2 open) |
+| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, **OQ-MODEL-8** | 6 (1 open) |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
-| **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, ~~OQ-MODEL-7~~ ✔ *decided 2026-08-15 — evidence in Phase 3 (W31), never a block* | 8 (7 open) |
+| **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 (4 open) |
 
@@ -1554,6 +1560,15 @@ second method because the choice belongs per grouping (OQ-MODEL-5); the complexi
 unset by default because the judgement belongs to an Approver (OQ-MODEL-6); and proxy
 detection became a Phase 3 deliverable that produces evidence and never a refusal (OQ-MODEL-7).
 The register carries the reasoning; `02` §3 carries the obligations, as FR-MODEL-75..82.
+
+**2026-08-15 — two `OVR` questions followed.** OQ-OVR-1 chose **deployment-per-tenant**, which
+is the largest architectural commitment since ADR-0004 and is recorded as **ADR-0006**:
+isolation becomes an infrastructure property rather than a promise that every query is
+correct forever, at a cost that is linear in tenants and permanent. OQ-OVR-6 chose the
+journey citation audit now and one end-to-end test per journey as its last module lands
+(FR-OVR-17). Note what the first one moved: a question the table gated at Phase 3 turned out
+to change what W14 builds in Phase 2, which is the argument for answering gates early rather
+than at the boundary they are filed under.
 
 ---
 

@@ -124,7 +124,7 @@ async def test_reusing_a_key_with_different_parameters_is_a_conflict(
 async def test_the_same_key_in_another_workspace_is_a_different_job(
     database: Database, principal
 ) -> None:
-    """Keys are scoped to a workspace, or one tenant can collide with another's."""
+    """Keys are scoped to a workspace, or one workspace can collide with another's."""
     a, b = new_uuid7(), new_uuid7()
     async with database.unit_of_work() as session:
         first = await jobs.submit(
