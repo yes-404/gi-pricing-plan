@@ -239,6 +239,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W7a**~~ ✔ | freMTPL2 data seed — the demo dataset through the real Job path | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W6a**~~ ✔ | Frontend — app shell, dataset views, validation report view | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W7b**~~ ✔ | Demo entrance — one command to a browser, with a derived guide | ✔ **closed 2026-08-15** — see the closure record below |
+| ~~**Exit demo**~~ ✔ | A person driving Phase 1a's exit criterion by hand, through `/demo` | ✔ **accepted by the maintainer 2026-08-15**. Two defects found by driving it, neither by any test — see below |
 | ~~**Exit gate**~~ ✔ | FR-DATA-41 (ingestion refuses a `direct_identifier` column) · FR-DATA-42 (append-only triggers on `validation_reports`, `profiles`, `validation_acknowledgements`) | ✔ **delivered 2026-08-15** — five injections, five caught. `blobs` left the list when building it proved it could not be append-only; the requirement was corrected rather than the table dropped |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
@@ -260,6 +261,28 @@ line; two of review 2's are still pending.
 
 After this has run twice the procedure becomes `.claude/skills/phase-review` (`CLAUDE.md`
 §14). It has now run twice — writing that skill is the outstanding item.
+
+### Phase 1a — exit demo accepted 2026-08-15
+
+Driven by hand through `/demo` against a freMTPL2 workspace seeded by the real Job path:
+version 1 fails validation on 571 rows of genuine exposure above 1.0, promotion is refused,
+version 2 reaches `validated` after one preparation step. **Accepted by the maintainer.**
+
+Both halves of the exit criterion hold. The failure loop passes headless *and* by hand, and
+the retrofit list is in place rather than asserted — artifact immutability stopped being a
+Pydantic flag the same day (FR-DATA-42).
+
+**Two defects, both found by driving it and neither by any test.** That is the argument
+FR-PLAT-53 makes for the entrance, and this is the evidence for it:
+
+| Found | State |
+|---|---|
+| The dataset list's **latest version** column was empty for every row — the list called `to_schema(row)` with no version while the detail route passed one. `01` §5.3 names it as one of four columns the list must show, and it is the demo's first screen | **Fixed**, with the injection proof |
+| **Nothing in the platform ever sets a version to `failed`.** `DatasetStatus.FAILED` is in the enum and in `VALID_DATASET_TRANSITIONS`, and no code path transitions to it — so a version whose first validation fails rests in `validating`, which every status screen reads as "still running" | **OQ-DATA-7**, open, recommendation `failed`; specified as **FR-DATA-43**, not implemented |
+
+Neither was visible to an audit. The first was a column nobody asserted; the second is a
+*state* rather than a requirement, so no marker could be missing and no coverage number
+could drop. A person opening the screen saw both in under a minute.
 
 ### Plan review 2 — at W7b's close and before Phase 1a's exit demo, 2026-08-15
 
