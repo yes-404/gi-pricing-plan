@@ -323,17 +323,27 @@ Yes, with one proposal.
 seed) before W6a was the right call and the reason W6a rendered real data from day one;
 nothing suggests a second such reordering is needed.
 
-*Proposal — `W6b` is not yet a row and should be.* Three items now have "W6b" as their
-owner in closure records (NFR-OVR-10's tabular chart fallback, browser authentication once
-OQ-PLAT-6 is decided, and the frontend half of governance surfacing) without a workstream
-row existing to hold them. An owner naming a workstream that does not exist is how work
-becomes nobody's.
+*Proposal — three items name `W6b` as their owner and W6b's row does not cover them.*
+NFR-OVR-10's tabular chart fallback, browser authentication once OQ-PLAT-6 is decided, and
+the frontend half of governance surfacing all point at W6b in closure records, while the
+row itself reads "factor workbench, model detail, diagnostics" — modelling views only. An
+owner naming a scope that does not include the work is how work becomes nobody's.
 
-> **Recommendation:** add `W6b — Frontend platform: authentication, accessibility,
-> workspace selection` to Phase 1b, depending on W6a and on OQ-PLAT-6 being decided. It is
-> a spec/plan change only; no code follows from this review (`CLAUDE.md` §14 rule 3).
+> **Correction, 2026-08-15.** As first written this said W6b "is not yet a row and should
+> be". It is a row, at Phase 1b, and had been since the 1a/1b split; the review missed it.
+> The substance survives — the three items still had no owner — but the change is to
+> **extend** W6b, not to create it. Recorded rather than edited away, because a review that
+> quietly fixes its own premise leaves nobody able to tell what was believed.
+
+> **Recommendation:** extend `W6b` to `Frontend: factor workbench, model detail,
+> diagnostics — **and the frontend platform**: browser authentication (FR-PLAT-55),
+> accessibility beyond semantics (NFR-OVR-10), workspace selection`. It gains a dependency
+> on OQ-PLAT-6 being decided. Spec and plan only; no code follows from a review
+> (`CLAUDE.md` §14 rule 3).
 >
-> **Maintainer acceptance:** _pending_ — recorded here for decision, not applied.
+> **Maintainer accepted 2026-08-15**, together with OQ-PLAT-6's recommendation (PKCE in the
+> SPA for Phases 1–2, now FR-PLAT-55). Applied to W6b's row and to the Phase 1b table
+> below.
 
 ### W6a — Frontend Data Workbench: closed 2026-08-15
 
@@ -414,9 +424,9 @@ authentication is **OQ-PLAT-6**, open, recommendation recorded.
 
 | Item | Verdict |
 |---|---|
-| Browser authentication | **Not started, and correctly so** — OQ-PLAT-6 is open and unanswered. The dev proxy is a dev loop, named so it cannot be mistaken for a mechanism |
+| Browser authentication | **Not started, and correctly so.** OQ-PLAT-6 was open when W6a closed; it was decided the same day — PKCE in the SPA, **FR-PLAT-55**, owned by W6b. The dev proxy remains a dev loop, named so it cannot be mistaken for a mechanism |
 | Playwright E2E | **Deferred to W7.** `01` §5.3's journeys are worth one E2E each *once the demo entrance exists*; before that an E2E asserts a fixture |
-| Pinia stores | **Registered, unused.** No state has yet needed to outlive a route: every view takes props and fetches its own data. The first store arrives when something must survive navigation — the PSI comparison selector, or a workspace selector once OQ-PLAT-6 lands |
+| Pinia stores | **Registered, unused.** No state has yet needed to outlive a route: every view takes props and fetches its own data. The first store arrives when something must survive navigation — the PSI comparison selector, or a workspace selector, which W6b now carries |
 | TanStack Table, Vue Flow | **Later phases** (`03` §5.3). Declared in `skills-map.md`, not installed |
 | Accessibility beyond semantics | **Partial.** Tables carry `aria-label`, alerts carry `role`, and every test queries by role or label — which keeps the semantics honest. NFR-OVR-10's tabular fallback for charts is **not** built; owner W6b |
 | `07` §5.1's six `PLAT` endpoints | Unchanged from W2's record — still owned by W14 |
@@ -893,7 +903,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
 | **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project |
-| **W6b** | Frontend: **factor workbench**, model detail, diagnostics | W5 | `02` §5.3's interaction requirement — an edit's consequence visible before saving |
+| **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed **and the demo entrance** | W5, W6b | `07` FR-PLAT-37 — one command to a working system — plus FR-PLAT-53/54, the entrance and its derived guide (`NT-0002`, accepted 2026-08-15). The data half closed early as **W7a** |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).
@@ -1071,7 +1081,7 @@ parallelisable workstreams. **No dates, because team size is unknown.**
 | 0 — Specification | — | — | done | — |
 | On-ramp (§3) | — | 3 | XS | ~~Research~~ ✔ · ~~3 spikes~~ ✔ · **7 decisions outstanding** |
 | **1a — Data Workbench** | ~26 % | 3 after W1 | **L** | ~~W1–W4~~ ✔ **all closed** + dataset views (W6a); the `validated` loop passes headless |
-| **1b — Modelling Workbench** | ~21 % | 2 | **L** | W5–W7; ends at `wf-01` end to end |
+| **1b — Modelling Workbench** | ~21 % | 2 | **L** | W5–W7; ends at `wf-01` end to end. W6b also carries the frontend platform — browser auth, accessibility, workspace selection — after plan review 1 |
 | 2 — Rating Engine | ~24 % | 2–3 | **L** | Deep; one large frontend, one hard NFR |
 | 3 — Governance | ~11 % | 3 | **M** | Mostly surfacing Phase 1 foundations |
 | 4 — Optimisation & Monitoring | ~18 % | 2 independent halves | **L** | Two loosely-coupled halves; monitoring can come early |
