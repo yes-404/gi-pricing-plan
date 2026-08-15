@@ -1253,6 +1253,36 @@ only the *source of assignments* is undecided.
 what the question's own recommendation says. The remaining half — optional external
 anchoring of the chain head — is untouched and stays open for Phase 3.
 
+### W5 — the GLM spine, 2026-08-15 *(in progress, not closed)*
+
+Phase 1b opened with the thinnest path that produces a real fitted model, so the remaining
+`MODEL` requirements have a working spine to build on rather than a design:
+
+**dataset → Factor → `GlmSpec` → `model.fit` Job → coefficients on screen.**
+
+| Delivered | Evidence |
+|---|---|
+| `Factor`, `GlmSpec`, `Coefficient`, `GlmFitResult`, `Model` in `model-schema` | R2 and R5 structural: everything frozen, and a `Coefficient` cannot exist without a standard error and an interval that contains its estimate |
+| GLM fitting with `glum` 3.4.1 | a Poisson book generated from known coefficients is recovered at 20 000 rows; standard errors from the observed information, since `glum` returns none |
+| `model.fit` through the Job path | end to end via `execute_job`: urban rows carry twice the claims of rural ones and the fitted relativity lands near 2 |
+| `POST`/`GET /factors`, `POST`/`GET /models` | R1 refused before a Job exists; FR-MODEL-66 returns the existing model on a `spec_hash` match |
+| `/models/:slug` | every estimate with its interval, a coefficient spanning zero marked, the base level shown at 1.000 |
+
+**Not delivered, and the audit says so numerically:** `scope-audit MODEL --endpoints` reads
+**4 of 23**. Bandings, groupings, spec validation, diagnostics, transparency, backtests,
+comparison, prediction, GBMs, custom objectives, custom metrics and peril structures are
+declared and unbuilt. Only the six error codes the spine can raise are registered — the
+other sixteen arrive with the slices that raise them, rather than sitting in the catalogue
+looking implemented.
+
+**Two `02` corrections, both found by building it**: `@version` in a path becomes
+`?version=` in §5.1 and §5.3 (an `@` must be percent-encoded by every client, and
+`family@7` then reads as `family%407` in every log and support conversation), and
+`POST /models` answers 202-with-a-Job **or** 200-with-the-Model rather than 202 always.
+
+**W5 is not closed and this is not a closure record.** It is one slice of seventy-eight
+requirements, written down so the next one starts from what is true.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -1263,7 +1293,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project. **Started 2026-08-15**: the GLM spine is in — see below |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 

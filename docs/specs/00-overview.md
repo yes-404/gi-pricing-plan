@@ -376,7 +376,7 @@ def fit_glm(
 | Dataset list / detail / version | `/data`, `/data/:slug`, `/data/:slug/v/:version` | 01 |
 | Validation report | `/data/:slug/v/:version/validation` | 01 |
 | Factor workbench (bandings, groupings) | `/factors/:datasetVersionId` | 02 |
-| Model list / detail / diagnostics | `/models`, `/models/:slug@:version` | 02 |
+| Model list / detail / diagnostics | `/models`, `/models/:slug?version=` | 02 |
 | Custom objective library | `/objectives` | 02 |
 | Rating DAG designer | `/rating/:slug/v/:version/design` | 03 |
 | Rate table editor | `/rating/:slug/v/:version/tables/:tableSlug` | 03 |

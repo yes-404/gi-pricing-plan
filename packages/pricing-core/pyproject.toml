@@ -18,6 +18,10 @@ dependencies = [
     # chi-square and gamma quantiles; a normal approximation is wrong exactly where it
     # matters, on the low-count cells an actuary is most cautious about.
     "scipy>=1.14",
+    # FR-MODEL-18: GLMs are fitted with `glum`. Chosen in `02` §8 over statsmodels for
+    # scale — it takes the exposure offset and sample weights an actuarial GLM needs, and
+    # fits a 10 M-row Poisson without materialising a dense design matrix.
+    "glum>=3.0",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and

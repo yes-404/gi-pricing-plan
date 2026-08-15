@@ -38,8 +38,11 @@ app.conf.beat_schedule = {
     }
 }
 
-# The `dataset.*` handlers. Registered here rather than at import of the handler module,
-# so importing it for a type or a test does not mutate a process-global registry.
+# The `dataset.*` and `model.*` handlers. Registered here rather than at import of the
+# handler modules, so importing one for a type or a test does not mutate a process-global
+# registry.
 from app.worker.data_handlers import register_data_handlers  # noqa: E402
+from app.worker.model_handlers import register_model_handlers  # noqa: E402
 
 register_data_handlers()
+register_model_handlers()
