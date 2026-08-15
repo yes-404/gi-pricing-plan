@@ -138,6 +138,16 @@ Type assertions go in `*.test-d.ts`, and `vitest.config.ts` needs:
 typecheck: { enabled: true, include: ["src/**/*.test-d.ts"], tsconfig: "./tsconfig.app.json" }
 ```
 
+**A populated `node_modules` hides a missing dependency.** Rewriting `package.json`
+dropped `openapi-typescript` and `typescript` from `devDependencies`; every local command
+kept working because the packages were still installed, and CI failed on its first run with
+`openapi-typescript: not found`. Prefer `pnpm add -D` over editing the file — and before
+pushing, reproduce the job the way CI builds it:
+
+```bash
+rm -rf frontend/node_modules && pnpm install --dir frontend --frozen-lockfile
+```
+
 **`exactOptionalPropertyTypes` rejects `{ body: undefined }`** where `RequestInit` wants the
 key absent. Spread conditionally — `...(body === undefined ? {} : { body })` — rather than
 assigning `undefined`, which is a different thing to this compiler and to `fetch`.
@@ -164,4 +174,6 @@ the 51-path contract, the 131 `anyOf`-null unions become clean `T | null`, `expo
 arrives as `string` carrying its own FR-OVR-7 warning, and the whole thing type-checks
 under `strict` + `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`. The four
 toolchain traps above were each found by hitting them. The `trace_id` claim was corrected:
-it is optional in the type, and the platform is right to leave it so.
+it is optional in the type, and the platform is right to leave it so. The
+`node_modules` trap was found by CI failing on its first run while every local command
+passed — which is the argument for adding the workflow in the same slice as the code.
