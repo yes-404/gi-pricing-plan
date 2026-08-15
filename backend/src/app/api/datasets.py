@@ -29,7 +29,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.authz import requires
-from app.api.deps import Caller
+from app.api.deps import Caller, job_identity
 from app.api.pagination import (
     COUNT_CAP,
     DEFAULT_LIMIT,
@@ -124,6 +124,11 @@ class DictionaryUpdate(BaseModel):
 class VersionCreate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    #: The SHA-256 of an already-uploaded blob. The file does not travel through this
+    #: endpoint: a ten-gigabyte parquet through the API process ties up a worker for the
+    #: length of the upload. `POST /blobs/upload-url` first, then this.
+    blob: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    filename: str = "upload.csv"
     source_id: UUID | None = None
     recipe: list[dict[str, Any]] = Field(default_factory=list)
 
@@ -372,7 +377,10 @@ async def start_ingestion(
             session,
             JobKind.DATASET_INGEST,
             {
+                **job_identity(caller),
                 "dataset_id": str(dataset.id),
+                "blob": body.blob,
+                "filename": body.filename,
                 "source_id": str(body.source_id) if body.source_id else None,
                 "recipe": body.recipe,
             },

@@ -28,7 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.authz import requires
-from app.api.deps import Caller
+from app.api.deps import Caller, job_identity
 from app.api.responses import problems
 from app.db.models import DatasetVersionRow, IngestionRunRow
 from app.db.session import Database
@@ -143,6 +143,7 @@ async def run_validation(
             session,
             JobKind.DATASET_VALIDATE,
             {
+                **job_identity(caller),
                 "dataset_version_id": str(version.id),
                 "rule_set_id": str(body.rule_set_id) if body.rule_set_id else None,
                 "reference_dataset_version_id": (
@@ -342,6 +343,7 @@ async def derive(
             session,
             JobKind.DATASET_DERIVE,
             {
+                **job_identity(caller),
                 "parent_version_id": str(version.id),
                 "operation": body.operation,
                 "params": body.params,

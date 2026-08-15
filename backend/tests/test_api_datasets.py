@@ -196,7 +196,9 @@ def test_starting_an_ingestion_returns_202_and_a_job(
     slug = _slug()
     client.post("/api/v1/datasets", json={"slug": slug}, headers=analyst)
     response = client.post(
-        f"/api/v1/datasets/{slug}/versions", json={"recipe": []}, headers=analyst
+        f"/api/v1/datasets/{slug}/versions",
+        json={"blob": "a" * 64, "filename": "exposure.csv", "recipe": []},
+        headers=analyst,
     )
     assert response.status_code == 202, response.text
     assert response.headers["Location"] == f"/api/v1/jobs/{response.json()['id']}"

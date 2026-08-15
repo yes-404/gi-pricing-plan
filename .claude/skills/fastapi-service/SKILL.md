@@ -476,3 +476,21 @@ number falling by 6× across three progressively cleaner measurements of unchang
 2026-08-14 — W4 REST surface. 528 tests pass. The DuckDB sandbox controls were each proven
 by removal; the `StatementType` identity trap was found by every query being refused, which
 is the direction that failure mode is survivable in.
+
+## Worker handlers must take the blob store from the worker, not from settings
+
+`BlobStore(load_settings())` inside a handler reads whatever `GIP_BLOB_BUCKET` happens to
+be — `gip-blobs` in the ambient settings and `gip-test-blobs` under test. The symptom is
+`NoSuchKey` for an object that demonstrably exists, because it exists in the *other*
+bucket. `execute_job(database, job_id, blob_store)` passes it through `JobProgress`
+alongside `database`, for the same reason: one pool, one store, one audit path.
+
+## CSV columns arrive as strings, so a real ingestion always carries a cast recipe
+
+`_read_delimited` uses `infer_schema=False` deliberately — a policy id of `007` must not
+become `7`, and a column that is numeric in this extract and alphanumeric in the next would
+change type between versions of one dataset. The consequence is easy to miss: **without a
+`cast` step in the Preparation Recipe, every numeric validation rule compares a string to a
+number and errors** (`cannot compare string with numeric type`). Recipes run before the
+reject partition, so the cast is in the right place to fix it.
+

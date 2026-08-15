@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+from collections.abc import Mapping, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -105,8 +106,14 @@ async def ingest_upload(
     idempotency_key: str | None = None,
     source_id: UUID | None = None,
     sheet: str | None = None,
+    recipe: Sequence[Mapping[str, Any]] | None = None,
 ) -> IngestionOutcome:
-    """Ingest an uploaded file as a new Dataset Version (FR-DATA-2..8, FR-DATA-40)."""
+    """Ingest an uploaded file as a new Dataset Version (FR-DATA-2..8, FR-DATA-40).
+
+    The Preparation Recipe is applied **during** ingestion (FR-DATA-9) and stored with the
+    version (FR-DATA-14). Applying it afterwards would mean the parquet on the version is
+    not what the version's totals, profile and validation report describe.
+    """
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -147,6 +154,23 @@ async def ingest_upload(
     frame = frame.rename(mapping.rename_map)
     rows_read = frame.height
 
+    # Before the reject partition: a recipe that parses a date or fills a null changes
+    # which rows are rejectable, and running it afterwards would quarantine rows the
+    # recipe exists to rescue.
+    if recipe:
+        from pricing_core.data.prepare import RecipeError, apply_recipe
+
+        try:
+            frame = apply_recipe({table_name: frame}, list(recipe)).tables[table_name]
+        except RecipeError as exc:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "The preparation recipe could not be applied",
+                422,
+                f"{exc} No version was created — a partially prepared version is one "
+                "whose parquet does not match what its recipe says was done (FR-DATA-14).",
+            ) from exc
+
     partition = partition_rejects(frame, required_non_null=required_non_null)
     schema = infer_schema(partition.clean)
 
@@ -176,6 +200,12 @@ async def ingest_upload(
 
     version.tables = tables
     version.source_fingerprint = {"kind": "file_sha256", "value": fingerprint}
+    # FR-DATA-14: stored with the version and replayable. The steps themselves, not an id
+    # pointing at a mutable recipe row — a recipe edited later would rewrite the history of
+    # every version that cites it.
+    version.derived_from = (
+        {**(version.derived_from or {}), "recipe": list(recipe)} if recipe else version.derived_from
+    )
     version.library_versions = library_versions()
 
     run = IngestionRunRow(

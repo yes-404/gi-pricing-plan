@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
-from app.api.deps import Caller, require_caller
+from app.api.deps import Caller, job_identity, require_caller
 from app.api.responses import problems
 from app.db.session import Database
 from app.platform import datasets as dataset_service
@@ -200,6 +200,7 @@ async def dry_run(
             session,
             JobKind.DATASET_VALIDATE,
             {
+                **job_identity(caller),
                 "dataset_version_id": str(body.dataset_version_id),
                 "dry_run_rule_id": str(rule.id),
             },

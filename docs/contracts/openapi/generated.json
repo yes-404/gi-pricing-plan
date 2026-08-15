@@ -3586,6 +3586,16 @@
       "VersionCreate": {
         "additionalProperties": false,
         "properties": {
+          "blob": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Blob",
+            "type": "string"
+          },
+          "filename": {
+            "default": "upload.csv",
+            "title": "Filename",
+            "type": "string"
+          },
           "recipe": {
             "items": {
               "additionalProperties": true,
@@ -3607,6 +3617,9 @@
             "title": "Source Id"
           }
         },
+        "required": [
+          "blob"
+        ],
         "title": "VersionCreate",
         "type": "object"
       },

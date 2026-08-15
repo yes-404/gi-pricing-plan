@@ -31,6 +31,7 @@ from sqlalchemy import select, update
 from app.db.models import JobRow
 from app.db.session import Database
 from app.observability.logging import get_logger
+from app.platform.blobs import BlobStore
 from pricing_core.progress import JobCancelled
 
 __all__ = ["JobBudgetExceededError", "JobProgress"]
@@ -81,9 +82,11 @@ class JobProgress:
         loop: asyncio.AbstractEventLoop,
         *,
         wall_clock_s: int | None = None,
+        blob_store: BlobStore | None = None,
     ) -> None:
         self._job_id = job_id
         self._database = database
+        self._blob_store = blob_store
         self._loop = loop
         self._wall_clock_s = wall_clock_s
         self._started = time.monotonic()
@@ -119,6 +122,48 @@ class JobProgress:
         if self._run(self._read_cancellation()):
             self._cancelled = True
             raise JobCancelled(f"job {self._job_id} was cancelled")
+
+    # -- the data-layer bridge, for handlers ---------------------------------------------
+
+    @property
+    def database(self) -> Database:
+        """The data layer, for a handler that needs to read or write.
+
+        A `pricing-core` handler needs neither and must not have either (ADR-0001). A
+        *platform* handler — one that loads a version's parquet, stores a report — needs
+        both, and giving it this rather than letting it build its own engine is what keeps
+        one connection pool and one audit path.
+        """
+        return self._database
+
+    @property
+    def blob_store(self) -> BlobStore:
+        """The object store, for a handler that reads or writes blobs.
+
+        Supplied by the worker rather than built from ambient settings inside the handler.
+        A handler that constructs its own reads whatever `GIP_BLOB_BUCKET` happens to be —
+        which is a different bucket under test, and the symptom is `NoSuchKey` for an
+        object that demonstrably exists.
+        """
+        if self._blob_store is None:
+            raise RuntimeError(
+                "this Job was started without a blob store; a handler that reads blobs "
+                "needs one passed to execute_job()"
+            )
+        return self._blob_store
+
+    def run_on_loop[T](self, coro: Coroutine[Any, Any, T]) -> T:
+        """Run a coroutine on the owning loop, from the handler's worker thread.
+
+        The same bridge `update()` uses, made public because handlers need it for exactly
+        the same reason. Calling `asyncio.run()` here instead would create a fresh loop and
+        detach the engine's connections from it — the symptom is
+        `Future attached to a different loop`, some way from the cause.
+
+        No write timeout: a handler's transaction is the work itself and may legitimately
+        take minutes, where a progress write that blocks for two seconds is a fault.
+        """
+        return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
     # -- internals ----------------------------------------------------------------------
 
