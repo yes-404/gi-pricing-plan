@@ -18,7 +18,7 @@ import polars as pl
 import pytest
 
 from model_schema import (
-    CredibilityStandard,
+    CredibilityModel,
     Grouping,
     GroupingMethod,
     GroupingProposal,
@@ -109,10 +109,21 @@ def test_a_default_nobody_consults_is_refused() -> None:
         _manual(default_target_level="A")
 
 
-@pytest.mark.req("FR-MODEL-14")
-def test_a_credibility_standard_belongs_only_to_the_method_that_uses_one() -> None:
+@pytest.mark.req("FR-MODEL-80")
+def test_a_credibility_model_belongs_only_to_the_method_that_uses_one() -> None:
+    """It lives in `method_params`, which is where `grouping.schema.json` has always had it."""
     with pytest.raises(ValueError, match="does not use one"):
-        _manual(credibility_standard=CredibilityStandard.LIMITED_FLUCTUATION)
+        _manual(method_params={"credibility_model": "limited_fluctuation"})
+
+
+@pytest.mark.req("FR-MODEL-80")
+def test_an_unknown_credibility_model_is_refused() -> None:
+    """`method_params` is loosely typed by the contract; the enum is still closed."""
+    with pytest.raises(ValueError, match="not one of"):
+        _manual(
+            method=GroupingMethod.CREDIBILITY_WEIGHTED,
+            method_params={"credibility_model": "vibes"},
+        )
 
 
 # --- proposing --------------------------------------------------------------------------
@@ -175,20 +186,30 @@ def test_credibility_weighted_merges_on_shrunk_rates() -> None:
         dataset_id=DATASET,
         slug="vg-cred",
     )
-    assert grouping.credibility_standard is CredibilityStandard.LIMITED_FLUCTUATION
+    assert grouping.credibility_model is CredibilityModel.LIMITED_FLUCTUATION
+    # FR-MODEL-80: the (p, k) pair is stored beside the count it implies, so a reviewer can
+    # check one against the other rather than take 1 082 on faith.
+    assert grouping.method_params["credibility_pk"] == {"p": 0.90, "k": 0.05}
+    assert grouping.method_params["credibility_standard_claims"] == 1082
     assert 1 < len(grouping.target_levels) < 20
     assert set(grouping.mapping) == set(_TRUE_EFFECT)
 
 
 @pytest.mark.req("FR-MODEL-14")
 def test_buhlmann_straub_is_refused_rather_than_silently_substituted() -> None:
-    """OQ-MODEL-5 is open on it; recording a standard that did not run would close it wrongly."""
+    """FR-MODEL-80 specifies it and this build does not implement it.
+
+    Refused rather than substituted: the requirement makes the model a recorded property of
+    the grouping, so returning limited fluctuation's answer under its name would be the one
+    failure it exists to prevent — and `credibility_components` would come back null for a
+    model that is meant to persist them.
+    """
     with pytest.raises(GroupingError, match="not implemented"):
         propose_grouping(
             _book(),
             _proposal(
                 method=GroupingMethod.CREDIBILITY_WEIGHTED,
-                credibility_standard=CredibilityStandard.BUHLMANN_STRAUB,
+                credibility_model=CredibilityModel.BUHLMANN_STRAUB,
             ),
             dataset_id=DATASET,
             slug="vg-bs",

@@ -15,7 +15,14 @@
       "properties": {
         "credibility_standard_claims": {"type": "integer", "minimum": 1},
         "credibility_model": {"enum": ["limited_fluctuation", "buhlmann_straub"],
-          "description": "Recorded per grouping; it is a modelling judgement, not a platform constant (OQ-MODEL-5)."},
+          "default": "limited_fluctuation",
+          "description": "Recorded per grouping; it is a modelling judgement, not a platform constant (FR-MODEL-80; OQ-MODEL-5 decided 2026-08-15)."},
+        "credibility_pk": {
+          "type": "object",
+          "required": ["p", "k"],
+          "properties": {"p": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+                         "k": {"type": "number", "exclusiveMinimum": 0}},
+          "description": "The (p, k) pair credibility_standard_claims was derived from — p=0.90, k=0.05 gives 1082 claims. Without it the standard is an unattributable number (FR-MODEL-80)."},
         "merge_tolerance_relativity": {"type": "number", "exclusiveMinimum": 0},
         "reference_table_ref": {"$ref": "common/artifact-ref.schema.json"}
       }
@@ -42,6 +49,11 @@
       "properties": {
         "source_level_count": {"type": "integer", "minimum": 1},
         "target_level_count": {"type": "integer", "minimum": 1},
+        "credibility_components": {
+          "type": ["object", "null"],
+          "properties": {"evpv": {"type": "number"}, "vhm": {"type": "number"},
+                         "k": {"type": "number", "exclusiveMinimum": 0}},
+          "description": "Buhlmann-Straub variance components, so a reviewer can re-derive Z rather than take it. Null under limited fluctuation (FR-MODEL-80)."},
         "deviance_before": {"type": "number"},
         "deviance_after": {"type": "number"},
         "df_saved": {"type": "integer"},

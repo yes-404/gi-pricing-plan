@@ -20,21 +20,24 @@ re-scorable without `glum`, by a process that never ran it.
 from __future__ import annotations
 
 import enum
-from typing import Annotated, Literal
+from decimal import Decimal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.money import DecimalStr
 from model_schema.profiles import OneWayRow
 
 __all__ = [
     "AboveRangePolicy",
     "Banding",
     "BandingMethod",
+    "BandingMinimums",
     "BandingProposal",
     "BelowRangePolicy",
     "Coefficient",
-    "CredibilityStandard",
+    "CredibilityModel",
     "Factor",
     "FactorIntent",
     "FactorType",
@@ -207,6 +210,26 @@ class AboveRangePolicy(enum.StrEnum):
     NULL_LEVEL = "null_level"
 
 
+class BandingMinimums(BaseModel):
+    """FR-MODEL-11's thresholds, stored **on the artifact** (`banding.schema.json`).
+
+    On the banding rather than passed to the check, because "configurable" means a reviewer
+    can see what was configured. Held at the call site instead, the choice persists nowhere
+    and two fits of the same banding could apply different floors.
+
+    An empty band always fails regardless of these, which is why there is no setting for it.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: An exposure, so an exact decimal on the wire and never a binary float (FR-OVR-7) —
+    #: `banding.schema.json` types it as `Decimal` and the first implementation made it a
+    #: float, which the money scan caught.
+    min_exposure_per_band: DecimalStr = Decimal(0)
+    min_claims_per_band: int = Field(default=0, ge=0)
+    on_violation: Literal["warn", "fail"] = "warn"
+
+
 class Banding(BaseModel):
     """A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).
 
@@ -243,6 +266,8 @@ class Banding(BaseModel):
     null_level: str | None = None
     below_range: BelowRangePolicy = BelowRangePolicy.ERROR
     above_range: AboveRangePolicy = AboveRangePolicy.ERROR
+    #: FR-MODEL-11's thresholds, as `banding.schema.json` declares them.
+    minimums: BandingMinimums = BandingMinimums()
     #: FR-MODEL-10's evidence, as of derivation. `OneWayRow` rather than a second shape
     #: holding the same numbers: `01` FR-DATA-26 already computes exposure, claims,
     #: frequency, severity and burning cost by level with intervals, and a band is a level.
@@ -297,12 +322,17 @@ class GroupingMethod(enum.StrEnum):
     REFERENCE_HIERARCHY = "reference_hierarchy"
 
 
-class CredibilityStandard(enum.StrEnum):
-    """Which credibility theory `credibility_weighted` merging applies (OQ-MODEL-5).
+class CredibilityModel(enum.StrEnum):
+    """Which credibility theory `credibility_weighted` merging applies (FR-MODEL-80).
 
-    Named on the artifact rather than fixed in the code because it is a modelling
-    judgement, not a platform constant — and because the two standards disagree on thin
-    cells, which is the only place the choice changes anything.
+    Recorded per grouping rather than fixed in the code because it is a modelling
+    judgement, not a platform constant — and because the two disagree on thin cells, which
+    is the only place the choice changes anything.
+
+    It lives in `method_params` under `credibility_model`, which is where
+    `grouping.schema.json` has carried it since Phase 0. It was briefly a top-level
+    `credibility_standard` field on `Grouping`; that contradicted the committed contract,
+    and the contract was right.
     """
 
     LIMITED_FLUCTUATION = "limited_fluctuation"
@@ -338,6 +368,9 @@ class GroupingEvidence(BaseModel):
     deviance_after: float | None = None
     df_saved: int = 0
     chi2_p_value: float | None = Field(default=None, ge=0.0, le=1.0)
+    #: FR-MODEL-80: EVPV, VHM and `k`, so a reviewer can re-derive `Z` rather than take it.
+    #: `None` under limited fluctuation, which has no variance components to report.
+    credibility_components: dict[str, float] | None = None
     #: The resulting target levels, carrying the statistics a source level carries — so
     #: "what did merging these four into G1 do to the frequency?" is a comparison rather
     #: than a re-run.
@@ -360,9 +393,9 @@ class Grouping(BaseModel):
     version: int = Field(ge=1)
     column: str
     method: GroupingMethod
-    method_params: dict[str, float] = Field(default_factory=dict)
-    #: Set only by `credibility_weighted` (OQ-MODEL-5).
-    credibility_standard: CredibilityStandard | None = None
+    #: `Any` rather than `float` because the contract's own params are not all numbers:
+    #: `credibility_model` is a string and `credibility_pk` an object (FR-MODEL-80).
+    method_params: dict[str, Any] = Field(default_factory=dict)
     derived_on_dataset_version_id: UUID | None = None
     #: Source level → target level. Keys are source levels as strings, because that is what
     #: a column cast to text yields and what a relativity table shows.
@@ -372,6 +405,11 @@ class Grouping(BaseModel):
     #: FR-MODEL-17: a chain applied in order (outcode → area → region), so the finer level
     #: stays available for diagnostics while rating happens on the coarser one.
     parent_grouping_id: UUID | None = None
+    #: FR-MODEL-16: the generated model document lists every grouping with its method **and
+    #: rationale**, and `grouping.schema.json` says it appears verbatim in the dossier
+    #: (`06` §4.4 §4). Declared by the contract since Phase 0 and missed by the first
+    #: implementation of this shape; a merge nobody can explain is one nobody can defend.
+    rationale: str | None = None
     evidence: GroupingEvidence | None = None
 
     @model_validator(mode="after")
@@ -397,15 +435,30 @@ class Grouping(BaseModel):
                 f"behaviour is {self.unseen_level_behaviour.value!r}. A default nothing "
                 "consults reads as protection that is not there."
             )
-        if (
-            self.credibility_standard is not None
-            and self.method is not GroupingMethod.CREDIBILITY_WEIGHTED
-        ):
-            raise ValueError(
-                f"grouping {self.slug!r} names a credibility standard with method "
-                f"{self.method.value!r}, which does not use one."
-            )
+        declared = self.method_params.get("credibility_model")
+        if declared is not None:
+            if self.method is not GroupingMethod.CREDIBILITY_WEIGHTED:
+                raise ValueError(
+                    f"grouping {self.slug!r} names a credibility model with method "
+                    f"{self.method.value!r}, which does not use one."
+                )
+            if declared not in tuple(CredibilityModel):
+                raise ValueError(
+                    f"grouping {self.slug!r} names credibility model {declared!r}, which "
+                    f"is not one of {[m.value for m in CredibilityModel]} (FR-MODEL-80)."
+                )
         return self
+
+    @property
+    def credibility_model(self) -> CredibilityModel | None:
+        """The credibility theory this grouping applied, or `None` (FR-MODEL-80).
+
+        Read through a property so callers get the enum without every one of them knowing
+        the key it is stored under — and so the storage stays exactly what the contract
+        describes.
+        """
+        declared = self.method_params.get("credibility_model")
+        return CredibilityModel(declared) if declared is not None else None
 
     @property
     def target_levels(self) -> tuple[str, ...]:
@@ -453,8 +506,15 @@ class GroupingProposal(BaseModel):
     #: The number of target levels to collapse to. Ignored by `credibility_weighted`, which
     #: merges until the standard is met rather than to a count.
     n_groups: int = Field(default=8, ge=1, le=200)
-    method_params: dict[str, float] = Field(default_factory=dict)
-    credibility_standard: CredibilityStandard = CredibilityStandard.LIMITED_FLUCTUATION
+    method_params: dict[str, Any] = Field(default_factory=dict)
+    #: FR-MODEL-80's default, and what a UK reviewer expects to see. Written into the
+    #: resulting grouping's `method_params`, never kept beside them.
+    credibility_model: CredibilityModel = CredibilityModel.LIMITED_FLUCTUATION
+    #: The `(p, k)` pair the full-credibility standard is derived from. 1 082 claims is
+    #: ±5 % at 90 % confidence; a reviewer who cannot see `(p, k)` cannot tell 1 082 from a
+    #: house number (FR-MODEL-80).
+    credibility_p: float = Field(default=0.90, gt=0.0, lt=1.0)
+    credibility_k: float = Field(default=0.05, gt=0.0)
     exposure_column: str = "exposure_years"
     claim_count_column: str = "claim_count"
     claim_amount_column: str = "claim_amount_minor"

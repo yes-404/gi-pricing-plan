@@ -16,7 +16,7 @@
 | Condition | Refs |
 |---|---|
 | The actor holds `custom_objective:author` | `06` §4.1 |
-| For `expression` objectives, the `expression_objectives_enabled` feature flag is on | `07` FR-PLAT-46, `02` OQ-MODEL-1 |
+| For `expression` objectives, the `expression_objectives_enabled` feature flag is on — it is off for the whole of Phase 1, so **Route B is a Phase 2 journey** and Route A is the whole of Phase 1's | `07` FR-PLAT-45/46, `02` FR-MODEL-75 |
 | A `validated` Dataset Version exists for the smoke fit and dry-run | `01` §1.3 |
 
 ---

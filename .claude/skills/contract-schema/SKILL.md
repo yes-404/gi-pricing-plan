@@ -77,7 +77,18 @@ divergences, one of them a wire-format error that would have reached the fronten
 that re-serialises differently each run reports drift that is not drift, and a check that
 cries wolf gets turned off.
 
+**That applies to generated schemas. Edit the hand-authored ones as text.** The Phase 0
+schemas in `docs/contracts/schemas/` are hand-formatted — one-line leaf objects, wrapped
+arrays — and `json.load` → `json.dumps` is not a round trip through that: adding two fields
+to `grouping.schema.json` that way produced a 189-line diff for a 13-line change, burying
+the edit in reflow and destroying the layout a reader relies on. Patch the text, then
+`json.loads` the result to prove it still parses.
+
 ## Verified
+
+2026-08-15 — Confirmed while applying OQ-MODEL-5's decision to `grouping.schema.json`
+(`credibility_model` default, `credibility_pk`, `credibility_components`). The reformat trap
+above cost a revert.
 
 2026-08-14 — W2. Generation wired up and the drift check proven in both directions.
 The generated/authored comparison found three real divergences on its first run.

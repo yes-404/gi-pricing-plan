@@ -20,6 +20,7 @@ from model_schema import (
     AboveRangePolicy,
     Banding,
     BandingMethod,
+    BandingMinimums,
     BandingProposal,
     BelowRangePolicy,
 )
@@ -316,6 +317,41 @@ def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
     with pytest.raises(BandingError) as caught:
         check_banding(frame, banding, min_claims=10_000, fail_on_thin=True)
     assert caught.value.code == "BAND_BELOW_MIN_EXPOSURE"
+
+
+@pytest.mark.req("FR-MODEL-11")
+def test_the_banding_carries_its_own_minimums() -> None:
+    """`banding.schema.json`'s `minimums`, read from the artifact rather than the call.
+
+    "Configurable" means a reviewer can see what was configured. Held only at the call site,
+    the choice persists nowhere and two fits of the same banding could apply different
+    floors — which is the same class of defect as a banding edited in place.
+    """
+    frame = _book()
+    proposed = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="age-5")
+
+    # Default minimums are zero, so a banding that fits the version reports nothing.
+    assert check_banding(frame, proposed) == ()
+
+    strict = proposed.model_copy(
+        update={
+            "minimums": BandingMinimums(min_claims_per_band=10_000, on_violation="fail")
+        }
+    )
+    with pytest.raises(BandingError) as caught:
+        check_banding(frame, strict)
+    assert caught.value.code == "BAND_BELOW_MIN_EXPOSURE"
+
+    # `on_violation: warn` is the requirement's default, and the artifact says which it is.
+    warning = strict.model_copy(
+        update={
+            "minimums": BandingMinimums(min_claims_per_band=10_000, on_violation="warn")
+        }
+    )
+    assert check_banding(frame, warning), "a thin band still warns"
+
+    # An explicit argument overrides the artifact — what a what-if evaluation needs.
+    assert check_banding(frame, strict, min_claims=0, fail_on_thin=False) == ()
 
 
 @pytest.mark.req("FR-MODEL-11")

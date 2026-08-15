@@ -1,0 +1,347 @@
+{
+  "$defs": {
+    "GroupingEvidence": {
+      "additionalProperties": false,
+      "description": "The change in fit a Grouping implies (FR-MODEL-15).\n\nGrouping is a modelling decision and must be defensible as one, so the artifact carries\nwhat it cost: deviance before and after, the degrees of freedom saved, and the\nlikelihood-ratio p-value that says whether the collapse was affordable.",
+      "properties": {
+        "chi2_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chi2 P Value"
+        },
+        "credibility_components": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credibility Components"
+        },
+        "deviance_after": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deviance After"
+        },
+        "deviance_before": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deviance Before"
+        },
+        "df_saved": {
+          "default": 0,
+          "title": "Df Saved",
+          "type": "integer"
+        },
+        "source_level_count": {
+          "minimum": 0,
+          "title": "Source Level Count",
+          "type": "integer"
+        },
+        "target_level_count": {
+          "minimum": 0,
+          "title": "Target Level Count",
+          "type": "integer"
+        },
+        "target_level_stats": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OneWayRow"
+          },
+          "title": "Target Level Stats",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_level_count",
+        "target_level_count"
+      ],
+      "title": "GroupingEvidence",
+      "type": "object"
+    },
+    "GroupingMethod": {
+      "description": "How Levels were merged (`02` §2, FR-MODEL-14).",
+      "enum": [
+        "manual",
+        "credibility_weighted",
+        "hierarchical_clustering",
+        "tree",
+        "reference_hierarchy"
+      ],
+      "title": "GroupingMethod",
+      "type": "string"
+    },
+    "OneWayRow": {
+      "additionalProperties": false,
+      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency and\nseverity are ratios and stay floats: they are statistics, not amounts, and rounding\nthem to minor units would lose the precision the confidence interval is expressing.",
+      "properties": {
+        "burning_cost_minor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Burning Cost Minor"
+        },
+        "claim_amount_minor": {
+          "default": 0,
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Claim Amount Minor",
+          "type": "integer"
+        },
+        "claim_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Claim Count",
+          "type": "integer"
+        },
+        "exposure_years": {
+          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Exposure Years",
+          "type": "string"
+        },
+        "frequency": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequency"
+        },
+        "frequency_ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequency Ci"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "severity_ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity Ci"
+        },
+        "severity_minor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity Minor"
+        }
+      },
+      "required": [
+        "level",
+        "exposure_years"
+      ],
+      "title": "OneWayRow",
+      "type": "object"
+    },
+    "UnseenLevelBehaviour": {
+      "description": "What scoring does with a Level the Grouping has never seen (FR-MODEL-13).\n\nMandatory — the field carries no default anywhere in this module. A grouping that\nsilently drops an unseen level prices it as the base, which is the cheapest cell by\nconstruction, and nobody finds out before the loss ratio does.",
+      "enum": [
+        "error",
+        "map_to_default",
+        "map_to_base"
+      ],
+      "title": "UnseenLevelBehaviour",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Source Levels mapped to target Levels (`02` §4.3, FR-MODEL-13..17).\n\nExhaustive over the Levels observed when it was derived, and explicit about the ones it\nwas not: `unseen_level_behaviour` has no default, because the three answers price an\nunknown vehicle group very differently and none of them is obviously right.",
+  "properties": {
+    "column": {
+      "title": "Column",
+      "type": "string"
+    },
+    "dataset_id": {
+      "format": "uuid",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "default_target_level": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Default Target Level"
+    },
+    "derived_on_dataset_version_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Derived On Dataset Version Id"
+    },
+    "evidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GroupingEvidence"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "mapping": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "minProperties": 1,
+      "title": "Mapping",
+      "type": "object"
+    },
+    "method": {
+      "$ref": "#/$defs/GroupingMethod"
+    },
+    "method_params": {
+      "additionalProperties": true,
+      "title": "Method Params",
+      "type": "object"
+    },
+    "parent_grouping_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Grouping Id"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rationale"
+    },
+    "slug": {
+      "title": "Slug",
+      "type": "string"
+    },
+    "unseen_level_behaviour": {
+      "$ref": "#/$defs/UnseenLevelBehaviour"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "dataset_id",
+    "version",
+    "column",
+    "method",
+    "mapping",
+    "unseen_level_behaviour"
+  ],
+  "title": "Grouping",
+  "type": "object"
+}

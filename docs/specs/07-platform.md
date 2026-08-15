@@ -152,8 +152,8 @@ The substrate every other module stands on:
 |---|---|
 | **FR-PLAT-43** | Settings resolve by precedence: **environment variable → workspace setting → platform default**. The effective value and its source are inspectable by an Admin. |
 | **FR-PLAT-44** | Settings are typed and validated at startup; an invalid setting prevents startup with a clear message rather than failing at first use. |
-| **FR-PLAT-45** | Workspace settings include: currency, locale/timezone for display, default validation thresholds, trace sampling rate, approval policy reference, retention windows, and feature flags (e.g. `sql_validation_check_enabled`, `expression_objectives_enabled`). |
-| **FR-PLAT-46** | Feature flags gate genuinely optional or risk-bearing capabilities (`01` OQ-DATA-3, `02` OQ-MODEL-1) and default to the safe value. |
+| **FR-PLAT-45** | Workspace settings include: currency, locale/timezone for display, default validation thresholds, trace sampling rate, approval policy reference, retention windows, model complexity thresholds (`modelling.max_factor_count`, `modelling.min_exposure_per_parameter` — both unset by default, `02` FR-MODEL-81), and feature flags (e.g. `sql_validation_check_enabled`, `expression_objectives_enabled`). |
+| **FR-PLAT-46** | Feature flags gate genuinely optional or risk-bearing capabilities (`01` §4.5, `02` FR-MODEL-75) and default to the safe value. `expression_objectives_enabled` stays off for the whole of Phase 1, because the capability behind it does not exist until Phase 2 (OQ-MODEL-1, decided 2026-08-15). |
 
 ### 3.9 API surface
 
