@@ -212,13 +212,20 @@ problem**, fixes the preparation recipe, acknowledges a warning with a justifica
 drives the version to `validated` — with the report and profile visible. This is
 `wf-01` phases A–B end to end.
 
+> **The loop itself passes as of W4's close (2026-08-15)**, in
+> `backend/tests/test_data_jobs.py::test_the_failure_loop_then_validated`: a file with a
+> negative exposure is ingested, validation fails on it, promotion is refused, the *data*
+> is fixed rather than the verdict, and the new version reaches `validated` — after which
+> `fittable_or_refuse` opens for it and still refuses the first. What Phase 1a still owes
+> the demo is the screen (W6a) and freMTPL2 itself (W7); the machinery under both is done.
+
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
 | ~~**W1**~~ ✔ | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | **Closed 2026-08-14** — see the status table below |
-| **W2** | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | ~35 of 60 `PLAT` requirements |
-| **W3** | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | §5 — skeleton only, no governance UI |
-| **W4** | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | All 49 `DATA` requirements |
-| **W6a** | Frontend: app shell, dataset views, **validation report view** | W4 | `01` §5.3 puts its interaction requirement here — "why can I not fit a model on this?" answerable in one screen |
+| ~~**W2**~~ ✔ | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | **Closed 2026-08-14** — ~35 of 61 `PLAT` requirements |
+| ~~**W3**~~ ✔ | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | **Closed 2026-08-14** — §5 skeleton only, no governance UI |
+| ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
+| **W6a** | Frontend: app shell, dataset views, **validation report view** | W4 ✔ | **next** — `01` §5.3 puts its interaction requirement here — "why can I not fit a model on this?" answerable in one screen |
 
 #### Phase 1a status
 
@@ -227,13 +234,194 @@ drives the version to `validated` — with the report and profile visible. This 
 | **W1** | Repo foundations | ✔ **closed 2026-08-14** |
 | ~~**W2**~~ ✔ | Platform core — jobs, blobs, settings, auth, health, tracing | ✔ **closed 2026-08-14** — see the closure record below |
 | ~~**W3**~~ ✔ | Governance write path — audit log, RBAC, approval state machine | ✔ **closed 2026-08-14** — see the closure record below |
-| **W4** | Data — ingestion, preparation, validation, profiling, reference data | next |
-| **W6a** | Frontend — app shell, dataset views, validation report view | with W4 |
+| ~~**W4**~~ ✔ | Data — ingestion, preparation, validation, profiling, reference data | ✔ **closed 2026-08-15** — see the closure record below |
+| **W6a** | Frontend — app shell, dataset views, validation report view | **next** |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered
 stated explicitly. A closure record without those is an assertion, not evidence.
+
+### W4 — Data Workbench: closed 2026-08-15
+
+**Scope, derived from `01` §3 before opening any source file: 50 requirements** — 40
+`FR-DATA` (§3.1 nine, §3.2 six, §3.3 ten, §3.4 four, §3.5 four, §3.6 four, §3.7 three) and
+10 `NFR-DATA`. Plus three endpoints reassigned from W2 by the interface audit: the two blob
+routes and `/metrics`.
+
+**The roadmap's row says "All 49 `DATA` requirements"; the spec holds 50.** The
+disagreement is a finding, not a rounding: FR-DATA-40 ("ingestion produces full snapshots",
+OQ-DATA-2) was appended in PR #16 *after* the row was written in PR #15. Exactly the shape
+of W2's "of 60" against a spec holding 61. The row is left as written and this record
+carries the correction — a roadmap row states what was known when it was written.
+
+| Deliverable (roadmap §6) | Evidence |
+|---|---|
+| Sources | Register, list, preview; credentials held by reference and absent from every response shape, asserted rather than redacted |
+| Ingestion | Blob → version → profile in one Job; rejects quarantined as a table on the version (FR-DATA-7); idempotent by source fingerprint |
+| Preparation recipes | Applied **during** ingestion and stored with the version; `explode_period` preserves exposure exactly; expressions compile to Polars through a restricted AST, never `eval` |
+| Parquet | Content-addressed blobs, deduplicated across versions by digest, presigned download |
+| Profiling | Aggregated in DuckDB; the frame and parquet paths produce identical Profiles; one-ways read from storage and never recomputed |
+| Four validation layers + built-in catalogue | **38 of 38** `01` §4.4 rules, each with a firing and a non-firing case; the `sql` escape hatch sandboxed |
+| Reference tables | Effective-dated versions, half-open intervals, overlap refused by a `btree_gist` exclusion constraint, publish-then-pin |
+| *(reassigned from W2)* Blob endpoints, `/metrics` | Presigned upload and 307 download; Prometheus exposition with bounded label cardinality |
+
+**Gate (local, 2026-08-15):** ruff clean · mypy --strict on 83 source files · import-linter
+3 kept / 0 broken · **565 tests** · 7 generated contracts match the models · docs audit
+15/15 · req-coverage 118 of 418 requirements marked.
+
+**Coverage, all three axes re-derivable from documents:**
+
+| `scope-audit.py DATA …` | Result |
+|---|---|
+| requirements | **48 / 50** (96 %) |
+| `--endpoints` | **28 / 28** (100 %) |
+| `--catalogue VR` | **38 / 38** (100 %) |
+
+**Enforcement proven, not assumed** (§13 rule 3). Every check the workstream added was
+shown to fail on deliberately broken input, with the exit code read from the check itself
+rather than from a `grep` in the pipeline after it:
+
+- `--endpoints` against a contract with one path deleted → 27/28, exit 1.
+- `--catalogue VR` against a rule id removed from source → 37/38, exit 1. **This one was
+  silently weak**: it scanned test files too, so a rule existing nowhere but in a test read
+  as implemented. The broken run failed to notice the deletion, which is how the weakness
+  was found; the scan is now source-only.
+- The DuckDB sandbox: dropping `enable_external_access` makes three tests fail, and
+  removing the interrupt watchdog hangs the timeout test rather than failing it.
+- The two profiling paths: reinstating either the tie-break or the quantile default breaks
+  the agreement test.
+- Metrics cardinality: resolved-path labels, path-labelled 404s, status codes instead of
+  classes, and a gauge that never clears — four injections, four caught.
+- The catalogue rules: five injections, **four** caught on the first pass. The miss was
+  real — the `vanished_level` fixture had no level below the materiality threshold, so
+  deleting the filter changed nothing. It has one now.
+
+**NFRs measured, not asserted.**
+
+| NFR | Measured | Budget |
+|---|---|---|
+| NFR-DATA-1 parquet ingest + prepare | 5.2 s | 900 s |
+| NFR-DATA-1 CSV ingest + prepare | 29.6 s | 1800 s |
+| NFR-DATA-2 validation, ~50 rules | 0.3 s | 600 s |
+| NFR-DATA-2 structural layer alone | 0.1 s | 120 s |
+| NFR-DATA-3 profiling | 91.7 s | 300 s |
+| NFR-DATA-3 memory | 113 MB → 236 MB above baseline over a 10× payload increase | does not scale with rows |
+| NFR-DATA-7 report summary, 500 rules | 30 ms | 500 ms |
+
+`scripts/bench-data.py` at 2 M rows × 80 columns, extrapolated to 10 M; the machine has
+13 GB and 80 float64 columns at 10 M rows is 6.4 GB resident before any operation runs.
+
+**Specification defects found by implementing it.** Five, each resolved in the spec rather
+than worked around:
+
+| Defect | Resolution |
+|---|---|
+| NFR-DATA-3 bounded profiling memory at "2× the largest column's compressed size" — 30.7 MB, while a Python process with `polars`, `duckdb`, `scipy` and `pydantic` imported occupies 140 MB before reading a byte | Amended to the property that is protective *and* measurable: memory does not scale with row count |
+| `01` §4.6's `overall` invariant left unnamed the state every report with warnings is in when written, and made an immutable artifact's verdict depend on acknowledgements arriving days later | `overall` is now a function of the rule results alone; acknowledgement is a fact *about* a report, checked at promotion |
+| `01` §5.1 had no code for a duplicate acknowledgement | `ACKNOWLEDGEMENT_ALREADY_RECORDED` appended |
+| `01` §4.5 read as requiring an Admin author *in addition to* `dataset:write`, leaving no built-in role able to author a `sql` rule | Read as *instead of*, per §4.5 step 5; the permission depends on the check |
+| `07` §3 had no requirement about metric label cardinality — a property whose violation is silent | `FR-PLAT-52` appended |
+
+**Not delivered by W4.** Every unevidenced requirement with a verdict:
+
+| Item | Verdict |
+|---|---|
+| NFR-DATA-1, NFR-DATA-2 | **Measured, not tested.** Numbers above. A timing assertion on a shared runner fails for reasons unrelated to the code and teaches everyone to re-run it — the same reasoning that left NFR-PLAT-4 measured rather than asserted |
+| FR-DATA-24, streaming half | **Reassigned to W7.** The distributional half is delivered — those rules read the reference Profile instead of re-scanning. Streaming structural rules over parquet row groups needs a real 10 M-row dataset to be designed against, which arrives with the freMTPL2 seed |
+| `POST /sources/{id}/preview` for `object_store` / `sql` sources | **Partial.** Implemented for uploaded bytes, the flow FR-DATA-4 is written around. The other source kinds need connectors, which no requirement in W4's scope asked for |
+| `pipelines/` — Dagster | **Deferred to W7.** `CLAUDE.md` §2 assigned it to 1a W4; W4's own roadmap row never named it, and `pipeline` as a Source *kind* is registrable without a scheduler. The mark is corrected rather than the gap hidden |
+| `GET`/`POST /api/v1/environments`, `PUT .../settings` | **W14**, which owns `07` FR-PLAT-28..31 |
+| `00` §5.4 `If-Match` optimistic concurrency | **Not delivered, reassigned to W5.** W2 named W4 as "the first workstream with versioned artifacts", which was right — but W4's mutating endpoints act on a version's *status*, and the transition state machine already refuses every unsafe move by reading the current status under a row lock. An ETag would add a second, weaker guard over the same field. `CONFLICT_STALE_WRITE` is still absent from the error registry; the first genuine lost-update risk is a Model's editable metadata in W5, and it should be built there against a real one |
+| `00` §5.4 `Idempotency-Key` header | **Delivered, after the audit found it wrong.** All four `202` endpoints accept it. It had been implemented as a *query parameter* on one of them — a retry is generated by an HTTP client that knows nothing about the endpoint's query string, and a key in the URL is also a key in every access log |
+
+**Retrofit list (§5) — where W4 leaves each item:**
+
+| Item | State after W4 |
+|---|---|
+| Append-only audit in the caller's transaction | **Delivered and used.** Every W4 mutation — version transitions, acknowledgements, dictionary edits, rule-set replacement, reference loads, schema corrections — writes through `audit.record` inside the caller's unit of work. 46 audit tests |
+| Artifact immutability + versioning + `parent_id` | **Delivered.** Every W4 artifact is `frozen=True`; versions are allocated under an advisory lock and never reused; `derived_from` carries lineage; a validated version cannot exist without its report, enforced by a check constraint against a raw `UPDATE` |
+| `model-schema` as SSOT | **Delivered.** `Dataset`, `DataDictionaryEntry`, `PiiClass`, `RecordGrain`, `Profile`, `ValidationReport` and the rule shapes all live there; the contract regenerates and CI fails on drift |
+| Job model with progress and cancellation | **Delivered and exercised.** The four `dataset.*` handlers run through it; progress and cooperative cancellation are the `pricing-core` `ProgressCallback` |
+| Decimal money discipline | **Delivered.** `MoneyMinor` and `DecimalStr` throughout `01`'s shapes; one-way ratios derive from the stored Decimal so a published frequency equals published claims ÷ published exposure |
+| `trace_id` propagation | **Delivered by W2, used by W4.** Carried into every Job and every audit event W4 writes |
+| RBAC from the first endpoint | **Delivered.** Every route declares its permission; acknowledgement raises the spec's own `ACKNOWLEDGE_FORBIDDEN_ROLE` rather than a generic denial |
+| Content-addressed blob store | **Delivered by W2, load-bearing in W4.** Parquet tables are blobs; identical tables across versions are stored once, asserted by test |
+
+---
+
+### W4 mid-workstream scope findings — 2026-08-14
+
+**W4 is roughly half delivered, and the requirement-coverage number said otherwise.**
+`scope-audit.py DATA` reported 44 of 50 requirements evidenced — 88 % — which reads as
+nearly finished. It is not, and the gap is a property of what the evidence *is* rather
+than a miscount.
+
+Two checks added while measuring the NFRs make the real position visible:
+
+| Check | Result |
+|---|---|
+| `scope-audit.py DATA --endpoints` | **0 of the 28 endpoints `01` §5.1 declares are published** |
+| Requirements evidenced only by `pricing-core` / `model-schema` tests | **19 of 50** |
+
+`@pytest.mark.req` markers do not distinguish "the maths is right" from "the platform does
+this". Nineteen `DATA` requirements are satisfied by pure-function tests over Polars
+frames, and several of those requirements are explicitly about persistence and
+orchestration rather than computation — FR-DATA-14 ("persisted with the Dataset Version"),
+FR-DATA-20 ("every non-pass outcome persists"), FR-DATA-25/27 ("runs automatically after
+successful ingestion", "persisted as an artifact"), FR-DATA-21/22 (rule sets versioned and
+governed). The functions those requirements need exist and are correct. Nothing stores
+their output, nothing runs them after an ingestion, and nothing serves them over HTTP.
+
+Concretely, still to build: `ValidationReport`, `Profile`, `ValidationRule` and
+`ValidationRuleSet` persistence with their migrations; the acknowledgement record
+(FR-DATA-17/18); validation and profiling as Jobs triggered by ingestion; and the §5.1
+REST surface. NFR-DATA-7 and FR-DATA-24 wait on that layer, and NFR-DATA-9 waits on the
+`sql` check, which does not exist.
+
+**The same check found a gap in a closed workstream.** `scope-audit.py PLAT --endpoints`
+reports 11 of 17 `PLAT` endpoints published: the blob upload-URL and download endpoints,
+environments CRUD, and `/metrics` are declared in `07` §5.1 and were never built. W2's
+closure record did not mention them, because nothing at the time compared the interface
+table to the contract. They are reassigned to W4 (blobs, `/metrics`) and W14
+(environments), and the W2 closure record is amended below rather than rewritten — a
+closure record states what was known when it was written.
+
+#### Position after the REST and handler slices
+
+| Check | Then | Now |
+|---|---|---|
+| `scope-audit DATA` requirements | 44 / 50 | **48 / 50** |
+| `scope-audit DATA --endpoints` | 0 / 28 | **28 / 28** |
+| `scope-audit DATA --catalogue VR` | not measured | **38 / 38** |
+
+Two of those moved because work landed. The third was a **third finding** of the same kind as the first two: a requirement can
+summarise a catalogue it does not enumerate. FR-DATA-16 says "validation covers four
+layers", which one test evidences honestly — while §4.4's catalogue of 38 named rules
+behind it stood at 12. **Since closed**: all 38 are implemented, and writing the tests
+found two defects in rules that already existed — `column_presence` passed when no columns
+were declared, and `development_maturity` could never pass, because it measures against
+the data's own latest period and the most recent rows are always immature.
+
+`--catalogue PREFIX` was added to `scope-audit.py` so the number is re-derivable rather
+than a one-off count, and it generalises: any spec declaring a catalogue of named ids can
+be checked the same way.
+
+**W4 was therefore not closeable at the time.** ~~What remains, with owners~~ — **superseded by the closure record above, 2026-08-15**; every row below was either delivered or given a verdict there:
+
+| Item | Verdict |
+|---|---|
+| 26 of 38 built-in catalogue rules (§4.4) | ~~not started~~ ✔ **delivered 2026-08-15** — all 38 implemented and tested, each with a case where it fires and one where it does not |
+| FR-DATA-24 streaming over parquet row groups | **not delivered** — the distributional half is done; the streaming half needs a real 10 M-row dataset to be designed against, so it is reassigned to **W7** alongside the freMTPL2 seed |
+| NFR-DATA-1, NFR-DATA-2 throughput | **measured, not tested** — `scripts/bench-data.py` at 2 M × 80, extrapolated to 10 M: parquet ingest+prepare 5.2 s / 900 s, CSV 29.6 s / 1800 s, validation 0.3 s / 600 s, structural alone 0.1 s / 120 s. A timing assertion on a shared runner fails for reasons unrelated to the code |
+| `GET /metrics` (FR-PLAT-40, reassigned from W2) | **not started** — needs a Prometheus client dependency and a `07` §8 entry, and several required series (scoring latency, cache hit rate) belong to later phases |
+| `POST /sources/{id}/preview` for `object_store` / `sql` sources | **partial** — implemented for uploaded bytes, the flow FR-DATA-4 is written around; the other source kinds need connectors W4 has not built |
+
+What *is* done and was not before: the `01` REST surface end to end, validation and
+profiling persistence, the four `dataset.*` job handlers, preparation recipes applied
+during ingestion, the sandboxed `sql` check, and **Phase 1a's exit criterion as a passing
+test** — `test_the_failure_loop_then_validated` ingests a file with a negative exposure,
+watches promotion refused, fixes the data rather than the verdict, and promotes.
 
 **W1 re-audited under §13, 2026-08-14.** W1 closed before the standard required a scope
 derivation, so it was audited again from the specifications rather than from its own
@@ -331,6 +519,22 @@ roadmap's "~35 of 60" meant. FR-PLAT-28..31 belong to W14 and FR-PLAT-37 to W7.
 **Gate (local):** ruff clean · mypy --strict on 49 files · import-linter 3 kept / 0 broken ·
 **246 tests** · generated contracts current · docs audit 14/14 · req-coverage 47 of 417.
 
+> **Amendment 2026-08-14, during W4.** `scope-audit.py PLAT --endpoints` — a check that
+> did not exist when this record was written — reports **11 of the 17 endpoints `07` §5.1
+> declares are published**. Six were never built: `GET /api/v1/blobs/{id}`,
+> `POST /api/v1/blobs/upload-url`, `GET`/`POST /api/v1/environments`,
+> `PUT /api/v1/environments/{name}/settings`, and `GET /metrics`.
+>
+> The closure was not careless about this; nothing at the time compared the spec's
+> interface table to the published contract, and all 35 in-scope requirements did have
+> evidence. That is precisely the blind spot: requirement markers sit on service-layer
+> tests, so a module can satisfy every requirement and still not be reachable over HTTP.
+>
+> Reassigned rather than reopened: the blob endpoints and `/metrics` to **W4**, which
+> needs blob download URLs for parquet anyway; environments to **W14**, which owns
+> `07` FR-PLAT-28..31. The record above stands as written — it states what was known
+> when it was written, which is what a closure record is for.
+
 **Enforcement proven, not assumed** (§13 rule 3). Each check was shown to fail on
 deliberately broken input: the ADR-0001 and DEP-3 import contracts (injected `import
 fastapi` and `import app`); the contract drift check (both a changed model with a stale
@@ -359,11 +563,11 @@ requirement, not a proxy for it.
 |---|---|---|
 | FR-PLAT-15 — Dagster schedules and sensors | not started; blocked on **OQ-PLAT-2**, which is deferred | whichever phase resolves OQ-PLAT-2 |
 | FR-PLAT-23 — backups, PITR, tested restore | not started — an operational capability, not application code | **deployment, Phase 2** |
-| FR-PLAT-40 — Prometheus `/metrics` | not started | **W3 or an observability slice** |
+| FR-PLAT-40 — Prometheus `/metrics` | ~~not started~~ ✔ **delivered by W4, 2026-08-15** — three of its five families; scoring latency and cache hit rate have nothing to report until W11 and are absent rather than zero | ~~W3 or an observability slice~~ **W4** |
 | FR-PLAT-14 — 13-month job retention | *partial*: the window is a declared setting with the 13-month floor enforced, but no sweeper purges beyond it. Nothing deletes job history today, so the floor holds by default rather than by design | W3 |
 | FR-PLAT-1 last clause — local development identity provider in the compose stack | not delivered; dev-header identity covers local work and is refused outside `local`/`dev` | deployment |
-| `00` §5.4 `If-Match` optimistic concurrency | **not applicable to W2** — no W2 resource is a versioned entity. `CONFLICT_STALE_WRITE` is not yet in the error registry | first workstream with versioned artifacts (**W4**) |
-| `00` §5.4 `Idempotency-Key` header | job submission is idempotent at the service layer (FR-PLAT-12), but no HTTP endpoint creates a Job — by design, since Jobs are created by domain actions | **W4** |
+| `00` §5.4 `If-Match` optimistic concurrency | **not applicable to W2** — no W2 resource is a versioned entity. `CONFLICT_STALE_WRITE` is not yet in the error registry | ~~**W4**~~ → **W5**, see W4's closure record |
+| `00` §5.4 `Idempotency-Key` header | job submission is idempotent at the service layer (FR-PLAT-12), but no HTTP endpoint creates a Job — by design, since Jobs are created by domain actions | ✔ **W4** — all four `202` endpoints |
 | Out of W2 scope entirely | FR-PLAT-24..27 secrets backend, 28..31 environments (W14), 32..36 deployment, 37 demo seed (W7), 49 rate limiting, 50 webhooks | as noted |
 
 Nine of the ten `PLAT` NFRs remain unmeasured beyond the three above; NFR-PLAT-4 was
@@ -474,9 +678,9 @@ XGBoost model, compares them, and gets one approved — i.e. **`wf-01` executed 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
 | ~~**W1**~~ ✔ | Repo foundations: `uv` workspace, `model-schema`, `pricing-core` skeleton, CI with import-linter contract (ADR-0001), docker compose | — | **Closed 2026-08-14** — see the status table below |
-| **W2** | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | ~35 of 60 `PLAT` requirements |
-| **W3** | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | §5 — skeleton only, no governance UI |
-| **W4** | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | All 49 `DATA` requirements |
+| ~~**W2**~~ ✔ | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | **Closed 2026-08-14** — ~35 of 61 `PLAT` requirements |
+| ~~**W3**~~ ✔ | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | **Closed 2026-08-14** — §5 skeleton only, no governance UI |
+| ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
 | **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 | All 78 `MODEL` requirements — the largest single workstream |
 | **W6** | Frontend: app shell, dataset views, **validation report view**, **factor workbench**, model detail, diagnostics | W4, W5 | The two bolded views are where `01` §5.3 and `02` §5.3 place their interaction requirements |
 | **W7** | freMTPL2 demo seed | W4, W5, W6 | `07` FR-PLAT-37 — one command to a working system |
@@ -626,7 +830,7 @@ parallelisable workstreams. **No dates, because team size is unknown.**
 |---|---|---|---|---|
 | 0 — Specification | — | — | done | — |
 | On-ramp (§3) | — | 3 | XS | ~~Research~~ ✔ · ~~3 spikes~~ ✔ · **7 decisions outstanding** |
-| **1a — Data Workbench** | ~26 % | 3 after W1 | **L** | W1–W4 + dataset views; ends at a `validated` dataset |
+| **1a — Data Workbench** | ~26 % | 3 after W1 | **L** | ~~W1–W4~~ ✔ **all closed** + dataset views (W6a); the `validated` loop passes headless |
 | **1b — Modelling Workbench** | ~21 % | 2 | **L** | W5–W7; ends at `wf-01` end to end |
 | 2 — Rating Engine | ~24 % | 2–3 | **L** | Deep; one large frontend, one hard NFR |
 | 3 — Governance | ~11 % | 3 | **M** | Mostly surfacing Phase 1 foundations |

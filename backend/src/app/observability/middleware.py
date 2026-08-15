@@ -11,6 +11,7 @@ from starlette.responses import Response
 
 from app.errors import problem_response, unexpected_problem
 from app.observability.logging import get_logger
+from app.observability.metrics import observe_request
 from app.observability.trace import (
     bind_trace_id,
     new_trace_id,
@@ -58,9 +59,11 @@ class TraceMiddleware(BaseHTTPMiddleware):
             )
             response = problem_response(unexpected_problem(request.url.path))
             response.headers[RESPONSE_HEADER] = trace_id
+            _observe(request, response.status_code, time.perf_counter() - started)
             return response
         else:
             response.headers[RESPONSE_HEADER] = trace_id
+            _observe(request, response.status_code, time.perf_counter() - started)
             _log.info(
                 "request completed",
                 extra={
@@ -73,3 +76,31 @@ class TraceMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             reset_trace_id(token)
+
+
+def _observe(request: Request, status_code: int, seconds: float) -> None:
+    """Record the request against its **route template** (FR-PLAT-40).
+
+    Labelling by resolved path would create one Prometheus time series per job id, and an
+    instance that has seen a million jobs would hold a million series for one counter. The
+    failure is silent — the counter keeps working while the monitoring system runs out of
+    memory — so the template has to be reconstructed rather than assumed.
+
+    Not from `route.path`: on an included router that is the router-*relative* template
+    (`/jobs/{job_id}`), with the `/api/v1` prefix already stripped, so two routers mounted
+    under different prefixes would share one label. Substituting the matched parameters
+    back into the resolved path recovers the full template and does not depend on how the
+    router was mounted.
+
+    An unmatched request — a 404 on a path nobody defined — has no parameters to
+    substitute, and is recorded under a single `<unmatched>` label for the same reason:
+    someone probing random URLs must not be able to add a time series per probe.
+    """
+    if request.scope.get("route") is None:
+        observe_request("<unmatched>", request.method, status_code, seconds)
+        return
+
+    template = request.url.path
+    for name, value in (request.scope.get("path_params") or {}).items():
+        template = template.replace(str(value), "{" + name + "}", 1)
+    observe_request(template, request.method, status_code, seconds)

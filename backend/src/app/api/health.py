@@ -17,11 +17,14 @@ import enum
 from collections.abc import Awaitable, Callable
 from typing import Final
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Request, Response, status
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import Settings
+from app.db.session import Database
 from app.observability.logging import get_logger
+from app.observability.metrics import blob_bytes, blob_objects, job_queue_depth, render
 
 __all__ = ["ComponentStatus", "ReadinessReport", "clear_probes", "register_probe", "router"]
 
@@ -128,3 +131,62 @@ def version_route(settings: Settings) -> Callable[[], VersionInfo]:
         )
 
     return version
+
+
+@router.get(
+    "/metrics",
+    summary="Prometheus metrics",
+    response_class=PlainTextResponse,
+    include_in_schema=True,
+)
+async def metrics(request: Request) -> PlainTextResponse:
+    """FR-PLAT-40.
+
+    Unauthenticated, like `/healthz` and `/readyz`, because a scraper is infrastructure and
+    not a principal — and reachable only from inside the deployment, which is where the
+    boundary belongs. It carries no identifiers: every label is drawn from a bounded set
+    (route template, method, status class, Job kind), so nothing here discloses which
+    datasets or policies exist.
+
+    The database-derived gauges are refreshed on scrape rather than on a timer. A timer
+    would keep a connection warm to compute numbers nobody is reading, and a scrape that
+    fails is a metric that stops updating rather than one that silently goes stale.
+    """
+    database: Database | None = getattr(request.app.state, "database", None)
+    if database is not None:
+        await refresh_platform_gauges(database)
+    return PlainTextResponse(render().decode("utf-8"), media_type="text/plain; version=0.0.4")
+
+
+async def refresh_platform_gauges(database: Database) -> None:
+    """Queue depth and blob usage, read at scrape time (FR-PLAT-40)."""
+    from sqlalchemy import func, select
+
+    from app.db.models import BlobRow, JobRow
+    from model_schema import TERMINAL_STATUSES
+
+    terminal = [state.value for state in TERMINAL_STATUSES]
+    async with database.session() as session:
+        depths = (
+            await session.execute(
+                select(JobRow.kind, JobRow.status, func.count())
+                .where(JobRow.status.not_in(terminal))
+                .group_by(JobRow.kind, JobRow.status)
+            )
+        ).all()
+        objects, total_bytes = (
+            await session.execute(
+                select(func.count(), func.coalesce(func.sum(BlobRow.bytes_), 0))
+            )
+        ).one()
+
+    # Cleared first: a kind that drained to zero would otherwise keep reporting its last
+    # non-zero depth for ever, which is the failure mode that makes a queue alert useless.
+    job_queue_depth.clear()
+    for kind, job_status, count in depths:
+        job_queue_depth.labels(
+            kind=getattr(kind, "value", str(kind)),
+            status=getattr(job_status, "value", str(job_status)),
+        ).set(count)
+    blob_objects.set(objects)
+    blob_bytes.set(total_bytes)

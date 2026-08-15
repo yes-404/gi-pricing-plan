@@ -112,8 +112,15 @@ class ColumnMapping:
         """`{normalised: source_name}` — what the Data Dictionary records."""
         return dict(self.normalised)
 
+    @property
     def rename_map(self) -> dict[str, str]:
-        """`{source_name: normalised}`, for `DataFrame.rename`."""
+        """`{source_name: normalised}`, for `DataFrame.rename`.
+
+        A property, like `source_names` beside it. One of the pair being a method was an
+        inconsistency with no reason behind it, and it read as an attribute at every call
+        site — `frame.rename(mapping.rename_map)` silently passes the *function*, which
+        Polars accepts as a callable renamer and applies to nothing.
+        """
         return {source: norm for norm, source in self.normalised.items()}
 
 

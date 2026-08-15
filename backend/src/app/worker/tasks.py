@@ -30,6 +30,7 @@ from app.db.session import Database
 from app.observability.logging import get_logger
 from app.observability.trace import bind_trace_id, current_trace_id, reset_trace_id
 from app.platform import jobs, outbox
+from app.platform.blobs import BlobStore
 from app.worker.celery_app import TASK_RELAY_OUTBOX, TASK_RUN_JOB, build_celery
 from app.worker.handlers import handler_for
 from app.worker.logs import JobLogCapture
@@ -74,7 +75,9 @@ class CeleryPublisher:
         self._celery.send_task(task, kwargs=payload, queue=queue.value)
 
 
-async def execute_job(database: Database, job_id: UUID) -> JobStatus:
+async def execute_job(
+    database: Database, job_id: UUID, blob_store: BlobStore | None = None
+) -> JobStatus:
     """Run one Job to a terminal state. Returns the status it reached.
 
     Separated from the Celery task so the whole lifecycle is testable without a broker —
@@ -130,7 +133,13 @@ async def execute_job(database: Database, job_id: UUID) -> JobStatus:
 
     budget = (row.resource_budget or {}).get("wall_clock_s")
     progress = JobProgress(
-        job_id, database, asyncio.get_running_loop(), wall_clock_s=budget
+        job_id,
+        database,
+        asyncio.get_running_loop(),
+        wall_clock_s=budget,
+        # Built here, once, when the caller did not supply one. A handler building its own
+        # picks up ambient settings and reads a different bucket than the one written to.
+        blob_store=blob_store or BlobStore(load_settings()),
     )
     parameters = dict(row.parameters)
 

@@ -18,7 +18,7 @@ than a fact.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Request
@@ -148,3 +148,19 @@ def _development_caller(request: Request, settings: Settings) -> Caller:
         ) from exc
 
     return Caller(principal=principal, workspace_id=workspace)
+
+
+def job_identity(caller: Caller) -> dict[str, Any]:
+    """Who asked, and in which workspace — carried in every domain Job's parameters.
+
+    A handler receives only `row.parameters`, so without this it cannot attribute what it
+    does, and every audit event a dataset job writes would read as "the system". That
+    answers the wrong question: nobody asks whether the platform ingested a file.
+
+    The workspace is included for the same reason and taken from the *caller*, never from
+    the request body — a body-supplied workspace makes tenancy a claim rather than a fact.
+    """
+    return {
+        "workspace_id": str(caller.workspace_id),
+        "actor": caller.principal.model_dump(mode="json"),
+    }

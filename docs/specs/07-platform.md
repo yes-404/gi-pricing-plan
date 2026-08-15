@@ -87,6 +87,7 @@ The substrate every other module stands on:
 | **FR-PLAT-12** | Jobs are **idempotent by key**: a submission carrying an `Idempotency-Key` that matches a Job from the last 24 h returns the original Job (`00` §5.4). |
 | **FR-PLAT-13** | Jobs are routed to queues by Kind, with per-queue worker pools sized independently: `compute` (fitting, certification, optimisation — few, large workers), `scoring` (batch scoring — many, moderate), `io` (ingestion, exports), `default` (everything else). |
 | **FR-PLAT-51** | **Job enqueue is transactionally safe.** Celery is the chosen broker (OQ-PLAT-1, decided 2026-08-14), which does **not** enlist in the database transaction — a task can be published to Redis and the surrounding transaction then roll back, leaving a worker acting on state that was never committed. Since audit writes share the caller's transaction (`06` R2), this would produce work with no audit record. Jobs are therefore enqueued through a **transactional outbox**: the job row is written in the same transaction as the domain change and the audit event, and a relay publishes to Celery only after commit. Publishing directly from inside a request transaction is refused at the service layer, not left to convention. |
+| **FR-PLAT-52** | Every metric label is drawn from a bounded set — route **template**, method, status class, Job kind. No label carries an identifier. A resolved path as a label creates one time series per entity, and the failure is silent: the counter keeps working while the monitoring system runs out of memory. |
 | **FR-PLAT-14** | Job history is retained ≥ 13 months with its parameters and result reference — a Job is part of the provenance chain (FR-OVR-3). |
 | **FR-PLAT-15** | Scheduled Jobs (monitoring runs, recurring ingestion) are defined as Dagster schedules/sensors and appear in the same Jobs UI as user-submitted work, with `source: system` (`06` FR-GOV-25). |
 | **FR-PLAT-16** | A Job that would exceed a configured resource budget (memory, wall clock) is terminated with a typed error naming the budget, not silently OOM-killed. |
@@ -285,6 +286,16 @@ The key value itself appears exactly once, in the creation response (FR-PLAT-3).
 | `GET` | `/healthz`, `/readyz`, `/version` | Health and version (FR-PLAT-41) |
 | `GET` | `/openapi.json` | Generated OpenAPI 3.1 (FR-PLAT-48) |
 | `GET` | `/metrics` | Prometheus metrics (FR-PLAT-40) |
+
+> **`/metrics` scope, 2026-08-15 (W4).** FR-PLAT-40 names five families. Three are emitted:
+> request rate/latency/error by route template, job queue depth and duration by kind, and
+> blob store usage. Two are **not**, because what they measure does not exist yet —
+> scoring latency by environment and rating version arrives with the scoring path (W11),
+> and there is no cache to report a hit rate for.
+>
+> They are absent rather than exposed as zero. A dashboard panel reading zero because
+> nothing reports is indistinguishable from one reading zero because nothing is wrong, and
+> the second reading is the one an operator will make at three in the morning.
 
 **Error codes owned by this module:** `UNAUTHENTICATED`, `TOKEN_EXPIRED`,
 `API_KEY_INVALID`, `API_KEY_EXPIRED`, `ENVIRONMENT_SCOPE_DENIED`, `JOB_NOT_CANCELLABLE`,

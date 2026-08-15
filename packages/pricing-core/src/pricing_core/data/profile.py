@@ -12,7 +12,7 @@ or noise depending on the method. The exact interval costs a chi-square quantile
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Final
@@ -40,6 +40,8 @@ __all__ = [
     "poisson_frequency_interval",
     "profile_frame",
     "profile_parquet",
+    "psi_from_weights",
+    "semantic_type_of",
 ]
 
 DEFAULT_QUANTILES: Final[tuple[float, ...]] = (0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99)
@@ -47,6 +49,11 @@ DEFAULT_QUANTILES: Final[tuple[float, ...]] = (0.01, 0.05, 0.25, 0.50, 0.75, 0.9
 #: FR-DATA-25 caps categorical detail at the top 20 levels. A high-cardinality column would
 #: otherwise put its entire domain into a persisted artifact.
 TOP_LEVELS: Final = 20
+
+#: Quantiles are linearly interpolated in both profiling paths. Stated here because it is
+#: a definition rather than an implementation detail: `nearest` and `linear` give different
+#: p99s on the same column, and a Profile must not record which engine computed it.
+QUANTILE_INTERPOLATION: Final = "linear"
 
 #: Above this share of distinct values a column looks like an identifier rather than a
 #: category. Banding a policy id produces a chart with five million bars.
@@ -67,8 +74,25 @@ def infer_semantic_type(series: pl.Series, *, row_count: int) -> SemanticType:
     `int32` is a dtype; policy id, vehicle group and driver age are three different things
     to do with one, and only the third can be banded meaningfully.
     """
-    name = series.name.lower()
-    dtype = series.dtype
+    return semantic_type_of(
+        series.name,
+        series.dtype,
+        distinct_count=int(series.drop_nulls().n_unique()),
+        row_count=row_count,
+    )
+
+
+def semantic_type_of(
+    column: str, dtype: pl.DataType | Any, *, distinct_count: int, row_count: int
+) -> SemanticType:
+    """The same rule, from statistics rather than a Series.
+
+    `profile_parquet` computes its distinct count in SQL and never holds the column, so it
+    cannot call the Series form. Sharing the rule is what stops the two profiling paths
+    from disagreeing about what a column is — and a column that is `identifier` in one and
+    `continuous` in the other would be banded by one screen and hidden by the next.
+    """
+    name = column.lower()
 
     if name.endswith(_MONEY_SUFFIX):
         return SemanticType.MONEY
@@ -77,8 +101,7 @@ def infer_semantic_type(series: pl.Series, *, row_count: int) -> SemanticType:
     if dtype in (pl.Date, pl.Datetime):
         return SemanticType.DATE
 
-    non_null = series.drop_nulls()
-    distinct = int(non_null.n_unique())
+    distinct = distinct_count
     if (
         row_count >= IDENTIFIER_MIN_ROWS
         and distinct / max(row_count, 1) >= IDENTIFIER_UNIQUENESS
@@ -130,14 +153,23 @@ def profile_frame(
                 mean = float(casted.mean())  # type: ignore[arg-type]
                 std = float(casted.std()) if casted.len() > 1 else 0.0  # type: ignore[arg-type]
                 quantiles = {
-                    f"p{int(q * 100)}": float(casted.quantile(q) or 0.0)
+                    f"p{int(q * 100)}": float(
+                        casted.quantile(q, interpolation="linear") or 0.0
+                    )
                     for q in DEFAULT_QUANTILES
                 }
 
         top: tuple[tuple[str, int], ...] = ()
         if semantic in {SemanticType.CATEGORICAL, SemanticType.ORDINAL, SemanticType.BOOLEAN}:
             counts = (
-                frame.group_by(name).len().sort("len", descending=True).head(TOP_LEVELS)
+                frame.group_by(name)
+                .len()
+                # Level name breaks the tie. Without it, forty groups of exactly 125 come
+                # back in whatever order the engine grouped them, and the same dataset
+                # profiled twice shows a different top-20 — which is indistinguishable
+                # from the data having changed.
+                .sort(["len", name], descending=[True, False])
+                .head(TOP_LEVELS)
             )
             top = tuple(
                 (str(level), int(count)) for level, count in counts.iter_rows()
@@ -151,7 +183,7 @@ def profile_frame(
                 row_count=height,
                 null_count=null_count,
                 null_rate=null_count / height if height else 0.0,
-                distinct_count=int(series.n_unique()),
+                distinct_count=int(series.drop_nulls().n_unique()),
                 minimum=minimum,
                 maximum=maximum,
                 mean=mean,
@@ -242,30 +274,23 @@ def one_way(
     rows: list[OneWayRow] = []
 
     for record in grouped.iter_rows(named=True):
-        exposure = float(record.get("_exposure") or 0.0)
-        claims = int(record.get("_claims") or 0)
-        amount = int(record.get("_amount") or 0)
-
-        frequency = claims / exposure if exposure > 0 else None
-        severity = amount / claims if claims else None
         rows.append(
-            OneWayRow(
-                level=str(record[column]),
-                exposure_years=Decimal(str(round(exposure, 6))),
-                claim_count=claims,
-                claim_amount_minor=amount,
-                frequency=frequency,
-                frequency_ci=(
-                    poisson_frequency_interval(claims, exposure, confidence=confidence)
-                    if exposure > 0
-                    else None
-                ),
-                severity_minor=severity,
-                severity_ci=gamma_severity_interval(amount, claims, confidence=confidence),
-                burning_cost_minor=amount / exposure if exposure > 0 else None,
+            _one_way_row(
+                level=record[column],
+                exposure=float(record.get("_exposure") or 0.0),
+                claims=int(record.get("_claims") or 0),
+                amount=int(record.get("_amount") or 0),
+                confidence=confidence,
             )
         )
     return OneWaySummary(column=column, rows=tuple(rows))
+
+
+def _identifier(name: str) -> str:
+    """Quote a SQL identifier. Column names reach here from a user's file, so `"` in a
+    header is not exotic — it is a Tuesday."""
+    escaped = name.replace('"', '""')
+    return f'"{escaped}"'
 
 
 def profile_parquet(
@@ -273,13 +298,18 @@ def profile_parquet(
     *,
     dataset_version_id: UUID,
     one_way_columns: Sequence[str] = (),
-    **kwargs: Any,
+    exposure_column: str = "exposure_years",
+    claim_count_column: str = "claim_count",
+    claim_amount_column: str = "claim_amount_minor",
 ) -> Profile:
-    """Profile parquet files with DuckDB (FR-DATA-27).
+    """Profile parquet files with DuckDB (FR-DATA-27, NFR-DATA-3).
 
-    DuckDB reads the files directly rather than the caller loading them into memory: a
-    dataset version is hundreds of millions of rows, and profiling is the one operation
-    guaranteed to touch every one of them.
+    Every statistic is computed **in SQL**; nothing but aggregates crosses back into
+    Python. This is the difference between profiling a dataset version and loading one —
+    an earlier build ran `SELECT *` and handed the frame to `profile_frame`, which peaked
+    at 2.1 GB on a 1.1 GB payload and would have needed ~11 GB at the 10M-row scale
+    NFR-DATA-3 is written against. Profiling is the one operation guaranteed to touch
+    every row, so it is the one that must not hold them.
 
     The paths are supplied by the caller, which is how ADR-0001 survives — this function
     opens no object store and holds no credential.
@@ -289,21 +319,180 @@ def profile_parquet(
     if not paths:
         raise ValueError("no parquet paths supplied")
 
+    # Polars reads the footer alone, so the dtypes are free and — more importantly —
+    # identical to the ones `profile_frame` would report. Deriving them from DuckDB's own
+    # type names instead would make the same column read `VARCHAR` here and `String`
+    # there, and a Profile should not record which code path produced it.
+    schema = pl.read_parquet_schema(paths[0])
+
     connection = duckdb.connect(":memory:")
     try:
-        files = ", ".join(f"'{p}'" for p in paths)
-        frame = connection.execute(f"SELECT * FROM read_parquet([{files}])").pl()
+        files = ", ".join(f"'{path}'" for path in paths)
+        connection.execute(f"CREATE VIEW src AS SELECT * FROM read_parquet([{files}])")
+        counted = connection.execute("SELECT count(*) FROM src").fetchone()
+        if counted is None:  # pragma: no cover — a scalar aggregate always returns a row
+            raise ValueError("DuckDB returned no row for a count aggregate")
+        row_count = int(counted[0])
+
+        columns = [
+            _profile_column(connection, name, dtype, row_count=row_count)
+            for name, dtype in schema.items()
+        ]
+        one_ways = tuple(
+            _one_way_sql(
+                connection,
+                column=column,
+                exposure_column=exposure_column if exposure_column in schema else None,
+                claim_count_column=claim_count_column if claim_count_column in schema else None,
+                claim_amount_column=(
+                    claim_amount_column if claim_amount_column in schema else None
+                ),
+            )
+            for column in one_way_columns
+            if column in schema
+        )
     finally:
         connection.close()
 
-    profile = profile_frame(
-        frame,
+    return Profile(
+        id=uuid4(),
         dataset_version_id=dataset_version_id,
-        one_way_columns=one_way_columns,
-        **kwargs,
+        computed_at=datetime.now(UTC),
+        row_count=row_count,
+        columns=tuple(columns),
+        one_ways=one_ways,
+        library_versions={"polars": pl.__version__, "duckdb": duckdb.__version__},
     )
-    return profile.model_copy(
-        update={"library_versions": {**profile.library_versions, "duckdb": duckdb.__version__}}
+
+
+def _profile_column(
+    connection: Any, name: str, dtype: Any, *, row_count: int
+) -> ColumnProfile:
+    """One column's profile, from at most three aggregate queries."""
+    quoted = _identifier(name)
+    counts = connection.execute(
+        f"SELECT count(*) FILTER (WHERE {quoted} IS NULL), count(DISTINCT {quoted}) FROM src"
+    ).fetchone()
+    if counts is None:  # pragma: no cover — a scalar aggregate always returns a row
+        raise ValueError(f"DuckDB returned no row when counting {name!r}")
+    null_count, distinct_count = int(counts[0]), int(counts[1])
+
+    semantic = semantic_type_of(
+        name, dtype, distinct_count=distinct_count, row_count=row_count
+    )
+    numeric = dtype.is_numeric() and semantic is not SemanticType.IDENTIFIER
+
+    minimum = maximum = mean = std = None
+    quantiles: dict[str, float] = {}
+    if numeric and row_count:
+        # Linear interpolation, matching `profile_frame`. Left to their defaults the two
+        # engines disagree — Polars rounds to the nearest observation, DuckDB's
+        # `quantile_disc` picks a different one — and FR-DATA-27 exists precisely so
+        # there is one answer to "what is p99 of this column?".
+        wanted = ", ".join(str(q) for q in DEFAULT_QUANTILES)
+        row = connection.execute(
+            f"SELECT min({quoted}), max({quoted}), avg({quoted}), stddev_samp({quoted}), "
+            f"quantile_cont({quoted}, [{wanted}]) FROM src WHERE {quoted} IS NOT NULL"
+        ).fetchone()
+        if row is not None and row[0] is not None:
+            minimum, maximum = float(row[0]), float(row[1])
+            mean = float(row[2])
+            std = float(row[3]) if row[3] is not None else 0.0
+            quantiles = {
+                f"p{int(q * 100)}": float(value or 0.0)
+                for q, value in zip(DEFAULT_QUANTILES, row[4], strict=True)
+            }
+
+    top: tuple[tuple[str, int], ...] = ()
+    if semantic in {SemanticType.CATEGORICAL, SemanticType.ORDINAL, SemanticType.BOOLEAN}:
+        levels = connection.execute(
+            f"SELECT {quoted}, count(*) AS n FROM src GROUP BY 1 "
+            f"ORDER BY n DESC, {quoted} ASC LIMIT ?",
+            [TOP_LEVELS],
+        ).fetchall()
+        top = tuple((str(level), int(count)) for level, count in levels)
+
+    return ColumnProfile(
+        name=name,
+        dtype=str(dtype),
+        semantic_type=semantic,
+        row_count=row_count,
+        null_count=null_count,
+        null_rate=null_count / row_count if row_count else 0.0,
+        distinct_count=distinct_count,
+        minimum=minimum,
+        maximum=maximum,
+        mean=mean,
+        std=std,
+        quantiles=quantiles,
+        top_levels=top,
+    )
+
+
+def _one_way_sql(
+    connection: Any,
+    *,
+    column: str,
+    exposure_column: str | None,
+    claim_count_column: str | None,
+    claim_amount_column: str | None,
+    confidence: float = 0.95,
+) -> OneWaySummary:
+    """A one-way grouped in SQL. Only the levels come back, never the rows behind them."""
+    quoted = _identifier(column)
+    selects = [f"{quoted} AS level", "count(*) AS rows"]
+    selects.append(
+        f"sum(CAST({_identifier(exposure_column)} AS DOUBLE))" if exposure_column else "0.0"
+    )
+    selects.append(
+        f"sum(CAST({_identifier(claim_count_column)} AS BIGINT))" if claim_count_column else "0"
+    )
+    selects.append(
+        f"sum(CAST({_identifier(claim_amount_column)} AS BIGINT))"
+        if claim_amount_column
+        else "0"
+    )
+    grouped = connection.execute(
+        f"SELECT {', '.join(selects)} FROM src GROUP BY 1 ORDER BY 1"
+    ).fetchall()
+
+    rows = [
+        _one_way_row(
+            level=level,
+            exposure=float(exposure or 0.0),
+            claims=int(claims or 0),
+            amount=int(amount or 0),
+            confidence=confidence,
+        )
+        for level, _rows, exposure, claims, amount in grouped
+    ]
+    return OneWaySummary(column=column, rows=tuple(rows))
+
+
+def _one_way_row(
+    *, level: Any, exposure: float, claims: int, amount: int, confidence: float
+) -> OneWayRow:
+    """The statistics of a one-way level, shared by both paths so they cannot drift."""
+    # Every ratio is derived from the exposure the row *stores*, not from the raw sum.
+    # Two engines summing the same column in different orders differ in the last bit, and
+    # a reader who divides the published claim count by the published exposure should get
+    # the published frequency back — not something that disagrees at the sixteenth digit.
+    stored = Decimal(str(round(exposure, 6)))
+    basis = float(stored)
+    return OneWayRow(
+        level=str(level),
+        exposure_years=stored,
+        claim_count=claims,
+        claim_amount_minor=amount,
+        frequency=claims / basis if basis > 0 else None,
+        frequency_ci=(
+            poisson_frequency_interval(claims, basis, confidence=confidence)
+            if basis > 0
+            else None
+        ),
+        severity_minor=amount / claims if claims else None,
+        severity_ci=gamma_severity_interval(amount, claims, confidence=confidence),
+        burning_cost_minor=amount / basis if basis > 0 else None,
     )
 
 
@@ -364,16 +553,30 @@ def _psi(current: ColumnProfile, reference: ColumnProfile) -> float | None:
     Computed from the top-level counts both profiles already hold, which is what makes the
     distributional layer cheap enough to run on every validation (FR-DATA-24's intent).
     """
-    if not current.top_levels or not reference.top_levels:
+    return psi_from_weights(dict(current.top_levels), dict(reference.top_levels))
+
+
+def psi_from_weights(
+    current: Mapping[str, float], reference: Mapping[str, float]
+) -> float | None:
+    """PSI between two level-weight maps — counts, or exposure (VR-DST-1, VR-DST-8).
+
+    Public because the distributional validation layer needs exactly this and must not
+    have its own copy: a `VR-DST-*` verdict and the comparison screen an actuary reads
+    would then be able to disagree about the same two versions, which is the failure the
+    module docstring promises against.
+
+    Weights rather than counts, because VR-DST-8 asks for PSI on the **exposure** across a
+    factor and not on row counts — a book that writes the same number of policies with
+    half the exposure in young drivers has shifted, and counting rows would not see it.
+    """
+    current_total = sum(current.values())
+    reference_total = sum(reference.values())
+    if not current or not reference or not current_total or not reference_total:
         return None
 
-    current_total = sum(count for _, count in current.top_levels)
-    reference_total = sum(count for _, count in reference.top_levels)
-    if not current_total or not reference_total:
-        return None
-
-    current_share = {level: count / current_total for level, count in current.top_levels}
-    reference_share = {level: count / reference_total for level, count in reference.top_levels}
+    current_share = {level: value / current_total for level, value in current.items()}
+    reference_share = {level: value / reference_total for level, value in reference.items()}
 
     import math
 

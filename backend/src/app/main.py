@@ -14,7 +14,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import approvals, audit, health, jobs, me, service_accounts
+from app.api import (
+    approvals,
+    audit,
+    blobs,
+    dataset_versions,
+    datasets,
+    health,
+    jobs,
+    me,
+    reference_tables,
+    service_accounts,
+    validation,
+)
 from app.api import settings as settings_api
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
@@ -78,6 +90,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(audit.router, prefix=API_PREFIX)
     app.include_router(approvals.router, prefix=API_PREFIX)
+    # `01` — Data. Order matters only for readability; FastAPI matches on the full path.
+    app.include_router(blobs.router, prefix=API_PREFIX)
+    app.include_router(datasets.router, prefix=API_PREFIX)
+    app.include_router(dataset_versions.router, prefix=API_PREFIX)
+    app.include_router(validation.router, prefix=API_PREFIX)
+    app.include_router(reference_tables.router, prefix=API_PREFIX)
     app.add_api_route(
         "/version",
         health.version_route(settings),

@@ -396,9 +396,30 @@ vocabulary — never arbitrary code (governance parity with custom objectives, A
 }
 ```
 
-**Invariants** — `overall = pass` iff no `fail`/`error` and no `warn`;
-`pass_with_warnings` iff no `fail`/`error` and every `warn` has an `acknowledgement`.
-The transition to `validated` is permitted for `pass` and `pass_with_warnings` only.
+**Invariants** — `overall` is a function of the rule results alone:
+`fail` if any result is `fail`; `error` if any is `error` and none is `fail`;
+`pass_with_warnings` if any is `warn` and none is `fail`/`error`; `pass` otherwise.
+The transition to `validated` is permitted for `pass` and `pass_with_warnings` only, and
+`pass_with_warnings` **additionally requires every `warn` to carry an acknowledgement** —
+checked at promotion (FR-DATA-17), not baked into `overall`.
+
+> **Amended 2026-08-14 (W4).** `overall` previously read *"`pass_with_warnings` iff no
+> `fail`/`error` and every `warn` has an `acknowledgement`"*, which had two problems.
+>
+> It left a state unnamed: a report with three warnings and no acknowledgements yet — the
+> state *every* report with warnings is in the moment it is written — was none of the four
+> values. Implementing it surfaced this immediately, because the field is `NOT NULL`.
+>
+> More seriously it made `overall` depend on acknowledgements, which arrive minutes or days
+> after the run. A report is an immutable artifact and NFR-DATA-5 requires byte-identical
+> bodies across runs; a verdict that changes when somebody clicks acknowledge is neither.
+> Acknowledgement is a fact *about* a report, recorded beside it and scoped to
+> `(dataset_version_id, rule_id, report_id)` by FR-DATA-18 — not a fact inside it.
+>
+> Nothing is lost: the promotion rule is unchanged, because `promote_to_validated` already
+> took `unacknowledged_warnings` as a separate argument. `fail` outranks `error` when both
+> are present — a definite failure is more actionable than "a rule could not tell", and
+> both block promotion identically.
 
 ### 4.7 `Profile`
 
@@ -488,6 +509,7 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 `SCHEMA_INFERENCE_CONFLICT`, `COLUMN_NAME_COLLISION`, `DIRECT_IDENTIFIER_PRESENT`,
 `VALIDATION_HAS_FAILURES`, `WARN_NOT_ACKNOWLEDGED`, `ACKNOWLEDGE_FORBIDDEN_ROLE`,
 `RULE_NOT_APPROVED`, `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`, `RULE_TIMEOUT`,
+`ACKNOWLEDGEMENT_ALREADY_RECORDED`,
 `REFERENCE_INTERVAL_OVERLAP`, `REFERENCE_VERSION_NOT_PINNED`, `SOURCE_UNREACHABLE`,
 `REJECT_RATE_EXCEEDED`.
 
@@ -644,7 +666,7 @@ PSI/KS implementation details; parquet decimal logical types.
 |---|---|
 | **NFR-DATA-1** | Ingest + prepare 10 M rows × 80 columns from parquet in ≤ 15 min on a 16-core worker; from CSV in ≤ 30 min. |
 | **NFR-DATA-2** | Full validation of a 10 M-row version with ~50 rules completes in ≤ 10 min; structural layer alone in ≤ 2 min so it can fail fast. |
-| **NFR-DATA-3** | Profiling a 10 M-row version completes in ≤ 5 min and requires no more memory than 2× the largest column's compressed size (DuckDB streaming, not full materialisation). |
+| **NFR-DATA-3** | Profiling a 10 M-row version completes in ≤ 5 min, and its memory **does not scale with row count**: every statistic is aggregated in DuckDB and only aggregates are materialised (see the note below). |
 | **NFR-DATA-4** | A one-way summary read from a stored Profile returns in < 300 ms (NFR-OVR-4); it is never computed on request. |
 | **NFR-DATA-5** | Validation is deterministic: the same version + rule set version produces byte-identical report bodies apart from timestamps and job ids (FR-OVR-8). |
 | **NFR-DATA-6** | Storage overhead of a Dataset Version is ≤ 1.2× the parquet payload; identical tables across versions are deduplicated by content hash (ID-4). |
@@ -652,6 +674,25 @@ PSI/KS implementation details; parquet decimal logical types.
 | **NFR-DATA-8** | Audit: dataset transitions, acknowledgements, dictionary edits, rule-set changes, and purges each emit an Audit Event with before/after state (FR-OVR-4). |
 | **NFR-DATA-9** | A user-supplied `sql` check cannot read outside the target version's parquet files, cannot write, cannot load DuckDB extensions, and is killed at its time budget (FR-DATA-19, §4.5). |
 | **NFR-DATA-10** | Ingestion of a source that fails mid-run leaves no partially-visible version: version rows become visible only on successful commit. |
+
+> **NFR-DATA-3 amended 2026-08-14.** It previously bounded profiling memory at "2× the
+> largest column's compressed size". That number is not achievable and was never the
+> property worth requiring. Measured on the W4 benchmark (`scripts/bench-data.py`), 80
+> columns × 2 M rows: the largest compressed column is 15.4 MB, so the old bound was
+> 30.7 MB — while a Python process with `polars`, `duckdb`, `scipy` and `pydantic`
+> imported occupies 140 MB before it has read a byte. The bound counted the interpreter
+> against the dataset.
+>
+> The property that actually protects the platform is that profiling does not hold the
+> data, and that *is* measurable: over a 10× increase in payload (109 MB → 1,092 MB),
+> peak RSS above the import baseline moved 113 MB → 236 MB. Sub-linear, so a 10 M-row
+> version does not need 10 M rows' worth of memory.
+>
+> The requirement was met in intent and missed in fact by the first implementation, which
+> ran `SELECT *` and handed the frame to the in-memory profiler — 2,278 MB peak on that
+> same 1,092 MB payload, and roughly 11 GB at the scale the requirement is written
+> against. The parenthetical "DuckDB streaming, not full materialisation" was already in
+> the spec; the code did not do it, and no test asked.
 
 ---
 

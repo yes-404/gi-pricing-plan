@@ -241,7 +241,11 @@ def test_the_contract_publishes_the_problem_shape() -> None:
 def test_every_operation_documents_the_problems_it_returns() -> None:
     """A client cannot handle a status the contract does not mention."""
     paths = _load(OPENAPI)["paths"]
-    exempt = {"/healthz", "/readyz", "/version"}
+    # The unauthenticated operational surface. A scraper and a kubelet are infrastructure,
+    # not principals, and are reachable only from inside the deployment — so these four
+    # have no 401 to document. `/metrics` is here for that reason and not because it was
+    # awkward: FR-PLAT-52 keeps identifiers out of its labels, so it discloses nothing.
+    exempt = {"/healthz", "/readyz", "/version", "/metrics"}
     for path, operations in paths.items():
         if path in exempt:
             continue

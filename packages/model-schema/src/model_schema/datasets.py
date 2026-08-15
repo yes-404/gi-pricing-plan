@@ -23,16 +23,21 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from model_schema.money import DecimalStr, MoneyMinor
+from model_schema.money import Currency, DecimalStr, MoneyMinor
+from model_schema.profiles import SemanticType
 from model_schema.refs import BlobRef
 
 __all__ = [
     "TERMINAL_DATASET_STATUSES",
     "VALID_DATASET_TRANSITIONS",
+    "DataDictionaryEntry",
+    "Dataset",
     "DatasetKind",
     "DatasetStatus",
     "DatasetTable",
     "DatasetVersion",
+    "PiiClass",
+    "RecordGrain",
     "SourceKind",
     "VersionTotals",
 ]
@@ -85,6 +90,96 @@ VALID_DATASET_TRANSITIONS: Final[dict[DatasetStatus, frozenset[DatasetStatus]]] 
 TERMINAL_DATASET_STATUSES: Final[frozenset[DatasetStatus]] = frozenset(
     {DatasetStatus.ARCHIVED}
 )
+
+
+class PiiClass(enum.StrEnum):
+    """How sensitive a column is (`01` §4.1, FR-OVR-9, FR-DATA-13).
+
+    The two strongest classes are not a warning label. A `direct_identifier` or
+    `special_category` column is **refused for modelling use** — rating on a special
+    category is unlawful in the UK/EU, and a direct identifier in a model is a
+    re-identification risk that no amount of care downstream removes.
+    """
+
+    NONE = "none"
+    PSEUDONYMOUS_KEY = "pseudonymous_key"
+    QUASI_IDENTIFIER = "quasi_identifier"
+    DIRECT_IDENTIFIER = "direct_identifier"
+    SPECIAL_CATEGORY = "special_category"
+
+
+#: The classes FR-OVR-9 and FR-DATA-13 refuse for modelling.
+MODELLING_FORBIDDEN_PII: Final[frozenset[PiiClass]] = frozenset(
+    {PiiClass.DIRECT_IDENTIFIER, PiiClass.SPECIAL_CATEGORY}
+)
+
+
+class RecordGrain(enum.StrEnum):
+    """What one row of the dataset *is*.
+
+    Recorded because every actuarial check downstream depends on it: "exposure > 0 and
+    period-consistent" means something different per policy-year than per claim.
+    """
+
+    POLICY_EXPOSURE = "policy_exposure"
+    POLICY_TERM = "policy_term"
+    CLAIM = "claim"
+    QUOTE = "quote"
+
+
+class DataDictionaryEntry(BaseModel):
+    """What one column means (`01` §4.1).
+
+    The dictionary is authored, not inferred. A Profile says a column is 98 % distinct
+    integers; only a person can say it is a policy id rather than a very granular rating
+    factor, and only a person can say it is a special category.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    description: str = ""
+    semantic_type: SemanticType | None = None
+    pii_class: PiiClass = PiiClass.NONE
+    unit: str | None = None
+    reference_table: str | None = None
+
+
+class Dataset(BaseModel):
+    """A named body of data with versions (`01` §4.1)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    workspace_id: UUID
+    slug: Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")]
+    name: str = ""
+    description: str | None = None
+
+    line_of_business: str | None = None
+    territory: str | None = None
+    currency: Currency = "GBP"
+    default_record_grain: RecordGrain | None = None
+
+    data_dictionary: dict[str, DataDictionaryEntry] = Field(default_factory=dict)
+    validation_rule_set_id: UUID | None = None
+    latest_version: int | None = None
+
+    created_at: datetime
+    archived_at: datetime | None = None
+
+    @property
+    def modelling_forbidden_columns(self) -> tuple[str, ...]:
+        """Columns FR-OVR-9 / FR-DATA-13 refuse to model on, in declaration order.
+
+        A property rather than a stored field: it is a *consequence* of the dictionary,
+        and storing it would let the two disagree after an edit.
+        """
+        return tuple(
+            column
+            for column, entry in self.data_dictionary.items()
+            if entry.pii_class in MODELLING_FORBIDDEN_PII
+        )
+
 
 
 class DatasetTable(BaseModel):

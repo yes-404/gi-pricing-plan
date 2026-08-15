@@ -459,3 +459,71 @@ def test_an_acknowledgement_does_not_carry_forward_to_the_next_report() -> None:
     assert second.results[0].acknowledgement is None
     assert second.unacknowledged_warnings == 1
     assert second.permits_validation is False
+
+
+@pytest.mark.req("FR-DATA-24")
+def test_distributional_rules_answer_from_a_stored_profile() -> None:
+    """FR-DATA-24: distributional rules use pre-computed profile aggregates rather than
+    re-scanning the reference version.
+
+    A null rate and a row count are both already in a Profile. Loading ten million
+    reference rows to recompute one of them is exactly the re-scan the requirement rules
+    out — and at that size it is not a slow answer, it is an out-of-memory error.
+
+    No reference *frame* is supplied here at all. If the checks still re-scanned they would
+    skip, and a skipped distributional layer is how a mix shift reaches a model.
+    """
+    from pricing_core.data.profile import profile_frame
+
+    reference_frame = pl.DataFrame(
+        {
+            "policy_id": [f"P{i}" for i in range(400)],
+            "exposure_years": [1.0] * 400,
+            "vehicle_group": [None if i % 100 == 0 else f"G{i % 5}" for i in range(400)],
+        }
+    )
+    reference_profile = profile_frame(reference_frame, dataset_version_id=uuid4())
+
+    # Half the rows, and a much higher null rate: both rules should fire.
+    current = pl.DataFrame(
+        {
+            "policy_id": [f"P{i}" for i in range(200)],
+            "exposure_years": [1.0] * 200,
+            "vehicle_group": [None if i % 4 == 0 else f"G{i % 5}" for i in range(200)],
+        }
+    )
+
+    rules = (
+        RuleSetEntry(
+            rule=ValidationRule(
+                id=uuid4(), slug="null-shift", version=1,
+                layer=ValidationLayer.DISTRIBUTIONAL, check="null_rate_shift",
+                severity=Severity.WARN,
+                target={"table": "exposure", "column": "vehicle_group"},
+                params={"max_shift_pp": 5.0},
+            )
+        ),
+        RuleSetEntry(
+            rule=ValidationRule(
+                id=uuid4(), slug="volume-shift", version=1,
+                layer=ValidationLayer.DISTRIBUTIONAL, check="volume_shift",
+                severity=Severity.WARN,
+                target={"table": "exposure"},
+                params={"max_shift_fraction": 0.2},
+            )
+        ),
+    )
+    report = run_validation(
+        {"exposure": current},
+        ValidationRuleSet(id=uuid4(), slug="s", version=1, entries=rules),
+        dataset_version_id=uuid4(),
+        reference_profile=reference_profile,
+    )
+
+    outcomes = {result.rule_slug: result for result in report.results}
+    assert outcomes["null-shift"].outcome is RuleOutcome.WARN
+    assert outcomes["null-shift"].measured["reference_null_rate"] == pytest.approx(0.01)
+    assert outcomes["volume-shift"].outcome is RuleOutcome.WARN
+    assert outcomes["volume-shift"].measured["reference_rows"] == 400
+    # Neither skipped, which is the claim: no reference frame was supplied.
+    assert all(r.outcome is not RuleOutcome.SKIPPED for r in report.results)

@@ -29,6 +29,7 @@ _TITLES: Final[dict[int, str]] = {
     403: "Not permitted",
     404: "Not found",
     409: "Conflict",
+    413: "Payload too large",
     422: "Request validation failed",
     429: "Rate limited",
     500: "Internal server error",
@@ -40,8 +41,22 @@ def problems(*statuses: int) -> dict[int | str, dict[str, Any]]:
     """Build the `responses=` mapping declaring RFC 9457 problems for these statuses.
 
     `422` is included by FastAPI automatically with *its* schema; passing it here replaces
-    that with ours, which is what the platform returns.
+    that with ours, which is what the platform returns. **Any route taking a path or query
+    parameter can return 422**, because a non-UUID id fails to parse before the handler
+    runs — seven routes omitted it and published FastAPI's `HTTPValidationError` instead,
+    which is a second error shape a client would have to branch on.
+
+    An unlisted status is refused rather than given a generic title. The same reasoning as
+    the error-code registry: a typo that silently produces "Problem" is a documentation
+    defect nobody notices, and the set of statuses this platform returns is small and
+    known.
     """
+    unknown = sorted(set(statuses) - set(_TITLES))
+    if unknown:
+        raise ValueError(
+            f"no problem title for status {unknown}. Add it to `_TITLES` — and check the "
+            "owning spec declares the status before the route claims it."
+        )
     return {
         status: {
             "model": ProblemDetail,

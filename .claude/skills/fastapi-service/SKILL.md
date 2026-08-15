@@ -245,6 +245,102 @@ For anything where **insertion order is the meaning** (log lines), use a databas
 follows with its per-workspace `sequence`; it just has to be applied everywhere order
 matters, not only where tamper-evidence does.
 
+## `alembic.ini` is at the repository root, not in `backend/`
+
+Running `uv run alembic ...` from `backend/` fails with `No 'script_location' key found in
+configuration` — which reads like a broken config file rather than a wrong working
+directory. `CLAUDE.md` §11 is right; run it from the root.
+
+```bash
+uv run alembic upgrade head            # from the repo root, always
+```
+
+## `PlatformError` exposes `status_code`, not `status`
+
+`excinfo.value.status` raises `AttributeError` inside `pytest.raises`, which pytest
+reports as a test error rather than a mismatch — so it looks like the code under test
+misbehaved. Assert `.code` by preference (the code is the contract, not the status), and
+`.status_code` when the status is genuinely the point.
+
+## Inventing an error code fails loudly, and that is the design
+
+`PlatformError.__init__` refuses any code not in `_KNOWN_CODES`, and a conformance test
+asserts each module's registry equals its spec's declared list. So a genuinely new failure
+condition is a **spec change first**: add the code to the owning spec's §5.1 list and the
+registry in the same commit.
+
+Before adding one, check whether the spec already owns a code for the case. `01` §5.1 had
+`ACKNOWLEDGE_FORBIDDEN_ROLE` for a refusal that `rbac.require_permission` would have
+reported as the generic `PERMISSION_DENIED`. The specific code is the better answer: an
+analyst reading "permission denied" goes looking for a grant, where the requirement means
+them to go and find an actuary. Use `rbac.has_permission` and raise the owned code.
+
+## Size `String()` columns against the *longest enum value*, not a round number
+
+`overall` was `String(16)`; `pass_with_warnings` is 18 characters. The column accepted
+every verdict except the one a report with warnings actually gets, and nothing caught it
+until a test wrote that value. `StringDataRightTruncationError` names the type and the
+limit but not the column, so grep the width, not the field name.
+
+Fold the fix into the unmerged migration rather than adding a corrective one, and
+round-trip `upgrade`/`downgrade` twice afterwards.
+
+## Measuring memory: a phase inherits whatever the phase before it allocated
+
+`ru_maxrss` is a process high-water mark, and glibc does not return freed arenas to the
+OS. So profiling measured *after* generating the test data reports the generator's peak,
+not the profiler's — 2,278 MB became 636 MB became 376 MB as the measurement got cleaner,
+with no change to the code being measured.
+
+Two things fix it. Sample `/proc/self/statm` in a thread during the block to get a
+per-operation peak rather than a process one, and run the phase in a **fresh process** that
+has never held the data:
+
+```bash
+uv run python scripts/bench-data.py --rows 2000000 --generate-to /tmp/bench.parquet
+uv run python scripts/bench-data.py --parquet /tmp/bench.parquet     # clean process
+```
+
+Also record the baseline after imports. A Python process with `polars`, `duckdb`, `scipy`
+and `pydantic` loaded occupies ~140 MB before reading a byte, and a memory budget that
+ignores it is measuring the interpreter.
+
+## Sandboxing user SQL in DuckDB: three settings, a parser, and a watchdog
+
+`01` §4.5's `sql` escape hatch runs a user's query. Everything below was verified by
+attempting the attack, not by reading the configuration:
+
+```python
+duckdb.connect(":memory:", config={
+    "enable_external_access": "false",       # without it, SELECT reads /etc/passwd
+    "autoinstall_known_extensions": "false", # without these, it installs one that does
+    "autoload_known_extensions": "false",
+    "allow_unsigned_extensions": "false",
+    "lock_configuration": "true",            # the query cannot undo the above
+})
+```
+
+Register the frames as views (`connection.register(name, frame)`) so the query has data to
+read without the connection having a path to anything else.
+
+**Use DuckDB's parser, not a regex.** `duckdb.extract_statements(q)` returns one entry per
+statement with a `.type`; `SELECT 1 /* comment */ ; DROP TABLE t` is two, and a pattern
+match on `;` gets it wrong.
+
+**Compare `StatementType` with `==`, never `is`.** It comes from the `_duckdb` extension
+module and the returned value is not the same object as the Python enum member, so `is`
+is always `False`. Here that failed closed — every query was refused as "not a SELECT" —
+but the same mistake in an allow-check fails *open*.
+
+**A time budget must interrupt, not measure.** `run_validation` checks its per-rule budget
+*after* the check returns, which is fine for a Polars expression and useless against
+`SELECT count(*) FROM range(1e10)`. Start a `threading.Timer` that calls
+`connection.interrupt()` and catch `duckdb.InterruptException`.
+
+Prove each control by removing it and watching the test fail — dropping
+`enable_external_access` alone made three passing tests fail, which is what makes them
+tests of the sandbox rather than of DuckDB's defaults.
+
 ## `pytest.raises(match=...)` on a `PlatformError` tests the *detail*
 
 `PlatformError.__str__` is `detail or title`, so `match="requires a reason"` compares
@@ -371,3 +467,30 @@ database before the migration was written, and the migration round-trip was run 
 
 2026-08-14 — W2 sprint 1. 40 backend tests pass; the middleware-ordering trap was found by
 a failing test asserting `trace_id` on the 500 path, not by reading Starlette's source.
+
+2026-08-14 — W4 validation persistence. The `alembic.ini` location, the `status_code`
+attribute, the error-registry refusal and the `String(16)` truncation were each found by a
+failing run rather than by reading; the memory-measurement trap was found by the same
+number falling by 6× across three progressively cleaner measurements of unchanged code.
+
+2026-08-14 — W4 REST surface. 528 tests pass. The DuckDB sandbox controls were each proven
+by removal; the `StatementType` identity trap was found by every query being refused, which
+is the direction that failure mode is survivable in.
+
+## Worker handlers must take the blob store from the worker, not from settings
+
+`BlobStore(load_settings())` inside a handler reads whatever `GIP_BLOB_BUCKET` happens to
+be — `gip-blobs` in the ambient settings and `gip-test-blobs` under test. The symptom is
+`NoSuchKey` for an object that demonstrably exists, because it exists in the *other*
+bucket. `execute_job(database, job_id, blob_store)` passes it through `JobProgress`
+alongside `database`, for the same reason: one pool, one store, one audit path.
+
+## CSV columns arrive as strings, so a real ingestion always carries a cast recipe
+
+`_read_delimited` uses `infer_schema=False` deliberately — a policy id of `007` must not
+become `7`, and a column that is numeric in this extract and alphanumeric in the next would
+change type between versions of one dataset. The consequence is easy to miss: **without a
+`cast` step in the Preparation Recipe, every numeric validation rule compares a string to a
+number and errors** (`cannot compare string with numeric type`). Recipes run before the
+reject partition, so the cast is in the right place to fix it.
+

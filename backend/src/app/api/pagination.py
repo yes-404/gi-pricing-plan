@@ -112,3 +112,4 @@ def decode_cursor(cursor: str | None) -> UUID | None:
         return UUID(raw)
     except ValueError as exc:
         raise _malformed() from exc
+
