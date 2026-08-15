@@ -404,3 +404,53 @@ async def test_report_summary_columns_match_the_body(
         ).scalar_one()
     assert (row.rule_count, row.fail_count, row.warn_count, row.error_count) == (4, 1, 2, 0)
     assert row.overall == OverallOutcome.FAIL.value
+
+
+@pytest.mark.req("FR-DATA-18")
+async def test_the_presented_report_says_which_warning_was_acknowledged(
+    database: Database, workspace_id
+) -> None:
+    """`01` §5.3 requires "warnings needing acknowledgement" as a band above the fold.
+
+    A count of outstanding warnings cannot render that: with one warning a client could
+    infer which, with three it cannot. The presented report carries the acknowledgement on
+    the rule it belongs to, with who and why.
+
+    The **stored** artifact is untouched — `load_report` still returns it byte for byte,
+    which NFR-DATA-5 depends on. This is the read edge, where an acknowledgement is a fact
+    *about* the report rather than inside it.
+    """
+    actuary = await _principal_with_role(database, workspace_id, "pricing_actuary")
+    version_id = await _version(database, workspace_id, actuary)
+    first, second = _result(RuleOutcome.WARN), _result(RuleOutcome.WARN)
+    report = _report(version_id, first, second, _result(RuleOutcome.PASS))
+
+    async with database.unit_of_work() as session:
+        await validation.store_report(
+            session, workspace_id=workspace_id, actor=actuary, report=report
+        )
+    async with database.unit_of_work() as session:
+        await validation.acknowledge(
+            session, workspace_id=workspace_id, actor=actuary, report_id=report.id,
+            rule_id=second.rule_id, justification="seasonal, confirmed against 2023",
+        )
+
+    async with database.session() as session:
+        presented = await validation.load_report_view(
+            session, workspace_id=workspace_id, report_id=report.id
+        )
+        stored = await validation.load_report(
+            session, workspace_id=workspace_id, report_id=report.id
+        )
+
+    by_rule = {result.rule_id: result for result in presented.results}
+    assert by_rule[second.rule_id].acknowledgement is not None
+    assert by_rule[second.rule_id].acknowledgement.justification == (
+        "seasonal, confirmed against 2023"
+    )
+    assert by_rule[second.rule_id].acknowledgement.user_id == actuary.id
+    # The one still needing attention is distinguishable from the one that had it.
+    assert by_rule[first.rule_id].acknowledgement is None
+
+    # And the artifact itself is unchanged, which NFR-DATA-5 compares byte for byte.
+    assert all(result.acknowledgement is None for result in stored.results)

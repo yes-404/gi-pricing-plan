@@ -152,6 +152,21 @@ rm -rf frontend/node_modules && pnpm install --dir frontend --frozen-lockfile
 key absent. Spread conditionally — `...(body === undefined ? {} : { body })` — rather than
 assigning `undefined`, which is a different thing to this compiler and to `fetch`.
 
+## `01` §5.3 describes layers; the interaction requirement describes urgency
+
+The spec asks for "four layer sections" *and* for "overall banner → failing rules →
+warnings needing acknowledgement → everything else" above the fold. Those pull in different
+directions, and **urgency wins at the top**: a reader asking "why can I not fit a model on
+this?" needs the blocking rules first, and a failing structural rule blocks exactly as hard
+as a failing actuarial one. Layers organise the tail — the rules nobody has to act on.
+
+An `error` bands with the failures, not with the passes. FR-DATA-19 makes an unrun rule
+never a pass, and a reader must see it beside what failed.
+
+Assert the ordering on **document order**, not on the set of headings. "Above the fold" is
+a claim about sequence, and a test that only checks the sections exist passes with them in
+any order — verified by swapping two and watching it fail.
+
 ## Setting it up (W6a, first time)
 
 - `pnpm`, not npm or yarn (§3). `frontend/` is **not** a uv workspace member — the root
@@ -177,3 +192,10 @@ toolchain traps above were each found by hitting them. The `trace_id` claim was 
 it is optional in the type, and the platform is right to leave it so. The
 `node_modules` trap was found by CI failing on its first run while every local command
 passed — which is the argument for adding the workflow in the same slice as the code.
+
+2026-08-15 — W6a slice 2, the validation report view. Building it found that the API
+returned a *count* of outstanding warnings but never which one was acknowledged, by whom or
+why: `RuleResult.acknowledgement` was in the contract and always null, because
+acknowledgements are rows written after the report is stored. `GET /validation-reports/{id}`
+now merges them at the read edge while `load_report` keeps returning the stored artifact
+byte for byte, which NFR-DATA-5 depends on.

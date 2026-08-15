@@ -11,6 +11,14 @@ const routes: RouteRecordRaw[] = [
     name: "datasets",
     component: () => import("@/views/DatasetListView.vue"),
   },
+  {
+    path: "/data/:slug/v/:version/validation",
+    name: "validation-report",
+    component: () => import("@/views/ValidationReportView.vue"),
+    // `props: true` so the view takes its inputs as props rather than reaching into the
+    // router — which is what makes it renderable in a test without a router at all.
+    props: true,
+  },
 ];
 
 export const router = createRouter({
