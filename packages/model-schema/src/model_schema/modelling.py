@@ -20,23 +20,39 @@ re-scorable without `glum`, by a process that never ran it.
 from __future__ import annotations
 
 import enum
-from typing import Annotated, Literal
+from decimal import Decimal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.money import DecimalStr
+from model_schema.profiles import OneWayRow
+
 __all__ = [
+    "AboveRangePolicy",
+    "Banding",
+    "BandingMethod",
+    "BandingMinimums",
+    "BandingProposal",
+    "BelowRangePolicy",
     "Coefficient",
+    "CredibilityModel",
     "Factor",
     "FactorIntent",
     "FactorType",
     "GlmFitResult",
     "GlmSpec",
+    "Grouping",
+    "GroupingEvidence",
+    "GroupingMethod",
+    "GroupingProposal",
     "Model",
     "ModelStatus",
     "MonotonicDirection",
     "OffsetSpec",
     "RelativityLevel",
+    "UnseenLevelBehaviour",
     "WeightSpec",
 ]
 
@@ -99,10 +115,46 @@ class Factor(BaseModel):
     #: said so" is the state this field exists to prevent.
     prohibited: bool = False
     prohibited_reason: str | None = None
+    #: `02` §4.1. The transformation a `banding` or `grouping` factor *is* — pinned by id,
+    #: because both are versioned artifacts (FR-MODEL-12) and a factor that named a slug
+    #: would change meaning the next time someone re-cut a boundary.
+    banding_id: UUID | None = None
+    grouping_id: UUID | None = None
     #: The level relativities are expressed against. Null until the fit picks one, because
     #: `largest_exposure` cannot be known without the data (FR-MODEL-21).
     base_level: str | None = None
     base_level_method: str = "largest_exposure"
+
+    @model_validator(mode="after")
+    def _the_type_and_its_transformation_agree(self) -> Factor:
+        """A `banding` factor carries a Banding, and only a `banding` factor does.
+
+        Both halves matter. Without the first, a banding factor resolves to its raw
+        column and the fit is one nobody can tell from a correct one — the failure
+        `resolve_factors` was written to refuse. Without the second, a `banding_id` sits on
+        an `identity` factor reading as a transformation that is never applied.
+        """
+        required = {
+            FactorType.BANDING: ("banding_id", self.banding_id),
+            FactorType.GROUPING: ("grouping_id", self.grouping_id),
+        }.get(self.type)
+        if required is not None and required[1] is None:
+            raise ValueError(
+                f"factor {self.slug!r} is of type {self.type.value!r} and names no "
+                f"{required[0]} (`02` §4.1). The transformation is what the factor *is*; "
+                "without it the factor is its raw column under another name."
+            )
+        for field, value, owner in (
+            ("banding_id", self.banding_id, FactorType.BANDING),
+            ("grouping_id", self.grouping_id, FactorType.GROUPING),
+        ):
+            if value is not None and self.type is not owner:
+                raise ValueError(
+                    f"factor {self.slug!r} is of type {self.type.value!r} and names a "
+                    f"{field}. Nothing would apply it, and a transformation recorded on an "
+                    "artifact that ignores it reads as one the model used."
+                )
+        return self
 
     @model_validator(mode="after")
     def _reasons_accompany_their_flags(self) -> Factor:
@@ -120,6 +172,354 @@ class Factor(BaseModel):
                 "person needs to know whose and why."
             )
         return self
+
+
+class BandingMethod(enum.StrEnum):
+    """How a Banding's boundaries were arrived at (`02` §2, FR-MODEL-9).
+
+    Recorded on the artifact because the method *is* the judgement. Two bandings with
+    identical boundaries, one hand-drawn and one from exposure quantiles, are different
+    claims about the same numbers, and a reviewer needs to know which one they are reading.
+    """
+
+    MANUAL = "manual"
+    EQUAL_WIDTH = "equal_width"
+    QUANTILE = "quantile"
+    EXPOSURE_QUANTILE = "exposure_quantile"
+    TREE = "tree"
+    CREDIBILITY = "credibility"
+
+
+class BelowRangePolicy(enum.StrEnum):
+    """What a value below the first boundary does (FR-MODEL-8).
+
+    Explicit rather than defaulted: silently clamping a driver age of 3 into the 17-20 band
+    is how a data defect becomes a price.
+    """
+
+    ERROR = "error"
+    CLAMP_TO_FIRST = "clamp_to_first"
+    NULL_LEVEL = "null_level"
+
+
+class AboveRangePolicy(enum.StrEnum):
+    """What a value at or above the last boundary does (FR-MODEL-8)."""
+
+    ERROR = "error"
+    CLAMP_TO_LAST = "clamp_to_last"
+    NULL_LEVEL = "null_level"
+
+
+class BandingMinimums(BaseModel):
+    """FR-MODEL-11's thresholds, stored **on the artifact** (`banding.schema.json`).
+
+    On the banding rather than passed to the check, because "configurable" means a reviewer
+    can see what was configured. Held at the call site instead, the choice persists nowhere
+    and two fits of the same banding could apply different floors.
+
+    An empty band always fails regardless of these, which is why there is no setting for it.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: An exposure, so an exact decimal on the wire and never a binary float (FR-OVR-7) —
+    #: `banding.schema.json` types it as `Decimal` and the first implementation made it a
+    #: float, which the money scan caught.
+    min_exposure_per_band: DecimalStr = Decimal(0)
+    min_claims_per_band: int = Field(default=0, ge=0)
+    on_violation: Literal["warn", "fail"] = "warn"
+
+
+class Banding(BaseModel):
+    """A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).
+
+    The invariants below are `02` §4.2's, at the type. They are not tidiness: a banding
+    with overlapping intervals assigns one row to two levels, and a label list one short
+    does not drop the last band — it renames every band after the gap. Both produce a model
+    that fits, reads correctly, and is wrong.
+
+    **Versioned, never edited** (FR-MODEL-12). A Model pins the Banding version it was
+    fitted with, so re-cutting a boundary allocates a new version and leaves every existing
+    model describing what it actually did.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    slug: str
+    dataset_id: UUID
+    version: int = Field(ge=1)
+    column: str
+    method: BandingMethod
+    method_params: dict[str, float] = Field(default_factory=dict)
+    #: The version the boundaries and `band_stats` were derived on (FR-MODEL-10). `None`
+    #: for a `manual` banding authored from an actuary's judgement rather than from data.
+    derived_on_dataset_version_id: UUID | None = None
+    #: `n + 1` cut points for `n` bands. The outer two are the range's ends, so a value
+    #: outside them is governed by `below_range` / `above_range` rather than lost.
+    boundaries: tuple[float, ...] = Field(min_length=2)
+    #: `left` means `[lower, upper)` — the actuarial convention for ages and years.
+    closed: Literal["left", "right"] = "left"
+    labels: tuple[str, ...] = Field(min_length=1)
+    #: The label nulls map to. `None` means a null is a resolution error, which is the
+    #: honest default: a missing driver age is not a band, it is a missing value.
+    null_level: str | None = None
+    below_range: BelowRangePolicy = BelowRangePolicy.ERROR
+    above_range: AboveRangePolicy = AboveRangePolicy.ERROR
+    #: FR-MODEL-11's thresholds, as `banding.schema.json` declares them.
+    minimums: BandingMinimums = BandingMinimums()
+    #: FR-MODEL-10's evidence, as of derivation. `OneWayRow` rather than a second shape
+    #: holding the same numbers: `01` FR-DATA-26 already computes exposure, claims,
+    #: frequency, severity and burning cost by level with intervals, and a band is a level.
+    band_stats: tuple[OneWayRow, ...] = ()
+
+    @model_validator(mode="after")
+    def _boundaries_and_labels_describe_the_same_bands(self) -> Banding:
+        if any(
+            later <= earlier
+            for earlier, later in zip(self.boundaries, self.boundaries[1:], strict=False)
+        ):
+            raise ValueError(
+                f"banding {self.slug!r} has boundaries {list(self.boundaries)}, which do "
+                "not strictly increase (`02` §4.2). Equal cut points make an empty band and "
+                "a decreasing pair makes an overlapping one; both send rows to a band the "
+                "reader cannot predict."
+            )
+        expected = len(self.boundaries) - 1
+        if len(self.labels) != expected:
+            raise ValueError(
+                f"banding {self.slug!r} has {len(self.labels)} labels for {expected} bands "
+                "(`02` §4.2). A label list one short does not drop the last band — it "
+                "renames every band after the gap."
+            )
+        if len(set(self.labels)) != len(self.labels):
+            raise ValueError(
+                f"banding {self.slug!r} repeats a label. Two bands sharing a name are one "
+                "level to every fit, table and chart downstream, which is a grouping nobody "
+                "declared."
+            )
+        if self.null_level is not None and self.null_level in self.labels:
+            raise ValueError(
+                f"banding {self.slug!r} sends nulls to {self.null_level!r}, which is also a "
+                "band. 'Missing' and 'in this range' would then be indistinguishable in "
+                "every relativity table."
+            )
+        return self
+
+    @property
+    def levels(self) -> tuple[str, ...]:
+        """Every level a resolved column can take, the null level included."""
+        return self.labels if self.null_level is None else (*self.labels, self.null_level)
+
+
+class GroupingMethod(enum.StrEnum):
+    """How Levels were merged (`02` §2, FR-MODEL-14)."""
+
+    MANUAL = "manual"
+    CREDIBILITY_WEIGHTED = "credibility_weighted"
+    HIERARCHICAL_CLUSTERING = "hierarchical_clustering"
+    TREE = "tree"
+    REFERENCE_HIERARCHY = "reference_hierarchy"
+
+
+class CredibilityModel(enum.StrEnum):
+    """Which credibility theory `credibility_weighted` merging applies (FR-MODEL-80).
+
+    Recorded per grouping rather than fixed in the code because it is a modelling
+    judgement, not a platform constant — and because the two disagree on thin cells, which
+    is the only place the choice changes anything.
+
+    It lives in `method_params` under `credibility_model`, which is where
+    `grouping.schema.json` has carried it since Phase 0. It was briefly a top-level
+    `credibility_standard` field on `Grouping`; that contradicted the committed contract,
+    and the contract was right.
+    """
+
+    LIMITED_FLUCTUATION = "limited_fluctuation"
+    BUHLMANN_STRAUB = "buhlmann_straub"
+
+
+class UnseenLevelBehaviour(enum.StrEnum):
+    """What scoring does with a Level the Grouping has never seen (FR-MODEL-13).
+
+    Mandatory — the field carries no default anywhere in this module. A grouping that
+    silently drops an unseen level prices it as the base, which is the cheapest cell by
+    construction, and nobody finds out before the loss ratio does.
+    """
+
+    ERROR = "error"
+    MAP_TO_DEFAULT = "map_to_default"
+    MAP_TO_BASE = "map_to_base"
+
+
+class GroupingEvidence(BaseModel):
+    """The change in fit a Grouping implies (FR-MODEL-15).
+
+    Grouping is a modelling decision and must be defensible as one, so the artifact carries
+    what it cost: deviance before and after, the degrees of freedom saved, and the
+    likelihood-ratio p-value that says whether the collapse was affordable.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    source_level_count: int = Field(ge=0)
+    target_level_count: int = Field(ge=0)
+    deviance_before: float | None = None
+    deviance_after: float | None = None
+    df_saved: int = 0
+    chi2_p_value: float | None = Field(default=None, ge=0.0, le=1.0)
+    #: FR-MODEL-80: EVPV, VHM and `k`, so a reviewer can re-derive `Z` rather than take it.
+    #: `None` under limited fluctuation, which has no variance components to report.
+    credibility_components: dict[str, float] | None = None
+    #: The resulting target levels, carrying the statistics a source level carries — so
+    #: "what did merging these four into G1 do to the frequency?" is a comparison rather
+    #: than a re-run.
+    target_level_stats: tuple[OneWayRow, ...] = ()
+
+
+class Grouping(BaseModel):
+    """Source Levels mapped to target Levels (`02` §4.3, FR-MODEL-13..17).
+
+    Exhaustive over the Levels observed when it was derived, and explicit about the ones it
+    was not: `unseen_level_behaviour` has no default, because the three answers price an
+    unknown vehicle group very differently and none of them is obviously right.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    slug: str
+    dataset_id: UUID
+    version: int = Field(ge=1)
+    column: str
+    method: GroupingMethod
+    #: `Any` rather than `float` because the contract's own params are not all numbers:
+    #: `credibility_model` is a string and `credibility_pk` an object (FR-MODEL-80).
+    method_params: dict[str, Any] = Field(default_factory=dict)
+    derived_on_dataset_version_id: UUID | None = None
+    #: Source level → target level. Keys are source levels as strings, because that is what
+    #: a column cast to text yields and what a relativity table shows.
+    mapping: dict[str, str] = Field(min_length=1)
+    unseen_level_behaviour: UnseenLevelBehaviour
+    default_target_level: str | None = None
+    #: FR-MODEL-17: a chain applied in order (outcode → area → region), so the finer level
+    #: stays available for diagnostics while rating happens on the coarser one.
+    parent_grouping_id: UUID | None = None
+    #: FR-MODEL-16: the generated model document lists every grouping with its method **and
+    #: rationale**, and `grouping.schema.json` says it appears verbatim in the dossier
+    #: (`06` §4.4 §4). Declared by the contract since Phase 0 and missed by the first
+    #: implementation of this shape; a merge nobody can explain is one nobody can defend.
+    rationale: str | None = None
+    evidence: GroupingEvidence | None = None
+
+    @model_validator(mode="after")
+    def _the_declared_behaviour_is_reachable(self) -> Grouping:
+        targets = set(self.mapping.values())
+        if self.unseen_level_behaviour is UnseenLevelBehaviour.MAP_TO_DEFAULT:
+            if not self.default_target_level:
+                raise ValueError(
+                    f"grouping {self.slug!r} maps unseen levels to a default and names no "
+                    "default (FR-MODEL-13). The behaviour is mandatory precisely so it "
+                    "cannot be half-declared."
+                )
+            if self.default_target_level not in targets:
+                raise ValueError(
+                    f"grouping {self.slug!r} defaults unseen levels to "
+                    f"{self.default_target_level!r}, which is not one of its target levels. "
+                    "An unseen level would land on a level no fitted model has a "
+                    "coefficient for."
+                )
+        elif self.default_target_level is not None:
+            raise ValueError(
+                f"grouping {self.slug!r} names a default target level while its unseen "
+                f"behaviour is {self.unseen_level_behaviour.value!r}. A default nothing "
+                "consults reads as protection that is not there."
+            )
+        declared = self.method_params.get("credibility_model")
+        if declared is not None:
+            if self.method is not GroupingMethod.CREDIBILITY_WEIGHTED:
+                raise ValueError(
+                    f"grouping {self.slug!r} names a credibility model with method "
+                    f"{self.method.value!r}, which does not use one."
+                )
+            if declared not in tuple(CredibilityModel):
+                raise ValueError(
+                    f"grouping {self.slug!r} names credibility model {declared!r}, which "
+                    f"is not one of {[m.value for m in CredibilityModel]} (FR-MODEL-80)."
+                )
+        return self
+
+    @property
+    def credibility_model(self) -> CredibilityModel | None:
+        """The credibility theory this grouping applied, or `None` (FR-MODEL-80).
+
+        Read through a property so callers get the enum without every one of them knowing
+        the key it is stored under — and so the storage stays exactly what the contract
+        describes.
+        """
+        declared = self.method_params.get("credibility_model")
+        return CredibilityModel(declared) if declared is not None else None
+
+    @property
+    def target_levels(self) -> tuple[str, ...]:
+        """The levels a resolved column can take, in first-seen order."""
+        seen: dict[str, None] = {}
+        for target in self.mapping.values():
+            seen.setdefault(target, None)
+        return tuple(seen)
+
+
+class BandingProposal(BaseModel):
+    """What `POST /bandings/propose` asks for (FR-MODEL-9, `02` §5.2).
+
+    A proposal, never a persisted artifact: the boundaries come back editable, and what is
+    stored is what the actuary accepted. Hence a separate shape — a `Banding` carries an id
+    and a version, and neither exists yet.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_version_id: UUID
+    column: str
+    method: BandingMethod
+    n_bands: int = Field(default=10, ge=1, le=200)
+    #: Method-specific knobs: `min_claims_per_band` for `credibility`, and the exposure /
+    #: claim-count column names where the dataset does not use the `01` conventions.
+    method_params: dict[str, float] = Field(default_factory=dict)
+    exposure_column: str = "exposure_years"
+    claim_count_column: str = "claim_count"
+    claim_amount_column: str = "claim_amount_minor"
+    closed: Literal["left", "right"] = "left"
+    null_level: str | None = None
+    below_range: BelowRangePolicy = BelowRangePolicy.ERROR
+    above_range: AboveRangePolicy = AboveRangePolicy.ERROR
+
+
+class GroupingProposal(BaseModel):
+    """What `POST /groupings/propose` asks for (FR-MODEL-14, `02` §5.2)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_version_id: UUID
+    column: str
+    method: GroupingMethod
+    #: The number of target levels to collapse to. Ignored by `credibility_weighted`, which
+    #: merges until the standard is met rather than to a count.
+    n_groups: int = Field(default=8, ge=1, le=200)
+    method_params: dict[str, Any] = Field(default_factory=dict)
+    #: FR-MODEL-80's default, and what a UK reviewer expects to see. Written into the
+    #: resulting grouping's `method_params`, never kept beside them.
+    credibility_model: CredibilityModel = CredibilityModel.LIMITED_FLUCTUATION
+    #: The `(p, k)` pair the full-credibility standard is derived from. 1 082 claims is
+    #: ±5 % at 90 % confidence; a reviewer who cannot see `(p, k)` cannot tell 1 082 from a
+    #: house number (FR-MODEL-80).
+    credibility_p: float = Field(default=0.90, gt=0.0, lt=1.0)
+    credibility_k: float = Field(default=0.05, gt=0.0)
+    exposure_column: str = "exposure_years"
+    claim_count_column: str = "claim_count"
+    claim_amount_column: str = "claim_amount_minor"
+    unseen_level_behaviour: UnseenLevelBehaviour
+    default_target_level: str | None = None
 
 
 class OffsetSpec(BaseModel):

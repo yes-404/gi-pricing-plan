@@ -24,17 +24,19 @@
     "above_range": {"enum": ["error", "clamp_to_last", "null_level"]},
     "band_stats": {
       "type": "array",
-      "description": "Evidence as of derivation, so a reviewer need not re-run anything (FR-MODEL-10).",
+      "description": "Evidence as of derivation, so a reviewer need not re-run anything (FR-MODEL-10). Keyed by `level`, not `label`, and identical to profile.schema.json's one-way row: a band IS a level, 01 FR-DATA-26 already defines a level's statistics, and two definitions of the same numbers would disagree in the fourth digit with nothing to say which is right (amended 2026-08-15, W5 — this file said `label` while profile.schema.json said `level`, for the same statistics).",
       "items": {
         "type": "object",
-        "required": ["label", "exposure_years", "claim_count"],
+        "required": ["level", "exposure_years", "claim_count"],
         "properties": {
-          "label": {"type": "string"},
+          "level": {"type": "string"},
           "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
           "claim_count": {"type": "integer", "minimum": 0},
+          "claim_amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
           "frequency": {"type": "number", "minimum": 0},
           "frequency_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
           "severity_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+          "severity_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
           "burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
         }
       }

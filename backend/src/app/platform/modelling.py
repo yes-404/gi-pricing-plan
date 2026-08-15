@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -37,6 +37,7 @@ from model_schema import (
 )
 
 __all__ = [
+    "SPEC_HASH_VERSION",
     "create_factor",
     "list_factors",
     "load_factors",
@@ -44,9 +45,25 @@ __all__ = [
     "record_fit",
     "reserve_model",
     "spec_hash",
+    "spec_hash_is_current",
     "to_factor",
     "to_model",
 ]
+
+
+#: The version of the `spec_hash` *algorithm*, carried inside the hashed payload and
+#: printed at the front of every digest.
+#:
+#: **Bump this whenever `GlmSpec` gains, loses or renames a field.** Adding a field changes
+#: the JSON the digest is taken over, so every stored digest silently stops matching its own
+#: specification — a resubmitted spec then looks new, FR-MODEL-66's dedup quietly ends, and
+#: the same model is fitted twice under two versions with nothing to say why. OQ-MODEL-8
+#: named this as the constraint to satisfy *before* the first new field lands.
+#:
+#: The tag does not prevent the change; it makes it **legible**. A `v1:` digest in a
+#: database this code no longer produces is a row that needs backfilling, and it can be
+#: found with a `LIKE 'v1:%'`. An untagged digest cannot be found at all.
+SPEC_HASH_VERSION: Final = 1
 
 
 def spec_hash(spec: GlmSpec) -> str:
@@ -56,9 +73,28 @@ def spec_hash(spec: GlmSpec) -> str:
     are one spec — and two that differ anywhere at all, including a loss treatment or a
     seed, are two. `02` §4.4 is explicit that a cap belongs *inside* the spec for exactly
     this reason: two models differing only in their cap must not collide.
+
+    The algorithm version is **inside** the payload as well as in front of the digest, so
+    two algorithm versions cannot produce the same hash even for an identical spec. A
+    prefix alone would let a future reader strip it and compare across versions, which is
+    exactly the comparison that is not meaningful.
     """
-    payload = json.dumps(spec.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
-    return f"sha256:{hashlib.sha256(payload.encode()).hexdigest()}"
+    payload = json.dumps(
+        {"spec_hash_version": SPEC_HASH_VERSION, "spec": spec.model_dump(mode="json")},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return f"v{SPEC_HASH_VERSION}:sha256:{hashlib.sha256(payload.encode()).hexdigest()}"
+
+
+def spec_hash_is_current(digest: str) -> bool:
+    """Whether `digest` was produced by the algorithm this build runs.
+
+    A stored digest from an older algorithm is not wrong, it is **unmatchable** — the
+    lookup in `reserve_model` will miss it and fit the model again. Answerable rather than
+    silent is the whole reason the version is in the string.
+    """
+    return digest.startswith(f"v{SPEC_HASH_VERSION}:")
 
 
 def to_factor(row: FactorRow) -> Factor:

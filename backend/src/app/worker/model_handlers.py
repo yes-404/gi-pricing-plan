@@ -12,6 +12,7 @@ learns it from a `409`, not from a failed job twenty seconds later.
 from __future__ import annotations
 
 import io
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -21,13 +22,22 @@ from app.db.models import BlobRow, ModelRow
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import modelling as model_service
+from app.platform import transformations as transform_service
 from app.platform.blobs import to_ref
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import register_handler
-from model_schema import GlmSpec, JobKind, JobResult
-from pricing_core import ProgressCallback
+from model_schema import Banding, Factor, GlmSpec, Grouping, JobKind, JobResult
+from pricing_core import ProgressCallback, ScaledProgress
 
 __all__ = ["register_model_handlers"]
+
+
+@dataclass(frozen=True, slots=True)
+class _Transformations:
+    """The banding and grouping artifacts a spec's factors pin, keyed by id."""
+
+    bandings: dict[UUID, Banding]
+    groupings: dict[UUID, Grouping]
 
 
 def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
@@ -43,7 +53,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     model_id = UUID(parameters["model_id"])
     progress.update(0.05, "loading the model spec")
 
-    async def load() -> tuple[GlmSpec, list[Any], pl.DataFrame]:
+    async def load() -> tuple[GlmSpec, list[Factor], _Transformations, pl.DataFrame]:
         async with progress.database.session() as session:
             row = await session.get(ModelRow, model_id)
             if row is None or row.workspace_id != workspace_id:
@@ -53,6 +63,22 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             spec = GlmSpec.model_validate(row.spec)
             factors = await model_service.load_factors(
                 session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+            )
+            # The bandings and groupings the factors pin. Loaded here rather than inside
+            # `pricing-core`, which cannot reach a database (ADR-0001) — and eagerly rather
+            # than lazily, because a dangling reference should be a `404` naming the id,
+            # not a resolution failure naming the factor.
+            transformations = _Transformations(
+                bandings=await transform_service.load_bandings(
+                    session,
+                    workspace_id=workspace_id,
+                    ids=[f.banding_id for f in factors if f.banding_id],
+                ),
+                groupings=await transform_service.load_groupings(
+                    session,
+                    workspace_id=workspace_id,
+                    ids=[f.grouping_id for f in factors if f.grouping_id],
+                ),
             )
 
             # **R1 again, here.** Checking it at reservation answers "may this be
@@ -75,16 +101,26 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                     f"Version {version.id} names a blob that is not in the store.",
                 )
             frame = pl.read_parquet(io.BytesIO(await blob_store.read(to_ref(blob))))
-            return spec, factors, frame
+            return spec, factors, transformations, frame
 
-    spec, factors, frame = progress.run_on_loop(load())
-    progress.update(0.35, f"fitting {len(factors)} factor(s) over {frame.height:,} rows")
+    spec, factors, transformations, frame = progress.run_on_loop(load())
 
     from pricing_core.modelling import GlmFitError, fit_glm
     from pricing_core.modelling.factors import FactorResolutionError
 
     try:
-        result = fit_glm(frame, spec, factors, seed=spec.seed)
+        result = fit_glm(
+            frame,
+            spec,
+            factors,
+            seed=spec.seed,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            # The fit owns the middle of the bar and reports its own `0..1` inside it.
+            # Before this it reported nothing, and a long fit sat at 0.35 for its whole
+            # duration — which FR-PLAT-8 exists to prevent and `00` §5.5 already required.
+            progress=ScaledProgress(progress, start=0.10, end=0.85),
+        )
     except GlmFitError as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a

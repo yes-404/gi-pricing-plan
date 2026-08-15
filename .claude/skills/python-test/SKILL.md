@@ -78,13 +78,52 @@ export UV_CACHE_DIR="$SP/uvcache" UV_PYTHON_INSTALL_DIR="$SP/uvpy"
 here means something. The `PYTHONPATH` approach in `library-spike` remains useful for a
 throwaway spike on one library, but it is not a substitute for the gate.
 
-**Still unavailable:** `docker compose` — no docker daemon, and 1 GB of RAM would not run
-Postgres, Redis and MinIO together anyway. Anything needing the local stack is first
-verified by CI.
+## A green `pytest -q` with no database is a **partial** run
+
+`backend/tests/conftest_db.py` **skips** rather than fails when nothing is listening on
+5432, so a developer without the stack can still run the unit tests. The cost is that a run
+which never touched Postgres reports the same cheerful summary as one that did — and every
+migration, trigger, privilege and `FOR UPDATE` test is among the ones that did not run.
+
+Bring the stack up first, and pass the DSN:
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --wait
+export GIP_TEST_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+uv run pytest -q            # ~740 tests; without the DSN it is ~90 fewer, silently
+```
+
+**The DSN is not optional and not the default.** The compose credentials are
+`gipricing:gipricing` (`deploy/docker-compose.yml`), while the application's default
+settings use `gip` — so `alembic` and the suite both fail with
+`InvalidPasswordError: password authentication failed for user "gip"` until
+`GIP_DATABASE_URL` / `GIP_TEST_DATABASE_URL` is set. The error names the *user*, which is
+the fastest way to recognise it.
+
+```bash
+export GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+uv run alembic upgrade head
+uv run alembic downgrade -1 && uv run alembic upgrade head   # prove the downgrade too
+```
+
+## Never `git checkout --` a file you are working on
+
+`git checkout -- path` restores the file to **HEAD**, not to the state before your last
+edit. Used to revert a deliberately-injected defect it silently discards the whole feature
+in that file — the injection *and* everything written this session. Copy the file aside
+first (`cp file /tmp/file.bak`) and restore from the copy.
 
 ## Verified
 
-2026-08-14 — W1's 21 tests, run this way. Two defects surfaced by *running* rather than
-assuming: the `test_money.py` basename collision (fixed by `importlib` mode), and an
-expected value of mine that was simply wrong — 24150 × 1.15 is exactly 27772.5, so
+2026-08-15 — W5's banding and grouping slice, run with the compose stack up: 740 Python
+tests and both alembic directions. **Corrects this skill's previous claim that
+`docker compose` is unavailable** — it runs here, and the DB-backed tests it enables are
+the ones that catch migrations and privileges. Four defects surfaced by running rather than
+assuming, three of them by injection: a `banding` factor that silently resolved to its raw
+column broke no test, `GLM_SEPARATION_DETECTED` was raised and registered nowhere,
+`POST /factors` turned an invariant into a 500, and `git checkout --` ate a file mid-task.
+
+2026-08-14 — W1's 21 tests, run without a database. Two defects surfaced by *running*
+rather than assuming: the `test_money.py` basename collision (fixed by `importlib` mode),
+and an expected value of mine that was simply wrong — 24150 × 1.15 is exactly 27772.5, so
 half-even gives 27772 and my intuition had defaulted to half-up.

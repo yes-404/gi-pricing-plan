@@ -4,6 +4,12 @@
 |---|---|---|
 | `POST` | `/factors` | Create or version a Factor (FR-MODEL-1, FR-MODEL-7) |
 | `GET` | `/factors` | List factors, with intent and prohibition visible |
+| `POST` | `/bandings/propose` | Propose boundaries by method (FR-MODEL-9) — persists nothing |
+| `POST` | `/bandings` | Persist a Banding, editable boundaries and all (FR-MODEL-12) |
+| `GET` | `/bandings` | List bandings |
+| `POST` | `/groupings/propose` | Propose a mapping by method (FR-MODEL-14) |
+| `POST` | `/groupings` | Persist a Grouping (FR-MODEL-16) |
+| `GET` | `/groupings` | List groupings |
 | `POST` | `/models` | **202** Fit → Job; returns the existing model on `spec_hash` match |
 | `GET` | `/models/{slug}` | The model artifact, latest or a named version |
 
@@ -18,7 +24,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.api.authz import requires
 from app.api.deps import Caller, job_identity
@@ -26,11 +32,17 @@ from app.api.responses import problems
 from app.db.session import Database
 from app.platform import jobs as job_service
 from app.platform import modelling as service
+from app.platform import transformations as transform_service
+from app.platform.blobs import BlobStore
 from model_schema import (
+    Banding,
+    BandingProposal,
     Factor,
     FactorIntent,
     FactorType,
     GlmSpec,
+    Grouping,
+    GroupingProposal,
     Job,
     JobKind,
     JobQueue,
@@ -55,6 +67,14 @@ def _database(request: Request) -> Database:
 DatabaseDep = Annotated[Database, Depends(_database)]
 
 
+def _blob_store(request: Request) -> BlobStore:
+    store: BlobStore = request.app.state.blob_store
+    return store
+
+
+BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
+
+
 class FactorCreate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -67,6 +87,43 @@ class FactorCreate(BaseModel):
     monotonic_rationale: str | None = None
     prohibited: bool = False
     prohibited_reason: str | None = None
+    #: `02` §4.1. The `Factor` type refuses a `banding` with no `banding_id`, so the
+    #: mismatch is a `422` with the field named rather than a resolution failure at fit
+    #: time, twenty seconds and one Job later.
+    banding_id: UUID | None = None
+    grouping_id: UUID | None = None
+
+    def as_factor(self) -> Factor:
+        return Factor(id=uuid4(), version=1, **self.model_dump())
+
+    @model_validator(mode="after")
+    def _it_describes_a_factor_that_can_exist(self) -> FactorCreate:
+        """Build the artifact here so its own invariants answer **422**, not 500.
+
+        The handler used to construct the `Factor` itself, and every rule the type enforces
+        — a prohibition with no reason, a monotonic direction with no rationale, and now a
+        `banding` with no `banding_id` — reached the caller as an internal error with a
+        pydantic traceback in the log. Restating the rules on this shape instead would be
+        the same shape defined twice, which `CLAUDE.md` §2 forbids for exactly the reason
+        that matters here: the two would diverge.
+        """
+        self.as_factor()
+        return self
+
+
+class BandingProposalRequest(BandingProposal):
+    """A `BandingProposal` plus the slug the resulting artifact would carry.
+
+    Separate from the core shape because a proposal is not yet an artifact: `pricing-core`
+    is handed the statistical question, and the name belongs to the platform that will one
+    day store it.
+    """
+
+    slug: str
+
+
+class GroupingProposalRequest(GroupingProposal):
+    slug: str
 
 
 class ModelCreate(BaseModel):
@@ -95,7 +152,7 @@ async def create_factor(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
-            factor=Factor(id=uuid4(), version=1, **body.model_dump()),
+            factor=body.as_factor(),
         )
         return service.to_factor(row)
 
@@ -115,6 +172,133 @@ async def list_factors(
             session, workspace_id=caller.workspace_id, dataset_id=dataset_id
         )
         return [service.to_factor(row) for row in rows]
+
+
+@router.post(
+    "/bandings/propose",
+    summary="Propose banding boundaries",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def propose_banding(
+    body: BandingProposalRequest,
+    caller: FitModels,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+) -> Banding:
+    """FR-MODEL-9: the platform proposes, the actuary edits, and **nothing is stored**.
+
+    The returned `Banding` carries a fresh id it does not own yet — `POST /bandings` is
+    what allocates a version. Returning the whole artifact rather than a list of numbers is
+    what makes "always editable" true: the caller can change a boundary and post back the
+    same shape.
+    """
+    async with database.session() as session:
+        return await transform_service.propose_banding_for_version(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            blob_store=blob_store,
+            proposal=BandingProposal.model_validate(
+                body.model_dump(exclude={"slug"})
+            ),
+            slug=body.slug,
+        )
+
+
+@router.post(
+    "/bandings",
+    status_code=status.HTTP_201_CREATED,
+    summary="Persist a Banding",
+    responses=problems(401, 403, 409, 422),
+)
+async def create_banding(
+    body: Banding, caller: FitModels, database: DatabaseDep
+) -> Banding:
+    """FR-MODEL-12: an existing slug allocates the next version rather than editing.
+
+    The whole artifact is the request body — boundaries the caller may have moved, labels
+    they may have renamed, and the evidence the proposal came back with. `id` and `version`
+    in the body are ignored; the platform allocates both.
+    """
+    async with database.unit_of_work() as session:
+        row = await transform_service.create_banding(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            banding=body,
+        )
+        return transform_service.to_banding(row)
+
+
+@router.get("/bandings", summary="List bandings", responses=problems(401, 403, 422))
+async def list_bandings(
+    caller: ReadModels,
+    database: DatabaseDep,
+    dataset_id: Annotated[UUID | None, Query()] = None,
+) -> list[Banding]:
+    async with database.session() as session:
+        rows = await transform_service.list_bandings(
+            session, workspace_id=caller.workspace_id, dataset_id=dataset_id
+        )
+        return [transform_service.to_banding(row) for row in rows]
+
+
+@router.post(
+    "/groupings/propose",
+    summary="Propose a grouping",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def propose_grouping(
+    body: GroupingProposalRequest,
+    caller: FitModels,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+) -> Grouping:
+    """FR-MODEL-14, with FR-MODEL-15's evidence attached and nothing persisted."""
+    async with database.session() as session:
+        return await transform_service.propose_grouping_for_version(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            blob_store=blob_store,
+            proposal=GroupingProposal.model_validate(
+                body.model_dump(exclude={"slug"})
+            ),
+            slug=body.slug,
+        )
+
+
+@router.post(
+    "/groupings",
+    status_code=status.HTTP_201_CREATED,
+    summary="Persist a Grouping",
+    responses=problems(401, 403, 409, 422),
+)
+async def create_grouping(
+    body: Grouping, caller: FitModels, database: DatabaseDep
+) -> Grouping:
+    """FR-MODEL-16: creation is an audited event, because grouping is a modelling decision."""
+    async with database.unit_of_work() as session:
+        row = await transform_service.create_grouping(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            grouping=body,
+        )
+        return transform_service.to_grouping(row)
+
+
+@router.get("/groupings", summary="List groupings", responses=problems(401, 403, 422))
+async def list_groupings(
+    caller: ReadModels,
+    database: DatabaseDep,
+    dataset_id: Annotated[UUID | None, Query()] = None,
+) -> list[Grouping]:
+    async with database.session() as session:
+        rows = await transform_service.list_groupings(
+            session, workspace_id=caller.workspace_id, dataset_id=dataset_id
+        )
+        return [transform_service.to_grouping(row) for row in rows]
 
 
 @router.post(

@@ -1186,6 +1186,65 @@ class FactorRow(Base):
     )
 
 
+class BandingRow(Base):
+    """A Banding, versioned independently of any Factor (`02` FR-MODEL-12).
+
+    Same shape as `FactorRow` and for the same reason: editing a banding creates a new
+    version and does not alter any Model already fitted with the old one. The body is the
+    whole artifact as JSON — boundaries, labels, policies and the derivation evidence —
+    because `model-schema` owns that shape (ADR-0002) and a second column-per-field
+    definition here is the divergence `CLAUDE.md` §2 forbids.
+    """
+
+    __tablename__ = "bandings"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    column_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", "version", name="uq_bandings_slug_version"),
+        CheckConstraint("version >= 1", name="banding_version_starts_at_one"),
+        Index("ix_bandings_dataset", "workspace_id", "dataset_id"),
+    )
+
+
+class GroupingRow(Base):
+    """A Grouping, versioned like a Banding (`02` FR-MODEL-13..17).
+
+    `parent_grouping_id` carries FR-MODEL-17's chain — outcode rolled to area rolled to
+    region — so the finer level stays available for diagnostics while rating happens on the
+    coarser one.
+    """
+
+    __tablename__ = "groupings"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    column_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    parent_grouping_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", "version", name="uq_groupings_slug_version"),
+        CheckConstraint("version >= 1", name="grouping_version_starts_at_one"),
+        Index("ix_groupings_dataset", "workspace_id", "dataset_id"),
+    )
+
+
 class ModelRow(Base):
     """A fitted Model (`02` §4.8), immutable once fitted (R2).
 
@@ -1205,7 +1264,10 @@ class ModelRow(Base):
 
     dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     spec: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    spec_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    #: `v<n>:sha256:<64 hex>`. Widened from 71 when the algorithm version was prefixed —
+    #: without the extra room the first tagged digest is truncated to a *different* valid
+    #: digest, which is the failure mode a length limit is least able to report.
+    spec_hash: Mapped[str] = mapped_column(String(80), nullable=False)
     fit_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     parent_model_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))

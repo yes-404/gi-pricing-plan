@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-__all__ = ["JobCancelled", "ProgressCallback"]
+__all__ = ["JobCancelled", "ProgressCallback", "ScaledProgress"]
 
 
 class JobCancelled(Exception):
@@ -35,6 +35,33 @@ class ProgressCallback(Protocol):
     def check_cancelled(self) -> None:
         """Raise `JobCancelled` if cancellation has been requested."""
         ...
+
+
+class ScaledProgress:
+    """A window onto a caller's range, so a nested computation can report its own `0..1`.
+
+    Without it a handler that reports `0.35` before calling a core function which reports
+    `0.05` leaves the bar going *backwards* — and a caller who avoids that by not reporting
+    at all leaves it frozen, which is the failure FR-PLAT-8 exists to prevent. The core
+    should not have to know it is a middle stage of something; this is how it does not.
+    """
+
+    def __init__(self, inner: ProgressCallback, *, start: float, end: float) -> None:
+        if not 0.0 <= start <= end <= 1.0:
+            raise ValueError(
+                f"a progress window must satisfy 0 <= start <= end <= 1, got "
+                f"[{start}, {end}]."
+            )
+        self._inner = inner
+        self._start = start
+        self._end = end
+
+    def update(self, fraction: float, stage: str, **counters: int) -> None:
+        bounded = min(max(fraction, 0.0), 1.0)
+        self._inner.update(self._start + (self._end - self._start) * bounded, stage, **counters)
+
+    def check_cancelled(self) -> None:
+        self._inner.check_cancelled()
 
 
 class NullProgress:
