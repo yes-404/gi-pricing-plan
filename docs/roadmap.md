@@ -26,9 +26,9 @@ Three things this document deliberately does not do:
 
 | | |
 |---|---|
-| **Phase 0 (Specification)** | Effectively complete — 8 specs, 5 workflows, 5 ADRs, 31 contracts, 408 requirements |
-| **Blocking Phase 1** | **7 decisions** (§3). Spike S3 closed 2026-08-14. Track A research **closed**; 45 of 46 open questions remain but only 7 gate Phase 1 |
-| **Code written** | None, by design (`CLAUDE.md` §0) |
+| **Phase 0 (Specification)** | Closed 2026-08-14 — 8 specs, 5 workflows, 5 ADRs, 31 contracts; `scripts/audit-docs.py` prints the current requirement count, which changes whenever an implementation proves the spec wrong |
+| **Blocking Phase 1** | **Nothing.** All seven of Track C's decisions are taken — the last six (OQ-MODEL-1, 2, 4, 5, 6, 7) on 2026-08-15. What remains open gates Phase 2 or later (§10) |
+| **Code written** | Phase 1a complete, Phase 1b started — the closure records in §6 are the authority, not this row |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
 question already carries options, trade-offs, and a recommendation.
@@ -98,7 +98,9 @@ about them.
 ### Track C — The decision backlog, sequenced
 
 **All four Phase 1a gates were decided on 2026-08-14** — Apache-2.0, Celery, fit-time
-large-loss treatment, and full-snapshot ingestion. Three remain before 1b:
+large-loss treatment, and full-snapshot ingestion. **The three 1b gates are now decided too** —
+OQ-OVR-5 on 2026-08-14, OQ-MODEL-1 and OQ-MODEL-5 on 2026-08-15. Nothing in this
+table blocks work:
 
 | Question | Gates | Why it blocks |
 |---|---|---|
@@ -106,9 +108,9 @@ large-loss treatment, and full-snapshot ingestion. Three remain before 1b:
 | **OQ-DATA-1** large-loss capping: dataset or model? | **1a** ✔ *decided* | It *is* the 1a/1b boundary — deferring it makes it a contract change rather than a decision |
 | **OQ-DATA-2** append ingestion vs full snapshots | **1a** ✔ *decided* | W4, and only if the first real dataset is large enough that full snapshots hurt |
 | **OQ-OVR-2** project licence | **1a** ✔ *decided* | Blocks nothing technically; blocks every external contribution and the public-repo story |
-| **OQ-MODEL-1** expression objectives in 1b? | 1b | Decides whether the AST parser and SymPy derivation are in scope — a material slice of W5 |
-| **OQ-MODEL-5** credibility standard | 1b | Needed to implement `credibility_weighted` grouping |
-| **OQ-OVR-5** notebook escape hatch | 1b | Affects whether a client library is in scope |
+| **OQ-MODEL-1** expression objectives in 1b? | **1b** ✔ *decided 2026-08-15* | Templates only in Phase 1; expressions in Phase 2 (FR-MODEL-75/76). The AST parser turned out to be built already — W4 needed it for `01` FR-DATA-10 — so what left W5 is the SymPy derivation and the gradient/hessian compilation target |
+| **OQ-MODEL-5** credibility standard | **1b** ✔ *decided 2026-08-15* | Both, limited fluctuation as the default, recorded per grouping (FR-MODEL-80) — so W5 builds two methods rather than choosing one |
+| **OQ-OVR-5** notebook escape hatch | **1b** ✔ *decided 2026-08-14* | Client library in Phase 1; embedded notebooks revisited in Phase 4 |
 
 The four marked **1a** are the ones that actually gate the start of work. The other 39
 can wait for the phase that needs them (§10).
@@ -123,12 +125,12 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 | # | Task | Kind | Owner | Blocks |
 |---|---|---|---|---|
 | ~~1~~ | ~~**OQ-OVR-2**~~ ✔ — project licence | decision | maintainer | **1a** — public contribution, not code |
-| **2** | **OQ-OVR-5** — notebook escape hatch | decision | maintainer | **1b** — client library scope |
+| ~~2~~ | ~~**OQ-OVR-5**~~ ✔ — notebook escape hatch | decision | maintainer | **1b** — decided 2026-08-14: client library |
 | ~~3~~ | ~~**OQ-PLAT-1**~~ ✔ — Celery vs a transactional Postgres queue | decision | maintainer | **1a** — W2, first sprint |
 | ~~4~~ | ~~**OQ-DATA-1**~~ ✔ — where large-loss capping lives | decision | maintainer | **1a** — it *is* the 1a/1b boundary; a contract change if deferred |
 | ~~5~~ | ~~**OQ-DATA-2**~~ ✔ — append ingestion vs full snapshots | decision | maintainer | **1a** — W4, only if the first dataset is large |
-| **6** | **OQ-MODEL-1** — do expression objectives ship in Phase 1b? | decision | maintainer | **1b** — W5 scope, materially |
-| **7** | **OQ-MODEL-5** — credibility standard | decision | maintainer | **1b** — W5 grouping implementation |
+| ~~6~~ | ~~**OQ-MODEL-1**~~ ✔ — do expression objectives ship in Phase 1b? | decision | maintainer | **1b** — decided 2026-08-15: templates only, expressions in Phase 2 |
+| ~~7~~ | ~~**OQ-MODEL-5**~~ ✔ — credibility standard | decision | maintainer | **1b** — decided 2026-08-15: both, limited fluctuation by default |
 | ~~8~~ | ~~**S3** — LightGBM `init_score`~~ ✔ **done** | spike | — | Closed. Found a real asymmetry → FR-MODEL-72 |
 | ~~9~~ | ~~**Phase 1 split** — accept or reject 1a/1b~~ ✔ **ACCEPTED 2026-08-14** | decision | maintainer | Now the plan; `CLAUDE.md` §9 updated |
 
@@ -138,7 +140,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 |---|---|---|
 | 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-MODEL-3, OQ-PLAT-3) | decisions | Before Phase 2 — OQ-RATE-2 now decided |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
-| 7 Phase-3 decisions · 12 Phase-4 decisions · 12 any-time | decisions | Per gate (§10) |
+| 7 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6 and 7 came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
@@ -1293,7 +1295,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project. **Started 2026-08-15**: the GLM spine is in — see below |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: the GLM spine is in — see below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78) |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
@@ -1342,7 +1344,7 @@ surface sits in Phase 1.**
 | Risk | Mitigation |
 |---|---|
 | Validation engine is under-estimated — 48 built-in rules across four layers with sandboxing | Build layers 1 and 3 first (they gate fitting); layers 2 and 4 can follow |
-| Custom objectives are a research task, not a coding task | Answer OQ-MODEL-1; if templates-only, Phase 1 shrinks materially |
+| ~~Custom objectives are a research task, not a coding task~~ **retired 2026-08-15** — OQ-MODEL-1 decided: templates only, and the parser the risk was really about was built in W4 for `01` FR-DATA-10 | What is left in Phase 1 is the certification machinery (FR-MODEL-76), which certifies losses `pricing-core` already differentiates. The research risk moves to Phase 2 with the expressions (W30) |
 | Polars/DuckDB performance at 10 M rows discovered late | Test against a realistic dataset in W4, not at the end |
 | Diagnostics scope creep — `02` lists a lot of them | FR-MODEL-50 (universal) is the gate; 51/52 can land incrementally |
 
@@ -1368,10 +1370,11 @@ dislocation, and serves a live quote inside the latency budget.
 | **W13** | Dislocation with attribution | FR-RATE-46..49 |
 | **W14** | Deployment: environments, atomic switchover, rollback, shadow | FR-RATE-50..55; `07` FR-PLAT-28..31 |
 | **W15** | Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project |
+| **W30** | **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` | Added 2026-08-15 by OQ-MODEL-1's decision, which moved this work out of W5 rather than deleting it: `02` FR-MODEL-40/41, FR-MODEL-75, §4.6, and `wf-05` Route B. It depends on nothing in W9–W15 and could equally be pulled into 1b if W5 finishes early — but it must not start before the certification machinery it fronts (FR-MODEL-76) has run for a phase, which is the whole point of the decision |
 
 ### Requirement coverage
 
-≈ **67 `RATE` + ~25 remaining `PLAT`** requirements.
+≈ **67 `RATE` + ~25 remaining `PLAT`** requirements, plus the `MODEL` requirements W30 carries over (FR-MODEL-40/41/75 and the `expression` half of §4.6/§4.7).
 
 ### Top risks
 
@@ -1403,6 +1406,7 @@ external review.
 | **W20** | Dossier generation, commentary blocks, PDF, point-in-time regeneration | FR-GOV-27..31 |
 | **W21** | Regulatory evidence export | FR-GOV-32 |
 | **W22** | Model risk tiering, if OQ-GOV-4 is accepted | Small addition to Approval Policy |
+| **W31** | **Proxy assessment** — an insurer-supplied reference table, association measures (mutual information, exposure-weighted AUC), evidence attached to the approval request | Added 2026-08-15 by OQ-MODEL-7's decision: `02` FR-MODEL-82. **Evidence, never a block** — it belongs beside `04` FR-OPT-24's outcome disparity report, and both exist to inform a legal judgement the platform must not make |
 
 Much of the *write path* already exists from Phase 1 (§5). Phase 3 is largely the
 **surfacing** of it — which is why it is comparatively low-risk despite being 43
@@ -1443,12 +1447,12 @@ you never block on a decision you have not reached.
 
 | Gate | Questions | Count |
 |---|---|---|
-| ~~**Before Phase 1a**~~ ✔ **all decided 2026-08-14** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ | 4 (0 open) |
-| **Before Phase 1b** | OQ-OVR-5, OQ-MODEL-1, OQ-MODEL-5 | 3 |
+| ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
+| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔ *all 2026-08-15*, **OQ-OVR-6**, **OQ-MODEL-8** | 6 (2 open) |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
-| **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, OQ-MODEL-7 | 8 |
+| **Before Phase 3** | OQ-GOV-1..6, OQ-OVR-1, ~~OQ-MODEL-7~~ ✔ *decided 2026-08-15 — evidence in Phase 3 (W31), never a block* | 8 (7 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
-| **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, OQ-MODEL-2, OQ-MODEL-4, OQ-MODEL-6, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 |
+| **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 (4 open) |
 
 **OQ-RATE-1 was the one question able to invalidate an accepted ADR. It has been answered**
 — by a spike, not an opinion — and ADR-0004 survived
@@ -1459,6 +1463,20 @@ budget, so OQ-MODEL-3 remains a design choice rather than being decided by force
 
 **Every question that could only be answered with code has been.** What remains is
 judgement, not measurement.
+
+The last four rows of the 1a/1b gates were raised *during* the phase rather than before it — by
+driving the exit demo (OQ-DATA-7), by plan review 2 (OQ-OVR-6, OQ-PLAT-6) and by auditing the
+GLM spine (OQ-MODEL-8) — and had not reached this table until 2026-08-15. A gate row is only
+as good as its habit of being written down.
+
+**2026-08-15 — the six `MODEL` judgement calls were taken**, and none of them enlarged Phase 1:
+expressions moved to Phase 2 while their certification machinery stayed here (OQ-MODEL-1);
+the cheap prediction interval was refused outright rather than made optional (OQ-MODEL-2);
+SHAP interaction detection ships as suggestion, not action (OQ-MODEL-4); credibility gained a
+second method because the choice belongs per grouping (OQ-MODEL-5); the complexity gate is
+unset by default because the judgement belongs to an Approver (OQ-MODEL-6); and proxy
+detection became a Phase 3 deliverable that produces evidence and never a refusal (OQ-MODEL-7).
+The register carries the reasoning; `02` §3 carries the obligations, as FR-MODEL-75..82.
 
 ---
 

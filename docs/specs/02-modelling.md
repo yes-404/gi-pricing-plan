@@ -86,6 +86,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-3** | A Factor declares its **actuarial intent**: `risk` (a genuine rating variable), `control` (present to absorb variance but not to be rated on, e.g. year-of-account), `offset`, or `diagnostic`. Rating Versions may only use `risk` factors; a `control` factor reaching a rate table is a validation error in `03`. |
 | **FR-MODEL-4** | A Factor may declare a **monotonic direction** (`increasing`, `decreasing`, `none`) with a written rationale. The direction is enforced as a constraint in GBM fitting (FR-MODEL-20) and checked (not enforced) for GLMs, where a violation is reported as a diagnostic. |
 | **FR-MODEL-5** | A Factor may declare a **prohibited** flag with a reason (e.g. a protected characteristic or a proxy the insurer has decided not to use). Prohibited factors cannot be added to any Model Spec; the attempt is refused and audited. |
+| **FR-MODEL-82** | **Proxy detection is a Phase 3 deliverable, and never an automated block** (OQ-MODEL-7, decided 2026-08-15). Through Phases 1–2 the platform's only treatment of a protected characteristic is FR-MODEL-5's `prohibited` flag, which refuses direct use and audits the attempt; the platform holds no protected characteristics of its own (`00` FR-OVR-9). From Phase 3 an optional **proxy assessment** consumes an insurer-supplied reference table that does carry the characteristic, measures each candidate Factor's association with it — mutual information, and the AUC of the factor predicting it, exposure-weighted, with the reference population and its date recorded — and attaches the result to the approval request as evidence. It never refuses a Factor: whether an association amounts to unlawful discrimination is a legal judgement, not a statistical one, and a platform that answered it automatically would be answering a different question from the one asked. `04` FR-OPT-24 applies the same principle to price change. |
 | **FR-MODEL-6** | `expression` factors use the restricted grammar of §4.6 — the same grammar as custom objectives and preparation recipes — evaluated over dataset columns only. |
 | **FR-MODEL-7** | Factor definitions are reusable across Models and Model Families and are versioned independently; a Model Spec pins the exact Factor version it used. |
 
@@ -105,6 +106,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 |---|---|
 | **FR-MODEL-13** | A **Grouping** maps source Levels to target Levels, is exhaustive over observed Levels, and declares behaviour for unseen Levels at scoring time (`error`, `map_to_default`, `map_to_base`). Unseen-level behaviour is mandatory — there is no implicit default. |
 | **FR-MODEL-14** | The platform can propose groupings by `credibility_weighted` (merge Levels whose credibility-adjusted relativities are within a tolerance), `hierarchical_clustering` (on relativity with exposure weights), `tree`, or `reference_hierarchy` (roll up via a Reference Table, e.g. outcode → rating area → region). Manual override is always available. |
+| **FR-MODEL-80** | A `credibility_weighted` Grouping declares `credibility_model` ∈ `limited_fluctuation` (**default**) \| `buhlmann_straub` (OQ-MODEL-5, decided 2026-08-15). Limited fluctuation is the default because it is what a UK reviewer expects to see in a grouping justification: a full-credibility standard expressed in claim counts, stored with the `(p, k)` pair it was derived from (1 082 claims for ±5 % at 90 % confidence), and partial credibility `Z = sqrt(n / n_full)`. Bühlmann–Straub is selectable and persists its variance components — EVPV, VHM and the resulting `k` — in the grouping evidence, so a reviewer can re-derive `Z` rather than take it. The choice is recorded **per grouping** in `method_params` and stated in the model document: it is a modelling judgement, not a platform constant. |
 | **FR-MODEL-15** | Every Grouping stores its method, parameters, source Level statistics, the resulting target Level statistics, and the *change in fit* (deviance delta, degrees of freedom saved) it implies — grouping is a modelling decision and must be defensible as one. |
 | **FR-MODEL-16** | Groupings are first-class auditable operations: creation, edit, and use in a Model each emit Audit Events (FR-OVR-4), and a generated model document lists every grouping with its method and rationale. |
 | **FR-MODEL-17** | A Grouping may be **hierarchical** — a chain of groupings applied in order (outcode → area → region) — so an actuary can retain the finer level for diagnostics while rating on the coarser one. |
@@ -145,6 +147,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-33** | Every non-GLM Model must carry at least one **Transparency Artifact** before it can be referenced by a Rating Version (R3). Two forms are supported and both may be present. |
 | **FR-MODEL-34** | **GLM approximation** — a GLM fitted to the GBM's own predictions over the modelling population, with the same factor set (optionally banded), reporting R² / deviance explained against the GBM, and the residual pattern where the approximation is worst. This is the artifact that turns a GBM into something rateable as a table. |
 | **FR-MODEL-35** | **SHAP factor summary** — TreeSHAP mean absolute contribution per factor, per-factor dependence summaries (contribution vs factor value, exposure-weighted), and the top interaction pairs. Computed on a reproducible sample with a persisted seed and sample size. |
+| **FR-MODEL-79** | **Interaction candidates found in TreeSHAP interaction values are suggestions, never additions** (OQ-MODEL-4, decided 2026-08-15). The transparency artifact ranks the top pairs (FR-MODEL-35) and the factor workbench surfaces each with its exposure share and its holdout lift, so an actuary sees what a suggestion is worth and over how much of the book. The platform never writes a Factor into a Model Spec: an interaction becomes rateable only as an explicit `interaction` Factor (FR-MODEL-1) carrying an intent and a written rationale (FR-MODEL-3), and the generated model document names it as an authored decision. Auto-detected structure entering a rating basis unreviewed is precisely the overfitting route this refuses. |
 | **FR-MODEL-36** | The transparency artifact records an explicit **fidelity statement**: how well the approximation reproduces the model, where it does not, and the exposure share of the region where it does not. A Rating Version referencing the model surfaces this at approval time. |
 | **FR-MODEL-37** | EBM (`interpret`) models are treated as transparent by construction: their term shape functions are exported directly as tables and require no approximation, but they still carry the fidelity/diagnostic sections in the same contract shape. |
 
@@ -160,6 +163,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-68** | The derivative-agreement check must **exclude sampled points within the finite-difference step `h` of a `Piecewise` branch boundary**, and report the excluded count. A central difference straddling a kink is invalid, so without this exclusion the check fails every `where()`-based objective for a reason that has nothing to do with correctness (verified empirically — see [`research/track-a-findings.md`](../research/track-a-findings.md) F3). |
 | **FR-MODEL-69** | Branch boundaries are themselves a **reported finding**, not merely an exclusion: the certificate records where the gradient or hessian is discontinuous and over what share of the sampled domain. A discontinuous hessian affects boosting stability and an approver must see it. |
 | **FR-MODEL-70** | Derivative-agreement tolerances are **step-aware**. Truncation error alone reaches ~4e-04 at `h = 1e-6` on a steeply-curved loss, so a fixed tight tolerance is not meaningful. Richardson extrapolation is used where the loss is smooth; the achieved tolerance and the method are recorded on the certificate. |
+| **FR-MODEL-75** | **Phase 1 ships `template` objectives only; `expression` objectives ship in Phase 2** (OQ-MODEL-1, decided 2026-08-15). The `expression` kind is gated by the `expression_objectives_enabled` feature flag (`07` FR-PLAT-45/46), which defaults to off and stays off for the whole of Phase 1: `POST /custom-objectives` with `kind: expression` and `POST /custom-objectives/{id}/derive` are refused with `OBJECTIVE_KIND_NOT_ENABLED` rather than accepted and left uncertifiable. Nothing in §4.6 is withdrawn — the grammar is specified, and its parser is already built and in use for `01` FR-DATA-10 — so what Phase 2 adds is the symbolic derivation, a **second compilation target** (vectorised gradient and hessian kernels, where the existing parser emits Polars expressions), and the review path for a user-authored loss. |
+| **FR-MODEL-76** | **The certification machinery of §4.7 is built in Phase 1, against templates** (OQ-MODEL-1). FR-MODEL-42 is not weakened for templates: every Custom Objective version carries an `ObjectiveCertificate` before submission whatever its `kind`. One check substitutes — for `kind: template` the derivative-agreement check compares `pricing-core`'s **analytic** gradient and hessian against the numeric derivative (`analytic_vs_numeric`), where an `expression` objective compares the SymPy-derived form (`symbolic_vs_numeric`). Finiteness, convexity, branch discontinuity (FR-MODEL-68/69), step-aware tolerance (FR-MODEL-70) and the smoke fit are identical for both kinds. Expressions therefore arrive in Phase 2 as a new front end onto proven machinery, not as a new subsystem certified for the first time by its riskiest input. |
 | **FR-MODEL-43** | A non-convex objective (hessian negative anywhere in the sampled domain) is not refused outright — some legitimate pricing losses are non-convex — but is flagged `convexity: violated`, requires the hessian clipping strategy to be declared (`clip_to_min`, `abs`, `gauss_newton`), and requires an additional Approver. |
 | **FR-MODEL-44** | Objectives declare their **applicability**: which responses (`claim_count`, `claim_severity`, `burning_cost`, …), which backends (`xgboost`, `lightgbm`, `glm`), whether an offset is required, and the valid range of `y`. A Model Spec pairing an objective with an inapplicable response is refused at spec validation, before any compute is spent. |
 | **FR-MODEL-45** | Custom eval metrics (`feval`) follow the same lifecycle and grammar as objectives, declared separately so that a metric can be reused across objectives. |
@@ -178,6 +183,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-53** | Cross-validation is supported with declared fold construction (`random`, `temporal`, `grouped_by_key`) and a persisted seed; per-fold metrics and their dispersion are persisted, not just the mean. |
 | **FR-MODEL-54** | Diagnostics are computed on **train and holdout separately and always reported side by side**. A diagnostic reported without its holdout counterpart is a defect. |
 | **FR-MODEL-55** | Metrics are recorded with their weighting scheme explicit (exposure-weighted vs unweighted vs claim-count-weighted). An unweighted metric on an exposure-weighted problem is labelled as such in the UI. |
+| **FR-MODEL-81** | **Model complexity is a diagnostic by default, and a gate only where a workspace asks for one** (OQ-MODEL-6, decided 2026-08-15). Every fit records its factor count, its fitted-parameter count, and its exposure-per-parameter and claims-per-parameter ratios in the diagnostics, beside whatever thresholds are in force. The workspace settings `modelling.max_factor_count` and `modelling.min_exposure_per_parameter` (`07` FR-PLAT-45) are **unset by default**; where a workspace sets one, `POST /model-specs/validate` and `POST /models` refuse a breaching spec with `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT` before any compute is spent, and the refusal is audited. There is no platform-wide constant: a large book legitimately supports a large model, and whether *this* model is overfitted is a judgement for the Approver with the diagnostic in front of them (`06`), not for a number chosen here. |
 | **FR-MODEL-56** | Model comparison is a first-class operation: two or more Models fitted on the same holdout can be compared on aligned metrics, double-lift, and factor-by-factor relativity differences, producing a persisted comparison artifact citable in an approval request. |
 | **FR-MODEL-57** | A **backtest** on a later Dataset Version is supported and produces the same diagnostic shapes, marked with the version it ran against. Backtests are the evidence bridge into `05-monitoring.md`. |
 
@@ -196,6 +202,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 |---|---|
 | **FR-MODEL-62** | `pricing-core` can score any persisted Model from its declarative artifact alone (ADR-0003), with no dependency on the fitting session. GLM scoring requires no `glum`; GBM scoring loads the JSON booster. |
 | **FR-MODEL-63** | Prediction returns the expectation plus an uncertainty measure: GLM prediction intervals from the covariance matrix; GBM either quantile-model-based intervals or an explicit `uncertainty: unavailable` with the reason (R5). |
+| **FR-MODEL-77** | **A GBM prediction states `uncertainty: unavailable` with a typed `reason` unless interval models were fitted for it** (OQ-MODEL-2, decided 2026-08-15) — `no_interval_models_fitted`, `interval_models_not_approved`, or `interval_models_stale` (fitted against a superseded Model version). **The variance-model approximation is not offered at all**, at any setting: it is cheap, it renders as a predictive interval, and it is not one — and a wrong interval on a price is worse than no interval. R5 is satisfied by the explicit statement of absence, never by an approximation that reads like a measurement. |
+| **FR-MODEL-78** | **Paired quantile models are the supported route to a GBM prediction interval, opt-in and explicit** (OQ-MODEL-2). Each bound is a Model in its own right — same Model Family, same dataset version, split and factor set, fitted with the `quantile` template (§4.5) at a declared `alpha` — carrying `interval_for`, which names the central Model version and the alpha it estimates, so the 2–3× fit cost is a choice the actuary makes and can see. Crossing quantiles (a lower bound above its upper at any prediction) are **detected, reported in the diagnostics, and never silently reordered**: crossing means the pair does not describe one distribution, which the reader must be told rather than protected from. Whether §4.8 carries `interval_for` before the slice that fits one exists is OQ-MODEL-8's question, not this one. |
 | **FR-MODEL-64** | Model lifecycle is `draft → fitted → review → approved → superseded → archived`. `fitted` requires diagnostics; `review` requires diagnostics, a transparency artifact where applicable, and a completed model-document draft; `approved` is by an Approver who is not the author (`06-governance.md`). |
 | **FR-MODEL-65** | Model lineage records `parent_model_id` and a typed `change_reason` (`refit_new_data`, `respecified`, `rebanded`, `regrouped`, `hyperparameter_change`, `objective_change`, `bug_fix`) so a family's history reads as a narrative. |
 | **FR-MODEL-66** | The `spec_hash` (§2, Model Spec) is computed over the canonicalised spec including pinned versions and seed. Submitting an identical spec returns the existing Model instead of refitting, unless `force_refit` is set — which then requires the two fits to be compared for reproducibility (FR-OVR-8). |
@@ -262,7 +270,9 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
   "slug": "vehicle-group-to-rating-group",
   "column": "abi_vehicle_group",
   "method": "credibility_weighted",
-  "method_params": {"credibility_standard_claims": 1082, "merge_tolerance_relativity": 0.05},
+  "method_params": {"credibility_model": "limited_fluctuation",
+                    "credibility_standard_claims": 1082, "credibility_pk": {"p": 0.90, "k": 0.05},
+                    "merge_tolerance_relativity": 0.05},
   "derived_on_dataset_version_id": "uuid",
   "mapping": {"1": "G1", "2": "G1", "3": "G1", "4": "G2", "…": "…"},
   "unseen_level_behaviour": "map_to_default",
@@ -270,12 +280,19 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
   "parent_grouping_id": null,
   "evidence": {
     "source_level_count": 50, "target_level_count": 8,
+    "credibility_components": null,
     "deviance_before": 184221.4, "deviance_after": 184388.1,
     "df_saved": 42, "chi2_p_value": 0.31,
     "target_level_stats": [{"level": "G1", "exposure_years": "180422.1", "claim_count": 19204, "relativity": 0.78}]
   }
 }
 ```
+
+`credibility_model` defaults to `limited_fluctuation` and is recorded per grouping
+(FR-MODEL-80). `credibility_pk` is the `(p, k)` pair the standard was derived from — 1 082
+claims is ±5 % at 90 % confidence, and a reviewer who cannot see `(p, k)` cannot tell 1 082
+from a house number. `credibility_components` carries Bühlmann–Straub's EVPV, VHM and `k`
+and is `null` under limited fluctuation.
 
 ### 4.4 `ModelSpec` (tagged union on `model_type`)
 
@@ -355,12 +372,18 @@ Shipped templates, each with analytic gradient/hessian in `pricing-core` (FR-MOD
 | `asymmetric_poisson` | `w_under`, `w_over` | Poisson deviance with side-dependent weights | Same intent, count response |
 | `huber` | `delta` | Quadratic within `delta`, linear beyond | Outlier-robust burning cost |
 | `pseudo_huber` | `delta` | Smooth Huber (twice differentiable everywhere) | Preferred where hessian smoothness matters |
-| `quantile` | `alpha` | Pinball loss | Quantile models for prediction intervals (FR-MODEL-63) |
+| `quantile` | `alpha` | Pinball loss | Paired quantile models — the only supported GBM prediction interval (FR-MODEL-63, FR-MODEL-78) |
 | `zero_inflated_poisson` | `pi_link` | ZIP negative log-likelihood | Very low-frequency perils |
 | `focal_binomial` | `gamma` | Focal loss on logistic | Heavily imbalanced conversion models |
 
 Each template declares its `applicability` block (FR-MODEL-44) and its own parameter
 validity ranges (e.g. `tweedie.p ∈ (1, 2)` exclusive, `cap > 0`).
+
+**This catalogue is the whole of Phase 1's custom-objective surface** (FR-MODEL-75,
+OQ-MODEL-1 decided 2026-08-15): `expression` objectives ship in Phase 2, behind a flag that
+is off until they do. A template still certifies (§4.7, FR-MODEL-76) — the machinery is
+built here, on losses whose derivatives `pricing-core` already knows, so that the first
+user-authored loss meets a certification path that has been running for a phase.
 
 ### 4.6 Restricted expression grammar
 
@@ -468,6 +491,11 @@ Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-
 
 `overall` ∈ `certified` | `certified_with_findings` | `failed`. A `failed` certificate
 blocks submission entirely.
+
+For `kind: template` the first two checks are named `analytic_vs_numeric_gradient` and
+`analytic_vs_numeric_hessian` — the comparison is against `pricing-core`'s analytic
+derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, and the
+`sampling` block that makes the findings interpretable, is identical for both kinds.
 
 ### 4.8 `Model`
 
@@ -644,6 +672,7 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 `GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED`, `OFFSET_REQUIRED_FOR_FREQUENCY`,
 `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
 `OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`, `OBJECTIVE_NOT_CERTIFIED`,
+`OBJECTIVE_KIND_NOT_ENABLED`, `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT`,
 `OBJECTIVE_GRAMMAR_VIOLATION`, `OBJECTIVE_NONFINITE_DERIVATIVE`,
 `TRANSPARENCY_ARTIFACT_REQUIRED`, `MODEL_IMMUTABLE`, `PICKLE_PERSISTENCE_REFUSED`,
 `PERIL_STRUCTURE_RECONCILIATION_FAILED`.
@@ -710,12 +739,12 @@ def make_xgb_objective(fns: ObjectiveFns, base_margin: np.ndarray | None):
 
 | View | Route | Contents |
 |---|---|---|
-| Factor workbench | `/factors/:datasetVersionId` | Column list with profile one-ways (`01` FR-DATA-26), banding editor with draggable boundaries and live band stats, grouping editor with relativity-ordered levels and merge tolerance slider, monotonic-direction and intent controls |
+| Factor workbench | `/factors/:datasetVersionId` | Column list with profile one-ways (`01` FR-DATA-26), banding editor with draggable boundaries and live band stats, grouping editor with relativity-ordered levels and merge tolerance slider, monotonic-direction and intent controls, interaction suggestions with exposure share and holdout lift which the actuary adds as explicit Factors or ignores (FR-MODEL-79) |
 | Model spec builder | `/models/new` | Dataset/split pickers, response & offset/weight, factor multi-select, model-type tabs, objective picker (builtin or approved custom), hyperparameters, live spec validation (FR-MODEL-44) |
 | Model detail | `/models/:slug` | Spec summary, coefficient/relativity tables with CI bars, fit metadata, lineage strip, flags. `?version=` selects one; the latest by default |
 | Diagnostics | `/models/:slug@:version/diagnostics` | Train/holdout side-by-side throughout; A/E by factor, lift & double-lift, calibration, residuals, GBM eval curves and importances, CV fold dispersion |
 | Model comparison | `/models/compare?ids=` | Aligned metric table, double-lift chart, factor-by-factor relativity diff |
-| Custom objective library | `/objectives` | List with status, applicability, usage count; editor with live parse errors, derived gradient/hessian display, loss-curve preview at chosen parameter values |
+| Custom objective library | `/objectives` | List with status, applicability, usage count; editor with live parse errors (expression authoring is gated by `expression_objectives_enabled` and off throughout Phase 1 — FR-MODEL-75), derived gradient/hessian display, loss-curve preview at chosen parameter values |
 | Objective certificate | `/objectives/:slug@:version/certificate` | Per-check pass/warn/fail, convexity heatmap over the sampled `(y, f)` domain, smoke-fit result |
 | Peril structure | `/peril-structures/:slug@:version` | Per-peril model pins, large-loss treatment, reconciliation panel |
 
@@ -786,12 +815,12 @@ Custom objective path: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-0
 | **XGBoost** | Primary GBM (FR-MODEL-25..32) | Custom objective `(grad, hess)` signature, `base_margin`, `monotone_constraints`, `interaction_constraints`, JSON model IO, `QuantileDMatrix` for memory |
 | **LightGBM** | Secondary GBM | `fobj`/`feval`, `init_score` as the offset, monotone constraint methods (`basic`/`intermediate`/`advanced`), native categoricals |
 | **interpret (EBM)** | Transparent ML (FR-MODEL-37) | Exporting term shape functions as tables; treating an EBM as a set of additive lookups |
-| **SHAP** | Transparency artifacts (FR-MODEL-35) | TreeSHAP on boosted trees, interaction values, exposure-weighted dependence summaries, sampling cost |
-| **SymPy** | Symbolic gradient/hessian derivation (FR-MODEL-40) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
+| **SHAP** | Transparency artifacts (FR-MODEL-35) | TreeSHAP on boosted trees, interaction values (which feed FR-MODEL-79's suggestions and never a Factor), exposure-weighted dependence summaries, sampling cost |
+| **SymPy** | Symbolic gradient/hessian derivation (FR-MODEL-40) — **Phase 2**, with `expression` objectives (FR-MODEL-75) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
 | **Python `ast`** | Restricted grammar parsing (§4.6) | Allow-list node walking, depth/size limits, why `eval`/`compile` on user input is never acceptable |
 | **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | Expression API for banding (`cut`), joins for grouping maps |
-| **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification | `scipy.optimize` for the profile grid, `scipy.stats` for CIs |
+| **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification, credibility standards for `credibility_weighted` groupings (FR-MODEL-80) | `scipy.optimize` for the profile grid, `scipy.stats` for CIs |
 | **ECharts (frontend)** | Relativity plots with CI bands, lift/gains, calibration, PD plots, convexity heatmap | Large-series performance; dual-axis A/E charts |
 | **TanStack Table (frontend)** | Coefficient, relativity, banding, and grouping grids | Inline editing for boundaries and level merges |
 
@@ -826,11 +855,11 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 
 | ID | Question |
 |---|---|
-| **OQ-MODEL-1** | Should `expression` custom objectives ship in Phase 1 at all, or should Phase 1 ship only the `template` catalogue (§4.5) with expressions following in Phase 2 once the certification machinery is proven? |
-| **OQ-MODEL-2** | GBM prediction intervals: do we require paired quantile models (expensive, 2–3× fit cost), accept "uncertainty unavailable", or use a variance-model approximation that is easy to misread? |
+| **OQ-MODEL-1** | ~~Should `expression` custom objectives ship in Phase 1 at all, or only the `template` catalogue (§4.5)?~~ **DECIDED 2026-08-15: templates in Phase 1, expressions in Phase 2 — and the certification machinery is built in Phase 1 regardless.** Specified as FR-MODEL-75 and FR-MODEL-76. The restricted parser is not the deferred part and never was: it already exists for `01` FR-DATA-10. What Phase 2 adds is symbolic derivation, a second compilation target, and the review path for a loss a user wrote. |
+| **OQ-MODEL-2** | ~~GBM prediction intervals: paired quantile models, "uncertainty unavailable", or a variance-model approximation?~~ **DECIDED 2026-08-15: `uncertainty: unavailable` with a typed reason by default, opt-in paired quantile models, and the variance approximation is never shipped.** Specified as FR-MODEL-77 and FR-MODEL-78. |
 | **OQ-MODEL-3** | Is the GLM approximation of a GBM a *transparency artifact* only, or should it be directly rateable — i.e. can a Rating Version rate on the approximation instead of calling the GBM, trading fidelity for a fully tabular rating structure? |
-| **OQ-MODEL-4** | Do we support interactions as explicit Factors only, or also as automatically-detected candidates surfaced from SHAP interaction values? Auto-detection is powerful and a well-known route to overfitting. |
-| **OQ-MODEL-5** | Credibility: which standard do we implement for `credibility_weighted` grouping — limited fluctuation (classical, simple, familiar to UK actuaries) or Bühlmann–Straub (more defensible, more parameters to explain)? |
-| **OQ-MODEL-6** | Should the platform enforce a maximum factor count or a minimum exposure-per-parameter ratio as a hard gate rather than a diagnostic warning? |
-| **OQ-MODEL-7** | How are protected-characteristic proxies detected? A `prohibited` flag (FR-MODEL-5) stops direct use, but proxy detection (e.g. postcode as an ethnicity proxy) needs a defined statistical test and a policy on what to do when it fires. |
+| **OQ-MODEL-4** | ~~Interactions as explicit Factors only, or also automatically-detected candidates from SHAP interaction values?~~ **DECIDED 2026-08-15: detected candidates are surfaced as suggestions with their exposure share and holdout lift; only an explicit Factor with a rationale can enter a Model Spec.** Specified as FR-MODEL-79. |
+| **OQ-MODEL-5** | ~~Which credibility standard for `credibility_weighted` grouping — limited fluctuation or Bühlmann–Straub?~~ **DECIDED 2026-08-15: both, limited fluctuation as the default, recorded per grouping.** Specified as FR-MODEL-80, with `credibility_model`, its `(p, k)` pair and Bühlmann–Straub's variance components persisted in §4.3. |
+| **OQ-MODEL-6** | ~~Hard gate on factor count / exposure-per-parameter, or a diagnostic warning?~~ **DECIDED 2026-08-15: a diagnostic always, and a gate only where a workspace configures one — unset by default.** Specified as FR-MODEL-81; the judgement belongs to the Approver (`06`), not to a constant chosen here. |
+| **OQ-MODEL-7** | ~~How are protected-characteristic proxies detected, and what happens when detection fires?~~ **DECIDED 2026-08-15: the `prohibited` flag is the whole of Phases 1–2; a Phase 3 proxy assessment produces evidence for the approval request and never a block.** Specified as FR-MODEL-82; delivery is a Phase 3 deliverable, so the decision is made and the work is not now. |
 | **OQ-MODEL-8** | Does the GLM spine grow to meet §4's field sets, or does §4 narrow to a staged contract? §4.1, §4.4 and §4.8 declare fields the spine does not implement, and §4.8's `status ≥ fitted ⟹ diagnostics_id set` cannot be met while diagnostics do not exist. Found by auditing the spine, 2026-08-15. |
