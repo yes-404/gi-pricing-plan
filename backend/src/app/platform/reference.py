@@ -28,13 +28,27 @@ from app.db.models import ReferenceRowRow, ReferenceTableRow, ReferenceTableVers
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, rbac
-from model_schema import JobSource, Permission, Principal
+from model_schema import (
+    JobSource,
+    Permission,
+    Principal,
+    ReferenceLookup,
+    ReferenceRow,
+    ReferenceTable,
+    ReferenceTableVersion,
+)
 
 __all__ = [
     "create_table",
+    "list_tables",
+    "list_versions",
     "load_version",
     "lookup",
     "publish_version",
+    "rows_as_at",
+    "to_table_schema",
+    "to_version_schema",
+    "version_view",
 ]
 
 _log = get_logger("app.reference")
@@ -234,7 +248,7 @@ async def lookup(
     key: str,
     as_at: date,
     version: int | None = None,
-) -> dict[str, Any]:
+) -> ReferenceLookup:
     """Point lookup, as at a date (FR-DATA-31).
 
     `version=None` reads the highest published version — acceptable for the debugging
@@ -282,14 +296,14 @@ async def lookup(
             f"{as_at.isoformat()}. The interval is half-open: a row ending on that date "
             "does not cover it.",
         )
-    return {
-        "reference_table_version_id": str(version_row.id),
-        "version": version_row.version,
-        "key": row.key,
-        "payload": row.payload,
-        "effective_from": row.effective_from.isoformat(),
-        "effective_to": row.effective_to.isoformat() if row.effective_to else None,
-    }
+    return ReferenceLookup(
+        reference_table_version_id=version_row.id,
+        version=version_row.version,
+        key=row.key,
+        payload=row.payload,
+        effective_from=row.effective_from,
+        effective_to=row.effective_to,
+    )
 
 
 async def _load_table(
@@ -314,3 +328,204 @@ def _as_date(value: Any) -> date | None:
     if value is None or isinstance(value, date):
         return value if not isinstance(value, bool) else None
     return date.fromisoformat(str(value))
+
+
+async def _version_stats(
+    session: AsyncSession, version_ids: Sequence[UUID]
+) -> dict[UUID, tuple[int, date | None, date | None]]:
+    """Row count and covered period per version, in one query rather than one per row.
+
+    The covered period is `[min(effective_from), max(effective_to))`, and `covers_to` is
+    null when **any** row is open-ended — `max()` over a nullable column ignores nulls, so
+    computing it that way would report a table that never expires as expiring.
+    """
+    if not version_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(
+                ReferenceRowRow.reference_table_version_id,
+                func.count(),
+                func.min(ReferenceRowRow.effective_from),
+                func.max(ReferenceRowRow.effective_to),
+                func.count().filter(ReferenceRowRow.effective_to.is_(None)),
+            )
+            .where(ReferenceRowRow.reference_table_version_id.in_(version_ids))
+            .group_by(ReferenceRowRow.reference_table_version_id)
+        )
+    ).all()
+    return {
+        version_id: (count, covers_from, None if open_ended else covers_to)
+        for version_id, count, covers_from, covers_to, open_ended in rows
+    }
+
+
+def to_table_schema(
+    row: ReferenceTableRow, *, latest_published: int | None = None, version_count: int = 0
+) -> ReferenceTable:
+    return ReferenceTable(
+        id=row.id,
+        slug=row.slug,
+        key_columns=tuple(row.key_columns or ()),
+        payload_columns=tuple(row.payload_columns or ()),
+        description=row.description,
+        created_at=row.created_at,
+        latest_published_version=latest_published,
+        version_count=version_count,
+    )
+
+
+def to_version_schema(
+    row: ReferenceTableVersionRow,
+    *,
+    slug: str,
+    stats: tuple[int, date | None, date | None] = (0, None, None),
+) -> ReferenceTableVersion:
+    row_count, covers_from, covers_to = stats
+    return ReferenceTableVersion(
+        id=row.id,
+        slug=slug,
+        version=row.version,
+        status=row.status,
+        source_note=row.source_note,
+        created_at=row.created_at,
+        row_count=row_count,
+        covers_from=covers_from,
+        covers_to=covers_to,
+    )
+
+
+async def list_tables(session: AsyncSession, *, workspace_id: UUID) -> list[ReferenceTable]:
+    """Every declared table, with the one number that says whether it can be pinned."""
+    tables = (
+        await session.execute(
+            select(ReferenceTableRow)
+            .where(ReferenceTableRow.workspace_id == workspace_id)
+            .order_by(ReferenceTableRow.slug)
+        )
+    ).scalars().all()
+    if not tables:
+        return []
+
+    counts = {
+        table_id: (total, latest)
+        for table_id, total, latest in (
+            await session.execute(
+                select(
+                    ReferenceTableVersionRow.reference_table_id,
+                    func.count(),
+                    func.max(ReferenceTableVersionRow.version).filter(
+                        ReferenceTableVersionRow.status == PUBLISHED
+                    ),
+                )
+                .where(
+                    ReferenceTableVersionRow.reference_table_id.in_([t.id for t in tables])
+                )
+                .group_by(ReferenceTableVersionRow.reference_table_id)
+            )
+        ).all()
+    }
+    return [
+        to_table_schema(
+            table,
+            latest_published=counts.get(table.id, (0, None))[1],
+            version_count=counts.get(table.id, (0, None))[0],
+        )
+        for table in tables
+    ]
+
+
+async def list_versions(
+    session: AsyncSession, *, workspace_id: UUID, slug: str
+) -> list[ReferenceTableVersion]:
+    """The version timeline, newest first (`01` §5.3)."""
+    table = await _load_table(session, workspace_id=workspace_id, slug=slug)
+    versions = (
+        await session.execute(
+            select(ReferenceTableVersionRow)
+            .where(ReferenceTableVersionRow.reference_table_id == table.id)
+            .order_by(ReferenceTableVersionRow.version.desc())
+        )
+    ).scalars().all()
+    stats = await _version_stats(session, [v.id for v in versions])
+    return [
+        to_version_schema(version, slug=slug, stats=stats.get(version.id, (0, None, None)))
+        for version in versions
+    ]
+
+
+async def version_view(
+    session: AsyncSession, *, workspace_id: UUID, slug: str, version: int
+) -> ReferenceTableVersion:
+    """One version with its real row count and covered period.
+
+    Used by the write routes for their responses. A response that reports what was asked
+    for rather than what was stored will eventually report something that did not happen.
+    """
+    versions = await list_versions(session, workspace_id=workspace_id, slug=slug)
+    found = next((v for v in versions if v.version == version), None)
+    if found is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "No such reference table version",
+            404,
+            f"{slug!r} has no version {version}.",
+        )
+    return found
+
+
+async def rows_as_at(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    as_at: date | None = None,
+    limit: int = 200,
+) -> list[ReferenceRow]:
+    """The rows of a version, optionally only those in force on a date (`01` §5.3).
+
+    `as_at=None` returns the version whole, which is what a reader wants when asking "what
+    changed?"; a date answers "what applied then?". Both read one **pinned** version — this
+    is a viewer, and it never falls back to the latest.
+    """
+    table = await _load_table(session, workspace_id=workspace_id, slug=slug)
+    version_row = (
+        await session.execute(
+            select(ReferenceTableVersionRow).where(
+                ReferenceTableVersionRow.reference_table_id == table.id,
+                ReferenceTableVersionRow.version == version,
+            )
+        )
+    ).scalar_one_or_none()
+    if version_row is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "No such reference table version",
+            404,
+            f"{slug!r} has no version {version}.",
+        )
+
+    query = select(ReferenceRowRow).where(
+        ReferenceRowRow.reference_table_version_id == version_row.id
+    )
+    if as_at is not None:
+        # Half-open, as everything else here is: a row ending on `as_at` does not cover it.
+        query = query.where(
+            ReferenceRowRow.effective_from <= as_at,
+            (ReferenceRowRow.effective_to.is_(None)) | (ReferenceRowRow.effective_to > as_at),
+        )
+    rows = (
+        await session.execute(
+            query.order_by(ReferenceRowRow.key, ReferenceRowRow.effective_from).limit(limit)
+        )
+    ).scalars().all()
+    return [
+        ReferenceRow(
+            key=row.key,
+            payload=row.payload,
+            effective_from=row.effective_from,
+            effective_to=row.effective_to,
+        )
+        for row in rows
+    ]

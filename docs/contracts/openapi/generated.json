@@ -2439,6 +2439,93 @@
         "title": "RecordGrain",
         "type": "string"
       },
+      "ReferenceLookup": {
+        "additionalProperties": false,
+        "description": "What a point lookup answers (FR-DATA-31) — for debugging, never for rating.",
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "reference_table_version_id": {
+            "format": "uuid",
+            "title": "Reference Table Version Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reference_table_version_id",
+          "version",
+          "key",
+          "effective_from"
+        ],
+        "title": "ReferenceLookup",
+        "type": "object"
+      },
+      "ReferenceRow": {
+        "additionalProperties": false,
+        "description": "One effective-dated row.",
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "effective_from"
+        ],
+        "title": "ReferenceRow",
+        "type": "object"
+      },
       "ReferenceRowIn": {
         "additionalProperties": false,
         "properties": {
@@ -2474,6 +2561,165 @@
           "effective_from"
         ],
         "title": "ReferenceRowIn",
+        "type": "object"
+      },
+      "ReferenceTable": {
+        "additionalProperties": false,
+        "description": "A declared table: what it is keyed by, and what it carries.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Columns",
+            "type": "array"
+          },
+          "latest_published_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Published Version"
+          },
+          "payload_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Payload Columns",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "version_count": {
+            "default": 0,
+            "title": "Version Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug"
+        ],
+        "title": "ReferenceTable",
+        "type": "object"
+      },
+      "ReferenceTableVersion": {
+        "additionalProperties": false,
+        "description": "An immutable version of a table (FR-DATA-30).",
+        "properties": {
+          "covers_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covers From"
+          },
+          "covers_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Covers To"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "row_count": {
+            "default": 0,
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "status": {
+            "default": "draft",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "version"
+        ],
+        "title": "ReferenceTableVersion",
         "type": "object"
       },
       "ReportSummary": {
@@ -3788,41 +4034,6 @@
           "exposure_years"
         ],
         "title": "VersionTotals",
-        "type": "object"
-      },
-      "VersionView": {
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "row_count": {
-            "title": "Row Count",
-            "type": "integer"
-          },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "version",
-          "status",
-          "row_count"
-        ],
-        "title": "VersionView",
         "type": "object"
       },
       "Withdraw": {
@@ -7834,6 +8045,75 @@
       }
     },
     "/api/v1/reference-tables": {
+      "get": {
+        "description": "`01` §5.3's table list.\n\nNot paginated: a workspace has tens of reference tables, not thousands, and a cursor\non a list this size is machinery with nothing to do. Each row carries\n`latest_published_version`, which is null while every version is a draft — the state\nthat decides whether the table can be pinned at all.",
+        "operationId": "list_tables_api_v1_reference_tables_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReferenceTable"
+                  },
+                  "title": "Response List Tables Api V1 Reference Tables Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List declared reference tables",
+        "tags": [
+          "reference data"
+        ]
+      },
       "post": {
         "operationId": "create_table_api_v1_reference_tables_post",
         "requestBody": {
@@ -7851,9 +8131,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Table Api V1 Reference Tables Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReferenceTable"
                 }
               }
             },
@@ -7983,9 +8261,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Lookup Api V1 Reference Tables  Slug  Lookup Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReferenceLookup"
                 }
               }
             },
@@ -8059,6 +8335,101 @@
       }
     },
     "/api/v1/reference-tables/{slug}/versions": {
+      "get": {
+        "description": "Newest first, each with the period its rows cover.\n\n`covers_from`/`covers_to` are what `VR-REF-3` checks a dataset's as-at date against, so\na reader deciding which version to pin can see the answer rather than infer it.",
+        "operationId": "list_versions_api_v1_reference_tables__slug__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReferenceTableVersion"
+                  },
+                  "title": "Response List Versions Api V1 Reference Tables  Slug  Versions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "The version timeline",
+        "tags": [
+          "reference data"
+        ]
+      },
       "post": {
         "description": "FR-DATA-29. Loaded whole, into `draft`; publish it to make it pinnable.",
         "operationId": "load_version_api_v1_reference_tables__slug__versions_post",
@@ -8088,7 +8459,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VersionView"
+                  "$ref": "#/components/schemas/ReferenceTableVersion"
                 }
               }
             },
@@ -8204,7 +8575,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VersionView"
+                  "$ref": "#/components/schemas/ReferenceTableVersion"
                 }
               }
             },
@@ -8272,6 +8643,141 @@
           }
         },
         "summary": "Publish a reference table version",
+        "tags": [
+          "reference data"
+        ]
+      }
+    },
+    "/api/v1/reference-tables/{slug}/versions/{version}/rows": {
+      "get": {
+        "description": "`01` §5.3's effective-date viewer.\n\nAlways reads the **pinned** version named in the path. Omitting `as_at` returns the\nversion whole, which answers \"what changed?\"; supplying one answers \"what applied\nthen?\". Neither ever falls back to the latest version — that is the mistake\nFR-DATA-32 exists to prevent, and a viewer that made it would teach it.",
+        "operationId": "list_rows_api_v1_reference_tables__slug__versions__version__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_at",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As At"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReferenceRow"
+                  },
+                  "title": "Response List Rows Api V1 Reference Tables  Slug  Versions  Version  Rows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Rows of a pinned version, optionally as at a date",
         "tags": [
           "reference data"
         ]

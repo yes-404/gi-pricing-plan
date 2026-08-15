@@ -512,8 +512,20 @@ versions must not overlap (FR-DATA-29), enforced by a PostgreSQL exclusion const
 | `POST` | `/api/v1/validation-rules/{id}/submit` | Submit for approval |
 | `POST` | `/api/v1/validation-rules/{id}/approve` | Approve a rule in review — never its author (§4.5 step 3) |
 | `GET`/`PUT` | `/api/v1/datasets/{slug}/rule-set` | Read / replace the Rule Set (creates a new rule-set version) |
+| `GET` | `/api/v1/reference-tables` | List declared Reference Tables |
 | `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-DATA-29) |
+| `GET` | `/api/v1/reference-tables/{slug}/versions` | The version timeline, with each version's covered period |
+| `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-DATA-32) |
 | `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-DATA-31) |
+
+> **Three reference read routes added 2026-08-15 (W6a).** §5.3 asks the `/reference` view
+> for a table list, a version timeline and an effective-date viewer, and §5.1 declared none
+> of them: the surface was write-plus-lookup. The endpoint audit compares this table against
+> the published contract, so an endpoint missing from **both** read as complete coverage —
+> the same blind spot §13 records for requirement markers, one level up.
+>
+> The rows route always reads the version named in the path and never falls back to the
+> latest, because FR-DATA-32 is the rule this screen is most likely to teach by example.
 
 > **`GET /datasets/{slug}/versions` added 2026-08-15 (W6a).** §5.3 requires the Dataset
 > detail view to render a **version timeline**, and §5.1 offered only `latest_version` and

@@ -5,7 +5,15 @@
 | `POST` | `/reference-tables` | Declare a table |
 | `POST` | `/reference-tables/{slug}/versions` | Load a new version (FR-DATA-29) |
 | `POST` | `/reference-tables/{slug}/versions/{version}/publish` | Make it pinnable |
+| `GET` | `/reference-tables` | List declared tables |
+| `GET` | `/reference-tables/{slug}/versions` | The version timeline |
+| `GET` | `/reference-tables/{slug}/versions/{version}/rows` | Rows, optionally as at a date |
 | `GET` | `/reference-tables/{slug}/lookup` | Point lookup for debugging (FR-DATA-31) |
+
+The three read routes were added in W6a. `01` §5.3 asks the `/reference` view for a table
+list, a version timeline and an effective-date viewer, and §5.1 declared none of them —
+so the endpoint audit, which compares the spec's table against the published contract,
+saw a complete surface. An endpoint missing from **both** is invisible to it.
 
 The lookup endpoint is **for debugging**, and its docstring says so where a reader will
 see it. Rating resolves a reference through a pinned version id (FR-DATA-32); an endpoint
@@ -28,6 +36,12 @@ from app.api.responses import problems
 from app.db.session import Database
 from app.platform import reference as service
 from model_schema import Permission as Perm
+from model_schema import (
+    ReferenceLookup,
+    ReferenceRow,
+    ReferenceTable,
+    ReferenceTableVersion,
+)
 
 __all__ = ["router"]
 
@@ -90,7 +104,7 @@ class VersionView(BaseModel):
 )
 async def create_table(
     body: TableCreate, caller: ManageReference, database: DatabaseDep
-) -> dict[str, Any]:
+) -> ReferenceTable:
     async with database.unit_of_work() as session:
         row = await service.create_table(
             session,
@@ -101,12 +115,11 @@ async def create_table(
             payload_columns=body.payload_columns,
             description=body.description,
         )
-        return {
-            "id": str(row.id),
-            "slug": row.slug,
-            "key_columns": row.key_columns,
-            "payload_columns": row.payload_columns,
-        }
+        # The schema type, not a hand-built dict: `CLAUDE.md` §2's rule is that a shape
+        # crossing the boundary is defined once. The dict published `additionalProperties`
+        # to the contract, which generates a TypeScript type a client cannot read a field
+        # from — the frontend would have had to declare the shape a second time.
+        return service.to_table_schema(row)
 
 
 @router.post(
@@ -117,7 +130,7 @@ async def create_table(
 )
 async def load_version(
     slug: str, body: VersionLoad, caller: ManageReference, database: DatabaseDep
-) -> VersionView:
+) -> ReferenceTableVersion:
     """FR-DATA-29. Loaded whole, into `draft`; publish it to make it pinnable."""
     async with database.unit_of_work() as session:
         row = await service.load_version(
@@ -128,9 +141,12 @@ async def load_version(
             rows=[entry.model_dump() for entry in body.rows],
             source_note=body.source_note,
         )
-        return VersionView(
-            id=row.id, slug=slug, version=row.version, status=row.status,
-            row_count=len(body.rows),
+        # The real covered period, not `(len(rows), None, None)`: a load response that
+        # said `covers_from: null` for a version that covers 2026 is the same lie the
+        # publish response used to tell about its row count, and a client cannot tell a
+        # fabricated null from a genuine one.
+        return await service.version_view(
+            session, workspace_id=caller.workspace_id, slug=slug, version=row.version
         )
 
 
@@ -141,7 +157,7 @@ async def load_version(
 )
 async def publish_version(
     slug: str, version: int, caller: ManageReference, database: DatabaseDep
-) -> VersionView:
+) -> ReferenceTableVersion:
     async with database.unit_of_work() as session:
         row = await service.publish_version(
             session,
@@ -150,8 +166,10 @@ async def publish_version(
             slug=slug,
             version=version,
         )
-        return VersionView(
-            id=row.id, slug=slug, version=row.version, status=row.status, row_count=0
+        # Was `row_count=0` regardless — a published version's own response said it had
+        # no rows, and a client rendering it would have shown exactly that.
+        return await service.version_view(
+            session, workspace_id=caller.workspace_id, slug=slug, version=row.version
         )
 
 
@@ -167,7 +185,7 @@ async def lookup(
     key: Annotated[str, Query(min_length=1)],
     as_at: Annotated[date, Query()],
     version: Annotated[int | None, Query(ge=1)] = None,
-) -> dict[str, Any]:
+) -> ReferenceLookup:
     """**For debugging** (FR-DATA-31).
 
     Rating pins a reference version id (FR-DATA-32) and never resolves "the latest" at
@@ -182,4 +200,71 @@ async def lookup(
             key=key,
             as_at=as_at,
             version=version,
+        )
+
+
+@router.get(
+    "",
+    summary="List declared reference tables",
+    responses=problems(401, 403, 422),
+)
+async def list_tables(caller: ReadDatasets, database: DatabaseDep) -> list[ReferenceTable]:
+    """`01` §5.3's table list.
+
+    Not paginated: a workspace has tens of reference tables, not thousands, and a cursor
+    on a list this size is machinery with nothing to do. Each row carries
+    `latest_published_version`, which is null while every version is a draft — the state
+    that decides whether the table can be pinned at all.
+    """
+    async with database.session() as session:
+        return await service.list_tables(session, workspace_id=caller.workspace_id)
+
+
+@router.get(
+    "/{slug}/versions",
+    summary="The version timeline",
+    responses=problems(401, 403, 404, 422),
+)
+async def list_versions(
+    slug: str, caller: ReadDatasets, database: DatabaseDep
+) -> list[ReferenceTableVersion]:
+    """Newest first, each with the period its rows cover.
+
+    `covers_from`/`covers_to` are what `VR-REF-3` checks a dataset's as-at date against, so
+    a reader deciding which version to pin can see the answer rather than infer it.
+    """
+    async with database.session() as session:
+        return await service.list_versions(
+            session, workspace_id=caller.workspace_id, slug=slug
+        )
+
+
+@router.get(
+    "/{slug}/versions/{version}/rows",
+    summary="Rows of a pinned version, optionally as at a date",
+    responses=problems(401, 403, 404, 422),
+)
+async def list_rows(
+    slug: str,
+    version: int,
+    caller: ReadDatasets,
+    database: DatabaseDep,
+    as_at: Annotated[date | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> list[ReferenceRow]:
+    """`01` §5.3's effective-date viewer.
+
+    Always reads the **pinned** version named in the path. Omitting `as_at` returns the
+    version whole, which answers "what changed?"; supplying one answers "what applied
+    then?". Neither ever falls back to the latest version — that is the mistake
+    FR-DATA-32 exists to prevent, and a viewer that made it would teach it.
+    """
+    async with database.session() as session:
+        return await service.rows_as_at(
+            session,
+            workspace_id=caller.workspace_id,
+            slug=slug,
+            version=version,
+            as_at=as_at,
+            limit=limit,
         )
