@@ -26,6 +26,7 @@ from app.observability.logging import get_logger
 from app.platform import audit, datasets, rbac
 from app.platform.rbac import ResourceRef
 from model_schema import (
+    Acknowledgement,
     JobSource,
     OverallOutcome,
     Permission,
@@ -37,7 +38,9 @@ from model_schema import (
 
 __all__ = [
     "acknowledge",
+    "acknowledgements_for",
     "load_report",
+    "load_report_view",
     "promote_using_report",
     "reports_for_version",
     "store_report",
@@ -153,6 +156,57 @@ async def load_report(
             "NOT_FOUND", "Validation report not found", 404, f"No report {report_id}."
         )
     return ValidationReport.model_validate(row.body)
+
+
+async def acknowledgements_for(
+    session: AsyncSession, *, workspace_id: UUID, report_id: UUID
+) -> dict[UUID, Acknowledgement]:
+    """The acknowledgements recorded against a report, by rule id (FR-DATA-18)."""
+    result = await session.execute(
+        select(AcknowledgementRow).where(
+            AcknowledgementRow.workspace_id == workspace_id,
+            AcknowledgementRow.report_id == report_id,
+        )
+    )
+    return {
+        row.rule_id: Acknowledgement(
+            user_id=row.user_id, at=row.acknowledged_at, justification=row.justification
+        )
+        for row in result.scalars()
+    }
+
+
+async def load_report_view(
+    session: AsyncSession, *, workspace_id: UUID, report_id: UUID
+) -> ValidationReport:
+    """The report **as presented**, with its acknowledgements merged in.
+
+    Distinct from `load_report`, which returns the stored artifact verbatim and must keep
+    doing so — NFR-DATA-5 compares bodies byte for byte, and an accessor that folded in
+    rows written afterwards would make an immutable artifact appear to change.
+
+    The merge belongs at the read edge because an acknowledgement is a fact *about* a
+    report rather than inside it (`01` §4.6, amended). Without it the API can say how many
+    warnings are outstanding but not **which** — and "warnings needing acknowledgement" is
+    a band `01` §5.3 requires the validation view to render above the fold. With one
+    warning a client could infer it; with three it cannot.
+    """
+    report = await load_report(session, workspace_id=workspace_id, report_id=report_id)
+    acknowledged = await acknowledgements_for(
+        session, workspace_id=workspace_id, report_id=report_id
+    )
+    if not acknowledged:
+        return report
+    return report.model_copy(
+        update={
+            "results": tuple(
+                result.model_copy(update={"acknowledgement": acknowledged[result.rule_id]})
+                if result.rule_id in acknowledged
+                else result
+                for result in report.results
+            )
+        }
+    )
 
 
 async def reports_for_version(

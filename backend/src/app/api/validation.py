@@ -102,7 +102,9 @@ async def get_report(
     report_id: UUID, caller: ReadDatasets, database: DatabaseDep
 ) -> ValidationReport:
     async with database.session() as session:
-        return await service.load_report(
+        # The report *as presented*: its acknowledgements merged in, so a client can tell
+        # which warnings still need one. The stored artifact is untouched.
+        return await service.load_report_view(
             session, workspace_id=caller.workspace_id, report_id=report_id
         )
 
