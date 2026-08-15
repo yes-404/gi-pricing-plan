@@ -20,6 +20,7 @@ from app.api import (
     blobs,
     dataset_versions,
     datasets,
+    demo,
     health,
     jobs,
     me,
@@ -92,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(approvals.router, prefix=API_PREFIX)
     # `01` — Data. Order matters only for readability; FastAPI matches on the full path.
     app.include_router(blobs.router, prefix=API_PREFIX)
+    app.include_router(demo.router, prefix=API_PREFIX)
     app.include_router(datasets.router, prefix=API_PREFIX)
     app.include_router(dataset_versions.router, prefix=API_PREFIX)
     app.include_router(validation.router, prefix=API_PREFIX)

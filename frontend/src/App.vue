@@ -20,6 +20,13 @@ import { RouterLink, RouterView } from "vue-router";
           Data
         </RouterLink>
         <RouterLink
+          to="/demo"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Demo
+        </RouterLink>
+        <RouterLink
           to="/reference"
           class="text-sm text-slate-600 hover:text-slate-900"
           active-class="text-slate-900 font-medium"

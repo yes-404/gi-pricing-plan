@@ -7,6 +7,14 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 const routes: RouteRecordRaw[] = [
   { path: "/", redirect: "/data" },
   {
+    // FR-PLAT-53's entrance. Routed unconditionally; the API answers 404 where the demo is
+    // not enabled, and the view reads that as a state rather than a failure — so there is
+    // one switch (`dev_auth_enabled`), not a second one in the frontend build.
+    path: "/demo",
+    name: "demo",
+    component: () => import("@/views/DemoView.vue"),
+  },
+  {
     path: "/data",
     name: "datasets",
     component: () => import("@/views/DatasetListView.vue"),

@@ -1236,6 +1236,148 @@
         "title": "DecisionKind",
         "type": "string"
       },
+      "DemoApiGroup": {
+        "additionalProperties": false,
+        "description": "Published endpoints under one OpenAPI tag, from `docs/contracts/` (FR-PLAT-48).",
+        "properties": {
+          "endpoints": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Endpoints",
+            "type": "array"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag"
+        ],
+        "title": "DemoApiGroup",
+        "type": "object"
+      },
+      "DemoGuide": {
+        "additionalProperties": false,
+        "description": "What is worth driving by hand today, and — the half that matters — what is not.",
+        "properties": {
+          "api": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DemoApiGroup"
+            },
+            "title": "Api",
+            "type": "array"
+          },
+          "generated_from": {
+            "default": [],
+            "description": "The files this was derived from. Named so a reader can check it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Generated From",
+            "type": "array"
+          },
+          "views": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DemoView"
+            },
+            "title": "Views",
+            "type": "array"
+          },
+          "workstreams": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DemoWorkstream"
+            },
+            "title": "Workstreams",
+            "type": "array"
+          }
+        },
+        "title": "DemoGuide",
+        "type": "object"
+      },
+      "DemoView": {
+        "additionalProperties": false,
+        "description": "One view a spec's §5.3 declares, and whether the frontend actually routes it.",
+        "properties": {
+          "contents": {
+            "title": "Contents",
+            "type": "string"
+          },
+          "implemented": {
+            "description": "The route pattern appears in the frontend router. A fact, not a claim.",
+            "title": "Implemented",
+            "type": "boolean"
+          },
+          "module": {
+            "description": "Its requirement prefix, e.g. `DATA`.",
+            "title": "Module",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "spec": {
+            "description": "The spec that declares it, e.g. `01-data-management`.",
+            "title": "Spec",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec",
+          "module",
+          "name",
+          "route",
+          "contents",
+          "implemented"
+        ],
+        "title": "DemoView",
+        "type": "object"
+      },
+      "DemoWorkstream": {
+        "additionalProperties": false,
+        "description": "A row of the roadmap's phase status table, as written there.",
+        "properties": {
+          "closed": {
+            "title": "Closed",
+            "type": "boolean"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "workstream": {
+            "title": "Workstream",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phase",
+          "workstream",
+          "scope",
+          "status",
+          "closed"
+        ],
+        "title": "DemoWorkstream",
+        "type": "object"
+      },
       "DeriveRequest": {
         "additionalProperties": false,
         "properties": {
@@ -7398,6 +7540,73 @@
         "summary": "Correct the inferred schema",
         "tags": [
           "datasets"
+        ]
+      }
+    },
+    "/api/v1/demo/guide": {
+      "get": {
+        "description": "Derived on every request from the specs, the router, the contract and the roadmap.\n\nNever stored: a stored guide needs a drift check to stay honest, and a drift check is a\npromise that somebody will run it. The guide's purpose is telling a person what to\ntrust, so it must not be capable of being wrong.",
+        "operationId": "get_guide_api_v1_demo_guide_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoGuide"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "What is testable today, derived from the repository (FR-PLAT-54)",
+        "tags": [
+          "demo"
         ]
       }
     },

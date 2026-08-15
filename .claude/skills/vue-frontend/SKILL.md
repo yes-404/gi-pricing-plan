@@ -310,6 +310,25 @@ must be 401. If both are 401, the env vars were not set in the shell that starte
 **`localhost`, not `127.0.0.1`.** Vite binds IPv6 by default, so `curl 127.0.0.1:5173`
 gets connection-refused while the server is running perfectly.
 
+## Starting the dev server from a script: three traps, all found by running it
+
+`scripts/demo.py` starts the API and the frontend together (FR-PLAT-53). Each of these cost
+a debugging session:
+
+- **`pnpm` is not the process you kill.** It spawns `sh -c vite`, so `Popen.send_signal`
+  stops the shell and orphans the server; the next run finds port 5173 held and fails for
+  a reason that looks unrelated. Start with `start_new_session=True` and stop with
+  `os.killpg(os.getpgid(pid), …)`.
+- **`--strictPort`, always.** Without it Vite moves to the next free port when 5173 is
+  taken, and a script that then prints `http://localhost:5173` is advertising a server it
+  did not start — possibly with a different dev identity, answering happily.
+- **Flush every `print`.** Subprocesses write to the same descriptor unbuffered, so
+  buffered step headers appear *after* the output they introduce, and when stdout is a file
+  the final "open this URL" banner can sit in the buffer indefinitely.
+
+Waiting for readiness: poll until the server answers **anything**, including 401. Waiting
+for 200 on an authenticated route hangs until the timeout on a perfectly healthy server.
+
 ## Verified
 
 2026-08-15 — written as W6a's groundwork, from the decided stack and the shapes the
@@ -342,3 +361,6 @@ column"), and the same dataset yields `area`, `veh_power`, `veh_brand`, `veh_gas
 2026-08-15 — W6a close. The rule-set editor and `/reference` complete `01` §5.3's seven
 views. The dev-identity section above was written after a live check found that no browser
 could reach the API at all, six views into the workstream.
+
+2026-08-15 — W7b. The three dev-server traps above were found by running `scripts/demo.py`,
+not by testing it: every unit test passed while Ctrl-C was leaving a server behind.

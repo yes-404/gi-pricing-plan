@@ -226,6 +226,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W3**~~ ✔ | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | **Closed 2026-08-14** — §5 skeleton only, no governance UI |
 | ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
 | ~~**W6a**~~ ✔ | Frontend: app shell, dataset views, **validation report view** | W4 ✔ | **Closed 2026-08-15** — all **7** of `01` §5.3's views, 75 frontend tests |
+| ~~**W7b**~~ ✔ | **The demo entrance** and its derived guide | W6a ✔, W7a ✔ | **Closed 2026-08-15** — FR-PLAT-53/54. Split from W7 for the same reason W7a was: the entrance needs no modelling, and Phase 1a's exit demo needs the entrance |
 
 #### Phase 1a status
 
@@ -237,6 +238,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W4**~~ ✔ | Data — ingestion, preparation, validation, profiling, reference data | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W7a**~~ ✔ | freMTPL2 data seed — the demo dataset through the real Job path | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W6a**~~ ✔ | Frontend — app shell, dataset views, validation report view | ✔ **closed 2026-08-15** — see the closure record below |
+| ~~**W7b**~~ ✔ | Demo entrance — one command to a browser, with a derived guide | ✔ **closed 2026-08-15** — see the closure record below |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
@@ -252,6 +254,76 @@ authority.
 
 The first run happened at **W6a's close** — it is [below](#plan-review-1--at-w6as-close-2026-08-15),
 with the maintainer acceptance line each of its proposals needs.
+
+### W7b — The demo entrance: closed 2026-08-15
+
+**Scope, derived from `07` §3.9 before writing anything: two requirements** — FR-PLAT-53
+(one documented command from a clean checkout to an authenticated browser) and FR-PLAT-54
+(a guide to what is testable, derived rather than written). Both were added by `NT-0002`,
+accepted 2026-08-15, whose deliverable was *spec change first*; this is the code half.
+
+Split from W7 into Phase 1a for the reason W7a was: the entrance needs no model, and
+Phase 1a's exit demo needs the entrance. What remains in W7 is the half that needs a
+fitted model.
+
+| Deliverable | Evidence |
+|---|---|
+| One command | `uv run python scripts/demo.py` — compose, migrations, freMTPL2 seeded through the real Job path, API, frontend, development identity for the seeded workspace, and the URL |
+| The entrance | `/demo`, listing what is built, what is not, and the routes that can be opened without an id |
+| The derived guide | `GET /api/v1/demo/guide`, built on every request from four files |
+| One switch | 404 from the whole surface where `dev_auth_enabled` is false, refused **before** authentication so the answer is "does not exist" rather than "authenticate and retry" |
+
+**Derived, and therefore incapable of going stale.** FR-PLAT-54 says the guide must not
+restate capability from memory. It restates nothing at all: every line is one file agreeing
+with another —
+
+| Section | Source | The claim it makes |
+|---|---|---|
+| Views | each spec's §5.3 table | what the design says exists |
+| — built? | `frontend/src/router/index.ts` | the router routes that path |
+| API | `docs/contracts/openapi/generated.json` | the published surface (FR-PLAT-48) |
+| Workstreams | this file's phase status tables | the roadmap's own words, not a second judgement |
+
+There is no stored copy, so there is no drift check to remember to run. What a closure
+must check instead is that the derivation still *works* — a renamed heading breaks it
+silently — and `backend/tests/test_demo_guide.py` is that check, in the gate.
+
+Today it reports **7 of 50 views built**, 63 endpoints published, 6 workstreams closed.
+Naming the 43 that are not built is the point: a page showing only what works invites the
+reader to assume the rest works too.
+
+**NFRs measured, not asserted** (NFR-PLAT-4: a usable seeded state in < 5 min).
+
+| Measured | | Budget |
+|---|---|---|
+| Cold — `compose down` first, images cached | **24 s** | 300 s |
+| Warm — containers already up | **19 s** | 300 s |
+
+Both include a 60 000-row seed through the real Job path, both versions, the validation
+failure loop and the acknowledgement. The full 678 013-row seed adds ~10 s (W7a's record).
+
+**Three defects, all found by running it rather than by testing it.** This is the whole
+argument for FR-PLAT-53: a passing test and a person driving the thing are different
+evidence.
+
+- **Ctrl-C left the frontend running.** `pnpm` spawns `sh -c vite`, so signalling the
+  direct child stopped the shell and orphaned the server; the next run then found port 5173
+  held and failed for a reason that looked unrelated. Fixed with `start_new_session` plus
+  `killpg`, and confirmed by watching both ports go free.
+- **Vite silently moved to another port** when 5173 was taken — and the command then
+  printed a URL for a server it had not started, with a different identity, answering
+  happily. `--strictPort` makes the clash an error.
+- **The banner never appeared** when stdout was a file: Python buffers, the subprocesses do
+  not, so step headers printed after the output they introduced and the final "open this
+  URL" sat in the buffer. Every print is flushed.
+
+**Not delivered by W7b:**
+
+| Item | Verdict |
+|---|---|
+| A browser session authenticated by OIDC | **Not started** — FR-PLAT-55, owned by W6b. The entrance uses the development identity the dev proxy injects, which is what FR-PLAT-53 asks for and no more |
+| The modelling half of the demo | **W7**, where it belongs: a fitted GLM, a rating version, `wf-01` end to end |
+| A guide covering more than views, endpoints and workstreams | Deliberate. Each section is a file agreeing with another file; a section without such a source would be the hand-written list FR-PLAT-54 exists to prevent |
 
 ### Plan review 1 — at W6a's close, 2026-08-15
 
@@ -904,7 +976,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 |---|---|---|---|
 | **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 (1a) | All 78 `MODEL` requirements — the largest single workstream in the project |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
-| **W7** | freMTPL2 demo seed **and the demo entrance** | W5, W6b | `07` FR-PLAT-37 — one command to a working system — plus FR-PLAT-53/54, the entrance and its derived guide (`NT-0002`, accepted 2026-08-15). The data half closed early as **W7a** |
+| **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).
 

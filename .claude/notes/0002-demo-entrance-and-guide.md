@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-15, maintainer |
-| **Status** | `accepted` 2026-08-15 — spec change landed, code blocked on W6a |
+| **Status** | `landed` 2026-08-15 — spec change first, then the code as **W7b** |
 | **Deliverable** | **Spec change first, then code.** The capability is not currently specified (`CLAUDE.md` §0) |
 | **Owner** | maintainer |
 | **Lands in** | `docs/specs/07-platform.md` beside FR-PLAT-37 · then `frontend/`, `deploy/`, `examples/` |
@@ -83,11 +83,26 @@ it extends FR-PLAT-37 instead of inventing a surface, the capability list is der
 `docs/contracts/` and the roadmap, the whole path hangs off the refusal that already exists,
 and the "not yet functional" column comes from the status table.
 
-## Next step
+## Where the code went — W7b, 2026-08-15
 
-**Code only after W6a closes.** Building the guide now would mean writing it against views
-that do not exist yet — and against a roadmap row the plan review (`CLAUDE.md` §14) has not
-yet re-tested.
+W6a closed, so the block lifted. Split from W7 into Phase 1a for the reason W7a was: the
+entrance needs no model, and Phase 1a's exit demo needs the entrance.
+
+| Outcome | Landed in |
+|---|---|
+| One command to a browser | `scripts/demo.py` |
+| The entrance | `frontend/src/views/DemoView.vue`, routed at `/demo` |
+| The guide, derived on every request | `backend/src/app/demo/guide.py`, `GET /api/v1/demo/guide` |
+| The shapes it returns | `packages/model-schema/src/model_schema/demo.py` (ADR-0002) |
+
+All four points of the assessment held. The guide restates nothing: every line is one file
+agreeing with another, so there is no stored copy to drift and no drift check to remember.
+Measured 24 s cold against NFR-PLAT-4's 300 s.
+
+The note's own prediction was right in an unexpected way — building it *did* find things,
+but not in the guide. Three defects came out of running the command rather than testing it:
+Ctrl-C orphaned the frontend, Vite silently moved ports and the command advertised a server
+it had not started, and buffered output hid the final banner. The closure record has them.
 
 ## Original wording
 
