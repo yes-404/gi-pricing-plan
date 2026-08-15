@@ -31,7 +31,7 @@ it, including one that would have rejected every valid custom objective.
 ### The rules that survive the phase change
 
 - Requirement IDs are permanent (§5). Never renumber; append or mark superseded.
-- Every spec change runs `python3 scripts/audit-docs.py` before commit (15 checks).
+- Every spec change runs `python3 scripts/audit-docs.py` before commit (20 checks).
 - `.claude/skills/` holds the procedures for this repo; §12's maintenance rules apply.
 - The retrofit-impossible foundations (`docs/roadmap.md` §5) land in Phase 1a. Audit writes
   share the caller's transaction, artifacts are immutable, money is integer minor units,
@@ -138,8 +138,9 @@ twice will diverge, and in a pricing platform a diverged shape is a mispricing.
 They are not parallel tracks that occasionally sync. **The specification is the contract
 the code is written against.** Two scripts keep that honest rather than aspirational:
 
-- **`scripts/audit-docs.py`** — 15 checks over the suite: requirement IDs, cross-references,
-  dependency direction, glossary single-sourcing, money discipline, schema validity.
+- **`scripts/audit-docs.py`** — 20 checks: requirement IDs, cross-references, dependency
+  direction, glossary single-sourcing, money discipline and schema validity over the suite
+  (1–15), plus the `.claude/notes/` working notes (16–20).
 - **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
   requirements the suite covers, failing when a test claims one that does not exist.
 
@@ -361,7 +362,7 @@ uv sync --all-packages --dev
 
 # The gate. Same commands CI runs (.github/workflows/python.yml), in the same order.
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
-python3 scripts/audit-docs.py                # 15 checks over docs/
+python3 scripts/audit-docs.py                # 20 checks over docs/ and .claude/notes/
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 

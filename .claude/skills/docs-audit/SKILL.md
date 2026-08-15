@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite before committing or opening a PR in this GI pricing platform repo. Runs fifteen checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage — and the decision-gate invariant the script does not cover. Use before any docs commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, plus the notes' header block, numbering, index agreement and references — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -14,12 +14,20 @@ python3 scripts/audit-docs.py
 It exits non-zero and lists failures. Passing output looks like:
 
 ```
-  408 requirements defined across 8 specs
+  418 requirements defined across 8 specs
   46 open questions, all mirrored
-  31 JSON schemas parsed, $refs checked
+  38 JSON schemas parsed, $refs checked
+  99 error codes, ownership exclusive
+  workflow coverage: DATA 50%, GOV 37%, MODEL 46%, ...
+  2 working notes, indexed and numbered
 
 All checks passed.
 ```
+
+**On Windows**, the script reads every file as UTF-8 explicitly. It did not always: bare
+`read_text()` picked up cp1252 and the audit died on the first em-dash in the suite, which
+meant the gate could not be run at all on the maintainer's own machine while passing on
+CI's Linux runner. If a new check reads a file, pass `encoding="utf-8"`.
 
 ### Bookkeeping (checks 1–8)
 
@@ -46,6 +54,26 @@ does:
 property-level ("TLS 1.3", "normalise to snake_case") and a journey legitimately never
 cites them. The floor is deliberately low — it catches a module with no journey at all, not
 a module with unglamorous requirements.
+
+### The register and the notes (checks 15–20)
+
+| # | Check | The defect it catches |
+|---|---|---|
+| 15 | Every `OQ-` row has an owner and a recognised status | "decided" written into the *owner* column while the status still says open |
+| 16 | Every working note has the header block and a known status | A note with no deliverable or no verdict — the two fields that make it actionable |
+| 17 | Note numbering: `NNNN-kebab.md`, unique, matching the `NT-NNNN` heading | A number reused or a heading that disagrees with its filename, so an `NT-0002` reference points at two things |
+| 18 | The `.claude/notes/README.md` index and the directory agree, both ways | A note added and never indexed, or an index row outliving its file |
+| 19 | Every link, `FR-`/`NFR-`, `OQ-`, `ADR-` and `NT-` reference in a note resolves | A note citing a requirement — or a superseding note — that never existed, which reads exactly like one that does |
+| 20 | No note defines a requirement id in the bold `**FR-…**` form | A requirement escaping `docs/specs/`, where `CLAUDE.md` §5's permanence rule does not reach it |
+
+**Checks 16–20 cover the mechanical half of `.claude/notes/README.md`'s audit standard.**
+The other half — is this status still *true*, is this deliverable still right for the
+current phase — is judgement, and the README marks which is which. Do not read a green run
+as "the notes are current".
+
+**`.claude/notes/**` is in `docs.yml`'s path filter.** Adding checks without adding the path
+would have been the worse half of the change: they would pass on every note-only commit by
+never running on one.
 
 ## The check the script does not do
 
@@ -82,6 +110,22 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-15 — Extended with checks 16–20 over `.claude/notes/`. **All five were proven
+against deliberately broken input**, twelve breakages in total, each producing exactly one
+targeted failure and the suite passing again on revert: a removed `**Owner**` row, a status
+of `pending`, a heading renumbered to `NT-0009` under filename `0001`, a duplicated number,
+an index status disagreeing with its file, a note missing from the index, an index row with
+no file, a dangling relative link, `FR-PLAT-999`, `ADR-9999`, `NT-0042`, and a requirement
+id written in the bold defining form.
+
+Note ids are `NT-NNNN` — the short-prefix form the suite uses for `FR-`/`OQ-`/`DEP-`, at
+ADR's four-digit width, with the filename carrying exactly the digits the id does.
+
+The same pass fixed a defect the checks exposed rather than introduced: every `read_text()`
+in the script was encoding-naive, so on Windows the audit crashed on the suite's first
+em-dash. It had been unrunnable on the maintainer's machine while green on CI — the exact
+shape of failure `reproducing-ci-locally` warns about, inverted.
 
 2026-08-14 — Run repeatedly through the Track A research application, then extended with
 checks 9–14. **All six structural checks were proven against deliberately broken input**

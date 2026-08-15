@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consistency audit for the docs/ specification suite.
+"""Consistency audit for the docs/ specification suite and the .claude/notes/ working notes.
 
 Checks (all non-destructive, exit 1 on any failure):
   1. No broken relative markdown links.
@@ -16,6 +16,12 @@ Checks (all non-destructive, exit 1 on any failure):
  12. Money fields (*_minor) are never written as fractional numbers.
  13. Terms are not redefined in a module glossary after 00-overview defines them.
  14. Every module is exercised by at least one workflow, above a coverage floor.
+ 15. Every open-question row has an owner and a status from a known set.
+ 16. Every working note carries the header block .claude/notes/README.md requires.
+ 17. Note numbering is well-formed and unique, and matches each file's own heading.
+ 18. The notes index and the directory agree, in both directions.
+ 19. Every reference a note makes resolves — links, FR-/NFR- ids, OQ- ids, ADRs, NT- ids.
+ 20. No note defines a requirement id; only docs/specs/ may do that.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -27,7 +33,9 @@ import pathlib
 import re
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent / "docs"
+REPO = pathlib.Path(__file__).resolve().parent.parent
+ROOT = REPO / "docs"
+NOTES = REPO / ".claude" / "notes"
 _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 REQUIRED_SECTIONS = [
     "Purpose & scope", "Concepts & glossary", "Functional requirements",
@@ -77,13 +85,145 @@ def check_open_question_columns() -> None:
             )
 
 
+def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
+    """16-20. The working notes in .claude/notes/, against that directory's README.
+
+    The notes are not the specification, so most of their audit standard is judgement — is
+    this status still true of the repository, is this deliverable still right for the phase
+    the project is now in. A script cannot answer either. What it *can* answer is every
+    mechanical part, and those are precisely the ones that rot without anyone noticing: a
+    reference to a file that has been renamed, a number reused after a deletion, an index
+    that no longer lists what the directory holds.
+
+    Two limits are worth stating rather than implying. **Number reuse across a deletion is
+    not detectable here** — a snapshot cannot see the retired number, so that check stays
+    manual and stays in the README. And gaps in the sequence are *legal*: a deleted note
+    retires its number, so contiguity is deliberately not asserted.
+    """
+    if not NOTES.is_dir():
+        notes.append("no .claude/notes/ directory — checks 16-20 skipped")
+        return
+
+    def rel(path: pathlib.Path) -> str:
+        return path.relative_to(REPO).as_posix()
+
+    def head_word(cell: str) -> str:
+        """First word of a status cell, stripped of markdown emphasis."""
+        cleaned = cell.replace("`", "").replace("*", "").replace("~", "").strip().lower()
+        return cleaned.split()[0].rstrip(",.;:") if cleaned else ""
+
+    allowed = {"open", "accepted", "landed", "superseded", "dropped"}
+    required = ("Raised", "Status", "Deliverable", "Owner", "Lands in")
+    files = sorted(p for p in NOTES.glob("*.md") if p.name != "README.md")
+    seen: dict[str, pathlib.Path] = {}
+    status_of: dict[str, str] = {}
+    cited: dict[pathlib.Path, set[str]] = {}
+
+    for f in files:
+        text = f.read_text(encoding="utf-8")
+        fields = dict(re.findall(r"^\| \*\*(.+?)\*\* \| (.+?) \|\s*$", text, re.M))
+
+        # 16. the header block README.md requires
+        for name in required:
+            if name not in fields:
+                fail(f"{rel(f)}: header block is missing the **{name}** field")
+        if not any(k.startswith(("Sequencing", "Trigger")) for k in fields):
+            fail(f"{rel(f)}: header block needs a **Sequencing** or **Trigger** field")
+        status = head_word(fields.get("Status", ""))
+        if status not in allowed:
+            fail(
+                f"{rel(f)}: status {fields.get('Status', '(absent)')!r} is not one of "
+                f"{sorted(allowed)}"
+            )
+
+        # 17. numbering, and the heading that must agree with it
+        match = re.match(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$", f.name)
+        if not match:
+            fail(f"{rel(f)}: filename is not of the form NNNN-kebab-title.md")
+        else:
+            number = match.group(1)
+            heading = re.search(r"^# NT-(\d{4})\b", text, re.M)
+            if not heading:
+                fail(f"{rel(f)}: first heading must read '# NT-{number} — <title>'")
+            elif heading.group(1) != number:
+                fail(
+                    f"{rel(f)}: heading says NT-{heading.group(1)} but the filename "
+                    f"says {number} — a note has one identity"
+                )
+            if number in seen:
+                fail(
+                    f"note number NT-{number} is used by both {rel(seen[number])} and "
+                    f"{rel(f)} — numbers are unique and never reused"
+                )
+            seen[number] = f
+            status_of[number] = status
+
+        # 19. every reference resolves
+        for m in re.finditer(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)", text):
+            target = m.group(1)
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            if not (f.parent / target).resolve().exists():
+                fail(f"{rel(f)}: broken link: {target}")
+        for rid in sorted(set(re.findall(r"\b((?:FR|NFR)-[A-Z]+-\d+)\b", text)) - defined):
+            fail(f"{rel(f)}: references {rid}, which no spec defines")
+        for oq in sorted(set(re.findall(r"\b(OQ-[A-Z]+-\d+)\b", text)) - questions):
+            fail(f"{rel(f)}: references {oq}, which open-questions.md does not list")
+        for ref in sorted(set(re.findall(r"ADR-(\d{4})", text)) - adrs):
+            fail(f"{rel(f)}: references ADR-{ref}, for which no file exists")
+        # NT- ids are resolved after the loop: a note may cite one numbered above it.
+        cited[f] = set(re.findall(r"\bNT-(\d{4})\b", text)) - {f.name[:4]}
+
+        # 20. a note may propose a requirement; it may never define one
+        for rid in sorted(set(re.findall(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", text))):
+            fail(
+                f"{rel(f)}: defines {rid} in the bold form reserved for docs/specs/ — "
+                "a note may propose a requirement, never carry one"
+            )
+
+    # 18. the index and the directory, in both directions
+    readme = NOTES / "README.md"
+    if not readme.is_file():
+        fail(".claude/notes/README.md is missing — the index is part of the standard")
+        return
+    indexed: dict[str, tuple[str, str]] = {}
+    for line in readme.read_text(encoding="utf-8").splitlines():
+        row = re.match(r"^\| \[NT-(\d{4})\]\(([^)]+)\)", line)
+        if not row:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        indexed[row.group(1)] = (row.group(2), cells[3] if len(cells) > 3 else "")
+    for number, path in sorted(seen.items()):
+        if number not in indexed:
+            fail(f"{rel(path)} is not listed in the .claude/notes/README.md index")
+        elif indexed[number][0] != path.name:
+            fail(
+                f"index row NT-{number} links to {indexed[number][0]}, but the file is "
+                f"{path.name}"
+            )
+        elif head_word(indexed[number][1]) != status_of[number]:
+            fail(
+                f"note NT-{number}: index says status "
+                f"{head_word(indexed[number][1])!r}, the file says {status_of[number]!r}"
+            )
+    for number in sorted(set(indexed) - set(seen)):
+        fail(f"index lists note NT-{number}, but no such file exists in .claude/notes/")
+
+    # 19, second pass: a note citing another note — a `superseded` row must name a real one,
+    # and a retired number must not be quietly resurrected by a reference to it.
+    for f, refs in sorted(cited.items()):
+        for ref in sorted(refs - set(seen)):
+            fail(f"{rel(f)}: references NT-{ref}, for which no note exists")
+    notes.append(f"{len(files)} working notes, indexed and numbered")
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
 
     # 1. relative links
     for f in md:
-        for m in re.finditer(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)", f.read_text()):
+        for m in re.finditer(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)", f.read_text(encoding="utf-8")):
             target = m.group(1)
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
@@ -93,7 +233,7 @@ def main() -> int:
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)
     for f in specs:
-        for m in re.finditer(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", f.read_text()):
+        for m in re.finditer(r"\*\*((?:FR|NFR)-[A-Z]+-\d+)\*\*", f.read_text(encoding="utf-8")):
             defined[m.group(1)].append(f.name)
     for rid, where in defined.items():
         if len(where) > 1:
@@ -101,7 +241,7 @@ def main() -> int:
 
     referenced: dict[str, set[str]] = collections.defaultdict(set)
     for f in md:
-        for m in re.finditer(r"\b((?:FR|NFR)-[A-Z]+-\d+)\b", f.read_text()):
+        for m in re.finditer(r"\b((?:FR|NFR)-[A-Z]+-\d+)\b", f.read_text(encoding="utf-8")):
             referenced[m.group(1)].add(str(f.relative_to(ROOT)))
     for rid in sorted(set(referenced) - set(defined)):
         fail(f"{rid} referenced but never defined (in {sorted(referenced[rid])})")
@@ -120,9 +260,9 @@ def main() -> int:
     # 4. open questions
     in_specs = set()
     for f in specs:
-        in_specs |= set(re.findall(r"\*\*(OQ-[A-Z]+-\d+)\*\*", f.read_text()))
+        in_specs |= set(re.findall(r"\*\*(OQ-[A-Z]+-\d+)\*\*", f.read_text(encoding="utf-8")))
     oq_file = ROOT / "open-questions.md"
-    in_file = set(re.findall(r"\*\*(OQ-[A-Z]+-\d+)\*\*", oq_file.read_text()))
+    in_file = set(re.findall(r"\*\*(OQ-[A-Z]+-\d+)\*\*", oq_file.read_text(encoding="utf-8")))
     for q in sorted(in_specs - in_file):
         fail(f"{q} raised in a spec but not mirrored into open-questions.md")
     for q in sorted(in_file - in_specs):
@@ -131,13 +271,13 @@ def main() -> int:
 
     # 5. ADRs
     adrs = {p.name.split("-")[0] for p in ROOT.glob("adr/0*.md")}
-    corpus = "\n".join(f.read_text() for f in md)
+    corpus = "\n".join(f.read_text(encoding="utf-8") for f in md)
     for ref in sorted(set(re.findall(r"ADR-(\d{4})", corpus)) - adrs):
         fail(f"ADR-{ref} referenced but no file exists")
 
     # 6. spec sections
     for f in specs:
-        heads = re.findall(r"^## \d+\.?\s*(?:—\s*)?(.+)$", f.read_text(), re.M)
+        heads = re.findall(r"^## \d+\.?\s*(?:—\s*)?(.+)$", f.read_text(encoding="utf-8"), re.M)
         lowered = [h.lower() for h in heads]
         for name in REQUIRED_SECTIONS:
             key = name.lower().split("(")[0].strip()
@@ -157,7 +297,7 @@ def main() -> int:
     loaded: dict[pathlib.Path, object] = {}
     for f in schemas:
         try:
-            loaded[f] = json.load(f.open(), object_pairs_hook=no_dupes)
+            loaded[f] = json.load(f.open(encoding="utf-8"), object_pairs_hook=no_dupes)
         except ValueError as exc:
             fail(f"{f.relative_to(ROOT)}: {exc}")
 
@@ -217,7 +357,7 @@ def main() -> int:
         "04": "04-optimisation.md", "05": "05-monitoring.md",
         "06": "06-governance.md", "07": "07-platform.md",
     }
-    spec_text = {f.name: f.read_text() for f in specs}
+    spec_text = {f.name: f.read_text(encoding="utf-8") for f in specs}
 
     # 9. cross-spec section references, e.g. `01` §4.5  /  02 §3.2
     # `(?<![0-9-])` matters: without it the `02` inside a date like `2026-08-15` matches,
@@ -226,7 +366,7 @@ def main() -> int:
     # kind of false positive.
     sec_re = re.compile(r"(?<![0-9-])`?(0[0-7])`?[^\n]{0,24}?§(\d+(?:\.\d+)*)")
     for f in md:
-        for m in sec_re.finditer(f.read_text()):
+        for m in sec_re.finditer(f.read_text(encoding="utf-8")):
             code, sec = m.group(1), m.group(2)
             target = spec_by_code[code]
             body = spec_text.get(target, "")
@@ -243,7 +383,7 @@ def main() -> int:
     owner: dict[str, str] = {}
     code_re = re.compile(r"\*\*Error codes owned by this module:\*\*(.+?)(?:\n\n|###)", re.S)
     for f in specs:
-        m = code_re.search(f.read_text())
+        m = code_re.search(f.read_text(encoding="utf-8"))
         if not m:
             continue
         block = m.group(1)
@@ -269,7 +409,7 @@ def main() -> int:
         if code not in code_of:
             continue
         me = code_of[code]
-        body = f.read_text()
+        body = f.read_text(encoding="utf-8")
         m = re.search(r"### 7\.1 (?:This module )?[Cc]onsumes(.*?)### 7\.2", body, re.S)
         if not m:
             continue
@@ -293,7 +433,7 @@ def main() -> int:
     # 12. money discipline: *_minor fields must never be fractional
     money_re = re.compile(r'"(\w*_minor)"\s*:\s*(-?\d+\.\d+)')
     for f in list(md) + schemas:
-        for m in money_re.finditer(f.read_text()):
+        for m in money_re.finditer(f.read_text(encoding="utf-8")):
             fail(
                 f"{f.relative_to(ROOT)}: {m.group(1)} written as fractional "
                 f"{m.group(2)} (FR-OVR-7)"
@@ -309,7 +449,7 @@ def main() -> int:
     for f in specs:
         if f.name == "00-overview.md":
             continue
-        for t in terms(f.read_text(), "2") & canon:
+        for t in terms(f.read_text(encoding="utf-8"), "2") & canon:
             fail(
                 f"{f.name}: glossary term '{t}' is already defined in "
                 "00-overview.md §2 — reference it, do not redefine"
@@ -323,7 +463,7 @@ def main() -> int:
     # workflow exercises at all, or coverage collapsing for one module while others
     # hold. The floor catches both; it is deliberately low.
     coverage_floor = 0.10
-    wf_text = "\n".join(f.read_text() for f in ROOT.glob("workflows/*.md"))
+    wf_text = "\n".join(f.read_text(encoding="utf-8") for f in ROOT.glob("workflows/*.md"))
     per_mod: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0])
     for rid in defined:
         if rid.startswith("NFR-"):
@@ -342,10 +482,14 @@ def main() -> int:
                  f"{coverage_floor:.0%} floor — no user journey exercises this module")
     notes.append("workflow coverage: " + ", ".join(summary))
 
-    for note in notes:
-        print(f"  {note}")
     # 15. open-question rows have an owner and a recognised status
     check_open_question_columns()
+
+    # 16-20. the working notes in .claude/notes/
+    check_notes(set(defined), in_file, adrs)
+
+    for note in notes:
+        print(f"  {note}")
 
     if failures:
         print(f"\nFAILED ({len(failures)}):")
