@@ -250,7 +250,7 @@ def test_another_workspaces_request_is_404(
         headers=submitter_headers,
     ).json()
     # The detail route needs only authentication, so the caller reaches the handler and
-    # the 404 is about tenancy rather than about being refused a permission.
+    # the 404 is about the workspace scope rather than about being refused a permission.
     other = _headers(submitter_headers[DEV_PRINCIPAL_HEADER], new_uuid7())
     response = client.get(f"/api/v1/approval-requests/{created['id']}", headers=other)
     assert response.status_code == 404

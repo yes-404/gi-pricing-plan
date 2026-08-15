@@ -188,7 +188,7 @@ async def test_another_workspaces_account_is_404_not_403(
 
     The caller is an admin in the second workspace too, so it is *authorised* there and the
     404 is about the account belonging to someone else — not about the caller being
-    refused. Without the second grant this returns 403 and asserts nothing about tenancy.
+    refused. Without the second grant this returns 403 and asserts nothing about scoping.
     """
     from sqlalchemy import select
 

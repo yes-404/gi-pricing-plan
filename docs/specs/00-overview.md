@@ -215,7 +215,10 @@ System-level requirements that no single module owns. Module codes are defined i
 | **FR-OVR-10** | Every long-running operation (validate, fit, score-batch, optimise, monitor) is a **Job** with a uniform lifecycle, progress, cancellation, log, and result reference (see `07-platform.md`). |
 | **FR-OVR-11** | The platform exposes a documented OpenAPI 3.1 surface; the SPA is a pure client of it. Any action possible in the UI is possible via the API. |
 | **FR-OVR-12** | Time is stored as UTC `timestamptz`. All business-effective dating (reference data, rating versions) uses explicit `effective_from` / `effective_to` half-open intervals `[from, to)`. |
-| **FR-OVR-13** | Multi-tenancy is single-tenant-per-deployment in Phases 0–4. All schemas nonetheless carry a `workspace_id` so that a future tenancy split is not a data migration. |
+| **FR-OVR-13** | **One tenant, one deployment — permanently, not for Phases 0–4** (OQ-OVR-1, decided 2026-08-15 by [ADR-0006](../adr/0006-tenant-isolation-is-a-deployment-boundary.md)). All schemas carry a `workspace_id`, and a **Workspace is an organisational container inside one tenant** — a business unit or line of business, and the scope for RBAC (`06` FR-GOV-4), settings (`07` §3.8) and the audit chain (`06` FR-GOV-24). **It is not an isolation boundary and no document may describe it as one**: the isolation is the deployment (FR-OVR-15), and a `workspace_id` believed to be a security boundary is the belief under which someone writes the cross-workspace query that nothing prevents. |
+| **FR-OVR-15** | **No running component that carries tenant data is reachable from more than one tenant's deployment** — application instances, database, cache and broker, object storage, encryption keys, and the audit chain are per tenant (ADR-0006). What may be shared is what carries no tenant data: container images, infrastructure code, CI, and public reference data (`01` FR-DATA-32). A shared managed database or bucket satisfies this only if no tenant's credentials can reach another's data; "separate schema, same connection" does not. |
+| **FR-OVR-16** | **Provenance names the build.** Every Job records the platform version it ran on, and every generated dossier (`06` FR-GOV-27) states it alongside the artifacts it assembled. Under ADR-0006 each tenant runs its own deployment, so version skew between tenants is normal and permanent: "the platform computed this" stops being a single, knowable thing, and a figure reproduced two years later must be attributable to the build that produced it. Owned by **W14**; any earlier `Job` migration should carry the column rather than wait. |
+| **FR-OVR-17** | **Each workflow journey (`docs/workflows/wf-01…05`) is evidenced twice, and a marker on an existing test is not one of them** (OQ-OVR-6, decided 2026-08-15). **(i)** A mechanical citation audit, running in CI on every docs change, asserts that every endpoint path and `pricing-core` function a journey step cites is declared by the owning module's §5.1 or §5.2 — the `scope-audit.py --endpoints` idea one level up, catching the class of drift that a spec and a journey disagreeing produces. **(ii)** One end-to-end test per journey, driving it through the platform, written by the workstream that completes the last module the journey touches — which in every case is the phase whose exit criterion names it (`roadmap.md` §12), so `wf-01` is **W5**'s. Marking an existing test with a journey id claims a journey where one slice is covered, which is the failure this requirement exists to refuse. |
 | **FR-OVR-14** | An artifact may only reference artifacts that are in a state at least as mature as its own (a `live` Rating Version cannot reference a `draft` Model). Enforced at transition time, not just at creation. |
 
 ---
@@ -255,6 +258,11 @@ Deployment    ──< ScoringTrace (sampled) ──< MonitoringAggregate
 * ──< AuditEvent
 * ──< Job
 ```
+
+**Above `Workspace` sits the deployment, and it is not drawn here because it is not an
+entity** — one tenant, one deployment, nothing shared (FR-OVR-13, FR-OVR-15, ADR-0006). A
+Workspace is an organisational container *inside* a tenant, and a diagram that showed two
+tenants would show two of these trees in two systems.
 
 ### 4.2 Identity and versioning rules
 
@@ -508,10 +516,10 @@ Mirrored in `docs/open-questions.md`.
 
 | ID | Question |
 |---|---|
-| **OQ-OVR-1** | Is the workspace the tenancy boundary, or do we also need per-workspace physical isolation for hosted use? |
+| **OQ-OVR-1** | ~~Is the workspace the tenancy boundary, or do we also need per-workspace physical isolation for hosted use?~~ **DECIDED 2026-08-15: neither — the tenancy boundary is the deployment.** One tenant, one deployment; schema-per-tenant rejected rather than deferred; `workspace_id` stays as an organisational scope. [ADR-0006](../adr/0006-tenant-isolation-is-a-deployment-boundary.md), FR-OVR-13/15. |
 | **OQ-OVR-2** | Project licence: Apache-2.0 (permissive, adoption) vs AGPL-3.0 (protects against closed SaaS forks). |
 | ~~**OQ-OVR-3**~~ ✔ | ~~Do we support multiple currencies in one workspace in Phase 2, or defer multi-currency to Phase 4? |~~ **Decided 2026-08-14: deferred to Phase 4; one currency per workspace, recorded on every artifact envelope now (FR-OVR-7, §4.3).**
-| **OQ-OVR-6** | How are the five workflow journeys (`workflows/wf-01…05`) evidenced? No test cites one, and the "workflow coverage" figure the docs audit prints measures whether a journey *mentions* a requirement id — not whether it runs. Raised by plan review 2, 2026-08-15. |
+| **OQ-OVR-6** | ~~How are the five workflow journeys (`workflows/wf-01…05`) evidenced?~~ **DECIDED 2026-08-15: a mechanical citation audit now, one end-to-end test per journey as its last module lands, and never a marker on an existing test.** Specified as FR-OVR-17. Raised by plan review 2, 2026-08-15, when the "workflow coverage" figure turned out to measure whether a journey *mentions* a requirement id. |
 | **OQ-OVR-7** | Should `01` FR-DATA-26's one-way row rename `severity_minor` and `burning_cost_minor`? They are means, and therefore floats, while `_minor` is reserved for integer minor units (FR-OVR-7). Raised 2026-08-15 by generating the `banding` and `grouping` schemas, which embed the row. |
 | ~~**OQ-OVR-4**~~ ✔ | ~~Is `pricing-core` published to PyPI as a standalone library from Phase 1, which would constrain its API stability earlier than otherwise needed? |~~ **Decided 2026-08-14: editable install in Phase 1, publish as `0.x` from Phase 2 with a no-stability notice.**
 | ~~**OQ-OVR-5**~~ ✔ | ~~Where does the notebook escape hatch live — an embedded JupyterLab in the platform, or a documented client library only? |~~ **Decided 2026-08-14: client library in Phase 1; embedded notebooks revisited in Phase 4 (§1.2).**

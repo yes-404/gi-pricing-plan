@@ -92,8 +92,8 @@ async def _load_scoped(database: Database, job_id: UUID, caller: Caller) -> JobR
     """Fetch a Job that belongs to the caller's workspace, or 404.
 
     A Job in another workspace yields the same 404 as one that does not exist. Returning
-    403 instead would confirm the id is real, which is a disclosure in a multi-tenant
-    system even when the body says nothing else.
+    403 instead would confirm the id is real, which discloses the existence of another
+    team's work even when the body says nothing else.
     """
     async with database.session() as session:
         row = await session.get(JobRow, job_id)

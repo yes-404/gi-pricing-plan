@@ -9,10 +9,16 @@ Three credential paths, tried in order, and every one of them can only *fail clo
 
 With none of these configured or presented, the answer is `401`, never a default identity.
 
-The workspace is not taken from the request. A caller states nothing about which tenant it
-is acting in; the platform derives it from membership (users) or from the account's own
-workspace (service accounts). A header-supplied workspace would make tenancy a claim rather
-than a fact.
+The workspace is not taken from the request. A caller states nothing about which workspace
+it is acting in; the platform derives it from membership (users) or from the account's own
+workspace (service accounts). A header-supplied workspace would make the scope a claim
+rather than a fact.
+
+A workspace is *not* the tenant boundary — ADR-0006 makes that the deployment, and one
+deployment serves one tenant. What this scoping buys is that a home-pricing team cannot
+read the motor book, which is worth having on its own; it is not what keeps two insurers
+apart, and describing it that way would put weight on a check that was never load-bearing
+for that.
 """
 
 from __future__ import annotations
@@ -158,7 +164,7 @@ def job_identity(caller: Caller) -> dict[str, Any]:
     answers the wrong question: nobody asks whether the platform ingested a file.
 
     The workspace is included for the same reason and taken from the *caller*, never from
-    the request body — a body-supplied workspace makes tenancy a claim rather than a fact.
+    the request body — a body-supplied workspace makes the scope a claim rather than a fact.
     """
     return {
         "workspace_id": str(caller.workspace_id),

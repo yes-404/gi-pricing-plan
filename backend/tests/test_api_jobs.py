@@ -143,7 +143,7 @@ async def test_list_returns_the_workspace_jobs(
 async def test_another_workspaces_jobs_are_invisible(
     client: TestClient, database: Database, workspace_id, principal, caller_headers
 ) -> None:
-    """Negative: tenancy is enforced in the query, not by the caller passing the right id."""
+    """Negative: the workspace scope is enforced in the query, not by the caller's id."""
     other = new_uuid7()
     await _submit(database, other, principal)
 
@@ -156,7 +156,7 @@ async def test_another_workspaces_jobs_are_invisible(
 async def test_a_job_in_another_workspace_is_404_not_403(
     client: TestClient, database: Database, principal, caller_headers
 ) -> None:
-    """403 would confirm the id exists, which is a disclosure in a multi-tenant system."""
+    """403 would confirm the id exists, which discloses another workspace's work."""
     other = new_uuid7()
     job = await _submit(database, other, principal)
 

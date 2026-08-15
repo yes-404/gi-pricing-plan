@@ -73,7 +73,7 @@ async def _audit_auth_failure(
     Skipped when no workspace can be determined: the audit log is chained per workspace,
     and inventing one to hold an event would corrupt a real chain. Those failures are
     logged instead — an unauthenticated caller has no workspace by definition, and a
-    tenant's audit log is not the right place for traffic that never reached it.
+    workspace's audit log is not the right place for traffic that never reached it.
     """
     if workspace_id is None:
         _log.warning("authentication failed", extra={"action": action, "reason": detail})
