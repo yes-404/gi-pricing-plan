@@ -239,6 +239,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W7a**~~ ✔ | freMTPL2 data seed — the demo dataset through the real Job path | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W6a**~~ ✔ | Frontend — app shell, dataset views, validation report view | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W7b**~~ ✔ | Demo entrance — one command to a browser, with a derived guide | ✔ **closed 2026-08-15** — see the closure record below |
+| **Exit gate** | FR-DATA-41 (ingestion refuses a `direct_identifier` column) · FR-DATA-42 (append-only triggers on `validation_reports`, `profiles`, `validation_acknowledgements`, `blobs`) | **open** — blocks the exit demo (plan review 2, accepted 2026-08-15). Owned by W6b's row, delivered in Phase 1a |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
@@ -303,6 +304,14 @@ read against the code since it was written.
 This is the same shape as the audit's other findings: a number exists, it is not measuring
 the thing its name suggests, and nobody had looked.
 
+> **Recorded as OQ-OVR-6** *(2026-08-15)*, with a recommendation: a mechanical audit that
+> every journey step cites an endpoint, requirement or artifact that exists — the
+> `--endpoints` idea one level up — **now**; one end-to-end journey test per workflow as its
+> modules land; and explicitly **not** a marker on an existing test, which would claim a
+> journey where one slice is covered. A journey belongs to the workstream that completes
+> the last module it touches, so `wf-01` is W5's to finish. Phase 1a's exit demo walks its
+> data half and is that half's first evidence.
+
 *Two model/contract divergences have no owner.* `Dataset` carries no status, validated-at or
 owner while `01` §5.3 asks the dataset list to display all three; `ColumnProfile` has no
 `histogram` while `01` §4.4 **and** `docs/contracts/schemas/profile.schema.json` both define
@@ -353,7 +362,15 @@ stored reports in a single statement. It is owned by W6b, in Phase 1b.
 > immutability enforcement, is coherent but should be chosen deliberately and with the risk
 > stated, not arrived at by the demo happening first.
 >
-> **Maintainer acceptance:** _pending_.
+> **Maintainer accepted 2026-08-15.** FR-DATA-41 and FR-DATA-42 are a **gate on Phase 1a's
+> exit demo**: the criterion stands as written, and the demo does not run until artifact
+> immutability is enforced in the database rather than asserted in Python.
+>
+> The bookkeeping is stated rather than tidied away: **W6b's row still names both
+> requirements**, and W6b is a Phase 1b row. The work therefore lands in Phase 1a while its
+> nominal owner sits in 1b. That is the maintainer's decision, taken twice; recording it
+> this way keeps the record honest about where the work happened, which matters more than
+> which row it hangs from.
 
 *Proposal B — W6b is now three workstreams in one row.* It carries `02` §5.3's factor
 workbench, model detail and diagnostics — a full frontend workstream on its own — plus
@@ -366,7 +383,8 @@ a Vue view, an OIDC flow and a database trigger is a row nothing can be said to 
 > planned, leaving W6b the views and the browser. No id is proposed here — naming one is
 > the maintainer's, and the last two attempts at it cost two corrections.
 >
-> **Maintainer acceptance:** _pending_.
+> **Maintainer accepted 2026-08-15.** The non-frontend half splits out when Phase 1b is
+> planned; W6b keeps the views and the browser. The id is assigned at that point, not here.
 
 *No change* to the phase boundaries, to W5, to W7's remaining modelling half, or to Phases
 2–4. Nothing this review found argues for re-cutting them.
@@ -1043,6 +1061,12 @@ is not; W1 made it *cheap*, which was its job.
 **Exit:** a freMTPL2 dataset version reaches `validated`, including at least one deliberate
 round through the failure loop. The retrofit list (§5) is fully in place by the end of 1a —
 that is the phase's other, quieter deliverable.
+
+> **The second half is a gate, not a footnote** *(plan review 2, accepted 2026-08-15)*.
+> **FR-DATA-41** and **FR-DATA-42** must land before the exit demo runs. Immutability is
+> currently `frozen=True` in Python — a rule about one process — and an audit rewrote 190
+> stored reports in a single statement. Every artifact Phase 1b produces would sit on that.
+> Nominal ownership stays with W6b; the work happens in Phase 1a.
 
 **W2 closure evidence** (2026-08-14). Closed under `CLAUDE.md` §13; the scope below was
 re-derived from `07` §3 rather than from the build log, after an independent audit found
