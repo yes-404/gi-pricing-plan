@@ -23,7 +23,17 @@ import dataclasses
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -361,7 +371,7 @@ async def start_ingestion(
     caller: WriteDatasets,
     database: DatabaseDep,
     response: Response,
-    idempotency_key: Annotated[str | None, Query(alias="idempotency_key")] = None,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
     """**202** with the Job (`00` §5.1 R1, FR-DATA-2).
 

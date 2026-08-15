@@ -124,10 +124,18 @@ def report_catalogue(module: str, prefix: str) -> int:
         print(f"\n  {spec.name} declares no {prefix}-* catalogue")
         return 0
 
+    # **Source only.** Scanning tests too would let a rule that exists nowhere but in a
+    # test file read as implemented — which is the precise inversion of what this check is
+    # for, and it was doing exactly that until a deliberately-broken run failed to notice
+    # a deleted rule id.
     named: set[str] = set()
-    for source in sorted((ROOT / "packages").rglob("*.py")) + sorted(
-        (ROOT / "backend" / "src").rglob("*.py")
-    ):
+    sources = [
+        path
+        for root in ((ROOT / "packages"), (ROOT / "backend" / "src"))
+        for path in sorted(root.rglob("*.py"))
+        if "tests" not in path.parts
+    ]
+    for source in sources:
         for found in re.findall(rf"{prefix}-[A-Z]{{2,4}}-[\d/]+", source.read_text("utf-8")):
             head, _, tail = found.rpartition("-")
             for part in tail.split("/"):

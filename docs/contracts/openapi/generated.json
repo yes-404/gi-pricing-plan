@@ -5162,6 +5162,22 @@
               "title": "Version Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
           }
         ],
         "requestBody": {
@@ -5785,6 +5801,22 @@
               "format": "uuid",
               "title": "Version Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
             }
           }
         ],
@@ -6607,8 +6639,8 @@
             }
           },
           {
-            "in": "query",
-            "name": "idempotency_key",
+            "in": "header",
+            "name": "Idempotency-Key",
             "required": false,
             "schema": {
               "anyOf": [
@@ -6619,7 +6651,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Idempotency Key"
+              "title": "Idempotency-Key"
             }
           }
         ],
@@ -9082,6 +9114,22 @@
               "format": "uuid",
               "title": "Rule Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
             }
           }
         ],

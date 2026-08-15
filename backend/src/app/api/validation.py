@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
@@ -186,6 +186,7 @@ async def dry_run(
     caller: WriteDatasets,
     database: DatabaseDep,
     response: Response,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
     """**202**. FR-DATA-21 step 2: a rule cannot be approved until it has run somewhere.
 
@@ -206,6 +207,7 @@ async def dry_run(
             },
             caller.principal,
             workspace_id=caller.workspace_id,
+            idempotency_key=idempotency_key,
         )
     response.headers["Location"] = f"/api/v1/jobs/{job.id}"
     return job

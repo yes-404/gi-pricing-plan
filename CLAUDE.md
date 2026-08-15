@@ -10,7 +10,7 @@ code is now the expected default** for work inside its scope (§9).
 
 The specification suite in `docs/` is the contract that Phase 1 builds against. It is
 finished, audited, and authoritative: 8 module specs, 5 workflow journeys, 5 ADRs, 31
-artifact contracts, 417 numbered requirements. **Read the relevant spec before writing the
+artifact contracts, 418 numbered requirements. **Read the relevant spec before writing the
 code that implements it** — the specs are precise enough that guessing is never the faster
 path, and a divergence between code and spec is a defect in whichever is wrong.
 
@@ -71,17 +71,18 @@ the maths.
 │   └── open-questions.md     ✔ every unresolved choice, gated by phase
 │
 ├── packages/
-│   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1, W2]
-│   └── pricing-core/         ◐ skeleton only — progress + money        [W1]
+│   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1, W2, W4]
+│   └── pricing-core/         ◐ progress + money + the `data/` maths      [W1, W4]
 │
-├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals [W2✔ W3✔]
-├── pipelines/                … Dagster ingestion and scheduling           [1a W4]
+├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals,
+│                               datasets, validation, profiling, reference [W2✔ W3✔ W4✔]
+├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
 ├── frontend/                 … Vue 3 SPA                                  [1a W6a]
 ├── examples/                 … freMTPL2 demo dataset and seed             [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
 ├── scripts/                  ✔ audit-docs.py, req-coverage.py
-└── .claude/skills/           ✔ 13 skills — 8 written here, 5 vendored (§12)
+└── .claude/skills/           ✔ 15 skills — 10 written here, 5 vendored (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -95,7 +96,7 @@ make the repository a Python project.
 | `packages/model-schema` | Python | `00` §4.3, FR-OVR-1/6/7 | root `pyproject.toml` | `python.yml` |
 | `packages/pricing-core` | Python | `02`–`05` — the maths | root `pyproject.toml` | `python.yml` |
 | `backend/` | Python | `01`, `06`, `07` | root `pyproject.toml` | `python.yml` |
-| `pipelines/` *(W4)* | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
+| `pipelines/` *(deferred to W7)* | Python | `01` ingestion, `05` scheduling | root `pyproject.toml` | `python.yml` |
 | `frontend/` *(W6a)* | TypeScript | each spec's §5.3 views | `frontend/package.json`, `tsconfig.json` | `frontend.yml` *(add with the code)* |
 | `docs/` | Markdown | itself — the specification | — | `docs.yml` |
 | `scripts/`, `.github/`, `deploy/`, `.claude/` | mixed | operational | — | as their target |
@@ -366,6 +367,8 @@ uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on d
 
 # Closure audit (§13 step 1): expected scope from the specs, then evidence.
 uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
+uv run python scripts/scope-audit.py DATA --endpoints    # §5.1 table vs the contract
+uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item catalogue
 
 # ADR-0001's promise, made usable (OQ-OVR-4, decided 2026-08-14). `pricing-core` is not
 # published to PyPI in Phase 1 — publishing would force semver stability on an API still
@@ -459,7 +462,7 @@ Both of its inputs are documents — requirements from `docs/specs/`, evidence f
 `@pytest.mark.req` markers — so the result does not depend on who runs it. It exits non-zero
 while any in-scope requirement lacks evidence.
 
-**It is a closure tool, not a CI gate.** Most of the 417 requirements belong to phases that
+**It is a closure tool, not a CI gate.** Most of the 418 requirements belong to phases that
 have not started, so running it unscoped will always fail; that is the correct behaviour for
 an audit and the wrong behaviour for a build.
 
@@ -476,6 +479,25 @@ documentation at all.
 
 **A marker is a claim, not a proof.** It says a test asserts *something* about a
 requirement, not that it covers it. Read the ones that matter.
+
+**Requirement coverage is not interface coverage, and not catalogue coverage.** Markers sit
+on unit and service tests, so a module can satisfy every requirement it owns and still
+expose no HTTP route — W4 stood at 49 of 50 requirements with **0 of 28** endpoints
+published, and nothing said so. A requirement can also *summarise* a catalogue it does not
+enumerate: FR-DATA-16 says "validation covers four layers", which one test evidences
+honestly, while `01` §4.4's catalogue of 38 named rules behind it stood at 12.
+
+Both are now derivable, and the same audit answers them:
+
+```bash
+uv run python scripts/scope-audit.py DATA --endpoints --catalogue VR
+```
+
+The endpoint check compares the spec's §5.1 table against the **published contract** rather
+than the running app, because the contract is the artifact external consumers read. The
+catalogue check scans **source only** — it counted a rule named nowhere but in a test as
+implemented until a deliberately-broken run failed to notice a deleted id, which is the
+inversion of what the check exists for.
 
 **Evidence is not only markers.** A requirement can be enforced by an import-linter
 contract, a database privilege, a migration, or a recorded measurement — none of which the

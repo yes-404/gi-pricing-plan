@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -135,6 +135,7 @@ async def run_validation(
     caller: ValidateDatasets,
     database: DatabaseDep,
     response: Response,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
     """**202** with the Job (FR-DATA-15)."""
     async with database.unit_of_work() as session:
@@ -154,6 +155,7 @@ async def run_validation(
             },
             caller.principal,
             workspace_id=caller.workspace_id,
+            idempotency_key=idempotency_key,
         )
     response.headers["Location"] = f"/api/v1/jobs/{job.id}"
     return job
@@ -335,6 +337,7 @@ async def derive(
     caller: WriteDatasets,
     database: DatabaseDep,
     response: Response,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
     """**202**. FR-DATA-33: sample, split, filter or union."""
     async with database.unit_of_work() as session:
@@ -350,6 +353,7 @@ async def derive(
             },
             caller.principal,
             workspace_id=caller.workspace_id,
+            idempotency_key=idempotency_key,
         )
     response.headers["Location"] = f"/api/v1/jobs/{job.id}"
     return job
