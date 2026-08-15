@@ -239,7 +239,7 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**W7a**~~ ✔ | freMTPL2 data seed — the demo dataset through the real Job path | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W6a**~~ ✔ | Frontend — app shell, dataset views, validation report view | ✔ **closed 2026-08-15** — see the closure record below |
 | ~~**W7b**~~ ✔ | Demo entrance — one command to a browser, with a derived guide | ✔ **closed 2026-08-15** — see the closure record below |
-| ~~**Exit demo**~~ ✔ | A person driving Phase 1a's exit criterion by hand, through `/demo` | ✔ **accepted by the maintainer 2026-08-15**. Two defects found by driving it, neither by any test — see below |
+| ~~**Exit demo**~~ ✔ | Phase 1a's exit criterion exercised through `/demo` | ✔ **accepted 2026-08-15** — one command to a served page in 27 s, the failure loop on real data, two defects found. Exercised over HTTP by Claude; the maintainer accepted without driving it, deferring hands-on testing until more functionality exists |
 | ~~**Exit gate**~~ ✔ | FR-DATA-41 (ingestion refuses a `direct_identifier` column) · FR-DATA-42 (append-only triggers on `validation_reports`, `profiles`, `validation_acknowledgements`) | ✔ **delivered 2026-08-15** — five injections, five caught. `blobs` left the list when building it proved it could not be append-only; the requirement was corrected rather than the table dropped |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
@@ -264,16 +264,25 @@ After this has run twice the procedure becomes `.claude/skills/phase-review` (`C
 
 ### Phase 1a — exit demo accepted 2026-08-15
 
-Driven by hand through `/demo` against a freMTPL2 workspace seeded by the real Job path:
-version 1 fails validation on 571 rows of genuine exposure above 1.0, promotion is refused,
-version 2 reaches `validated` after one preparation step. **Accepted by the maintainer.**
+**Accepted by the maintainer. What it was accepted on is worth stating exactly**, because
+the criterion's own words are "a person driving the screen", and this record first claimed
+more than happened.
 
-Both halves of the exit criterion hold. The failure loop passes headless *and* by hand, and
-the retrofit list is in place rather than asserted — artifact immutability stopped being a
-Pydantic flag the same day (FR-DATA-42).
+| | |
+|---|---|
+| The stack came up in one command | `uv run python scripts/demo.py`, **27 s** to a served page against NFR-PLAT-4's 300 s |
+| The failure loop ran on real data | version 1 fails on 571 rows of genuine exposure above 1.0, promotion refused with `VALIDATION_HAS_FAILURES`, version 2 reaches `validated` after one preparation step |
+| The screens were exercised **by Claude, over HTTP**, not by a person in a browser | the entrance, the guide, the dataset list, the version timeline |
+| The maintainer **accepted it without driving it**, deferring hands-on testing until more functionality exists | their words: *"I cannot really test anything on the demo platform, I will test more after more functions added"* |
 
-**Two defects, both found by driving it and neither by any test.** That is the argument
-FR-PLAT-53 makes for the entrance, and this is the evidence for it:
+So the exit criterion's mechanical half is met and evidenced; its *human* half is
+outstanding by the maintainer's own choice, and the phase closes on that basis rather than
+on a claim nobody made. The entrance exists and works, which is what W7b owed; the person
+driving it comes when there is more to drive.
+
+**Two defects found by exercising it, neither by any test.** That is the argument
+FR-PLAT-53 makes for the entrance, and it holds even though the exercising was done over
+HTTP rather than in a browser:
 
 | Found | State |
 |---|---|
