@@ -82,7 +82,7 @@ the maths.
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
 ├── scripts/                  ✔ audit-docs.py, req-coverage.py
-└── .claude/skills/           ✔ 15 skills — 10 written here, 5 vendored (§12)
+└── .claude/skills/           ✔ 22 skills — 11 written here, 11 vendored (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -408,12 +408,20 @@ unfamiliar part of the suite.
 
 **Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`, `adr-write`,
 `contract-schema`, `library-spike`, `git-hygiene`, `python-package`, `python-test`,
-`fastapi-service`.
+`fastapi-service`, `vue-frontend`.
 
 **Vendored** from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills) (MIT,
 security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,
-`testing-strategy`, `code-quality`, `secret-hygiene`. Kept as upstream wrote them and
-excluded from `ruff`.
+`testing-strategy`, `code-quality`, `secret-hygiene`.
+
+**Vendored** from [`yes-404/vue3-skills`](https://github.com/yes-404/vue3-skills), a fork of
+`vuejs-ai/skills` (MIT, security-reviewed 2026-08-15): `vue-best-practices`,
+`vue-router-best-practices`, `vue-pinia-best-practices`, `vue-testing-best-practices`,
+`vue-debug-guides`, `create-adaptable-composable`. Two of the eight were **not** taken —
+`vue-jsx-best-practices` and `vue-options-api-best-practices` document approaches §3 has
+decided against, and a skill teaching a rejected approach is worse than a missing one.
+
+All vendored skills are kept as upstream wrote them and excluded from `ruff`.
 
 `.claude/skills/README.md` is the index and records why each was added.
 

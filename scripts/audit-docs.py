@@ -220,7 +220,11 @@ def main() -> int:
     spec_text = {f.name: f.read_text() for f in specs}
 
     # 9. cross-spec section references, e.g. `01` §4.5  /  02 §3.2
-    sec_re = re.compile(r"`?(0[0-7])`?[^\n]{0,24}?§(\d+(?:\.\d+)*)")
+    # `(?<![0-9-])` matters: without it the `02` inside a date like `2026-08-15` matches,
+    # and any § reference within the next 24 characters is reported as a broken
+    # cross-reference to `02`. It reads exactly like a real finding, which is the worst
+    # kind of false positive.
+    sec_re = re.compile(r"(?<![0-9-])`?(0[0-7])`?[^\n]{0,24}?§(\d+(?:\.\d+)*)")
     for f in md:
         for m in sec_re.finditer(f.read_text()):
             code, sec = m.group(1), m.group(2)

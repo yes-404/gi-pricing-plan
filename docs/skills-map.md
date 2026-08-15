@@ -96,10 +96,23 @@ where the project's hard problems live.
 
 ## 5. Frontend
 
+> **Vendored skills cover the first four rows** as of 2026-08-15 (`CLAUDE.md` §12):
+> `vue-best-practices`, `vue-router-best-practices`, `vue-pinia-best-practices`,
+> `vue-testing-best-practices`, `vue-debug-guides` and `create-adaptable-composable`, from
+> `yes-404/vue3-skills` (MIT). What they do **not** cover is anything specific to this
+> platform — the generated-client seam, how money and exact decimals cross into TypeScript,
+> the RFC 9457 error shape, cursor pagination, the 202-plus-Job model. That is
+> `.claude/skills/vue-frontend`, and the two are meant to be read together.
+>
+> `vue-jsx-best-practices` and `vue-options-api-best-practices` were deliberately **not**
+> taken: §3 fixes `<script setup lang="ts">` and the Composition API, and a skill teaching
+> a rejected approach is worse than a missing one.
+
 | Component | Used in | Depth | Skills to research | Resources |
 |---|---|---|---|---|
-| Vue 3 Composition API | 00 §5.6 | ★★ | `<script setup lang="ts">`, composables, provide/inject, suspense for async views | [Vue 3 docs](https://vuejs.org/guide/introduction.html) |
-| Pinia | frontend state | ★ | Store composition, persisting selected dataset/model context, typed stores | [Pinia docs](https://pinia.vuejs.org/) |
+| Vue 3 Composition API ✔ | 00 §5.6 | ★★ | **Skill vendored** (`vue-best-practices`, `create-adaptable-composable`). Remaining project-specific: composables over the generated client, suspense for async views | [Vue 3 docs](https://vuejs.org/guide/introduction.html) |
+| Pinia ✔ | frontend state | ★ | **Skill vendored** (`vue-pinia-best-practices`). Remaining: persisting the selected dataset/model context across routes | [Pinia docs](https://pinia.vuejs.org/) |
+| Vue Router ✔ | 01/02/03 §5.3 views | ★ | **Skill vendored** (`vue-router-best-practices`). Remaining: guards against the permission set `GET /me` returns | [Vue Router docs](https://router.vuejs.org/) |
 | Vite + TS strict | frontend build | ★ | Strict-mode config, path aliases, env handling, build splitting for heavy chart bundles | [Vite docs](https://vite.dev/) |
 | Tailwind | frontend styling | ★ | Design tokens, dark mode, component extraction discipline | [Tailwind docs](https://tailwindcss.com/docs) |
 | ECharts / vue-echarts | 02 diagnostics, 05 dashboards | ★★ | Large-dataset rendering, dual-axis A/E charts, custom tooltips, accessible tabular fallback (NFR-OVR-10) | [Apache ECharts](https://echarts.apache.org/en/index.html), [vue-echarts](https://github.com/ecomfe/vue-echarts) |
@@ -123,7 +136,7 @@ where the project's hard problems live.
 | pytest + hypothesis | all Python; 03 FR-RATE-44 | ★★ | Property-based testing of actuarial invariants (monotonicity, additivity, decimal exactness), **building strategies from a declarative input contract**, shrinking counterexamples into something an actuary can read, fixtures for artifact round-trips | [Hypothesis docs](https://hypothesis.readthedocs.io/), [Composite strategies](https://hypothesis.readthedocs.io/en/latest/data.html#composite-strategies) |
 | mypy --strict | `packages/` | ★★ | Strict-mode idioms with Pydantic v2 and Polars, typed protocols for callbacks | [mypy docs](https://mypy.readthedocs.io/) |
 | Ruff | all Python | ★ | Rule selection, line length 100, import sorting, import-linter-style layering (ADR-0001) | [Ruff docs](https://docs.astral.sh/ruff/) |
-| Vitest / Vue Testing Library / Playwright | frontend | ★ | Component testing with generated API types mocked, E2E for the DAG designer | [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) |
+| Vitest / Vue Testing Library / Playwright ✔ | frontend | ★ | **Skill vendored** (`vue-testing-best-practices`). Remaining: mocking against the *generated* API types so a contract change breaks the test rather than the runtime | [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) |
 | Docker Compose / Helm | `deploy/` | ★ | Local full-stack parity (NFR-OVR-9), worker scaling, MinIO wiring | [Compose docs](https://docs.docker.com/compose/) |
 
 ---
