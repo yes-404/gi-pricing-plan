@@ -350,3 +350,61 @@ async def test_a_preparation_recipe_is_applied_during_ingestion(
         "cast",
         "filter_rows",
     ]
+
+
+@pytest.mark.req("FR-DATA-5")
+async def test_an_ingested_version_reads_back_over_http(
+    database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
+) -> None:
+    """The round trip nothing exercised: ingest through the real path, then read the
+    version back **through the API**.
+
+    `GET /datasets/{slug}/versions/{version}` returned **500 on every ingested version**.
+    `_store_table` writes `source_names` per table (FR-DATA-5), `DatasetTable` is
+    `extra="forbid"` and did not declare it, so `DatasetVersion.model_validate` refused the
+    row the platform had itself written.
+
+    Nothing caught it because the layers were only ever tested apart: the API tests never
+    fetched a version that had been ingested, the job tests read versions through the
+    service rather than the route, and the frontend mocked `fetch`. It surfaced the first
+    time a browser asked for a real one.
+    """
+    from backend.tests.conftest_db import test_database_url
+    from fastapi.testclient import TestClient
+    from pydantic import SecretStr
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+    from app.config import Environment, Settings
+    from app.main import create_app
+
+    dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, actuary)
+    version_id = await _ingest(
+        database, blob_store, workspace_id, actuary, dataset_id, CLEAN
+    )
+
+    from app.db.models import DatasetRow
+
+    async with database.session() as session:
+        version = await session.get(DatasetVersionRow, version_id)
+        slug = (await session.get(DatasetRow, version.dataset_id)).slug
+
+    settings = Settings(
+        environment=Environment.LOCAL, version="test", dev_auth_enabled=True,
+        database_url=SecretStr(test_database_url()),
+    )
+    with TestClient(create_app(settings), raise_server_exceptions=False) as client:
+        response = client.get(
+            f"/api/v1/datasets/{slug}/versions/{version.version}",
+            headers={
+                DEV_PRINCIPAL_HEADER: str(actuary.id),
+                DEV_WORKSPACE_HEADER: str(workspace_id),
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["version"] == version.version
+    # The header the column came from, which normalisation is lossy about (FR-DATA-5).
+    table = body["tables"][0]
+    assert table["source_names"], "the source headers did not survive the round trip"
+    assert table["row_count"] > 0

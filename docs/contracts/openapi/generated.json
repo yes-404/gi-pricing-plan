@@ -1002,6 +1002,14 @@
             "minimum": 0.0,
             "title": "Row Count",
             "type": "integer"
+          },
+          "source_names": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Normalised column name to the header it came from (FR-DATA-5). Kept because normalisation is lossy and occasionally surprising: freMTPL2's `IDpol` becomes `i_dpol`, since the splitter reads it as `I` + `Dpol` — the same rule that correctly gives `HTTPServer` → `http_server`. Without the original, a user cannot tell which of their columns a rule is talking about.",
+            "title": "Source Names",
+            "type": "object"
           }
         },
         "required": [

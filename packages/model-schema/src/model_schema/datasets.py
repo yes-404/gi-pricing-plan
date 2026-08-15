@@ -199,6 +199,16 @@ class DatasetTable(BaseModel):
     blob: BlobRef | None = None
     pandera_schema_ref: str | None = None
     arrow_schema: dict[str, str] = Field(default_factory=dict)
+    source_names: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Normalised column name to the header it came from (FR-DATA-5). Kept because "
+            "normalisation is lossy and occasionally surprising: freMTPL2's `IDpol` "
+            "becomes `i_dpol`, since the splitter reads it as `I` + `Dpol` — the same rule "
+            "that correctly gives `HTTPServer` → `http_server`. Without the original, a "
+            "user cannot tell which of their columns a rule is talking about."
+        ),
+    )
 
 
 class VersionTotals(BaseModel):
