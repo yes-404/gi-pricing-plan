@@ -38,6 +38,7 @@ from app.platform import jobs as job_service
 from app.platform import profiles as profile_service
 from app.platform import validation as validation_service
 from model_schema import (
+    DatasetSplit,
     DatasetStatus,
     DatasetVersion,
     Job,
@@ -421,3 +422,72 @@ async def rejected_rows(
         "reject_rate": run.rows_rejected / run.rows_read if run.rows_read else 0.0,
         "sample": run.reject_sample,
     }
+
+
+class SplitRequest(BaseModel):
+    """Record a named split over parts that already exist (FR-DATA-36)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1, max_length=64)
+    method: str
+    seed: int
+    parts: dict[str, UUID] = Field(min_length=2)
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.post(
+    "/{version_id}/splits",
+    status_code=status.HTTP_201_CREATED,
+    summary="Record a named split",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def record_split(
+    version_id: UUID,
+    body: SplitRequest,
+    caller: WriteDatasets,
+    database: DatabaseDep,
+) -> DatasetSplit:
+    """FR-DATA-36: the split is recorded on the **parent**, over parts already derived.
+
+    Synchronous, unlike `/derive`: this writes one row referencing versions that exist. The
+    expensive half — partitioning the rows — happened in the `dataset.derive` Jobs that
+    produced the parts.
+
+    The service function has existed since W4 and had no route, so a split could be created
+    only from inside the platform. `02`'s `split_ref` needs one that a caller can name,
+    which is what made the gap visible.
+    """
+    async with database.unit_of_work() as session:
+        version = await _scoped(session, version_id, caller)
+        row = await dataset_service.record_split(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            parent_version_id=version.id,
+            name=body.name,
+            method=body.method,
+            seed=body.seed,
+            parts=body.parts,
+            params=body.params,
+        )
+        return dataset_service.to_split(row)
+
+
+@router.get(
+    "/{version_id}/splits",
+    summary="Splits recorded on this version",
+    responses=problems(401, 403, 404, 422),
+)
+async def list_splits(
+    version_id: UUID,
+    caller: ReadDatasets,
+    database: DatabaseDep,
+) -> list[DatasetSplit]:
+    """Every split on this version, so a Model Spec can cite one by id (FR-DATA-36)."""
+    async with database.session() as session:
+        version = await _scoped(session, version_id, caller)
+        rows = await dataset_service.list_splits(
+            session, workspace_id=caller.workspace_id, parent_version_id=version.id
+        )
+        return [dataset_service.to_split(row) for row in rows]

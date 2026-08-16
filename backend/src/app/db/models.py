@@ -50,6 +50,7 @@ __all__ = [
     "DatasetRow",
     "DatasetSplitRow",
     "DatasetVersionRow",
+    "DiagnosticsRow",
     "IngestionRunRow",
     "JobLogRow",
     "JobRow",
@@ -1269,6 +1270,10 @@ class ModelRow(Base):
     #: digest, which is the failure mode a length limit is least able to report.
     spec_hash: Mapped[str] = mapped_column(String(80), nullable=False)
     fit_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    #: `02` §4.8: `status >= fitted` implies this is set. Written in the same transaction
+    #: as `fit_result` and `status`, because a model that is `fitted` for even one
+    #: transaction without its diagnostics is a model something could read in that state.
+    diagnostics_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
     parent_model_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     change_reason: Mapped[str | None] = mapped_column(Text)
@@ -1289,5 +1294,44 @@ class ModelRow(Base):
             "status IN ('draft', 'archived') OR fit_result IS NOT NULL",
             name="fitted_model_has_a_fit_result",
         ),
+        # `02` §4.8's other invariant, at the same layer and for the same reason. The
+        # spine could not state it because diagnostics did not exist; a model that reaches
+        # `review` with no evidence is an approval request with nothing in it.
+        CheckConstraint(
+            "status IN ('draft', 'archived') OR diagnostics_id IS NOT NULL",
+            name="fitted_model_has_diagnostics",
+        ),
         Index("ix_models_dataset_version", "workspace_id", "dataset_version_id"),
+    )
+
+
+class DiagnosticsRow(Base):
+    """Model quality evidence, computed once at fit time (`02` FR-MODEL-49, §4).
+
+    An **artifact**: insert-only at the privilege layer like every other one (FR-DATA-42),
+    because FR-MODEL-49 says diagnostics are computed once and read thereafter. A
+    diagnostics row that could be updated would let the evidence behind an approval change
+    after the approval.
+
+    One row per model, enforced: a second set of diagnostics for one model is either a
+    recomputation the requirement forbids or a silent overwrite of the evidence.
+    """
+
+    __tablename__ = "diagnostics"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    model_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: The `Diagnostics` artifact, whole. Stored as one document rather than shredded into
+    #: columns: nothing queries inside it, and a shredded artifact is one that can be
+    #: partially written.
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("model_id", name="uq_diagnostics_model"),
+        Index("ix_diagnostics_workspace", "workspace_id"),
     )

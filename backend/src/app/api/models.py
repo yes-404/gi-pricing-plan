@@ -29,10 +29,12 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.api.authz import requires
-from app.api.deps import Caller, job_identity
+from app.api.deps import Caller, SettingsDep, job_identity
 from app.api.responses import problems
 from app.db.session import Database
+from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
+from app.platform import model_specs as spec_service
 from app.platform import modelling as service
 from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore
@@ -40,6 +42,7 @@ from model_schema import (
     Banding,
     BandingEvaluation,
     BandingProposal,
+    Diagnostics,
     Factor,
     FactorIntent,
     FactorType,
@@ -52,6 +55,7 @@ from model_schema import (
     JobQueue,
     Model,
     MonotonicDirection,
+    SpecValidation,
 )
 from model_schema import Permission as Perm
 
@@ -128,6 +132,15 @@ class BandingProposalRequest(BandingProposal):
 
 class GroupingProposalRequest(GroupingProposal):
     slug: str
+
+
+class ModelSpecValidate(BaseModel):
+    """A spec to check. Same shape as `ModelCreate` minus the lineage fields, which say
+    what a *new* model would be rather than whether this one could be fitted."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    spec: GlmSpec
 
 
 class ModelCreate(BaseModel):
@@ -368,6 +381,7 @@ async def fit_model(
     body: ModelCreate,
     caller: FitModels,
     database: DatabaseDep,
+    settings: SettingsDep,
     response: Response,
 ) -> Job | Model:
     """**202** with a Job for a new fit; **200** with the model when it already exists.
@@ -377,6 +391,16 @@ async def fit_model(
     failed job twenty seconds later is a worse answer to the same question.
     """
     async with database.unit_of_work() as session:
+        # FR-MODEL-81's gate, before a Job exists. `reserve_model` answers R1 and the
+        # prohibited-factor rule with their own codes; this adds the complexity limits and
+        # nothing else, so a caller's existing refusals do not change shape.
+        await spec_service.enforce_complexity(
+            session,
+            settings,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            spec=body.spec,
+        )
         row, should_fit = await service.reserve_model(
             session,
             workspace_id=caller.workspace_id,
@@ -419,3 +443,62 @@ async def get_model(
             session, workspace_id=caller.workspace_id, slug=slug, version=version
         )
         return service.to_model(row)
+
+
+@router.get(
+    "/models/{slug}/diagnostics",
+    summary="Model diagnostics",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_model_diagnostics(
+    slug: str,
+    caller: ReadModels,
+    database: DatabaseDep,
+    version: Annotated[int | None, Query(ge=1)] = None,
+) -> Diagnostics:
+    """The evidence behind a fitted model (FR-MODEL-49, `02` §5.1).
+
+    Read, never recomputed. FR-MODEL-49 makes diagnostics a product of the fit, so this
+    endpoint returns what that fit recorded — a screen that recalculated them would be
+    showing numbers no approval could cite.
+
+    `?version=` selects a model version, like `GET /models/{slug}`; the latest without it.
+    """
+    async with database.session() as session:
+        model = await service.load_model(
+            session, workspace_id=caller.workspace_id, slug=slug, version=version
+        )
+        return await diagnostics_service.load_diagnostics(
+            session, workspace_id=caller.workspace_id, model_id=model.id
+        )
+
+
+@router.post(
+    "/model-specs/validate",
+    summary="Validate a model spec without fitting",
+    responses=problems(401, 403, 404, 422),
+)
+async def validate_model_spec(
+    body: ModelSpecValidate,
+    caller: FitModels,
+    database: DatabaseDep,
+    settings: SettingsDep,
+) -> SpecValidation:
+    """`wf-01` D2: catch the errors before any compute is spent (FR-MODEL-44).
+
+    **200 with `ok: false`**, not a 4xx, when the spec is merely unfittable. The caller
+    asked whether this spec is valid and got a complete answer; a 422 would say the
+    *request* was malformed, and `02` §5.3's live validation would then be a form that
+    errors on every keystroke while the actuary is still typing.
+
+    A spec naming a dataset version that does not exist is a different thing — a bad
+    reference rather than an invalid spec — and is a 404.
+    """
+    async with database.unit_of_work() as session:
+        return await spec_service.validate_spec(
+            session,
+            settings,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            spec=body.spec,
+        )

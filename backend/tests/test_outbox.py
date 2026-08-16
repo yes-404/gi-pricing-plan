@@ -106,10 +106,26 @@ async def test_rollback_discards_the_job_and_its_publish_intent_together(
     assert all(i.job_id != row.id for i in intents)
 
 
+async def _drain(database: Database) -> None:
+    """Publish every intent already pending, so a test starts from a known outbox.
+
+    `relay_once` takes the **oldest** `batch_size` rows, and tests submit Jobs without ever
+    running the relay — so pending intents accumulate across a session. Once the backlog
+    passes the batch size, a test's own row is no longer in the batch and "was it
+    published?" starts answering a question about the backlog instead.
+
+    Found when the modelling tests grew: each fit now derives two split parts, and the
+    accumulated intents pushed this file's subject rows out of the first hundred.
+    """
+    while await outbox.relay_once(database, RecordingPublisher()) > 0:
+        pass
+
+
 @pytest.mark.req("FR-PLAT-51")
 async def test_relay_publishes_pending_intents_after_commit(
     database: Database, workspace_id, principal
 ) -> None:
+    await _drain(database)
     async with database.unit_of_work() as session:
         row = _job(workspace_id, principal)
         session.add(row)
@@ -135,6 +151,7 @@ async def test_relay_publishes_pending_intents_after_commit(
 async def test_a_published_intent_is_not_published_twice(
     database: Database, workspace_id, principal
 ) -> None:
+    await _drain(database)
     async with database.unit_of_work() as session:
         row = _job(workspace_id, principal)
         session.add(row)

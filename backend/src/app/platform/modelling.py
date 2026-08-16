@@ -22,10 +22,11 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import FactorRow, ModelRow
+from app.db.models import DiagnosticsRow, FactorRow, ModelRow
 from app.errors import PlatformError
 from app.platform import audit, datasets, rbac
 from model_schema import (
+    Diagnostics,
     Factor,
     GlmFitResult,
     GlmSpec,
@@ -63,7 +64,11 @@ __all__ = [
 #: The tag does not prevent the change; it makes it **legible**. A `v1:` digest in a
 #: database this code no longer produces is a row that needs backfilling, and it can be
 #: found with a `LIKE 'v1:%'`. An untagged digest cannot be found at all.
-SPEC_HASH_VERSION: Final = 1
+#: **v2, 2026-08-16** — `GlmSpec` gained `split_ref` with the diagnostics slice. Every `v1:`
+#: digest in the database describes a spec this build would hash differently, so a `v1:`
+#: model resubmitted today looks new. That is the documented cost of the field, paid
+#: visibly: `spec_hash_is_current` reports the stale rows and `LIKE 'v1:%'` finds them.
+SPEC_HASH_VERSION: Final = 2
 
 
 def spec_hash(spec: GlmSpec) -> str:
@@ -111,6 +116,7 @@ def to_model(row: ModelRow) -> Model:
         spec=GlmSpec.model_validate(row.spec),
         spec_hash=row.spec_hash,
         fit_result=GlmFitResult.model_validate(row.fit_result) if row.fit_result else None,
+        diagnostics_id=row.diagnostics_id,
         dataset_version_id=row.dataset_version_id,
         parent_model_id=row.parent_model_id,
         change_reason=row.change_reason,
@@ -361,13 +367,19 @@ async def record_fit(
     actor: Principal,
     model_id: UUID,
     fit_result: GlmFitResult,
+    diagnostics: Diagnostics,
     job_id: UUID | None = None,
 ) -> ModelRow:
-    """Write the numbers a fit produced, once (R2).
+    """Write the numbers a fit produced, once (R2), with the evidence for them.
 
     Refuses a model that already carries a `fit_result`: R2 makes a Model immutable once
     fitted, and "refit" means a new version, not new coefficients on the old one. Without
     this the rule would hold only for callers who remembered it.
+
+    `diagnostics` is **required**, not optional. FR-MODEL-49 makes them a product of every
+    fit and `02` §4.8 makes them a condition of `fitted`; an optional argument would make
+    the invariant depend on each caller remembering to pass one, which is the shape of
+    every invariant this repository has had to repair.
     """
     # `FOR UPDATE`, not a plain read. This is a check-then-act, and two Jobs naming one
     # model — nothing forbids submitting two — both read `fit_result IS NULL` and both
@@ -390,7 +402,23 @@ async def record_fit(
             "`parent_model_id` set, never new coefficients on an existing one.",
         )
 
+    # The diagnostics row is written **before** the status moves, in this transaction.
+    # `02` §4.8 makes `diagnostics_id` a condition of `fitted`, and the database CHECK
+    # enforces it — so a fit that recorded coefficients and then failed to record evidence
+    # rolls back rather than leaving a model nothing may reference and nothing explains.
+    diagnostics_row = DiagnosticsRow(
+        workspace_id=workspace_id,
+        model_id=model_id,
+        job_id=job_id,
+        payload=diagnostics.model_dump(
+            mode="json", exclude={"id", "model_id", "computed_at", "job_id"}
+        ),
+    )
+    session.add(diagnostics_row)
+    await session.flush()
+
     row.fit_result = fit_result.model_dump(mode="json")
+    row.diagnostics_id = diagnostics_row.id
     row.status = ModelStatus.FITTED.value
     row.job_id = job_id
     await session.flush()

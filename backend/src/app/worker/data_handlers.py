@@ -21,7 +21,7 @@ from uuid import UUID
 
 import polars as pl
 
-from app.data.ingestion import ingest_upload
+from app.data.ingestion import PARQUET_MEDIA_TYPE, ingest_upload
 from app.db.models import BlobRow, DatasetVersionRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
@@ -305,9 +305,24 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
 
 def _derive(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`dataset.derive` — sample, split, filter or union (FR-DATA-33)."""
+    """`dataset.derive` — sample, split, filter or union (FR-DATA-33).
+
+    **`split` is materialised; the other operations are not yet.** A derived version used
+    to inherit its parent's `tables` wholesale, which made a "1 % sample" a version
+    containing 100 % of the rows and a train/test split two versions each containing
+    everything. FR-DATA-34 says a derived version inherits schema, dictionary and rule set
+    — the code was inheriting the *data*, and the two had been conflated.
+
+    Fixed here for `split`, because the diagnostics slice needs an honest holdout and a
+    holdout containing every training row is worse than none: it produces excellent numbers
+    that mean nothing. `sample`, `filter`, `join` and `aggregate` still inherit and are
+    recorded as such — OQ-DATA-8.
+    """
     progress = _bridge(callback)
+    blob_store = progress.blob_store
     actor, workspace_id = _actor(parameters), _workspace(parameters)
+    operation = parameters["operation"]
+    params = parameters.get("params") or {}
 
     async def work() -> UUID:
         async with progress.database.unit_of_work() as session:
@@ -316,13 +331,89 @@ def _derive(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
                 workspace_id=workspace_id,
                 actor=actor,
                 parent_version_id=UUID(parameters["parent_version_id"]),
-                operation=parameters["operation"],
-                params=parameters.get("params") or {},
+                operation=operation,
+                params=params,
             )
+            if operation == "split":
+                row.tables = await _materialise_split(
+                    session, blob_store, tables=list(row.tables), params=params
+                )
             return UUID(str(row.id))
 
     version_id = progress.run_on_loop(work())
     return JobResult(kind="artifact", ref=f"dataset_version:{version_id}")
+
+
+async def _materialise_split(
+    session: Any,
+    blob_store: BlobStore,
+    *,
+    tables: list[dict[str, Any]],
+    params: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Write the requested part's rows as their own blob (FR-DATA-33, FR-DATA-36).
+
+    The partition is `pricing_core.data.splits`', which computes it as a pure function of
+    method, seed and fractions — so the `train` Job and the `test` Job, running minutes
+    apart in different processes, agree on every row without coordinating.
+    """
+    from pricing_core.data.splits import SplitError, partition
+
+    part = params.get("part")
+    if not part:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "A split must say which part this version is",
+            422,
+            "`params.part` names the part being derived (e.g. 'train'). Without it there "
+            "is nothing to select and the version would silently be the whole parent.",
+        )
+
+    written: list[dict[str, Any]] = []
+    for entry in tables:
+        blob_row = await session.get(BlobRow, entry["blob"]["sha256"])
+        if blob_row is None:
+            raise PlatformError(
+                "NOT_FOUND", "A table's blob is missing", 404,
+                f"The parent names blob {entry['blob']['sha256']}, which is not in the store.",
+            )
+        frame = pl.read_parquet(io.BytesIO(await blob_store.read(to_ref(blob_row))))
+        try:
+            parts = partition(
+                frame,
+                method=params.get("method", "random"),
+                seed=int(params.get("seed", 0)),
+                fractions=params.get("fractions"),
+                key_column=params.get("key_column"),
+                time_column=params.get("time_column"),
+                cutoff=params.get("cutoff"),
+            )
+        except SplitError as exc:
+            raise PlatformError(
+                "VALIDATION_FAILED", "The split cannot be computed as described", 422, str(exc)
+            ) from exc
+
+        if part not in parts:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "The split has no such part",
+                422,
+                f"Part {part!r} is not one of {sorted(parts)}. A version derived for a part "
+                "the split does not define would carry no rows and claim to be a holdout.",
+            )
+
+        selected = parts[part]
+        buffer = io.BytesIO()
+        selected.write_parquet(buffer, compression="zstd")
+        ref = await blob_store.put(session, buffer.getvalue(), PARQUET_MEDIA_TYPE)
+        written.append(
+            {
+                **entry,
+                "row_count": selected.height,
+                "blob": ref.model_dump(mode="json", by_alias=True),
+            }
+        )
+    return written
 
 
 def register_data_handlers() -> None:

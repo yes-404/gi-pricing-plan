@@ -47,6 +47,11 @@ GENERATED_SHAPES: dict[str, str] = {
     # contract promises — and three divergences went unnoticed until `main` moved.
     "banding": "Banding",
     "grouping": "Grouping",
+    # Added 2026-08-16 (W5, diagnostics). Same reason as the two above, learned from them:
+    # `diagnostics.schema.json` is a hand-authored Phase-0 contract, and until there is a
+    # generated counterpart nothing compares it against the shape the code actually emits.
+    "diagnostics": "Diagnostics",
+    "dataset-split": "DatasetSplit",
 }
 
 

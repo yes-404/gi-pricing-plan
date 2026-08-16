@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import enum
 from datetime import date, datetime
-from typing import Annotated, Final
+from typing import Annotated, Any, Final
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -33,6 +33,7 @@ __all__ = [
     "DataDictionaryEntry",
     "Dataset",
     "DatasetKind",
+    "DatasetSplit",
     "DatasetStatus",
     "DatasetTable",
     "DatasetVersion",
@@ -291,3 +292,36 @@ class DatasetVersion(BaseModel):
         exactly one, and it is not a judgement call.
         """
         return self.status is DatasetStatus.VALIDATED
+
+
+class DatasetSplit(BaseModel):
+    """A named train/test split, recorded on the parent version (`01` FR-DATA-36).
+
+    On the **parent**, not the parts, so that "trained on the same split" is one artifact
+    two models cite rather than two derivations believed to match. `parts` maps a part name
+    to the Derived Dataset Version holding its rows.
+
+    At least two parts, always: a one-part split is a filter, and recording it as a split
+    would let a model claim a holdout it never had.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    parent_version_id: UUID
+    name: str
+    method: str
+    seed: int
+    params: dict[str, Any] = Field(default_factory=dict)
+    parts: dict[str, UUID] = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def _a_split_has_at_least_two_parts(self) -> DatasetSplit:
+        if len(self.parts) < 2:
+            raise ValueError(
+                f"split {self.name!r} has {len(self.parts)} part(s). A one-part split is a "
+                "filter; recorded as a split it would let a model claim a holdout it never "
+                "had (FR-DATA-36)."
+            )
+        return self

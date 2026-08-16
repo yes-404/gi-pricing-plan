@@ -145,6 +145,30 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         constraints={"min": 0.0, "max": 1.0},
     ),
     SettingDefinition(
+        key="modelling.max_factor_count",
+        type=SettingType.INT,
+        default=None,
+        description="Maximum factors a Model Spec may declare (`02` FR-MODEL-81, "
+        "OQ-MODEL-6). **Unset by default, and that is the decision** — a large book "
+        "legitimately supports a large model, so there is no platform-wide constant. Where "
+        "a workspace sets one, a breaching spec is refused with "
+        "`MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT` before any compute is spent, and the "
+        "refusal is audited. Whether *this* model is overfitted stays a judgement for the "
+        "Approver holding the diagnostic (`06`).",
+        constraints={"min": 1},
+    ),
+    SettingDefinition(
+        key="modelling.min_exposure_per_parameter",
+        type=SettingType.FLOAT,
+        default=None,
+        description="Minimum exposure per fitted parameter a Model Spec may leave (`02` "
+        "FR-MODEL-81). Unset by default, for the reason above. Checked against the "
+        "version's recorded totals and its profile's distinct counts rather than by "
+        "reading the data, so the refusal costs nothing — which is what makes 'before any "
+        "compute is spent' true rather than aspirational.",
+        constraints={"min": 0.0},
+    ),
+    SettingDefinition(
         key="observability.trace_sample_rate",
         type=SettingType.FLOAT,
         default=1.0,

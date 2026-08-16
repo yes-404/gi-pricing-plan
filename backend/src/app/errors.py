@@ -102,6 +102,15 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "GLM_SEPARATION_DETECTED",
         "OFFSET_REQUIRED_FOR_FREQUENCY",
         "MODEL_IMMUTABLE",
+        # The diagnostics slice. A spec with no `split_ref` has no holdout, so it can
+        # produce no diagnostics (FR-MODEL-54) and therefore cannot reach `fitted`
+        # (`02` §4.8) — refused before the fit rather than after it.
+        "MODEL_SPLIT_REQUIRED",
+        # FR-MODEL-81's gate half, 2026-08-16. The diagnostic half shipped with the
+        # diagnostics slice and this did not — a requirement counted as evidenced because
+        # a test marked it, which is the "a marker is a claim, not a proof" trap
+        # `CLAUDE.md` §13 names.
+        "MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT",
     }
 )
 

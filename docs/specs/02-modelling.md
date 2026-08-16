@@ -586,6 +586,27 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 }
 ```
 
+> **`split_ref` and `diagnostics_id` are live from 2026-08-16 (W5, diagnostics).** Both
+> were among the fields OQ-MODEL-8 named as declared-and-dead, and `diagnostics_id` was its
+> own worked example: §4.8's `status ≥ fitted ⟹ diagnostics_id` could not be met because
+> diagnostics did not exist, so the spine enforced `fitted ⟹ fit_result` instead. The
+> invariant now holds at the type, at a database CHECK, and in the fit path, which writes
+> both in one transaction.
+>
+> This is the recommendation on file — "re-widen it as the slices land" — not a decision
+> taken ahead of the maintainer. `expression`, `filter` and `loss_treatment` stay
+> unimplemented and OQ-MODEL-8 stays open for them.
+>
+> **`split_ref` is required to reach `fitted`**, though the field itself is optional: a
+> spec may be explored without one, but FR-MODEL-54 makes a diagnostic without its holdout
+> counterpart a defect and FR-MODEL-64 makes diagnostics the condition of `fitted`, so a
+> fit with no split is refused with `MODEL_SPLIT_REQUIRED` before any compute is spent.
+> The obligation sits on `Model`, where the status is, rather than on the spec.
+>
+> **`spec_hash` is now `v2`.** Adding a field to `GlmSpec` changes the digest, which the
+> algorithm version exists to make legible: every `v1:` digest is findable with
+> `LIKE 'v1:%'` and reported stale by `spec_hash_is_current`.
+
 **Invariants** — `status ≥ fitted` ⟹ `diagnostics_id` set; `model_type ≠ glm` and
 `status = approved` ⟹ `transparency_artifact_id` set (R3); `custom_objective_ref` set and
 `status = approved` ⟹ that objective version is `approved` (R4); `booster_blob` present
@@ -667,7 +688,7 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/groupings/evaluate` | Recompute the deviance/df evidence for an **edited** mapping (FR-MODEL-83) |
 | `POST` | `/api/v1/groupings` | **201** Persist a Grouping |
 | `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
-| `POST` | `/api/v1/model-specs/validate` | Validate a spec without fitting: factors resolve, offsets sane, objective applicable (FR-MODEL-44) |
+| `POST` | `/api/v1/model-specs/validate` | **200** with `SpecValidation` — `ok` plus every problem, never only the first. A spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx; a spec naming a version that does not exist is a 404 (FR-MODEL-44, FR-MODEL-81) |
 | `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-MODEL-66) |
 | `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
 | `GET` | `/api/v1/models/{id}/diagnostics` | Diagnostics artifact |
@@ -787,8 +808,16 @@ def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
             progress: ProgressCallback | None = None) -> GlmFitResult
-def predict_glm(model: Model, data: pl.DataFrame, *,
-                with_interval: bool = False) -> pl.DataFrame
+
+# pricing_core/modelling/predict.py
+def linear_predictor(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
+                     spec: GlmSpec, *,
+                     bandings: Mapping[UUID, Banding] | None = None,
+                     groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
+def predict_glm(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
+                spec: GlmSpec, *,
+                bandings: Mapping[UUID, Banding] | None = None,
+                groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
 
 # pricing_core/modelling/gbm.py
 def fit_gbm(data: pl.DataFrame, spec: GbmSpec, *, seed: int = 0,
@@ -803,8 +832,16 @@ def certify_objective(obj: CustomObjective, *, sampling: SamplingSpec,
                       seed: int) -> ObjectiveCertificate
 
 # pricing_core/modelling/diagnostics.py
-def compute_diagnostics(model: Model, train: pl.DataFrame, holdout: pl.DataFrame,
-                        *, weights: WeightSpec) -> Diagnostics
+def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Factor], *,
+                        train: pl.DataFrame, holdout: pl.DataFrame,
+                        bandings: Mapping[UUID, Banding] | None = None,
+                        groupings: Mapping[UUID, Grouping] | None = None,
+                        max_factor_count: int | None = None,
+                        min_exposure_per_parameter: float | None = None,
+                        type_iii: bool = True,
+                        progress: ProgressCallback | None = None) -> DiagnosticsResult
+def unit_deviance(y, mu, *, family: str, power: float = 1.5) -> NDArray[float64]
+def deviance(y, mu, *, family: str, power: float = 1.5, weights=None) -> float
 def compare_models(models: Sequence[Model], holdout: pl.DataFrame) -> ModelComparison
 
 # pricing_core/modelling/transparency.py
@@ -817,6 +854,24 @@ def build_shap_summary(model: Model, data: pl.DataFrame, *, sample: int,
 def assemble_risk_premium(structure: PerilStructure, data: pl.DataFrame) -> pl.DataFrame
 def reconcile(structure: PerilStructure, data: pl.DataFrame) -> Reconciliation
 ```
+
+> **Two signatures corrected, 2026-08-16 (W5, diagnostics).** `predict_glm` and
+> `compute_diagnostics` were declared taking a `Model`. They cannot: a `Model` carries
+> *references* — factor ids, banding ids, a dataset version — and resolving one needs a
+> database, which ADR-0001 forbids this package. This is the same correction already
+> recorded for `fit_glm`, and it was always going to recur for every function the spec
+> declared the same way; `compare_models`, `build_glm_approximation`, `build_shap_summary`
+> and `predict_gbm` still carry it and will need it when their slices land.
+>
+> `predict_glm` returns the expectation as an array rather than a `DataFrame`, and takes no
+> `with_interval`: FR-MODEL-63's interval comes from the covariance matrix, which the fit
+> stores as a blob this signature does not receive. A half-interval derived from the
+> coefficient standard errors alone would read as a prediction interval and not be one,
+> so the parameter is absent until the slice that can honour it.
+>
+> `compute_diagnostics` returns `DiagnosticsResult` — the computed numbers — rather than
+> the persisted `Diagnostics` artifact, which carries an id, a `model_id` and a
+> `computed_at` that only the platform can supply.
 
 Sketch of the compiled objective handed to XGBoost — note the platform, not the user,
 owns this function; the user only ever supplied `loss` (§4.6):

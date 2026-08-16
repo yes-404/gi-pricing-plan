@@ -54,6 +54,10 @@ __all__ = [
     "MonotonicDirection",
     "OffsetSpec",
     "RelativityLevel",
+    "SpecProblem",
+    "SpecProblemKind",
+    "SpecValidation",
+    "SplitRef",
     "UnseenLevelBehaviour",
     "WeightSpec",
 ]
@@ -569,6 +573,36 @@ class OffsetSpec(BaseModel):
         return self
 
 
+class SplitRef(BaseModel):
+    """The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).
+
+    A *reference*, not a description. FR-DATA-36 records the split on the **parent**
+    version precisely so that "trained on the same split" is one artifact two models cite,
+    rather than two derivations that were believed to match. Naming the part versions
+    directly here would reintroduce the belief.
+
+    `train_part` and `holdout_part` are keys into the split's `parts` map; that they name
+    two *different* parts is checked here, because a model whose holdout is its training
+    set reports a flawless fit and no diagnostic downstream can tell.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    split_artifact_id: UUID
+    train_part: str = "train"
+    holdout_part: str = "test"
+
+    @model_validator(mode="after")
+    def _the_holdout_is_not_the_training_set(self) -> SplitRef:
+        if self.train_part == self.holdout_part:
+            raise ValueError(
+                f"train and holdout are both {self.train_part!r}. A model measured on the "
+                "rows it was fitted on reports its own memory, and FR-MODEL-54's "
+                "side-by-side comparison would then show two copies of one number."
+            )
+        return self
+
+
 class WeightSpec(BaseModel):
     """Severity weights by claim count, burning cost by exposure (FR-MODEL-19)."""
 
@@ -597,6 +631,12 @@ class GlmSpec(BaseModel):
     model_type: Literal["glm"] = "glm"
     model_family_slug: str
     dataset_version_id: UUID
+    #: `02` §4.4's `split_ref`, live from the diagnostics slice. Optional because a model
+    #: may be explored without a holdout; **required to reach `fitted`**, since FR-MODEL-54
+    #: makes a diagnostic without its holdout counterpart a defect and FR-MODEL-64 makes
+    #: diagnostics the condition of `fitted`. The obligation therefore sits on `Model`,
+    #: where the status is, rather than here.
+    split_ref: SplitRef | None = None
     peril: str | None = None
     response_column: str
     offset: OffsetSpec = OffsetSpec()
@@ -749,6 +789,10 @@ class Model(BaseModel):
     spec: GlmSpec
     spec_hash: str
     fit_result: GlmFitResult | None = None
+    #: `02` §4.8. Unmeetable during the spine — diagnostics did not exist — and enforced
+    #: below now that they do. OQ-MODEL-8 cited this field as its own example of a
+    #: declared-but-dead contract field.
+    diagnostics_id: UUID | None = None
     dataset_version_id: UUID
     parent_model_id: UUID | None = None
     change_reason: str | None = None
@@ -768,4 +812,94 @@ class Model(BaseModel):
                 f"model {self.model_family_slug}@{self.version} is {self.status.value} "
                 "with no fit result (`02` §4.8)."
             )
+        return self
+
+    @model_validator(mode="after")
+    def _a_fitted_model_has_its_diagnostics(self) -> Model:
+        """`02` §4.8's other invariant: `status ≥ fitted` ⟹ `diagnostics_id` set.
+
+        The spine enforced `fitted ⟹ fit_result` and left this one unstated, because
+        diagnostics did not exist to point at. It is the stronger of the two: coefficients
+        say what the model *is*, diagnostics say whether it is any good, and FR-MODEL-64
+        makes the second the condition of leaving `draft`. A model that reached `review`
+        with no diagnostics would be an approval request with no evidence.
+
+        `archived` is excluded with `draft` for the same reason as above — it is a
+        terminal state a model can be put into from anywhere, including from `draft`.
+        """
+        beyond_draft = self.status not in {ModelStatus.DRAFT, ModelStatus.ARCHIVED}
+        if beyond_draft and self.diagnostics_id is None:
+            raise ValueError(
+                f"model {self.model_family_slug}@{self.version} is {self.status.value} "
+                "with no diagnostics (`02` §4.8, FR-MODEL-49). Diagnostics are computed at "
+                "fit time and are what `fitted` means."
+            )
+        return self
+
+
+class SpecProblemKind(enum.StrEnum):
+    """Why a Model Spec cannot be fitted (`02` FR-MODEL-44, FR-MODEL-81).
+
+    A closed set, because the frontend renders each differently and an open string would
+    make that a guess about wording.
+    """
+
+    DATASET_NOT_VALIDATED = "dataset_not_validated"
+    FACTOR_MISSING = "factor_missing"
+    FACTOR_PROHIBITED = "factor_prohibited"
+    FACTOR_UNRESOLVABLE = "factor_unresolvable"
+    SPLIT_MISSING = "split_missing"
+    SPLIT_INVALID = "split_invalid"
+    RESPONSE_MISSING = "response_missing"
+    OFFSET_MISSING = "offset_missing"
+    COMPLEXITY_LIMIT = "complexity_limit"
+
+
+class SpecProblem(BaseModel):
+    """One reason a spec was refused, in terms the caller can act on."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: SpecProblemKind
+    message: str
+    #: What the problem is about — a factor slug, a column name, a setting key. Named
+    #: rather than described: "a factor is prohibited" sends the reader hunting, and the
+    #: form that pins the error to a field needs something to pin it to.
+    subject: str | None = None
+
+
+class SpecValidation(BaseModel):
+    """The answer to "may this be fitted?", without fitting it (FR-MODEL-44).
+
+    Reported as a list rather than raised as the first failure. A spec builder that
+    surfaced one error at a time would make a ten-factor spec a ten-round conversation,
+    and `02` §5.3 asks for live validation as the form is edited.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ok: bool
+    problems: tuple[SpecProblem, ...] = ()
+    #: What the complexity gate measured, whether or not it fired — so a caller near a
+    #: limit can see it coming rather than discovering it by crossing it.
+    factor_count: int = Field(default=0, ge=0)
+    estimated_parameter_count: int = Field(default=0, ge=0)
+    exposure_per_parameter: float | None = None
+    max_factor_count: int | None = None
+    min_exposure_per_parameter: float | None = None
+
+    @model_validator(mode="after")
+    def _ok_means_no_problems(self) -> SpecValidation:
+        """`ok` is derived, and must not be able to disagree with the list beside it.
+
+        A payload saying `ok: true` with three problems is the kind of thing a screen
+        renders as a green tick above a list of errors.
+        """
+        if self.ok and self.problems:
+            raise ValueError(
+                f"validation says ok with {len(self.problems)} problem(s): "
+                f"{[p.kind.value for p in self.problems]}"
+            )
+        if not self.ok and not self.problems:
+            raise ValueError("validation says not ok and names no problem")
         return self

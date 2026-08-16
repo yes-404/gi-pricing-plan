@@ -1400,6 +1400,89 @@ pins a banding.
 API only through the dev proxy, so this view is drivable via `scripts/demo.py` and not from
 a deployed browser.
 
+### W5 — diagnostics, and the holdout that was not one, 2026-08-16 *(in progress, not closed)*
+
+The fourth slice. `02` §3.8 was 0 of 10 and `02` §4.8's invariant — `status ≥ fitted ⟹
+diagnostics_id` — was unmeetable, which OQ-MODEL-8 had cited as its own worked example.
+
+**Two defects found before a line of the slice was written, both in closed work:**
+
+| Found | What it was |
+|---|---|
+| **`record_split` had no route** | FR-DATA-36's service function, its table and its negative tests have existed since W4; no HTTP route reached it and `01` §5.1 declared none. The endpoint audit compares the spec's table against the published contract, so an endpoint missing from *both* is invisible to it — the same blind spot that hid `01`'s reference publish lifecycle, and W4 closed through it. Now `POST`/`GET /dataset-versions/{id}/splits`, with the §5.1 rows |
+| **Derived versions inherited their parent's data** | `dataset.derive` recorded the operation and set `child.tables = parent.tables`, conflating FR-DATA-34's "inherits schema, Data Dictionary and Rule Set" with inheriting the *rows*. A 1 % sample held 100 % of the rows; a train/test split produced two versions each containing everything. A model "fitted on train" was fitted on all of it, and its holdout contained every training row — diagnostics that look excellent and mean nothing. **`split` is materialised now** (FR-DATA-44); `sample`, `filter`, `join` and `aggregate` are **not**, and are OQ-DATA-8 |
+
+| Delivered | Evidence |
+|---|---|
+| `compute_diagnostics` — universal (FR-MODEL-50) and GLM (FR-MODEL-51), train and holdout side by side | Built on a book with known relativities, so the tests assert what the numbers *are*. Train A/E is exactly 1.0 for a Poisson log-link fit with an intercept — the identity `Σy = Σμ`, which only holds if design columns, base level and offset are all reconstructed correctly |
+| **The type-III test separates signal from noise** | A real factor returns p < 1e-10 and a column drawn independently of the response returns p > 0.01, on the same fit. Without both halves the p-value is decoration. Degrees of freedom are asserted too: levels − 1, and a wrong df gives a wrong p-value from a right statistic |
+| `predict_glm` / `linear_predictor` (FR-MODEL-62, point predictions) | Scoring from the artifact alone, no `glum` — ADR-0003. Written because diagnostics need predictions on two frames; exposing it rather than hiding it avoids writing the same arithmetic twice when `03` calls it |
+| **Deviance, computed at last** | `GlmFitResult.deviance` was declared by the spine and always `None`. Now computed per family from the unit deviance, with AIC and BIC from an exact log-likelihood |
+| **A Tweedie fit reports no AIC rather than a wrong one** | Tweedie's density has no closed form. `aic`/`bic` are `None` with the reason stated, not a deviance-based stand-in that would differ from every other tool's AIC by an additive constant and read as a disagreement between two correct numbers |
+| `split_ref` and `diagnostics_id` live; `spec_hash` → `v2` | OQ-MODEL-8's "re-widen as the slices land", and the version tag the previous slice built doing its job: every `v1:` digest is findable with `LIKE 'v1:%'` |
+| The invariant, at three layers | The type refuses a `Model` beyond `draft` with no `diagnostics_id`; a database CHECK refuses it against a direct `INSERT`; the fit path writes model and diagnostics in **one transaction**. A fit with no split is refused with `MODEL_SPLIT_REQUIRED` before compute is spent |
+| `GET /models/{slug}/diagnostics`, `POST`/`GET /dataset-versions/{id}/splits` | Published in the contract, not merely routed — asserted against `docs/contracts/openapi/generated.json`, the file the endpoint audit reads |
+| `diagnostics` is insert-only | `GRANT SELECT, INSERT` and `REVOKE UPDATE, DELETE` for `gip_app`, asserted from `information_schema`. FR-MODEL-49 makes diagnostics computed once and read thereafter; a row that could be updated would let the evidence behind an approval change after the approval |
+
+**A defect the fixture found.** The deterministic test book fits exactly, so its deviance
+is 0 — and floating-point accumulation returned **−4.7e-17**. Deviance cannot be negative.
+It is clamped within a scaled tolerance and **raises** beyond it, because silently zeroing a
+genuinely negative total would turn a wrong unit-deviance formula into a plausible number.
+
+**The money-discipline scan was narrowed, and the narrowing was proved.** FR-MODEL-81's
+`exposure_per_parameter` is a ratio, not an exposure, and the name-based scan flagged it.
+Excluded by `_per_parameter` — a rule rather than two more names on the allow-list OQ-OVR-7
+objects to — and deliberately *not* a general `_per_\w+`, since `premium_per_policy` is
+money. Injecting a float `exposure_years` into a generated schema still fails the check.
+
+**Not delivered.** `scope-audit MODEL --endpoints` reads **13 of 27** and 31 of 95
+requirements; §3.8 is 6 of 10. The verdicts:
+
+| Requirement | Verdict |
+|---|---|
+| FR-MODEL-52 — GBM diagnostics | **Not started.** Nothing fits a GBM yet; the roadmap's own risk row makes FR-MODEL-50 the gate and 51/52 incremental. Owned by the GBM slice |
+| FR-MODEL-53 — cross-validation | **Not started.** Interacts with FR-MODEL-20's unimplemented regularisation path, which is where `select_by: cv` lives. Owned with it |
+| FR-MODEL-56 — model comparison | **Not started.** Its own endpoint and artifact; `wf-01` E1 needs it |
+| FR-MODEL-57 — backtest | **Not started.** The evidence bridge into `05`; owned by the slice that needs it |
+| FR-MODEL-63, 77, 78 — prediction intervals | **Not started.** 63 needs the covariance blob the fit stores but this signature does not receive; 77/78 need a GBM and the `quantile` template |
+| FR-MODEL-64 — the rest of the lifecycle | **Partial.** `draft → fitted` is enforced at three layers; `review`, `approved`, `superseded` and `archived` have no transitions. Owned by the submission slice |
+| FR-MODEL-67 — `dataset_invalidated` | **Not started.** Unowned |
+| FR-MODEL-81 — complexity | **Corrected 2026-08-16.** This record read as delivered and was **half** delivered: the diagnostic was recorded, the *gate* was not, and the requirement counted as evidenced because a test marked it. The gate landed in the next slice. Left here rather than edited away, because which was believed is the thing a governed system cannot afford to lose (`CLAUDE.md` §0) |
+
+### W5 — spec validation, and the half of FR-MODEL-81 the last slice missed, 2026-08-16 *(in progress, not closed)*
+
+The fifth slice, and it opens by correcting the fourth. **FR-MODEL-81 was recorded as
+delivered and was half delivered:** the diagnostics slice recorded factor counts,
+parameter counts and the two ratios, and shipped **no gate** —
+`MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT` was registered nowhere and neither
+`POST /model-specs/validate` nor `POST /models` refused anything. The requirement counted
+as evidenced because a test marked it, which is exactly `CLAUDE.md` §13's "a marker is a
+claim, not a proof" — found by reading the requirement rather than the marker, one slice
+later than it should have been.
+
+| Delivered | Evidence |
+|---|---|
+| `POST /model-specs/validate` (FR-MODEL-44, `wf-01` D2) | **200 with `ok: false`**, not a 4xx: a spec that cannot be fitted is a complete answer to the question asked, and §5.3's live validation would otherwise error on every keystroke. A version that does not exist *is* a 404 — a bad reference rather than an invalid spec |
+| Every problem, not the first | A spec with a missing factor, an unresolvable one and a bad response column reports all three. A validator that stopped at the first would make a ten-factor spec a ten-round conversation |
+| **The FR-MODEL-81 gate, on both entry points** | The requirement names `/model-specs/validate` **and** `POST /models`; a gate on the validator alone is advisory, because a caller can skip validation and post. Both call one `complexity_or_refuse`, so they cannot drift apart |
+| The refusal is audited | `model_spec.refused_for_complexity`, asserted from the audit table. Only the complexity refusal — auditing every keystroke of a live-validating form would bury the governance events |
+| Unset by default, and proved so | OQ-MODEL-6 refused a platform-wide constant. Both settings resolve to `None`, and with neither set the gate returns before reading the version or its profile |
+| **It costs nothing** | The parameter count comes from the stored profile's `distinct_count` and the exposure from the version's recorded totals — no parquet is read, which is what makes "before any compute is spent" true rather than aspirational |
+
+**The estimate is named an estimate.** A banded factor is counted at its *unbanded* levels,
+so the gate is conservative in the direction that refuses a spec which would have fitted.
+Reading the data to count exactly would be the compute the gate exists to avoid; the
+diagnostics record the true count after the fit, and that is the number a reviewer reads.
+
+**Both directions are tested.** The same spec is accepted, then refused once the limit
+moves below it — a test that only saw the refusal would pass against a gate that refused
+everything, and one that only saw the acceptance would pass against a gate that never
+fired.
+
+**Not delivered.** FR-MODEL-44's *objective applicability* half — which responses and
+backends an objective admits — is unbuilt, because no custom objective exists to be
+applicable or not. Owned by the custom-objective slice (FR-MODEL-75/76).
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
