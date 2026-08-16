@@ -196,6 +196,31 @@ re-install will reintroduce both:
    project contract; that text lives in `.claude/CLAUDE.md`, phrased conditionally on the
    artifact existing.
 
+**Running it on this repo: the docs half is parsed, not prompted.** `scripts/graphify-docs-extract.py`
+emits graphify's semantic-extraction JSON for `docs/**/*.md` deterministically, because the
+spec suite's structure is *written down* — requirement ids, ADR and `OQ-` citations, `§`
+references — so parsing beats asking a model to infer them, and every edge is honestly
+`EXTRACTED` at confidence 1.0. It also reads every `@pytest.mark.req` marker and emits a
+requirement←test `implements` edge, which is what fuses the spec half of the graph to the
+code half. Three things it took a wrong turn on first, all worth keeping:
+
+- **Node ids must match the AST extractor's exactly** — full repo-relative path, extension
+  dropped, each segment lowercased with non-alphanumerics collapsed to `_`. Get it wrong and
+  the doc nodes do not dedupe onto the code nodes; they become orphan ghost duplicates and
+  the graph silently gains a parallel, disconnected universe. Verify the overlap before
+  building, not after.
+- **Only the register defines an id.** `open-questions.md` defines each `OQ-`; a spec's §10
+  mirrors it. Treating both as definitions produced 95 open questions where the repo has 52.
+  Likewise an ADR *is* its document — a concept node beside it splits the citations in two.
+- **Cross-check the result against `scripts/req-coverage.py`.** The first run reported 147
+  evidenced requirements against the tool's 148; the missing one was `FR-PLAT-37`, whose
+  marker lives in `examples/` — a directory the scan roots had omitted. A graph that
+  disagrees with the authoritative tool is the failure this whole exercise exists to catch,
+  so the diff is the check.
+
+Run order for a full rebuild is graphify's own Steps 1–9 with this script standing in for
+Part B. `graphify-out/` is git-ignored, so the graph is rebuilt rather than shared.
+
 **Fourth pass, 2026-08-16 — installed on request, not from a gap analysis.** Worth saying
 plainly: the three passes above searched for a skill and found (or rejected) one. This one
 arrived as a maintainer instruction. The gap it happens to fill is real — `docs/` holds
