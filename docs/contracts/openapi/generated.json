@@ -63,6 +63,75 @@
         "title": "ActorKind",
         "type": "string"
       },
+      "AeCell": {
+        "additionalProperties": false,
+        "description": "Actual versus expected for one level of one factor (FR-MODEL-50).\n\n`ci_95` is on the **ratio**, not on the actual: an A/E of 1.19 whose interval excludes\n1.0 is a finding, and one whose interval spans it is noise. Without the interval the\ntwo render identically, which is how a thin cell becomes a rating decision.",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "number"
+          },
+          "ae": {
+            "title": "Ae",
+            "type": "number"
+          },
+          "ci_95": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci 95"
+          },
+          "expected": {
+            "title": "Expected",
+            "type": "number"
+          },
+          "exposure_years": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Years"
+          },
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "factor",
+          "level",
+          "actual",
+          "expected",
+          "ae"
+        ],
+        "title": "AeCell",
+        "type": "object"
+      },
       "ApprovalPolicy": {
         "additionalProperties": false,
         "description": "A workspace's approval policy (FR-GOV-12).",
@@ -620,6 +689,38 @@
         "title": "Body_preview_source_api_v1_sources__source_id__preview_post",
         "type": "object"
       },
+      "CalibrationBin": {
+        "additionalProperties": false,
+        "description": "Predicted against observed within a predicted-decile bin (FR-MODEL-50).",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "number"
+          },
+          "bin": {
+            "minimum": 1.0,
+            "title": "Bin",
+            "type": "integer"
+          },
+          "predicted": {
+            "title": "Predicted",
+            "type": "number"
+          },
+          "rows": {
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bin",
+          "rows",
+          "predicted",
+          "actual"
+        ],
+        "title": "CalibrationBin",
+        "type": "object"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "The result of recomputing the chain (FR-GOV-24).",
@@ -913,6 +1014,72 @@
           "distinct_count"
         ],
         "title": "ColumnProfile",
+        "type": "object"
+      },
+      "ComplexityDiagnostic": {
+        "additionalProperties": false,
+        "description": "Factor and parameter counts against whatever thresholds are in force (FR-MODEL-81).\n\nRecorded on **every** fit. The thresholds are stored with the measurements because they\nare workspace settings that change: a fit judged against no limit and a fit judged\nagainst a limit of 40 are different events, and a diagnostic that stored only the\ncounts would render them identically a year later.",
+        "properties": {
+          "claims_per_parameter": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claims Per Parameter"
+          },
+          "exposure_per_parameter": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Per Parameter"
+          },
+          "factor_count": {
+            "minimum": 0.0,
+            "title": "Factor Count",
+            "type": "integer"
+          },
+          "max_factor_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Factor Count"
+          },
+          "min_exposure_per_parameter": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Exposure Per Parameter"
+          },
+          "parameter_count": {
+            "minimum": 0.0,
+            "title": "Parameter Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "factor_count",
+          "parameter_count"
+        ],
+        "title": "ComplexityDiagnostic",
         "type": "object"
       },
       "ComponentHealth": {
@@ -1318,6 +1485,68 @@
         ],
         "title": "DatasetKind",
         "type": "string"
+      },
+      "DatasetSplit": {
+        "additionalProperties": false,
+        "description": "A named train/test split, recorded on the parent version (`01` FR-DATA-36).\n\nOn the **parent**, not the parts, so that \"trained on the same split\" is one artifact\ntwo models cite rather than two derivations believed to match. `parts` maps a part name\nto the Derived Dataset Version holding its rows.\n\nAt least two parts, always: a one-part split is a filter, and recording it as a split\nwould let a model claim a holdout it never had.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "parent_version_id": {
+            "format": "uuid",
+            "title": "Parent Version Id",
+            "type": "string"
+          },
+          "parts": {
+            "additionalProperties": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Parts",
+            "type": "object"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "parent_version_id",
+          "name",
+          "method",
+          "seed"
+        ],
+        "title": "DatasetSplit",
+        "type": "object"
       },
       "DatasetStatus": {
         "enum": [
@@ -1819,6 +2048,76 @@
         "title": "DeriveRequest",
         "type": "object"
       },
+      "Diagnostics": {
+        "additionalProperties": false,
+        "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49). `gbm`,\n`cross_validation` and `backtest` are declared and always `None` in this slice — the\nfields exist because the contract the frontend generates from declares them, and their\nproducers (FR-MODEL-52, 53, 57) are owned by later slices.",
+        "properties": {
+          "backtest": {
+            "title": "Backtest",
+            "type": "null"
+          },
+          "complexity": {
+            "$ref": "#/components/schemas/ComplexityDiagnostic"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "cross_validation": {
+            "title": "Cross Validation",
+            "type": "null"
+          },
+          "gbm": {
+            "title": "Gbm",
+            "type": "null"
+          },
+          "glm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlmDiagnostics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "universal": {
+            "$ref": "#/components/schemas/UniversalDiagnostics"
+          }
+        },
+        "required": [
+          "id",
+          "model_id",
+          "computed_at",
+          "universal",
+          "complexity"
+        ],
+        "title": "Diagnostics",
+        "type": "object"
+      },
       "DictionaryUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -2118,6 +2417,104 @@
         "title": "FieldError",
         "type": "object"
       },
+      "GlmDiagnostics": {
+        "additionalProperties": false,
+        "description": "GLM-specific evidence (FR-MODEL-51).",
+        "properties": {
+          "aic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aic"
+          },
+          "aliasing": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliasing",
+            "type": "array"
+          },
+          "bic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bic"
+          },
+          "degrees_of_freedom": {
+            "minimum": 0.0,
+            "title": "Degrees Of Freedom",
+            "type": "integer"
+          },
+          "deviance": {
+            "title": "Deviance",
+            "type": "number"
+          },
+          "dispersion": {
+            "title": "Dispersion",
+            "type": "number"
+          },
+          "leverage_blob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leverage Blob"
+          },
+          "null_deviance": {
+            "title": "Null Deviance",
+            "type": "number"
+          },
+          "residual_blob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Blob"
+          },
+          "type_iii_tests": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TypeIIITest"
+            },
+            "title": "Type Iii Tests",
+            "type": "array"
+          },
+          "vif": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Vif",
+            "type": "object"
+          }
+        },
+        "required": [
+          "deviance",
+          "null_deviance",
+          "dispersion",
+          "degrees_of_freedom"
+        ],
+        "title": "GlmDiagnostics",
+        "type": "object"
+      },
       "GlmFitResult": {
         "additionalProperties": false,
         "description": "What a fit returns and the Model stores (ADR-0003).\n\nData, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this\nmodule owns, and a Model must be re-scorable by a process that never ran `glum`.",
@@ -2308,6 +2705,16 @@
             "default": 0,
             "title": "Seed",
             "type": "integer"
+          },
+          "split_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "tolerance": {
             "default": 1e-08,
@@ -3051,6 +3458,51 @@
         "title": "KeyView",
         "type": "object"
       },
+      "LiftBin": {
+        "additionalProperties": false,
+        "description": "One predicted-decile bin of a lift/gains curve (FR-MODEL-50).",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "number"
+          },
+          "bin": {
+            "minimum": 1.0,
+            "title": "Bin",
+            "type": "integer"
+          },
+          "exposure_years": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Years"
+          },
+          "predicted": {
+            "title": "Predicted",
+            "type": "number"
+          },
+          "rows": {
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bin",
+          "rows",
+          "predicted",
+          "actual"
+        ],
+        "title": "LiftBin",
+        "type": "object"
+      },
       "Me": {
         "additionalProperties": false,
         "description": "The current principal, its roles, and its effective permissions.",
@@ -3122,6 +3574,18 @@
             "format": "uuid",
             "title": "Dataset Version Id",
             "type": "string"
+          },
+          "diagnostics_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostics Id"
           },
           "fit_result": {
             "anyOf": [
@@ -3638,6 +4102,90 @@
           "total_estimate"
         ],
         "title": "Page[dict[str, Any]]",
+        "type": "object"
+      },
+      "PartitionDiagnostics": {
+        "additionalProperties": false,
+        "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nOne of these describes train and another describes holdout; neither is meaningful\nwithout the other, which is why they are only ever held together\n(`UniversalDiagnostics`).",
+        "properties": {
+          "ae_by_factor": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AeCell"
+            },
+            "title": "Ae By Factor",
+            "type": "array"
+          },
+          "ae_overall": {
+            "minimum": 0.0,
+            "title": "Ae Overall",
+            "type": "number"
+          },
+          "calibration": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CalibrationBin"
+            },
+            "title": "Calibration",
+            "type": "array"
+          },
+          "double_lift": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LiftBin"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Double Lift"
+          },
+          "gini": {
+            "title": "Gini",
+            "type": "number"
+          },
+          "gini_normalised": {
+            "title": "Gini Normalised",
+            "type": "number"
+          },
+          "lift": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LiftBin"
+            },
+            "title": "Lift",
+            "type": "array"
+          },
+          "residual_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResidualSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          },
+          "weighting": {
+            "$ref": "#/components/schemas/Weighting"
+          }
+        },
+        "required": [
+          "weighting",
+          "rows",
+          "ae_overall",
+          "gini",
+          "gini_normalised"
+        ],
+        "title": "PartitionDiagnostics",
         "type": "object"
       },
       "Permission": {
@@ -4380,6 +4928,46 @@
         "title": "ReportSummary",
         "type": "object"
       },
+      "ResidualSummary": {
+        "additionalProperties": false,
+        "description": "Distribution summary of the working residuals (FR-MODEL-50).",
+        "properties": {
+          "maximum": {
+            "title": "Maximum",
+            "type": "number"
+          },
+          "mean": {
+            "title": "Mean",
+            "type": "number"
+          },
+          "minimum": {
+            "title": "Minimum",
+            "type": "number"
+          },
+          "p01": {
+            "title": "P01",
+            "type": "number"
+          },
+          "p99": {
+            "title": "P99",
+            "type": "number"
+          },
+          "std": {
+            "title": "Std",
+            "type": "number"
+          }
+        },
+        "required": [
+          "mean",
+          "std",
+          "minimum",
+          "maximum",
+          "p01",
+          "p99"
+        ],
+        "title": "ResidualSummary",
+        "type": "object"
+      },
       "ResourceBudget": {
         "additionalProperties": false,
         "description": "Exceeding it yields a typed error naming the budget, not an opaque kill (FR-PLAT-16).",
@@ -5026,6 +5614,74 @@
         "title": "SourceView",
         "type": "object"
       },
+      "SplitRef": {
+        "additionalProperties": false,
+        "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).\n\nA *reference*, not a description. FR-DATA-36 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
+        "properties": {
+          "holdout_part": {
+            "default": "test",
+            "title": "Holdout Part",
+            "type": "string"
+          },
+          "split_artifact_id": {
+            "format": "uuid",
+            "title": "Split Artifact Id",
+            "type": "string"
+          },
+          "train_part": {
+            "default": "train",
+            "title": "Train Part",
+            "type": "string"
+          }
+        },
+        "required": [
+          "split_artifact_id"
+        ],
+        "title": "SplitRef",
+        "type": "object"
+      },
+      "SplitRequest": {
+        "additionalProperties": false,
+        "description": "Record a named split over parts that already exist (FR-DATA-36).",
+        "properties": {
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "parts": {
+            "additionalProperties": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minProperties": 2,
+            "title": "Parts",
+            "type": "object"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "method",
+          "seed",
+          "parts"
+        ],
+        "title": "SplitRequest",
+        "type": "object"
+      },
       "SubmitApproval": {
         "additionalProperties": false,
         "properties": {
@@ -5134,6 +5790,57 @@
           "to"
         ],
         "title": "TransitionRequest",
+        "type": "object"
+      },
+      "TypeIIITest": {
+        "additionalProperties": false,
+        "description": "A factor's type-III deviance test (FR-MODEL-51).\n\n`deviance_delta` is the increase in deviance when the factor is dropped, on `df`\ndegrees of freedom — a likelihood-ratio statistic, so the p-value means what a reader\nexpects it to mean.",
+        "properties": {
+          "deviance_delta": {
+            "title": "Deviance Delta",
+            "type": "number"
+          },
+          "df": {
+            "minimum": 0.0,
+            "title": "Df",
+            "type": "integer"
+          },
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "p_value": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "P Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "factor",
+          "deviance_delta",
+          "df",
+          "p_value"
+        ],
+        "title": "TypeIIITest",
+        "type": "object"
+      },
+      "UniversalDiagnostics": {
+        "additionalProperties": false,
+        "description": "Train and holdout, side by side (FR-MODEL-54).\n\nBoth fields are required. The requirement says a diagnostic reported without its\nholdout counterpart *is a defect*, and the cheapest way to honour that is to make the\ndefective shape unrepresentable rather than to check for it later.",
+        "properties": {
+          "holdout": {
+            "$ref": "#/components/schemas/PartitionDiagnostics"
+          },
+          "train": {
+            "$ref": "#/components/schemas/PartitionDiagnostics"
+          }
+        },
+        "required": [
+          "train",
+          "holdout"
+        ],
+        "title": "UniversalDiagnostics",
         "type": "object"
       },
       "UnseenLevelBehaviour": {
@@ -5648,6 +6355,16 @@
         },
         "title": "WeightSpec",
         "type": "object"
+      },
+      "Weighting": {
+        "description": "How a metric was weighted (FR-MODEL-55).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
+        "enum": [
+          "exposure",
+          "count",
+          "claim_count"
+        ],
+        "title": "Weighting",
+        "type": "string"
       },
       "Withdraw": {
         "additionalProperties": false,
@@ -8060,6 +8777,221 @@
           }
         },
         "summary": "Quarantined rows",
+        "tags": [
+          "dataset versions"
+        ]
+      }
+    },
+    "/api/v1/dataset-versions/{version_id}/splits": {
+      "get": {
+        "description": "Every split on this version, so a Model Spec can cite one by id (FR-DATA-36).",
+        "operationId": "list_splits_api_v1_dataset_versions__version_id__splits_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetSplit"
+                  },
+                  "title": "Response List Splits Api V1 Dataset Versions  Version Id  Splits Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Splits recorded on this version",
+        "tags": [
+          "dataset versions"
+        ]
+      },
+      "post": {
+        "description": "FR-DATA-36: the split is recorded on the **parent**, over parts already derived.\n\nSynchronous, unlike `/derive`: this writes one row referencing versions that exist. The\nexpensive half — partitioning the rows — happened in the `dataset.derive` Jobs that\nproduced the parts.\n\nThe service function has existed since W4 and had no route, so a split could be created\nonly from inside the platform. `02`'s `split_ref` needs one that a caller can name,\nwhich is what made the gap visible.",
+        "operationId": "record_split_api_v1_dataset_versions__version_id__splits_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSplit"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Record a named split",
         "tags": [
           "dataset versions"
         ]
@@ -10987,6 +11919,116 @@
           }
         },
         "summary": "Model artifact",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/{slug}/diagnostics": {
+      "get": {
+        "description": "The evidence behind a fitted model (FR-MODEL-49, `02` §5.1).\n\nRead, never recomputed. FR-MODEL-49 makes diagnostics a product of the fit, so this\nendpoint returns what that fit recorded — a screen that recalculated them would be\nshowing numbers no approval could cite.\n\n`?version=` selects a model version, like `GET /models/{slug}`; the latest without it.",
+        "operationId": "get_model_diagnostics_api_v1_models__slug__diagnostics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Diagnostics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Model diagnostics",
         "tags": [
           "modelling"
         ]

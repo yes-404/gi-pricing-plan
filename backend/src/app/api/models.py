@@ -32,6 +32,7 @@ from app.api.authz import requires
 from app.api.deps import Caller, job_identity
 from app.api.responses import problems
 from app.db.session import Database
+from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import modelling as service
 from app.platform import transformations as transform_service
@@ -40,6 +41,7 @@ from model_schema import (
     Banding,
     BandingEvaluation,
     BandingProposal,
+    Diagnostics,
     Factor,
     FactorIntent,
     FactorType,
@@ -419,3 +421,31 @@ async def get_model(
             session, workspace_id=caller.workspace_id, slug=slug, version=version
         )
         return service.to_model(row)
+
+
+@router.get(
+    "/models/{slug}/diagnostics",
+    summary="Model diagnostics",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_model_diagnostics(
+    slug: str,
+    caller: ReadModels,
+    database: DatabaseDep,
+    version: Annotated[int | None, Query(ge=1)] = None,
+) -> Diagnostics:
+    """The evidence behind a fitted model (FR-MODEL-49, `02` §5.1).
+
+    Read, never recomputed. FR-MODEL-49 makes diagnostics a product of the fit, so this
+    endpoint returns what that fit recorded — a screen that recalculated them would be
+    showing numbers no approval could cite.
+
+    `?version=` selects a model version, like `GET /models/{slug}`; the latest without it.
+    """
+    async with database.session() as session:
+        model = await service.load_model(
+            session, workspace_id=caller.workspace_id, slug=slug, version=version
+        )
+        return await diagnostics_service.load_diagnostics(
+            session, workspace_id=caller.workspace_id, model_id=model.id
+        )

@@ -1,0 +1,585 @@
+{
+  "$defs": {
+    "AeCell": {
+      "additionalProperties": false,
+      "description": "Actual versus expected for one level of one factor (FR-MODEL-50).\n\n`ci_95` is on the **ratio**, not on the actual: an A/E of 1.19 whose interval excludes\n1.0 is a finding, and one whose interval spans it is noise. Without the interval the\ntwo render identically, which is how a thin cell becomes a rating decision.",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "ae": {
+          "title": "Ae",
+          "type": "number"
+        },
+        "ci_95": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci 95"
+        },
+        "expected": {
+          "title": "Expected",
+          "type": "number"
+        },
+        "exposure_years": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Years"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "factor",
+        "level",
+        "actual",
+        "expected",
+        "ae"
+      ],
+      "title": "AeCell",
+      "type": "object"
+    },
+    "CalibrationBin": {
+      "additionalProperties": false,
+      "description": "Predicted against observed within a predicted-decile bin (FR-MODEL-50).",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "bin": {
+          "minimum": 1,
+          "title": "Bin",
+          "type": "integer"
+        },
+        "predicted": {
+          "title": "Predicted",
+          "type": "number"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bin",
+        "rows",
+        "predicted",
+        "actual"
+      ],
+      "title": "CalibrationBin",
+      "type": "object"
+    },
+    "ComplexityDiagnostic": {
+      "additionalProperties": false,
+      "description": "Factor and parameter counts against whatever thresholds are in force (FR-MODEL-81).\n\nRecorded on **every** fit. The thresholds are stored with the measurements because they\nare workspace settings that change: a fit judged against no limit and a fit judged\nagainst a limit of 40 are different events, and a diagnostic that stored only the\ncounts would render them identically a year later.",
+      "properties": {
+        "claims_per_parameter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Claims Per Parameter"
+        },
+        "exposure_per_parameter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Per Parameter"
+        },
+        "factor_count": {
+          "minimum": 0,
+          "title": "Factor Count",
+          "type": "integer"
+        },
+        "max_factor_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Factor Count"
+        },
+        "min_exposure_per_parameter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Exposure Per Parameter"
+        },
+        "parameter_count": {
+          "minimum": 0,
+          "title": "Parameter Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "factor_count",
+        "parameter_count"
+      ],
+      "title": "ComplexityDiagnostic",
+      "type": "object"
+    },
+    "GlmDiagnostics": {
+      "additionalProperties": false,
+      "description": "GLM-specific evidence (FR-MODEL-51).",
+      "properties": {
+        "aic": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aic"
+        },
+        "aliasing": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliasing",
+          "type": "array"
+        },
+        "bic": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bic"
+        },
+        "degrees_of_freedom": {
+          "minimum": 0,
+          "title": "Degrees Of Freedom",
+          "type": "integer"
+        },
+        "deviance": {
+          "title": "Deviance",
+          "type": "number"
+        },
+        "dispersion": {
+          "title": "Dispersion",
+          "type": "number"
+        },
+        "leverage_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leverage Blob"
+        },
+        "null_deviance": {
+          "title": "Null Deviance",
+          "type": "number"
+        },
+        "residual_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Residual Blob"
+        },
+        "type_iii_tests": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TypeIIITest"
+          },
+          "title": "Type Iii Tests",
+          "type": "array"
+        },
+        "vif": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Vif",
+          "type": "object"
+        }
+      },
+      "required": [
+        "deviance",
+        "null_deviance",
+        "dispersion",
+        "degrees_of_freedom"
+      ],
+      "title": "GlmDiagnostics",
+      "type": "object"
+    },
+    "LiftBin": {
+      "additionalProperties": false,
+      "description": "One predicted-decile bin of a lift/gains curve (FR-MODEL-50).",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "bin": {
+          "minimum": 1,
+          "title": "Bin",
+          "type": "integer"
+        },
+        "exposure_years": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Years"
+        },
+        "predicted": {
+          "title": "Predicted",
+          "type": "number"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bin",
+        "rows",
+        "predicted",
+        "actual"
+      ],
+      "title": "LiftBin",
+      "type": "object"
+    },
+    "PartitionDiagnostics": {
+      "additionalProperties": false,
+      "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nOne of these describes train and another describes holdout; neither is meaningful\nwithout the other, which is why they are only ever held together\n(`UniversalDiagnostics`).",
+      "properties": {
+        "ae_by_factor": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AeCell"
+          },
+          "title": "Ae By Factor",
+          "type": "array"
+        },
+        "ae_overall": {
+          "minimum": 0.0,
+          "title": "Ae Overall",
+          "type": "number"
+        },
+        "calibration": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CalibrationBin"
+          },
+          "title": "Calibration",
+          "type": "array"
+        },
+        "double_lift": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/LiftBin"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Double Lift"
+        },
+        "gini": {
+          "title": "Gini",
+          "type": "number"
+        },
+        "gini_normalised": {
+          "title": "Gini Normalised",
+          "type": "number"
+        },
+        "lift": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/LiftBin"
+          },
+          "title": "Lift",
+          "type": "array"
+        },
+        "residual_summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResidualSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "weighting": {
+          "$ref": "#/$defs/Weighting"
+        }
+      },
+      "required": [
+        "weighting",
+        "rows",
+        "ae_overall",
+        "gini",
+        "gini_normalised"
+      ],
+      "title": "PartitionDiagnostics",
+      "type": "object"
+    },
+    "ResidualSummary": {
+      "additionalProperties": false,
+      "description": "Distribution summary of the working residuals (FR-MODEL-50).",
+      "properties": {
+        "maximum": {
+          "title": "Maximum",
+          "type": "number"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number"
+        },
+        "minimum": {
+          "title": "Minimum",
+          "type": "number"
+        },
+        "p01": {
+          "title": "P01",
+          "type": "number"
+        },
+        "p99": {
+          "title": "P99",
+          "type": "number"
+        },
+        "std": {
+          "title": "Std",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mean",
+        "std",
+        "minimum",
+        "maximum",
+        "p01",
+        "p99"
+      ],
+      "title": "ResidualSummary",
+      "type": "object"
+    },
+    "TypeIIITest": {
+      "additionalProperties": false,
+      "description": "A factor's type-III deviance test (FR-MODEL-51).\n\n`deviance_delta` is the increase in deviance when the factor is dropped, on `df`\ndegrees of freedom — a likelihood-ratio statistic, so the p-value means what a reader\nexpects it to mean.",
+      "properties": {
+        "deviance_delta": {
+          "title": "Deviance Delta",
+          "type": "number"
+        },
+        "df": {
+          "minimum": 0,
+          "title": "Df",
+          "type": "integer"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "p_value": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "P Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "factor",
+        "deviance_delta",
+        "df",
+        "p_value"
+      ],
+      "title": "TypeIIITest",
+      "type": "object"
+    },
+    "UniversalDiagnostics": {
+      "additionalProperties": false,
+      "description": "Train and holdout, side by side (FR-MODEL-54).\n\nBoth fields are required. The requirement says a diagnostic reported without its\nholdout counterpart *is a defect*, and the cheapest way to honour that is to make the\ndefective shape unrepresentable rather than to check for it later.",
+      "properties": {
+        "holdout": {
+          "$ref": "#/$defs/PartitionDiagnostics"
+        },
+        "train": {
+          "$ref": "#/$defs/PartitionDiagnostics"
+        }
+      },
+      "required": [
+        "train",
+        "holdout"
+      ],
+      "title": "UniversalDiagnostics",
+      "type": "object"
+    },
+    "Weighting": {
+      "description": "How a metric was weighted (FR-MODEL-55).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
+      "enum": [
+        "exposure",
+        "count",
+        "claim_count"
+      ],
+      "title": "Weighting",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49). `gbm`,\n`cross_validation` and `backtest` are declared and always `None` in this slice — the\nfields exist because the contract the frontend generates from declares them, and their\nproducers (FR-MODEL-52, 53, 57) are owned by later slices.",
+  "properties": {
+    "backtest": {
+      "default": null,
+      "title": "Backtest",
+      "type": "null"
+    },
+    "complexity": {
+      "$ref": "#/$defs/ComplexityDiagnostic"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "cross_validation": {
+      "default": null,
+      "title": "Cross Validation",
+      "type": "null"
+    },
+    "gbm": {
+      "default": null,
+      "title": "Gbm",
+      "type": "null"
+    },
+    "glm": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GlmDiagnostics"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "model_id": {
+      "format": "uuid",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "universal": {
+      "$ref": "#/$defs/UniversalDiagnostics"
+    }
+  },
+  "required": [
+    "id",
+    "model_id",
+    "computed_at",
+    "universal",
+    "complexity"
+  ],
+  "title": "Diagnostics",
+  "type": "object"
+}

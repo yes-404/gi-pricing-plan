@@ -102,6 +102,10 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "GLM_SEPARATION_DETECTED",
         "OFFSET_REQUIRED_FOR_FREQUENCY",
         "MODEL_IMMUTABLE",
+        # The diagnostics slice. A spec with no `split_ref` has no holdout, so it can
+        # produce no diagnostics (FR-MODEL-54) and therefore cannot reach `fitted`
+        # (`02` §4.8) — refused before the fit rather than after it.
+        "MODEL_SPLIT_REQUIRED",
     }
 )
 

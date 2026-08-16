@@ -121,12 +121,29 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: generating (they embed the one-way row); the scan had never reached them before.
     ratio_statistics = {"severity_minor", "burning_cost_minor"}
 
+    #: `x_per_y` is a **ratio**, not a quantity of `x`. FR-MODEL-81's
+    #: `exposure_per_parameter` is exposure divided by a count, and dividing a decimal
+    #: exposure by an integer does not produce a decimal exposure — it produces a number
+    #: whose precision carries no monetary meaning.
+    #:
+    #: A rule rather than two more names in `ratio_statistics`. OQ-OVR-7 objects to
+    #: money-discipline exceptions maintained as a hand-written list precisely because such
+    #: lists only grow; this one recognises a *shape* of name, so the next ratio needs no
+    #: entry and no decision.
+    #:
+    #: Deliberately **not** a general `_per_\\w+$`: `premium_per_policy` is an average
+    #: premium and is money, so a blanket ratio rule would open the hole this test exists to
+    #: close. Only `_per_parameter` is dimensionless here — a model's parameter count is a
+    #: property of the fit, not of the book.
+    ratio_suffix = re.compile(r"_per_parameter$", re.I)
+
     def walk(node: object, path: str = "") -> None:
         if isinstance(node, dict):
             for key, value in node.items():
                 if (
                     money_like.search(key)
                     and key not in ratio_statistics
+                    and not ratio_suffix.search(key)
                     and isinstance(value, dict)
                 ):
                     branches = value.get("anyOf", [value])

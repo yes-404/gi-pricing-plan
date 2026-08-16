@@ -24,10 +24,11 @@ from backend.tests.test_data_jobs import (
 )
 from sqlalchemy import select
 
-from app.db.models import ModelRow
+from app.db.models import DatasetVersionRow, ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
+from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import rbac
@@ -47,6 +48,7 @@ from model_schema import (
     OffsetSpec,
     Principal,
     ScopeType,
+    SplitRef,
     new_uuid7,
 )
 
@@ -126,6 +128,61 @@ def _spec(version_id: UUID, factor_ids: tuple[UUID, ...], **over: object) -> Glm
     return GlmSpec(**base)  # type: ignore[arg-type]
 
 
+async def _split(
+    database: Database, blob_store: BlobStore, workspace_id, actor, parent_version_id: UUID
+) -> SplitRef:
+    """Derive train and test parts through the real Jobs, then record the split.
+
+    Through `dataset.derive` rather than by inserting rows, because materialising the parts
+    is what that handler now does — a split whose parts were faked would give every fit a
+    holdout identical to its training set, which is the defect this slice exists to remove.
+    """
+    parts: dict[str, UUID] = {}
+    for part in ("train", "test"):
+        async with database.unit_of_work() as session:
+            job = await job_service.submit(
+                session,
+                JobKind.DATASET_DERIVE,
+                {
+                    "workspace_id": str(workspace_id),
+                    "actor": {"kind": actor.kind.value, "id": str(actor.id),
+                              "display": actor.display},
+                    "parent_version_id": str(parent_version_id),
+                    "operation": "split",
+                    "params": {"method": "random", "seed": 20260816, "part": part,
+                               "fractions": {"train": 0.75, "test": 0.25}},
+                },
+                actor,
+                workspace_id=workspace_id,
+            )
+        assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+        async with database.session() as session:
+            child = (
+                await session.execute(
+                    select(DatasetVersionRow).where(
+                        DatasetVersionRow.workspace_id == workspace_id,
+                        DatasetVersionRow.derived_from["parent_version_id"].astext
+                        == str(parent_version_id),
+                        DatasetVersionRow.derived_from["params"]["part"].astext == part,
+                    )
+                )
+            ).scalar_one()
+        parts[part] = child.id
+
+    async with database.unit_of_work() as session:
+        row = await dataset_service.record_split(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            parent_version_id=parent_version_id,
+            name=f"holdout-{new_uuid7().hex[-6:]}",
+            method="random",
+            seed=20260816,
+            parts=parts,
+        )
+        return SplitRef(split_artifact_id=row.id, train_part="train", holdout_part="test")
+
+
 async def _validated_version(database, blob_store, workspace_id, actor, dataset_id) -> UUID:
     """Ingest and validate, then promote — the only route to `validated` (`01` §1.3)."""
     version_id = await _ingest(database, blob_store, workspace_id, actor, dataset_id, BOOK)
@@ -156,11 +213,12 @@ async def test_a_model_fits_through_the_job_and_stores_its_coefficients(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
 
     async with database.unit_of_work() as session:
         row, should_fit = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor,
-            spec=_spec(version_id, (area,)),
+            spec=_spec(version_id, (area,), split_ref=split),
         )
         assert should_fit is True
         model_id = row.id
@@ -237,7 +295,8 @@ async def test_the_same_specification_does_not_fit_twice(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
-    spec = _spec(version_id, (area,))
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    spec = _spec(version_id, (area,), split_ref=split)
 
     async with database.unit_of_work() as session:
         first, _ = await model_service.reserve_model(
@@ -263,7 +322,7 @@ async def test_the_same_specification_does_not_fit_twice(
     async with database.unit_of_work() as session:
         other, other_should_fit = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor,
-            spec=_spec(version_id, (area,), seed=7),
+            spec=_spec(version_id, (area,), seed=7, split_ref=split),
         )
     assert other_should_fit is True
     assert other.id != first_id
@@ -284,10 +343,12 @@ async def test_a_fitted_model_cannot_be_refitted(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
 
     async with database.unit_of_work() as session:
         row, _ = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor, spec=_spec(version_id, (area,))
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split)
         )
         model_id = row.id
         job = await job_service.submit(
@@ -304,11 +365,19 @@ async def test_a_fitted_model_cannot_be_refitted(
         fitted = model_service.to_model(await session.get(ModelRow, model_id))
     assert fitted.fit_result is not None
 
+    # The diagnostics the first fit recorded, replayed. Re-using them rather than building
+    # an empty set keeps the refusal about R2 — a second `record_fit` that failed for want
+    # of a valid argument would pass this test without exercising the rule.
+    async with database.session() as session:
+        evidence = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+
     with pytest.raises(PlatformError) as refused:
         async with database.unit_of_work() as session:
             await model_service.record_fit(
                 session, workspace_id=workspace_id, actor=actor,
-                model_id=model_id, fit_result=fitted.fit_result,
+                model_id=model_id, fit_result=fitted.fit_result, diagnostics=evidence,
             )
     assert refused.value.code == "MODEL_IMMUTABLE"
 
@@ -334,10 +403,12 @@ async def test_a_version_that_loses_its_standing_before_the_job_runs_is_refused(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
 
     async with database.unit_of_work() as session:
         row, _ = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor, spec=_spec(version_id, (area,))
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split)
         )
         model_id = row.id
         job = await job_service.submit(
@@ -451,7 +522,8 @@ async def test_a_reservation_whose_fit_failed_can_be_retried(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
-    spec = _spec(version_id, (area,))
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    spec = _spec(version_id, (area,), split_ref=split)
 
     async with database.unit_of_work() as session:
         first, should_fit = await model_service.reserve_model(
@@ -485,10 +557,12 @@ async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
 
     async with database.unit_of_work() as session:
         row, _ = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor, spec=_spec(version_id, (area,))
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split)
         )
         model_id = row.id
         job = await job_service.submit(

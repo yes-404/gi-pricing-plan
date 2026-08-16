@@ -39,6 +39,7 @@ from model_schema import (
     DataDictionaryEntry,
     Dataset,
     DatasetKind,
+    DatasetSplit,
     DatasetStatus,
     JobSource,
     Permission,
@@ -55,12 +56,14 @@ __all__ = [
     "derive_version",
     "fittable_or_refuse",
     "lineage_of",
+    "list_splits",
     "load_dataset",
     "new_version",
     "promote_to_validated",
     "purge_subject",
     "record_split",
     "to_schema",
+    "to_split",
     "transition",
     "update_dictionary",
 ]
@@ -834,3 +837,34 @@ async def record_split(
         after={"name": name, "method": method, "seed": seed, "parts": list(parts)},
     )
     return row
+
+def to_split(row: DatasetSplitRow) -> DatasetSplit:
+    """The stored split as its artifact shape (FR-DATA-36)."""
+    return DatasetSplit(
+        id=row.id,
+        parent_version_id=row.parent_version_id,
+        name=row.name,
+        method=row.method,
+        seed=row.seed,
+        params=row.params,
+        parts={name: UUID(str(v)) for name, v in row.parts.items()},
+        created_at=row.created_at,
+    )
+
+
+async def list_splits(
+    session: AsyncSession, *, workspace_id: UUID, parent_version_id: UUID
+) -> list[DatasetSplitRow]:
+    """Every split recorded on one version, newest first."""
+    return list(
+        (
+            await session.execute(
+                select(DatasetSplitRow)
+                .where(
+                    DatasetSplitRow.workspace_id == workspace_id,
+                    DatasetSplitRow.parent_version_id == parent_version_id,
+                )
+                .order_by(DatasetSplitRow.created_at.desc())
+            )
+        ).scalars()
+    )

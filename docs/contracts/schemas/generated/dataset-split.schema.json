@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "description": "A named train/test split, recorded on the parent version (`01` FR-DATA-36).\n\nOn the **parent**, not the parts, so that \"trained on the same split\" is one artifact\ntwo models cite rather than two derivations believed to match. `parts` maps a part name\nto the Derived Dataset Version holding its rows.\n\nAt least two parts, always: a one-part split is a filter, and recording it as a split\nwould let a model claim a holdout it never had.",
+  "properties": {
+    "created_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "method": {
+      "title": "Method",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "params": {
+      "additionalProperties": true,
+      "title": "Params",
+      "type": "object"
+    },
+    "parent_version_id": {
+      "format": "uuid",
+      "title": "Parent Version Id",
+      "type": "string"
+    },
+    "parts": {
+      "additionalProperties": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "title": "Parts",
+      "type": "object"
+    },
+    "seed": {
+      "title": "Seed",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "parent_version_id",
+    "name",
+    "method",
+    "seed"
+  ],
+  "title": "DatasetSplit",
+  "type": "object"
+}

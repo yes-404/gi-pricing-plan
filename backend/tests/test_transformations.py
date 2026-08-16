@@ -21,6 +21,7 @@ from backend.tests.test_model_jobs import (
     _actuary,
     _dataset,
     _spec,
+    _split,
     _validated_version,
 )
 from sqlalchemy import select
@@ -454,10 +455,12 @@ async def test_a_model_fits_through_a_stored_banding(
         )
         factor_id = factor_row.id
 
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
     async with database.unit_of_work() as session:
         row, should_fit = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor,
-            spec=_spec(version_id, (factor_id,)),
+            spec=_spec(version_id, (factor_id,), split_ref=split),
         )
         assert should_fit is True
         model_id = row.id

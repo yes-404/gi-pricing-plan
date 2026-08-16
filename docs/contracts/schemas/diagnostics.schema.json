@@ -4,142 +4,395 @@
   "title": "Diagnostics",
   "description": "Persisted model quality evidence. Computed once at fit time and read thereafter; every metric is reported for train AND holdout side by side (02 FR-MODEL-49..57).",
   "type": "object",
-  "required": ["model_id", "computed_at", "universal"],
+  "required": [
+    "model_id",
+    "computed_at",
+    "universal",
+    "complexity"
+  ],
   "properties": {
-    "model_id": {"type": "string", "format": "uuid"},
-    "computed_at": {"type": "string", "format": "date-time"},
-    "job_id": {"type": "string", "format": "uuid"},
+    "model_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "computed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
     "universal": {
       "type": "object",
-      "required": ["train", "holdout"],
+      "required": [
+        "train",
+        "holdout"
+      ],
       "description": "A diagnostic reported without its holdout counterpart is a defect (FR-MODEL-54).",
       "properties": {
-        "train": {"$ref": "#/$defs/PartitionDiagnostics"},
-        "holdout": {"$ref": "#/$defs/PartitionDiagnostics"}
+        "train": {
+          "$ref": "#/$defs/PartitionDiagnostics"
+        },
+        "holdout": {
+          "$ref": "#/$defs/PartitionDiagnostics"
+        }
       }
     },
     "glm": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "description": "FR-MODEL-51.",
       "properties": {
-        "deviance": {"type": "number"},
-        "null_deviance": {"type": "number"},
-        "aic": {"type": "number"},
-        "bic": {"type": "number"},
-        "dispersion": {"type": "number"},
-        "degrees_of_freedom": {"type": "integer"},
+        "deviance": {
+          "type": "number"
+        },
+        "null_deviance": {
+          "type": "number"
+        },
+        "aic": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Null where the family has no closed-form likelihood this platform evaluates (Tweedie needs a series expansion). A deviance-based stand-in would differ from another tool's AIC by an additive constant, which reads as a disagreement between two correct numbers."
+        },
+        "bic": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "dispersion": {
+          "type": "number"
+        },
+        "degrees_of_freedom": {
+          "type": "integer"
+        },
         "type_iii_tests": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["factor", "deviance_delta", "df", "p_value"],
+            "required": [
+              "factor",
+              "deviance_delta",
+              "df",
+              "p_value"
+            ],
             "properties": {
-              "factor": {"type": "string"},
-              "deviance_delta": {"type": "number"},
-              "df": {"type": "integer"},
-              "p_value": {"type": "number", "minimum": 0, "maximum": 1}
+              "factor": {
+                "type": "string"
+              },
+              "deviance_delta": {
+                "type": "number"
+              },
+              "df": {
+                "type": "integer"
+              },
+              "p_value": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
             }
           }
         },
-        "aliasing": {"type": "array", "items": {"type": "object"}},
-        "vif": {"type": "object", "additionalProperties": {"type": "number"}},
-        "residual_blob": {"type": ["string", "null"]},
-        "leverage_blob": {"type": ["string", "null"]}
+        "aliasing": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "vif": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "residual_blob": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "leverage_blob": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "gbm": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "description": "FR-MODEL-52.",
       "properties": {
         "eval_curve": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["iteration", "train", "holdout"],
+            "required": [
+              "iteration",
+              "train",
+              "holdout"
+            ],
             "properties": {
-              "iteration": {"type": "integer", "minimum": 0},
-              "train": {"type": "number"},
-              "holdout": {"type": "number"}
+              "iteration": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "train": {
+                "type": "number"
+              },
+              "holdout": {
+                "type": "number"
+              }
             }
           }
         },
-        "best_iteration": {"type": "integer", "minimum": 0},
+        "best_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
         "importance": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["factor"],
+            "required": [
+              "factor"
+            ],
             "properties": {
-              "factor": {"type": "string"},
-              "gain": {"type": "number"},
-              "cover": {"type": "number"},
-              "frequency": {"type": "number"},
-              "permutation_holdout": {"type": "number"}
+              "factor": {
+                "type": "string"
+              },
+              "gain": {
+                "type": "number"
+              },
+              "cover": {
+                "type": "number"
+              },
+              "frequency": {
+                "type": "number"
+              },
+              "permutation_holdout": {
+                "type": "number"
+              }
             }
           }
         },
-        "partial_dependence_blob": {"type": ["string", "null"]},
+        "partial_dependence_blob": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "monotonicity_verified": {
           "type": "boolean",
           "description": "That the fitted response actually respects declared constraints, not merely that they were passed."
         },
-        "tree_summary": {"type": "object"}
+        "tree_summary": {
+          "type": "object"
+        }
       }
     },
     "cross_validation": {
-      "type": ["object", "null"],
-      "required": ["fold_construction", "seed", "folds"],
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "fold_construction",
+        "seed",
+        "folds"
+      ],
       "description": "Per-fold metrics and their dispersion, not just the mean (FR-MODEL-53).",
       "properties": {
-        "fold_construction": {"enum": ["random", "temporal", "grouped_by_key"]},
-        "group_key": {"type": ["string", "null"]},
-        "seed": {"type": "integer"},
-        "folds": {"type": "array", "items": {"type": "object"}},
-        "dispersion": {"type": "object"}
+        "fold_construction": {
+          "enum": [
+            "random",
+            "temporal",
+            "grouped_by_key"
+          ]
+        },
+        "group_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "folds": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "dispersion": {
+          "type": "object"
+        }
       }
     },
     "backtest": {
-      "type": ["object", "null"],
-      "required": ["dataset_version_id"],
+      "type": [
+        "object",
+        "null"
+      ],
+      "required": [
+        "dataset_version_id"
+      ],
       "description": "FR-MODEL-57; the evidence bridge into monitoring.",
       "properties": {
-        "dataset_version_id": {"type": "string", "format": "uuid"},
-        "results": {"$ref": "#/$defs/PartitionDiagnostics"}
+        "dataset_version_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "results": {
+          "$ref": "#/$defs/PartitionDiagnostics"
+        }
+      }
+    },
+    "complexity": {
+      "type": "object",
+      "description": "Recorded on every fit, beside whatever thresholds were in force (FR-MODEL-81). The thresholds are stored with the measurements because they are workspace settings that change: a fit judged against no limit and one judged against a limit of 40 are different events.",
+      "required": [
+        "factor_count",
+        "parameter_count"
+      ],
+      "properties": {
+        "factor_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parameter_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exposure_per_parameter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "claims_per_parameter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "max_factor_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "The workspace limit in force, or null where none is set \u2014 FR-MODEL-81's default. Distinct from 0, which would be a limit nothing could satisfy."
+        },
+        "min_exposure_per_parameter": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
       }
     }
   },
   "$defs": {
     "PartitionDiagnostics": {
       "type": "object",
-      "required": ["ae_overall", "weighting"],
+      "required": [
+        "ae_overall",
+        "weighting"
+      ],
       "properties": {
         "weighting": {
-          "enum": ["exposure", "count", "claim_count"],
+          "enum": [
+            "exposure",
+            "count",
+            "claim_count"
+          ],
           "description": "Explicit; an unweighted metric on an exposure-weighted problem is labelled as such (FR-MODEL-55)."
         },
-        "ae_overall": {"type": "number", "minimum": 0},
+        "ae_overall": {
+          "type": "number",
+          "minimum": 0
+        },
         "ae_by_factor": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["factor", "level", "actual", "expected", "ae"],
+            "required": [
+              "factor",
+              "level",
+              "actual",
+              "expected",
+              "ae"
+            ],
             "properties": {
-              "factor": {"type": "string"},
-              "level": {"type": "string"},
-              "actual": {"type": "number"},
-              "expected": {"type": "number"},
-              "ae": {"type": "number"},
-              "ci_95": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
-              "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"}
+              "factor": {
+                "type": "string"
+              },
+              "level": {
+                "type": "string"
+              },
+              "actual": {
+                "type": "number"
+              },
+              "expected": {
+                "type": "number"
+              },
+              "ae": {
+                "type": "number"
+              },
+              "ci_95": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "number"
+                }
+              },
+              "exposure_years": {
+                "$ref": "common/money.schema.json#/$defs/Decimal"
+              }
             }
           }
         },
-        "lift": {"type": "array", "items": {"type": "object"}},
-        "double_lift": {"type": ["array", "null"], "items": {"type": "object"}},
-        "gini": {"type": "number"},
-        "gini_normalised": {"type": "number"},
-        "calibration": {"type": "array", "items": {"type": "object"}},
-        "residual_summary": {"type": "object"}
+        "lift": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "double_lift": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "object"
+          }
+        },
+        "gini": {
+          "type": "number"
+        },
+        "gini_normalised": {
+          "type": "number"
+        },
+        "calibration": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "residual_summary": {
+          "type": "object"
+        }
       }
     }
   }

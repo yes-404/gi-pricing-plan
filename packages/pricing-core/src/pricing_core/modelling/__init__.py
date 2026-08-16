@@ -10,6 +10,12 @@ from pricing_core.modelling.bandings import (
     check_banding,
     propose_banding,
 )
+from pricing_core.modelling.diagnostics import (
+    DiagnosticsResult,
+    compute_diagnostics,
+    deviance,
+    unit_deviance,
+)
 from pricing_core.modelling.errors import (
     BandingError,
     FactorResolutionError,
@@ -23,22 +29,34 @@ from pricing_core.modelling.groupings import (
     grouping_evidence,
     propose_grouping,
 )
+from pricing_core.modelling.predict import (
+    PredictionError,
+    linear_predictor,
+    predict_glm,
+)
 
 __all__ = [
     "BandingError",
+    "DiagnosticsResult",
     "FactorMatrix",
     "FactorResolutionError",
     "GlmFitError",
     "GroupingError",
     "ModellingError",
+    "PredictionError",
     "apply_banding",
     "apply_grouping",
     "band_statistics",
     "check_banding",
+    "compute_diagnostics",
+    "deviance",
     "fit_glm",
     "grouping_evidence",
+    "linear_predictor",
+    "predict_glm",
     "propose_banding",
     "propose_grouping",
     "rateable",
     "resolve_factors",
+    "unit_deviance",
 ]
