@@ -81,6 +81,18 @@ Thumbs.db
 # ---- Claude Code local state (skills and settings ARE committed) ----
 .claude/settings.local.json
 
+# planning-with-files working memory. The skill writes an agent's live plan state into the
+# working directory; it is per-session scratch, not a record. The durable record of a
+# decision belongs in docs/ or .claude/notes/ (NT-NNNN), which the audit can see — a plan
+# file committed here would be a second, unaudited account of what the project is doing.
+# Anchored with a leading slash on purpose: the skill writes these to the project root, and
+# unanchored patterns would match at any depth — silently ignoring a future
+# docs/research/findings.md, which is exactly the kind of file this repo does commit.
+/task_plan.md
+/findings.md
+/progress.md
+/.planning/
+
 # Celery beat's scheduler state. Written wherever beat is started, including the repo
 # root during an NFR measurement — it is runtime state, not source.
 celerybeat-schedule

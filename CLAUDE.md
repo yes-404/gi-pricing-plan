@@ -101,7 +101,7 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 38 skills — 12 written here, 26 external (§12)
+└── .claude/skills/           ✔ 39 skills — 12 written here, 27 external (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -461,6 +461,12 @@ security-reviewed 2026-08-16, upstream v6.3.0): all fourteen — `using-superpow
 `using-git-worktrees`, `finishing-a-development-branch`, `writing-skills`. These are
 *process* skills — how work is approached — where the other two sets are subject matter.
 
+**Vendored** from
+[`OthmanAdi/planning-with-files`](https://github.com/OthmanAdi/planning-with-files) (MIT,
+security-reviewed 2026-08-16, upstream v3.10.1): `planning-with-files` — plan state on disk
+that survives `/clear`, compaction and session death. The English canonical skill only; the
+six-language, eighteen-agent mirrors and the bundled Pi extension were not taken.
+
 **Installed** from [`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify)
 (Apache-2.0, security-reviewed 2026-08-16, CLI 0.9.45): `graphify` — the repository as a
 traversable knowledge graph, triggered by `/graphify`. Unlike the three sets above it is
@@ -479,7 +485,13 @@ knowledge graph exists that a fresh clone does not have. The conditional version
 extraction is local tree-sitter and always safe; the semantic pass must never be pointed at
 real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is the exception.
 
-All vendored skills are kept as upstream wrote them and excluded from `ruff`.
+All vendored skills are kept as upstream wrote them and excluded from `ruff` — with one
+recorded exception. `planning-with-files`' five hook commands search `${CLAUDE_SKILL_DIR}`,
+`~/.claude/skills/` and `~/.claude/plugins/marketplaces/`, none of which reaches a
+project-level `.claude/skills/` checkout, so as shipped the hooks register and silently do
+nothing. Each gained one `$CLAUDE_PROJECT_DIR/...` fallback, and the body's
+`${CLAUDE_PLUGIN_ROOT}` became `${CLAUDE_SKILL_DIR}`. `.claude/skills/README.md` carries the
+evidence, including why substitution does not reach a hook command string.
 
 `.claude/skills/README.md` is the index and records why each was added.
 
