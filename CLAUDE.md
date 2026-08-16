@@ -101,7 +101,7 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 23 skills — 12 written here, 11 vendored (§12)
+└── .claude/skills/           ✔ 37 skills — 12 written here, 25 vendored (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -453,9 +453,47 @@ security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,
 `vue-jsx-best-practices` and `vue-options-api-best-practices` document approaches §3 has
 decided against, and a skill teaching a rejected approach is worse than a missing one.
 
+**Vendored** from [`obra/superpowers`](https://github.com/obra/superpowers) (MIT,
+security-reviewed 2026-08-16, upstream v6.3.0): all fourteen — `using-superpowers`,
+`brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`,
+`dispatching-parallel-agents`, `systematic-debugging`, `test-driven-development`,
+`verification-before-completion`, `requesting-code-review`, `receiving-code-review`,
+`using-git-worktrees`, `finishing-a-development-branch`, `writing-skills`. These are
+*process* skills — how work is approached — where the other two sets are subject matter.
+
 All vendored skills are kept as upstream wrote them and excluded from `ruff`.
 
 `.claude/skills/README.md` is the index and records why each was added.
+
+### Precedence — superpowers first
+
+**When a superpowers skill and any other skill both apply, follow the superpowers one.**
+It sets the *approach*; the others supply this repository's *facts*. Upstream's
+`using-superpowers` states the same rule from its own side — process skills before
+implementation skills — but it also says user instructions outrank skills, so the rule
+only actually binds by being written here.
+
+The order to work in:
+
+1. **`using-superpowers`** — the router. Read it when a task starts.
+2. **The superpowers process skill for the shape of the work** — `brainstorming` before
+   creative work, `systematic-debugging` before any fix, `writing-plans` /
+   `executing-plans` / `subagent-driven-development` for multi-step work,
+   `test-driven-development` before implementation code, and
+   `verification-before-completion` before claiming anything passes.
+3. **This repo's skill for the specifics** — it carries the paths, commands, requirement
+   ids and conventions a general skill cannot know.
+
+The one carve-out is narrow and factual, not a licence to prefer the local skill: where
+superpowers gives a *procedure* and a repo skill states a *fact about this repository*,
+the fact wins, because superpowers does not contain it and cannot. `git-hygiene`'s
+`.gitignore` rules and squash-merge-with-auto-delete flow, `python-test`'s
+`@pytest.mark.req` markers and §11's gate commands are facts of that kind —
+`finishing-a-development-branch` still decides *how* a branch ends.
+
+Nothing in superpowers overrides §0, §5 or §13. The phase table, permanent requirement
+ids and the closure standard are this project's contract, not a default behaviour a
+general skill is entitled to replace.
 
 ### Skill maintenance rules
 
