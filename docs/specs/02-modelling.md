@@ -688,7 +688,7 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/groupings/evaluate` | Recompute the deviance/df evidence for an **edited** mapping (FR-MODEL-83) |
 | `POST` | `/api/v1/groupings` | **201** Persist a Grouping |
 | `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
-| `POST` | `/api/v1/model-specs/validate` | Validate a spec without fitting: factors resolve, offsets sane, objective applicable (FR-MODEL-44) |
+| `POST` | `/api/v1/model-specs/validate` | **200** with `SpecValidation` — `ok` plus every problem, never only the first. A spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx; a spec naming a version that does not exist is a 404 (FR-MODEL-44, FR-MODEL-81) |
 | `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-MODEL-66) |
 | `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
 | `GET` | `/api/v1/models/{id}/diagnostics` | Diagnostics artifact |

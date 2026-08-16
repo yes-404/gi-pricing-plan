@@ -3678,6 +3678,20 @@
         "title": "ModelCreate",
         "type": "object"
       },
+      "ModelSpecValidate": {
+        "additionalProperties": false,
+        "description": "A spec to check. Same shape as `ModelCreate` minus the lineage fields, which say\nwhat a *new* model would be rather than whether this one could be fitted.",
+        "properties": {
+          "spec": {
+            "$ref": "#/components/schemas/GlmSpec"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "title": "ModelSpecValidate",
+        "type": "object"
+      },
       "ModelStatus": {
         "enum": [
           "draft",
@@ -5612,6 +5626,120 @@
           "has_credentials"
         ],
         "title": "SourceView",
+        "type": "object"
+      },
+      "SpecProblem": {
+        "additionalProperties": false,
+        "description": "One reason a spec was refused, in terms the caller can act on.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SpecProblemKind"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "kind",
+          "message"
+        ],
+        "title": "SpecProblem",
+        "type": "object"
+      },
+      "SpecProblemKind": {
+        "description": "Why a Model Spec cannot be fitted (`02` FR-MODEL-44, FR-MODEL-81).\n\nA closed set, because the frontend renders each differently and an open string would\nmake that a guess about wording.",
+        "enum": [
+          "dataset_not_validated",
+          "factor_missing",
+          "factor_prohibited",
+          "factor_unresolvable",
+          "split_missing",
+          "split_invalid",
+          "response_missing",
+          "offset_missing",
+          "complexity_limit"
+        ],
+        "title": "SpecProblemKind",
+        "type": "string"
+      },
+      "SpecValidation": {
+        "additionalProperties": false,
+        "description": "The answer to \"may this be fitted?\", without fitting it (FR-MODEL-44).\n\nReported as a list rather than raised as the first failure. A spec builder that\nsurfaced one error at a time would make a ten-factor spec a ten-round conversation,\nand `02` §5.3 asks for live validation as the form is edited.",
+        "properties": {
+          "estimated_parameter_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Estimated Parameter Count",
+            "type": "integer"
+          },
+          "exposure_per_parameter": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Per Parameter"
+          },
+          "factor_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Factor Count",
+            "type": "integer"
+          },
+          "max_factor_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Factor Count"
+          },
+          "min_exposure_per_parameter": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Exposure Per Parameter"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "problems": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SpecProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "SpecValidation",
         "type": "object"
       },
       "SplitRef": {
@@ -11697,6 +11825,98 @@
         "summary": "Current principal, roles and effective permissions",
         "tags": [
           "governance"
+        ]
+      }
+    },
+    "/api/v1/model-specs/validate": {
+      "post": {
+        "description": "`wf-01` D2: catch the errors before any compute is spent (FR-MODEL-44).\n\n**200 with `ok: false`**, not a 4xx, when the spec is merely unfittable. The caller\nasked whether this spec is valid and got a complete answer; a 422 would say the\n*request* was malformed, and `02` §5.3's live validation would then be a form that\nerrors on every keystroke while the actuary is still typing.\n\nA spec naming a dataset version that does not exist is a different thing — a bad\nreference rather than an invalid spec — and is a 404.",
+        "operationId": "validate_model_spec_api_v1_model_specs_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelSpecValidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpecValidation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Validate a model spec without fitting",
+        "tags": [
+          "modelling"
         ]
       }
     },

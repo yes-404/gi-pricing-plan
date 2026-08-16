@@ -54,6 +54,9 @@ __all__ = [
     "MonotonicDirection",
     "OffsetSpec",
     "RelativityLevel",
+    "SpecProblem",
+    "SpecProblemKind",
+    "SpecValidation",
     "SplitRef",
     "UnseenLevelBehaviour",
     "WeightSpec",
@@ -831,4 +834,72 @@ class Model(BaseModel):
                 "with no diagnostics (`02` §4.8, FR-MODEL-49). Diagnostics are computed at "
                 "fit time and are what `fitted` means."
             )
+        return self
+
+
+class SpecProblemKind(enum.StrEnum):
+    """Why a Model Spec cannot be fitted (`02` FR-MODEL-44, FR-MODEL-81).
+
+    A closed set, because the frontend renders each differently and an open string would
+    make that a guess about wording.
+    """
+
+    DATASET_NOT_VALIDATED = "dataset_not_validated"
+    FACTOR_MISSING = "factor_missing"
+    FACTOR_PROHIBITED = "factor_prohibited"
+    FACTOR_UNRESOLVABLE = "factor_unresolvable"
+    SPLIT_MISSING = "split_missing"
+    SPLIT_INVALID = "split_invalid"
+    RESPONSE_MISSING = "response_missing"
+    OFFSET_MISSING = "offset_missing"
+    COMPLEXITY_LIMIT = "complexity_limit"
+
+
+class SpecProblem(BaseModel):
+    """One reason a spec was refused, in terms the caller can act on."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: SpecProblemKind
+    message: str
+    #: What the problem is about — a factor slug, a column name, a setting key. Named
+    #: rather than described: "a factor is prohibited" sends the reader hunting, and the
+    #: form that pins the error to a field needs something to pin it to.
+    subject: str | None = None
+
+
+class SpecValidation(BaseModel):
+    """The answer to "may this be fitted?", without fitting it (FR-MODEL-44).
+
+    Reported as a list rather than raised as the first failure. A spec builder that
+    surfaced one error at a time would make a ten-factor spec a ten-round conversation,
+    and `02` §5.3 asks for live validation as the form is edited.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ok: bool
+    problems: tuple[SpecProblem, ...] = ()
+    #: What the complexity gate measured, whether or not it fired — so a caller near a
+    #: limit can see it coming rather than discovering it by crossing it.
+    factor_count: int = Field(default=0, ge=0)
+    estimated_parameter_count: int = Field(default=0, ge=0)
+    exposure_per_parameter: float | None = None
+    max_factor_count: int | None = None
+    min_exposure_per_parameter: float | None = None
+
+    @model_validator(mode="after")
+    def _ok_means_no_problems(self) -> SpecValidation:
+        """`ok` is derived, and must not be able to disagree with the list beside it.
+
+        A payload saying `ok: true` with three problems is the kind of thing a screen
+        renders as a green tick above a list of errors.
+        """
+        if self.ok and self.problems:
+            raise ValueError(
+                f"validation says ok with {len(self.problems)} problem(s): "
+                f"{[p.kind.value for p in self.problems]}"
+            )
+        if not self.ok and not self.problems:
+            raise ValueError("validation says not ok and names no problem")
         return self
