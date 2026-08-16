@@ -101,7 +101,7 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 37 skills — 12 written here, 25 vendored (§12)
+└── .claude/skills/           ✔ 38 skills — 12 written here, 26 external (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -460,6 +460,24 @@ security-reviewed 2026-08-16, upstream v6.3.0): all fourteen — `using-superpow
 `verification-before-completion`, `requesting-code-review`, `receiving-code-review`,
 `using-git-worktrees`, `finishing-a-development-branch`, `writing-skills`. These are
 *process* skills — how work is approached — where the other two sets are subject matter.
+
+**Installed** from [`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify)
+(Apache-2.0, security-reviewed 2026-08-16, CLI 0.9.45): `graphify` — the repository as a
+traversable knowledge graph, triggered by `/graphify`. Unlike the three sets above it is
+not hand-vendored: the skill payload is written by the tool's own
+`graphify install --project --platform claude`, so it is refreshed by re-running that, not
+by editing the files. Its output directory `graphify-out/` is git-ignored.
+
+Two things the installer does are **deliberately not committed**, and re-running it
+reintroduces both — `.claude/skills/README.md` has the detail and the reason:
+its `PreToolUse` hooks carry an absolute path from the installing machine and belong in
+`.claude/settings.local.json`, and its `## graphify` append to *this* file asserts a
+knowledge graph exists that a fresh clone does not have. The conditional version lives in
+`.claude/CLAUDE.md`.
+
+**The semantic pass over docs, PDFs and images calls a configured LLM provider.** Code
+extraction is local tree-sitter and always safe; the semantic pass must never be pointed at
+real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is the exception.
 
 All vendored skills are kept as upstream wrote them and excluded from `ruff`.
 

@@ -89,3 +89,8 @@ celerybeat.pid
 # pnpm's virtual store and vite/vitest caches — node_modules is already covered above.
 frontend/node_modules/.vite/
 frontend/coverage/
+
+# graphify's generated knowledge graph — `/graphify .` output, rebuilt from source by
+# `graphify update .`. Derived, machine-sized, and stale the moment code changes; the
+# skill that produces it IS committed (.claude/skills/graphify/).
+graphify-out/
