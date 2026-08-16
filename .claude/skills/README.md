@@ -155,6 +155,70 @@ Not installed, worth revisiting when the phase needs them: `github-actions` (CI 
 trigger hygiene), `performance` (Phase 2, NFR-RATE-1), `api-design` and
 `web-app-architecture` (W2's FastAPI surface).
 
+### planning-with-files — working memory on disk
+
+One vendored from
+[`OthmanAdi/planning-with-files`](https://github.com/OthmanAdi/planning-with-files)
+(MIT, © 2026 Ahmad Adi) on 2026-08-16, at the maintainer's request, pinned at **v3.10.1
+(`9b7d0a0`)**. Upstream's `LICENSE` is kept inside the skill directory.
+
+| Skill | Fills | Note |
+|---|---|---|
+| [`planning-with-files`](planning-with-files/SKILL.md) | Plan state that survives `/clear`, compaction and session death — `task_plan.md`, `findings.md`, `progress.md` on disk, re-injected each turn | Five lifecycle hooks in its frontmatter; the templates and the Stop gate are the mechanism, not the prose |
+
+**Only the English canonical skill was vendored.** Upstream ships 149 skill files — six
+languages × mirrors for eighteen agents (`.codex/`, `.cursor/`, `.gemini/`, `.pi/`, …) —
+plus its own test suite, packaging and a bundled Pi extension carrying a `package-lock.json`
+with the AWS, Google and Mistral SDKs. None of that is reachable from Claude Code, and a
+vendored copy is read by people as *the* copy. `commands/` was not taken either: those files
+invoke `planning-with-files:planning-with-files`, the plugin-namespaced form, which does not
+resolve for a project skill. The skill is `user-invocable`, so `/planning-with-files` is the
+entry point here.
+
+**Security review, 2026-08-16.** No network egress, no credential access, no writes outside
+the invoking project — plan state goes to `./task_plan.md`, `./findings.md`, `./progress.md`
+and `./.planning/`, all now gitignored at the repo root. No `eval`, and no shell string is
+assembled from model output. Three things worth knowing:
+
+- **`session-catchup.py` reads other agents' local transcripts** — `~/.claude/projects/`,
+  `~/.codex/sessions/`, and an OpenCode SQLite store — to reconstruct what happened before a
+  `/clear`. Read-only and local, but it is the one script that reaches outside the project,
+  and what it reads is summarised straight into the model's context.
+- **The Stop gate can refuse to let a session stop.** It is opt-in per plan via a `.mode`
+  file; with no `.mode` present `check-complete --gate` never blocks, and `PLANNING_DISABLED=1`
+  is a per-invocation escape. Verified here: in legacy mode it prints advice and exits 0.
+- **Injected plan text is fenced** — the hook wraps it in `===BEGIN PLAN DATA===` and tells
+  the model to treat the contents as data, not instructions. That is the right shape for a
+  file the agent both writes and re-reads.
+
+**Hooks fire only after the skill is invoked**, not at session start — Claude Code registers
+skill-frontmatter hooks on invocation and keeps them for the rest of the session. Nobody who
+never runs `/planning-with-files` pays for it. This is the material difference from the
+superpowers `SessionStart` hook declined above, which would have run for anyone who cloned.
+
+**One deviation from upstream, and why.** `CLAUDE.md` §12 keeps vendored files as upstream
+wrote them; this file is the exception, recorded rather than silent. Upstream's five hook
+commands resolve their script through `${CLAUDE_SKILL_DIR}`, then fall back to
+`~/.claude/skills/…` and `~/.claude/plugins/marketplaces/…`. **All three miss a project-level
+`.claude/skills/` checkout**, so as shipped the hooks register and then do nothing:
+
+- `${CLAUDE_SKILL_DIR}` is substituted into the skill body and into `allowed-tools`, but not
+  into hook command strings — in the v2.1.x build the skill constructor applies the
+  replacement to the allowed-tools array and the prompt text while passing `hooks` through
+  untouched;
+- it is not exported to the hook process either. A hook receives `CLAUDE_PROJECT_DIR`, plus
+  `CLAUDE_PLUGIN_ROOT`/`CLAUDE_PLUGIN_DATA` for plugins. There is no `CLAUDE_SKILL_DIR`.
+
+Measured: with `CLAUDE_SKILL_DIR` unset the command resolves to the empty string and exits 0
+with no output — upstream's own README calls this being "silently hook-less". So each hook
+gained **one** fallback entry, `$CLAUDE_PROJECT_DIR/.claude/skills/planning-with-files/scripts/…`,
+ahead of the two upstream paths, and the body's `${CLAUDE_PLUGIN_ROOT}` references became
+`${CLAUDE_SKILL_DIR}` — which *is* substituted, at every scope including plugins. Nothing else
+changed. Verified after patching: resolves via `CLAUDE_PROJECT_DIR`, silent with no plan
+present, injects the plan block when one exists, and the Stop gate stays non-blocking.
+
+Worth reporting upstream: the same gap breaks every project-level install, not just this one.
+
 ### Original discovery passes
 
 **None installed.** Two discovery passes against `anthropics/skills` (18 skills) and
