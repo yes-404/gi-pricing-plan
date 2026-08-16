@@ -101,7 +101,7 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 38 skills — 12 written here, 26 vendored (§12)
+└── .claude/skills/           ✔ 39 skills — 12 written here, 27 external (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -467,11 +467,29 @@ security-reviewed 2026-08-16, upstream v3.10.1): `planning-with-files` — plan 
 that survives `/clear`, compaction and session death. The English canonical skill only; the
 six-language, eighteen-agent mirrors and the bundled Pi extension were not taken.
 
+**Installed** from [`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify)
+(Apache-2.0, security-reviewed 2026-08-16, CLI 0.9.45): `graphify` — the repository as a
+traversable knowledge graph, triggered by `/graphify`. Unlike the three sets above it is
+not hand-vendored: the skill payload is written by the tool's own
+`graphify install --project --platform claude`, so it is refreshed by re-running that, not
+by editing the files. Its output directory `graphify-out/` is git-ignored.
+
+Two things the installer does are **deliberately not committed**, and re-running it
+reintroduces both — `.claude/skills/README.md` has the detail and the reason:
+its `PreToolUse` hooks carry an absolute path from the installing machine and belong in
+`.claude/settings.local.json`, and its `## graphify` append to *this* file asserts a
+knowledge graph exists that a fresh clone does not have. The conditional version lives in
+`.claude/CLAUDE.md`.
+
+**The semantic pass over docs, PDFs and images calls a configured LLM provider.** Code
+extraction is local tree-sitter and always safe; the semantic pass must never be pointed at
+real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is the exception.
+
 All vendored skills are kept as upstream wrote them and excluded from `ruff` — with one
-recorded exception. `planning-with-files`' five hook commands search
-`${CLAUDE_SKILL_DIR}`, `~/.claude/skills/` and `~/.claude/plugins/marketplaces/`, none of
-which reaches a project-level `.claude/skills/` checkout, so as shipped the hooks register
-and silently do nothing. Each gained one `$CLAUDE_PROJECT_DIR/...` fallback, and the body's
+recorded exception. `planning-with-files`' five hook commands search `${CLAUDE_SKILL_DIR}`,
+`~/.claude/skills/` and `~/.claude/plugins/marketplaces/`, none of which reaches a
+project-level `.claude/skills/` checkout, so as shipped the hooks register and silently do
+nothing. Each gained one `$CLAUDE_PROJECT_DIR/...` fallback, and the body's
 `${CLAUDE_PLUGIN_ROOT}` became `${CLAUDE_SKILL_DIR}`. `.claude/skills/README.md` carries the
 evidence, including why substitution does not reach a hook command string.
 
