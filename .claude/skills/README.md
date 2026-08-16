@@ -7,6 +7,17 @@ easy to break silently, or a trap that a passing check would hide.
 Personal/global skills live in `~/.claude/skills/` and are **never** modified as part of
 project work (`CLAUDE.md` §12).
 
+## Precedence
+
+**Superpowers first** (`CLAUDE.md` §12). The fourteen skills vendored from
+[`obra/superpowers`](https://github.com/obra/superpowers) set *how work is approached*;
+everything else here supplies *what is true about this repository*. When both apply,
+follow superpowers for the procedure and the repo-local skill for the facts — paths,
+commands, requirement ids — that a general skill cannot contain.
+
+Start a task by reading [`using-superpowers`](using-superpowers/SKILL.md); it is the
+router, and it points at the rest.
+
 ## Index
 
 | Skill | Purpose | Source | Last verified |
@@ -26,6 +37,75 @@ project work (`CLAUDE.md` §12).
 
 ## External skills
 
+### superpowers — the process set, and the one with precedence
+
+Fourteen vendored from [`obra/superpowers`](https://github.com/obra/superpowers) (MIT,
+© 2025 Jesse Vincent) on 2026-08-16 at the maintainer's request, from upstream v6.3.0
+(`b36e082`, 2026-08-12), after a security review. **All fourteen were taken** — unlike the
+Vue set, none teaches an approach `CLAUDE.md` has decided against, and the set is designed
+to be read as one: `using-superpowers` routes to the others by name.
+
+| Skill | Fills | Note |
+|---|---|---|
+| [`using-superpowers`](using-superpowers/SKILL.md) | The router — find and invoke a skill before responding | Read first. Its own "user instructions outrank skills" line is why the precedence rule had to be written into `CLAUDE.md` §12 to bind |
+| [`brainstorming`](brainstorming/SKILL.md) | Turning an idea into a design before implementation | Bundles an optional local visual companion — see the security note below |
+| [`writing-plans`](writing-plans/SKILL.md) | A written implementation plan, bite-sized, for an engineer with no context | Pairs with this repo's `spec-change`: the spec is the design, the plan is the execution order |
+| [`executing-plans`](executing-plans/SKILL.md) | Executing a written plan in a fresh session, with review checkpoints | |
+| [`subagent-driven-development`](subagent-driven-development/SKILL.md) | Fresh implementer subagent per task, review after each | Three bundled shell scripts; writes to an untracked `.superpowers/sdd/` |
+| [`dispatching-parallel-agents`](dispatching-parallel-agents/SKILL.md) | 2+ independent tasks with no shared state | |
+| [`systematic-debugging`](systematic-debugging/SKILL.md) | Root cause before any fix — symptom fixes are failure | The rule this repository already lives by: a spec/code disagreement is *resolved*, never quietly matched (`CLAUDE.md` §0) |
+| [`test-driven-development`](test-driven-development/SKILL.md) | Test first, watch it fail, then implement | Complements `python-test` (markers, negative tests) and `testing-strategy` (technique) |
+| [`verification-before-completion`](verification-before-completion/SKILL.md) | Evidence before any "it passes" claim | The generalisation of §13's "measured, not asserted" and §11's read-each-exit-code rule |
+| [`requesting-code-review`](requesting-code-review/SKILL.md) | Dispatching a reviewer subagent with crafted context | |
+| [`receiving-code-review`](receiving-code-review/SKILL.md) | Verify feedback before implementing it | |
+| [`using-git-worktrees`](using-git-worktrees/SKILL.md) | Isolated workspace before feature work | Prefers the harness's native worktree tool over raw `git worktree` |
+| [`finishing-a-development-branch`](finishing-a-development-branch/SKILL.md) | Deciding how completed work integrates | Decides *how* a branch ends; `git-hygiene` still supplies this repo's squash-merge, auto-delete and merge-order facts |
+| [`writing-skills`](writing-skills/SKILL.md) | Creating and verifying skills — TDD applied to process docs | Supersedes nothing in *Conventions* below; read both when adding a skill |
+
+**Where it overlaps a skill already here**, superpowers gives the procedure and the local
+skill gives the facts:
+
+| Superpowers | Local counterpart | Split |
+|---|---|---|
+| `test-driven-development` | `python-test`, `testing-strategy` | TDD sets the loop; `python-test` supplies `@pytest.mark.req`, the negative-test emphasis, and why a run without a database is partial |
+| `verification-before-completion` | `reproducing-ci-locally`, `close-workstream` | Evidence-before-claims is the rule; §11's two-halved gate and §13's audit are the commands |
+| `finishing-a-development-branch`, `using-git-worktrees` | `git-hygiene` | Integration procedure vs this repo's `.gitignore`, branch and squash-merge specifics |
+| `writing-plans`, `brainstorming` | `spec-change`, `adr-write` | How to reach a design vs where a decision is recorded and how its id behaves |
+| `writing-skills` | *Conventions*, below | Authoring method vs this file's naming and `## Verified` requirements |
+
+**Security review, 2026-08-16.** Skills only — the plugin's `hooks/`, `scripts/`, `tests/`
+and packaging were not vendored. Across the fourteen: no network egress, no credential
+access, no writes outside the invoking project. Every outbound URL in the prose points at
+`platform.claude.com`, Anthropic's docs CDN, `code.claude.com`, `github.com`,
+`agentskills.io` or the author's site. Four findings worth knowing:
+
+- **`brainstorming` bundles a local web server** (`scripts/server.cjs`, ~26 KB) that binds
+  `127.0.0.1` by default, gates requests on a per-session key and an `Origin` check, and
+  launches a browser through `execFile` with the URL as an argv element rather than a
+  shell string. It is opt-in — the skill works without it — and its host is overridable by
+  `BRAINSTORM_HOST`, so **do not set that to a non-loopback address**.
+- **`subagent-driven-development` writes into the working tree**: `.superpowers/sdd/` with
+  a self-ignoring `.gitignore`, so it stays out of `git status` without touching a tracked
+  file. Nothing to add to this repo's `.gitignore`; nothing should ever be committed
+  from it.
+- **`stop-server.sh` does `rm -rf "$1"`** on a caller-supplied session directory. The
+  caller is the skill, passing the path `start-server.sh` printed — but it is an
+  unqualified recursive delete, so never invoke it by hand with a path you assembled.
+- **`using-superpowers` is written to compel** (`<EXTREMELY-IMPORTANT>`, "you do not have
+  a choice"). That is upstream's mechanism for making skills fire rather than an attempt
+  to redirect the agent, it defers explicitly to `CLAUDE.md`, and it is exactly the
+  behaviour the maintainer asked for. Noted because prior reviews here recorded "no
+  instructions aimed at the agent beyond their subject" — this set does not meet that
+  description, deliberately.
+
+**Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
+into every session through `hooks/hooks.json`. That is plugin configuration rather than a
+skill, it would run a command at the start of every session for anyone who clones this
+repo, and `CLAUDE.md` §12's precedence rule achieves the same priority through a file the
+agent already loads. Install the plugin separately if the automatic injection is wanted.
+
+### python-skills — Python craft
+
 Five vendored from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills)
 (MIT, © 2025 Will McGinnis) on 2026-08-14, after a security review: no network calls of
 their own, no credential access, no filesystem reach outside a target project. The one
@@ -41,6 +121,8 @@ the network.
 | [`testing-strategy`](testing-strategy/SKILL.md) | pytest technique — fixtures, parametrization, Hypothesis | Complements this repo's `python-test` |
 | [`code-quality`](code-quality/SKILL.md) | ruff/mypy depth and refactoring | Complements this repo's `python-package` |
 | [`secret-hygiene`](secret-hygiene/SKILL.md) | Secrets and build artifacts in git | **Renamed** from upstream `git-hygiene` to avoid colliding with this repo's own |
+
+### vue3-skills — frontend subject matter
 
 Six vendored from [`yes-404/vue3-skills`](https://github.com/yes-404/vue3-skills), a fork
 of [`vuejs-ai/skills`](https://github.com/vuejs-ai/skills) (MIT, © 2025 hyf0 & SerKo) on
@@ -94,9 +176,18 @@ have to rediscover them:
 | `xlsx` | Phase 2 | Rate table CSV/XLSX import-export round-tripping (FR-RATE-20) |
 | `pdf` | Phase 3 | Dossier PDF rendering, deterministic output (FR-GOV-29) |
 | `webapp-testing` | Phase 1–2 | Frontend and DAG designer testing |
-| `skill-creator` | when this library grows | Skill evals and description tuning; heavyweight (spawns nested `claude -p`) |
+| `skill-creator` | ~~when this library grows~~ | **Superseded 2026-08-16** by superpowers' `writing-skills`, which covers authoring and verification without spawning a nested `claude -p` |
 
 External skills are **never installed without the maintainer's approval** (`CLAUDE.md` §12).
+The superpowers set was installed on that approval, given directly.
+
+**Third pass, 2026-08-16 — `obra/superpowers`, installed.** The first two passes looked for
+*subject* skills and found none, because the gap was never subject matter: it was process.
+Nothing here said how to reach a design before writing code, how to debug to root cause, or
+what evidence a completion claim owes — all of which this repository had already learned the
+expensive way and written into `CLAUDE.md` §0, §13 and §14 as standards for *documents*
+rather than as a working method. Superpowers is that method, and it is pinned at v6.3.0
+(`b36e082`) so the monthly upstream check has something to compare against.
 
 ## Conventions
 
