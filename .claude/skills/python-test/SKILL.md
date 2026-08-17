@@ -106,6 +106,36 @@ uv run alembic upgrade head
 uv run alembic downgrade -1 && uv run alembic upgrade head   # prove the downgrade too
 ```
 
+## A gate run is only valid if the tree held still for all of it
+
+The gate is eight commands over several minutes, and every one of them reads the working
+tree at the moment it runs — not a snapshot taken at the start. If anything moves the tree
+in between, the run reports a state that never existed: `pytest` measured one revision,
+`generate-contracts --check` another, and the summary says both passed.
+
+**This is not hypothetical, and the mover need not be a person.** Two Claude sessions
+sharing one working directory produced it twice in an hour — a `git checkout main` that
+reverted an edit between two tool calls with nothing in either output mentioning it, and an
+amended commit that moved the tree under a gate run already in progress. The second was
+sound only by luck: the delta was two markdown files carrying test counts, and nothing under
+test changed.
+
+So bracket the run and check, rather than assuming:
+
+```bash
+before=$(git rev-parse HEAD); git status --short | grep -v '^??' > /tmp/gate-dirty.before
+# … the gate …
+[ "$before" = "$(git rev-parse HEAD)" ] || echo "TREE MOVED — the run proves nothing"
+```
+
+If it moved, re-run — and if the delta is genuinely documentation only, say so explicitly
+with the command that shows it (`git diff --stat $before HEAD`) rather than calling the
+result byte-identical. A closure record's numbers are worth exactly what the tree they were
+measured on is.
+
+Before starting a gate you intend to quote, check for company: `git worktree list` shows the
+sibling checkouts, but a second session in *this* directory shows up nowhere — ask.
+
 ## Assert on a metric that responds to what the fixture changed
 
 Two fits of the same factor differing only in regularisation **tie on Gini**, and a test that
@@ -247,6 +277,11 @@ unpromotable since the spec was amended three days earlier. Fixtures produced al
 hard fail; nothing in between.
 
 ## Verified
+
+2026-08-17 — Two sessions, one working directory. The bracket above was written after a
+gate run began at one revision and ended at another, and after a `checkout` in the same
+directory silently discarded an edit made between two commands. Both were found by
+comparing SHAs, not by any command reporting an error.
 
 2026-08-17 — W5's `wf-01` journey slice, compose stack up: **961 Python tests** and the
 frontend's 105. The inverted-assertion procedure above came from the three steps `wf-01`
