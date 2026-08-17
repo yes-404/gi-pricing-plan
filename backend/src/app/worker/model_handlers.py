@@ -30,14 +30,20 @@ from app.platform.blobs import to_ref
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import register_handler
 from model_schema import (
+    MODEL_SPEC_ADAPTER,
     Banding,
     Diagnostics,
     Factor,
+    FitResult,
+    GbmEvalPoint,
+    GbmFitResult,
+    GbmSpec,
     GlmFitResult,
     GlmSpec,
     Grouping,
     JobKind,
     JobResult,
+    ModelSpec,
     new_uuid7,
 )
 from pricing_core import ProgressCallback, ScaledProgress
@@ -70,7 +76,7 @@ async def _split_frames(
     blob_store: Any,
     *,
     workspace_id: UUID,
-    spec: GlmSpec,
+    spec: ModelSpec,
     parent: pl.DataFrame,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
     """The train and holdout frames the spec's `split_ref` names (`01` FR-DATA-36).
@@ -149,7 +155,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     progress.update(0.05, "loading the model spec")
 
     async def load() -> tuple[
-        GlmSpec, list[Factor], _Transformations, pl.DataFrame, pl.DataFrame
+        ModelSpec, list[Factor], _Transformations, pl.DataFrame, pl.DataFrame
     ]:
         async with progress.database.session() as session:
             row = await session.get(ModelRow, model_id)
@@ -157,7 +163,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 raise PlatformError(
                     "NOT_FOUND", "Model not found", 404, f"No model {model_id}."
                 )
-            spec = GlmSpec.model_validate(row.spec)
+            spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
             factors = await model_service.load_factors(
                 session, workspace_id=workspace_id, factor_ids=list(spec.factors)
             )
@@ -215,27 +221,43 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
 
     spec, factors, transformations, frame, holdout = progress.run_on_loop(load())
 
-    from pricing_core.modelling import GlmFitError, fit_glm
+    from pricing_core.modelling import GbmFitError, GlmFitError, fit_gbm, fit_glm
     from pricing_core.modelling.factors import FactorResolutionError
 
+    # The fit owns the middle of the bar and reports its own `0..1` inside it. Before this
+    # it reported nothing, and a long fit sat at 0.35 for its whole duration — which
+    # FR-PLAT-8 exists to prevent and `00` §5.5 already required.
+    fitting = ScaledProgress(progress, start=0.10, end=0.85)
+    booster: bytes | None = None
+    eval_curve: tuple[GbmEvalPoint, ...] = ()
+    result: FitResult
     try:
-        result = fit_glm(
-            frame,
-            spec,
-            factors,
-            seed=spec.seed,
-            bandings=transformations.bandings,
-            groupings=transformations.groupings,
-            # The fit owns the middle of the bar and reports its own `0..1` inside it.
-            # Before this it reported nothing, and a long fit sat at 0.35 for its whole
-            # duration — which FR-PLAT-8 exists to prevent and `00` §5.5 already required.
-            progress=ScaledProgress(progress, start=0.10, end=0.85),
-        )
-    except GlmFitError as exc:
+        if isinstance(spec, GbmSpec):
+            fit = fit_gbm(
+                frame, spec, factors,
+                # FR-MODEL-30: the holdout rows, not merely the declared split. `fit_gbm`
+                # refuses early stopping without them rather than letting either backend
+                # fall back to the training set.
+                holdout=holdout,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=fitting,
+            )
+            result, booster, eval_curve = fit.result, fit.booster_bytes, fit.eval_curve
+        else:
+            result = fit_glm(
+                frame, spec, factors, seed=spec.seed,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=fitting,
+            )
+    except (GbmFitError, GlmFitError) as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
         # reader can look it up.
-        raise PlatformError(exc.code, "The GLM could not be fitted", 409, str(exc)) from exc
+        raise PlatformError(
+            exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
+        ) from exc
     except FactorResolutionError as exc:
         raise PlatformError(
             "FACTOR_RESOLUTION_FAILED",
@@ -245,18 +267,33 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "a version; this is that resolution failing.",
         ) from exc
     progress.update(0.85, "diagnostics")
-    from pricing_core.modelling import compute_diagnostics
+    from pricing_core.modelling import compute_diagnostics, compute_gbm_diagnostics
 
-    computed = compute_diagnostics(
-        result,
-        spec,
-        factors,
-        train=frame,
-        holdout=holdout,
-        bandings=transformations.bandings,
-        groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.85, end=0.97),
-    )
+    diagnostic_progress = ScaledProgress(progress, start=0.85, end=0.97)
+    if isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult) and booster:
+        computed = compute_gbm_diagnostics(
+            result, booster, spec, factors,
+            train=frame, holdout=holdout, eval_curve=eval_curve,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=diagnostic_progress,
+        )
+    elif isinstance(spec, GlmSpec) and isinstance(result, GlmFitResult):
+        computed = compute_diagnostics(
+            result, spec, factors,
+            train=frame, holdout=holdout,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=diagnostic_progress,
+        )
+    else:  # pragma: no cover - the unions are checked together at the type
+        raise PlatformError(
+            "MODEL_TYPE_UNSUPPORTED",
+            "This model type cannot be fitted",
+            409,
+            f"{spec.model_type!r} has a spec arm and no fit path. `ebm` is declared by "
+            "`CLAUDE.md` §7 and built by no slice.",
+        )
     diagnostics = Diagnostics(
         id=new_uuid7(),
         model_id=model_id,
@@ -265,11 +302,22 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         universal=computed.universal,
         complexity=computed.complexity,
         glm=computed.glm,
+        gbm=computed.gbm,
     )
-    progress.update(0.97, "storing coefficients and diagnostics")
+    progress.update(0.97, "storing the fit and its diagnostics")
 
     async def store() -> None:
         async with progress.database.unit_of_work() as session:
+            # **The booster is stored in the same transaction as the model row.** The
+            # `BlobRef` inside `fit_result` was computed by `pricing-core` from the bytes,
+            # so it is already correct — what this guarantees is that a committed model
+            # never references an object that was never written. `put` is idempotent on the
+            # digest (FR-PLAT-19), so a retried job stores nothing twice.
+            if booster is not None:
+                assert isinstance(result, GbmFitResult)
+                await progress.blob_store.put(
+                    session, booster, result.booster_blob.media_type
+                )
             await model_service.record_fit(
                 session,
                 workspace_id=workspace_id,

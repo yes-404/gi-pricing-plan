@@ -14,6 +14,7 @@ from pricing_core.modelling.comparison import ComparisonCandidate, compare_model
 from pricing_core.modelling.diagnostics import (
     DiagnosticsResult,
     compute_diagnostics,
+    compute_gbm_diagnostics,
     deviance,
     unit_deviance,
 )
@@ -25,11 +26,14 @@ from pricing_core.modelling.errors import (
 )
 from pricing_core.modelling.factors import FactorMatrix, rateable, resolve_factors
 from pricing_core.modelling.gbm import (
+    SUPPORTED_GBM_OBJECTIVES,
     GbmFit,
     GbmFitError,
     apply_loss_treatment,
     fit_gbm,
+    objective_family,
     predict_gbm,
+    tree_summary,
 )
 from pricing_core.modelling.glm import GlmFitError, fit_glm
 from pricing_core.modelling.groupings import (
@@ -44,6 +48,7 @@ from pricing_core.modelling.predict import (
 )
 
 __all__ = [
+    "SUPPORTED_GBM_OBJECTIVES",
     "BandingError",
     "ComparisonCandidate",
     "DiagnosticsResult",
@@ -62,16 +67,19 @@ __all__ = [
     "check_banding",
     "compare_models",
     "compute_diagnostics",
+    "compute_gbm_diagnostics",
     "deviance",
     "fit_gbm",
     "fit_glm",
     "grouping_evidence",
     "linear_predictor",
+    "objective_family",
     "predict_gbm",
     "predict_glm",
     "propose_banding",
     "propose_grouping",
     "rateable",
     "resolve_factors",
+    "tree_summary",
     "unit_deviance",
 ]

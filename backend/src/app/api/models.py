@@ -49,7 +49,6 @@ from model_schema import (
     Factor,
     FactorIntent,
     FactorType,
-    GlmSpec,
     Grouping,
     GroupingEvaluation,
     GroupingProposal,
@@ -58,6 +57,7 @@ from model_schema import (
     JobQueue,
     Model,
     ModelComparison,
+    ModelSpec,
     MonotonicDirection,
     SpecValidation,
 )
@@ -159,13 +159,13 @@ class ModelSpecValidate(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    spec: GlmSpec
+    spec: ModelSpec
 
 
 class ModelCreate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    spec: GlmSpec
+    spec: ModelSpec
     change_reason: str | None = None
 
 

@@ -40,8 +40,8 @@ from model_schema import (
     DatasetStatus,
     Diagnostics,
     Factor,
+    FitResult,
     GlmFitResult,
-    GlmSpec,
     JobSource,
     Model,
     ModelFlag,
@@ -260,7 +260,7 @@ async def reserve_model(
     *,
     workspace_id: UUID,
     actor: Principal,
-    spec: GlmSpec,
+    spec: ModelSpec,
     change_reason: str | None = None,
 ) -> tuple[ModelRow, bool]:
     """Allocate the model row a fit will populate, or return the one that exists.
@@ -354,7 +354,7 @@ async def reserve_model(
 
 
 async def _refuse_unusable_factors(
-    session: AsyncSession, *, workspace_id: UUID, spec: GlmSpec, dataset_id: UUID
+    session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec, dataset_id: UUID
 ) -> None:
     """FR-MODEL-5 and FR-MODEL-2, at the attempt rather than in the worker.
 
@@ -405,7 +405,7 @@ async def record_fit(
     workspace_id: UUID,
     actor: Principal,
     model_id: UUID,
-    fit_result: GlmFitResult,
+    fit_result: FitResult,
     diagnostics: Diagnostics,
     job_id: UUID | None = None,
 ) -> ModelRow:
@@ -462,7 +462,23 @@ async def record_fit(
     row.job_id = job_id
     await session.flush()
 
-    intercept = fit_result.intercept
+    # The audit payload is per arm, because "what was fitted" is a different sentence for
+    # a coefficient vector and for a booster. A shared subset — rows and model type — would
+    # record the two events identically and leave a reader unable to tell them apart.
+    after: dict[str, object] = {"model_type": fit_result.model_type, "rows": fit_result.rows}
+    if isinstance(fit_result, GlmFitResult):
+        intercept = fit_result.intercept
+        after |= {
+            "converged": fit_result.converged,
+            "terms": len(fit_result.coefficients),
+            "intercept": intercept.estimate if intercept else None,
+        }
+    else:
+        after |= {
+            "booster": fit_result.booster_blob.sha256,
+            "best_iteration": fit_result.best_iteration,
+            "features": len(fit_result.feature_order),
+        }
     await audit.record(
         session,
         workspace_id=workspace_id,
@@ -470,12 +486,7 @@ async def record_fit(
         source=JobSource.SYSTEM if job_id else JobSource.API,
         action="model.fitted",
         entity_ref=f"model:{row.model_family_slug}@{row.version}",
-        after={
-            "converged": fit_result.converged,
-            "rows": fit_result.rows,
-            "terms": len(fit_result.coefficients),
-            "intercept": intercept.estimate if intercept else None,
-        },
+        after=after,
     )
     return row
 

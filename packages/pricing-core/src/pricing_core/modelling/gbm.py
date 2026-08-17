@@ -53,17 +53,35 @@ from model_schema import (
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 from pricing_core.progress import NullProgress, ProgressCallback
 
-__all__ = ["GbmFit", "GbmFitError", "apply_loss_treatment", "fit_gbm", "predict_gbm"]
+__all__ = [
+    "SUPPORTED_GBM_OBJECTIVES",
+    "GbmFit",
+    "GbmFitError",
+    "apply_loss_treatment",
+    "fit_gbm",
+    "objective_family",
+    "predict_gbm",
+    "tree_summary",
+]
 
 #: FR-MODEL-26's closed set, spelled in XGBoost's vocabulary because that is the
 #: vocabulary the requirement uses, mapped to LightGBM's. The third element is the inverse
 #: link, which LightGBM's raw-score path needs and XGBoost's does not — see `predict_gbm`.
+#:
+#: `SUPPORTED_GBM_OBJECTIVES` below is the same set, exported: `POST /model-specs/validate`
+#: reports an unsupported objective as a spec problem before a Job exists (FR-MODEL-44) and
+#: the fit refuses it again as a backstop. Two hand-written lists would eventually disagree
+#: about which objectives the platform supports, and the disagreement would show up as a
+#: spec that validated and then failed.
 _OBJECTIVES: Final[dict[str, tuple[str, str, str]]] = {
     "count:poisson": ("count:poisson", "poisson", "exp"),
     "reg:gamma": ("reg:gamma", "gamma", "exp"),
     "reg:tweedie": ("reg:tweedie", "tweedie", "exp"),
     "binary:logistic": ("binary:logistic", "binary", "logistic"),
 }
+
+#: FR-MODEL-26's set, for callers that need to *check* rather than translate.
+SUPPORTED_GBM_OBJECTIVES: Final[frozenset[str]] = frozenset(_OBJECTIVES)
 
 #: Eval metrics that mean the same thing under two names. Anything else is passed to the
 #: backend **verbatim** — the metric vocabulary is the backend's own, and refusing an
@@ -117,6 +135,11 @@ class GbmFit:
 
     result: GbmFitResult
     booster_bytes: bytes
+    #: FR-MODEL-52's evaluation curve, which belongs on the **diagnostics** artifact rather
+    #: than on the fit. Returned here because the fit is what produces it and
+    #: `compute_gbm_diagnostics` is a separate call — handing it back is what lets the
+    #: caller place it where the requirement says without the fit reaching into diagnostics.
+    eval_curve: tuple[GbmEvalPoint, ...] = ()
 
 
 def apply_loss_treatment(response: np.ndarray, treatment: LossTreatment) -> np.ndarray:
@@ -375,12 +398,12 @@ def fit_gbm(
             monotone_constraints=constraints if any(constraints) else (),
             base_margin=spec.offset,
             best_iteration=best,
-            eval_curve=curve,
             rows=data.height,
             fit_seconds=elapsed,
             library_versions=versions,
         ),
         booster_bytes=payload,
+        eval_curve=curve,
     )
 
 
@@ -413,6 +436,35 @@ def _interaction_groups(spec: GbmSpec, order: Sequence[str]) -> list[list[str]] 
             )
         groups.append(list(group))
     return groups
+
+
+def _curve(
+    history: Mapping[str, Mapping[str, Sequence[float]]], *, declared: str
+) -> tuple[GbmEvalPoint, ...]:
+    """Both partitions on one row per iteration (FR-MODEL-52, FR-MODEL-54).
+
+    The two libraries key their history identically once the eval sets are named, so this
+    is shared. `declared` is the metric as the **spec** spelled it: LightGBM reports its
+    own name for the same quantity, and a reviewer looking for the metric they asked for
+    should find it rather than its translation.
+    """
+    train = dict(history.get("train", {}))
+    holdout = dict(history.get("holdout", {}))
+    metrics = list(holdout) or list(train)
+    points: list[GbmEvalPoint] = []
+    for metric in metrics:
+        train_values = list(train.get(metric, []))
+        holdout_values = list(holdout.get(metric, []))
+        for index in range(max(len(train_values), len(holdout_values))):
+            points.append(
+                GbmEvalPoint(
+                    iteration=index,
+                    metric=declared or metric,
+                    train=train_values[index] if index < len(train_values) else None,
+                    holdout=holdout_values[index] if index < len(holdout_values) else None,
+                )
+            )
+    return tuple(points)
 
 
 def _fit_xgboost(
@@ -457,7 +509,11 @@ def _fit_xgboost(
     dtrain = matrix(x, y, base_margin)
     evals: list[tuple[Any, str]] = []
     if valid is not None:
-        evals = [(matrix(valid[0], valid[1], valid[2]), "holdout")]
+        # Train **and** holdout: FR-MODEL-52 asks for the curve on both, and FR-MODEL-54
+        # calls a diagnostic reported without its holdout counterpart a defect — which
+        # reads the same way round. A curve on one partition cannot show the divergence
+        # that early stopping exists to catch.
+        evals = [(dtrain, "train"), (matrix(valid[0], valid[1], valid[2]), "holdout")]
     stopping = spec.early_stopping
     if stopping is not None:
         params["eval_metric"] = stopping.metric
@@ -469,11 +525,7 @@ def _fit_xgboost(
         verbose_eval=False,
     )
     best = int(getattr(booster, "best_iteration", rounds - 1))
-    curve = tuple(
-        GbmEvalPoint(iteration=index, metric=metric, holdout=value)
-        for metric, values in history.get("holdout", {}).items()
-        for index, value in enumerate(values)
-    )
+    curve = _curve(history, declared=str(stopping.metric) if stopping else "")
     payload = bytes(booster.save_raw(raw_format="json"))
     return payload, best + 1, curve, {"xgboost": xgb.__version__}
 
@@ -522,29 +574,25 @@ def _fit_lightgbm(
     callbacks: list[Any] = []
     history: dict[str, dict[str, list[float]]] = {}
     valid_sets: list[Any] = []
+    valid_names: list[str] = []
     if valid is not None:
         valid_sets = [
+            train_set,
             lgb.Dataset(valid[0], label=valid[1], init_score=valid[2], reference=train_set,
                         feature_name=list(order), categorical_feature=categorical_indices,
-                        free_raw_data=False)
+                        free_raw_data=False),
         ]
+        valid_names = ["train", "holdout"]
         callbacks.append(lgb.record_evaluation(history))
         if stopping is not None:
             callbacks.append(lgb.early_stopping(stopping.rounds, verbose=False))
 
     booster = lgb.train(
         params, train_set, num_boost_round=rounds, valid_sets=valid_sets,
-        valid_names=["holdout"] if valid_sets else None, callbacks=callbacks,
+        valid_names=valid_names or None, callbacks=callbacks,
     )
     best = int(booster.best_iteration or rounds)
-    # The curve is reported under LightGBM's metric name; FR-MODEL-30 asks for the metric
-    # that was *used*, and the spec's spelling is the one a reader will recognise.
-    declared = stopping.metric if stopping else ""
-    curve = tuple(
-        GbmEvalPoint(iteration=index, metric=declared or metric, holdout=value)
-        for metric, values in history.get("holdout", {}).items()
-        for index, value in enumerate(values)
-    )
+    curve = _curve(history, declared=str(stopping.metric) if stopping else "")
     payload = booster.model_to_string(num_iteration=best).encode()
     return payload, best, curve, {"lightgbm": lgb.__version__}
 
@@ -631,3 +679,90 @@ def predict_gbm(
         values = np.exp(raw)
 
     return pl.Series("prediction", np.asarray(values, dtype=np.float64))
+
+
+#: FR-MODEL-26's objectives as the exponential-dispersion families the deviance functions
+#: already know. The pair is what `unit_deviance` takes; the power is Tweedie's and is
+#: ignored elsewhere.
+_FAMILIES: Final[dict[str, tuple[str, float]]] = {
+    "count:poisson": ("poisson", 1.5),
+    "reg:gamma": ("gamma", 1.5),
+    "reg:tweedie": ("tweedie", 1.5),
+    "binary:logistic": ("binomial", 1.5),
+}
+
+
+def objective_family(spec: GbmSpec) -> tuple[str, float]:
+    """The family and Tweedie power implied by a GBM's objective.
+
+    A GBM spec has no `family` field — the objective *is* the family, spelled the
+    backend's way. Diagnostics need it in the deviance functions' vocabulary, and deriving
+    it here keeps the mapping in one place rather than beside every caller.
+    """
+    name = str(spec.objective.name)
+    family, default_power = _FAMILIES.get(name, ("poisson", 1.5))
+    power = float(spec.hyperparameters.get("tweedie_variance_power", default_power))
+    return family, power
+
+
+def tree_summary(result: GbmFitResult, booster: bytes) -> tuple[int, int, float, int]:
+    """`(tree_count, max_depth, mean_depth, leaf_count)` from the persisted booster.
+
+    Read from the artifact rather than from a live estimator, because that is what a
+    reviewer will have: the diagnostics are computed once (FR-MODEL-49) and everything
+    afterwards reads the stored bytes.
+
+    `leaf_count` is what `ComplexityDiagnostic.parameter_count` means for a boosted model.
+    A GBM has no coefficient vector, and counting factors instead would report the same
+    complexity for a stump and for a thousand deep trees — which is the comparison
+    FR-MODEL-81's exposure-per-parameter exists to make.
+    """
+    depths: list[int] = []
+    leaves = 0
+
+    if result.model_type == "xgboost":
+        import json
+
+        import xgboost as xgb
+
+        loaded = xgb.Booster()
+        loaded.load_model(bytearray(booster))
+        dumps = loaded.get_dump(dump_format="json")[: result.best_iteration]
+
+        def walk_xgb(node: dict[str, Any], depth: int) -> None:
+            nonlocal leaves
+            children = node.get("children")
+            if not children:
+                leaves += 1
+                depths.append(depth)
+                return
+            for child in children:
+                walk_xgb(child, depth + 1)
+
+        for tree in dumps:
+            walk_xgb(json.loads(tree), 0)
+        count = len(dumps)
+    else:
+        import lightgbm as lgb
+
+        loaded_lgb = lgb.Booster(model_str=booster.decode())
+        model = loaded_lgb.dump_model()
+
+        def walk_lgb(node: dict[str, Any], depth: int) -> None:
+            nonlocal leaves
+            if "leaf_value" in node and "left_child" not in node:
+                leaves += 1
+                depths.append(depth)
+                return
+            for key in ("left_child", "right_child"):
+                if key in node:
+                    walk_lgb(node[key], depth + 1)
+
+        trees = model.get("tree_info", [])
+        for tree in trees:
+            walk_lgb(tree["tree_structure"], 0)
+        count = len(trees)
+
+    if not depths:
+        return count, 0, 0.0, 0
+    return count, max(depths), sum(depths) / len(depths), leaves

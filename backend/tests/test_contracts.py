@@ -135,7 +135,13 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: premium and is money, so a blanket ratio rule would open the hole this test exists to
     #: close. Only `_per_parameter` is dimensionless here — a model's parameter count is a
     #: property of the fit, not of the book.
-    ratio_suffix = re.compile(r"_per_parameter$", re.I)
+    #: `_share` joins `_per_parameter` for the same reason and by the same rule rather than
+    #: as another name: a share is a proportion of a total, dimensionless by construction
+    #: and bounded to [0, 1] by the field itself. `exposure_share` is not a quantity of
+    #: exposure any more than `exposure_per_parameter` is, and rounding either to minor
+    #: units would be rounding a ratio. (Added 2026-08-17, when partial dependence and the
+    #: transparency artifact both introduced one.)
+    ratio_suffix = re.compile(r"(_per_parameter|_share)$", re.I)
 
     #: Two `02` types every number on which is a **fitted estimate**, not a quantity:
     #: `Coefficient` and `RelativityLevel` carry `exp(β)` and the exposure it was measured

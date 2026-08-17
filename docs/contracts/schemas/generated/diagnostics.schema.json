@@ -173,6 +173,159 @@
       "title": "ComplexityDiagnostic",
       "type": "object"
     },
+    "FeatureImportance": {
+      "additionalProperties": false,
+      "description": "One feature's importance under the three measures a booster already knows.\n\nAll three, because they disagree and the disagreement is the information: `gain` says\nhow much a split improved the objective, `cover` how much data it improved it over, and\n`frequency` merely how often the feature was chosen. A feature that is frequent and\nlow-gain is one the model reaches for and learns little from — invisible if only one\nmeasure is stored.",
+      "properties": {
+        "cover": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cover"
+        },
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "frequency": {
+          "minimum": 0.0,
+          "title": "Frequency",
+          "type": "number"
+        },
+        "gain": {
+          "minimum": 0.0,
+          "title": "Gain",
+          "type": "number"
+        }
+      },
+      "required": [
+        "feature",
+        "gain",
+        "frequency"
+      ],
+      "title": "FeatureImportance",
+      "type": "object"
+    },
+    "GbmDiagnostics": {
+      "additionalProperties": false,
+      "description": "GBM-specific evidence (FR-MODEL-52), all six things the requirement names.\n\nThe evaluation curve is here rather than on `GbmFitResult` because FR-MODEL-52 calls it\na diagnostic and asks for **train and holdout** — which is FR-MODEL-54's shape, and the\nshape `diagnostics.schema.json` has carried since Phase 0. `fit_gbm` produces it and\nhands it back for the caller to place here; only `best_iteration` stays on the fit,\nbecause scoring needs it and diagnostics are not loaded to score.",
+      "properties": {
+        "eval_curve": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GbmEvalPoint"
+          },
+          "title": "Eval Curve",
+          "type": "array"
+        },
+        "importances": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FeatureImportance"
+          },
+          "title": "Importances",
+          "type": "array"
+        },
+        "max_depth": {
+          "minimum": 0,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "mean_depth": {
+          "minimum": 0.0,
+          "title": "Mean Depth",
+          "type": "number"
+        },
+        "monotonicity": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MonotonicityCheck"
+          },
+          "title": "Monotonicity",
+          "type": "array"
+        },
+        "partial_dependence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PartialDependence"
+          },
+          "title": "Partial Dependence",
+          "type": "array"
+        },
+        "permutation_importances": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PermutationImportance"
+          },
+          "title": "Permutation Importances",
+          "type": "array"
+        },
+        "tree_count": {
+          "minimum": 0,
+          "title": "Tree Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tree_count",
+        "max_depth",
+        "mean_depth"
+      ],
+      "title": "GbmDiagnostics",
+      "type": "object"
+    },
+    "GbmEvalPoint": {
+      "additionalProperties": false,
+      "description": "One row of the evaluation curve FR-MODEL-52 requires (FR-MODEL-30 persists it).\n\nBoth partitions on one row rather than two series, because the pair is the point: a\nmetric still improving on train while flat on holdout is the shape early stopping\nexists to catch, and two separately-stored series can be joined wrongly.",
+      "properties": {
+        "holdout": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Holdout"
+        },
+        "iteration": {
+          "minimum": 0,
+          "title": "Iteration",
+          "type": "integer"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "train": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Train"
+        }
+      },
+      "required": [
+        "iteration",
+        "metric"
+      ],
+      "title": "GbmEvalPoint",
+      "type": "object"
+    },
     "GlmDiagnostics": {
       "additionalProperties": false,
       "description": "GLM-specific evidence (FR-MODEL-51).",
@@ -321,6 +474,86 @@
       "title": "LiftBin",
       "type": "object"
     },
+    "MonotonicityCheck": {
+      "additionalProperties": false,
+      "description": "Whether the **fitted** response respects a declared constraint (FR-MODEL-52).\n\nVerified rather than assumed. A constraint is a parameter passed to a library, and the\nthing that makes it true of this model is that someone swept the factor and looked —\nwhich is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).",
+      "properties": {
+        "declared": {
+          "title": "Declared",
+          "type": "string"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "holds": {
+          "title": "Holds",
+          "type": "boolean"
+        },
+        "worst_violation": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Worst Violation",
+          "type": "number"
+        }
+      },
+      "required": [
+        "factor",
+        "declared",
+        "holds"
+      ],
+      "title": "MonotonicityCheck",
+      "type": "object"
+    },
+    "PartialDependence": {
+      "additionalProperties": false,
+      "description": "The fitted response to one factor, averaged over the book (FR-MODEL-52).\n\n`exposure_share` rides with every point because a partial dependence curve is most\ndramatic exactly where the book is thinnest, and a plot without it invites reading a\nspike over 0.2 % of exposure as a rating signal.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "points": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PartialDependencePoint"
+          },
+          "title": "Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "factor"
+      ],
+      "title": "PartialDependence",
+      "type": "object"
+    },
+    "PartialDependencePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "exposure_share": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Exposure Share",
+          "type": "number"
+        },
+        "mean_prediction": {
+          "title": "Mean Prediction",
+          "type": "number"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "mean_prediction",
+        "exposure_share"
+      ],
+      "title": "PartialDependencePoint",
+      "type": "object"
+    },
     "PartitionDiagnostics": {
       "additionalProperties": false,
       "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nOne of these describes train and another describes holdout; neither is meaningful\nwithout the other, which is why they are only ever held together\n(`UniversalDiagnostics`).",
@@ -390,6 +623,47 @@
         "gini_normalised"
       ],
       "title": "PartitionDiagnostics",
+      "type": "object"
+    },
+    "PermutationImportance": {
+      "additionalProperties": false,
+      "description": "How much the holdout metric degrades when one feature is shuffled (FR-MODEL-52).\n\nOn the **holdout**, and stated as a degradation rather than a score, because that is\nthe question an actuary is asking: what would this model lose if this variable were\nnoise. Split importance answers a different question — how the trees were built — and\na feature can be split on constantly while carrying no predictive weight.",
+      "properties": {
+        "baseline": {
+          "title": "Baseline",
+          "type": "number"
+        },
+        "degradation": {
+          "title": "Degradation",
+          "type": "number"
+        },
+        "feature": {
+          "title": "Feature",
+          "type": "string"
+        },
+        "permuted": {
+          "title": "Permuted",
+          "type": "number"
+        },
+        "repeats": {
+          "minimum": 1,
+          "title": "Repeats",
+          "type": "integer"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "feature",
+        "baseline",
+        "permuted",
+        "degradation",
+        "repeats",
+        "seed"
+      ],
+      "title": "PermutationImportance",
       "type": "object"
     },
     "ResidualSummary": {
@@ -495,7 +769,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49). `gbm`,\n`cross_validation` and `backtest` are declared and always `None` in this slice — the\nfields exist because the contract the frontend generates from declares them, and their\nproducers (FR-MODEL-52, 53, 57) are owned by later slices.",
+  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\". `cross_validation` and `backtest` are still\ndeclared and always `None` — the fields exist because the contract the frontend\ngenerates from declares them, and their producers (FR-MODEL-53, 57) are later slices.",
   "properties": {
     "backtest": {
       "default": null,
@@ -516,9 +790,15 @@
       "type": "null"
     },
     "gbm": {
-      "default": null,
-      "title": "Gbm",
-      "type": "null"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GbmDiagnostics"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "glm": {
       "anyOf": [

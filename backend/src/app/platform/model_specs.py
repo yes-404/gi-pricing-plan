@@ -33,14 +33,16 @@ from app.platform.modelling import to_factor
 from model_schema import (
     DatasetStatus,
     Factor,
-    GlmSpec,
+    GbmSpec,
     JobSource,
+    ModelSpec,
     Principal,
     Profile,
     SpecProblem,
     SpecProblemKind,
     SpecValidation,
 )
+from pricing_core.modelling.gbm import SUPPORTED_GBM_OBJECTIVES
 
 __all__ = ["complexity_or_refuse", "enforce_complexity", "validate_spec"]
 
@@ -141,7 +143,7 @@ async def validate_spec(
     *,
     workspace_id: UUID,
     actor: Principal,
-    spec: GlmSpec,
+    spec: ModelSpec,
 ) -> SpecValidation:
     """Everything that can refuse this spec, answered before any compute (FR-MODEL-44).
 
@@ -247,6 +249,7 @@ async def validate_spec(
             )
         )
 
+    problems.extend(_objective_problems(spec))
     problems.extend(await _split_problems(session, workspace_id, spec))
 
     profile = await _profile(session, workspace_id, spec.dataset_version_id)
@@ -291,8 +294,47 @@ async def validate_spec(
     )
 
 
+def _objective_problems(spec: ModelSpec) -> list[SpecProblem]:
+    """FR-MODEL-44's *objective applicability* half, for the GBM arm.
+
+    `fit_gbm` refuses both of these too, and that is not a duplicate rule: this answers
+    "may this be fitted?" before a Job exists, which is what `wf-01` D2 asks for and what
+    `02` §5.3's live validation renders. The fit-time refusal is the backstop for a spec
+    that was valid when it was validated and reached the worker anyway.
+
+    A GLM's equivalent lives on the type — `GlmSpec` refuses a Tweedie power outside
+    (1, 2) — so there is nothing to restate here for that arm.
+    """
+    if not isinstance(spec, GbmSpec):
+        return []
+    if spec.objective.kind == "custom":
+        return [
+            SpecProblem(
+                kind=SpecProblemKind.OBJECTIVE_UNSUPPORTED,
+                subject=str(spec.objective.ref),
+                message=(
+                    "the spec names a Custom Objective (FR-MODEL-38), which no slice has "
+                    "built. `02` R4 would also require it to be approved before a model "
+                    "using it could be."
+                ),
+            )
+        ]
+    if str(spec.objective.name) not in SUPPORTED_GBM_OBJECTIVES:
+        return [
+            SpecProblem(
+                kind=SpecProblemKind.OBJECTIVE_UNSUPPORTED,
+                subject=str(spec.objective.name),
+                message=(
+                    f"{spec.objective.name!r} is outside FR-MODEL-26's set "
+                    f"({', '.join(sorted(SUPPORTED_GBM_OBJECTIVES))})."
+                ),
+            )
+        ]
+    return []
+
+
 async def _factors(
-    session: AsyncSession, workspace_id: UUID, spec: GlmSpec
+    session: AsyncSession, workspace_id: UUID, spec: ModelSpec
 ) -> list[Factor]:
     if not spec.factors:
         return []
@@ -344,7 +386,7 @@ async def _profile(
 
 
 async def _split_problems(
-    session: AsyncSession, workspace_id: UUID, spec: GlmSpec
+    session: AsyncSession, workspace_id: UUID, spec: ModelSpec
 ) -> list[SpecProblem]:
     """The split must exist and name two real parts (FR-DATA-36, FR-MODEL-54).
 
@@ -404,7 +446,7 @@ async def enforce_complexity(
     *,
     workspace_id: UUID,
     actor: Principal,
-    spec: GlmSpec,
+    spec: ModelSpec,
 ) -> None:
     """Refuse a breaching spec before a Job is queued (FR-MODEL-81).
 
