@@ -29,9 +29,9 @@
 | A3 | Analyst | Corrects the inference where it is wrong (a numeric-looking policy id is a string; a date is `DD/MM/YYYY`, not `MM/DD/YYYY`). | `01` FR-DATA-4 |
 | A4 | Analyst | Builds or reuses the **Preparation Recipe**: casts, date parsing, `explode_period` for mid-term changes, `attach_claims`, `pseudonymise` on the policy key. | `01` FR-DATA-9..13 |
 | A5 | Frontend → Backend | `POST /datasets/{slug}/versions` → `202` + Job (`dataset.ingest`, queue `io`). | `07` FR-PLAT-7/13 |
-| A6 | Worker → pricing-core | `apply_recipe` streams the source into parquet; unparseable rows go to `_rejected`, not to the floor. | `01` FR-DATA-7, FR-DATA-14 |
+| A6 | Worker → pricing-core | `apply_recipe()` streams the source into parquet; unparseable rows go to `_rejected`, not to the floor. | `01` FR-DATA-7, FR-DATA-14 |
 | A7 | Worker | Writes content-addressed parquet blobs; creates Dataset Version `v13`, status `draft`. | `01` FR-DATA-2, ID-4 |
-| A8 | Worker → pricing-core | `profile_version` runs automatically: per-column stats, one-way frequency/severity/burning cost with confidence intervals. | `01` FR-DATA-25/26 |
+| A8 | Worker → pricing-core | `profile_frame()` runs automatically: per-column stats, one-way frequency/severity/burning cost with confidence intervals. | `01` FR-DATA-25/26 |
 | A9 | Analyst | Reviews the profile. This is the first honest look at the data — a 40 % null rate on `annual_mileage` is visible here, before anything is fitted. | `01` §5.3 |
 
 **Checkpoint:** `dataset:motor-gb-quote-bind@13`, status `draft`, profiled, with a
@@ -76,8 +76,8 @@ possible. Before this point it was not, and there was no way to make it so.
 | D1 | Analyst | Builds a Model Spec: AD peril, `claim_count` response, Poisson, log link, `offset = log(exposure_years)`, 32 factors, seed. | `02` FR-MODEL-19, §4.4 |
 | D2 | Frontend → Backend | `POST /model-specs/validate` — factors resolve, offset present, no prohibited factor, objective applicable. Errors are caught before any compute is spent. | `02` FR-MODEL-44 |
 | D3 | Frontend → Backend | `POST /models` → `202` + Job (`model.fit`, queue `compute`). | `07` FR-PLAT-13 |
-| D4 | Worker → pricing-core | `fit_glm` via glum; converged in 23 iterations, 184 s. | `02` FR-MODEL-18, NFR-MODEL-1 |
-| D5 | Worker → pricing-core | `compute_diagnostics` on train **and** holdout: A/E by factor, lift, double lift, calibration, Gini, type-III deviance tests, residuals. | `02` FR-MODEL-50/51/54 |
+| D4 | Worker → pricing-core | `fit_glm()` via glum; converged in 23 iterations, 184 s. | `02` FR-MODEL-18, NFR-MODEL-1 |
+| D5 | Worker → pricing-core | `compute_diagnostics()` on train **and** holdout: A/E by factor, lift, double lift, calibration, Gini, type-III deviance tests, residuals. | `02` FR-MODEL-50/51/54 |
 | D6 | Analyst | Reviews diagnostics. Holdout A/E on `driver_age_band 17-20` is 1.19 with a CI excluding 1.0 — the band is under-predicting. | `02` FR-MODEL-50 |
 | D7 | Analyst | Iterates: adds an `annual_mileage × driver_age` interaction factor, refits as `@2` with `change_reason: respecified`. | `02` FR-MODEL-65 |
 | D8 | Analyst | Also fits an XGBoost model on the same factors: `count:poisson`, `base_margin = log(exposure)`, monotone constraints derived from the factor declarations, early stopping on the declared holdout. | `02` FR-MODEL-25..30 |

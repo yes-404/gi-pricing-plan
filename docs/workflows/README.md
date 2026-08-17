@@ -19,6 +19,19 @@ the modules while they do it?"
 - Each step cites the requirement IDs it exercises, so the workflows double as a
   traceability check: a requirement no workflow reaches is either infrastructure or
   a requirement nobody needs.
+- **Citations have a fixed form, because `scripts/audit-docs.py` check 21 reads them**
+  (FR-OVR-17). An endpoint is `` `METHOD /path` `` — the method in capitals, the path
+  without the `/api/v1` prefix, concrete where the journey is concrete (`/environments/prod/…`
+  rather than `/environments/{env}/…`). A `pricing-core` function is `` `name()` `` — **with
+  the parentheses**, which is what distinguishes a citation from a column name, a parameter
+  or a piece of prose in the same cell. Every one of both kinds must be declared in the
+  owning module's §5.1 or §5.2, and the audit fails the build when it is not.
+
+  The parentheses are a convention rather than a nicety. The first run of check 21 found
+  `profile_version()` cited in wf-01 and declared nowhere — `01` §5.2 was corrected on
+  2026-08-15 to `profile_frame` / `profile_parquet` and the journey was not — which is
+  precisely the drift FR-OVR-17 exists to catch, and it could only be found because the
+  citation was distinguishable from the prose around it.
 - Failure paths are specified, not implied. A journey that only documents the happy path
   is not a specification.
 - Each document ends with a **traceability table** and a **timing** estimate, so the

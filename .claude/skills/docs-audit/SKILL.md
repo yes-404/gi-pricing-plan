@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, plus the notes' header block, numbering, index agreement and references — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty-one checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, and every endpoint and pricing-core function a workflow journey cites — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -75,6 +75,33 @@ as "the notes are current".
 would have been the worse half of the change: they would pass on every note-only commit by
 never running on one.
 
+### The journeys' citations (check 21)
+
+| # | Check | The defect it catches |
+|---|---|---|
+| 21 | Every `` `METHOD /path` `` and `` `name()` `` in `wf-01…05` is declared in a spec's §5.1 or §5.2 | A journey citing an interface no spec declares — renamed, never written, or removed under it |
+
+FR-OVR-17(i), and `scope-audit.py --endpoints` one level up: that compares a spec's table
+against the published contract, this compares the **journeys** against the specs. Check 14's
+"workflow coverage" is a different and much weaker question — whether a journey *mentions* a
+requirement id.
+
+**Citations only count if they are recognisable, so the form is fixed** in
+`docs/workflows/README.md`: an endpoint is `` `METHOD /path` `` without the `/api/v1` prefix,
+a function is `` `name()` `` **with the parentheses**. Without the parentheses the check would
+have to guess at every backticked token in a `Worker → pricing-core` row, and those rows also
+contain `` `control` ``, `` `_rejected` ``, `` `f` ``, `` `where` `` and `` `Piecewise` ``.
+
+**A declared `{}` segment matches a literal one**, but only after an exact match fails. A
+journey writes `/environments/prod/deployments` where `03` §5.1 declares
+`/environments/{env}/deployments`, and the journey is right to be concrete. The audit prints
+how many citations used that fallback, because it is the one place the check is looser than a
+strict comparison — a citation of `/models/nonsense` would match a declared `/models/{}`.
+
+**Read the summary line, not just the exit code.** It reports the counts and says
+`**N undeclared**` rather than `all declared` when the check failed — a note claiming
+correctness above a `FAILED` block is the shape of defect this audit exists to catch.
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -110,6 +137,18 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-17 — Extended with **check 21**, the journeys' interface citations (FR-OVR-17(i)).
+Proven on deliberately broken input in both halves — an undeclared endpoint and an undeclared
+function each produced exactly one targeted failure, and the summary line's verdict flipped
+with them. **It found a real defect on its first run**: wf-01 cited `profile_version()`, which
+`01` §5.2 renamed to `profile_frame` / `profile_parquet` on 2026-08-15 without the journey
+following.
+
+Also worth knowing before the next check is added: **the number of checks is stated in six
+places** — `CLAUDE.md` three times, this skill's frontmatter, `.claude/skills/README.md`, and
+`docs.yml`'s comment — and every one of them had to be edited. `CLAUDE.md` §0's own rule is
+that counts which change do not belong in it.
 
 2026-08-15 — Extended with checks 16–20 over `.claude/notes/`. **All five were proven
 against deliberately broken input**, twelve breakages in total, each producing exactly one

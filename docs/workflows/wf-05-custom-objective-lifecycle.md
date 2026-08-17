@@ -97,7 +97,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 |---|---|---|---|
 | C1 | Analyst | Builds a GbmSpec with `objective: {kind: "custom", ref: "custom_objective:asymmetric-burning-cost@1"}`. | `02` §4.4 |
 | C2 | Backend | Spec validation checks applicability: response `burning_cost` is declared, backend `xgboost` is declared, `y ≥ 0` holds. A `claim_count` response would fail `OBJECTIVE_NOT_APPLICABLE` **before any compute is spent**. | `02` FR-MODEL-44 |
-| C3 | Worker → pricing-core | `compile_objective` builds vectorised NumPy gradient/hessian functions from the stored expression tree. **The user's text is never executed** — only the platform's compiled tree. | `02` FR-MODEL-40, NFR-MODEL-8 |
+| C3 | Worker → pricing-core | `compile_objective()` builds vectorised NumPy gradient/hessian functions from the stored expression tree. **The user's text is never executed** — only the platform's compiled tree. | `02` FR-MODEL-40, NFR-MODEL-8 |
 | C4 | Worker | Fits. Each round: computes gradient and hessian, checks finiteness, applies `clip_to_min`. | `02` FR-MODEL-48 |
 | C5 | Worker | On a later fit with different data, a NaN gradient appears at round 412; the fit aborts with `OBJECTIVE_NONFINITE_DERIVATIVE`, naming the round and the offending input range. It does not silently produce a degenerate model. | `02` FR-MODEL-48 |
 | C6 | Analyst | Traces it to a single row with `y = 0` and an extreme offset; fixes the data issue, refits. | — |

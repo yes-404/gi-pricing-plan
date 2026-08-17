@@ -55,7 +55,7 @@ committee and is normally the one nobody can answer.
 |---|---|---|---|
 | C1 | Pricing Actuary | `POST /rating-versions` — declares the algorithm version and every pin: rate tables, peril structure, reference tables. | `03` FR-RATE-22 |
 | C2 | Pricing Actuary | `POST /rating-versions/{id}/compile` → `202` + Job (`rating.compile`). | `07` FR-PLAT-7 |
-| C3 | Worker → pricing-core | `compile_bundle` validates everything at once: DAG structure, reference resolvability, artifact maturity, type compatibility, no `control`-intent factor in a rateable path, no unapproved custom objective transitively reachable. | `03` FR-RATE-25 |
+| C3 | Worker → pricing-core | `compile_bundle()` validates everything at once: DAG structure, reference resolvability, artifact maturity, type compatibility, no `control`-intent factor in a rateable path, no unapproved custom objective transitively reachable. | `03` FR-RATE-25 |
 | C4 | Worker | First attempt fails: `PIN_NOT_APPROVED` — the windscreen burning-cost model is still `review`. | `03` FR-RATE-25, FR-OVR-14 |
 | C5 | Pricing Actuary | Waits for that model's approval (WF-01 phase E), recompiles. | — |
 | C6 | Worker | Produces the Bundle: content hash, 84 MB, self-contained. It will score with no database access at all. | `03` FR-RATE-24, NFR-RATE-3 |
