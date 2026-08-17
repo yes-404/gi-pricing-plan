@@ -178,7 +178,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | ID | Requirement |
 |---|---|
 | **FR-MODEL-49** | Every fit produces a persisted **Diagnostics** artifact. Diagnostics are computed once at fit time and read thereafter; the UI never recomputes them. |
-| **FR-MODEL-50** | Universal diagnostics (all model types): actual-vs-expected by factor level and by banded continuous factor (exposure-weighted, with CIs); lift/gains curves by predicted decile; double lift vs a comparison model; Gini / normalised Gini; calibration by predicted decile; residual summaries; overall A/E ratio on train and holdout. |
+| **FR-MODEL-50** | Universal diagnostics (all model types): actual-vs-expected by factor level and by banded continuous factor (exposure-weighted, with CIs); lift/gains curves by predicted decile; Gini / normalised Gini; calibration by predicted decile; residual summaries; overall A/E ratio on train and holdout. *(Amended 2026-08-17, W5. **Double lift is removed from this list** and lives on the comparison artifact, FR-MODEL-56 and §4.11. It was listed here and `PartitionDiagnostics.double_lift` was populated by nothing — nothing could populate it: double lift is pairwise, the comparison model is unknown at fit time, and FR-MODEL-49 makes diagnostics computed once at fit time and read thereafter, so it could not be filled later either. A field that is structurally always null is worse than an absent one, because a reader takes it for a measurement that came out empty.)* |
 | **FR-MODEL-51** | GLM-specific diagnostics: deviance, null deviance, AIC/BIC, dispersion estimate, degrees of freedom, per-factor type-III deviance test with p-value, relativity plots with confidence bands, standardised deviance and Pearson residual plots, leverage/Cook's distance on a sample, and a VIF/aliasing report. |
 | **FR-MODEL-52** | GBM-specific diagnostics: evaluation curve per iteration for train and holdout, gain/cover/frequency importance, permutation importance on the holdout, partial dependence for declared factors, monotonicity verification (that the fitted response actually respects declared constraints), and tree-count/depth summary. |
 | **FR-MODEL-53** | Cross-validation is supported with declared fold construction (`random`, `temporal`, `grouped_by_key`) and a persisted seed; per-fold metrics and their dispersion are persisted, not just the mean. |
@@ -686,6 +686,80 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 }
 ```
 
+### 4.11 `ModelComparison`
+
+*Added 2026-08-17 (W5, the comparison slice).* §5.2 has named `ModelComparison` as a return
+type since Phase 0 and **no section defined it** — so this is the shape's first written form
+rather than a description of an existing one, and `model-comparison.schema.json` is generated
+from it.
+
+```json
+{
+  "id": "uuid",
+  "computed_at": "2026-08-17T15:20:11Z",
+  "job_id": "uuid|null",
+  "summary": {
+    "model_refs": ["model:motor-ad-frequency@7", "model:motor-ad-frequency-gbm@2"],
+    "baseline_ref": "model:motor-ad-frequency@7",
+    "split_ref": {"split_artifact_id": "uuid", "train_part": "train", "holdout_part": "test"},
+    "holdout_rows": 169_503,
+    "metrics": [
+      {"metric": "gini_normalised", "weighting": "exposure", "direction": "higher_is_better",
+       "values": [{"model_ref": "model:motor-ad-frequency@7", "value": 0.412},
+                  {"model_ref": "model:motor-ad-frequency-gbm@2", "value": 0.430}],
+       "leader": "model:motor-ad-frequency-gbm@2"},
+      {"metric": "ae_overall", "weighting": "exposure",
+       "direction": "closer_to_one_is_better",
+       "values": [{"model_ref": "model:motor-ad-frequency@7", "value": 1.001},
+                  {"model_ref": "model:motor-ad-frequency-gbm@2", "value": 0.994}],
+       "leader": "model:motor-ad-frequency@7"},
+      {"metric": "rows", "weighting": "exposure", "direction": "not_ordered",
+       "values": [{"model_ref": "model:motor-ad-frequency@7", "value": 169503.0},
+                  {"model_ref": "model:motor-ad-frequency-gbm@2", "value": 169503.0}],
+       "leader": null}
+    ],
+    "double_lift": [
+      {"baseline_ref": "model:motor-ad-frequency@7",
+       "challenger_ref": "model:motor-ad-frequency-gbm@2",
+       "weighting": "exposure",
+       "bins": [{"bin": 1, "rows": 16_950, "actual": 0.0491,
+                 "baseline_predicted": 0.0523, "challenger_predicted": 0.0447,
+                 "exposure_years": "14203.400000"}]}
+    ],
+    "relativity_differences": [
+      {"factor": "driver_age_banded", "level": "17-20",
+       "values": [{"model_ref": "model:motor-ad-frequency@7", "value": 1.718},
+                  {"model_ref": "model:motor-ad-frequency-gbm@2", "value": 1.902}],
+       "max_abs_difference": 0.184}
+    ]
+  }
+}
+```
+
+**Invariants** — `|model_refs| ≥ 2` (FR-MODEL-56 compares *two or more*; one model measured
+against nothing is a diagnostics read); `baseline_ref ∈ model_refs`; every metric carries a
+value for **every** model, null where the metric does not apply, because a missing model
+reads as one that scored nothing rather than one nobody measured; `leader ∈` the metric's own
+model refs, and null where the metric does not order **or the models tie** — a winner chosen
+by tie-break is one the data did not choose; a `double_lift` series' `baseline_ref` equals the
+comparison's, and no series has a model as its own challenger.
+
+**`direction` is part of the metric, not the reader's assumption.** `closer_to_one_is_better`
+exists because A/E has no better direction: 1.4 and 0.6 are equally wrong, and every
+higher-is-better table would rank 1.4 first.
+
+**The shared holdout is stored, not promised.** `01` FR-DATA-36 records the split on the
+parent version precisely so "the same holdout" is one artifact two models cite; keeping the
+`SplitRef` here makes the claim checkable by a reader rather than something taken on trust.
+
+**Double-lift bins are ordered by the *ratio* of the two predictions.** Sorting by either
+model's prediction gives two lift curves side by side, which answers "does each model order
+risk?"; the ratio answers "where they disagree, which one does the data support?" — the
+question a selection decision (`wf-01` E2) actually turns on.
+
+**Immutable, and enforced at the privilege layer** (FR-DATA-42): `06` §3.3 makes a comparison
+required evidence for a Model approval where a predecessor exists.
+
 ---
 
 ## 5. Interfaces
@@ -711,6 +785,7 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-MODEL-33) |
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-MODEL-57) |
 | `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-MODEL-56) |
+| `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) |
 | `POST` | `/api/v1/models/{id}/predict` | Score rows (dev/debug scale; production scoring is `03`) |
 | `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required |
 | `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-MODEL-64), `If-Match` required |
@@ -786,6 +861,35 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 > The `spec_hash` precondition the same question named is delivered: the digest now reads
 > `v1:sha256:…` and `spec_hash_is_current` answers whether a stored one is still matchable.
 
+> **Amended 2026-08-17 (W5, the comparison slice).** `POST /models/compare` is built, and one
+> route is **added to the table above**:
+>
+> * `GET /api/v1/models/comparisons/{id}` — the table declared the `POST` and no read. A 202
+>   whose artifact nothing can fetch is complete to the endpoint audit and unusable to a
+>   caller; `01`'s reference publish lifecycle made the same omission from the other side.
+>
+> And **§5.2's `compare_models` signature is corrected — the third instance of one defect.**
+> It was declared `compare_models(models: Sequence[Model], holdout)`, which cannot be written:
+> a `Model` carries *references* — factor ids, banding ids, a dataset version — and resolving
+> one needs a database that ADR-0001 forbids `pricing-core`. `predict_glm` and
+> `compute_diagnostics` were corrected the same way on 2026-08-16. It now takes
+> `ComparisonCandidate`s, which are that resolution, and returns a `ComparisonSummary` — the
+> identity-free body of §4.11's artifact, because `pricing-core` allocates no ids and reads no
+> clock. The pattern is `compute_diagnostics` → `DiagnosticsResult`, deliberately.
+>
+> Two other decisions the building settled:
+>
+> * **The comparison recomputes its metrics on the shared holdout** rather than reading each
+>   model's stored diagnostics. Two models' diagnostics came from two Jobs; the point of a
+>   comparison is that every figure in the table came from the same rows in the same run, an
+>   alignment nothing downstream can verify once the numbers are copied out of two artifacts.
+> * **Candidates must agree on their weighting scheme** (FR-MODEL-55), refused with
+>   `MODELS_NOT_COMPARABLE`. An exposure-weighted A/E beside a claim-count-weighted one is two
+>   quantities in one column. A frequency model and a severity model are not rivals.
+>
+> Still declared and unbuilt after this slice: transparency, backtests, prediction, custom
+> objectives, metrics and peril structures.
+
 > **Amended 2026-08-17 (W5, the model lifecycle).** `POST /models/{id}/submit` is built, and
 > one route is **added to the table above**:
 >
@@ -825,7 +929,7 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 `OBJECTIVE_KIND_NOT_ENABLED`, `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT`,
 `OBJECTIVE_GRAMMAR_VIOLATION`, `OBJECTIVE_NONFINITE_DERIVATIVE`,
 `TRANSPARENCY_ARTIFACT_REQUIRED`, `MODEL_IMMUTABLE`, `PICKLE_PERSISTENCE_REFUSED`,
-`PERIL_STRUCTURE_RECONCILIATION_FAILED`.
+`PERIL_STRUCTURE_RECONCILIATION_FAILED`, `MODELS_NOT_COMPARABLE`.
 
 An **invalid lifecycle transition** (FR-MODEL-64) is `VALIDATION_FAILED` at `409`, not a code
 of its own — the same answer `01` gives for a Dataset Version's transitions, and for the same
@@ -896,7 +1000,8 @@ def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Fact
                         progress: ProgressCallback | None = None) -> DiagnosticsResult
 def unit_deviance(y, mu, *, family: str, power: float = 1.5) -> NDArray[float64]
 def deviance(y, mu, *, family: str, power: float = 1.5, weights=None) -> float
-def compare_models(models: Sequence[Model], holdout: pl.DataFrame) -> ModelComparison
+def compare_models(candidates: Sequence[ComparisonCandidate], holdout: pl.DataFrame, *,
+                   baseline: str | None = None) -> ComparisonSummary
 
 # pricing_core/modelling/transparency.py
 def build_glm_approximation(model: Model, data: pl.DataFrame,
