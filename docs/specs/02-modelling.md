@@ -150,6 +150,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-35** | **SHAP factor summary** — TreeSHAP mean absolute contribution per factor, per-factor dependence summaries (contribution vs factor value, exposure-weighted), and the top interaction pairs. Computed on a reproducible sample with a persisted seed and sample size. |
 | **FR-MODEL-79** | **Interaction candidates found in TreeSHAP interaction values are suggestions, never additions** (OQ-MODEL-4, decided 2026-08-15). The transparency artifact ranks the top pairs (FR-MODEL-35) and the factor workbench surfaces each with its exposure share and its holdout lift, so an actuary sees what a suggestion is worth and over how much of the book. The platform never writes a Factor into a Model Spec: an interaction becomes rateable only as an explicit `interaction` Factor (FR-MODEL-1) carrying an intent and a written rationale (FR-MODEL-3), and the generated model document names it as an authored decision. Auto-detected structure entering a rating basis unreviewed is precisely the overfitting route this refuses. |
 | **FR-MODEL-36** | The transparency artifact records an explicit **fidelity statement**: how well the approximation reproduces the model, where it does not, and the exposure share of the region where it does not. A Rating Version referencing the model surfaces this at approval time. |
+| **FR-MODEL-84** | **A transparency artifact is readable.** `GET /api/v1/models/{id}/transparency` returns the model's most recent artifact, or a 404 naming the model. Added 2026-08-17 (W5, the transparency slice): §5.1 declared the `POST` and no read, which is a 202 whose artifact nothing can fetch — complete to the endpoint audit, since that compares the spec against the contract and an endpoint missing from both is invisible to it, and unusable to every caller. The same omission `01`'s reference publish lifecycle made, and the one the comparison artifact carried until FR-MODEL-56 was built. A model may hold several artifacts (FR-MODEL-33 allows both forms, and a re-sampled SHAP summary is a second artifact rather than a correction); the route returns the latest, and an approval citing a specific one resolves it by id. |
 | **FR-MODEL-37** | EBM (`interpret`) models are treated as transparent by construction: their term shape functions are exported directly as tables and require no approximation, but they still carry the fidelity/diagnostic sections in the same contract shape. |
 
 ### 3.7 Custom objectives
@@ -809,6 +810,7 @@ required evidence for a Model approval where a predecessor exists.
 | `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
 | `GET` | `/api/v1/models/{id}/diagnostics` | Diagnostics artifact |
 | `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-MODEL-33) |
+| `GET` | `/api/v1/models/{id}/transparency` | The model's most recent artifact (FR-MODEL-84) |
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-MODEL-57) |
 | `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-MODEL-56) |
 | `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) |
@@ -982,7 +984,23 @@ required evidence for a Model approval where a predecessor exists.
 `OBJECTIVE_KIND_NOT_ENABLED`, `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT`,
 `OBJECTIVE_GRAMMAR_VIOLATION`, `OBJECTIVE_NONFINITE_DERIVATIVE`,
 `TRANSPARENCY_ARTIFACT_REQUIRED`, `MODEL_IMMUTABLE`, `PICKLE_PERSISTENCE_REFUSED`,
-`PERIL_STRUCTURE_RECONCILIATION_FAILED`, `MODELS_NOT_COMPARABLE`.
+`PERIL_STRUCTURE_RECONCILIATION_FAILED`, `MODELS_NOT_COMPARABLE`,
+`OFFSET_NOT_RECONSTRUCTABLE`, `GBM_NO_FEATURES`, `SCORING_FEATURES_MISMATCH`,
+`INTERACTION_FEATURE_UNKNOWN`, `LOSS_TREATMENT_UNIMPLEMENTED`, `MODEL_NOT_FITTED`,
+`MODEL_ALREADY_TRANSPARENT`, `MODEL_TYPE_UNSUPPORTED`, `APPROXIMATION_TARGET_NOT_POSITIVE`,
+`SHAP_SAMPLE_EMPTY`.
+
+> **Added 2026-08-17 (W5, the GBM and transparency slices).** The ten codes above are new;
+> five *existing* ones are now raised for the first time by the GBM path rather than being
+> given parallel names — `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
+> `OBJECTIVE_NOT_APPLICABLE`, `OBJECTIVE_NOT_APPROVED` and
+> `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`. A second spelling for a refusal already named is how a
+> screen ends up branching on one and not the other.
+>
+> `OFFSET_NOT_RECONSTRUCTABLE` is the one that earns its own code rather than joining
+> `SCORING_FEATURES_MISMATCH`: FR-MODEL-71 exists because omitting the offset at scoring
+> time fails *silently* on both backends, so "this frame cannot rebuild the offset" must be
+> distinguishable from "this frame is missing a column" by anything reading the code.
 
 An **invalid lifecycle transition** (FR-MODEL-64) is `VALIDATION_FAILED` at `409`, not a code
 of its own — the same answer `01` gives for a Dataset Version's transitions, and for the same

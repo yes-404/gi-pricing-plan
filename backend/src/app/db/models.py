@@ -1354,6 +1354,36 @@ class ModelComparisonRow(Base):
     )
 
 
+class TransparencyArtifactRow(Base):
+    """A non-GLM model's explanation (`02` FR-MODEL-33..37, R3).
+
+    An **artifact**: insert-only at the privilege layer (FR-DATA-42), because it is the
+    evidence a Rating Version's approval is granted against (FR-MODEL-36) and evidence that
+    can change after the decision is not evidence.
+
+    **Many rows per model, unlike `diagnostics`.** FR-MODEL-33 says *at least one*, both
+    forms may be present, and a SHAP summary recomputed on a larger sample is a second
+    artifact rather than a correction of the first. The read path takes the most recent;
+    the older ones stay because an approval that cited one must still resolve.
+    """
+
+    __tablename__ = "transparency_artifacts"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    model_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: The `TransparencyArtifact`, whole — same reasoning as `diagnostics.payload`.
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        Index("ix_transparency_model", "workspace_id", "model_id", "created_at"),
+    )
+
+
 class DiagnosticsRow(Base):
     """Model quality evidence, computed once at fit time (`02` FR-MODEL-49, §4).
 
