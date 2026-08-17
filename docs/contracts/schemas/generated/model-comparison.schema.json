@@ -1,0 +1,342 @@
+{
+  "$defs": {
+    "ComparisonMetric": {
+      "additionalProperties": false,
+      "description": "One metric, aligned across every model in the comparison (FR-MODEL-56).",
+      "properties": {
+        "direction": {
+          "$ref": "#/$defs/MetricDirection"
+        },
+        "leader": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leader"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/ComparisonValue"
+          },
+          "minItems": 2,
+          "title": "Values",
+          "type": "array"
+        },
+        "weighting": {
+          "$ref": "#/$defs/Weighting"
+        }
+      },
+      "required": [
+        "metric",
+        "weighting",
+        "direction",
+        "values"
+      ],
+      "title": "ComparisonMetric",
+      "type": "object"
+    },
+    "ComparisonSummary": {
+      "additionalProperties": false,
+      "description": "What a comparison found, before the platform gives it an identity.\n\nThe `DiagnosticsResult` split, for the same reason: `pricing-core` computes and does not\nallocate ids, know about rows, or read a clock (ADR-0001).",
+      "properties": {
+        "baseline_ref": {
+          "title": "Baseline Ref",
+          "type": "string"
+        },
+        "double_lift": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/DoubleLift"
+          },
+          "title": "Double Lift",
+          "type": "array"
+        },
+        "holdout_rows": {
+          "minimum": 1,
+          "title": "Holdout Rows",
+          "type": "integer"
+        },
+        "metrics": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ComparisonMetric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "model_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Model Refs",
+          "type": "array"
+        },
+        "relativity_differences": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RelativityDifference"
+          },
+          "title": "Relativity Differences",
+          "type": "array"
+        },
+        "split_ref": {
+          "$ref": "#/$defs/SplitRef"
+        }
+      },
+      "required": [
+        "model_refs",
+        "baseline_ref",
+        "split_ref",
+        "holdout_rows"
+      ],
+      "title": "ComparisonSummary",
+      "type": "object"
+    },
+    "ComparisonValue": {
+      "additionalProperties": false,
+      "description": "One model's reading of one quantity.\n\n`value` is nullable and the model is always present — see the module docstring. The ref is\nthe canonical `{type}:{slug}@{version}` string (ID-3), so a comparison read years later\nstill names exactly which model versions it held.",
+      "properties": {
+        "model_ref": {
+          "title": "Model Ref",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "model_ref"
+      ],
+      "title": "ComparisonValue",
+      "type": "object"
+    },
+    "DoubleLift": {
+      "additionalProperties": false,
+      "description": "One challenger against the baseline (FR-MODEL-56, and FR-MODEL-50 as amended).",
+      "properties": {
+        "baseline_ref": {
+          "title": "Baseline Ref",
+          "type": "string"
+        },
+        "bins": {
+          "items": {
+            "$ref": "#/$defs/DoubleLiftBin"
+          },
+          "minItems": 1,
+          "title": "Bins",
+          "type": "array"
+        },
+        "challenger_ref": {
+          "title": "Challenger Ref",
+          "type": "string"
+        },
+        "weighting": {
+          "$ref": "#/$defs/Weighting"
+        }
+      },
+      "required": [
+        "baseline_ref",
+        "challenger_ref",
+        "weighting",
+        "bins"
+      ],
+      "title": "DoubleLift",
+      "type": "object"
+    },
+    "DoubleLiftBin": {
+      "additionalProperties": false,
+      "description": "One bin of a double-lift chart: what each model said, and what happened.\n\nBins are ordered by the **ratio** of the two predictions, not by either prediction — that\nordering is what makes the chart answer \"where the models disagree, which one is right?\".\nA chart binned by predicted value would show two lift curves side by side, which is a\ndifferent and much weaker question.",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "baseline_predicted": {
+          "title": "Baseline Predicted",
+          "type": "number"
+        },
+        "bin": {
+          "minimum": 1,
+          "title": "Bin",
+          "type": "integer"
+        },
+        "challenger_predicted": {
+          "title": "Challenger Predicted",
+          "type": "number"
+        },
+        "exposure_years": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Years"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bin",
+        "rows",
+        "actual",
+        "baseline_predicted",
+        "challenger_predicted"
+      ],
+      "title": "DoubleLiftBin",
+      "type": "object"
+    },
+    "MetricDirection": {
+      "description": "Which way is better, declared with the metric rather than assumed by the reader.\n\n`CLOSER_TO_ONE_IS_BETTER` exists for A/E, and it is the reason this enum is not a\nboolean: an A/E of 1.4 and one of 0.6 are equally wrong, and every \"higher is better\"\ntable this repository could have written would have ranked 1.4 above 1.0.\n\n`NOT_ORDERED` is for the metrics that are context rather than score — the holdout row\ncount is the same number for every model on a shared split, and a winner on it would be\nan artefact of tie-breaking.",
+      "enum": [
+        "higher_is_better",
+        "lower_is_better",
+        "closer_to_one_is_better",
+        "not_ordered"
+      ],
+      "title": "MetricDirection",
+      "type": "string"
+    },
+    "RelativityDifference": {
+      "additionalProperties": false,
+      "description": "How the models price one level of one factor differently (FR-MODEL-56).\n\nThe comparison an actuary actually argues from: two models can score almost identically\nand disagree by 15 % on young drivers, and the aggregate metrics cannot show that.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "max_abs_difference": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Abs Difference"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/ComparisonValue"
+          },
+          "minItems": 2,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "factor",
+        "level",
+        "values"
+      ],
+      "title": "RelativityDifference",
+      "type": "object"
+    },
+    "SplitRef": {
+      "additionalProperties": false,
+      "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).\n\nA *reference*, not a description. FR-DATA-36 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
+      "properties": {
+        "holdout_part": {
+          "default": "test",
+          "title": "Holdout Part",
+          "type": "string"
+        },
+        "split_artifact_id": {
+          "format": "uuid",
+          "title": "Split Artifact Id",
+          "type": "string"
+        },
+        "train_part": {
+          "default": "train",
+          "title": "Train Part",
+          "type": "string"
+        }
+      },
+      "required": [
+        "split_artifact_id"
+      ],
+      "title": "SplitRef",
+      "type": "object"
+    },
+    "Weighting": {
+      "description": "How a metric was weighted (FR-MODEL-55).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
+      "enum": [
+        "exposure",
+        "count",
+        "claim_count"
+      ],
+      "title": "Weighting",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The persisted comparison artifact (`02` §4.11, FR-MODEL-56).\n\nImmutable, and enforced at the privilege layer as well as here (FR-DATA-42): an approval\ncites this, and evidence that can change after the approval is not evidence.\n\nIt has no slug and no version of its own, for the reason `Diagnostics` has none — it is\nalways reached by id, from the Job that produced it or the approval that cites it.",
+  "properties": {
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "summary": {
+      "$ref": "#/$defs/ComparisonSummary"
+    }
+  },
+  "required": [
+    "id",
+    "computed_at",
+    "summary"
+  ],
+  "title": "ModelComparison",
+  "type": "object"
+}

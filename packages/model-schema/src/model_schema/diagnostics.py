@@ -137,7 +137,12 @@ class PartitionDiagnostics(BaseModel):
     ae_overall: float = Field(ge=0.0)
     ae_by_factor: tuple[AeCell, ...] = ()
     lift: tuple[LiftBin, ...] = ()
-    double_lift: tuple[LiftBin, ...] | None = None
+    #: **`double_lift` was here and is gone (2026-08-17).** FR-MODEL-50 listed "double lift
+    #: vs a comparison model" among *universal* diagnostics, and nothing ever populated the
+    #: field — nothing could. Double lift is pairwise, the comparison model is unknown at fit
+    #: time, and FR-MODEL-49 makes diagnostics computed once and read thereafter, so the
+    #: field could not be filled later either. It lives on the comparison artifact
+    #: (`comparison.DoubleLift`), and FR-MODEL-50 carries the amendment.
     gini: float
     gini_normalised: float
     calibration: tuple[CalibrationBin, ...] = ()

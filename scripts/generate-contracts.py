@@ -52,6 +52,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # generated counterpart nothing compares it against the shape the code actually emits.
     "diagnostics": "Diagnostics",
     "dataset-split": "DatasetSplit",
+    # Added 2026-08-17 (W5, model comparison). **No hand-authored Phase-0 counterpart** —
+    # `02` §5.2 named `ModelComparison` as a return type and no document defined it, so this
+    # is the shape's first written form rather than a check on an existing one.
+    "model-comparison": "ModelComparison",
 }
 
 

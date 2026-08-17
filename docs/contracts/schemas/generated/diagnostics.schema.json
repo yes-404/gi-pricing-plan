@@ -346,21 +346,6 @@
           "title": "Calibration",
           "type": "array"
         },
-        "double_lift": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/LiftBin"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Double Lift"
-        },
         "gini": {
           "title": "Gini",
           "type": "number"
