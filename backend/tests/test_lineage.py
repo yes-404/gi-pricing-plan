@@ -444,15 +444,42 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
     A loader is a parser plus a documented fetch step. If a data file ever appears here,
     somebody has shipped rows — and this is the test that says so before a licence holder
     does.
+
+    Vendored skills under `.claude/skills/` are the one carve-out, and it is conditional
+    rather than blanket. `ui-ux-pro-max` (2026-08-17) is the first vendored skill to ship
+    data files — 18 CSVs of font, colour and UX guidance — and FR-DATA-32 is about UK
+    *reference* sets whose rows are not ours to redistribute, not about a third-party
+    payload committed under its own licence. So the exemption is bought by that licence:
+    a skill may carry data only while its LICENSE travels with it in the same directory,
+    which is precisely the exposure this test exists to prevent. Delete the licence and
+    this fails, which is the point.
     """
     import pathlib
 
     root = pathlib.Path(__file__).resolve().parents[2]
+
+    def licensed_vendored_skill(path: pathlib.Path) -> bool:
+        """True when `path` sits under a skill directory that commits its upstream licence.
+
+        Matched at any depth rather than against one fixed prefix: a worktree under
+        `.claude/worktrees/` carries its own `.claude/skills/`, and a check anchored to
+        the outer one would fail the whole suite in the main checkout whenever a worktree
+        happened to exist.
+        """
+        parts = path.parts
+        for i in range(len(parts) - 3):
+            if parts[i] == ".claude" and parts[i + 1] == "skills":
+                skill_dir = pathlib.Path(*parts[: i + 3])
+                return any((skill_dir / n).is_file() for n in ("LICENSE", "LICENSE.txt"))
+        return False
+
     data_files = [
         path
         for pattern in ("*.csv", "*.parquet", "*.xlsx")
         for path in root.rglob(pattern)
-        if ".venv" not in path.parts and ".git" not in path.parts
+        if ".venv" not in path.parts
+        and ".git" not in path.parts
+        and not licensed_vendored_skill(path)
     ]
     assert data_files == [], f"unexpected bundled data: {data_files}"
 

@@ -101,7 +101,7 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 39 skills — 12 written here, 27 external (§12)
+└── .claude/skills/           ✔ 40 skills — 12 written here, 28 external (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -486,8 +486,32 @@ knowledge graph exists that a fresh clone does not have. The conditional version
 extraction is local tree-sitter and always safe; the semantic pass must never be pointed at
 real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is the exception.
 
-All vendored skills are kept as upstream wrote them and excluded from `ruff` — with one
-recorded exception. `planning-with-files`' five hook commands search `${CLAUDE_SKILL_DIR}`,
+**Vendored** from
+[`nextlevelbuilder/ui-ux-pro-max-skill`](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+(MIT, security-reviewed 2026-08-17, upstream v2.15.0): `ui-ux-pro-max` — a searchable local
+database of design guidance (119 UX guidelines, 192 palettes, 74 font pairings, 25 chart
+types, 22 stacks including Vue), for the design decisions `vue-frontend` and
+`vue-best-practices` do not cover: colour, typography, accessibility and chart choice.
+
+**One of the seven skills that repository ships was taken.** The other six — `ui-styling`,
+`design`, `design-system`, `brand`, `banner-design`, `slides` — are bundled `claudekit`
+skills for brand identity, logo and social-asset generation and slide decks. `ui-styling`
+builds shadcn/ui on Radix, which is React where §3 fixed Vue 3, and `design` calls Google
+Gemini with a key read from `~/.claude/.env`. A skill teaching a rejected framework is the
+same exclusion `vue-jsx-best-practices` got; the rest is subject matter this repository
+does not have.
+
+All vendored skills are kept as upstream wrote them and excluded from `ruff` — with two
+recorded exceptions, both the same root cause: a path variable that does not resolve for a
+project-level `.claude/skills/` checkout.
+
+`ui-ux-pro-max` invokes its own search script through `${CLAUDE_PLUGIN_ROOT}`, which is set
+for plugins and not for a project skill, so as shipped every documented command line
+resolves to `/scripts/search.py` and fails. Its eleven occurrences became
+`${CLAUDE_SKILL_DIR}/scripts/search.py`, which *is* substituted into a skill body at every
+scope. Nothing else changed.
+
+`planning-with-files`' five hook commands search `${CLAUDE_SKILL_DIR}`,
 `~/.claude/skills/` and `~/.claude/plugins/marketplaces/`, none of which reaches a
 project-level `.claude/skills/` checkout, so as shipped the hooks register and silently do
 nothing. Each gained one `$CLAUDE_PROJECT_DIR/...` fallback, and the body's
