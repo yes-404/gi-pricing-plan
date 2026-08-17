@@ -1004,9 +1004,17 @@ def predict_glm(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor]
                 groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
 
 # pricing_core/modelling/gbm.py
-def fit_gbm(data: pl.DataFrame, spec: GbmSpec, *, seed: int = 0,
-            progress: ProgressCallback | None = None) -> GbmFitResult
-def predict_gbm(model: Model, data: pl.DataFrame) -> pl.DataFrame
+def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
+            holdout: pl.DataFrame | None = None,
+            bandings: Mapping[UUID, Banding] | None = None,
+            groupings: Mapping[UUID, Grouping] | None = None,
+            progress: ProgressCallback | None = None) -> GbmFit   # .result, .booster_bytes
+def predict_gbm(result: GbmFitResult, booster: bytes, data: pl.DataFrame,
+                factors: Sequence[Factor] = (), *,
+                bandings: Mapping[UUID, Banding] | None = None,
+                groupings: Mapping[UUID, Grouping] | None = None) -> pl.Series
+def apply_loss_treatment(response: NDArray[float64], treatment: LossTreatment
+                         ) -> NDArray[float64]
 
 # pricing_core/modelling/objectives.py
 def parse_expression(text: str, bound: Sequence[str], params: Sequence[Parameter]) -> ExprTree
@@ -1057,6 +1065,30 @@ def reconcile(structure: PerilStructure, data: pl.DataFrame) -> Reconciliation
 > `compute_diagnostics` returns `DiagnosticsResult` — the computed numbers — rather than
 > the persisted `Diagnostics` artifact, which carries an id, a `model_id` and a
 > `computed_at` that only the platform can supply.
+
+> **Corrected again, 2026-08-17 (W5, the GBM arm).** `predict_gbm` was the third instance
+> of the same defect, and it is now the third one fixed: it took a `Model`, whose
+> references need a database ADR-0001 forbids this package. It takes the `GbmFitResult` and
+> the booster **bytes**.
+>
+> Three further departures from the declared signature, each forced by something the
+> declaration did not know:
+>
+> * **`fit_gbm` returns a `GbmFit`, not a `GbmFitResult`.** The artifact holds a `BlobRef`
+>   to the booster (FR-MODEL-31) and this package cannot store a blob (ADR-0001). Content
+>   addressing resolves it: the digest is a pure function of the payload, so `fit_gbm`
+>   computes the complete reference and hands back the bytes for the caller to store. A
+>   caller that forgets has a reference resolving to nothing, rather than a model that half
+>   exists.
+> * **`factors` is a parameter, as it is on `fit_glm`.** Same reason, same correction.
+> * **`holdout` is a parameter.** FR-MODEL-30's early stopping needs the rows, and
+>   `split_ref` names them without carrying them. Passing none while declaring a holdout is
+>   refused: both backends fall back to the training set, which is the requirement's
+>   prohibition arrived at by omission.
+>
+> `apply_loss_treatment` is new and was declared nowhere — FR-MODEL-73's cap is applied to
+> the response at fit time, and it belongs beside the fit rather than inside it, because
+> the GLM path will need the same function.
 
 Sketch of the compiled objective handed to XGBoost — note the platform, not the user,
 owns this function; the user only ever supplied `loss` (§4.6):

@@ -75,6 +75,29 @@ almost always that the code belongs in `backend/`.
 Every runtime dependency must be **Apache-2.0 compatible** (OQ-OVR-2 decided; NFR-OVR-11).
 AGPL and SSPL are out, transitively.
 
+**A wheel that installs is not a wheel that imports.** `uv sync` resolves and unpacks; it
+says nothing about the shared libraries the extension modules need at load time. LightGBM's
+Linux wheel links the OpenMP runtime and does not vendor it, so on a machine without
+`libgomp1` the install succeeds and `import lightgbm` fails with
+
+```
+OSError: libgomp.so.1: cannot open shared object file: No such file or directory
+```
+
+XGBoost's wheel *does* vendor one, which makes this worse rather than better: the primary
+backend works, the secondary does not, and a test suite that only exercised the primary
+would report the pair healthy. Fixed with `sudo apt-get install -y libgomp1`, and declared
+as a step in `.github/workflows/python.yml` rather than left to the runner image.
+
+**After adding a compiled dependency, import it before writing anything against it.**
+`uv run python -c "import <pkg>; print(<pkg>.__version__)"` costs a second and is the whole
+check.
+
+Watch the *coercion* a Pydantic field applies to values you pass through to a library.
+`dict[str, float]` turned `max_depth: 5` into `5.0`, and both GBM backends reject a float
+where they want an integer — a contract that silently retypes a caller's value fails at the
+backend, one layer past where the mistake was made. `dict[str, int | float]` keeps it.
+
 ## Pydantic v2 idioms this project depends on
 
 **Money is a type, not a convention.** `MoneyMinor` is `Annotated[int, Strict()]`, so a
@@ -119,3 +142,7 @@ freezing are all covered by passing tests, including negative ones asserting a f
 refused and that the generated schema carries no `anyOf`. The `DecimalStr` rule exists
 because research F7 measured the permissive union on a bare `Decimal`; without it the
 contract would have admitted exactly what FR-OVR-7 forbids.
+
+2026-08-17 — W5, the GBM arm. The `libgomp1` rule and the `int | float` coercion rule are
+both from building `fit_gbm`: the first stopped `import lightgbm` outright on this machine,
+the second failed inside both backends with two different error messages for one cause.

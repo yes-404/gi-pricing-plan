@@ -855,7 +855,13 @@ class GbmSpec(ModelSpecCommon):
     #: §4.4's common tuning knobs — `max_depth`, `eta`, `subsample`, `num_boost_round` and
     #: the rest. A dict rather than fields because the two backends spell several of them
     #: differently and a fixed set would refuse a legitimate one.
-    hyperparameters: dict[str, float] = Field(default_factory=dict)
+    #:
+    #: `int | float`, **not `float`**: declared as `float` this coerced `max_depth: 5` to
+    #: `5.0`, and both libraries reject a float where they want an integer — XGBoost with
+    #: "Invalid Parameter format for max_depth expect int but value='3.0'", LightGBM with
+    #: its own wording. A contract that silently retypes a caller's integer is a contract
+    #: that fails at the backend, one layer past where the mistake was made.
+    hyperparameters: dict[str, int | float] = Field(default_factory=dict)
     early_stopping: EarlyStopping | None = None
     #: FR-MODEL-32, and **no default**: a default would be the silence the requirement
     #: exists to refuse. `native` uses the backend's categorical support; `factor_encoding`

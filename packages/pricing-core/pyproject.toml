@@ -22,6 +22,15 @@ dependencies = [
     # scale — it takes the exposure offset and sample weights an actuarial GLM needs, and
     # fits a 10 M-row Poisson without materialising a dense design matrix.
     "glum>=3.0",
+    # FR-MODEL-25: XGBoost is the primary GBM backend, LightGBM the secondary, and both
+    # are declared here because `02` §3.5 requires the same `GbmSpec` to fit on either —
+    # a secondary backend that is an optional extra is one nobody ever runs.
+    #
+    # Both are pinned to the majors the offset findings were verified against: research
+    # F5 (XGBoost `base_margin`) and F13 (LightGBM `init_score`, and the asymmetry at
+    # prediction time that FR-MODEL-72 exists for). A major bump re-opens both questions.
+    "xgboost>=3.4,<4",
+    "lightgbm>=4.5,<5",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and

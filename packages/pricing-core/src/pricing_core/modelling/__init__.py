@@ -1,4 +1,4 @@
-"""Modelling maths: factors, bandings, groupings and GLM fitting (`02` §5.2).
+"""Modelling maths: factors, bandings, groupings, GLM and GBM fitting (`02` §5.2).
 
 Importable without the platform, like every other `pricing-core` module — ADR-0001, and
 the import-linter contract that enforces it.
@@ -24,6 +24,13 @@ from pricing_core.modelling.errors import (
     ModellingError,
 )
 from pricing_core.modelling.factors import FactorMatrix, rateable, resolve_factors
+from pricing_core.modelling.gbm import (
+    GbmFit,
+    GbmFitError,
+    apply_loss_treatment,
+    fit_gbm,
+    predict_gbm,
+)
 from pricing_core.modelling.glm import GlmFitError, fit_glm
 from pricing_core.modelling.groupings import (
     apply_grouping,
@@ -42,20 +49,25 @@ __all__ = [
     "DiagnosticsResult",
     "FactorMatrix",
     "FactorResolutionError",
+    "GbmFit",
+    "GbmFitError",
     "GlmFitError",
     "GroupingError",
     "ModellingError",
     "PredictionError",
     "apply_banding",
     "apply_grouping",
+    "apply_loss_treatment",
     "band_statistics",
     "check_banding",
     "compare_models",
     "compute_diagnostics",
     "deviance",
+    "fit_gbm",
     "fit_glm",
     "grouping_evidence",
     "linear_predictor",
+    "predict_gbm",
     "predict_glm",
     "propose_banding",
     "propose_grouping",

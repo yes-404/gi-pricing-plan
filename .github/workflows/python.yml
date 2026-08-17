@@ -76,6 +76,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # LightGBM's Linux wheel links against the OpenMP runtime and does **not** vendor
+      # it: `import lightgbm` fails with `OSError: libgomp.so.1: cannot open shared object
+      # file` on an image without it. XGBoost's wheel does vendor one, so a suite
+      # exercising only the primary backend passes on a machine where the secondary cannot
+      # even import — which is exactly how this was found, locally, in W5.
+      #
+      # A no-op on the GitHub runner images, which ship libgomp1 with gcc. Kept because
+      # "the runner happens to have it" is not a dependency declaration, and the failure it
+      # prevents is a collection error with no obvious connection to the change.
+      - name: OpenMP runtime (LightGBM)
+        run: |
+          dpkg -s libgomp1 >/dev/null 2>&1 \
+            || (sudo apt-get update && sudo apt-get install -y --no-install-recommends libgomp1)
+
       - uses: astral-sh/setup-uv@v5
         with: {enable-cache: true}
       - run: uv sync --all-packages --dev

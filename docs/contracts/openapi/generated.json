@@ -2939,7 +2939,14 @@
           },
           "hyperparameters": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
             },
             "title": "Hyperparameters",
             "type": "object"
