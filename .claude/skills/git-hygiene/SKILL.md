@@ -32,6 +32,40 @@ gh pr merge <n> --squash                      # CLAUDE.md §10
 
 `delete_branch_on_merge` is enabled, so merged branches clean themselves up.
 
+### If a stack exists anyway: retarget the dependants *before* merging the one below
+
+`delete_branch_on_merge` and a stacked PR combine badly. Merging the base PR deletes its
+branch, and GitHub closes every PR that was targeting it — **irrecoverably**:
+
+```
+$ gh api -X PATCH repos/OWNER/REPO/pulls/84 -f state=open
+state cannot be changed. The w5-gbm-contract branch has been deleted.   (422)
+$ gh api -X PATCH repos/OWNER/REPO/pulls/84 -f base=main
+Cannot change the base branch of a closed pull request.                 (422)
+```
+
+Both directions are refused, so the only way back is a **new PR** from the same branch,
+carrying the closed one's body (`gh pr view 84 --json body -q .body`) and a line naming the
+PR it replaces and why — otherwise the review history points at a dead number.
+
+The order that avoids it, for a stack that is already open:
+
+```bash
+gh api -X PATCH repos/OWNER/REPO/pulls/<dependant> -f base=main   # first, while it is open
+gh pr merge <base-pr> --squash --delete-branch                    # then
+git rebase --onto origin/main <old-base-tip> <dependant-branch>   # then re-verify by content
+git push --force-with-lease origin <dependant-branch>
+```
+
+A retargeted PR's diff temporarily includes the commits below it; the rebase is what makes
+the diff honest again. Check it (`git diff --stat origin/main..<branch>`) before merging.
+
+**`gh pr edit --base` does not do this.** In this repository it exits reporting only a
+Projects-classic deprecation error from its own GraphQL query, and the base is left
+unchanged — silently, so a following `gh pr view` is the only way to notice. The REST call
+above works where the `gh` subcommand does not, which generalises: when `gh` fails on a
+field it did not need, reach for `gh api`.
+
 ## Deleting branches after a squash-merge
 
 Squash-merge rewrites history, so `git branch -d` **refuses** even when the content is
@@ -124,6 +158,8 @@ existed, so 12 `.pyc` files were already tracked; the new patterns did not untra
 and `git status` reported them as *modified*. `git rm -r --cached` cleared them. The
 failure landed in the gap between writing this skill and committing it, which is a fair
 demonstration that the same-commit rule above is a rule and not a preference.
+
+2026-08-17 — W5's three-PR stack. The retarget-first order above was learned by not following it: merging #83 with `--delete-branch` closed #84, which then refused both reopening and a base change, and that slice landed as #90 instead. #88 survived the same event only because its base was moved to `main` first.
 
 2026-08-15 — W6a close. The `pull_request` `paths:` behaviour above was learned by
 pushing a commit as a proof it could not be.

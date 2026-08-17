@@ -22,7 +22,7 @@ router, and it points at the rest.
 
 | Skill | Purpose | Source | Last verified |
 |---|---|---|---|
-| [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup, and the merge-order trap that strands work | self-written | 2026-08-14 |
+| [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup, the merge-order trap that strands work, and how a stacked PR survives the merge below it | self-written | 2026-08-17 |
 | [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing, and what recording a *decision* touches | self-written | 2026-08-15 |
 | [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — 21 checks (8 bookkeeping, 7 structural, 5 over the `.claude/notes/` working notes, 1 over the journeys' interface citations) plus the decision-gate invariant the script does not cover | self-written | 2026-08-17 |
 | [`close-workstream`](close-workstream/SKILL.md) | Audit a workstream against `CLAUDE.md` §13 before writing "closed" into the roadmap — **scope derived from the specs first**, then evidence; gate run locally, new checks proven non-trivial, NFRs measured, every gap given a verdict | self-written | 2026-08-14 |
