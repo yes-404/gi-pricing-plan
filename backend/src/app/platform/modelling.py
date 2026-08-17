@@ -22,16 +22,27 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DiagnosticsRow, FactorRow, ModelRow
+from app.db.models import (
+    ApprovalRequestRow,
+    DatasetVersionRow,
+    DiagnosticsRow,
+    FactorRow,
+    ModelRow,
+)
 from app.errors import PlatformError
-from app.platform import audit, datasets, rbac
+from app.platform import approvals, audit, datasets, rbac
 from model_schema import (
+    VALID_MODEL_TRANSITIONS,
+    ApprovalStatus,
+    ArtifactRef,
+    DatasetStatus,
     Diagnostics,
     Factor,
     GlmFitResult,
     GlmSpec,
     JobSource,
     Model,
+    ModelFlag,
     ModelStatus,
     Permission,
     Principal,
@@ -39,7 +50,10 @@ from model_schema import (
 
 __all__ = [
     "SPEC_HASH_VERSION",
+    "apply_approval_decision",
+    "archive",
     "create_factor",
+    "flags_for",
     "list_factors",
     "load_factors",
     "load_model",
@@ -47,6 +61,7 @@ __all__ = [
     "reserve_model",
     "spec_hash",
     "spec_hash_is_current",
+    "submit_for_review",
     "to_factor",
     "to_model",
 ]
@@ -107,7 +122,15 @@ def to_factor(row: FactorRow) -> Factor:
                                   "dataset_id": row.dataset_id})
 
 
-def to_model(row: ModelRow) -> Model:
+def to_model(row: ModelRow, *, flags: tuple[ModelFlag, ...] = ()) -> Model:
+    """The artifact as the contract declares it (`02` §4.8).
+
+    `flags` is a parameter rather than a column because FR-MODEL-67's flag is computed from
+    the dataset version's *current* status — see `flags_for`, which is async and therefore
+    cannot be called from here. A caller that has not asked for them passes none, and the
+    artifact then says `[]` truthfully for "not evaluated on this path" only because every
+    path that gates on a flag evaluates it (`apply_approval_decision`).
+    """
     return Model(
         id=row.id,
         model_family_slug=row.model_family_slug,
@@ -120,6 +143,8 @@ def to_model(row: ModelRow) -> Model:
         dataset_version_id=row.dataset_version_id,
         parent_model_id=row.parent_model_id,
         change_reason=row.change_reason,
+        flags=flags,
+        approval_request_id=row.approval_request_id,
     )
 
 
@@ -467,3 +492,355 @@ async def load_model(
 def fit_payload(row: ModelRow) -> dict[str, Any]:
     """What the `model.fit` Job carries: the model to fill in, and nothing else."""
     return {"model_id": str(row.id), "workspace_id": str(row.workspace_id)}
+
+
+# -- The lifecycle (FR-MODEL-64) -----------------------------------------------------------
+#
+# `06` FR-GOV-9 makes the approval machine uniform across artifact types and stops it at
+# `approved`: "post-approval states belong to the owning module". This is that module for a
+# Model, and the seam is deliberate in both directions.
+#
+# **Direction.** `MODEL` depends on `GOV` (DEP-1), so this file calls `approvals`. Nothing in
+# `approvals` may call back here, which is why `apply_approval_decision` is driven by the
+# caller that already holds both — the API route for `POST /approval-requests/{id}/decide` —
+# rather than by a hook inside the approval machine. `withdraw`'s `artifact_is_live`
+# argument is the same seam, decided the same way when W3 built it: governance owns the
+# rule, the owning module owns the state.
+
+
+async def flags_for(
+    session: AsyncSession, *, workspace_id: UUID, row: ModelRow
+) -> tuple[ModelFlag, ...]:
+    """FR-MODEL-67's flags, **computed rather than stored**.
+
+    A stored flag is a snapshot, and the thing this one describes moves: `01` FR-DATA-23
+    makes validation re-runnable on an already-validated version, so a dataset that was
+    good under an older rule set can go to `failed` long after a model was fitted on it.
+    A column written at fit time would then say `[]` for exactly the model FR-MODEL-67
+    exists to stop.
+
+    The cost is a read per model, which is why it is not called on the list path.
+    """
+    version = await session.get(DatasetVersionRow, row.dataset_version_id)
+    if version is None or DatasetStatus(version.status) is not DatasetStatus.VALIDATED:
+        return (ModelFlag.DATASET_INVALIDATED,)
+    return ()
+
+
+def _require_transition(row: ModelRow, target: ModelStatus) -> ModelStatus:
+    """Refuse an edge the lifecycle does not have, before anything is written.
+
+    `VALIDATION_FAILED` at 409 follows `01`'s precedent for the same refusal
+    (`datasets._transition`): the *request* was well formed, the artifact's state is what
+    makes it impossible, and a caller branching on the code should not have to tell a
+    malformed body from a stale view of a lifecycle.
+    """
+    current = ModelStatus(row.status)
+    if target not in VALID_MODEL_TRANSITIONS[current]:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Invalid model lifecycle transition",
+            409,
+            f"{row.model_family_slug}@{row.version} is {current.value!r} and cannot move "
+            f"to {target.value!r} (FR-MODEL-64).",
+        )
+    return current
+
+
+async def _for_update(session: AsyncSession, workspace_id: UUID, model_id: UUID) -> ModelRow:
+    """The row, locked. Every transition is a check-then-act on `status`."""
+    row = (
+        await session.execute(
+            select(ModelRow).where(ModelRow.id == model_id).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None or row.workspace_id != workspace_id:
+        raise PlatformError("NOT_FOUND", "Model not found", 404, f"No model {model_id}.")
+    return row
+
+
+async def submit_for_review(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    model_id: UUID,
+    change_summary: str,
+) -> tuple[ModelRow, ApprovalRequestRow]:
+    """`fitted → review`, with the approval request it exists to create (`wf-01` E6/E7).
+
+    Gated on `model:submit` — a permission that existed in `permissions.py` and gated
+    nothing until now, held by `pricing_actuary` and not by `analyst`. Submitting is not
+    fitting: it puts a model in front of an approver and starts a governed process, and the
+    role that may explore a specification is not automatically the role that may do that.
+
+    **The flag is not checked here.** A model whose dataset version has lost its standing
+    can still be submitted; what it cannot do is reach `approved` (FR-MODEL-67). Refusing
+    the submission would hide the flag from the approver, and `06` FR-GOV-17's whole design
+    is that flags are visible *in the approval surface* rather than being an error the
+    submitter alone ever sees.
+    """
+    await rbac.require_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.MODEL_SUBMIT,
+    )
+    row = await _for_update(session, workspace_id, model_id)
+    _require_transition(row, ModelStatus.REVIEW)
+    await _require_evidence(session, workspace_id=workspace_id, row=row)
+
+    # Governance allocates the request, enforces one-open-request-per-artifact, and audits
+    # the submission. A second `submit` for the same model reaches its partial unique index
+    # and comes back as a 409 — which is the right layer for that answer, because two open
+    # reviews of one artifact is a governance rule, not a modelling one.
+    request = await approvals.submit(
+        session,
+        workspace_id=workspace_id,
+        submitter=actor,
+        artifact_ref=ArtifactRef(
+            type="model", slug=row.model_family_slug, version=row.version
+        ),
+        change_summary=change_summary,
+    )
+
+    row.status = ModelStatus.REVIEW.value
+    row.approval_request_id = request.id
+    await session.flush()
+
+    # Recorded on the submission rather than left for the approver to discover: FR-GOV-17
+    # puts the flag in the approval surface, and the audit trail is where "was it flagged
+    # when it was submitted?" is answered after the dataset has moved on again.
+    flags = await flags_for(session, workspace_id=workspace_id, row=row)
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="model.submitted",
+        entity_ref=f"model:{row.model_family_slug}@{row.version}",
+        before={"status": ModelStatus.FITTED.value},
+        after={
+            "status": ModelStatus.REVIEW.value,
+            "approval_request_id": str(request.id),
+            "flags": [f.value for f in flags],
+        },
+        justification=change_summary,
+    )
+    return row, request
+
+
+async def _require_evidence(
+    session: AsyncSession, *, workspace_id: UUID, row: ModelRow
+) -> None:
+    """`06` R4 and FR-GOV-10: the policy's required evidence, enforced at submission.
+
+    `EVIDENCE_INCOMPLETE` was a registered code nothing raised — the shape of gap this
+    repository has had to repair twice, where a catalogue entry is indistinguishable from a
+    working refusal.
+
+    **Fails closed on an evidence kind it cannot check.** A workspace may edit the policy
+    (FR-GOV-12), so it can name evidence this slice has no way to look for — `02`'s
+    transparency artifact and model comparison are both declared and unbuilt. Treating an
+    uncheckable requirement as satisfied would let a policy tightening silently do nothing,
+    which is worse than a submission refused with the reason named.
+    """
+    policy = await approvals.policy_for(session, workspace_id)
+    entry = policy.entry_for("model")
+    if entry is None:
+        return
+
+    #: What this slice can actually verify, and the field that answers each one.
+    verifiable = {"diagnostics": row.diagnostics_id is not None}
+
+    missing = [kind for kind in entry.evidence if not verifiable.get(kind, False)]
+    if missing:
+        unknown = [kind for kind in missing if kind not in verifiable]
+        detail = (
+            f"{row.model_family_slug}@{row.version} is missing required evidence: "
+            f"{', '.join(missing)}. `06` FR-GOV-19 defines it per artifact type and R4 "
+            "makes it a condition of submission, not of approval."
+        )
+        if unknown:
+            detail += (
+                f" This build cannot verify {', '.join(unknown)} — the artifact does not "
+                "exist yet — and treating an uncheckable requirement as met would make a "
+                "policy tightening do nothing."
+            )
+        raise PlatformError("EVIDENCE_INCOMPLETE", "Required evidence is missing", 422, detail)
+
+
+async def apply_approval_decision(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    request: ApprovalRequestRow,
+) -> ModelRow | None:
+    """Carry a governance decision into the artifact (`wf-01` E10, FR-MODEL-64).
+
+    Returns `None` when the request is about something other than a Model, so the caller
+    can drive every artifact type through one call rather than branching per type.
+
+    Called in the **same transaction** as the decision. A model left in `review` after its
+    request reached `approved` is a model no Rating Version may reference and no screen can
+    explain, and two transactions is all it takes to produce one.
+    """
+    if request.artifact_type != "model":
+        return None
+
+    ref = ArtifactRef.model_validate(request.artifact_ref)
+    row = (
+        await session.execute(
+            select(ModelRow)
+            .where(
+                ModelRow.workspace_id == workspace_id,
+                ModelRow.model_family_slug == ref.slug,
+                ModelRow.version == ref.version,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "The approval request names a model that does not exist",
+            404,
+            f"No {request.artifact_ref}.",
+        )
+
+    target = _target_status(ApprovalStatus(request.status))
+    if target is None or ModelStatus(row.status) is target:
+        # A partial approval: the request is still in `review` because the policy wants
+        # another approver. Nothing about the artifact has changed yet.
+        return row
+
+    if target is ModelStatus.APPROVED:
+        flags = await flags_for(session, workspace_id=workspace_id, row=row)
+        if flags:
+            # FR-MODEL-67 and `06` FR-GOV-17. The decision is recorded and the artifact does
+            # not move; the transaction is rolled back by the caller, so neither happens.
+            raise PlatformError(
+                "ARTIFACT_FLAGGED",
+                "This model carries a flag and cannot be approved",
+                409,
+                f"{request.artifact_ref} is flagged {[f.value for f in flags]}. "
+                "FR-MODEL-67: a Model whose Dataset Version was invalidated cannot advance "
+                "to `approved`. Re-validating the version, or refitting on one that holds, "
+                "clears it — the flag is computed, not stored, so nothing needs unsetting.",
+            )
+
+    before = ModelStatus(row.status)
+    _require_transition(row, target)
+    row.status = target.value
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action=f"model.{target.value}",
+        entity_ref=str(ref),
+        before={"status": before.value},
+        after={"status": target.value, "approval_request_id": str(request.id)},
+    )
+
+    if target is ModelStatus.APPROVED:
+        await _supersede_earlier_versions(
+            session, workspace_id=workspace_id, actor=actor, approved=row
+        )
+    return row
+
+
+def _target_status(request_status: ApprovalStatus) -> ModelStatus | None:
+    """What a request's status means for the artifact behind it.
+
+    `changes_requested`, `rejected` and `withdrawn` all return the model to **`fitted`**,
+    not to `draft`. FR-GOV-13 says `draft`, and for most artifact types that is right; for a
+    Model it is not, because `02` uses `draft` for *reserved, not yet fitted* and R2 makes
+    the coefficients immutable. A model cannot un-fit. `06` FR-GOV-13 carries the amendment
+    (2026-08-17) rather than this code carrying a silent divergence.
+    """
+    return {
+        ApprovalStatus.APPROVED: ModelStatus.APPROVED,
+        ApprovalStatus.CHANGES_REQUESTED: ModelStatus.FITTED,
+        ApprovalStatus.REJECTED: ModelStatus.FITTED,
+        ApprovalStatus.WITHDRAWN: ModelStatus.FITTED,
+    }.get(request_status)
+
+
+async def _supersede_earlier_versions(
+    session: AsyncSession, *, workspace_id: UUID, actor: Principal, approved: ModelRow
+) -> None:
+    """`approved → superseded` for every earlier approved version of the family.
+
+    Automatic rather than an operation someone performs, because the alternative is a family
+    with two approved versions and nothing to say which one a Rating Version means. Only
+    `approved` rows move: a version still at `fitted` is a candidate, not a predecessor, and
+    superseding it would say it had once been in force.
+    """
+    earlier = (
+        await session.execute(
+            select(ModelRow)
+            .where(
+                ModelRow.workspace_id == workspace_id,
+                ModelRow.model_family_slug == approved.model_family_slug,
+                ModelRow.version < approved.version,
+                ModelRow.status == ModelStatus.APPROVED.value,
+            )
+            .with_for_update()
+        )
+    ).scalars().all()
+
+    for row in earlier:
+        _require_transition(row, ModelStatus.SUPERSEDED)
+        row.status = ModelStatus.SUPERSEDED.value
+        await session.flush()
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            source=JobSource.API,
+            action="model.superseded",
+            entity_ref=f"model:{row.model_family_slug}@{row.version}",
+            before={"status": ModelStatus.APPROVED.value},
+            after={
+                "status": ModelStatus.SUPERSEDED.value,
+                "superseded_by": f"model:{approved.model_family_slug}@{approved.version}",
+            },
+        )
+
+
+async def archive(
+    session: AsyncSession, *, workspace_id: UUID, actor: Principal, model_id: UUID
+) -> ModelRow:
+    """`draft | fitted | superseded → archived` — the lifecycle's only end state.
+
+    An `approved` model cannot be archived directly: it is a Rating Version's referent, and
+    the operation that removes one names its replacement (`_supersede_earlier_versions`).
+    A model in `review` cannot either — withdraw the request first, so the approver's queue
+    does not lose an item without a decision recorded against it.
+    """
+    await rbac.require_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.MODEL_SUBMIT,
+    )
+    row = await _for_update(session, workspace_id, model_id)
+    before = _require_transition(row, ModelStatus.ARCHIVED)
+    row.status = ModelStatus.ARCHIVED.value
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="model.archived",
+        entity_ref=f"model:{row.model_family_slug}@{row.version}",
+        before={"status": before.value},
+        after={"status": ModelStatus.ARCHIVED.value},
+    )
+    return row
