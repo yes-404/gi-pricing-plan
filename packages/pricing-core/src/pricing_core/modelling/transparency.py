@@ -221,9 +221,10 @@ def build_shap_summary(
     )
 
     matrix = resolve_factors(frame, factors, bandings=bandings, groupings=groupings)
-    from pricing_core.modelling.gbm import _encode
+    from pricing_core.modelling.gbm import _encode, _native_categoricals
 
-    x, order, _, _ = _encode(matrix, factors, maps=result.categorical_maps)
+    x, order, *_ = _encode(matrix, factors, maps=result.categorical_maps)
+    native = _native_categoricals(result)
     report.update(0.35, "tree shap")
 
     if result.model_type == "xgboost":
@@ -233,7 +234,7 @@ def build_shap_summary(
         loaded.load_model(bytearray(booster))
         frame_x = xgb.DMatrix(
             x, feature_names=list(order),
-            feature_types=["c" if slug in result.categorical_maps else "q" for slug in order],
+            feature_types=["c" if slug in native else "q" for slug in order],
             enable_categorical=True,
         )
         contributions = np.asarray(loaded.predict(frame_x, pred_contribs=True))
@@ -283,11 +284,14 @@ def _interaction_candidates(
     """
     import xgboost as xgb
 
+    from pricing_core.modelling.gbm import _native_categoricals
+
     assert isinstance(loaded, xgb.Booster)
+    native = _native_categoricals(result)
     capped = x[: min(x.shape[0], 5_000)]
     frame = xgb.DMatrix(
         capped, feature_names=list(order),
-        feature_types=["c" if slug in result.categorical_maps else "q" for slug in order],
+        feature_types=["c" if slug in native else "q" for slug in order],
         enable_categorical=True,
     )
     values = np.asarray(loaded.predict(frame, pred_interactions=True))

@@ -32,7 +32,7 @@ import hashlib
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 from uuid import UUID
 
 import numpy as np
@@ -42,6 +42,7 @@ from model_schema import (
     Banding,
     BlobRef,
     Factor,
+    FactorType,
     GbmEvalPoint,
     GbmFitResult,
     GbmSpec,
@@ -200,12 +201,26 @@ def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray 
     return np.asarray(np.log(values), dtype=np.float64)
 
 
+class Encoded(NamedTuple):
+    """The feature matrix and everything the backends and the artifact need to read it."""
+
+    x: np.ndarray
+    order: tuple[str, ...]
+    #: `f64` numeric · `ord` ordered integer codes · `cat` native categorical (FR-MODEL-31).
+    dtypes: dict[str, str]
+    maps: dict[str, dict[str, int]]
+    #: The features whose levels have **no** order — the ones a backend must be told are
+    #: categorical, and the ones FR-MODEL-28 refuses a direction on.
+    unordered: frozenset[str]
+
+
 def _encode(
     matrix: FactorMatrix,
     factors: Sequence[Factor],
     *,
     maps: Mapping[str, Mapping[str, int]] | None = None,
-) -> tuple[np.ndarray, tuple[str, ...], dict[str, str], dict[str, dict[str, int]]]:
+    bandings: Mapping[UUID, Banding] | None = None,
+) -> Encoded:
     """One column per factor, categoricals as integer codes with the map returned.
 
     This *is* label encoding, and FR-MODEL-32 refuses the **silent** kind: the map comes
@@ -215,11 +230,27 @@ def _encode(
 
     `maps` supplied means scoring: a level absent from the persisted map has no code, and
     inventing one would score it as whichever level happens to share the number.
+
+    **A banding is ordinal, and is encoded as such**: its codes run in the artifact's own
+    label order — which is boundary order, the order of the underlying values — and it is
+    *not* declared to the backend as a categorical. Both halves matter.
+
+    The order is what makes FR-MODEL-28 meaningful on a band: sorted lexicographically
+    `"10-49"` lands second, between `"0-1"` and `"2-4"`, so "frequency falls with licence
+    years" would constrain the alphabet. The declaration is what makes it *possible*:
+    LightGBM refuses monotone constraints on a categorical feature and does so by aborting
+    the process — `[LightGBM] [Fatal] The output cannot be monotone with respect to
+    categorical features`, verified here on 4.7.0 — so a band declared categorical cannot
+    carry the constraint `02` §4.4's own `driver_age_banded` example declares.
+
+    FR-MODEL-32 refuses the silent label-encoding of an **unordered** categorical. A band
+    is ordered and its map is persisted, so this is neither.
     """
     columns: list[np.ndarray] = []
     order: list[str] = []
     dtypes: dict[str, str] = {}
     encodings: dict[str, dict[str, int]] = {}
+    unordered: set[str] = set()
 
     for factor in factors:
         slug = factor.slug
@@ -240,12 +271,21 @@ def _encode(
                         terms=unknown,
                     )
             else:
-                levels = sorted(text.unique().to_list())
+                declared = _ordered_levels(factor, bandings)
+                observed = {v for v in text.unique().to_list() if v is not None}
+                levels = (
+                    [level for level in declared if level in observed]
+                    if declared
+                    else sorted(observed)
+                )
                 mapping = {level: code for code, level in enumerate(levels)}
             encodings[slug] = mapping
             codes = text.replace_strict(mapping, return_dtype=pl.Int32).to_numpy()
             columns.append(codes.astype(np.float64))
-            dtypes[slug] = "i32"
+            ordinal = factor.type is FactorType.BANDING
+            dtypes[slug] = "ord" if ordinal else "cat"
+            if not ordinal:
+                unordered.add(slug)
         else:
             columns.append(series.cast(pl.Float64).to_numpy())
             dtypes[slug] = "f64"
@@ -256,24 +296,48 @@ def _encode(
             "the feature matrix has no columns — every factor resolved to nothing, so "
             "there is nothing to boost on.",
         )
-    return np.column_stack(columns), tuple(order), dtypes, encodings
+    return Encoded(
+        np.column_stack(columns), tuple(order), dtypes, encodings, frozenset(unordered)
+    )
+
+
+def _ordered_levels(
+    factor: Factor, bandings: Mapping[UUID, Banding] | None
+) -> tuple[str, ...]:
+    """The order a factor's levels genuinely have, or empty when they have none.
+
+    A **banding** has one and the artifact states it: `labels` runs in boundary order, which
+    is the order of the underlying values. Nothing else does. An `identity` categorical's
+    levels are names, and a `grouping`'s targets are a modelling decision whose order this
+    module would be asserting rather than reading — so both fall back to a sorted encoding
+    and `_monotone` refuses a direction on them.
+    """
+    if factor.type is not FactorType.BANDING or not bandings or factor.banding_id is None:
+        return ()
+    banding = bandings.get(factor.banding_id)
+    return banding.labels if banding else ()
 
 
 def _monotone(
-    factors: Sequence[Factor], order: Sequence[str], categorical: set[str]
+    factors: Sequence[Factor], order: Sequence[str], unordered: frozenset[str]
 ) -> tuple[int, ...]:
     """FR-MODEL-28: the direction is declared on the Factor and derived here.
 
-    A direction on an **unordered categorical** is refused. Both backends accept the
+    A direction on an **unordered** categorical is refused. Both backends accept the
     constraint and apply it to whatever integer codes the levels happened to receive, so
     the model becomes monotone in an ordering nobody chose while the artifact records a
     direction that reads as an actuarial judgement.
+
+    A **banding is ordered** and is therefore allowed — `02` §4.4's own example is a
+    monotone constraint on `driver_age_banded`, and `wf-01` C7 declares one. `_encode`
+    codes it in the artifact's label order and declares it ordinal rather than categorical,
+    which is what lets the constraint hold in the underlying value.
     """
     by_slug = {factor.slug: factor for factor in factors}
     vector: list[int] = []
     for slug in order:
         direction = by_slug[slug].monotonic_direction
-        if direction is not MonotonicDirection.NONE and slug in categorical:
+        if direction is not MonotonicDirection.NONE and slug in unordered:
             raise GbmFitError(
                 "MONOTONE_CONSTRAINT_CONFLICT",
                 f"factor {slug!r} is an unordered categorical and declares a "
@@ -341,8 +405,8 @@ def fit_gbm(
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 
     report.update(0.15, "encoding features")
-    x, order, dtypes, encodings = _encode(matrix, factors)
-    constraints = _monotone(factors, order, set(encodings))
+    x, order, dtypes, encodings, unordered = _encode(matrix, factors, bandings=bandings)
+    constraints = _monotone(factors, order, unordered)
     base_margin = _offset(data, spec.offset, what="this fit")
 
     response = data[spec.response_column].cast(pl.Float64).to_numpy()
@@ -362,7 +426,7 @@ def fit_gbm(
     valid: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None = None
     if holdout is not None:
         holdout_matrix = resolve_factors(holdout, factors, bandings=bandings, groupings=groupings)
-        vx, _, _, _ = _encode(holdout_matrix, factors, maps=encodings)
+        vx = _encode(holdout_matrix, factors, maps=encodings, bandings=bandings).x
         vy = apply_loss_treatment(
             holdout[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment
         )
@@ -373,12 +437,12 @@ def fit_gbm(
     if spec.model_type == "xgboost":
         payload, best, curve, versions = _fit_xgboost(
             spec, x, response, base_margin, valid, order, constraints,
-            set(encodings), xgb_objective, rounds,
+            unordered, xgb_objective, rounds,
         )
     else:
         payload, best, curve, versions = _fit_lightgbm(
             spec, x, response, base_margin, valid, order, constraints,
-            set(encodings), lgb_objective, rounds,
+            unordered, lgb_objective, rounds,
         )
     elapsed = time.perf_counter() - started
     report.update(0.95, "recording the artifact")
@@ -475,7 +539,7 @@ def _fit_xgboost(
     valid: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None,
     order: Sequence[str],
     constraints: tuple[int, ...],
-    categorical: set[str],
+    categorical: frozenset[str],
     objective: str,
     rounds: int,
 ) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
@@ -538,7 +602,7 @@ def _fit_lightgbm(
     valid: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None,
     order: Sequence[str],
     constraints: tuple[int, ...],
-    categorical: set[str],
+    categorical: frozenset[str],
     objective: str,
     rounds: int,
 ) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
@@ -597,6 +661,24 @@ def _fit_lightgbm(
     return payload, best, curve, {"lightgbm": lgb.__version__}
 
 
+def _native_categoricals(result: GbmFitResult) -> frozenset[str]:
+    """The fitted features the backend was told are categorical (FR-MODEL-31's dtypes).
+
+    Scoring has to declare exactly what fitting declared: XGBoost splits a `c` feature by
+    set membership and a `q` feature by threshold, so a band scored as `c` reads a booster
+    that was grown as `q`. The encoding maps alone cannot answer this — a banding has one
+    and is ordinal — which is what `feature_dtypes` is for.
+
+    A result carrying maps and no dtypes falls back to "every encoded feature is
+    categorical", which is what this module did before bandings became ordinal. `fit_gbm`
+    always populates dtypes, so the fallback is for a hand-assembled result rather than for
+    anything the platform has fitted.
+    """
+    if not result.feature_dtypes:
+        return frozenset(result.categorical_maps)
+    return frozenset(slug for slug, dtype in result.feature_dtypes.items() if dtype == "cat")
+
+
 def predict_gbm(
     result: GbmFitResult,
     booster: bytes,
@@ -624,7 +706,9 @@ def predict_gbm(
     """
     if factors:
         matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
-        x, order, _, _ = _encode(matrix, factors, maps=result.categorical_maps)
+        x, order, *_ = _encode(
+            matrix, factors, maps=result.categorical_maps, bandings=bandings
+        )
     else:
         missing = [slug for slug in result.feature_order if slug not in data.columns]
         if missing:
@@ -634,7 +718,7 @@ def predict_gbm(
                 "them resolved, or supply each feature under its factor slug.",
                 terms=missing,
             )
-        x, order, _, _ = _encode(
+        x, order, *_ = _encode(
             FactorMatrix(
                 frame=data,
                 terms={slug: slug for slug in result.feature_order},
@@ -663,7 +747,7 @@ def predict_gbm(
         loaded.load_model(bytearray(booster))
         frame = xgb.DMatrix(
             x, base_margin=margin, feature_names=list(result.feature_order),
-            feature_types=["c" if slug in result.categorical_maps else "q"
+            feature_types=["c" if slug in _native_categoricals(result) else "q"
                            for slug in result.feature_order],
             enable_categorical=True,
         )

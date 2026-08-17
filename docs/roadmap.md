@@ -1719,6 +1719,71 @@ Python tests, 105 frontend.
 | Frontend | **W6b.** §5.3's model spec builder, the diagnostics view's GBM eval curves and FR-MODEL-79's interaction suggestions are view work. `ModelDetailView.vue` is narrowed to the GLM arm so `vue-tsc` keeps naming the GBM view as missing |
 | **OQ-MODEL-10** raised | Whether the GLM approximation is a Model in its own right. Bound to OQ-MODEL-3 — it needs an independent identity only if something may rate on it — and recommended to wait rather than build an artifact nothing references |
 
+### W5 — `wf-01` driven end to end, 2026-08-17 *(in progress, not closed)*
+
+The tenth slice: FR-OVR-17(ii) for `wf-01`, the requirement the citation-audit slice left
+outstanding and the GBM slice made writable. One test, `backend/tests/test_wf01_journey.py`,
+walking the journey's own phases in order through the same Jobs and services a caller reaches
+— not a marker on an existing test, which FR-OVR-17 refuses by name.
+
+| Delivered | Evidence |
+|---|---|
+| A→E2 and E6→E10 in one test | Ingest, **the failure loop** (a version that fails validation, is corrected, and passes), profiling, a materialised train/test split, a banding, a grouping, a GLM fit, an XGBoost fit on the same factors and split, diagnostics on both, the transparency artifact, the comparison, submission, the self-approval refusal, and approval — each block naming the step it executes |
+| The split is **materialised**, not asserted | `dataset.derive` produces both parts as real versions. A faked split gives every fit a holdout identical to its training set, and every diagnostic downstream reports the model's own memory |
+| E9 walks the refusal, not the happy path | `SUBMITTER_CANNOT_APPROVE` (`06` R1) is asserted inside the journey, because a journey test that only walked the happy path would not reach the one step that has to fail |
+| E1 compares **both** candidates | The artifact is read back through `load_comparison` and its `holdout_deviance` asserted to carry a number for each model ref — the job succeeding proves nothing, since a comparison that silently dropped the GBM would also succeed |
+| The three steps the platform cannot drive are **pinned, not skipped** | D7 (an `interaction` Factor) and E4/E5 (the Peril Structure, FR-MODEL-58..61) are inverted assertions: each passes while the capability is absent and **fails the day it lands**, so the slice that builds either must come back and extend the journey. A comment would have said the same and gone stale |
+
+**Model comparison gained its GBM arm here, because the journey asked for it.** `wf-01` E1
+compares "the GLM and GBM candidates" and FR-MODEL-56 is type-agnostic, so a comparison that
+could only read a `GlmSpec` was code failing the spec rather than a capability nobody had
+specified — the comparison slice's own verdict said as much, deferring it to "the GBM slice".
+Three sites: `ComparisonCandidate` takes a `GlmFitResult | GbmFitResult` and requires the
+booster bytes alongside a GBM fit (ADR-0001 — this package is handed artifacts, never ids),
+`_score` dispatches to `predict_gbm`, and the backend's `_resolve_candidate` validates through
+the union adapters and fetches the booster. `relativity_differences` is computed for the GLM
+candidates alone and returns empty below two, because a relativity is a ratio between level
+effects and a booster has none — `02` §3.6's transparency artifact is where a GBM's factor
+story lives.
+
+**The defect the journey found is in the encoding, and it is the kind only an end-to-end run
+produces.** D5's banding and D8's monotone constraint met for the first time here. A banded
+Factor was being handed to both backends as an **unordered categorical**, with its levels coded
+in *lexicographic* order — so `"10-49"` sorted between `"0-1"` and `"2-4"`, and a declared
+`decreasing` constraint would have held over the alphabet rather than over age. On LightGBM it
+was worse than wrong: a monotone constraint on a categorical feature **aborts the process**
+(`[LightGBM] [Fatal] The output cannot be monotone with respect to categorical features`, 4.7.0)
+rather than raising, so the failure arrives as a dead worker with no error to map. Resolved in
+`02` §4.4 (amended, dated) rather than diverged from: a banding is **ordinal** — coded in the
+artifact's own label order and declared to the backend as ordered integers — while identity
+categoricals and groupings stay unordered, since the platform has no order to assert for them.
+FR-MODEL-28 refuses a direction on those two and only those two. The dtype vocabulary is now
+named: `f64`, `ord`, `cat`. Proven behaviourally on both backends: band-midpoint predictions
+never rise under a `decreasing` constraint, and the encoding map's order is asserted to equal
+the banding's labels.
+
+**Two stale tests, corrected against the spec rather than against the code.** Both pinned
+`OverallOutcome.FAIL` for an unacknowledged warning; `01` §4.6 was amended on 2026-08-14 so
+that `overall` derives from rule results alone and acknowledgement is checked at promotion
+(FR-DATA-17). The code was right, the tests were the survivors — and the property they
+asserted deadlocked promotion, since a report that can never leave `fail` can never be
+acknowledged into `validated`. The test now names what it asserts:
+`test_an_unacknowledged_warning_is_pass_with_warnings_and_still_blocks_promotion`.
+
+**Numbers.** Suite: **961 Python tests**, 105 frontend. `req-coverage` reads 182 of 443
+marked (41.1 %). `scope-audit MODEL --sections 3.5,3.6` is unchanged at **17 of 19** — a
+journey test evidences the seams between requirements rather than adding to their count, which
+is the point of having both measures.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| **D7** — an `annual_mileage x driver_age` interaction factor | **Not started.** `resolve_factors` implements `identity`, `banding` and `grouping` and refuses `interaction` by name. Owner: the interaction-factor slice, which must extend this journey test |
+| **E4/E5** — the Peril Structure and its reconciliation (FR-MODEL-58..61) | **Not started** — no contract, no table, no code. Owner: the peril-structure slice, which also owns FR-MODEL-74 |
+| FR-OVR-17(ii) for `wf-02…05` | **Outstanding**, each owned by the phase whose exit criterion names it (`§12`) — unchanged by this slice |
+| `wf-01` as a **Phase 1b exit** claim | **Not yet.** The exit is the journey end to end *on freMTPL2* through the UI; this test drives the platform on a synthetic frame, which is what makes it a test rather than the demo. W7's modelling half is the other half |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -1729,7 +1794,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: eight slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, and `wf-01`'s citation audit; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the journey test and, before it, the citation audit that gives the claim something to stand on (FR-OVR-17) |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: ten slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, and `wf-01` driven end to end; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the citation audit and the journey test, both landed 2026-08-17, the journey test *partial* with D7 and E4/E5 named and owned (FR-OVR-17) |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 

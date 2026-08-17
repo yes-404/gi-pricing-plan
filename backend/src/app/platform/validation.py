@@ -60,23 +60,18 @@ def _counts(report: ValidationReport) -> dict[str, int]:
 def overall_outcome(report: ValidationReport) -> OverallOutcome:
     """A report's verdict (`01` §4.6), from the rule results alone.
 
-    Deliberately independent of acknowledgements. Those arrive after the run, and a
-    verdict that changes when somebody clicks acknowledge cannot be stored in an immutable
-    artifact — see the amendment note in `01` §4.6. Promotion combines this with the
-    outstanding acknowledgement count.
+    **One line, because there must be one implementation.** This function and
+    `ValidationReport.overall` were two statements of §4.6's invariant, and they disagreed:
+    this one followed the 2026-08-14 amendment and the property did not, so the row said
+    `pass_with_warnings` while the handler — which reads the property through
+    `permits_validation` — drove the version to `failed`. Any dataset version with a single
+    warning was then unpromotable for ever. Found by `wf-01`'s journey test, 2026-08-17.
 
-    `error` is not a pass. A rule that raised or ran out of budget did not check the thing
-    it exists to check, and treating "we could not tell" as "it is fine" is how a gate
-    stops being one.
+    Kept as a function rather than deleted: it is the name three call sites and two tests
+    already use, and a re-export costs nothing while a rename touches files this change has
+    no business in.
     """
-    counts = _counts(report)
-    if counts[RuleOutcome.FAIL.value]:
-        return OverallOutcome.FAIL
-    if counts[RuleOutcome.ERROR.value]:
-        return OverallOutcome.ERROR
-    if counts[RuleOutcome.WARN.value]:
-        return OverallOutcome.PASS_WITH_WARNINGS
-    return OverallOutcome.PASS
+    return report.overall
 
 
 async def store_report(
