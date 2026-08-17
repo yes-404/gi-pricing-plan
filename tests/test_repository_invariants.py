@@ -190,3 +190,65 @@ def test_the_error_code_registry_matches_the_specs() -> None:
             f"{filename}: spec-only {sorted(declared - set(registry))}, "
             f"registry-only {sorted(set(registry) - declared)}"
         )
+
+
+@pytest.mark.req("FR-OVR-13")
+def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> None:
+    """A code `pricing-core` raises reaches the caller through `PlatformError`.
+
+    The fit handler maps a `GlmFitError`/`GbmFitError` code straight across, and
+    `PlatformError` refuses a code it does not know — so an unregistered one turns a named
+    refusal into `ValueError: unknown error code` **from inside the error path**, at the
+    moment the caller most needs the answer.
+
+    This has now happened twice: `GLM_SEPARATION_DETECTED` was unregistered from the spine
+    until the diagnostics slice tripped it, and the GBM slice added eleven more codes that
+    no test would have exercised until a real fit failed. Checking the *source* rather than
+    waiting for a scenario is what makes the next one impossible rather than unlucky.
+
+    `02-modelling.md` is deliberately absent from the spec-versus-registry test above,
+    because §5.1's catalogue declares codes whose slices have not been built — so this
+    checks the other direction: everything raised must be declared **and** registered, while
+    the catalogue may still run ahead.
+    """
+    import ast
+    import re
+    import sys
+
+    sys.path.insert(0, str(ROOT / "backend" / "src"))
+    from app.errors import MODELLING_ERROR_CODES
+
+    raisers = {"GbmFitError", "GlmFitError", "ModellingError", "FactorResolutionError"}
+    raised: dict[str, str] = {}
+
+    for path in (ROOT / "packages" / "pricing-core" / "src" / "pricing_core" / "modelling").glob(
+        "*.py"
+    ):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = node.func.id if isinstance(node.func, ast.Name) else None
+            if name not in raisers or not node.args:
+                continue
+            first = node.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                raised[first.value] = path.name
+
+    assert raised, "no error codes found — the scan is looking in the wrong place"
+
+    unregistered = {
+        code: where for code, where in raised.items()
+        if code not in MODELLING_ERROR_CODES
+    }
+    assert not unregistered, (
+        f"raised by pricing-core and unknown to PlatformError: {sorted(unregistered)}. "
+        "Add them to MODELLING_ERROR_CODES and to `02` §5.1's catalogue."
+    )
+
+    spec = (ROOT / "docs" / "specs" / "02-modelling.md").read_text(encoding="utf-8")
+    marker = "**Error codes owned by this module:**"
+    block = spec[spec.index(marker) : spec.index("\n\n", spec.index(marker))]
+    declared = set(re.findall(r"`([A-Z][A-Z0-9_]{2,})`", block))
+    undeclared = sorted(code for code in raised if code not in declared)
+    assert not undeclared, f"raised and registered but absent from `02` §5.1: {undeclared}"

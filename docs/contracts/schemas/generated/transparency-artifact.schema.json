@@ -1,0 +1,475 @@
+{
+  "$defs": {
+    "BlobRef": {
+      "description": "A content-addressed object reference (ID-4).",
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "part_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Count"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes",
+        "media_type"
+      ],
+      "title": "BlobRef",
+      "type": "object"
+    },
+    "Coefficient": {
+      "additionalProperties": false,
+      "description": "One fitted term, with the uncertainty `02` R5 requires of every estimate.",
+      "properties": {
+        "ci_95": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Ci 95",
+          "type": "array"
+        },
+        "estimate": {
+          "title": "Estimate",
+          "type": "number"
+        },
+        "p_value": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "P Value",
+          "type": "number"
+        },
+        "relativity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relativity"
+        },
+        "std_error": {
+          "minimum": 0.0,
+          "title": "Std Error",
+          "type": "number"
+        },
+        "term": {
+          "title": "Term",
+          "type": "string"
+        },
+        "z": {
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "term",
+        "estimate",
+        "std_error",
+        "z",
+        "p_value",
+        "ci_95"
+      ],
+      "title": "Coefficient",
+      "type": "object"
+    },
+    "GlmApproximation": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-34 — a GLM fitted to the GBM's own predictions.\n\nWhat turns a GBM into something rateable as a table, so the coefficients and\nrelativities are *here*: a fidelity score with no table behind it says the\napproximation was good without saying what it was.",
+      "properties": {
+        "approximating_model_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approximating Model Id"
+        },
+        "coefficients": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Coefficient"
+          },
+          "title": "Coefficients",
+          "type": "array"
+        },
+        "deviance_explained": {
+          "maximum": 1.0,
+          "title": "Deviance Explained",
+          "type": "number"
+        },
+        "family": {
+          "default": "gamma",
+          "title": "Family",
+          "type": "string"
+        },
+        "link": {
+          "default": "log",
+          "title": "Link",
+          "type": "string"
+        },
+        "r_squared": {
+          "maximum": 1.0,
+          "title": "R Squared",
+          "type": "number"
+        },
+        "relativities": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/$defs/RelativityLevel"
+            },
+            "type": "array"
+          },
+          "title": "Relativities",
+          "type": "object"
+        },
+        "relativity_table_blob": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target": {
+          "default": "gbm_prediction",
+          "title": "Target",
+          "type": "string"
+        },
+        "worst_regions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/WorstRegion"
+          },
+          "title": "Worst Regions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "r_squared",
+        "deviance_explained"
+      ],
+      "title": "GlmApproximation",
+      "type": "object"
+    },
+    "RelativityLevel": {
+      "additionalProperties": false,
+      "description": "One level of a categorical factor, as an actuary reads it (FR-MODEL-21).",
+      "properties": {
+        "estimate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Estimate"
+        },
+        "exposure": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure"
+        },
+        "is_base": {
+          "default": false,
+          "title": "Is Base",
+          "type": "boolean"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "relativity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relativity"
+        }
+      },
+      "required": [
+        "level"
+      ],
+      "title": "RelativityLevel",
+      "type": "object"
+    },
+    "ShapContribution": {
+      "additionalProperties": false,
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "value": {
+          "minimum": 0.0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "factor",
+        "value"
+      ],
+      "title": "ShapContribution",
+      "type": "object"
+    },
+    "ShapInteraction": {
+      "additionalProperties": false,
+      "description": "One candidate interaction pair, and what it is worth (FR-MODEL-79).\n\nA **suggestion**, never an addition. The platform never writes a Factor into a Model\nSpec: an interaction becomes rateable only as an explicit `interaction` Factor carrying\nan intent and a written rationale, and the model document names it as an authored\ndecision. Auto-detected structure entering a rating basis unreviewed is the overfitting\nroute FR-MODEL-79 refuses.",
+      "properties": {
+        "exposure_share": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Exposure Share",
+          "type": "number"
+        },
+        "pair": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Pair",
+          "type": "array"
+        },
+        "strength": {
+          "minimum": 0.0,
+          "title": "Strength",
+          "type": "number"
+        }
+      },
+      "required": [
+        "pair",
+        "strength"
+      ],
+      "title": "ShapInteraction",
+      "type": "object"
+    },
+    "ShapSummary": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-35 — TreeSHAP over the booster, on a reproducible sample.",
+      "properties": {
+        "algorithm": {
+          "default": "tree_shap",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "dependence_blob": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "interactions_available": {
+          "default": true,
+          "title": "Interactions Available",
+          "type": "boolean"
+        },
+        "mean_abs_contribution": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ShapContribution"
+          },
+          "title": "Mean Abs Contribution",
+          "type": "array"
+        },
+        "sample_rows": {
+          "minimum": 1,
+          "title": "Sample Rows",
+          "type": "integer"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "top_interactions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ShapInteraction"
+          },
+          "title": "Top Interactions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sample_rows",
+        "seed"
+      ],
+      "title": "ShapSummary",
+      "type": "object"
+    },
+    "WorstRegion": {
+      "additionalProperties": false,
+      "description": "Where the approximation is worst, and over how much of the book (FR-MODEL-36).\n\nThe exposure share is required rather than optional. \"The approximation is 11 % out for\nyoung high-mileage drivers\" is a different sentence depending on whether that is 0.8 %\nof exposure or 8 %, and a fidelity statement without it invites the wrong one.",
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "exposure_share": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Exposure Share",
+          "type": "number"
+        },
+        "mean_abs_error_pct": {
+          "minimum": 0.0,
+          "title": "Mean Abs Error Pct",
+          "type": "number"
+        }
+      },
+      "required": [
+        "description",
+        "exposure_share",
+        "mean_abs_error_pct"
+      ],
+      "title": "WorstRegion",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The persisted artifact (`02` §4.9, FR-MODEL-33..37).\n\nImmutable once written, like every other artifact here: it is the evidence a Rating\nVersion's approval was granted against (FR-MODEL-36), and evidence that can change\nafter the decision is not evidence.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "fidelity_statement": {
+      "minLength": 1,
+      "title": "Fidelity Statement",
+      "type": "string"
+    },
+    "glm_approximation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GlmApproximation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "model_id": {
+      "format": "uuid",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "monotonicity_verified": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Monotonicity Verified"
+    },
+    "shap_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ShapSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "model_id",
+    "created_at",
+    "fidelity_statement"
+  ],
+  "title": "TransparencyArtifact",
+  "type": "object"
+}

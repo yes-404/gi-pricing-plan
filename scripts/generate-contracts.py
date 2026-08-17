@@ -64,6 +64,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # to compare them against.
     "model-spec": "MODEL_SPEC_ADAPTER",
     "model": "Model",
+    # Added 2026-08-17 (W5, transparency). `transparency-artifact.schema.json` is a
+    # hand-authored Phase-0 contract that nothing has ever compared against code, and R3
+    # makes this the artifact a Rating Version's approval hangs from.
+    "transparency-artifact": "TransparencyArtifact",
 }
 
 

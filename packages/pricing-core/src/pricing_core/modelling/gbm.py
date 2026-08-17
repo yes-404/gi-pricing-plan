@@ -233,7 +233,7 @@ def _encode(
                 unknown = sorted(set(text.unique().to_list()) - set(mapping))
                 if unknown:
                     raise GbmFitError(
-                        "UNSEEN_LEVEL",
+                        "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
                         f"factor {slug!r} carries level(s) {unknown} that the fitted model "
                         "never saw, so they have no code in its persisted encoding map "
                         "(FR-MODEL-32).",
@@ -275,7 +275,7 @@ def _monotone(
         direction = by_slug[slug].monotonic_direction
         if direction is not MonotonicDirection.NONE and slug in categorical:
             raise GbmFitError(
-                "MONOTONE_ON_UNORDERED_FACTOR",
+                "MONOTONE_CONSTRAINT_CONFLICT",
                 f"factor {slug!r} is an unordered categorical and declares a "
                 f"{direction.value} direction (FR-MODEL-28). The constraint would be "
                 "applied to the encoding's arbitrary order, and recorded as a judgement.",
@@ -292,7 +292,7 @@ def _monotone(
 def _objective(spec: GbmSpec) -> tuple[str, str, str]:
     if spec.objective.kind == "custom":
         raise GbmFitError(
-            "CUSTOM_OBJECTIVE_UNAVAILABLE",
+            "OBJECTIVE_NOT_APPROVED",
             f"objective {spec.objective.ref!r} is a Custom Objective (FR-MODEL-38), which "
             "no slice has built. `02` R4 would also require it to be approved before a "
             "model using it could be.",
@@ -301,7 +301,7 @@ def _objective(spec: GbmSpec) -> tuple[str, str, str]:
     name = str(spec.objective.name)
     if name not in _OBJECTIVES:
         raise GbmFitError(
-            "OBJECTIVE_UNSUPPORTED",
+            "OBJECTIVE_NOT_APPLICABLE",
             f"objective {name!r} is outside FR-MODEL-26's set "
             f"({', '.join(sorted(_OBJECTIVES))}).",
             terms=[name],
@@ -353,7 +353,7 @@ def fit_gbm(
     stopping = spec.early_stopping
     if stopping is not None and stopping.on == "holdout" and holdout is None:
         raise GbmFitError(
-            "HOLDOUT_REQUIRED",
+            "EARLY_STOPPING_REQUIRES_HOLDOUT",
             "early stopping is declared on a holdout and no holdout frame was passed "
             "(FR-MODEL-30). Without one the backend evaluates on the training rows, which "
             "is the training-set early stopping the requirement forbids.",
@@ -629,7 +629,7 @@ def predict_gbm(
         missing = [slug for slug in result.feature_order if slug not in data.columns]
         if missing:
             raise GbmFitError(
-                "FEATURE_MISSING",
+                "SCORING_FEATURES_MISMATCH",
                 f"the frame does not carry {missing}. Pass the model's factors to have "
                 "them resolved, or supply each feature under its factor slug.",
                 terms=missing,
@@ -649,7 +649,7 @@ def predict_gbm(
         )
     if tuple(order) != result.feature_order:
         raise GbmFitError(
-            "FEATURE_ORDER_MISMATCH",
+            "SCORING_FEATURES_MISMATCH",
             f"resolved features {order} do not match the fitted order "
             f"{result.feature_order}. The booster is positional.",
         )

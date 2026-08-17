@@ -689,6 +689,20 @@
         "title": "Body_preview_source_api_v1_sources__source_id__preview_post",
         "type": "object"
       },
+      "BuildTransparency": {
+        "additionalProperties": false,
+        "properties": {
+          "sample": {
+            "default": 200000,
+            "description": "Rows the SHAP summary is computed on (FR-MODEL-35). Persisted on the artifact with the seed, because a summary computed on a different sample is a different summary.",
+            "minimum": 1.0,
+            "title": "Sample",
+            "type": "integer"
+          }
+        },
+        "title": "BuildTransparency",
+        "type": "object"
+      },
       "CalibrationBin": {
         "additionalProperties": false,
         "description": "Predicted against observed within a predicted-decile bin (FR-MODEL-50).",
@@ -3160,6 +3174,91 @@
           "categorical_handling"
         ],
         "title": "GbmSpec",
+        "type": "object"
+      },
+      "GlmApproximation": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-34 — a GLM fitted to the GBM's own predictions.\n\nWhat turns a GBM into something rateable as a table, so the coefficients and\nrelativities are *here*: a fidelity score with no table behind it says the\napproximation was good without saying what it was.",
+        "properties": {
+          "approximating_model_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approximating Model Id"
+          },
+          "coefficients": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Coefficient"
+            },
+            "title": "Coefficients",
+            "type": "array"
+          },
+          "deviance_explained": {
+            "maximum": 1.0,
+            "title": "Deviance Explained",
+            "type": "number"
+          },
+          "family": {
+            "default": "gamma",
+            "title": "Family",
+            "type": "string"
+          },
+          "link": {
+            "default": "log",
+            "title": "Link",
+            "type": "string"
+          },
+          "r_squared": {
+            "maximum": 1.0,
+            "title": "R Squared",
+            "type": "number"
+          },
+          "relativities": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/RelativityLevel"
+              },
+              "type": "array"
+            },
+            "title": "Relativities",
+            "type": "object"
+          },
+          "relativity_table_blob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "default": "gbm_prediction",
+            "title": "Target",
+            "type": "string"
+          },
+          "worst_regions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/WorstRegion"
+            },
+            "title": "Worst Regions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "r_squared",
+          "deviance_explained"
+        ],
+        "title": "GlmApproximation",
         "type": "object"
       },
       "GlmDiagnostics": {
@@ -6630,6 +6729,121 @@
         "title": "Severity",
         "type": "string"
       },
+      "ShapContribution": {
+        "additionalProperties": false,
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "value": {
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "factor",
+          "value"
+        ],
+        "title": "ShapContribution",
+        "type": "object"
+      },
+      "ShapInteraction": {
+        "additionalProperties": false,
+        "description": "One candidate interaction pair, and what it is worth (FR-MODEL-79).\n\nA **suggestion**, never an addition. The platform never writes a Factor into a Model\nSpec: an interaction becomes rateable only as an explicit `interaction` Factor carrying\nan intent and a written rationale, and the model document names it as an authored\ndecision. Auto-detected structure entering a rating basis unreviewed is the overfitting\nroute FR-MODEL-79 refuses.",
+        "properties": {
+          "exposure_share": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Exposure Share",
+            "type": "number"
+          },
+          "pair": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Pair",
+            "type": "array"
+          },
+          "strength": {
+            "minimum": 0.0,
+            "title": "Strength",
+            "type": "number"
+          }
+        },
+        "required": [
+          "pair",
+          "strength"
+        ],
+        "title": "ShapInteraction",
+        "type": "object"
+      },
+      "ShapSummary": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-35 — TreeSHAP over the booster, on a reproducible sample.",
+        "properties": {
+          "algorithm": {
+            "default": "tree_shap",
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "dependence_blob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interactions_available": {
+            "default": true,
+            "title": "Interactions Available",
+            "type": "boolean"
+          },
+          "mean_abs_contribution": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ShapContribution"
+            },
+            "title": "Mean Abs Contribution",
+            "type": "array"
+          },
+          "sample_rows": {
+            "minimum": 1.0,
+            "title": "Sample Rows",
+            "type": "integer"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "top_interactions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ShapInteraction"
+            },
+            "title": "Top Interactions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sample_rows",
+          "seed"
+        ],
+        "title": "ShapSummary",
+        "type": "object"
+      },
       "SourceCreate": {
         "additionalProperties": false,
         "properties": {
@@ -7019,6 +7233,83 @@
           "to"
         ],
         "title": "TransitionRequest",
+        "type": "object"
+      },
+      "TransparencyArtifact": {
+        "additionalProperties": false,
+        "description": "The persisted artifact (`02` §4.9, FR-MODEL-33..37).\n\nImmutable once written, like every other artifact here: it is the evidence a Rating\nVersion's approval was granted against (FR-MODEL-36), and evidence that can change\nafter the decision is not evidence.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fidelity_statement": {
+            "minLength": 1,
+            "title": "Fidelity Statement",
+            "type": "string"
+          },
+          "glm_approximation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GlmApproximation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "monotonicity_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonicity Verified"
+          },
+          "shap_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShapSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "model_id",
+          "created_at",
+          "fidelity_statement"
+        ],
+        "title": "TransparencyArtifact",
         "type": "object"
       },
       "TypeIIITest": {
@@ -7614,6 +7905,35 @@
           "reason"
         ],
         "title": "Withdraw",
+        "type": "object"
+      },
+      "WorstRegion": {
+        "additionalProperties": false,
+        "description": "Where the approximation is worst, and over how much of the book (FR-MODEL-36).\n\nThe exposure share is required rather than optional. \"The approximation is 11 % out for\nyoung high-mileage drivers\" is a different sentence depending on whether that is 0.8 %\nof exposure or 8 %, and a fidelity statement without it invites the wrong one.",
+        "properties": {
+          "description": {
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "exposure_share": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Exposure Share",
+            "type": "number"
+          },
+          "mean_abs_error_pct": {
+            "minimum": 0.0,
+            "title": "Mean Abs Error Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "description",
+          "exposure_share",
+          "mean_abs_error_pct"
+        ],
+        "title": "WorstRegion",
         "type": "object"
       }
     }
@@ -13597,6 +13917,217 @@
           }
         },
         "summary": "Submit a model for approval",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/{model_id}/transparency": {
+      "get": {
+        "description": "**Added to `02` §5.1 with this slice** (FR-MODEL-84).\n\nThe table declared the `POST` and no `GET` — a 202 whose artifact nothing can read,\nwhich is complete to the endpoint audit and unusable to a caller. The same omission\n`01`'s reference publish lifecycle made, and the same one the comparison artifact had\nuntil `#81`.\n\nThe **latest** artifact: FR-MODEL-33 allows several, and a SHAP summary recomputed on a\nlarger sample is a second artifact rather than a correction. An approval cites one by\nid, and that path resolves the row directly.\n\n`model:read`, not `model:fit`: building an explanation spends compute, reading one does\nnot.",
+        "operationId": "get_transparency_api_v1_models__model_id__transparency_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransparencyArtifact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "A model's transparency artifact",
+        "tags": [
+          "modelling"
+        ]
+      },
+      "post": {
+        "description": "**202** with a Job (FR-MODEL-33, R3).\n\nWork, not a lookup: it scores the booster over the modelling population, fits a GLM to\nthose predictions and walks every tree for TreeSHAP.\n\nBoth refusals happen **here**, before a Job exists — a model with no fit has nothing to\nexplain, and a GLM needs no artifact at all. The second matters more than it looks:\nbuilding one would produce a GLM approximating itself, reporting 100 % fidelity, which\nis worse than no artifact because it reads as evidence.",
+        "operationId": "build_transparency_api_v1_models__model_id__transparency_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildTransparency"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Build a transparency artifact for a non-GLM model",
         "tags": [
           "modelling"
         ]
