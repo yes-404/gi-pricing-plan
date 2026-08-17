@@ -52,6 +52,12 @@ Four were: OQ-DATA-7, OQ-OVR-6, OQ-PLAT-6 and OQ-MODEL-8 were all raised inside 
 all mirrored correctly, and none reached the gate table until 2026-08-15. The `docs-audit`
 skill carries the script that catches it; run it whenever you add or decide a question.
 
+**Deciding one edits that row too**, and its `N (M open)` count is hand-maintained — so a
+decision that strikes the id and leaves the count alone leaves the plan claiming an open
+question the register has closed. Recount the row rather than decrementing it: OQ-DATA-8 had
+been decided before it ever reached the table, so the row went 9 (3 open) → 10 (2 open) in
+one edit.
+
 **Deciding one is the same edit in three places**, and the register's own precedent shows
 the shape: strike the question and prefix `**DECIDED <date>: …**`; leave the options column
 as it was, because it records what was believed at the time; rewrite the recommendation
@@ -76,6 +82,13 @@ explicit status enums. Avoid "the system should handle…". Small illustrative s
 encouraged; full implementations are not.
 
 ## Verified
+
+2026-08-17 — Confirmed while recording two maintainer decisions (OQ-OVR-7 → `01`
+FR-DATA-46, OQ-DATA-8 → FR-DATA-45). Both halves of "a decision appends a requirement"
+appeared in one commit: FR-DATA-45's refusal shipped with it, FR-DATA-46's rename is
+deliberately not delivered and the requirement says so with a trigger and an owner — which
+is what stops a deferred decision from decaying back into a recommendation. The gate-table
+count rule above was learnt here.
 
 2026-08-15 — Confirmed while recording six maintainer decisions (OQ-MODEL-1, 2, 4, 5, 6, 7)
 as FR-MODEL-75..82. The gate-table rule above was learnt from the failure, not from

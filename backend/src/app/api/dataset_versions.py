@@ -340,7 +340,13 @@ async def derive(
     response: Response,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Job:
-    """**202**. FR-DATA-33: sample, split, filter or union."""
+    """**202**. FR-DATA-33's declared operations.
+
+    Only `split` can produce its own rows today; the Job fails with
+    `DERIVATION_NOT_MATERIALISED` for the others (FR-DATA-45), which is why this stays a
+    202 — the refusal is the worker's, on the same path as the unknown-operation and
+    missing-seed refusals beside it.
+    """
     async with database.unit_of_work() as session:
         version = await _scoped(session, version_id, caller)
         job = await job_service.submit(

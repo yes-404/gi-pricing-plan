@@ -9493,7 +9493,7 @@
     },
     "/api/v1/dataset-versions/{version_id}/derive": {
       "post": {
-        "description": "**202**. FR-DATA-33: sample, split, filter or union.",
+        "description": "**202**. FR-DATA-33's declared operations.\n\nOnly `split` can produce its own rows today; the Job fails with\n`DERIVATION_NOT_MATERIALISED` for the others (FR-DATA-45), which is why this stays a\n202 — the refusal is the worker's, on the same path as the unknown-operation and\nmissing-seed refusals beside it.",
         "operationId": "derive_api_v1_dataset_versions__version_id__derive_post",
         "parameters": [
           {

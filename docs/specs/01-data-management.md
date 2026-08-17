@@ -156,6 +156,8 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-26** | Profiling additionally produces **one-way summaries** per candidate rating column: exposure, claim count, claim amount, observed frequency, severity, and burning cost by level or banded interval, with Poisson/Gamma confidence intervals. These are the inputs to the factor workbench in `02-modelling.md` and are computed once, here. |
 | **FR-DATA-27** | Profiles are computed with DuckDB directly over the version's parquet files and persisted as an artifact. The UI never recomputes a profile client-side or ad-hoc on request. |
 | **FR-DATA-28** | A **profile comparison** between any two Dataset Versions of the same Dataset is available on demand: per-column PSI, mean shift, null-rate shift, new/vanished levels. This is the same computation that the distributional validation layer consumes. |
+| **FR-DATA-46** | *(appended 2026-08-17; OQ-OVR-7, decided)* FR-DATA-26's one-way row names its two mean fields **`mean_severity`** and **`mean_burning_cost`** — not `severity_minor` and `burning_cost_minor`. Both are means and therefore floats, kept as floats deliberately, because rounding a mean to whole minor units would lose the precision the confidence interval beside it expresses. The values are right; the *names* are what FR-OVR-7 objects to, since `_minor` is reserved for integer minor units. Both stay expressed in the workspace currency's minor unit, so only the names change. **Not yet delivered**: the rename touches `01`'s published profile contract, the `banding` and `grouping` schemas that embed the row, the frontend that reads it and the seeded demo, and OQ-OVR-7 decided it lands **in the slice that next changes the profile contract** rather than as a change of its own. Until then both names are excluded by name from the money scan in `backend/tests/test_contracts.py`, with the reason beside them, and **that exclusion may not grow**: a ratio recognisable by shape is excluded by a rule instead (`_per_parameter`), and a third hand-written name means the rename is overdue. Owner: the next slice to change the profile contract. |
+
 
 ### 3.5 Reference data
 
@@ -174,7 +176,22 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-34** | A Derived Dataset Version inherits its parent's schema, Data Dictionary, and Rule Set, and must be validated in its own right — but rules can be marked `skip_on_derived` where they are meaningless (e.g. a volume-based distributional check on a 1 % sample). |
 | **FR-DATA-35** | Lineage is queryable in both directions: "what was this built from?" and "what depends on this?" — the latter spanning Models, Rating Versions, and Monitoring baselines (used to compute the blast radius of FR-DATA-23). |
 | **FR-DATA-36** | Train/test splits are recorded on the *parent* version as a named split artifact, so that two models can be compared on provably identical holdout rows. |
-| **FR-DATA-44** | A derived version produced by `split` **holds its part's rows**, not its parent's. Added 2026-08-16 (W5, diagnostics), because FR-DATA-33's "produced by declared operations" and FR-DATA-34's "inherits its parent's schema, Data Dictionary and Rule Set" had been implemented as inheriting the parent's *data*: `dataset.derive` recorded the operation and pointed the child at the parent's blob. A 1 % sample therefore held 100 % of the rows, and a train/test split produced two versions each containing everything — so a model "fitted on train" was fitted on all of it and its "holdout" contained every training row. The partition is a pure function of the recorded method, seed and fractions, so the `train` Job and the `test` Job agree without coordinating. **`sample`, `filter`, `join` and `aggregate` still inherit** and are the subject of OQ-DATA-8. |
+| **FR-DATA-44** | A derived version produced by `split` **holds its part's rows**, not its parent's. Added 2026-08-16 (W5, diagnostics), because FR-DATA-33's "produced by declared operations" and FR-DATA-34's "inherits its parent's schema, Data Dictionary and Rule Set" had been implemented as inheriting the parent's *data*: `dataset.derive` recorded the operation and pointed the child at the parent's blob. A 1 % sample therefore held 100 % of the rows, and a train/test split produced two versions each containing everything — so a model "fitted on train" was fitted on all of it and its "holdout" contained every training row. The partition is a pure function of the recorded method, seed and fractions, so the `train` Job and the `test` Job agree without coordinating. **Every other operation is refused rather than left inheriting** — FR-DATA-45, which is OQ-DATA-8 decided. |
+| **FR-DATA-45** | *(appended 2026-08-17; OQ-DATA-8, decided)* Every declared operation **other than `split` is refused**, with `DERIVATION_NOT_MATERIALISED`, until it produces its own rows. FR-DATA-44 materialised `split` because the diagnostics slice needed an honest holdout; leaving the others inheriting is worse than refusing them, because the failure is silent — a version that records `sample` and holds 100 % of the parent's rows validates, profiles and fits, and every number it produces is the parent's. FR-DATA-33's purpose is that a derivation is reproducible, and a sample nobody sampled can be neither reproduced nor defended. Each is materialised **in the slice that first needs it**, on FR-DATA-44's terms: the child's rows written as its own content-addressed blob, computed as a pure function of the recorded parameters. **Owner: W7 for `sample`** — the demo seed's `--rows` path is the first real caller. `filter`, `join` and `aggregate` are unowned and stay refused until one exists. **Delivered 2026-08-17** (the refusal; the materialisation is the obligation above). |
+
+> **FR-DATA-33's operation list and the implementation's disagree, and FR-DATA-45 is why it
+> currently costs nothing.** The requirement names `sample`, `split`, `filter` and `union`;
+> `dataset.derive` accepts `sample`, `split`, `filter`, `join` and `aggregate` — so `union`
+> is refused as undeclared while two operations nobody specified are accepted. Recorded
+> 2026-08-17 rather than silently reconciled (`CLAUDE.md` §0): which side is right is a real
+> question — `union` (stack two versions of one schema), `join` (widen by key) and
+> `aggregate` (change grain) are three different operations, not one renamed twice.
+>
+> **Neither side is edited to match the other here**, because FR-DATA-45 now refuses every
+> one of them: no caller can reach the difference, and the set is settled by the slice that
+> materialises the first of them, which must state which operations exist and amend this
+> requirement in the same commit. Until then the implementation's set is the one the error
+> message quotes, and `union` is refused twice over.
 
 ### 3.7 Access, retention, deletion
 
@@ -642,7 +659,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 | `GET` | `/api/v1/dataset-versions/{id}/profile` | Profile artifact (FR-DATA-25) |
 | `GET` | `/api/v1/dataset-versions/{id}/one-ways?column=` | One-way summary for a column (FR-DATA-26) |
 | `GET` | `/api/v1/dataset-versions/{id}/compare?against={id}` | Profile comparison / PSI (FR-DATA-28) |
-| `POST` | `/api/v1/dataset-versions/{id}/derive` | **202** Sample / split / filter / union (FR-DATA-33) |
+| `POST` | `/api/v1/dataset-versions/{id}/derive` | **202** A declared derivation (FR-DATA-33). Only `split` is materialised; the Job fails with `DERIVATION_NOT_MATERIALISED` for the rest (FR-DATA-45) |
 | `POST` | `/api/v1/dataset-versions/{id}/splits` | **201** Record a named split over parts already derived (FR-DATA-36) |
 | `GET` | `/api/v1/dataset-versions/{id}/splits` | Splits recorded on this version, for a Model Spec to cite (FR-DATA-36) |
 | `GET` | `/api/v1/dataset-versions/{id}/lineage?direction=up\|down` | Lineage graph (FR-DATA-35) |
@@ -706,7 +723,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 `RULE_NOT_APPROVED`, `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`, `RULE_TIMEOUT`,
 `ACKNOWLEDGEMENT_ALREADY_RECORDED`,
 `REFERENCE_INTERVAL_OVERLAP`, `REFERENCE_VERSION_NOT_PINNED`, `SOURCE_UNREACHABLE`,
-`REJECT_RATE_EXCEEDED`.
+`REJECT_RATE_EXCEEDED`, `DERIVATION_NOT_MATERIALISED`.
 
 ### 5.2 `pricing-core` interfaces
 
@@ -912,5 +929,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-DATA-4**~~ ✔ | ~~Where do IBNR / claims-development adjustments live — a preparation step producing developed claim amounts, a modelling offset, or out of scope entirely (user supplies developed data)? `VR-ACT-14` currently only *warns*. |~~ **Decided 2026-08-14: out of scope — the user supplies developed data; `VR-ACT-14` warns about immature periods (§1.2).**
 | ~~**OQ-DATA-5**~~ ✔ | ~~Should the platform hold the ONS/ABI reference sets as shipped data, given their licensing terms, or only ship loaders and require the user to supply the files? |~~ **Decided 2026-08-14: loaders for every source; rows shipped only under an unambiguous licence; ABI group tables never (FR-DATA-32).**
 | ~~**OQ-DATA-7**~~ ✔ | ~~Nothing in the platform ever sets a Dataset Version to `failed`. `DatasetStatus.FAILED` exists in the enum and in `VALID_DATASET_TRANSITIONS`, and no code path transitions to it — so a version whose first validation fails rests in **`validating`**, which every screen reads as "still running". FR-DATA-2 uses `failed` for a broken ingestion run and FR-DATA-23 sends a *re-validated* version back to `draft`; the first-failure case was specified nowhere. Found by exercising Phase 1a's exit demo, 2026-08-15.~~ **Decided and delivered 2026-08-15: `failed`** (FR-DATA-43). |
-| **OQ-DATA-8** | `sample`, `filter`, `join` and `aggregate` derived versions inherit their parent's rows rather than being produced from them — `dataset.derive` recorded the operation and pointed the child at the parent's blob, so a 1 % sample presently holds 100 % of the rows. `split` was materialised as FR-DATA-44 because the diagnostics slice needed an honest holdout; the other four are unowned. Raised 2026-08-16 (W5). |
+| ~~**OQ-DATA-8**~~ ✔ | ~~`sample`, `filter`, `join` and `aggregate` derived versions inherit their parent's rows rather than being produced from them — a 1 % sample holds 100 % of them.~~ **DECIDED 2026-08-17: materialise all four, each in the slice that first needs it, and refuse them until then rather than leaving the silent version.** Specified as FR-DATA-45 and the refusal delivered the same day; `split` remains the one materialised operation (FR-DATA-44). Owner: W7 for `sample`; `filter`, `join` and `aggregate` unowned. Raised 2026-08-16 (W5). |
 | ~~**OQ-DATA-6**~~ ✔ | ~~Is `warn` acknowledgement per-rule-per-report the right granularity, or should an actuary be able to pre-approve a recurring known warning for a defined period (with expiry) to avoid acknowledgement fatigue? |~~ **Decided 2026-08-14: per report as FR-DATA-18 specifies, plus a pre-fill affordance that still requires an explicit, separately audited act.**

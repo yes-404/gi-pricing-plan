@@ -305,9 +305,9 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
 
 def _derive(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`dataset.derive` — sample, split, filter or union (FR-DATA-33).
+    """`dataset.derive` — a declared operation over a parent version (FR-DATA-33).
 
-    **`split` is materialised; the other operations are not yet.** A derived version used
+    **`split` is materialised; every other operation is refused.** A derived version used
     to inherit its parent's `tables` wholesale, which made a "1 % sample" a version
     containing 100 % of the rows and a train/test split two versions each containing
     everything. FR-DATA-34 says a derived version inherits schema, dictionary and rule set
@@ -315,8 +315,9 @@ def _derive(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
 
     Fixed here for `split`, because the diagnostics slice needs an honest holdout and a
     holdout containing every training row is worse than none: it produces excellent numbers
-    that mean nothing. `sample`, `filter`, `join` and `aggregate` still inherit and are
-    recorded as such — OQ-DATA-8.
+    that mean nothing. The rest now fail the Job with `DERIVATION_NOT_MATERIALISED` in
+    `derive_version` (FR-DATA-45, OQ-DATA-8 decided 2026-08-17) rather than succeeding with
+    the parent's rows — the same failure, made loud.
     """
     progress = _bridge(callback)
     blob_store = progress.blob_store
