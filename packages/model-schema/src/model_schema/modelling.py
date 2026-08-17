@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import enum
 from decimal import Decimal
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -30,6 +30,8 @@ from model_schema.money import DecimalStr
 from model_schema.profiles import OneWayRow
 
 __all__ = [
+    "TERMINAL_MODEL_STATUSES",
+    "VALID_MODEL_TRANSITIONS",
     "AboveRangePolicy",
     "Banding",
     "BandingEvaluation",
@@ -50,6 +52,7 @@ __all__ = [
     "GroupingMethod",
     "GroupingProposal",
     "Model",
+    "ModelFlag",
     "ModelStatus",
     "MonotonicDirection",
     "OffsetSpec",
@@ -772,6 +775,47 @@ class ModelStatus(enum.StrEnum):
     ARCHIVED = "archived"
 
 
+class ModelFlag(enum.StrEnum):
+    """Conditions raised elsewhere that gate this model's approval (`06` FR-GOV-17).
+
+    Named rather than free strings because two surfaces branch on them — `02` FR-MODEL-67's
+    block on `approved`, and the approvals inbox — and a flag spelled two ways is a gate
+    that holds on one screen and not the other.
+    """
+
+    DATASET_INVALIDATED = "dataset_invalidated"
+
+
+#: FR-MODEL-64's lifecycle, as data rather than as conditionals spread over a service.
+#: `01`'s `VALID_DATASET_TRANSITIONS` set the pattern; the reasons here are the model's own.
+#:
+#: Three edges are worth reading twice:
+#:
+#: * **`draft → review` does not exist.** FR-MODEL-64 makes diagnostics the condition of
+#:   `fitted` and `fitted` the condition of `review`, so a model reaching an approver
+#:   without coefficients is not a state to refuse later — it is a state with no edge into
+#:   it.
+#: * **`review → fitted`, never `review → draft`.** `06` FR-GOV-13 returns a
+#:   `changes_requested` artifact to `draft`; for a Model that would claim the numbers had
+#:   been withdrawn, which R2 makes impossible. The pre-submission state of a Model is
+#:   `fitted`. Amended in `06` FR-GOV-13, 2026-08-17, rather than diverged from silently.
+#: * **`approved → archived` does not exist.** An approved model is a Rating Version's
+#:   referent; archiving it would remove the referent while naming no replacement.
+#:   Supersession names one, which is why it is the only edge out.
+VALID_MODEL_TRANSITIONS: Final[dict[ModelStatus, frozenset[ModelStatus]]] = {
+    ModelStatus.DRAFT: frozenset({ModelStatus.FITTED, ModelStatus.ARCHIVED}),
+    ModelStatus.FITTED: frozenset({ModelStatus.REVIEW, ModelStatus.ARCHIVED}),
+    ModelStatus.REVIEW: frozenset({ModelStatus.APPROVED, ModelStatus.FITTED}),
+    ModelStatus.APPROVED: frozenset({ModelStatus.SUPERSEDED}),
+    ModelStatus.SUPERSEDED: frozenset({ModelStatus.ARCHIVED}),
+    ModelStatus.ARCHIVED: frozenset(),
+}
+
+#: `archived` is the only end state. A model returned from review is `fitted` again and can
+#: be resubmitted, which is what makes FR-GOV-13's loop a loop.
+TERMINAL_MODEL_STATUSES: Final[frozenset[ModelStatus]] = frozenset({ModelStatus.ARCHIVED})
+
+
 class Model(BaseModel):
     """A fitted model for one peril and response (`02` §4.8).
 
@@ -796,7 +840,14 @@ class Model(BaseModel):
     dataset_version_id: UUID
     parent_model_id: UUID | None = None
     change_reason: str | None = None
-    flags: tuple[str, ...] = ()
+    #: FR-MODEL-67's flags, **computed from the referents rather than stored**. A stored
+    #: flag goes stale the moment `01` re-validates the dataset version, and the whole
+    #: point of the flag is that it tracks the dataset rather than a snapshot of it.
+    flags: tuple[ModelFlag, ...] = ()
+    #: `02` §4.8. The open approval request, set when the model enters `review` and left in
+    #: place afterwards: it is how a reader gets from an approved model to the decision and
+    #: the comment behind it, which is the trail FR-GOV-14's pinning exists to leave.
+    approval_request_id: UUID | None = None
 
     @model_validator(mode="after")
     def _a_fitted_model_has_a_fit(self) -> Model:
