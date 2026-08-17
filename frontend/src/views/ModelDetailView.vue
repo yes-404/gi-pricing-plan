@@ -17,7 +17,25 @@ const model = ref<Model | null>(null);
 const loading = ref(true);
 const problem = ref<ProblemError | null>(null);
 
-const fit = computed(() => model.value?.fit_result ?? null);
+/**
+ * **The GLM arm only.** `02` §4.4's spec and fit result are tagged unions from the GBM
+ * slice on, and this view reads coefficients, relativities and a convergence flag — none
+ * of which a booster has. Narrowing here rather than casting is what makes the compiler,
+ * not a reviewer, the thing that notices when the GBM view is still missing: every
+ * consumer below keeps its GLM types, and a non-GLM model renders the header and nothing
+ * that would be a lie.
+ *
+ * The GBM detail view is W6b's (`02` §5.3), together with the transparency artifact that
+ * is a GBM's answer to a relativity table (FR-MODEL-34).
+ */
+const glmSpec = computed(() => {
+  const spec = model.value?.spec ?? null;
+  return spec?.model_type === "glm" ? spec : null;
+});
+const fit = computed(() => {
+  const result = model.value?.fit_result ?? null;
+  return result?.model_type === "glm" ? result : null;
+});
 const coefficients = computed<Coefficient[]>(() => fit.value?.coefficients ?? []);
 const relativities = computed(() => Object.entries(fit.value?.relativities ?? {}));
 const libraries = computed(() =>
@@ -66,7 +84,12 @@ onMounted(async () => {
         class="mt-1 text-sm text-slate-500"
       >
         version {{ model.version }} · {{ model.status }} ·
-        {{ model.spec.family }} / {{ model.spec.link }} link ·
+        <template v-if="glmSpec">
+          {{ glmSpec.family }} / {{ glmSpec.link }} link
+        </template>
+        <template v-else>
+          {{ model.spec.model_type }}
+        </template> ·
         response <span class="font-mono">{{ model.spec.response_column }}</span>
       </p>
     </header>

@@ -56,6 +56,14 @@ GENERATED_SHAPES: dict[str, str] = {
     # `02` §5.2 named `ModelComparison` as a return type and no document defined it, so this
     # is the shape's first written form rather than a check on an existing one.
     "model-comparison": "ModelComparison",
+    # Added 2026-08-17 (W5, the GBM arm). `model-spec` is a **union**, not a model class —
+    # `02` §4.4's tagged union acquired its second arm here, and the published contract is
+    # the only place a consumer can see both. `model` follows it because the union is what
+    # a Model carries; generating one without the other publishes a spec shape no artifact
+    # references. Both have hand-authored Phase-0 counterparts, so this is the first thing
+    # to compare them against.
+    "model-spec": "MODEL_SPEC_ADAPTER",
+    "model": "Model",
 }
 
 
@@ -85,6 +93,8 @@ def build_openapi() -> dict[str, Any]:
 
 
 def build_schemas() -> dict[str, dict[str, Any]]:
+    import pydantic
+
     import model_schema
 
     out: dict[str, dict[str, Any]] = {}
@@ -96,7 +106,14 @@ def build_schemas() -> dict[str, dict[str, Any]]:
         # and as a plain string in serialization mode. Generating the serialization schema
         # would produce a contract that looks compliant while the request side accepts the
         # lossy float FR-OVR-7 forbids.
-        out[slug] = model.model_json_schema(mode="validation")
+        # A discriminated union has no `model_json_schema` — it is not a class. Its
+        # `TypeAdapter` answers the same question, in the same mode, and is the only way
+        # the union's arms reach a published contract at all.
+        out[slug] = (
+            model.json_schema(mode="validation")
+            if isinstance(model, pydantic.TypeAdapter)
+            else model.model_json_schema(mode="validation")
+        )
     return out
 
 

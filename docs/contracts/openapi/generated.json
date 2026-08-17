@@ -2393,6 +2393,48 @@
         "title": "DryRunRequest",
         "type": "object"
       },
+      "EarlyStopping": {
+        "additionalProperties": false,
+        "description": "When to stop boosting, and against what (FR-MODEL-30).\n\n**There is no `train` value**, and that is the requirement rather than an oversight:\na stopping rule read off the data being fitted stops when the model has finished\nmemorising. Refusing it by construction means no validator can be relaxed into\nallowing it.",
+        "properties": {
+          "cv_folds": {
+            "anyOf": [
+              {
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cv Folds"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "on": {
+            "enum": [
+              "holdout",
+              "cv"
+            ],
+            "title": "On",
+            "type": "string"
+          },
+          "rounds": {
+            "minimum": 1.0,
+            "title": "Rounds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "on",
+          "metric",
+          "rounds"
+        ],
+        "title": "EarlyStopping",
+        "type": "object"
+      },
       "Factor": {
         "additionalProperties": false,
         "description": "A named, versioned transformation over dataset columns (FR-MODEL-1, FR-MODEL-7).\n\nDefined against a **Dataset**, resolved against a specific **version** at fit time\n(FR-MODEL-2) — so a factor outlives the version it was first used on, and a column that\nchanged dtype fails loudly at resolution rather than quietly changing the model.",
@@ -2660,6 +2702,354 @@
         "title": "FieldError",
         "type": "object"
       },
+      "GbmEvalPoint": {
+        "additionalProperties": false,
+        "description": "One row of the evaluation curve FR-MODEL-30 requires to be persisted.\n\nBoth parts on one row rather than two series, because the pair is the point: a metric\nstill improving on train while flat on holdout is the shape early stopping exists to\ncatch, and two separately-stored series can be joined wrongly.",
+        "properties": {
+          "holdout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holdout"
+          },
+          "iteration": {
+            "minimum": 0.0,
+            "title": "Iteration",
+            "type": "integer"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "train": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Train"
+          }
+        },
+        "required": [
+          "iteration",
+          "metric"
+        ],
+        "title": "GbmEvalPoint",
+        "type": "object"
+      },
+      "GbmFitResult": {
+        "additionalProperties": false,
+        "description": "What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is optional on the type because a fit without early stopping has\nno curve to report; the fit path populates it whenever `early_stopping` was declared,\nwhich is where the spec is in scope to say so.",
+        "properties": {
+          "base_margin": {
+            "$ref": "#/components/schemas/OffsetSpec"
+          },
+          "best_iteration": {
+            "minimum": 0.0,
+            "title": "Best Iteration",
+            "type": "integer"
+          },
+          "booster_blob": {
+            "$ref": "#/components/schemas/BlobRef"
+          },
+          "booster_format": {
+            "enum": [
+              "xgboost_json",
+              "lightgbm_text"
+            ],
+            "title": "Booster Format",
+            "type": "string"
+          },
+          "categorical_maps": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "Categorical Maps",
+            "type": "object"
+          },
+          "eval_curve": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GbmEvalPoint"
+            },
+            "title": "Eval Curve",
+            "type": "array"
+          },
+          "feature_dtypes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Feature Dtypes",
+            "type": "object"
+          },
+          "feature_order": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Feature Order",
+            "type": "array"
+          },
+          "fit_seconds": {
+            "minimum": 0.0,
+            "title": "Fit Seconds",
+            "type": "number"
+          },
+          "library_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Library Versions",
+            "type": "object"
+          },
+          "model_type": {
+            "enum": [
+              "xgboost",
+              "lightgbm"
+            ],
+            "title": "Model Type",
+            "type": "string"
+          },
+          "monotone_constraints": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Monotone Constraints",
+            "type": "array"
+          },
+          "rows": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_type",
+          "booster_blob",
+          "booster_format",
+          "feature_order",
+          "base_margin",
+          "best_iteration",
+          "fit_seconds"
+        ],
+        "title": "GbmFitResult",
+        "type": "object"
+      },
+      "GbmFunctionRef": {
+        "additionalProperties": false,
+        "description": "A builtin objective or eval metric by name, or an approved artifact by reference.\n\nOne shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice —\na builtin the backend already implements, or a Custom Objective / Custom Metric that\ncarries its own approval status (R4). Two classes with identical fields would be a\nshape defined twice.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "GbmFunctionRef",
+        "type": "object"
+      },
+      "GbmSpec": {
+        "additionalProperties": false,
+        "description": "`02` §4.4's common block plus the gradient-boosting arm (FR-MODEL-25).\n\n**One contract, two backends.** `model_type` is the backend — §4.4 also gave this arm a\n`backend` field carrying the same two strings, and two fields holding one fact can\ndisagree with nothing downstream able to say which to believe. Backend-specific tuning\nlives in `backend_params`, which is what keeps the contract from forking.\n\n**The offset is declared once.** §4.4 also gave this arm a `base_margin` block of the\nsame shape as the common `offset`. FR-MODEL-27 says the platform *constructs*\n`base_margin` from the declared offset, so a second declaration is a second source of\ntruth for the one number the fit silently depends on. What was actually constructed is\nrecorded on the fit result, where FR-MODEL-71 can assert it at load time.\n\nBoth corrections are recorded in `02` §4.4, dated 2026-08-17.",
+        "properties": {
+          "backend_params": {
+            "additionalProperties": true,
+            "title": "Backend Params",
+            "type": "object"
+          },
+          "categorical_handling": {
+            "enum": [
+              "native",
+              "factor_encoding"
+            ],
+            "title": "Categorical Handling",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "early_stopping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarlyStopping"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eval_metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GbmFunctionRef"
+            },
+            "title": "Eval Metrics",
+            "type": "array"
+          },
+          "factors": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "hyperparameters": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Hyperparameters",
+            "type": "object"
+          },
+          "interaction_constraints": {
+            "default": [],
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Interaction Constraints",
+            "type": "array"
+          },
+          "loss_treatment": {
+            "$ref": "#/components/schemas/LossTreatment",
+            "default": {
+              "kind": "none"
+            }
+          },
+          "model_family_slug": {
+            "title": "Model Family Slug",
+            "type": "string"
+          },
+          "model_type": {
+            "enum": [
+              "xgboost",
+              "lightgbm"
+            ],
+            "title": "Model Type",
+            "type": "string"
+          },
+          "monotone_constraints": {
+            "default": "derived_from_factors",
+            "enum": [
+              "derived_from_factors",
+              "none"
+            ],
+            "title": "Monotone Constraints",
+            "type": "string"
+          },
+          "objective": {
+            "$ref": "#/components/schemas/GbmFunctionRef"
+          },
+          "offset": {
+            "$ref": "#/components/schemas/OffsetSpec",
+            "default": {
+              "kind": "none"
+            }
+          },
+          "offset_acknowledgement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset Acknowledgement"
+          },
+          "peril": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peril"
+          },
+          "response_column": {
+            "title": "Response Column",
+            "type": "string"
+          },
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "split_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weight": {
+            "$ref": "#/components/schemas/WeightSpec",
+            "default": {
+              "kind": "none"
+            }
+          }
+        },
+        "required": [
+          "model_family_slug",
+          "dataset_version_id",
+          "response_column",
+          "model_type",
+          "objective",
+          "categorical_handling"
+        ],
+        "title": "GbmSpec",
+        "type": "object"
+      },
       "GlmDiagnostics": {
         "additionalProperties": false,
         "description": "GLM-specific evidence (FR-MODEL-51).",
@@ -2906,6 +3296,12 @@
             ],
             "title": "Link",
             "type": "string"
+          },
+          "loss_treatment": {
+            "$ref": "#/components/schemas/LossTreatment",
+            "default": {
+              "kind": "none"
+            }
           },
           "max_iter": {
             "default": 200,
@@ -3746,6 +4142,59 @@
         "title": "LiftBin",
         "type": "object"
       },
+      "LossTreatment": {
+        "additionalProperties": false,
+        "description": "How large losses are treated **as the model is fitted** (FR-MODEL-73).\n\nA modelling decision, not a property of the data: `01` VR-ACT-10 flags large losses and\nnever removes them, so one validated Dataset Version serves many capping assumptions\nwithout re-ingestion. That is only true while the assumption lives here, inside the\nspec — and therefore inside `spec_hash`, so two models differing only in their cap are\ntwo models rather than a collision (FR-MODEL-66).\n\n`cap_minor` is **integer minor units** (`CLAUDE.md` §7). A cap is a money threshold\ncompared against a money column, and a float one compares unequal to itself at the\nboundary — which decides whether the largest claim in the book was capped.",
+        "properties": {
+          "cap_minor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Minor"
+          },
+          "evidence_blob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "default": "none",
+            "enum": [
+              "none",
+              "capped",
+              "spliced",
+              "excess"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "restoration_loading": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restoration Loading"
+          }
+        },
+        "title": "LossTreatment",
+        "type": "object"
+      },
       "Me": {
         "additionalProperties": false,
         "description": "The current principal, its roles, and its effective permissions.",
@@ -3856,12 +4305,28 @@
           "fit_result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GlmFitResult"
+                "discriminator": {
+                  "mapping": {
+                    "glm": "#/components/schemas/GlmFitResult",
+                    "lightgbm": "#/components/schemas/GbmFitResult",
+                    "xgboost": "#/components/schemas/GbmFitResult"
+                  },
+                  "propertyName": "model_type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/GlmFitResult"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GbmFitResult"
+                  }
+                ]
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Fit Result"
           },
           "flags": {
             "default": [],
@@ -3893,7 +4358,23 @@
             "title": "Parent Model Id"
           },
           "spec": {
-            "$ref": "#/components/schemas/GlmSpec"
+            "discriminator": {
+              "mapping": {
+                "glm": "#/components/schemas/GlmSpec",
+                "lightgbm": "#/components/schemas/GbmSpec",
+                "xgboost": "#/components/schemas/GbmSpec"
+              },
+              "propertyName": "model_type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GlmSpec"
+              },
+              {
+                "$ref": "#/components/schemas/GbmSpec"
+              }
+            ],
+            "title": "Spec"
           },
           "spec_hash": {
             "title": "Spec Hash",

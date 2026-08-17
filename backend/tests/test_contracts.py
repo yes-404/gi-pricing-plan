@@ -137,13 +137,30 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: property of the fit, not of the book.
     ratio_suffix = re.compile(r"_per_parameter$", re.I)
 
+    #: Two `02` types every number on which is a **fitted estimate**, not a quantity:
+    #: `Coefficient` and `RelativityLevel` carry `exp(β)` and the exposure it was measured
+    #: over, each beside its own confidence interval. Rounding an estimate to a money grid
+    #: would misstate the interval printed next to it, which is the same reason
+    #: `ratio_statistics` above exists.
+    #:
+    #: Excluded by **owning type**, never by field name. `relativity` is also what a Rate
+    #: Table entry is called (`03`), and that one *is* on the rating path, where
+    #: `CLAUDE.md` §7 requires exact arithmetic. A bare `relativity` exclusion would open
+    #: exactly the hole this test exists to close, and would open it in the module where
+    #: it costs money. (Surfaced 2026-08-17, when `model` first generated — the scan had
+    #: never reached these two types before.)
+    estimate_types = {"Coefficient", "RelativityLevel"}
+    owning_type = re.compile(r"\$defs\.([A-Za-z]+)\.properties$")
+
     def walk(node: object, path: str = "") -> None:
         if isinstance(node, dict):
             for key, value in node.items():
+                owner = owning_type.search(path)
                 if (
                     money_like.search(key)
                     and key not in ratio_statistics
                     and not ratio_suffix.search(key)
+                    and not (owner and owner.group(1) in estimate_types)
                     and isinstance(value, dict)
                 ):
                     branches = value.get("anyOf", [value])

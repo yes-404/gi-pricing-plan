@@ -32,6 +32,8 @@ from app.db.models import (
 from app.errors import PlatformError
 from app.platform import approvals, audit, datasets, rbac
 from model_schema import (
+    FIT_RESULT_ADAPTER,
+    MODEL_SPEC_ADAPTER,
     VALID_MODEL_TRANSITIONS,
     ApprovalStatus,
     ArtifactRef,
@@ -43,6 +45,7 @@ from model_schema import (
     JobSource,
     Model,
     ModelFlag,
+    ModelSpec,
     ModelStatus,
     Permission,
     Principal,
@@ -71,11 +74,12 @@ __all__ = [
 #: The version of the `spec_hash` *algorithm*, carried inside the hashed payload and
 #: printed at the front of every digest.
 #:
-#: **Bump this whenever `GlmSpec` gains, loses or renames a field.** Adding a field changes
-#: the JSON the digest is taken over, so every stored digest silently stops matching its own
-#: specification — a resubmitted spec then looks new, FR-MODEL-66's dedup quietly ends, and
-#: the same model is fitted twice under two versions with nothing to say why. OQ-MODEL-8
-#: named this as the constraint to satisfy *before* the first new field lands.
+#: **Bump this whenever any arm of `ModelSpec` gains, loses or renames a field.** Adding a
+#: field changes the JSON the digest is taken over, so every stored digest silently stops
+#: matching its own specification — a resubmitted spec then looks new, FR-MODEL-66's dedup
+#: quietly ends, and the same model is fitted twice under two versions with nothing to say
+#: why. OQ-MODEL-8 named this as the constraint to satisfy *before* the first new field
+#: lands.
 #:
 #: The tag does not prevent the change; it makes it **legible**. A `v1:` digest in a
 #: database this code no longer produces is a row that needs backfilling, and it can be
@@ -84,10 +88,17 @@ __all__ = [
 #: digest in the database describes a spec this build would hash differently, so a `v1:`
 #: model resubmitted today looks new. That is the documented cost of the field, paid
 #: visibly: `spec_hash_is_current` reports the stale rows and `LIKE 'v1:%'` finds them.
-SPEC_HASH_VERSION: Final = 2
+#: **v3, 2026-08-17** — `02` §4.4's common block gained `loss_treatment` with the GBM
+#: slice (FR-MODEL-73). It sits on the common block rather than on the GBM arm because
+#: capping is a property of the *response*, and a field defined on one arm of a union is a
+#: field that will be spelled differently on the other. The cost is the same as v2's and is
+#: paid the same way: every `v2:` digest describes a spec this build hashes differently, so
+#: a `v2:` model resubmitted today looks new. `spec_hash_is_current` reports them and
+#: `LIKE 'v2:%'` finds them.
+SPEC_HASH_VERSION: Final = 3
 
 
-def spec_hash(spec: GlmSpec) -> str:
+def spec_hash(spec: ModelSpec) -> str:
     """A stable digest of the specification (FR-MODEL-66).
 
     Over the model's JSON with sorted keys, so two specs that differ only in field order
@@ -137,9 +148,11 @@ def to_model(row: ModelRow, *, flags: tuple[ModelFlag, ...] = ()) -> Model:
         model_family_slug=row.model_family_slug,
         version=row.version,
         status=ModelStatus(row.status),
-        spec=GlmSpec.model_validate(row.spec),
+        spec=MODEL_SPEC_ADAPTER.validate_python(row.spec),
         spec_hash=row.spec_hash,
-        fit_result=GlmFitResult.model_validate(row.fit_result) if row.fit_result else None,
+        fit_result=FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+        if row.fit_result
+        else None,
         diagnostics_id=row.diagnostics_id,
         dataset_version_id=row.dataset_version_id,
         parent_model_id=row.parent_model_id,

@@ -1,0 +1,621 @@
+{
+  "$defs": {
+    "BlobRef": {
+      "description": "A content-addressed object reference (ID-4).",
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "part_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Count"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes",
+        "media_type"
+      ],
+      "title": "BlobRef",
+      "type": "object"
+    },
+    "EarlyStopping": {
+      "additionalProperties": false,
+      "description": "When to stop boosting, and against what (FR-MODEL-30).\n\n**There is no `train` value**, and that is the requirement rather than an oversight:\na stopping rule read off the data being fitted stops when the model has finished\nmemorising. Refusing it by construction means no validator can be relaxed into\nallowing it.",
+      "properties": {
+        "cv_folds": {
+          "anyOf": [
+            {
+              "minimum": 2,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cv Folds"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "on": {
+          "enum": [
+            "holdout",
+            "cv"
+          ],
+          "title": "On",
+          "type": "string"
+        },
+        "rounds": {
+          "minimum": 1,
+          "title": "Rounds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "on",
+        "metric",
+        "rounds"
+      ],
+      "title": "EarlyStopping",
+      "type": "object"
+    },
+    "GbmFunctionRef": {
+      "additionalProperties": false,
+      "description": "A builtin objective or eval metric by name, or an approved artifact by reference.\n\nOne shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice —\na builtin the backend already implements, or a Custom Objective / Custom Metric that\ncarries its own approval status (R4). Two classes with identical fields would be a\nshape defined twice.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "builtin",
+            "custom"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "GbmFunctionRef",
+      "type": "object"
+    },
+    "GbmSpec": {
+      "additionalProperties": false,
+      "description": "`02` §4.4's common block plus the gradient-boosting arm (FR-MODEL-25).\n\n**One contract, two backends.** `model_type` is the backend — §4.4 also gave this arm a\n`backend` field carrying the same two strings, and two fields holding one fact can\ndisagree with nothing downstream able to say which to believe. Backend-specific tuning\nlives in `backend_params`, which is what keeps the contract from forking.\n\n**The offset is declared once.** §4.4 also gave this arm a `base_margin` block of the\nsame shape as the common `offset`. FR-MODEL-27 says the platform *constructs*\n`base_margin` from the declared offset, so a second declaration is a second source of\ntruth for the one number the fit silently depends on. What was actually constructed is\nrecorded on the fit result, where FR-MODEL-71 can assert it at load time.\n\nBoth corrections are recorded in `02` §4.4, dated 2026-08-17.",
+      "properties": {
+        "backend_params": {
+          "additionalProperties": true,
+          "title": "Backend Params",
+          "type": "object"
+        },
+        "categorical_handling": {
+          "enum": [
+            "native",
+            "factor_encoding"
+          ],
+          "title": "Categorical Handling",
+          "type": "string"
+        },
+        "dataset_version_id": {
+          "format": "uuid",
+          "title": "Dataset Version Id",
+          "type": "string"
+        },
+        "early_stopping": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EarlyStopping"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "eval_metrics": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/GbmFunctionRef"
+          },
+          "title": "Eval Metrics",
+          "type": "array"
+        },
+        "factors": {
+          "default": [],
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Factors",
+          "type": "array"
+        },
+        "hyperparameters": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Hyperparameters",
+          "type": "object"
+        },
+        "interaction_constraints": {
+          "default": [],
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Interaction Constraints",
+          "type": "array"
+        },
+        "loss_treatment": {
+          "$ref": "#/$defs/LossTreatment",
+          "default": {
+            "cap_minor": null,
+            "evidence_blob": null,
+            "kind": "none",
+            "restoration_loading": null
+          }
+        },
+        "model_family_slug": {
+          "title": "Model Family Slug",
+          "type": "string"
+        },
+        "model_type": {
+          "enum": [
+            "xgboost",
+            "lightgbm"
+          ],
+          "title": "Model Type",
+          "type": "string"
+        },
+        "monotone_constraints": {
+          "default": "derived_from_factors",
+          "enum": [
+            "derived_from_factors",
+            "none"
+          ],
+          "title": "Monotone Constraints",
+          "type": "string"
+        },
+        "objective": {
+          "$ref": "#/$defs/GbmFunctionRef"
+        },
+        "offset": {
+          "$ref": "#/$defs/OffsetSpec",
+          "default": {
+            "column": null,
+            "kind": "none",
+            "model_ref": null
+          }
+        },
+        "offset_acknowledgement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offset Acknowledgement"
+        },
+        "peril": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peril"
+        },
+        "response_column": {
+          "title": "Response Column",
+          "type": "string"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "split_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SplitRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "weight": {
+          "$ref": "#/$defs/WeightSpec",
+          "default": {
+            "column": null,
+            "kind": "none"
+          }
+        }
+      },
+      "required": [
+        "model_family_slug",
+        "dataset_version_id",
+        "response_column",
+        "model_type",
+        "objective",
+        "categorical_handling"
+      ],
+      "title": "GbmSpec",
+      "type": "object"
+    },
+    "GlmSpec": {
+      "additionalProperties": false,
+      "description": "`02` §4.4's common block plus the `glm` arm.\n\nThe spec is what `spec_hash` is taken over, so every field here changes the identity of\nthe model. That is why `loss_treatment` belongs in the spec rather than beside it, and\nwhy two models differing only in a cap must not collide (FR-MODEL-66).",
+      "properties": {
+        "alpha": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Alpha",
+          "type": "number"
+        },
+        "dataset_version_id": {
+          "format": "uuid",
+          "title": "Dataset Version Id",
+          "type": "string"
+        },
+        "factors": {
+          "default": [],
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Factors",
+          "type": "array"
+        },
+        "family": {
+          "default": "poisson",
+          "enum": [
+            "poisson",
+            "negative_binomial",
+            "gamma",
+            "inverse_gaussian",
+            "tweedie",
+            "binomial",
+            "gaussian"
+          ],
+          "title": "Family",
+          "type": "string"
+        },
+        "family_params": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Family Params",
+          "type": "object"
+        },
+        "l1_ratio": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "L1 Ratio",
+          "type": "number"
+        },
+        "link": {
+          "default": "log",
+          "enum": [
+            "log",
+            "logit",
+            "identity",
+            "inverse"
+          ],
+          "title": "Link",
+          "type": "string"
+        },
+        "loss_treatment": {
+          "$ref": "#/$defs/LossTreatment",
+          "default": {
+            "cap_minor": null,
+            "evidence_blob": null,
+            "kind": "none",
+            "restoration_loading": null
+          }
+        },
+        "max_iter": {
+          "default": 200,
+          "minimum": 1,
+          "title": "Max Iter",
+          "type": "integer"
+        },
+        "model_family_slug": {
+          "title": "Model Family Slug",
+          "type": "string"
+        },
+        "model_type": {
+          "const": "glm",
+          "default": "glm",
+          "title": "Model Type",
+          "type": "string"
+        },
+        "offset": {
+          "$ref": "#/$defs/OffsetSpec",
+          "default": {
+            "column": null,
+            "kind": "none",
+            "model_ref": null
+          }
+        },
+        "peril": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peril"
+        },
+        "response_column": {
+          "title": "Response Column",
+          "type": "string"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "split_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SplitRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tolerance": {
+          "default": 1e-08,
+          "exclusiveMinimum": 0.0,
+          "title": "Tolerance",
+          "type": "number"
+        },
+        "weight": {
+          "$ref": "#/$defs/WeightSpec",
+          "default": {
+            "column": null,
+            "kind": "none"
+          }
+        }
+      },
+      "required": [
+        "model_family_slug",
+        "dataset_version_id",
+        "response_column"
+      ],
+      "title": "GlmSpec",
+      "type": "object"
+    },
+    "LossTreatment": {
+      "additionalProperties": false,
+      "description": "How large losses are treated **as the model is fitted** (FR-MODEL-73).\n\nA modelling decision, not a property of the data: `01` VR-ACT-10 flags large losses and\nnever removes them, so one validated Dataset Version serves many capping assumptions\nwithout re-ingestion. That is only true while the assumption lives here, inside the\nspec — and therefore inside `spec_hash`, so two models differing only in their cap are\ntwo models rather than a collision (FR-MODEL-66).\n\n`cap_minor` is **integer minor units** (`CLAUDE.md` §7). A cap is a money threshold\ncompared against a money column, and a float one compares unequal to itself at the\nboundary — which decides whether the largest claim in the book was capped.",
+      "properties": {
+        "cap_minor": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cap Minor"
+        },
+        "evidence_blob": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "default": "none",
+          "enum": [
+            "none",
+            "capped",
+            "spliced",
+            "excess"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "restoration_loading": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Restoration Loading"
+        }
+      },
+      "title": "LossTreatment",
+      "type": "object"
+    },
+    "OffsetSpec": {
+      "additionalProperties": false,
+      "description": "`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.",
+      "properties": {
+        "column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "kind": {
+          "default": "none",
+          "enum": [
+            "none",
+            "log_column",
+            "column",
+            "model"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "model_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Ref"
+        }
+      },
+      "title": "OffsetSpec",
+      "type": "object"
+    },
+    "SplitRef": {
+      "additionalProperties": false,
+      "description": "The named split a model was fitted and judged on (`02` §4.4, `01` FR-DATA-36).\n\nA *reference*, not a description. FR-DATA-36 records the split on the **parent**\nversion precisely so that \"trained on the same split\" is one artifact two models cite,\nrather than two derivations that were believed to match. Naming the part versions\ndirectly here would reintroduce the belief.\n\n`train_part` and `holdout_part` are keys into the split's `parts` map; that they name\ntwo *different* parts is checked here, because a model whose holdout is its training\nset reports a flawless fit and no diagnostic downstream can tell.",
+      "properties": {
+        "holdout_part": {
+          "default": "test",
+          "title": "Holdout Part",
+          "type": "string"
+        },
+        "split_artifact_id": {
+          "format": "uuid",
+          "title": "Split Artifact Id",
+          "type": "string"
+        },
+        "train_part": {
+          "default": "train",
+          "title": "Train Part",
+          "type": "string"
+        }
+      },
+      "required": [
+        "split_artifact_id"
+      ],
+      "title": "SplitRef",
+      "type": "object"
+    },
+    "WeightSpec": {
+      "additionalProperties": false,
+      "description": "Severity weights by claim count, burning cost by exposure (FR-MODEL-19).",
+      "properties": {
+        "column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "kind": {
+          "default": "none",
+          "enum": [
+            "none",
+            "column"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "WeightSpec",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "glm": "#/$defs/GlmSpec",
+      "lightgbm": "#/$defs/GbmSpec",
+      "xgboost": "#/$defs/GbmSpec"
+    },
+    "propertyName": "model_type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/GlmSpec"
+    },
+    {
+      "$ref": "#/$defs/GbmSpec"
+    }
+  ]
+}

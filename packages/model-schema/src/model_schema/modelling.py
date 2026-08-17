@@ -1,8 +1,9 @@
 """Modelling shapes: Factors, Model Specs, and what a fit returns (`02` §4).
 
-Only the GLM spine lives here so far — `02` §4.4's tagged union has four arms and this
-carries `glm`. The rest arrives with the workstream slice that implements it, because a
-declared arm nothing can produce is a shape that will be wrong by the time anything does.
+`02` §4.4's tagged union has four declared arms and this carries two: `glm`, and the
+gradient-boosting pair `xgboost`/`lightgbm`. `ebm` arrives with the slice that fits one,
+because a declared arm nothing can produce is a shape that will be wrong by the time
+anything does.
 
 **Two rules from `02` §1.3 are structural rather than checked at the edges:**
 
@@ -24,12 +25,15 @@ from decimal import Decimal
 from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from model_schema.money import DecimalStr
 from model_schema.profiles import OneWayRow
+from model_schema.refs import BlobRef
 
 __all__ = [
+    "FIT_RESULT_ADAPTER",
+    "MODEL_SPEC_ADAPTER",
     "TERMINAL_MODEL_STATUSES",
     "VALID_MODEL_TRANSITIONS",
     "AboveRangePolicy",
@@ -41,9 +45,15 @@ __all__ = [
     "BelowRangePolicy",
     "Coefficient",
     "CredibilityModel",
+    "EarlyStopping",
     "Factor",
     "FactorIntent",
     "FactorType",
+    "FitResult",
+    "GbmEvalPoint",
+    "GbmFitResult",
+    "GbmFunctionRef",
+    "GbmSpec",
     "GlmFitResult",
     "GlmSpec",
     "Grouping",
@@ -51,8 +61,10 @@ __all__ = [
     "GroupingEvidence",
     "GroupingMethod",
     "GroupingProposal",
+    "LossTreatment",
     "Model",
     "ModelFlag",
+    "ModelSpec",
     "ModelStatus",
     "MonotonicDirection",
     "OffsetSpec",
@@ -621,17 +633,61 @@ class WeightSpec(BaseModel):
         return self
 
 
-class GlmSpec(BaseModel):
-    """`02` §4.4's common block plus the `glm` arm.
+class LossTreatment(BaseModel):
+    """How large losses are treated **as the model is fitted** (FR-MODEL-73).
 
-    The spec is what `spec_hash` is taken over, so every field here changes the identity of
-    the model. That is why `loss_treatment` belongs in the spec rather than beside it, and
-    why two models differing only in a cap must not collide (FR-MODEL-66).
+    A modelling decision, not a property of the data: `01` VR-ACT-10 flags large losses and
+    never removes them, so one validated Dataset Version serves many capping assumptions
+    without re-ingestion. That is only true while the assumption lives here, inside the
+    spec — and therefore inside `spec_hash`, so two models differing only in their cap are
+    two models rather than a collision (FR-MODEL-66).
+
+    `cap_minor` is **integer minor units** (`CLAUDE.md` §7). A cap is a money threshold
+    compared against a money column, and a float one compares unequal to itself at the
+    boundary — which decides whether the largest claim in the book was capped.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    model_type: Literal["glm"] = "glm"
+    #: `spliced` and `excess` are declared by FR-MODEL-73 and refused by the fit path until
+    #: a slice implements them (`02` §3.5, noted 2026-08-17). Declared-and-refused rather
+    #: than omitted: narrowing the enum now would cost a `spec_hash` version to widen later.
+    kind: Literal["none", "capped", "spliced", "excess"] = "none"
+    cap_minor: int | None = Field(default=None, ge=0)
+    #: The loading that restores the mean after capping. Required with a cap because
+    #: FR-MODEL-74 reconciles a capped model against **uncapped** experience: without it
+    #: the reconciliation reports a modelling error where there was an intended adjustment.
+    restoration_loading: float | None = Field(default=None, gt=0.0)
+    evidence_blob: BlobRef | None = None
+
+    @model_validator(mode="after")
+    def _a_treatment_carries_exactly_the_parameters_it_needs(self) -> LossTreatment:
+        if self.kind == "none" and (self.cap_minor is not None
+                                    or self.restoration_loading is not None):
+            raise ValueError(
+                "loss treatment 'none' carries a cap or a restoration loading. A reader "
+                "cannot then tell whether the response was capped, and the answer is "
+                "inside `spec_hash` for ever."
+            )
+        if self.kind != "none" and self.cap_minor is None:
+            raise ValueError(f"loss treatment {self.kind!r} requires cap_minor")
+        if self.kind == "capped" and self.restoration_loading is None:
+            raise ValueError(
+                "a capped response requires restoration_loading (FR-MODEL-74: the "
+                "reconciliation compares restored burning cost against uncapped observed)."
+            )
+        return self
+
+
+class ModelSpecCommon(BaseModel):
+    """`02` §4.4's common block — every arm of the tagged union carries these.
+
+    A base class rather than a copied field list, for the reason `CLAUDE.md` §2 gives:
+    a shape defined twice diverges, and a diverged spec field is a mispricing.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     model_family_slug: str
     dataset_version_id: UUID
     #: `02` §4.4's `split_ref`, live from the diagnostics slice. Optional because a model
@@ -645,6 +701,19 @@ class GlmSpec(BaseModel):
     offset: OffsetSpec = OffsetSpec()
     weight: WeightSpec = WeightSpec()
     factors: tuple[UUID, ...] = ()
+    loss_treatment: LossTreatment = LossTreatment()
+    seed: int = 0
+
+
+class GlmSpec(ModelSpecCommon):
+    """`02` §4.4's common block plus the `glm` arm.
+
+    The spec is what `spec_hash` is taken over, so every field here changes the identity of
+    the model. That is why `loss_treatment` belongs in the spec rather than beside it, and
+    why two models differing only in a cap must not collide (FR-MODEL-66).
+    """
+
+    model_type: Literal["glm"] = "glm"
     #: FR-MODEL-18's supported families. `tweedie` carries its power in `family_params`.
     family: Literal[
         "poisson", "negative_binomial", "gamma", "inverse_gaussian",
@@ -656,7 +725,6 @@ class GlmSpec(BaseModel):
     l1_ratio: float = Field(default=0.0, ge=0.0, le=1.0)
     max_iter: int = Field(default=200, ge=1)
     tolerance: float = Field(default=1e-8, gt=0.0)
-    seed: int = 0
 
     @model_validator(mode="after")
     def _a_tweedie_power_lies_between_the_two_families_it_spans(self) -> GlmSpec:
@@ -690,6 +758,162 @@ class GlmSpec(BaseModel):
                 "a Poisson model must declare an offset (FR-MODEL-19: frequency → Poisson, "
                 "log link, offset = log(exposure)). Fitting counts without exposure "
                 "silently models 'claims per policy-record' instead of 'claims per year'."
+            )
+        return self
+
+
+class GbmFunctionRef(BaseModel):
+    """A builtin objective or eval metric by name, or an approved artifact by reference.
+
+    One shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice —
+    a builtin the backend already implements, or a Custom Objective / Custom Metric that
+    carries its own approval status (R4). Two classes with identical fields would be a
+    shape defined twice.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["builtin", "custom"]
+    #: FR-MODEL-26's insurance objectives: `count:poisson`, `reg:gamma`, `reg:tweedie`,
+    #: `binary:logistic`. Not an enum — the eval-metric vocabulary is the backend's and
+    #: differs between them, and a closed set here would refuse a metric XGBoost supports.
+    name: str | None = None
+    #: `custom_objective:<slug>@<version>` / `custom_metric:<slug>@<version>`.
+    ref: str | None = None
+
+    @model_validator(mode="after")
+    def _the_kind_decides_which_field_is_meaningful(self) -> GbmFunctionRef:
+        if self.kind == "builtin":
+            if not self.name:
+                raise ValueError("a builtin objective or metric needs a name")
+            if self.ref:
+                raise ValueError(
+                    "a builtin objective or metric carries a ref as well as a name. The "
+                    "fit path would have to choose, and two runs could choose differently."
+                )
+        else:
+            if not self.ref:
+                raise ValueError("a custom objective or metric needs a ref")
+            if self.name:
+                raise ValueError("a custom objective or metric carries a name as well as a ref")
+        return self
+
+
+class EarlyStopping(BaseModel):
+    """When to stop boosting, and against what (FR-MODEL-30).
+
+    **There is no `train` value**, and that is the requirement rather than an oversight:
+    a stopping rule read off the data being fitted stops when the model has finished
+    memorising. Refusing it by construction means no validator can be relaxed into
+    allowing it.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    on: Literal["holdout", "cv"]
+    metric: str
+    rounds: int = Field(ge=1)
+    #: Required for `on='cv'`; meaningless otherwise.
+    cv_folds: int | None = Field(default=None, ge=2)
+
+    @model_validator(mode="after")
+    def _cross_validation_declares_its_folds(self) -> EarlyStopping:
+        if self.on == "cv" and self.cv_folds is None:
+            raise ValueError("early stopping on cv requires cv_folds")
+        if self.on == "holdout" and self.cv_folds is not None:
+            raise ValueError("early stopping on a holdout does not take cv_folds")
+        return self
+
+
+class GbmSpec(ModelSpecCommon):
+    """`02` §4.4's common block plus the gradient-boosting arm (FR-MODEL-25).
+
+    **One contract, two backends.** `model_type` is the backend — §4.4 also gave this arm a
+    `backend` field carrying the same two strings, and two fields holding one fact can
+    disagree with nothing downstream able to say which to believe. Backend-specific tuning
+    lives in `backend_params`, which is what keeps the contract from forking.
+
+    **The offset is declared once.** §4.4 also gave this arm a `base_margin` block of the
+    same shape as the common `offset`. FR-MODEL-27 says the platform *constructs*
+    `base_margin` from the declared offset, so a second declaration is a second source of
+    truth for the one number the fit silently depends on. What was actually constructed is
+    recorded on the fit result, where FR-MODEL-71 can assert it at load time.
+
+    Both corrections are recorded in `02` §4.4, dated 2026-08-17.
+    """
+
+    model_type: Literal["xgboost", "lightgbm"]
+    objective: GbmFunctionRef
+    #: FR-MODEL-27's escape hatch. A frequency objective with no offset is refused unless
+    #: this says why — a sentence a reviewer reads, rather than an omission nobody sees.
+    offset_acknowledgement: str | None = None
+    #: FR-MODEL-28. `derived_from_factors` reads each Factor's monotonic direction; the
+    #: vector that results is persisted on the fit result, beside the feature order.
+    monotone_constraints: Literal["derived_from_factors", "none"] = "derived_from_factors"
+    #: FR-MODEL-29: interaction is permitted *within* each declared group and nowhere else.
+    interaction_constraints: tuple[tuple[str, ...], ...] = ()
+    #: §4.4's common tuning knobs — `max_depth`, `eta`, `subsample`, `num_boost_round` and
+    #: the rest. A dict rather than fields because the two backends spell several of them
+    #: differently and a fixed set would refuse a legitimate one.
+    hyperparameters: dict[str, float] = Field(default_factory=dict)
+    early_stopping: EarlyStopping | None = None
+    #: FR-MODEL-32, and **no default**: a default would be the silence the requirement
+    #: exists to refuse. `native` uses the backend's categorical support; `factor_encoding`
+    #: takes the mapping from the Factor's grouping.
+    categorical_handling: Literal["native", "factor_encoding"]
+    eval_metrics: tuple[GbmFunctionRef, ...] = ()
+    #: The backend-specific escape hatch (`tree_method`, `boosting_type`, …), namespaced so
+    #: FR-MODEL-25's single contract does not fork into two.
+    backend_params: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _a_frequency_gbm_declares_its_exposure(self) -> GbmSpec:
+        """FR-MODEL-27, and the GBM half of what `GlmSpec` refuses for the same reason.
+
+        Exposure rides in `base_margin`/`init_score` as `log(exposure)`. Passed as a
+        feature it is a variable the trees may split on; passed as a weight under a count
+        objective it changes the loss rather than the mean. Both fit, neither errors, and
+        the model has learned claims-per-record.
+        """
+        counting = self.objective.kind == "builtin" and (
+            self.objective.name or ""
+        ).startswith(("count:", "reg:tweedie"))
+        if counting and self.offset.kind == "none" and not self.offset_acknowledgement:
+            raise ValueError(
+                f"objective {self.objective.name!r} counts events but the spec declares no "
+                "offset (FR-MODEL-27). Set offset to log(exposure), or say in "
+                "offset_acknowledgement why this data needs none."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _an_interaction_group_names_at_least_two_features(self) -> GbmSpec:
+        """A group of one permits nothing and forbids nothing (FR-MODEL-29).
+
+        Written by hand it is almost always a truncated list; read back it looks
+        deliberate.
+        """
+        for group in self.interaction_constraints:
+            if len(group) < 2:
+                raise ValueError(
+                    f"interaction group {list(group)} names fewer than two features. A "
+                    "group of one constrains nothing, and reads as though it did."
+                )
+        return self
+
+    @model_validator(mode="after")
+    def _early_stopping_on_a_holdout_needs_one(self) -> GbmSpec:
+        """FR-MODEL-30: early stopping requires a *declared* holdout or CV scheme.
+
+        `split_ref` is where the holdout is declared (`01` FR-DATA-36). Stopping "on the
+        holdout" with no split named would fall back to the training set, which is the one
+        thing the requirement forbids.
+        """
+        if self.early_stopping and self.early_stopping.on == "holdout" and self.split_ref is None:
+            raise ValueError(
+                "early stopping on a holdout requires split_ref (FR-MODEL-30). Without a "
+                "declared split there is no holdout, and the stopping metric would be read "
+                "off the training rows."
             )
         return self
 
@@ -766,6 +990,115 @@ class GlmFitResult(BaseModel):
         return next((c for c in self.coefficients if c.term == "intercept"), None)
 
 
+class GbmEvalPoint(BaseModel):
+    """One row of the evaluation curve FR-MODEL-30 requires to be persisted.
+
+    Both parts on one row rather than two series, because the pair is the point: a metric
+    still improving on train while flat on holdout is the shape early stopping exists to
+    catch, and two separately-stored series can be joined wrongly.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    iteration: int = Field(ge=0)
+    metric: str
+    train: float | None = None
+    holdout: float | None = None
+
+    @model_validator(mode="after")
+    def _a_point_reports_at_least_one_part(self) -> GbmEvalPoint:
+        if self.train is None and self.holdout is None:
+            raise ValueError("an evaluation point reports neither train nor holdout")
+        return self
+
+
+class GbmFitResult(BaseModel):
+    """What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).
+
+    The booster is a **content-addressed blob in the backend's own JSON or text format**,
+    never a pickle — `booster_format` has no spelling for one, so the persistence layer's
+    refusal is not the only thing between a Model and an artifact that executes on load.
+
+    Everything needed to score is here beside it: feature order, dtype expectations,
+    categorical encoding maps, the monotone constraint vector, the pinned library version,
+    and — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic
+    about the last one because omitting the offset at scoring time fails *silently* on both
+    backends, and differently.
+
+    The evaluation curve is optional on the type because a fit without early stopping has
+    no curve to report; the fit path populates it whenever `early_stopping` was declared,
+    which is where the spec is in scope to say so.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_type: Literal["xgboost", "lightgbm"]
+    booster_blob: BlobRef
+    #: ADR-0003. `pickle` is not a refused value here — it is not a value.
+    booster_format: Literal["xgboost_json", "lightgbm_text"]
+    feature_order: tuple[str, ...]
+    #: FR-MODEL-31's dtype expectations, one per feature — checked against `feature_order`
+    #: below, because a scoring frame built from a partial map is a frame with a column
+    #: whose type nobody declared.
+    feature_dtypes: dict[str, str] = Field(default_factory=dict)
+    #: FR-MODEL-32's encoding maps, per categorical feature.
+    categorical_maps: dict[str, dict[str, int]] = Field(default_factory=dict)
+    #: FR-MODEL-28, positionally aligned with `feature_order`. Empty when the spec asked
+    #: for none.
+    monotone_constraints: tuple[int, ...] = ()
+    #: FR-MODEL-71. **Required**: the load-time assertion needs something to assert.
+    base_margin: OffsetSpec
+    best_iteration: int = Field(ge=0)
+    eval_curve: tuple[GbmEvalPoint, ...] = ()
+    rows: int = Field(default=0, ge=0)
+    fit_seconds: float = Field(ge=0.0)
+    library_versions: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _the_constraint_vector_is_aligned_with_the_feature_order(self) -> GbmFitResult:
+        """FR-MODEL-28: the vector is persisted *alongside* the feature order.
+
+        Positional data whose length is unchecked is positional data that will one day be
+        off by one — and a monotone constraint applied to the wrong column is a model that
+        is monotone in the wrong thing, which reads as correct on every screen.
+        """
+        if self.monotone_constraints and len(self.monotone_constraints) != len(self.feature_order):
+            raise ValueError(
+                f"{len(self.monotone_constraints)} monotone constraints for "
+                f"{len(self.feature_order)} features in feature_order. The vector is "
+                "positional; a mismatch silently constrains the wrong column."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _every_feature_declares_its_dtype(self) -> GbmFitResult:
+        """FR-MODEL-31's dtype expectations, checked rather than hoped for.
+
+        A scoring frame assembled from a partial map has a column whose type nobody
+        declared, and the backends differ in what they infer for it.
+        """
+        if self.feature_dtypes and set(self.feature_dtypes) != set(self.feature_order):
+            missing = sorted(set(self.feature_order) - set(self.feature_dtypes))
+            extra = sorted(set(self.feature_dtypes) - set(self.feature_order))
+            raise ValueError(
+                f"feature_dtypes does not cover feature_order (missing {missing}, "
+                f"unexpected {extra})."
+            )
+        return self
+
+
+#: `02` §4.4's tagged union, as a union rather than as a promise. Until this existed the
+#: tag was present and `GlmSpec.model_validate` was the only reader, so a GBM payload
+#: failed on a literal mismatch rather than on anything a caller could act on.
+ModelSpec = Annotated[GlmSpec | GbmSpec, Field(discriminator="model_type")]
+MODEL_SPEC_ADAPTER: Final[TypeAdapter[ModelSpec]] = TypeAdapter(ModelSpec)
+
+#: The same union over what a fit returns. Both are discriminated on `model_type`, and
+#: `Model` checks that the two agree — see `_the_fit_matches_the_specification`.
+FitResult = Annotated[GlmFitResult | GbmFitResult, Field(discriminator="model_type")]
+FIT_RESULT_ADAPTER: Final[TypeAdapter[FitResult]] = TypeAdapter(FitResult)
+
+
 class ModelStatus(enum.StrEnum):
     DRAFT = "draft"
     FITTED = "fitted"
@@ -830,9 +1163,9 @@ class Model(BaseModel):
     model_family_slug: str
     version: int = Field(ge=1)
     status: ModelStatus = ModelStatus.DRAFT
-    spec: GlmSpec
+    spec: ModelSpec
     spec_hash: str
-    fit_result: GlmFitResult | None = None
+    fit_result: FitResult | None = None
     #: `02` §4.8. Unmeetable during the spine — diagnostics did not exist — and enforced
     #: below now that they do. OQ-MODEL-8 cited this field as its own example of a
     #: declared-but-dead contract field.
@@ -862,6 +1195,21 @@ class Model(BaseModel):
             raise ValueError(
                 f"model {self.model_family_slug}@{self.version} is {self.status.value} "
                 "with no fit result (`02` §4.8)."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _the_fit_matches_the_specification(self) -> Model:
+        """Both unions are on one artifact, so the pairing has to be stated somewhere.
+
+        A `GbmSpec` beside a `GlmFitResult` is a model whose coefficient table describes a
+        booster nobody fitted — and the coefficient table is what a rating basis is read
+        from. Neither discriminator can see the other, so nothing but this refuses it.
+        """
+        if self.fit_result is not None and self.fit_result.model_type != self.spec.model_type:
+            raise ValueError(
+                f"model_type disagrees: the spec says {self.spec.model_type!r} and the fit "
+                f"result says {self.fit_result.model_type!r}."
             )
         return self
 

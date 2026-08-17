@@ -390,13 +390,11 @@ cap are different models, and must not collide on `spec_hash`.
 }
 ```
 
-`GbmSpec` adds:
+`GbmSpec` adds (`model_type` is `xgboost` or `lightgbm` — see the amendment below):
 
 ```json
 {
-  "backend": "xgboost",
   "objective": {"kind": "builtin", "name": "count:poisson"},
-  "base_margin": {"kind": "log_column", "column": "exposure_years"},
   "monotone_constraints": "derived_from_factors",
   "interaction_constraints": [["driver_age_banded", "vehicle_group_rated"], ["ncd", "annual_mileage"]],
   "hyperparameters": {"max_depth": 5, "eta": 0.05, "subsample": 0.8,
@@ -411,6 +409,34 @@ cap are different models, and must not collide on `spec_hash`.
 ```
 
 `objective.kind = "custom"` replaces `name` with `ref: "custom_objective:<slug>@<version>"`.
+
+> **Amended 2026-08-17 (W5, the GBM arm).** Three corrections, made by building the union.
+>
+> * **`backend` is removed; `model_type` is the backend.** This arm declared
+>   `backend: "xgboost" | "lightgbm"` beside a `model_type` carrying the same two strings.
+>   Two fields holding one fact can disagree, and nothing downstream could say which to
+>   believe — so the discriminator the union already turns on is the one that survives.
+>   `GbmSpec.model_type` is therefore `Literal["xgboost", "lightgbm"]`, and a payload still
+>   carrying `backend` is refused rather than ignored.
+> * **`base_margin` is removed from the spec; the common block's `offset` is the single
+>   declaration.** FR-MODEL-27 says the platform *constructs* `base_margin` from the
+>   declared offset, so a second declaration here was a second source of truth for the one
+>   number the fit silently depends on. What was actually constructed is recorded on the
+>   **fit result** (`GbmFitResult.base_margin`), which is where FR-MODEL-71's load-time
+>   assertion needs it.
+> * **`loss_treatment` sits on the common block, not on this arm.** FR-MODEL-73 applies it
+>   to the *response*, which is not a property of the learner. It is `{kind, cap_minor,
+>   restoration_loading, evidence_blob}`, with `cap_minor` in integer minor units
+>   (`CLAUDE.md` §7). `spliced` and `excess` are declared and **refused by the fit path**
+>   until a slice implements them: narrowing the enum now would cost a `spec_hash` version
+>   to widen later, and the digest algorithm went to **v3** for this field alone.
+>
+> Two constraints the built contract adds, neither of which the JSON above implied:
+>
+> * `categorical_handling` has **no default** — a default would be FR-MODEL-32's silence.
+> * `early_stopping.on` has **no `train` value**, and `on: "holdout"` requires `split_ref`.
+>   FR-MODEL-30 refuses training-set early stopping; reaching it by omitting the split is
+>   the same defect arrived at more quietly.
 
 ### 4.5 Custom objective — `template` catalogue
 
