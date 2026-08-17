@@ -34,9 +34,16 @@ __all__ = [
     "CalibrationBin",
     "ComplexityDiagnostic",
     "Diagnostics",
+    "FeatureImportance",
+    "GbmDiagnostics",
+    "GbmEvalPoint",
     "GlmDiagnostics",
     "LiftBin",
+    "MonotonicityCheck",
+    "PartialDependence",
+    "PartialDependencePoint",
     "PartitionDiagnostics",
+    "PermutationImportance",
     "ResidualSummary",
     "TypeIIITest",
     "UniversalDiagnostics",
@@ -240,13 +247,145 @@ class ComplexityDiagnostic(BaseModel):
     min_exposure_per_parameter: float | None = None
 
 
+class GbmEvalPoint(BaseModel):
+    """One row of the evaluation curve FR-MODEL-52 requires (FR-MODEL-30 persists it).
+
+    Both partitions on one row rather than two series, because the pair is the point: a
+    metric still improving on train while flat on holdout is the shape early stopping
+    exists to catch, and two separately-stored series can be joined wrongly.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    iteration: int = Field(ge=0)
+    metric: str
+    train: float | None = None
+    holdout: float | None = None
+
+    @model_validator(mode="after")
+    def _a_point_reports_at_least_one_part(self) -> GbmEvalPoint:
+        if self.train is None and self.holdout is None:
+            raise ValueError("an evaluation point reports neither train nor holdout")
+        return self
+
+
+class FeatureImportance(BaseModel):
+    """One feature's importance under the three measures a booster already knows.
+
+    All three, because they disagree and the disagreement is the information: `gain` says
+    how much a split improved the objective, `cover` how much data it improved it over, and
+    `frequency` merely how often the feature was chosen. A feature that is frequent and
+    low-gain is one the model reaches for and learns little from — invisible if only one
+    measure is stored.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    feature: str
+    gain: float = Field(ge=0.0)
+    #: `None` on LightGBM, which exposes `split` and `gain` and **no cover at all**.
+    #: Optional rather than zero-filled: a zero would read as "this feature covered no
+    #: rows", which is a measurement, and the truth is that the backend does not report it.
+    cover: float | None = Field(default=None, ge=0.0)
+    frequency: float = Field(ge=0.0)
+
+
+class PermutationImportance(BaseModel):
+    """How much the holdout metric degrades when one feature is shuffled (FR-MODEL-52).
+
+    On the **holdout**, and stated as a degradation rather than a score, because that is
+    the question an actuary is asking: what would this model lose if this variable were
+    noise. Split importance answers a different question — how the trees were built — and
+    a feature can be split on constantly while carrying no predictive weight.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    feature: str
+    baseline: float
+    permuted: float
+    #: `permuted - baseline` for a metric where lower is better. Negative means shuffling
+    #: the feature *improved* the holdout metric, which is a real finding and not clipped
+    #: away: it is what an overfitted or leaked feature looks like.
+    degradation: float
+    repeats: int = Field(ge=1)
+    seed: int
+
+
+class PartialDependencePoint(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    value: str
+    mean_prediction: float
+    exposure_share: float = Field(ge=0.0, le=1.0)
+
+
+class PartialDependence(BaseModel):
+    """The fitted response to one factor, averaged over the book (FR-MODEL-52).
+
+    `exposure_share` rides with every point because a partial dependence curve is most
+    dramatic exactly where the book is thinnest, and a plot without it invites reading a
+    spike over 0.2 % of exposure as a rating signal.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    points: tuple[PartialDependencePoint, ...] = ()
+
+
+class MonotonicityCheck(BaseModel):
+    """Whether the **fitted** response respects a declared constraint (FR-MODEL-52).
+
+    Verified rather than assumed. A constraint is a parameter passed to a library, and the
+    thing that makes it true of this model is that someone swept the factor and looked —
+    which is also what `TransparencyArtifact.monotonicity_verified` reports upward (R3).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    declared: str
+    holds: bool
+    #: The largest move against the declared direction, on the mean scale. `0.0` when the
+    #: constraint holds; present when it does not, because "violated" without a magnitude
+    #: cannot be told from floating-point noise.
+    worst_violation: float = Field(ge=0.0, default=0.0)
+
+
+class GbmDiagnostics(BaseModel):
+    """GBM-specific evidence (FR-MODEL-52), all six things the requirement names.
+
+    The evaluation curve is here rather than on `GbmFitResult` because FR-MODEL-52 calls it
+    a diagnostic and asks for **train and holdout** — which is FR-MODEL-54's shape, and the
+    shape `diagnostics.schema.json` has carried since Phase 0. `fit_gbm` produces it and
+    hands it back for the caller to place here; only `best_iteration` stays on the fit,
+    because scoring needs it and diagnostics are not loaded to score.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    eval_curve: tuple[GbmEvalPoint, ...] = ()
+    importances: tuple[FeatureImportance, ...] = ()
+    permutation_importances: tuple[PermutationImportance, ...] = ()
+    partial_dependence: tuple[PartialDependence, ...] = ()
+    monotonicity: tuple[MonotonicityCheck, ...] = ()
+    tree_count: int = Field(ge=0)
+    #: The deepest tree and the mean depth. Two numbers because a forest of stumps with one
+    #: deep tree and a forest of uniformly middling trees have the same mean.
+    max_depth: int = Field(ge=0)
+    mean_depth: float = Field(ge=0.0)
+
+
 class Diagnostics(BaseModel):
     """The persisted artifact (`02` §4, `diagnostics.schema.json`).
 
-    Immutable: computed at fit time and read thereafter (FR-MODEL-49). `gbm`,
-    `cross_validation` and `backtest` are declared and always `None` in this slice — the
-    fields exist because the contract the frontend generates from declares them, and their
-    producers (FR-MODEL-52, 53, 57) are owned by later slices.
+    Immutable: computed at fit time and read thereafter (FR-MODEL-49).
+
+    `gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which
+    is the honest reading of "GBM-specific". `cross_validation` and `backtest` are still
+    declared and always `None` — the fields exist because the contract the frontend
+    generates from declares them, and their producers (FR-MODEL-53, 57) are later slices.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -258,6 +397,6 @@ class Diagnostics(BaseModel):
     universal: UniversalDiagnostics
     complexity: ComplexityDiagnostic
     glm: GlmDiagnostics | None = None
-    gbm: None = None
+    gbm: GbmDiagnostics | None = None
     cross_validation: None = None
     backtest: None = None

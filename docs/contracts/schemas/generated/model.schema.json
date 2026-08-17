@@ -147,54 +147,9 @@
       "title": "EarlyStopping",
       "type": "object"
     },
-    "GbmEvalPoint": {
-      "additionalProperties": false,
-      "description": "One row of the evaluation curve FR-MODEL-30 requires to be persisted.\n\nBoth parts on one row rather than two series, because the pair is the point: a metric\nstill improving on train while flat on holdout is the shape early stopping exists to\ncatch, and two separately-stored series can be joined wrongly.",
-      "properties": {
-        "holdout": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Holdout"
-        },
-        "iteration": {
-          "minimum": 0,
-          "title": "Iteration",
-          "type": "integer"
-        },
-        "metric": {
-          "title": "Metric",
-          "type": "string"
-        },
-        "train": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Train"
-        }
-      },
-      "required": [
-        "iteration",
-        "metric"
-      ],
-      "title": "GbmEvalPoint",
-      "type": "object"
-    },
     "GbmFitResult": {
       "additionalProperties": false,
-      "description": "What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is optional on the type because a fit without early stopping has\nno curve to report; the fit path populates it whenever `early_stopping` was declared,\nwhich is where the spec is in scope to say so.",
+      "description": "What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is **not** here. FR-MODEL-52 names it a GBM-specific *diagnostic*\nand asks for train and holdout side by side, which is FR-MODEL-54's shape; it lives on\n`GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place\nthere. `best_iteration` stays, because scoring needs it and diagnostics are not loaded\nto score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code\nagreeing with it rather than the schema being edited to match.)",
       "properties": {
         "base_margin": {
           "$ref": "#/$defs/OffsetSpec"
@@ -224,14 +179,6 @@
           },
           "title": "Categorical Maps",
           "type": "object"
-        },
-        "eval_curve": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/GbmEvalPoint"
-          },
-          "title": "Eval Curve",
-          "type": "array"
         },
         "feature_dtypes": {
           "additionalProperties": {

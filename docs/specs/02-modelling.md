@@ -946,6 +946,33 @@ required evidence for a Model approval where a predecessor exists.
 > Still declared and unbuilt after this slice: transparency, backtests, comparison,
 > prediction, custom objectives, metrics and peril structures.
 
+> **Amended 2026-08-17 (W5, the GBM arm).** No route is added or removed. `POST /models`
+> and `POST /model-specs/validate` now take **either arm** of §4.4's union, and one Job kind
+> fits both — a second `model.gbm_fit` would have made every caller, status screen and
+> audit query ask which of two names to look for.
+>
+> Two things the building settled, neither of which the table could state:
+>
+> * **FR-MODEL-44's *objective applicability* half is now built for the GBM arm.**
+>   `SpecProblemKind` gains `objective_unsupported`, and a spec naming an objective outside
+>   FR-MODEL-26's set — or a Custom Objective while FR-MODEL-38 is unbuilt — comes back as a
+>   **200 with `ok: false`** rather than a queued Job that fails three minutes later. The set
+>   is exported from `pricing-core` and read by both the validator and the fit, because two
+>   hand-written lists would eventually disagree about what the platform supports.
+> * **`Diagnostics.gbm` is populated (FR-MODEL-52), and the evaluation curve lives there.**
+>   The code briefly put the curve on `GbmFitResult`; `diagnostics.schema.json` has had it
+>   under `gbm` since Phase 0 and FR-MODEL-52 calls it a diagnostic asking for **train and
+>   holdout**, which is FR-MODEL-54's shape. The **code was wrong and moved**. Only
+>   `best_iteration` stays on the fit result, because scoring needs it and diagnostics are
+>   not loaded to score.
+>
+> A GBM's `ComplexityDiagnostic.parameter_count` is its **leaf count** (FR-MODEL-81). A
+> boosted model has no coefficient vector, and counting factors would report a stump and a
+> thousand deep trees as equally complex — the comparison exposure-per-parameter exists to
+> make. The *pre-fit* estimate in `POST /model-specs/validate` remains the factor-level
+> proxy, which for a GBM is a bound rather than an estimate; it is already documented as
+> deliberately conservative, and it only gates where a workspace sets a limit.
+
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
 `GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_DID_NOT_CONVERGE`,

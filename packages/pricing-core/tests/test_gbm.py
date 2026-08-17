@@ -303,10 +303,14 @@ def test_early_stopping_records_the_curve_and_the_iteration_it_chose(backend: st
     spec = _spec(backend, early_stopping=EarlyStopping(
         on="holdout", metric="poisson-nloglik", rounds=10))
     fit = fit_gbm(data, spec, FACTORS, holdout=_frequency_data(n=3_000, seed=99))
-    assert fit.result.eval_curve
+    assert fit.eval_curve
     assert fit.result.best_iteration >= 1
-    assert {point.metric for point in fit.result.eval_curve} == {"poisson-nloglik"}
-    assert all(point.holdout is not None for point in fit.result.eval_curve)
+    assert {point.metric for point in fit.eval_curve} == {"poisson-nloglik"}
+    # FR-MODEL-52 asks for **both** partitions, and FR-MODEL-54 calls one of them alone a
+    # defect. A curve on the holdout only cannot show the divergence early stopping exists
+    # to catch, which is the whole reason the pair is one row rather than two series.
+    assert all(point.holdout is not None for point in fit.eval_curve)
+    assert all(point.train is not None for point in fit.eval_curve)
 
 
 @pytest.mark.req("FR-MODEL-32")
@@ -445,3 +449,135 @@ def test_a_declared_interaction_group_reaches_the_backend(backend: str) -> None:
     spec = _spec(backend, interaction_constraints=(("area", "driv_age"),))
     fit = fit_gbm(_frequency_data(), spec, FACTORS)
     assert fit.result.feature_order == ("area", "driv_age")
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-52 — GBM diagnostics
+# --------------------------------------------------------------------------------------
+
+
+def _diagnose(backend: str, factors: list[Factor] | None = None):  # type: ignore[no-untyped-def]
+    from pricing_core.modelling import compute_gbm_diagnostics
+
+    use = factors or FACTORS
+    train, holdout = _frequency_data(), _frequency_data(n=3_000, seed=4242)
+    fit = fit_gbm(train, _spec(backend, factors=tuple(f.id for f in use)), use)
+    return fit, compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes,
+        _spec(backend, factors=tuple(f.id for f in use)), use,
+        train=train, holdout=holdout, eval_curve=fit.eval_curve,
+    )
+
+
+@pytest.mark.req("FR-MODEL-54")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_gbm_reports_both_partitions_through_the_same_code_as_a_glm(backend: str) -> None:
+    """FR-MODEL-50 says the universal diagnostics are for *all model types*, and
+    FR-MODEL-54 says both partitions or it is a defect.
+
+    Both hold here because `_partition` takes `mu` and knows nothing about how it was
+    produced — the same function computes a GLM's A/E and a GBM's. Two implementations
+    would drift, and FR-MODEL-56's comparison would then be two conventions placed side by
+    side rather than a comparison.
+    """
+    _, diagnostics = _diagnose(backend)
+    assert diagnostics.universal.train.ae_overall > 0
+    assert diagnostics.universal.holdout.ae_overall > 0
+    assert diagnostics.universal.train.ae_by_factor
+    assert diagnostics.glm is None
+    assert diagnostics.gbm is not None
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_the_three_split_importances_are_reported_and_cover_is_honest(backend: str) -> None:
+    """FR-MODEL-52 asks for gain, cover and frequency.
+
+    LightGBM exposes `split` and `gain` and **no cover**, so `cover` is `None` there rather
+    than zero. A zero would read as a measurement — "this feature covered no rows" — when
+    the truth is that the backend does not report the quantity at all.
+    """
+    _, diagnostics = _diagnose(backend)
+    assert diagnostics.gbm is not None
+    importances = {i.feature: i for i in diagnostics.gbm.importances}
+    assert set(importances) == {"area", "driv_age"}
+    assert importances["driv_age"].gain > 0
+    if backend == "xgboost":
+        assert importances["driv_age"].cover is not None
+    else:
+        assert all(i.cover is None for i in diagnostics.gbm.importances)
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_permutation_importance_degrades_the_holdout_when_signal_is_destroyed(
+    backend: str,
+) -> None:
+    """FR-MODEL-52's permutation importance answers a different question from split
+    importance: what would this model lose if the variable were noise.
+
+    Asserted as a *degradation*, on the holdout, for a factor the data-generating process
+    actually uses — if shuffling `driv_age` did not hurt, either the model never learned it
+    or the permutation never reached the feature.
+    """
+    _, diagnostics = _diagnose(backend)
+    assert diagnostics.gbm is not None
+    by_feature = {p.feature: p for p in diagnostics.gbm.permutation_importances}
+    assert by_feature["driv_age"].degradation > 0
+    assert by_feature["driv_age"].permuted > by_feature["driv_age"].baseline
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_partial_dependence_carries_the_exposure_share_of_each_point(backend: str) -> None:
+    """A partial dependence curve is most dramatic exactly where the book is thinnest.
+
+    The share rides with every point so a spike over 0.2 % of exposure cannot be read as a
+    rating signal by a chart that never had the denominator.
+    """
+    _, diagnostics = _diagnose(backend)
+    assert diagnostics.gbm is not None
+    curves = {c.factor: c for c in diagnostics.gbm.partial_dependence}
+    area = curves["area"]
+    assert [p.value for p in area.points] == ["rural", "urban"]
+    assert sum(p.exposure_share for p in area.points) == pytest.approx(1.0, abs=1e-9)
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_monotonicity_is_verified_on_the_fitted_response_not_assumed(backend: str) -> None:
+    """FR-MODEL-52: *that the fitted response actually respects declared constraints*.
+
+    A constraint is a parameter handed to a library. What makes it true of this model is
+    that something swept the factor and looked — which is also what
+    `TransparencyArtifact.monotonicity_verified` will report upward under R3.
+    """
+    factors = [
+        _factor("area", "area"),
+        _factor("driv_age", "driv_age", monotonic_direction=MonotonicDirection.INCREASING,
+                monotonic_rationale="claim frequency rises with age in this book"),
+    ]
+    _, diagnostics = _diagnose(backend, factors)
+    assert diagnostics.gbm is not None
+    checks = {c.factor: c for c in diagnostics.gbm.monotonicity}
+    assert set(checks) == {"driv_age"}, "a factor with no declared direction has nothing to verify"
+    assert checks["driv_age"].holds
+    assert checks["driv_age"].declared == "increasing"
+
+
+@pytest.mark.req("FR-MODEL-81")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_boosted_models_parameter_count_is_its_leaves(backend: str) -> None:
+    """FR-MODEL-81 records a fitted-parameter count on every fit, and a GBM has no
+    coefficient vector.
+
+    Counting factors instead would report a stump and a thousand deep trees as equally
+    complex, which is precisely the comparison exposure-per-parameter exists to make.
+    """
+    _, diagnostics = _diagnose(backend)
+    assert diagnostics.gbm is not None
+    assert diagnostics.complexity.factor_count == 2
+    assert diagnostics.complexity.parameter_count > 100
+    assert diagnostics.complexity.exposure_per_parameter is not None
+    assert diagnostics.gbm.tree_count == 40
+    assert diagnostics.gbm.max_depth <= 3

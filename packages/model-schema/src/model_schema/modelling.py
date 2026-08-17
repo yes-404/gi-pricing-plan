@@ -50,7 +50,6 @@ __all__ = [
     "FactorIntent",
     "FactorType",
     "FitResult",
-    "GbmEvalPoint",
     "GbmFitResult",
     "GbmFunctionRef",
     "GbmSpec",
@@ -65,6 +64,7 @@ __all__ = [
     "Model",
     "ModelFlag",
     "ModelSpec",
+    "ModelSpecCommon",
     "ModelStatus",
     "MonotonicDirection",
     "OffsetSpec",
@@ -996,28 +996,6 @@ class GlmFitResult(BaseModel):
         return next((c for c in self.coefficients if c.term == "intercept"), None)
 
 
-class GbmEvalPoint(BaseModel):
-    """One row of the evaluation curve FR-MODEL-30 requires to be persisted.
-
-    Both parts on one row rather than two series, because the pair is the point: a metric
-    still improving on train while flat on holdout is the shape early stopping exists to
-    catch, and two separately-stored series can be joined wrongly.
-    """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    iteration: int = Field(ge=0)
-    metric: str
-    train: float | None = None
-    holdout: float | None = None
-
-    @model_validator(mode="after")
-    def _a_point_reports_at_least_one_part(self) -> GbmEvalPoint:
-        if self.train is None and self.holdout is None:
-            raise ValueError("an evaluation point reports neither train nor holdout")
-        return self
-
-
 class GbmFitResult(BaseModel):
     """What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).
 
@@ -1031,9 +1009,12 @@ class GbmFitResult(BaseModel):
     about the last one because omitting the offset at scoring time fails *silently* on both
     backends, and differently.
 
-    The evaluation curve is optional on the type because a fit without early stopping has
-    no curve to report; the fit path populates it whenever `early_stopping` was declared,
-    which is where the spec is in scope to say so.
+    The evaluation curve is **not** here. FR-MODEL-52 names it a GBM-specific *diagnostic*
+    and asks for train and holdout side by side, which is FR-MODEL-54's shape; it lives on
+    `GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place
+    there. `best_iteration` stays, because scoring needs it and diagnostics are not loaded
+    to score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code
+    agreeing with it rather than the schema being edited to match.)
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -1054,8 +1035,10 @@ class GbmFitResult(BaseModel):
     monotone_constraints: tuple[int, ...] = ()
     #: FR-MODEL-71. **Required**: the load-time assertion needs something to assert.
     base_margin: OffsetSpec
+    #: Kept here and **not** in the diagnostics: `predict_gbm` needs it to score
+    #: (`iteration_range` / `num_iteration`), and diagnostics are not loaded at scoring
+    #: time. The evaluation *curve* went the other way — see `GbmDiagnostics`.
     best_iteration: int = Field(ge=0)
-    eval_curve: tuple[GbmEvalPoint, ...] = ()
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)
@@ -1258,6 +1241,11 @@ class SpecProblemKind(enum.StrEnum):
     RESPONSE_MISSING = "response_missing"
     OFFSET_MISSING = "offset_missing"
     COMPLEXITY_LIMIT = "complexity_limit"
+    #: FR-MODEL-44's *objective applicability* half, live from the GBM slice. A GBM spec
+    #: naming an objective outside FR-MODEL-26's set, or a Custom Objective while none can
+    #: exist, is unfittable — and `wf-01` D2 says the caller learns that before a Job is
+    #: queued rather than from a job that fails three minutes in.
+    OBJECTIVE_UNSUPPORTED = "objective_unsupported"
 
 
 class SpecProblem(BaseModel):
