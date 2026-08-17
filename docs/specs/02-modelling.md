@@ -439,6 +439,27 @@ cap are different models, and must not collide on `spec_hash`.
 >   FR-MODEL-30 refuses training-set early stopping; reaching it by omitting the split is
 >   the same defect arrived at more quietly.
 
+> **Amended 2026-08-17 (W5, found by the `wf-01` journey test).** **A banded Factor is
+> ordinal, and `categorical_handling: "native"` does not apply to it.** Its levels are
+> coded in the Banding artifact's own `labels` order — boundary order, which is the order
+> of the underlying values — and the feature is handed to the backend as an ordered
+> integer, not as a categorical.
+>
+> Both halves were wrong before, and the example above is the one that failed. Coded
+> alphabetically, `"10-49"` sorts second, between `"0-1"` and `"2-4"`, so a monotone
+> constraint on `driver_age_banded` would hold in the alphabet — and it would still fit,
+> still persist `-1`, and still read as an actuarial judgement. Declared categorical it
+> cannot hold at all: **LightGBM refuses monotone constraints on a categorical feature and
+> does so by aborting the process** (`[LightGBM] [Fatal] The output cannot be monotone with
+> respect to categorical features`, verified on 4.7.0), so the constraint this very example
+> declares was unreachable on the secondary backend.
+>
+> FR-MODEL-32 is unaffected: it refuses the silent label-encoding of an **unordered**
+> categorical, and a band is ordered with its map persisted. FR-MODEL-31's dtype
+> expectations carry the distinction — `f64` numeric, `ord` ordered codes, `cat` native
+> categorical — because scoring must declare exactly what fitting declared, and the
+> encoding maps alone cannot say which a coded feature is.
+
 ### 4.5 Custom objective — `template` catalogue
 
 Shipped templates, each with analytic gradient/hessian in `pricing-core` (FR-MODEL-39):

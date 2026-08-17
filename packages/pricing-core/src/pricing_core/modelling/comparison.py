@@ -43,6 +43,8 @@ from model_schema import (
     DoubleLift,
     DoubleLiftBin,
     Factor,
+    GbmFitResult,
+    GbmSpec,
     GlmFitResult,
     GlmSpec,
     Grouping,
@@ -78,11 +80,22 @@ class ComparisonCandidate:
     """
 
     ref: str
-    fit: GlmFitResult
-    spec: GlmSpec
+    fit: GlmFitResult | GbmFitResult
+    spec: GlmSpec | GbmSpec
     factors: tuple[Factor, ...]
     bandings: Mapping[UUID, Banding] = field(default_factory=dict)
     groupings: Mapping[UUID, Grouping] = field(default_factory=dict)
+    #: Required for a GBM and meaningless for a GLM: the booster is the model, and this
+    #: package is handed artifacts rather than the ids it would need to fetch them.
+    booster: bytes | None = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.fit, GbmFitResult) and self.booster is None:
+            raise ModellingError(
+                "MODELS_NOT_COMPARABLE",
+                f"{self.ref} is a GBM and carries no booster bytes, so it cannot score the "
+                "holdout. A GLM's coefficients are its fit result; a GBM's are not.",
+            )
 
 
 def compare_models(
@@ -202,6 +215,28 @@ def _refuse_an_incomparable_set(
 
 
 def _score(candidate: ComparisonCandidate, holdout: pl.DataFrame) -> npt.NDArray[np.float64]:
+    """One candidate's holdout predictions, on the mean scale, whichever kind it is.
+
+    `wf-01` E1 compares the GLM against the GBM, which is the comparison the phase exists
+    for — an actuary weighing a booster's lift against a GLM's transparency. This dispatch
+    is all that separated the two: everything below is computed from `μ` and the response.
+    """
+    if isinstance(candidate.fit, GbmFitResult):
+        from pricing_core.modelling.gbm import predict_gbm
+
+        assert candidate.booster is not None  # `__post_init__` refuses the alternative
+        return np.asarray(
+            predict_gbm(
+                candidate.fit,
+                candidate.booster,
+                holdout,
+                candidate.factors,
+                bandings=candidate.bandings,
+                groupings=candidate.groupings,
+            ).to_numpy(),
+            dtype=np.float64,
+        )
+    assert isinstance(candidate.spec, GlmSpec)
     return predict_glm(
         candidate.fit,
         holdout,
@@ -210,6 +245,21 @@ def _score(candidate: ComparisonCandidate, holdout: pl.DataFrame) -> npt.NDArray
         bandings=candidate.bandings,
         groupings=candidate.groupings,
     )
+
+
+def _family(spec: GlmSpec | GbmSpec) -> tuple[str, float]:
+    """The deviance family and Tweedie power a spec implies, either way it is spelled.
+
+    A GLM declares its family; a GBM's objective *is* the family, in the backend's
+    vocabulary, and `objective_family` already owns that translation. Deriving it here
+    rather than requiring the caller to pass one keeps the comparison's deviance column
+    computed the same way as each model's own diagnostics.
+    """
+    if isinstance(spec, GbmSpec):
+        from pricing_core.modelling.gbm import objective_family
+
+        return objective_family(spec)
+    return spec.family, float(spec.family_params.get("power", 1.5))
 
 
 # -- metrics ------------------------------------------------------------------------------
@@ -234,14 +284,12 @@ def _metrics(
         mu = predicted[candidate.ref]
         expected = float(np.sum(mu))
         gini, gini_normalised = _gini(actual, mu, exposure)
-        power = float(candidate.spec.family_params.get("power", 1.5))
+        family, power = _family(candidate.spec)
         by_ref[candidate.ref] = {
             "ae_overall": (float(np.sum(actual)) / expected) if expected > 0 else None,
             "gini": gini,
             "gini_normalised": gini_normalised,
-            "holdout_deviance": deviance(
-                actual, mu, family=candidate.spec.family, power=power
-            ),
+            "holdout_deviance": deviance(actual, mu, family=family, power=power),
             "rows": float(actual.size),
         }
 
@@ -363,9 +411,21 @@ def _relativity_differences(
     A level one model does not have gets `None`, not `1.0`. Reporting the absent relativity as
     "no effect" is the defect the spine audit found in `RelativityLevel`, and it would be
     worse here — a difference of 0.0 says the two models agree.
+
+    **Only models that have relativities appear**, and with fewer than two the section is
+    empty. A booster has no coefficient table: its factor effects are the transparency
+    artifact's GLM approximation (FR-MODEL-34), which is a *different* model fitted for the
+    purpose and would be read here as the GBM's own relativities. An empty section says the
+    comparison has nothing to show; a column of nulls beside a GLM would say the GBM priced
+    none of these levels, which is false.
     """
+    with_relativities = [c for c in candidates if isinstance(c.fit, GlmFitResult)]
+    if len(with_relativities) < 2:
+        return ()
+
     levels: dict[tuple[str, str], dict[str, float | None]] = {}
-    for candidate in candidates:
+    for candidate in with_relativities:
+        assert isinstance(candidate.fit, GlmFitResult)
         for factor, entries in candidate.fit.relativities.items():
             for entry in entries:
                 levels.setdefault((factor, entry.level), {})[candidate.ref] = entry.relativity
@@ -373,7 +433,8 @@ def _relativity_differences(
     rows: list[RelativityDifference] = []
     for (factor, level), by_ref in levels.items():
         values = tuple(
-            ComparisonValue(model_ref=c.ref, value=by_ref.get(c.ref)) for c in candidates
+            ComparisonValue(model_ref=c.ref, value=by_ref.get(c.ref))
+            for c in with_relativities
         )
         present = [v.value for v in values if v.value is not None]
         rows.append(

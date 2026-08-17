@@ -24,6 +24,8 @@ import polars as pl
 import pytest
 
 from model_schema import (
+    Banding,
+    BandingMethod,
     EarlyStopping,
     Factor,
     FactorType,
@@ -42,10 +44,12 @@ EXPOSURE = OffsetSpec(kind="log_column", column="exposure_years")
 
 
 def _factor(slug: str, column: str, **over: object) -> Factor:
-    return Factor(
-        id=uuid4(), slug=slug, dataset_id=uuid4(), version=1,
-        type=FactorType.IDENTITY, source_columns=(column,), **over,
-    )
+    fields: dict[str, object] = {
+        "id": uuid4(), "slug": slug, "dataset_id": uuid4(), "version": 1,
+        "type": FactorType.IDENTITY, "source_columns": (column,),
+    }
+    fields.update(over)
+    return Factor(**fields)  # type: ignore[arg-type]
 
 
 FACTORS = [_factor("area", "area"), _factor("driv_age", "driv_age")]
@@ -254,6 +258,80 @@ def test_monotone_constraints_are_derived_from_the_factors_and_hold(backend: str
     })
     predictions = predict_gbm(fit.result, fit.booster_bytes, sweep).to_numpy()
     assert np.all(np.diff(predictions) >= -1e-12), f"{backend}: the constraint did not hold"
+
+
+LICENCE_BANDING = Banding(
+    id=uuid4(), slug="licence-years", dataset_id=uuid4(), version=1,
+    column="licence_years", method=BandingMethod.MANUAL,
+    boundaries=(0.0, 2.0, 5.0, 10.0, 50.0),
+    labels=("0-1", "2-4", "5-9", "10-49"),
+)
+
+
+def _licence_data(n: int = 8_000, seed: int = 20260817) -> pl.DataFrame:
+    """A book whose frequency falls with licence years — the effect the constraint names."""
+    rng = np.random.default_rng(seed)
+    exposure = rng.uniform(0.1, 1.0, n)
+    years = rng.uniform(0.0, 49.0, n)
+    eta = np.log(exposure) - 1.4 - 0.06 * years
+    return pl.DataFrame({
+        "exposure_years": exposure,
+        "licence_years": years,
+        "claim_count": rng.poisson(np.exp(eta)).astype(float),
+    })
+
+
+@pytest.mark.req("FR-MODEL-28")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_monotone_direction_holds_on_a_banded_factor(backend: str) -> None:
+    """A banding is **ordered**, so FR-MODEL-28 applies to it — `02` §4.4's own example is a
+    monotone constraint on `driver_age_banded`, and `wf-01` C7 declares one.
+
+    The order has to come from the Banding artifact. Encoding the levels with a plain
+    `sorted()` puts `"10-49"` second, between `"0-1"` and `"2-4"`, so a decreasing
+    constraint would hold in the alphabet and mean nothing about licence years — and the
+    fit would still succeed, still persist `-1`, and still look right. The labels here are
+    chosen so the two orders differ; sweeping the bands in the artifact's order is the only
+    check that notices.
+
+    Found by the `wf-01` journey test on 2026-08-17: the guard refused this constraint
+    outright, because the encoding it was defending against was the module's own.
+    """
+    banded = _factor(
+        "licence_years_banded", "licence_years", type=FactorType.BANDING,
+        banding_id=LICENCE_BANDING.id,
+        monotonic_direction=MonotonicDirection.DECREASING,
+        monotonic_rationale="claim frequency falls with driving experience",
+    )
+    bandings = {LICENCE_BANDING.id: LICENCE_BANDING}
+    spec = _spec(backend, response_column="claim_count", factors=(banded.id,))
+    fit = fit_gbm(_licence_data(), spec, [banded], bandings=bandings)
+
+    assert sorted(LICENCE_BANDING.labels) != list(LICENCE_BANDING.labels), (
+        "the labels no longer distinguish artifact order from alphabetical order, so this "
+        "test would pass against the bug it exists for"
+    )
+    codes = fit.result.categorical_maps["licence_years_banded"]
+    assert sorted(codes, key=lambda level: codes[level]) == list(LICENCE_BANDING.labels)
+
+    position = fit.result.feature_order.index("licence_years_banded")
+    assert fit.result.monotone_constraints[position] == -1
+
+    # One row per band, swept in the artifact's order, at the midpoint of each.
+    midpoints = [
+        (lower + upper) / 2
+        for lower, upper in zip(
+            LICENCE_BANDING.boundaries, LICENCE_BANDING.boundaries[1:], strict=False
+        )
+    ]
+    sweep = pl.DataFrame({
+        "exposure_years": np.ones(len(midpoints)),
+        "licence_years": midpoints,
+    })
+    predictions = predict_gbm(
+        fit.result, fit.booster_bytes, sweep, [banded], bandings=bandings
+    ).to_numpy()
+    assert np.all(np.diff(predictions) <= 1e-12), f"{backend}: the constraint did not hold"
 
 
 @pytest.mark.req("FR-MODEL-28")

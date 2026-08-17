@@ -218,7 +218,39 @@ edit. Used to revert a deliberately-injected defect it silently discards the who
 in that file — the injection *and* everything written this session. Copy the file aside
 first (`cp file /tmp/file.bak`) and restore from the copy.
 
+## A journey test pins the steps it cannot drive, inverted
+
+An end-to-end journey (FR-OVR-17(ii)) will always reach steps the platform cannot execute yet.
+Skipping them, or naming them in a comment, leaves nothing that notices when they arrive —
+`wf-01`'s D7 and E4/E5 would have stayed absent from the journey long after the slices landed.
+
+Write each as an assertion that **passes while the capability is absent and fails the day it
+lands**:
+
+```python
+with pytest.raises(FactorResolutionError) as unbuilt:      # D7 — interaction factors
+    resolve_factors(frame, [interaction])
+assert "interaction" in str(unbuilt.value).lower()
+
+assert not hasattr(model_schema, "PerilStructure"), (      # E4/E5 — no contract at all
+    "E4/E5 are buildable now — extend the journey test above rather than deleting this"
+)
+```
+
+The failure message is the handover: it tells the slice that broke it what to do. This is what
+makes "FR-OVR-17(ii) partial" a claim with an expiry rather than a permanent excuse.
+
+**And a journey test earns its cost by producing states no fixture does.** `wf-01`'s B8/B9 —
+a warning, acknowledged, then promoted — was the first thing in the suite to ask for that
+sequence, and it found a deadlock that had made *every* dataset version with one warning
+unpromotable since the spec was amended three days earlier. Fixtures produced all-pass or a
+hard fail; nothing in between.
+
 ## Verified
+
+2026-08-17 — W5's `wf-01` journey slice, compose stack up: **961 Python tests** and the
+frontend's 105. The inverted-assertion procedure above came from the three steps `wf-01`
+cannot drive; the paragraph after it from the defect the journey found on its first run.
 
 2026-08-17 — W5's comparison slice, compose stack up: **855 Python tests** and the frontend's
 105, plus both alembic directions. Two new checks proved by injection (the shared-split refusal

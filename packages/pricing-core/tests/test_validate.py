@@ -144,10 +144,22 @@ def test_a_clean_run_passes() -> None:
 
 
 @pytest.mark.req("FR-DATA-17")
-def test_an_unacknowledged_warning_does_not_permit_validation() -> None:
-    """`01` §4.6: `pass_with_warnings` requires *every* warn acknowledged.
+def test_an_unacknowledged_warning_is_pass_with_warnings_and_still_blocks_promotion() -> (
+    None
+):
+    """`01` §4.6, as amended 2026-08-14: the two questions are separate.
 
-    An unacknowledged warning is not a mild pass — it is a finding nobody has accepted.
+    `overall` is a function of the rule results alone, so a warning is
+    `pass_with_warnings` from the moment the report is written — the state *every* report
+    with warnings is in before anyone has looked at it. Whether the version may be promoted
+    is the second question, and FR-DATA-17 answers it at promotion from
+    `unacknowledged_warnings`, which is a fact about the report rather than inside it.
+
+    This test asserted `FAIL` until 2026-08-17, encoding the pre-amendment rule. It was not
+    a harmless stale assertion: the property it pinned deadlocked promotion for every
+    dataset version carrying a warning, since `dataset.validate` reads
+    `permits_validation`, acknowledgement happens afterwards, and re-validating regenerates
+    the warning unacknowledged. `wf-01` B8/B9 is what asked for the state that shows it.
     """
     warning = _rule("range", slug="warn-rule", severity=Severity.WARN,
                     target={"table": "policy_exposure", "column": "exposure_years"},
@@ -156,8 +168,8 @@ def test_an_unacknowledged_warning_does_not_permit_validation() -> None:
 
     assert report.results[0].outcome is RuleOutcome.WARN
     assert report.unacknowledged_warnings == 1
-    assert report.overall is OverallOutcome.FAIL
-    assert report.permits_validation is False
+    assert report.overall is OverallOutcome.PASS_WITH_WARNINGS
+    assert report.permits_validation is True
 
 
 @pytest.mark.req("FR-DATA-17")
@@ -458,7 +470,9 @@ def test_an_acknowledgement_does_not_carry_forward_to_the_next_report() -> None:
     assert second.id != accepted.id
     assert second.results[0].acknowledgement is None
     assert second.unacknowledged_warnings == 1
-    assert second.permits_validation is False
+    # The outcome is unchanged — it never depended on acknowledgement (§4.6, amended). What
+    # the fresh report loses is the acceptance, and that is what blocks promotion.
+    assert second.overall is OverallOutcome.PASS_WITH_WARNINGS
 
 
 @pytest.mark.req("FR-DATA-24")

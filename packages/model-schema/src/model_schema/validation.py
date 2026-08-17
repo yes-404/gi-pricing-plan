@@ -234,23 +234,40 @@ class ValidationReport(BaseModel):
 
     @property
     def overall(self) -> OverallOutcome:
-        """Derived, never assigned (`01` §4.6's invariants).
+        """Derived, never assigned, and **from the rule results alone** (`01` §4.6).
 
         An `error` is not a pass: FR-DATA-19 is explicit that an unrun rule is never
         treated as a pass, because "the rule that would have caught it timed out" and "the
-        rule passed" must never look the same in a report an actuary relies on.
+        rule passed" must never look the same in a report an actuary relies on. `fail`
+        outranks `error` when both are present — a definite failure is more actionable than
+        "a rule could not tell", and both block promotion identically.
+
+        **Corrected 2026-08-17 (W5, the `wf-01` journey test).** This property had been
+        wrong since `01` §4.6 was amended on 2026-08-14: it ranked `error` above `fail`, and
+        it folded acknowledgements in, returning `fail` for a report whose warnings were not
+        yet acknowledged. That is the *"pass_with_warnings iff every warn has an
+        acknowledgement"* rule the amendment removed, for the reason it gives — a verdict
+        that changes when somebody clicks acknowledge cannot live in an immutable artifact.
+
+        The consequence was a **deadlock**, and nothing had produced the state that reveals
+        it. `dataset.validate` concludes a failed validation from `permits_validation`, so a
+        report with any warning drove its version to `failed`; acknowledgement happens
+        afterwards, against a report whose version can no longer be promoted, and
+        re-validating produces a new report whose warnings are unacknowledged again. **Any
+        dataset version with a single warning could never reach `validated`.** Every fixture
+        in the suite produced all-pass or a hard fail; `wf-01` B8/B9 is the first thing that
+        asked for a warning and an acknowledgement, which is what a journey test is for.
+
+        Acknowledgement remains what it always was: a fact *about* a report, checked at
+        promotion (FR-DATA-17) through `unacknowledged_warnings`, never inside `overall`.
         """
         outcomes = {r.outcome for r in self.results}
-        if RuleOutcome.ERROR in outcomes:
-            return OverallOutcome.ERROR
         if RuleOutcome.FAIL in outcomes:
             return OverallOutcome.FAIL
+        if RuleOutcome.ERROR in outcomes:
+            return OverallOutcome.ERROR
         if RuleOutcome.WARN in outcomes:
-            return (
-                OverallOutcome.PASS_WITH_WARNINGS
-                if self.unacknowledged_warnings == 0
-                else OverallOutcome.FAIL
-            )
+            return OverallOutcome.PASS_WITH_WARNINGS
         return OverallOutcome.PASS
 
     @property

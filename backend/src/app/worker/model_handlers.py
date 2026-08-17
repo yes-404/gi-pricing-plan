@@ -348,21 +348,29 @@ async def _resolve_candidate(
     """
     from pricing_core.modelling.comparison import ComparisonCandidate
 
-    spec = GlmSpec.model_validate(row.spec)
+    spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
     factors = await model_service.load_factors(
         session, workspace_id=workspace_id, factor_ids=list(spec.factors)
     )
     if row.fit_result is None:
         raise PlatformError(
             "MODELS_NOT_COMPARABLE",
-            "A model with no coefficients cannot be compared",
+            "A model with no fit result cannot be compared",
             409,
             f"{row.model_family_slug}@{row.version} has no fit result.",
         )
+    fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+    # `wf-01` E1 compares the GLM against the GBM. A GLM's fit result *is* its model; a
+    # GBM's is a reference to the booster, so the bytes are fetched here — the resolution
+    # ADR-0001 keeps out of `pricing-core`, exactly like the factors and the frames.
+    booster = (
+        await blob_store.read(fit.booster_blob) if isinstance(fit, GbmFitResult) else None
+    )
     return ComparisonCandidate(
         ref=f"model:{row.model_family_slug}@{row.version}",
-        fit=GlmFitResult.model_validate(row.fit_result),
+        fit=fit,
         spec=spec,
+        booster=booster,
         factors=tuple(factors),
         bandings=await transform_service.load_bandings(
             session,

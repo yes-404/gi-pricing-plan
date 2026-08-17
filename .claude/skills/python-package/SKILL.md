@@ -89,6 +89,21 @@ backend works, the secondary does not, and a test suite that only exercised the 
 would report the pair healthy. Fixed with `sudo apt-get install -y libgomp1`, and declared
 as a step in `.github/workflows/python.yml` rather than left to the runner image.
 
+**A compiled dependency can `abort()` instead of raising.** LightGBM refuses a monotone
+constraint on a feature it was told is categorical by calling `Fatal`, which on 4.7.0 kills
+the interpreter:
+
+```
+[LightGBM] [Fatal] The output cannot be monotone with respect to categorical features
+Fatal Python error: Aborted
+```
+
+`pytest.raises` cannot catch it and the worker simply dies, so the *first* thing to try with
+an unexplained hard exit from a native library is the combination on its own, in a throwaway
+script — the message is printed before the abort, and it is the only place it appears. XGBoost
+accepts the same pair and silently grows a categorical split under a constraint that then does
+not hold, which is the more dangerous half.
+
 **After adding a compiled dependency, import it before writing anything against it.**
 `uv run python -c "import <pkg>; print(<pkg>.__version__)"` costs a second and is the whole
 check.
@@ -131,6 +146,10 @@ Ruff, line length 100. Match the surrounding code. Comments explain *why* — th
 the spec, and a comment restating the code is noise that rots.
 
 ## Verified
+
+2026-08-17 — W5's `wf-01` journey slice: the LightGBM abort above, found when a monotone
+constraint on a banded factor met `categorical_handling: "native"` for the first time. The
+procedure that found it is the one written above — the pair alone, in a throwaway script.
 
 2026-08-14 — re-verified on the rebuilt instance. Full gate green after
 `uv sync --all-packages --dev`: ruff clean, mypy 7 files clean, import-linter 3 kept /
