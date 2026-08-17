@@ -199,16 +199,66 @@ async def test_a_stochastic_derivation_without_a_seed_is_refused(
     database: Database, workspace_id
 ) -> None:
     """FR-OVR-8: identical inputs must give identical outputs. Without a recorded seed the
-    version cannot be reproduced."""
+    version cannot be reproduced.
+
+    Exercised on `split` because it is the only stochastic operation that gets as far as
+    the seed check — `sample` is refused a line earlier as unmaterialised (FR-DATA-45).
+    """
     actor = await _with_role(database, workspace_id, "analyst")
     _, parent_id = await _version(database, workspace_id, actor)
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as seed_exc:
             await datasets.derive_version(
                 session, workspace_id=workspace_id, actor=actor,
-                parent_version_id=parent_id, operation="sample", params={"fraction": 0.1},
+                parent_version_id=parent_id, operation="split",
+                params={"method": "random", "part": "train"},
             )
     assert seed_exc.value.title == "This derivation needs a seed"
+
+
+@pytest.mark.req("FR-DATA-45")
+@pytest.mark.parametrize("operation", ["sample", "filter", "join", "aggregate"])
+async def test_a_derivation_that_cannot_produce_its_rows_is_refused(
+    database: Database, workspace_id, operation: str
+) -> None:
+    """Negative, FR-DATA-45 (OQ-DATA-8, decided 2026-08-17): refusing beats succeeding.
+
+    Each of these used to return a version that recorded the operation and pointed at the
+    parent's blob, so a 1 % sample held 100 % of the rows and said nothing about it. A
+    derivation nobody performed cannot be reproduced or defended (FR-DATA-33), and the
+    failure is silent — the version validates, profiles and fits, and every number it
+    produces is the parent's.
+    """
+    actor = await _with_role(database, workspace_id, "analyst")
+    _, parent_id = await _version(database, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await datasets.derive_version(
+                session, workspace_id=workspace_id, actor=actor,
+                parent_version_id=parent_id, operation=operation,
+                params={"seed": 1, "fraction": 0.01},
+            )
+    assert exc.value.code == "DERIVATION_NOT_MATERIALISED"
+    assert exc.value.status_code == 501
+
+
+@pytest.mark.req("FR-DATA-44")
+async def test_split_is_the_one_derivation_that_is_not_refused(
+    database: Database, workspace_id
+) -> None:
+    """The positive half, and the guard against the refusal widening to everything.
+
+    `UNMATERIALISED_OPERATIONS` is `DERIVED_OPERATIONS` minus `split`; a refusal computed
+    by subtraction is exactly the kind that quietly swallows the one case that works.
+    """
+    actor = await _with_role(database, workspace_id, "analyst")
+    _, parent_id = await _version(database, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        child = await datasets.derive_version(
+            session, workspace_id=workspace_id, actor=actor, parent_version_id=parent_id,
+            operation="split", params={"part": "train", "seed": 1},
+        )
+    assert child.derived_from["operation"] == "split"
 
 
 @pytest.mark.req("FR-DATA-34")
@@ -237,7 +287,7 @@ async def test_a_derived_version_starts_in_draft_and_must_be_validated_itself(
     async with database.unit_of_work() as session:
         child = await datasets.derive_version(
             session, workspace_id=workspace_id, actor=actor, parent_version_id=parent_id,
-            operation="filter", params={"expression": "exposure_years > 0"},
+            operation="split", params={"part": "train", "seed": 7},
         )
         child_id = child.id
 

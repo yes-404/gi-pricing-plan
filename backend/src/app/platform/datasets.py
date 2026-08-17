@@ -623,6 +623,11 @@ async def derive_version(
     it must be validated in its own right: a stratified sample of a validated dataset can
     break rules the parent passed — an exposure band with two claims in the sample and two
     thousand in the parent fails a plausibility rule the parent never came near.
+
+    It inherits nothing about its **rows** either, and only `split` can currently produce
+    its own (FR-DATA-44). The rest are refused here — FR-DATA-45, the decided half of
+    OQ-DATA-8 — because a version recording an operation nobody performed is a derivation
+    that cannot be reproduced or defended, and it fails silently: the numbers look right.
     """
     if operation not in DERIVED_OPERATIONS:
         raise PlatformError(
@@ -631,6 +636,16 @@ async def derive_version(
             422,
             f"{operation!r} is not one of {sorted(DERIVED_OPERATIONS)} (FR-DATA-33). "
             "A derivation the platform cannot describe is one it cannot reproduce.",
+        )
+    if operation in UNMATERIALISED_OPERATIONS:
+        raise PlatformError(
+            "DERIVATION_NOT_MATERIALISED",
+            "This derivation is not built yet",
+            501,
+            f"{operation!r} is declared by FR-DATA-33 but the platform cannot yet produce "
+            "its rows, so it is refused rather than returning a version that claims the "
+            "operation and holds the parent's data unchanged (FR-DATA-45, OQ-DATA-8). "
+            "`split` is materialised (FR-DATA-44).",
         )
     if operation in _SEEDED_OPERATIONS and "seed" not in params:
         raise PlatformError(
@@ -654,7 +669,9 @@ async def derive_version(
             "params": params,
         },
     )
-    # Inherited from the parent (FR-DATA-34) — schema and rule set, never validity.
+    # Inherited from the parent (FR-DATA-34) — schema and rule set, never validity. The
+    # rows are the caller's to materialise: `split` replaces this wholesale (FR-DATA-44),
+    # and every other operation was refused above (FR-DATA-45).
     child.tables = parent.tables
     await session.flush()
     return child
@@ -669,6 +686,12 @@ DERIVED_OPERATIONS: frozenset[str] = frozenset(
 
 #: The stochastic ones. FR-OVR-8 requires a seed on anything that could vary.
 _SEEDED_OPERATIONS: frozenset[str] = frozenset({"sample", "split"})
+
+#: Declared, but unable to produce their own rows — refused until they can (FR-DATA-45,
+#: OQ-DATA-8 decided 2026-08-17). Derived by subtraction from `DERIVED_OPERATIONS` rather
+#: than listed, so materialising one is a single edit in one place and cannot leave a
+#: refusal behind for an operation that now works.
+UNMATERIALISED_OPERATIONS: frozenset[str] = DERIVED_OPERATIONS - {"split"}
 
 
 async def lineage_of(

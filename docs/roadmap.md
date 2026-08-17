@@ -1410,7 +1410,7 @@ diagnostics_id` — was unmeetable, which OQ-MODEL-8 had cited as its own worked
 | Found | What it was |
 |---|---|
 | **`record_split` had no route** | FR-DATA-36's service function, its table and its negative tests have existed since W4; no HTTP route reached it and `01` §5.1 declared none. The endpoint audit compares the spec's table against the published contract, so an endpoint missing from *both* is invisible to it — the same blind spot that hid `01`'s reference publish lifecycle, and W4 closed through it. Now `POST`/`GET /dataset-versions/{id}/splits`, with the §5.1 rows |
-| **Derived versions inherited their parent's data** | `dataset.derive` recorded the operation and set `child.tables = parent.tables`, conflating FR-DATA-34's "inherits schema, Data Dictionary and Rule Set" with inheriting the *rows*. A 1 % sample held 100 % of the rows; a train/test split produced two versions each containing everything. A model "fitted on train" was fitted on all of it, and its holdout contained every training row — diagnostics that look excellent and mean nothing. **`split` is materialised now** (FR-DATA-44); `sample`, `filter`, `join` and `aggregate` are **not**, and are OQ-DATA-8 |
+| **Derived versions inherited their parent's data** | `dataset.derive` recorded the operation and set `child.tables = parent.tables`, conflating FR-DATA-34's "inherits schema, Data Dictionary and Rule Set" with inheriting the *rows*. A 1 % sample held 100 % of the rows; a train/test split produced two versions each containing everything. A model "fitted on train" was fitted on all of it, and its holdout contained every training row — diagnostics that look excellent and mean nothing. **`split` is materialised now** (FR-DATA-44); `sample`, `filter`, `join` and `aggregate` are **not**, and were OQ-DATA-8 — **decided 2026-08-17**: each is materialised in the slice that first needs it, and refused with `DERIVATION_NOT_MATERIALISED` until then (FR-DATA-45), so no version can claim an operation nobody performed |
 
 | Delivered | Evidence |
 |---|---|
@@ -1808,7 +1808,7 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, **OQ-MODEL-8**, **OQ-OVR-7**, **OQ-MODEL-9** | 9 (3 open) |
+| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔ *both 2026-08-17*, **OQ-MODEL-8**, **OQ-MODEL-9** | 10 (2 open) |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |

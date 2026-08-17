@@ -82,6 +82,12 @@ DATA_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "REFERENCE_VERSION_NOT_PINNED",
         "SOURCE_UNREACHABLE",
         "REJECT_RATE_EXCEEDED",
+        # OQ-DATA-8, decided 2026-08-17. Every declared derivation except `split` is
+        # refused until it is materialised (FR-DATA-45), and the refusal needs its own
+        # code rather than `VALIDATION_FAILED`: the request is well formed and will be
+        # valid unchanged once the operation is built, which is the opposite of what a
+        # validation failure tells a caller.
+        "DERIVATION_NOT_MATERIALISED",
     }
 )
 
