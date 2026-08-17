@@ -1,8 +1,9 @@
 """The `model.*` Job handlers (`02` §3.4, `07` FR-PLAT-7).
 
-One handler so far: `model.fit`. It reads the version's parquet, resolves the spec's
-factors against it, fits with `pricing-core`, and records the numbers on the model row that
-`reserve_model` already allocated.
+Two handlers: `model.fit` reads the version's parquet, resolves the spec's factors against
+it, fits with `pricing-core`, and records the numbers on the model row that `reserve_model`
+already allocated. `model.compare` scores two or more fitted models over the holdout they
+share and records the comparison artifact (FR-MODEL-56).
 
 **The reservation happens in the request, not here**, so `02` R1 — fitting requires a
 `validated` Dataset Version — is answered before a Job exists. A caller who is refused
@@ -21,6 +22,7 @@ import polars as pl
 
 from app.db.models import BlobRow, DatasetSplitRow, DatasetVersionRow, ModelRow
 from app.errors import PlatformError
+from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import modelling as model_service
 from app.platform import transformations as transform_service
@@ -31,6 +33,7 @@ from model_schema import (
     Banding,
     Diagnostics,
     Factor,
+    GlmFitResult,
     GlmSpec,
     Grouping,
     JobKind,
@@ -282,9 +285,133 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     return JobResult(kind="artifact", ref=f"model:{model_id}")
 
 
+async def _resolve_candidate(
+    session: Any, blob_store: Any, *, workspace_id: UUID, row: ModelRow
+) -> Any:
+    """One model, resolved to everything `compare_models` needs (ADR-0001).
+
+    The same resolution `_fit` does, for the same reason: `pricing-core` is handed
+    dataframes and artifacts, never ids, because resolving an id needs a database it may not
+    import.
+    """
+    from pricing_core.modelling.comparison import ComparisonCandidate
+
+    spec = GlmSpec.model_validate(row.spec)
+    factors = await model_service.load_factors(
+        session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+    )
+    if row.fit_result is None:
+        raise PlatformError(
+            "MODELS_NOT_COMPARABLE",
+            "A model with no coefficients cannot be compared",
+            409,
+            f"{row.model_family_slug}@{row.version} has no fit result.",
+        )
+    return ComparisonCandidate(
+        ref=f"model:{row.model_family_slug}@{row.version}",
+        fit=GlmFitResult.model_validate(row.fit_result),
+        spec=spec,
+        factors=tuple(factors),
+        bandings=await transform_service.load_bandings(
+            session,
+            workspace_id=workspace_id,
+            ids=[f.banding_id for f in factors if f.banding_id],
+        ),
+        groupings=await transform_service.load_groupings(
+            session,
+            workspace_id=workspace_id,
+            ids=[f.grouping_id for f in factors if f.grouping_id],
+        ),
+    )
+
+
+def _compare(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`model.compare` — align two or more models on the holdout they share (FR-MODEL-56).
+
+    The comparability rules are checked in `request_comparison` before this Job exists, and
+    **again** here through `compare_models`. Both are needed: the first so a caller gets a
+    409 rather than a failed job, the second because a Job sits in a queue while the world
+    moves, and because `compare_models` is reachable from a notebook where the platform is
+    not.
+    """
+    progress = _bridge(callback)
+    blob_store = progress.blob_store
+    actor, workspace_id = _actor(parameters), _workspace(parameters)
+    model_ids = [UUID(i) for i in parameters["model_ids"]]
+    baseline_id = UUID(parameters["baseline_id"])
+    progress.update(0.05, "loading the candidates")
+
+    async def load() -> tuple[list[Any], pl.DataFrame, str]:
+        async with progress.database.session() as session:
+            rows: list[ModelRow] = []
+            for model_id in model_ids:
+                row = await session.get(ModelRow, model_id)
+                if row is None or row.workspace_id != workspace_id:
+                    raise PlatformError(
+                        "NOT_FOUND", "Model not found", 404, f"No model {model_id}."
+                    )
+                rows.append(row)
+
+            candidates = [
+                await _resolve_candidate(
+                    session, blob_store, workspace_id=workspace_id, row=row
+                )
+                for row in rows
+            ]
+            baseline = next(
+                c for c, row in zip(candidates, rows, strict=True) if row.id == baseline_id
+            )
+
+            # The holdout, from the split every candidate cites. Read through the same
+            # `_split_frames` the fit uses, so the frame compared on is the frame trained
+            # against — a second reader of the same split could drift from the first.
+            spec = candidates[0].spec
+            version = await dataset_service.fittable_or_refuse(
+                session, workspace_id=workspace_id, version_id=spec.dataset_version_id
+            )
+            parent = await _frame_of(session, blob_store, version)
+            _, holdout = await _split_frames(
+                session, blob_store, workspace_id=workspace_id, spec=spec, parent=parent
+            )
+            return candidates, holdout, baseline.ref
+
+    candidates, holdout, baseline_ref = progress.run_on_loop(load())
+    progress.update(0.35, "scoring the holdout")
+
+    from pricing_core.modelling import ModellingError, compare_models
+
+    try:
+        summary = compare_models(candidates, holdout, baseline=baseline_ref)
+    except ModellingError as exc:
+        # `pricing-core` names the failure; the platform gives it the HTTP shape, so a Job's
+        # stored error carries `02` §5.1's code rather than a library traceback.
+        raise PlatformError(
+            exc.code, "The models could not be compared", 409, str(exc)
+        ) from exc
+
+    progress.update(0.9, "storing the comparison")
+
+    async def store() -> UUID:
+        async with progress.database.unit_of_work() as session:
+            row = await comparison_service.record_comparison(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                summary=summary,
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+            )
+            return row.id
+
+    comparison_id = progress.run_on_loop(store())
+    progress.update(1.0, "done")
+    return JobResult(kind="artifact", ref=f"model_comparison:{comparison_id}")
+
+
 def register_model_handlers() -> None:
     """Register the `model.*` handlers, idempotently — see `register_data_handlers`."""
     from app.worker import handlers as handler_registry
 
     if JobKind.MODEL_FIT not in handler_registry.HANDLERS:
         register_handler(JobKind.MODEL_FIT, _fit)
+    if JobKind.MODEL_COMPARE not in handler_registry.HANDLERS:
+        register_handler(JobKind.MODEL_COMPARE, _compare)

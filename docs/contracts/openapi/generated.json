@@ -1016,6 +1016,166 @@
         "title": "ColumnProfile",
         "type": "object"
       },
+      "CompareModels": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The model double lift is measured against. Defaults to the first.",
+            "title": "Baseline Id"
+          },
+          "model_ids": {
+            "description": "Two or more models fitted on the same holdout (FR-MODEL-56), in the order the table should present them.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Model Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "model_ids"
+        ],
+        "title": "CompareModels",
+        "type": "object"
+      },
+      "ComparisonMetric": {
+        "additionalProperties": false,
+        "description": "One metric, aligned across every model in the comparison (FR-MODEL-56).",
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/MetricDirection"
+          },
+          "leader": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Leader"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonValue"
+            },
+            "minItems": 2,
+            "title": "Values",
+            "type": "array"
+          },
+          "weighting": {
+            "$ref": "#/components/schemas/Weighting"
+          }
+        },
+        "required": [
+          "metric",
+          "weighting",
+          "direction",
+          "values"
+        ],
+        "title": "ComparisonMetric",
+        "type": "object"
+      },
+      "ComparisonSummary": {
+        "additionalProperties": false,
+        "description": "What a comparison found, before the platform gives it an identity.\n\nThe `DiagnosticsResult` split, for the same reason: `pricing-core` computes and does not\nallocate ids, know about rows, or read a clock (ADR-0001).",
+        "properties": {
+          "baseline_ref": {
+            "title": "Baseline Ref",
+            "type": "string"
+          },
+          "double_lift": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DoubleLift"
+            },
+            "title": "Double Lift",
+            "type": "array"
+          },
+          "holdout_rows": {
+            "minimum": 1.0,
+            "title": "Holdout Rows",
+            "type": "integer"
+          },
+          "metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ComparisonMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "model_refs": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Model Refs",
+            "type": "array"
+          },
+          "relativity_differences": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RelativityDifference"
+            },
+            "title": "Relativity Differences",
+            "type": "array"
+          },
+          "split_ref": {
+            "$ref": "#/components/schemas/SplitRef"
+          }
+        },
+        "required": [
+          "model_refs",
+          "baseline_ref",
+          "split_ref",
+          "holdout_rows"
+        ],
+        "title": "ComparisonSummary",
+        "type": "object"
+      },
+      "ComparisonValue": {
+        "additionalProperties": false,
+        "description": "One model's reading of one quantity.\n\n`value` is nullable and the model is always present — see the module docstring. The ref is\nthe canonical `{type}:{slug}@{version}` string (ID-3), so a comparison read years later\nstill names exactly which model versions it held.",
+        "properties": {
+          "model_ref": {
+            "title": "Model Ref",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "model_ref"
+        ],
+        "title": "ComparisonValue",
+        "type": "object"
+      },
       "ComplexityDiagnostic": {
         "additionalProperties": false,
         "description": "Factor and parameter counts against whatever thresholds are in force (FR-MODEL-81).\n\nRecorded on **every** fit. The thresholds are stored with the measurements because they\nare workspace settings that change: a fit judged against no limit and a fit judged\nagainst a limit of 40 are different events, and a diagnostic that stored only the\ncounts would render them identically a year later.",
@@ -2133,6 +2293,89 @@
           "data_dictionary"
         ],
         "title": "DictionaryUpdate",
+        "type": "object"
+      },
+      "DoubleLift": {
+        "additionalProperties": false,
+        "description": "One challenger against the baseline (FR-MODEL-56, and FR-MODEL-50 as amended).",
+        "properties": {
+          "baseline_ref": {
+            "title": "Baseline Ref",
+            "type": "string"
+          },
+          "bins": {
+            "items": {
+              "$ref": "#/components/schemas/DoubleLiftBin"
+            },
+            "minItems": 1,
+            "title": "Bins",
+            "type": "array"
+          },
+          "challenger_ref": {
+            "title": "Challenger Ref",
+            "type": "string"
+          },
+          "weighting": {
+            "$ref": "#/components/schemas/Weighting"
+          }
+        },
+        "required": [
+          "baseline_ref",
+          "challenger_ref",
+          "weighting",
+          "bins"
+        ],
+        "title": "DoubleLift",
+        "type": "object"
+      },
+      "DoubleLiftBin": {
+        "additionalProperties": false,
+        "description": "One bin of a double-lift chart: what each model said, and what happened.\n\nBins are ordered by the **ratio** of the two predictions, not by either prediction — that\nordering is what makes the chart answer \"where the models disagree, which one is right?\".\nA chart binned by predicted value would show two lift curves side by side, which is a\ndifferent and much weaker question.",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "number"
+          },
+          "baseline_predicted": {
+            "title": "Baseline Predicted",
+            "type": "number"
+          },
+          "bin": {
+            "minimum": 1.0,
+            "title": "Bin",
+            "type": "integer"
+          },
+          "challenger_predicted": {
+            "title": "Challenger Predicted",
+            "type": "number"
+          },
+          "exposure_years": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Years"
+          },
+          "rows": {
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bin",
+          "rows",
+          "actual",
+          "baseline_predicted",
+          "challenger_predicted"
+        ],
+        "title": "DoubleLiftBin",
         "type": "object"
       },
       "DryRunRequest": {
@@ -3555,6 +3798,17 @@
         "title": "Me",
         "type": "object"
       },
+      "MetricDirection": {
+        "description": "Which way is better, declared with the metric rather than assumed by the reader.\n\n`CLOSER_TO_ONE_IS_BETTER` exists for A/E, and it is the reason this enum is not a\nboolean: an A/E of 1.4 and one of 0.6 are equally wrong, and every \"higher is better\"\ntable this repository could have written would have ranked 1.4 above 1.0.\n\n`NOT_ORDERED` is for the metrics that are context rather than score — the holdout row\ncount is the same number for every model on a shared split, and a winner on it would be\nan artefact of tie-breaking.",
+        "enum": [
+          "higher_is_better",
+          "lower_is_better",
+          "closer_to_one_is_better",
+          "not_ordered"
+        ],
+        "title": "MetricDirection",
+        "type": "string"
+      },
       "Model": {
         "additionalProperties": false,
         "description": "A fitted model for one peril and response (`02` §4.8).\n\nImmutable once fitted (R2). Refitting produces a **new version** with\n`parent_model_id` set; there is no operation that edits a coefficient, which is what\nmakes a Rating Version's reference to a model version mean something.",
@@ -3664,6 +3918,44 @@
           "dataset_version_id"
         ],
         "title": "Model",
+        "type": "object"
+      },
+      "ModelComparison": {
+        "additionalProperties": false,
+        "description": "The persisted comparison artifact (`02` §4.11, FR-MODEL-56).\n\nImmutable, and enforced at the privilege layer as well as here (FR-DATA-42): an approval\ncites this, and evidence that can change after the approval is not evidence.\n\nIt has no slug and no version of its own, for the reason `Diagnostics` has none — it is\nalways reached by id, from the Job that produced it or the approval that cites it.",
+        "properties": {
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ComparisonSummary"
+          }
+        },
+        "required": [
+          "id",
+          "computed_at",
+          "summary"
+        ],
+        "title": "ModelComparison",
         "type": "object"
       },
       "ModelCreate": {
@@ -4810,6 +5102,46 @@
           "version"
         ],
         "title": "ReferenceTableVersion",
+        "type": "object"
+      },
+      "RelativityDifference": {
+        "additionalProperties": false,
+        "description": "How the models price one level of one factor differently (FR-MODEL-56).\n\nThe comparison an actuary actually argues from: two models can score almost identically\nand disagree by 15 % on young drivers, and the aggregate metrics cannot show that.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "max_abs_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Abs Difference"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonValue"
+            },
+            "minItems": 2,
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "factor",
+          "level",
+          "values"
+        ],
+        "title": "RelativityDifference",
         "type": "object"
       },
       "RelativityLevel": {
@@ -12053,6 +12385,207 @@
           }
         },
         "summary": "Fit a model",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/compare": {
+      "post": {
+        "description": "**202** with a Job (`wf-01` E1, FR-MODEL-56).\n\n202 rather than 200 because the comparison is work: it reads the holdout and scores every\ncandidate over it. `POST /models` draws the same line for the same reason — 202 when work\nstarts, 200 when the answer already exists.\n\nEvery comparability rule is answered **here**, before a Job exists: two or more models,\nall fitted, one shared split, a baseline among them. A caller who is refused gets a 409\nnaming what differs rather than a failed job twenty seconds later.",
+        "operationId": "compare_models_route_api_v1_models_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareModels"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Compare two or more models on their shared holdout",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/comparisons/{comparison_id}": {
+      "get": {
+        "description": "**Added to `02` §5.1 with this slice.** The table declared the `POST` and no `GET`,\nwhich is a 202 whose artifact nothing can read — complete to the endpoint audit and\nunusable to a caller, the omission `01`'s reference publish lifecycle made in the same\ndirection.\n\n`model:read`, not `model:fit`: producing a comparison spends compute, reading one someone\nelse produced does not.",
+        "operationId": "get_comparison_api_v1_models_comparisons__comparison_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comparison_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comparison Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "A stored model comparison",
         "tags": [
           "modelling"
         ]

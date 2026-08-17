@@ -1319,6 +1319,41 @@ class ModelRow(Base):
     )
 
 
+class ModelComparisonRow(Base):
+    """A persisted model comparison (`02` §4.11, FR-MODEL-56).
+
+    Insert-only at the privilege layer (FR-DATA-42): `06` §3.3 makes a comparison required
+    evidence for a Model approval where a predecessor exists, and evidence that can change
+    after the approval is not evidence.
+
+    No slug and no version, for the reason `DiagnosticsRow` has none — a comparison has no
+    independent life and is always reached by id, from the Job that produced it or the
+    approval that cites it.
+    """
+
+    __tablename__ = "model_comparisons"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        Index("ix_model_comparisons_workspace", "workspace_id"),
+        # One artifact per Job: a second row for one Job would mean the comparison was
+        # recorded twice, with nothing to say which one an approval cited.
+        Index(
+            "uq_model_comparisons_job",
+            "job_id",
+            unique=True,
+            postgresql_where=job_id.isnot(None),
+        ),
+    )
+
+
 class DiagnosticsRow(Base):
     """Model quality evidence, computed once at fit time (`02` FR-MODEL-49, §4).
 

@@ -141,7 +141,15 @@ async def execute_job(
         # picks up ambient settings and reads a different bucket than the one written to.
         blob_store=blob_store or BlobStore(load_settings()),
     )
-    parameters = dict(row.parameters)
+    # **`job_id` is injected by the runner, not carried in the payload.** Three handlers
+    # already read `parameters.get("job_id")` to stamp the artifact they produce with the Job
+    # that produced it — and no caller ever put it there, so `diagnostics.job_id`,
+    # `models.job_id` and every artifact's provenance link were silently always NULL. Found
+    # 2026-08-17 by the comparison slice, whose artifact is keyed on it.
+    #
+    # The runner is authoritative and overrides a payload that supplies one: a handler
+    # stamping an artifact with somebody else's Job id is worse than one stamping nothing.
+    parameters = dict(row.parameters) | {"job_id": str(job_id)}
 
     # FR-PLAT-10: captured for the duration of this Job only. Attached to the root logger
     # so a handler's own log calls are collected without it knowing it is being watched.

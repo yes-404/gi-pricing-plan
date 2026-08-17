@@ -34,6 +34,7 @@ from app.api.deps import Caller, SettingsDep, job_identity
 from app.api.responses import problems
 from app.db.models import ModelRow
 from app.db.session import Database
+from app.platform import comparison as comparison_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
@@ -56,6 +57,7 @@ from model_schema import (
     JobKind,
     JobQueue,
     Model,
+    ModelComparison,
     MonotonicDirection,
     SpecValidation,
 )
@@ -621,3 +623,84 @@ async def archive_model(
         )
         response.headers["ETag"] = _model_etag(row)
         return service.to_model(row)
+
+
+class CompareModels(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_ids: tuple[UUID, ...] = Field(
+        min_length=2,
+        description="Two or more models fitted on the same holdout (FR-MODEL-56), in the "
+        "order the table should present them.",
+    )
+    baseline_id: UUID | None = Field(
+        default=None,
+        description="The model double lift is measured against. Defaults to the first.",
+    )
+
+
+@router.post(
+    "/models/compare",
+    summary="Compare two or more models on their shared holdout",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def compare_models_route(
+    body: CompareModels,
+    caller: FitModels,
+    database: DatabaseDep,
+    response: Response,
+) -> Job:
+    """**202** with a Job (`wf-01` E1, FR-MODEL-56).
+
+    202 rather than 200 because the comparison is work: it reads the holdout and scores every
+    candidate over it. `POST /models` draws the same line for the same reason — 202 when work
+    starts, 200 when the answer already exists.
+
+    Every comparability rule is answered **here**, before a Job exists: two or more models,
+    all fitted, one shared split, a baseline among them. A caller who is refused gets a 409
+    naming what differs rather than a failed job twenty seconds later.
+    """
+    async with database.unit_of_work() as session:
+        rows = await comparison_service.request_comparison(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            model_ids=list(body.model_ids),
+            baseline_id=body.baseline_id,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_COMPARE,
+            {
+                **job_identity(caller),
+                **comparison_service.compare_payload(rows, baseline_id=body.baseline_id),
+            },
+            caller.principal,
+            workspace_id=caller.workspace_id,
+            queue=JobQueue.COMPUTE,
+        )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
+
+
+@router.get(
+    "/models/comparisons/{comparison_id}",
+    summary="A stored model comparison",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_comparison(
+    comparison_id: UUID, caller: ReadModels, database: DatabaseDep
+) -> ModelComparison:
+    """**Added to `02` §5.1 with this slice.** The table declared the `POST` and no `GET`,
+    which is a 202 whose artifact nothing can read — complete to the endpoint audit and
+    unusable to a caller, the omission `01`'s reference publish lifecycle made in the same
+    direction.
+
+    `model:read`, not `model:fit`: producing a comparison spends compute, reading one someone
+    else produced does not.
+    """
+    async with database.session() as session:
+        return await comparison_service.load_comparison(
+            session, workspace_id=caller.workspace_id, comparison_id=comparison_id
+        )

@@ -116,6 +116,12 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # a test marked it, which is the "a marker is a claim, not a proof" trap
         # `CLAUDE.md` §13 names.
         "MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT",
+        # The comparison slice, 2026-08-17. `02` §5.1 declared no code for it, and
+        # `VALIDATION_FAILED` would have done — but "these models cannot be compared" is a
+        # state the compare screen branches on, and it has four distinct causes it must be
+        # able to tell apart from a malformed request. Added to `02` §5.1's catalogue in the
+        # same commit, and raised by `pricing-core` as well as by the platform.
+        "MODELS_NOT_COMPARABLE",
     }
 )
 
