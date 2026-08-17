@@ -138,7 +138,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 
 | Task | Kind | Due |
 |---|---|---|
-| 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-MODEL-3, OQ-PLAT-3) | decisions | Before Phase 2 — OQ-RATE-2 now decided |
+| 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-PLAT-3, OQ-MODEL-11) | decisions | Before Phase 2 — OQ-RATE-2 decided by spike, OQ-MODEL-3 decided 2026-08-17 and OQ-MODEL-11 raised by it |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
 | 6 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
@@ -1354,10 +1354,11 @@ The lesson is narrower than "read the contracts": these are **hand-authored Phas
 schemas that no generator checks, so nothing failed. `generate-contracts --check` compares
 the *generated* files against the models and is silent about the twenty hand-written ones.
 
-`tree` banding, `tree` grouping and `reference_hierarchy` grouping are declared and
-**refused by name**. The first two want a tree learner `pricing-core` does not declare as a
-dependency, raised as **OQ-MODEL-9**; the third needs a Reference Table, which ADR-0001
-keeps out of the package. `buhlmann_straub` is refused the same way — **not** because OQ-MODEL-5 is open (it was
+`reference_hierarchy` grouping is declared and **refused by name**: it needs a Reference
+Table, which ADR-0001 keeps out of the package. `tree` banding and `tree` grouping were
+refused alongside it until **OQ-MODEL-9** was decided (2026-08-17) — `pricing-core` now
+declares `scikit-learn` and fits both with a depth-limited `DecisionTreeRegressor`
+(FR-MODEL-85). `buhlmann_straub` is refused the same way — **not** because OQ-MODEL-5 is open (it was
 decided in #73 while this branch was in review) but because FR-MODEL-80 makes the model a
 recorded property of the grouping, and its `credibility_components` would come back null
 for a model that is supposed to persist them. In every case the alternative was a quantile
@@ -1947,9 +1948,9 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔ *both 2026-08-17*, **OQ-MODEL-8**, **OQ-MODEL-9** | 10 (2 open) |
-| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-MODEL-3, OQ-PLAT-3 | 7 (5 open) |
-| **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
+| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, **OQ-MODEL-10**, **OQ-GOV-7** | 11 (2 open) |
+| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-PLAT-3, OQ-MODEL-11 | 8 (5 open) |
+| **Before Phase 3** | OQ-GOV-1..6 *(OQ-GOV-7 is gated at 1b, not here — see below)*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 (4 open) |
 
@@ -1958,7 +1959,10 @@ you never block on a decision you have not reached.
 ([`research/track-a-findings.md`](research/track-a-findings.md) F1).
 
 **OQ-RATE-2 has also now been answered** by spike S2 — `exact` mode costs ~2 % of the
-budget, so OQ-MODEL-3 remains a design choice rather than being decided by force.
+budget, so OQ-MODEL-3 remained a design choice rather than being decided by force. **It was taken on 2026-08-17**: both modes are supported, and the mode belongs to the
+Rating Version rather than to the step (`03` FR-RATE-60). What an `approximation`-mode
+version must *prove* before it may deploy was the part the question did not settle, and
+is now OQ-MODEL-11 rather than an assumption.
 
 **Every question that could only be answered with code has been.** What remains is
 judgement, not measurement.
@@ -1971,6 +1975,23 @@ the last two while resolving a rebase, which is not a reliable mechanism. **A qu
 in a spec belongs in this table in the same commit** — the `spec-change` skill now says so,
 because `audit-docs.py` checks the spec ↔ register mirror and cannot see this table at all.
 A gate row is only as good as its habit of being written down.
+
+**2026-08-17 — the three `MODEL` questions were decided, and recounting this table found it
+had been over-claiming since it was written.** OQ-MODEL-8 (a GBM's evidence obligation) and
+OQ-MODEL-9 (supervised banding) closed against appended requirements and tests; OQ-MODEL-3
+closed as above. Three ids reached no row at all: **OQ-MODEL-10** and **OQ-GOV-7** are gated
+at 1b, and **OQ-MODEL-11** at Phase 2. OQ-MODEL-10's placement is the substantive one — it
+was blocked on OQ-MODEL-3 and is now unblocked, and it must be answered before anything
+references a transparency artifact by identifier, because `TransparencyArtifact` carries no
+`status` and so cannot satisfy FR-OVR-14's approved-or-better pin check. OQ-GOV-7 moves
+forward from Phase 3 for a plainer reason: its own recommendation says it is cheap to build
+*once a second evidence kind exists*, and the transparency kind became checkable on the same
+day. Both placements are proposals in §14's sense — a maintainer may move either row.
+
+The recount is the finding the count column exists to produce. The **Before Phase 1b** cell
+claimed 10 entries while naming 9, and had done so since it was written; the six other rows
+were consistent. It now reads 11 because two ids were placed, not because one was found.
+**Recount the row from its names — never decrement the number you found.**
 
 **2026-08-15 — the six `MODEL` judgement calls were taken**, and none of them enlarged Phase 1:
 expressions moved to Phase 2 while their certification machinery stayed here (OQ-MODEL-1);

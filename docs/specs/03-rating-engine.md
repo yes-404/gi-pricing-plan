@@ -105,6 +105,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-RATE-8** | `table` steps resolve a Rate Table Version pinned by the Rating Version (R1). Key expressions may band a continuous input inline, but the banding is a stored artifact reference (`02` FR-MODEL-8), not an inline literal list. |
 | **FR-RATE-9** | `lookup` steps evaluate reference data **as at a declared date** — normally the policy effective date, never "now" (`01` FR-DATA-31). The date source is explicit in the step. |
 | **FR-RATE-10** | `model_call` steps declare `mode`: `exact` invokes the model itself; `approximation` uses the model's GLM approximation relativity tables (`02` OQ-MODEL-3). The choice is recorded on the Rating Version and surfaced at approval with the fidelity statement. |
+| **FR-RATE-60** | **Both modes are supported, and the mode belongs to the Rating Version rather than to the step.** `RatingVersion.model_reference_mode` (§4.3) is the declaration; every `model_call` step's `mode` (FR-RATE-10) must equal it, checked at save time beside FR-RATE-13's type check, and a version whose steps disagree with it is refused with `MODEL_REFERENCE_MODE_INCONSISTENT`. This makes one identifier derived from the other rather than closing a capability: `rating-version.schema.json` enumerates `exact \| approximation` and nothing else, so a per-step mix was never expressible in the published contract. What an `approximation`-mode version must *prove* before it may deploy is **not** settled here — FR-MODEL-36's fidelity statement is descriptive and nothing gates on it (`02` OQ-MODEL-11). (`02` OQ-MODEL-3, decided 2026-08-17.) |
 | **FR-RATE-11** | `constraint` steps are how business and regulatory limits are expressed: minimum premium, maximum year-on-year increase, decline rules, capping of a relativity. Each carries a `reason_code` that appears in the Trace and in any decline response. |
 | **FR-RATE-12** | `output` steps declare rounding explicitly (mode and unit — e.g. `half_even` to the penny, `ceiling` to the pound). Rounding is never implicit and never happens twice. |
 | **FR-RATE-13** | Every step declares its result type, and type compatibility is checked at save time. A monetary result must be `decimal` or `money_minor` (R2). |
@@ -328,7 +329,8 @@ Values are stored as decimal strings, never JSON floats (R2).
 **Invariants** — `status ≥ approved` ⟹ every `evidence` field required by the workspace
 policy is present and passing (R4, FR-RATE-40); every pin resolves to an artifact whose
 status is `approved` or better (FR-OVR-14); `bundle.content_hash` is reproducible from the
-pins.
+pins; every `model_call` step's `mode` equals `model_reference_mode`
+(FR-RATE-60).
 
 ### 4.4 `QuoteContext` and `ScoringResult`
 
@@ -476,7 +478,7 @@ pins.
 `RATE_TABLE_KEY_DUPLICATE`, `CONTROL_FACTOR_IN_RATEABLE_PATH`, `PIN_NOT_APPROVED`,
 `BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
-`LADDER_RECONCILIATION_FAILED`.
+`LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`.
 
 ### 5.2 `pricing-core` interfaces
 

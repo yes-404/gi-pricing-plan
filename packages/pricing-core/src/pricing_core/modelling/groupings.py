@@ -8,8 +8,9 @@ fit** the merge implies, so the decision is defensible as a decision.
 * **FR-MODEL-13** — exhaustive over observed Levels, with `unseen_level_behaviour`
   mandatory. The mandatory part is enforced at the type (`Grouping` has no default);
   exhaustiveness is enforced here, against the version being fitted.
-* **FR-MODEL-14** — `credibility_weighted` and `hierarchical_clustering` are implemented.
-  `tree` and `reference_hierarchy` are refused by name, for the reasons the refusals give.
+* **FR-MODEL-14** — `credibility_weighted`, `hierarchical_clustering` and `tree` are
+  implemented; `tree` since FR-MODEL-85 (OQ-MODEL-9, decided 2026-08-17).
+  `reference_hierarchy` is refused by name, for the reason the refusal gives.
 * **FR-MODEL-15** — the evidence: source and target level counts, Poisson deviance before
   and after, degrees of freedom saved, and the likelihood-ratio p-value.
 
@@ -77,14 +78,6 @@ def propose_grouping(
             "a `manual` grouping has nothing to propose — the mapping is the actuary's. "
             "Persist it directly.",
         )
-    if proposal.method is GroupingMethod.TREE:
-        raise GroupingError(
-            "GROUPING_NOT_EXHAUSTIVE",
-            "`tree` grouping needs a decision tree on the response (FR-MODEL-14), which "
-            "needs a tree learner this build does not depend on. Named rather than "
-            "silently substituted with clustering, which is a different method and would "
-            "be recorded as the one it is not.",
-        )
     if proposal.method is GroupingMethod.REFERENCE_HIERARCHY:
         raise GroupingError(
             "GROUPING_NOT_EXHAUSTIVE",
@@ -116,6 +109,8 @@ def propose_grouping(
 
     if proposal.method is GroupingMethod.CREDIBILITY_WEIGHTED:
         clusters = _credibility_weighted(source, proposal)
+    elif proposal.method is GroupingMethod.TREE:
+        clusters = _tree(source, proposal)
     else:
         clusters = _hierarchical(source, proposal)
 
@@ -166,8 +161,15 @@ def _method_params(proposal: GroupingProposal) -> dict[str, object]:
     The credibility settings go **in** `method_params` rather than beside them, which is
     where the contract has carried `credibility_model` since Phase 0. `credibility_pk` and
     the count it implies are written together, so the two cannot drift apart.
+
+    The **effective** settings, not only the ones the caller named: a `tree` grouping that
+    records neither `random_state` nor `min_samples_leaf` cannot be reproduced from its own
+    artifact, and reproducing a stored artifact is the point of storing how it was made.
     """
     params: dict[str, object] = dict(proposal.method_params)
+    if proposal.method is GroupingMethod.TREE:
+        params.setdefault("min_samples_leaf", 1)
+        params.setdefault("random_state", 0)
     if proposal.method is GroupingMethod.CREDIBILITY_WEIGHTED:
         params["credibility_model"] = proposal.credibility_model.value
         params["credibility_pk"] = {"p": proposal.credibility_p, "k": proposal.credibility_k}
@@ -324,6 +326,66 @@ def _hierarchical(
         # A level nobody was exposed to has no rate to cluster on. It joins the largest
         # cluster rather than forming one of its own, which would be a target level with no
         # data behind it — FR-MODEL-11's objection, in the grouping direction.
+        clusters[_largest_cluster(clusters)].extend(zero_exposure)
+    return clusters
+
+
+def _tree(
+    source: tuple[OneWayRow, ...], proposal: GroupingProposal
+) -> list[list[OneWayRow]]:
+    """Merge Levels by a depth-limited regression tree on the observed rate (FR-MODEL-85).
+
+    Each Level is one observation, target-encoded by its own rate, weighted by its
+    exposure; the tree's leaves become the target Levels. On a single sorted feature the
+    leaves are contiguous rate intervals, so — as with `hierarchical_clustering` — the
+    result reads as an ordered banding of a categorical, which is what a rate table can
+    carry.
+
+    It is a genuinely different method from Ward linkage rather than a second spelling of
+    it: the tree partitions greedily to minimise weighted squared error under a leaf-count
+    budget, where Ward merges agglomeratively. On the same column they routinely disagree,
+    which is why FR-MODEL-14 names both and why substituting one for the other was refused.
+    """
+    from sklearn.tree import DecisionTreeRegressor
+
+    rated = [(r, row) for row in source if (r := _relativity(row)) is not None]
+    if not rated:
+        raise GroupingError(
+            "GROUPING_NOT_EXHAUSTIVE",
+            f"no level of {proposal.column!r} carries exposure, so there are no rates to "
+            "fit a tree on.",
+        )
+    rated.sort(key=lambda pair: pair[0])
+    zero_exposure = [row for row in source if _relativity(row) is None]
+
+    target = min(proposal.n_groups, len(rated))
+    if target <= 1:
+        clusters = [[row for _, row in rated]]
+    else:
+        rates = np.asarray([rate for rate, _ in rated], dtype=np.float64).reshape(-1, 1)
+        weights = np.asarray(
+            [float(row.exposure_years) for _, row in rated], dtype=np.float64
+        )
+        tree = DecisionTreeRegressor(
+            max_leaf_nodes=target,
+            min_samples_leaf=int(proposal.method_params.get("min_samples_leaf", 1)),
+            random_state=int(proposal.method_params.get("random_state", 0)),
+        )
+        tree.fit(rates, rates.ravel(), sample_weight=weights)
+
+        buckets: dict[int, list[int]] = {}
+        for index, leaf in enumerate(tree.apply(rates)):
+            buckets.setdefault(int(leaf), []).append(index)
+        clusters = [
+            [rated[i][1] for i in sorted(members)]
+            for _, members in sorted(
+                buckets.items(), key=lambda item: min(rated[i][0] for i in item[1])
+            )
+        ]
+
+    if zero_exposure:
+        # Same rule as `_hierarchical`: a level nobody was exposed to has no rate to split
+        # on, and a target level with no data behind it is FR-MODEL-11's objection.
         clusters[_largest_cluster(clusters)].extend(zero_exposure)
     return clusters
 

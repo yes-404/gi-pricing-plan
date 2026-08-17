@@ -68,6 +68,16 @@ files = ["packages/model-schema/src", "packages/pricing-core/src", "backend/src"
 warn_unreachable = true
 disallow_any_explicit = false
 
+# scikit-learn ships no `py.typed` marker, so a --strict run cannot see through
+# `sklearn.tree` and reports the import itself as an error (FR-MODEL-85's two call sites,
+# `tree` banding and `tree` grouping). The alternative — a per-line `type: ignore` at each
+# import — states the same fact twice and goes stale silently when the package starts
+# shipping types. Both call sites read `tree_.threshold` and `tree_.feature`, which are
+# untyped attributes of an untyped object either way.
+[[tool.mypy.overrides]]
+module = ["sklearn.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = [
     "packages/model-schema/tests",

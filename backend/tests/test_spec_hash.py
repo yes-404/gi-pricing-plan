@@ -36,6 +36,7 @@ def _spec(**over: object) -> GlmSpec:
 
 
 @pytest.mark.req("FR-MODEL-66")
+@pytest.mark.req("FR-MODEL-86")
 def test_the_digest_announces_the_algorithm_that_produced_it() -> None:
     """A `v1:` digest in a database this code no longer produces is findable.
 
@@ -51,6 +52,7 @@ def test_the_digest_announces_the_algorithm_that_produced_it() -> None:
 
 
 @pytest.mark.req("FR-MODEL-66")
+@pytest.mark.req("FR-MODEL-86")
 def test_the_version_is_inside_the_payload_not_only_in_front_of_it() -> None:
     """Otherwise a reader could strip the prefix and compare across algorithms.
 
@@ -67,6 +69,7 @@ def test_the_version_is_inside_the_payload_not_only_in_front_of_it() -> None:
 
 
 @pytest.mark.req("FR-MODEL-66")
+@pytest.mark.req("FR-MODEL-86")
 def test_the_stored_column_is_wide_enough_for_a_tagged_digest() -> None:
     """A truncated digest is not a failure that reports itself — it is a *different*
     valid-looking digest, and two specs would collide on it."""

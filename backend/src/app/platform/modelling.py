@@ -28,6 +28,7 @@ from app.db.models import (
     DiagnosticsRow,
     FactorRow,
     ModelRow,
+    TransparencyArtifactRow,
 )
 from app.errors import PlatformError
 from app.platform import approvals, audit, datasets, rbac
@@ -678,18 +679,47 @@ async def _require_evidence(
     working refusal.
 
     **Fails closed on an evidence kind it cannot check.** A workspace may edit the policy
-    (FR-GOV-12), so it can name evidence this slice has no way to look for — `02`'s
-    transparency artifact and model comparison are both declared and unbuilt. Treating an
-    uncheckable requirement as satisfied would let a policy tightening silently do nothing,
-    which is worse than a submission refused with the reason named.
+    (FR-GOV-12), so it can name evidence this slice has no way to look for — model
+    comparison is still declared and unbuilt. Treating an uncheckable requirement as
+    satisfied would let a policy tightening silently do nothing, which is worse than a
+    submission refused with the reason named.
+
+    **`transparency` became checkable on 2026-08-17 and this function was still failing
+    closed on it.** The artifact exists now, so the policy kind is answered by looking for
+    one rather than by refusing — and FR-MODEL-89's R3 is enforced here whether or not any
+    policy asks for it, because R3 is an invariant of the Model rather than a workspace's
+    choice.
     """
+    has_transparency = await _has_transparency_artifact(
+        session, workspace_id=workspace_id, model_id=row.id
+    )
+    model_type = str(row.spec.get("model_type", "glm"))
+    if model_type != "glm" and not has_transparency:
+        # FR-MODEL-89 / `02` §4.8 R3, enforced at submission for the same reason
+        # FR-MODEL-64 puts it at `review`: `approved` is unreachable without passing here,
+        # and refusing at the approval step would waste an approver's attention on a model
+        # that was never eligible. The check runs artifact→model, which is the direction
+        # the link runs — `models` carries no column anything writes back.
+        raise PlatformError(
+            "EVIDENCE_INCOMPLETE",
+            "Required evidence is missing",
+            422,
+            f"{row.model_family_slug}@{row.version} is a {model_type} model and no "
+            "transparency artifact names it. `02` §4.8 R3 and FR-MODEL-89: a non-GLM model "
+            "cannot be approved without one, and FR-MODEL-64 makes `review` the gate. "
+            "POST /api/v1/models/{id}/transparency produces it.",
+        )
+
     policy = await approvals.policy_for(session, workspace_id)
     entry = policy.entry_for("model")
     if entry is None:
         return
 
-    #: What this slice can actually verify, and the field that answers each one.
-    verifiable = {"diagnostics": row.diagnostics_id is not None}
+    #: What this slice can actually verify, and what answers each one.
+    verifiable = {
+        "diagnostics": row.diagnostics_id is not None,
+        "transparency_artifact": has_transparency,
+    }
 
     missing = [kind for kind in entry.evidence if not verifiable.get(kind, False)]
     if missing:
@@ -706,6 +736,26 @@ async def _require_evidence(
                 "policy tightening do nothing."
             )
         raise PlatformError("EVIDENCE_INCOMPLETE", "Required evidence is missing", 422, detail)
+
+
+async def _has_transparency_artifact(
+    session: AsyncSession, *, workspace_id: UUID, model_id: UUID
+) -> bool:
+    """Whether any `TransparencyArtifact` names this model (FR-MODEL-89).
+
+    The artifact carries `model_id` and the Model carries no back-reference that anything
+    writes, so this is the only direction the question can be asked in. FR-MODEL-33 allows
+    many artifacts per model; one is enough to satisfy R3.
+    """
+    found = await session.scalar(
+        select(TransparencyArtifactRow.id)
+        .where(
+            TransparencyArtifactRow.workspace_id == workspace_id,
+            TransparencyArtifactRow.model_id == model_id,
+        )
+        .limit(1)
+    )
+    return found is not None
 
 
 async def apply_approval_decision(

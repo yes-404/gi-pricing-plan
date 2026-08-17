@@ -221,12 +221,62 @@ def test_a_manual_banding_has_nothing_to_propose() -> None:
         )
 
 
+@pytest.mark.req("FR-MODEL-85")
+def test_tree_boundaries_split_on_the_response_not_on_the_quantiles() -> None:
+    """The reason the quantile substitution was refused: the two do not agree.
+
+    `_book()`'s frequency turns at 26, where the exposure changes by a factor of ten. A
+    tree splitting on frequency finds that breakpoint; an exposure quantile cuts wherever
+    equal tenths of exposure fall, which is somewhere else entirely.
+    """
+    tree = propose_banding(
+        _book(), _proposal(method=BandingMethod.TREE), dataset_id=DATASET, slug="age-tree"
+    )
+    quantile = propose_banding(_book(), _proposal(), dataset_id=DATASET, slug="age-eq")
+
+    assert list(tree.boundaries) == sorted(tree.boundaries)
+    assert len(tree.boundaries) <= 6  # n_bands + 1
+    assert tree.boundaries[0] == 18.0
+    assert tree.boundaries[-1] == 79.0
+    assert tree.boundaries != quantile.boundaries
+    # The age-26 breakpoint the book was built around.
+    assert any(25.0 < cut < 27.0 for cut in tree.boundaries)
+
+
+@pytest.mark.req("FR-MODEL-85")
+def test_a_tree_banding_records_enough_to_reproduce_itself() -> None:
+    """`n_bands` alone does not reproduce a fit — `random_state` is part of the method."""
+    first = propose_banding(
+        _book(), _proposal(method=BandingMethod.TREE), dataset_id=DATASET, slug="age-tree"
+    )
+    again = propose_banding(
+        _book(), _proposal(method=BandingMethod.TREE), dataset_id=DATASET, slug="age-tree"
+    )
+    assert first.boundaries == again.boundaries
+    assert {"n_bands", "min_samples_leaf", "random_state"} <= set(first.method_params)
+    assert first.method_params["n_bands"] == len(first.boundaries) - 1
+
+
 @pytest.mark.req("FR-MODEL-9")
-def test_tree_boundaries_are_refused_by_name_not_substituted() -> None:
-    """A quantile banding recorded as `tree` is a method recorded as one it is not."""
-    with pytest.raises(BandingError, match="tree"):
+def test_a_tree_banding_refuses_a_book_it_cannot_weight_or_split_on() -> None:
+    """An unweighted tree, or one fitted on the banded column alone, is another method.
+
+    Substituting either under the name `tree` is the failure the refusal this replaced was
+    written for — implementing the method does not retire that objection, it narrows it.
+    """
+    with pytest.raises(BandingError, match="response to split on"):
         propose_banding(
-            _book(), _proposal(method=BandingMethod.TREE), dataset_id=DATASET, slug="t"
+            _book().drop("claim_count"),
+            _proposal(method=BandingMethod.TREE),
+            dataset_id=DATASET,
+            slug="t",
+        )
+    with pytest.raises(BandingError, match="exposure-weighted"):
+        propose_banding(
+            _book().drop("exposure_years"),
+            _proposal(method=BandingMethod.TREE),
+            dataset_id=DATASET,
+            slug="t",
         )
 
 

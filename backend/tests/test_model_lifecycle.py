@@ -253,9 +253,14 @@ async def test_submission_without_the_policys_evidence_is_refused(
     slice — a catalogue entry indistinguishable from a working refusal, which is the trap
     `01` fell into with `RULE_TIMEOUT`.
 
-    The policy is tightened to require a transparency artifact, which this build has no way
-    to verify. Failing closed is the decision under test: treating an uncheckable
-    requirement as satisfied would let a policy tightening silently do nothing.
+    The policy is tightened to require a model comparison, which this build has no way to
+    verify. Failing closed is the decision under test: treating an uncheckable requirement
+    as satisfied would let a policy tightening silently do nothing.
+
+    **The example used to be `transparency_artifact`**, and was changed rather than deleted
+    when that kind became checkable (FR-MODEL-89, 2026-08-17). A test whose uncheckable
+    example quietly becomes checkable stops testing failing-closed and starts testing
+    nothing — the same trap in the other direction.
     """
     actor, model_id = await _fit(database, blob_store, workspace_id)
     admin = await _principal_with(database, workspace_id, "admin")
@@ -271,7 +276,7 @@ async def test_submission_without_the_policys_evidence_is_refused(
                         artifact_type="model",
                         approvers_required=1,
                         approver_roles=("approver",),
-                        evidence=("diagnostics", "transparency_artifact"),
+                        evidence=("diagnostics", "model_comparison"),
                     ),
                 )
             ),
@@ -284,7 +289,7 @@ async def test_submission_without_the_policys_evidence_is_refused(
                 change_summary="submitted against a tightened policy",
             )
     assert refused.value.code == "EVIDENCE_INCOMPLETE"
-    assert "transparency_artifact" in (refused.value.detail or "")
+    assert "model_comparison" in (refused.value.detail or "")
 
 
 # -- The seam to governance: E9 → E10 -----------------------------------------------------

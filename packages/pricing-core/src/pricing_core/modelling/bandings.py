@@ -80,15 +80,6 @@ def propose_banding(
             "judgement, and inventing some to be edited would put the platform's name on "
             "them. Persist the boundaries directly instead.",
         )
-    if proposal.method is BandingMethod.TREE:
-        raise BandingError(
-            "FACTOR_RESOLUTION_FAILED",
-            "`tree` boundaries need a shallow decision tree on the response "
-            "(FR-MODEL-9), which needs a tree learner this build does not depend on. "
-            "Named rather than silently substituted: quantile boundaries returned under "
-            "the label `tree` would be a method recorded as one it is not.",
-        )
-
     column = proposal.column
     if column not in frame.columns:
         raise FactorResolutionError(
@@ -125,10 +116,7 @@ def propose_banding(
         version=1,
         column=column,
         method=proposal.method,
-        method_params={
-            "n_bands": float(len(boundaries) - 1),
-            **{k: float(v) for k, v in proposal.method_params.items()},
-        },
+        method_params=_method_params(proposal, boundaries),
         derived_on_dataset_version_id=proposal.dataset_version_id,
         boundaries=tuple(boundaries),
         closed=proposal.closed,
@@ -148,6 +136,21 @@ def propose_banding(
             )
         }
     )
+
+
+def _method_params(proposal: BandingProposal, boundaries: list[float]) -> dict[str, float]:
+    """What the Banding records about how it was derived.
+
+    The **effective** values, not only the ones the caller named: a `tree` banding that
+    records `n_bands` and not `random_state` cannot be reproduced from its own artifact,
+    and reproducing a stored artifact is the point of storing how it was made.
+    """
+    params = {"n_bands": float(len(boundaries) - 1)}
+    if proposal.method is BandingMethod.TREE:
+        params["min_samples_leaf"] = float(proposal.method_params.get("min_samples_leaf", 1))
+        params["random_state"] = float(proposal.method_params.get("random_state", 0))
+    params.update({k: float(v) for k, v in proposal.method_params.items()})
+    return params
 
 
 def _boundaries(
@@ -176,7 +179,9 @@ def _boundaries(
         cuts = _weighted_quantiles(values, weights=exposure, n=n)
     elif method is BandingMethod.CREDIBILITY:
         cuts = _credibility(values, exposure=exposure, claims=claims, proposal=proposal)
-    else:  # pragma: no cover — MANUAL and TREE are refused above
+    elif method is BandingMethod.TREE:
+        cuts = _tree(values, exposure=exposure, claims=claims, proposal=proposal)
+    else:  # pragma: no cover — MANUAL is refused above
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED", f"unhandled banding method {method.value!r}"
         )
@@ -279,6 +284,92 @@ def _credibility(
             left, right = counts[thinnest - 1], counts[thinnest + 1]
             cuts.pop(thinnest if left <= right else thinnest + 1)
     return cuts
+
+
+def _tree(
+    values: pl.Series,
+    *,
+    exposure: pl.Series | None,
+    claims: pl.Series | None,
+    proposal: BandingProposal,
+) -> list[float]:
+    """Cut points from a single depth-limited regression tree on the response.
+
+    FR-MODEL-85 (OQ-MODEL-9, decided 2026-08-17). The response is **claim frequency**,
+    exposure-weighted — the tree minimises weighted squared error, so a band's estimate is
+    trusted in proportion to the exposure behind it, which is the same weighting
+    `exposure_quantile` and `hierarchical_clustering` already use.
+
+    **Why scikit-learn rather than a one-tree booster.** `pricing-core` already depends on
+    XGBoost and LightGBM, so `max_depth=k, n_estimators=1` would have cost no dependency
+    at all. It was rejected because a booster selects splits under `lambda`,
+    `min_child_weight` and `gamma`, so its cut points are not the CART cut points the
+    method is named for. Recording them as `tree` is the mislabelling this method's
+    quantile substitution was refused for, in a subtler form.
+
+    **The boundaries are exact.** scikit-learn splits at the midpoint between two adjacent
+    observed values, so no threshold coincides with a value in the data and `closed="left"`
+    versus `closed="right"` moves no row between bands.
+    """
+    from sklearn.tree import DecisionTreeRegressor
+
+    if claims is None:
+        raise BandingError(
+            "FACTOR_RESOLUTION_FAILED",
+            f"`tree` banding needs {proposal.claim_count_column!r} as the response to "
+            "split on, and this dataset version does not have it. A tree fitted on the "
+            "banded column alone would be splitting on nothing.",
+        )
+    if exposure is None:
+        raise BandingError(
+            "FACTOR_RESOLUTION_FAILED",
+            f"`tree` banding is exposure-weighted (FR-MODEL-9) and needs "
+            f"{proposal.exposure_column!r}, which this dataset version does not have. An "
+            "unweighted tree is a different method and would be recorded as this one.",
+        )
+
+    frame = (
+        pl.DataFrame({"v": values, "c": claims, "e": exposure})
+        .drop_nulls()
+        .filter(
+            pl.col("v").is_not_nan() & pl.col("c").is_not_nan() & (pl.col("e") > 0)
+        )
+    )
+    if frame.height == 0:
+        raise BandingError(
+            "FACTOR_RESOLUTION_FAILED",
+            "no row carries a value, a claim count and positive exposure together, so "
+            "there is no response for a tree to split on.",
+        )
+
+    v = frame["v"].to_numpy()
+    weight = frame["e"].to_numpy()
+    response = frame["c"].to_numpy() / weight
+
+    params = proposal.method_params
+    tree = DecisionTreeRegressor(
+        max_leaf_nodes=max(2, proposal.n_bands),
+        min_samples_leaf=int(params.get("min_samples_leaf", 1)),
+        # Reproducibility is the platform's first commitment: two runs over one dataset
+        # version must return the same boundaries, and `random_state` is what settles
+        # scikit-learn's tie-breaking when two splits score identically.
+        random_state=int(params.get("random_state", 0)),
+    )
+    tree.fit(v.reshape(-1, 1), response, sample_weight=weight)
+
+    # An internal node carries its split threshold; leaves are flagged with a negative
+    # feature index. `tree_.threshold` holds one entry per node either way.
+    internal = tree.tree_.feature >= 0
+    thresholds = sorted(float(t) for t in tree.tree_.threshold[internal])
+    if not thresholds:
+        raise BandingError(
+            "FACTOR_RESOLUTION_FAILED",
+            f"a tree on {proposal.column!r} found no split that reduces weighted error — "
+            "the response does not vary with this column in this dataset version. "
+            "Quantile boundaries would have returned something, which is why this refuses "
+            "instead.",
+        )
+    return [float(v.min()), *thresholds, float(v.max())]
 
 
 def _claims_per_band(v: np.ndarray, c: np.ndarray, cuts: list[float]) -> np.ndarray:

@@ -101,6 +101,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-12** | Bandings are versioned artifacts with lineage; editing a banding creates a new version and does not alter any Model already fitted with the old one. |
 | **FR-MODEL-83** | A Banding or Grouping can be **evaluated against a Dataset Version without being persisted**: the platform recomputes FR-MODEL-10's per-band statistics, or FR-MODEL-15's deviance/df evidence, for boundaries or a mapping the actuary has edited by hand. Added 2026-08-15 (W5), and numbered 83 rather than 75 because OQ-MODEL-1..7's decisions took 75..82 while this was in review — ids are permanent, so the later claimant moves (`CLAUDE.md` §5). §5.3's interaction requirement — that an edit's consequence is visible *before* it is saved — is otherwise unmeetable, because `/propose` derives a mapping from a *method* and has no way to accept one. Without it "the proposal is always editable" (FR-MODEL-9, FR-MODEL-14) means editable but unmeasurable, which is the state that makes an actuary fit a model to find out whether a grouping was sensible. |
 
+| **FR-MODEL-85** | **`tree` banding (FR-MODEL-9) and `tree` grouping (FR-MODEL-14) fit a single depth-limited CART regression tree, and are named for the instrument they use** (OQ-MODEL-9, decided 2026-08-17). Both fit `sklearn.tree.DecisionTreeRegressor` with `max_leaf_nodes` set from `n_bands` / `n_groups`, on the observed response — claim frequency for a banding, the Level's own rate for a grouping — weighted by exposure, so a cut is trusted in proportion to the exposure behind it. `scikit-learn` is declared in `pricing-core`'s dependencies rather than relied on transitively through `glum` (§8). Each artifact records the **effective** `min_samples_leaf` and `random_state` in `method_params`, not only what the caller named, because an artifact that cannot reproduce its own fit is not evidence. A one-tree booster on the XGBoost this package already depends on was rejected: it selects splits under `lambda`, `min_child_weight` and `gamma` rather than as CART does, so its cut points are not the ones the method is named for — the same objection, in subtler form, that refused returning quantile boundaries under the label `tree`. A `tree` banding refuses a Dataset Version with no claim-count column (nothing to split on) or no exposure column (an unweighted tree is a different method); a `tree` grouping refuses a column no Level of which carries exposure. |
+
 ### 3.3 Groupings
 
 | ID | Requirement |
@@ -210,6 +212,10 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-65** | Model lineage records `parent_model_id` and a typed `change_reason` (`refit_new_data`, `respecified`, `rebanded`, `regrouped`, `hyperparameter_change`, `objective_change`, `bug_fix`) so a family's history reads as a narrative. |
 | **FR-MODEL-66** | The `spec_hash` (§2, Model Spec) is computed over the canonicalised spec including pinned versions and seed. Submitting an identical spec returns the existing Model instead of refitting, unless `force_refit` is set — which then requires the two fits to be compared for reproducibility (FR-OVR-8). |
 | **FR-MODEL-67** | A Model whose Dataset Version was invalidated (`01` FR-DATA-23) is flagged `dataset_invalidated` and cannot advance to `approved`; if already `approved`, the flag propagates to every Rating Version referencing it and to the Approvals inbox. |
+| **FR-MODEL-86** | **`spec_hash` carries the version of the algorithm that produced it, inside the hashed payload.** The digest is `v<n>:sha256:<64 hex>` where `n` is `SPEC_HASH_VERSION`, and the same `n` is one of the hashed fields — a prefix alone would let a reader strip it and compare across versions, which is exactly the comparison that is not meaningful. **Any change to the set of fields entering the payload increments `n` in the same commit as the field**, and `spec_hash_is_current` reports every older digest as stale so the affected rows are findable (`LIKE 'v1:%'`). Without this, one added field silently changes every stored digest and FR-MODEL-66's dedup ends with no error to see. The rule has been exercised twice: `split_ref` moved the digest `v1 → v2` (2026-08-16) and `loss_treatment` moved it `v2 → v3` (2026-08-17). (OQ-MODEL-8, decided 2026-08-17.) |
+| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec`, `interval_for` (deferred here by FR-MODEL-78), `custom_objective_ref` and the regularisation-selection fields `select_by`/`cv_folds` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`). |
+| **FR-MODEL-88** | **The unimplemented arms of FR-MODEL-1's closed set are refused by name at resolution, never approximated.** Five of the eight — `interaction`, `spline`, `polynomial`, `offset` and `expression` — do not resolve, and `resolve_factors` raises naming the type rather than returning the raw column, because a fit built on the raw column is one nobody could tell from a correct one. **`expression` is the sharper case and its verdict is stated rather than implied:** `FactorType.EXPRESSION` is selectable while `Factor` carries no field to hold the expression, so a factor of that type can be *created* and can never be *resolved*. That is contained rather than corrected — the refusal is at the boundary where it would matter — and the field plus its validator arm are owned by Phase 1b with the rest of §4.7's expression work. (OQ-MODEL-8, decided 2026-08-17.) |
+| **FR-MODEL-89** | **§4.8 R3 is enforced artifact→model, because that is the direction the link runs.** The `TransparencyArtifact` carries `model_id` and the `Model` carries no back-reference that anything writes, so "`model_type ≠ glm` and `status = approved` ⟹ a transparency artifact exists" is checked by querying for an artifact naming the model at the approval transition, not by reading a column on the model. Stating it as a field-set invariant made it unenforceable — the same shape as §4.8's `status ≥ fitted ⟹ diagnostics_id`, which OQ-MODEL-8 was written around. (OQ-MODEL-8, decided 2026-08-17.) |
 
 ---
 
@@ -384,12 +390,20 @@ cap are different models, and must not collide on `spec_hash`.
   "family": "poisson",
   "family_params": {},
   "link": "log",
-  "regularisation": {"kind": "elastic_net", "alpha": 0.001, "l1_ratio": 0.0,
-                     "select_by": "cv", "cv_folds": 5},
-  "custom_objective_ref": null,
+  "alpha": 0.001, "l1_ratio": 0.0,
   "max_iter": 200, "tolerance": 1e-8
 }
 ```
+
+> **Corrected 2026-08-17 (W5, OQ-MODEL-8).** This block used to show a nested
+> `regularisation: {"kind": "elastic_net", "alpha": …, "l1_ratio": …, "select_by": "cv",
+> "cv_folds": 5}` and a `custom_objective_ref`. `GlmSpec` implements the two penalty
+> parameters **flat**, as `glum` takes them, and carries neither the selection fields nor
+> the objective reference. **The spec was the wrong side here**: the nested shape was
+> written in Phase 0 and nothing was ever built to it, so a caller copying this page would
+> have sent a body the contract rejects — a divergence rather than a field awaiting a slice.
+> `select_by` / `cv_folds` (penalty selection by cross-validation) and `custom_objective_ref`
+> on the GLM arm are **absent entirely** and owned by Phase 1b (FR-MODEL-87).
 
 `GbmSpec` adds (`model_type` is `xgboost` or `lightgbm` — see the amendment below):
 
@@ -642,8 +656,9 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > both in one transaction.
 >
 > This is the recommendation on file — "re-widen it as the slices land" — not a decision
-> taken ahead of the maintainer. `expression`, `filter` and `loss_treatment` stay
-> unimplemented and OQ-MODEL-8 stays open for them.
+> taken ahead of the maintainer. `loss_treatment` landed with the GBM slice on 2026-08-17;
+> `expression` and `filter` stay unimplemented, and OQ-MODEL-8 was **decided 2026-08-17**
+> on exactly that staging rule — FR-MODEL-87 carries it, and names them with their owners.
 >
 > **`split_ref` is required to reach `fitted`**, though the field itself is optional: a
 > spec may be explored without one, but FR-MODEL-54 makes a diagnostic without its holdout
@@ -668,13 +683,23 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > every read that gates on it, and recorded in the audit event at submission so that "was it
 > flagged when it was submitted?" survives the dataset moving again.
 >
-> `transparency_artifact_id` and `custom_objective_ref` stay declared and unbuilt, and
-> OQ-MODEL-8 stays open for them.
+> `transparency_artifact_id` and `custom_objective_ref` stay declared and unbuilt. That is
+> now a stated verdict with an owner rather than an open question: OQ-MODEL-8 was decided
+> 2026-08-17 and FR-MODEL-87 lists them, while FR-MODEL-89 restates R3 in the direction the
+> link actually runs.
 
 **Invariants** — `status ≥ fitted` ⟹ `diagnostics_id` set; `model_type ≠ glm` and
-`status = approved` ⟹ `transparency_artifact_id` set (R3); `custom_objective_ref` set and
-`status = approved` ⟹ that objective version is `approved` (R4); `booster_blob` present
-iff `model_type ∈ {xgboost, lightgbm}`.
+`status = approved` ⟹ a `TransparencyArtifact` naming this model exists (R3);
+`custom_objective_ref` set and `status = approved` ⟹ that objective version is
+`approved` (R4); `booster_blob` present iff `model_type ∈ {xgboost, lightgbm}`.
+
+> **R3 restated 2026-08-17 (W5, OQ-MODEL-8) — FR-MODEL-89.** It used to read
+> `⟹ transparency_artifact_id set`, which cannot be enforced: the artifact landed on
+> 2026-08-17 carrying `model_id`, so the link runs artifact→model and nothing writes the
+> column on this side. The obligation is unchanged and the direction of the check is
+> now the one the data supports — a query for an artifact naming the model, run at the
+> approval transition. `transparency_artifact_id` itself stays declared and unbuilt
+> (FR-MODEL-87).
 
 ### 4.9 `TransparencyArtifact`
 
@@ -902,11 +927,13 @@ required evidence for a Model approval where a predecessor exists.
 > `split_ref`, `loss_treatment`, `diagnostics_id` and others. That is a **larger divergence
 > awaiting a decision**, not an oversight: whether the spine grows to meet §4 or §4 narrows
 > to a staged contract is a design choice, recorded in `docs/open-questions.md` as
-> OQ-MODEL-8 rather than settled here.
+> OQ-MODEL-8 rather than settled here. *(Decided 2026-08-17 — the staged contract, as
+> FR-MODEL-87. All four fields named in this paragraph are now live.)*
 >
 > **Narrowed 2026-08-15 (W5):** §4.1's `banding_id` and `grouping_id` are now live fields
 > on `Factor`, because their slice landed — which is what OQ-MODEL-8's recommendation
-> ("re-widen it as the slices land") describes. `expression` remains declared and unbuilt.
+> ("re-widen it as the slices land") describes. `expression` remains declared and unbuilt,
+> and FR-MODEL-88 states its verdict: selectable, unresolvable, and refused by name.
 > The `spec_hash` precondition the same question named is delivered: the digest now reads
 > `v1:sha256:…` and `spec_hash_is_current` answers whether a stored one is still matchable.
 
@@ -1276,12 +1303,13 @@ Custom objective path: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-0
 | **XGBoost** | Primary GBM (FR-MODEL-25..32) | Custom objective `(grad, hess)` signature, `base_margin`, `monotone_constraints`, `interaction_constraints`, JSON model IO, `QuantileDMatrix` for memory |
 | **LightGBM** | Secondary GBM | `fobj`/`feval`, `init_score` as the offset, monotone constraint methods (`basic`/`intermediate`/`advanced`), native categoricals |
 | **interpret (EBM)** | Transparent ML (FR-MODEL-37) | Exporting term shape functions as tables; treating an EBM as a set of additive lookups |
-| ~~**SHAP**~~ **The backends' own TreeSHAP** | Transparency artifacts (FR-MODEL-35) | **Amended 2026-08-17 (W5, transparency): the `shap` package is not a dependency.** XGBoost's `pred_contribs` and LightGBM's `pred_contrib` are the same TreeSHAP algorithm on the same trees, already linked against the booster `pricing-core` holds — and `shap` would have pulled scikit-learn and its transitive weight into the package ADR-0001 keeps importable standalone, for plotting the frontend does (§5.3) and aggregation that is fifteen lines. What is genuinely lost is **interaction values on LightGBM**: XGBoost computes them (`pred_interactions`, feeding FR-MODEL-79's suggestions and never a Factor), LightGBM does not compute them at all, and `ShapSummary.interactions_available` reports that as a capability rather than as an empty list. Revisit if a third backend or kernel SHAP for a non-tree model is ever needed |
+| ~~**SHAP**~~ **The backends' own TreeSHAP** | Transparency artifacts (FR-MODEL-35) | **Amended 2026-08-17 (W5, transparency): the `shap` package is not a dependency.** XGBoost's `pred_contribs` and LightGBM's `pred_contrib` are the same TreeSHAP algorithm on the same trees, already linked against the booster `pricing-core` holds — and `shap` would have added a dependency of its own — for plotting the frontend does (§5.3) and aggregation that is fifteen lines — to the package ADR-0001 keeps importable standalone. *(Corrected 2026-08-17, same day: this row first gave the cost as "would have pulled scikit-learn and its transitive weight in". The scikit-learn half was wrong when written — `glum` 3.4.1 requires it, so it was already installed in every environment this package has ever had, as OQ-MODEL-9 found the next hour. The row's conclusion is unaffected: `shap` itself is still a dependency added for work already done elsewhere.)* What is genuinely lost is **interaction values on LightGBM**: XGBoost computes them (`pred_interactions`, feeding FR-MODEL-79's suggestions and never a Factor), LightGBM does not compute them at all, and `ShapSummary.interactions_available` reports that as a capability rather than as an empty list. Revisit if a third backend or kernel SHAP for a non-tree model is ever needed |
 | **SymPy** | Symbolic gradient/hessian derivation (FR-MODEL-40) — **Phase 2**, with `expression` objectives (FR-MODEL-75) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
 | **Python `ast`** | Restricted grammar parsing (§4.6) | Allow-list node walking, depth/size limits, why `eval`/`compile` on user input is never acceptable |
 | **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | `replace_strict` for grouping maps (it refuses an unmapped level rather than dropping it, which is FR-MODEL-13's whole point). **Banding is `numpy.searchsorted`, not `pl.cut`** — the artifact's `closed`, `null_level`, `below_range` and `above_range` policies decide where a value lands, and `cut` implements one fixed convention (added 2026-08-15, W5) |
 | **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification, credibility standards for `credibility_weighted` groupings (FR-MODEL-80) | `scipy.optimize` for the profile grid, `scipy.stats` for CIs, plus `scipy.cluster.hierarchy` (Ward linkage + `fcluster`) for FR-MODEL-14's `hierarchical_clustering` — exposure weighting by observation repetition, since the clusterer takes no sample weights (added 2026-08-15, W5) |
+| **scikit-learn** | FR-MODEL-9's `tree` banding and FR-MODEL-14's `tree` grouping (FR-MODEL-85) | `DecisionTreeRegressor` with `max_leaf_nodes` and `sample_weight`; cut points read off `tree_.threshold` where `tree_.feature >= 0`. Splits are midpoints between adjacent observed values, so no threshold coincides with a value in the data and a banding's `closed` convention moves no row. Declared rather than relied on transitively — it arrives with `glum`, but a package that *imports* it and does not declare it is the pandera state `01` §4.4 found in reverse (added 2026-08-17, W5) |
 | **ECharts (frontend)** | Relativity plots with CI bands, lift/gains, calibration, PD plots, convexity heatmap | Large-series performance; dual-axis A/E charts |
 | **TanStack Table (frontend)** | Coefficient, relativity, banding, and grouping grids | Inline editing for boundaries and level merges |
 
@@ -1342,11 +1370,12 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 |---|---|
 | **OQ-MODEL-1** | ~~Should `expression` custom objectives ship in Phase 1 at all, or only the `template` catalogue (§4.5)?~~ **DECIDED 2026-08-15: templates in Phase 1, expressions in Phase 2 — and the certification machinery is built in Phase 1 regardless.** Specified as FR-MODEL-75 and FR-MODEL-76. The restricted parser is not the deferred part and never was: it already exists for `01` FR-DATA-10. What Phase 2 adds is symbolic derivation, a second compilation target, and the review path for a loss a user wrote. |
 | **OQ-MODEL-2** | ~~GBM prediction intervals: paired quantile models, "uncertainty unavailable", or a variance-model approximation?~~ **DECIDED 2026-08-15: `uncertainty: unavailable` with a typed reason by default, opt-in paired quantile models, and the variance approximation is never shipped.** Specified as FR-MODEL-77 and FR-MODEL-78. |
-| **OQ-MODEL-3** | Is the GLM approximation of a GBM a *transparency artifact* only, or should it be directly rateable — i.e. can a Rating Version rate on the approximation instead of calling the GBM, trading fidelity for a fully tabular rating structure? **Note 2026-08-17:** `03` FR-RATE-10 already specifies both modes and cites this question, so the rating spec presumes an answer this row has not been given; `open-questions.md` carries the finding, the two names one field has, and what stays open under either reading. |
+| **OQ-MODEL-3** | ~~Is the GLM approximation of a GBM a *transparency artifact* only, or should it be directly rateable — i.e. can a Rating Version rate on the approximation instead of calling the GBM, trading fidelity for a fully tabular rating structure?~~ **DECIDED 2026-08-17: both modes, and the mode belongs to the Rating Version rather than to the step.** Specified as `03` FR-RATE-60, which pins every `model_call` step's `mode` to `RatingVersion.model_reference_mode` and refuses a disagreement at save time; `03` FR-RATE-10 was ahead of its question rather than wrong and stands as written. What an approximation must *prove* before deploying in that mode is carved out as **OQ-MODEL-11**, and **OQ-MODEL-10** is unblocked. |
 | **OQ-MODEL-4** | ~~Interactions as explicit Factors only, or also automatically-detected candidates from SHAP interaction values?~~ **DECIDED 2026-08-15: detected candidates are surfaced as suggestions with their exposure share and holdout lift; only an explicit Factor with a rationale can enter a Model Spec.** Specified as FR-MODEL-79. |
 | **OQ-MODEL-5** | ~~Which credibility standard for `credibility_weighted` grouping — limited fluctuation or Bühlmann–Straub?~~ **DECIDED 2026-08-15: both, limited fluctuation as the default, recorded per grouping.** Specified as FR-MODEL-80, with `credibility_model`, its `(p, k)` pair and Bühlmann–Straub's variance components persisted in §4.3. |
 | **OQ-MODEL-6** | ~~Hard gate on factor count / exposure-per-parameter, or a diagnostic warning?~~ **DECIDED 2026-08-15: a diagnostic always, and a gate only where a workspace configures one — unset by default.** Specified as FR-MODEL-81; the judgement belongs to the Approver (`06`), not to a constant chosen here. |
 | **OQ-MODEL-7** | ~~How are protected-characteristic proxies detected, and what happens when detection fires?~~ **DECIDED 2026-08-15: the `prohibited` flag is the whole of Phases 1–2; a Phase 3 proxy assessment produces evidence for the approval request and never a block.** Specified as FR-MODEL-82; delivery is a Phase 3 deliverable, so the decision is made and the work is not now. |
-| **OQ-MODEL-8** | Does the GLM spine grow to meet §4's field sets, or does §4 narrow to a staged contract? §4.1, §4.4 and §4.8 declare fields the spine does not implement, and §4.8's `status ≥ fitted ⟹ diagnostics_id set` cannot be met while diagnostics do not exist. Found by auditing the spine, 2026-08-15. **2026-08-17:** that invariant now holds at the type, at a database CHECK and in the fit path; the row stays open for the residual fields listed in `open-questions.md`, which are three different kinds of thing. |
-| **OQ-MODEL-9** | Do `tree` banding boundaries (FR-MODEL-9) and `tree` grouping (FR-MODEL-14) justify adding a tree learner to `pricing-core`'s dependencies? Both are declared and both are refused by name today, because the only honest alternatives were a new dependency or a quantile cut recorded under the label `tree`. Raised by implementing the other methods, 2026-08-15. **Reframed 2026-08-17:** `pricing-core` now declares `xgboost` and `lightgbm`, so the question is no longer whether to add a tree learner but whether a one-tree booster may be called `tree`, or `scikit-learn`'s `DecisionTreeRegressor` should be declared for the plain instrument. |
-| **OQ-MODEL-10** | Is the GLM approximation of a GBM (FR-MODEL-34) a **Model** in its own right, or a block inside the transparency artifact? §4.9's `approximating_model_id` implies the first; the built artifact carries the coefficients and relativities and leaves that field `None`, because a Model whose response column is another model's prediction means something different by `dataset_version_id`, `spec_hash` and R1 — and would need diagnostics of a surrogate against a surrogate target to reach `fitted` (§4.8). Bound to **OQ-MODEL-3**: the approximation needs an independent identity only if something may rate on it. Raised by building it, 2026-08-17. |
+| **OQ-MODEL-8** | ~~Does the GLM spine grow to meet §4's field sets, or does §4 narrow to a staged contract? §4.1, §4.4 and §4.8 declare fields the spine does not implement, and §4.8's `status ≥ fitted ⟹ diagnostics_id set` cannot be met while diagnostics do not exist.~~ **DECIDED 2026-08-17: §4 is a staged contract, re-widened as each slice lands — decided by demonstration, after the pattern ran six times.** Specified as FR-MODEL-87, which names every remaining residual with a verdict and an owner; the standing `spec_hash` versioning rule the question set as its own precondition is now FR-MODEL-86; `expression`'s verdict is FR-MODEL-88 and §4.8's R3 is restated enforceably by FR-MODEL-89. §4.4's nested `regularisation` block was a divergence rather than a staged field and is corrected in place. |
+| **OQ-MODEL-9** | ~~Do `tree` banding boundaries (FR-MODEL-9) and `tree` grouping (FR-MODEL-14) justify adding a tree learner to `pricing-core`'s dependencies?~~ **DECIDED 2026-08-17: declare `scikit-learn` and fit a CART tree in both — the label `tree` must name the instrument.** Specified as FR-MODEL-85, with the dependency in §8; a one-tree booster would have cost no dependency at all and was rejected because its splits are not CART's. |
+| **OQ-MODEL-10** | Is the GLM approximation of a GBM (FR-MODEL-34) a **Model** in its own right, or a block inside the transparency artifact? §4.9's `approximating_model_id` implies the first; the built artifact carries the coefficients and relativities and leaves that field `None`, because a Model whose response column is another model's prediction means something different by `dataset_version_id`, `spec_hash` and R1 — and would need diagnostics of a surrogate against a surrogate target to reach `fitted` (§4.8). Bound to **OQ-MODEL-3**: the approximation needs an independent identity only if something may rate on it. Raised by building it, 2026-08-17. **Unblocked 2026-08-17**: OQ-MODEL-3 is decided, so something may rate on the approximation — and a Rating Version pins what it rates on, while the transparency artifact carries no status for FR-OVR-14's approved-or-better pin check to read. |
+| **OQ-MODEL-11** | What must a GLM approximation prove before a Rating Version may **deploy** in `approximation` mode? FR-MODEL-36's fidelity statement is descriptive — computed, stored, shown, and nothing refuses anything on it — so a mode whose deployed prices are by construction not the validated model has no floor. Options: a numeric floor on the artifact, a dislocation-based gate (`03` FR-RATE-46) with a premium-deviation threshold, or nothing beyond the statement. Carved out of OQ-MODEL-3 when it was decided, 2026-08-17; Phase 2, with the deployment path it gates. |
