@@ -55,6 +55,11 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "SETTING_INVALID",
         "PROMOTION_ORDER_VIOLATION",
         "MIGRATION_REQUIRED",
+        # `00` §5.4's optimistic concurrency, owned by `07` because FR-PLAT-47 owns "the API
+        # implements `00` §5 exactly". Registered with the first routes that require the
+        # header (the model lifecycle, W5) rather than when the convention was written —
+        # W2 and W4 both recorded it as still absent, which is what made it findable.
+        "CONFLICT_STALE_WRITE",
     }
 )
 

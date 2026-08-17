@@ -106,6 +106,73 @@ uv run alembic upgrade head
 uv run alembic downgrade -1 && uv run alembic upgrade head   # prove the downgrade too
 ```
 
+## Constructing a **fitted** model row: the write order is forced
+
+Three guards on `models` interact, and only one order satisfies all three. A fixture that
+needs a fitted model — a second version for a supersession test, say — has to do this:
+
+```python
+row = ModelRow(..., status="draft")   # no fit_result, no diagnostics_id
+session.add(row); await session.flush()          # 1. the model exists, so it can be named
+session.add(DiagnosticsRow(model_id=row.id, payload=...))
+await session.flush()                            # 2. the evidence exists
+row.fit_result, row.diagnostics_id, row.status = fit, diagnostics.id, "fitted"
+await session.flush()                            # 3. all three together
+```
+
+Every shortcut fails, each for a different reason:
+
+* **Insert straight at `fitted`** → `ck_models_fitted_model_has_diagnostics`. The row needs a
+  `diagnostics_id`, and `diagnostics` needs the model's id to point at — the cycle is real,
+  and `draft` is how you break it.
+* **Write `fit_result` first, the pointer second** → the immutability trigger. It fires when
+  `OLD.fit_result IS NOT NULL`, so by the second statement the row is already protected.
+* **Un-fit an existing model** (`row.fit_result = None`) → the same trigger,
+  `a fitted Model is immutable (02 R2): UPDATE rejected`. To test a `draft` model, insert one.
+
+`app/platform/modelling.record_fit` does exactly this, and it is the reference.
+
+## Query `pg_constraint` by suffix, not by the name you wrote
+
+The metadata naming convention prefixes check constraints: `model_status_is_in_the_lifecycle`
+is stored as `ck_models_model_status_is_in_the_lifecycle`. A test asserting a constraint's
+*definition* (rather than catching its error) must use
+`conname LIKE '%%model_status_is_in_the_lifecycle'` — the doubled `%%` because SQLAlchemy's
+`text()` treats a single one as a bind marker. Querying the bare name returns no rows, and
+`scalar_one()` then raises `NoResultFound`, which reads like a missing constraint.
+
+The error path needs no such care: `pytest.raises(..., match="...")` sees the full prefixed
+name in the exception message.
+
+## An HTTP test that needs real data builds it on its own event loop
+
+Every HTTP test in this suite is **synchronous** — `TestClient` is a blocking client — so the
+async `database` and `blob_store` fixtures cannot be requested from one. Building the data
+with `asyncio.new_event_loop()` inside the test is the honest route:
+
+```python
+loop = asyncio.new_event_loop()
+try:
+    database = Database(Settings(database_url=test_database_url()))
+    try:
+        actor, model_id = loop.run_until_complete(_fit(database, store, workspace_id))
+    finally:
+        loop.run_until_complete(database.dispose())
+finally:
+    loop.close()
+```
+
+`dispose()` matters: an asyncpg pool bound to a closed loop surfaces later as
+`got Future attached to a different loop` in an unrelated test. The alternative — hand-built
+rows — makes the route test prove the routes work on a shape the real path never produces.
+
+## A negative DB test that *fails* rolls back, so it leaks nothing
+
+`with pytest.raises(...)` inside `async with database.unit_of_work()` raises pytest's
+`Failed` out of the block when the expected exception does not arrive, and the unit of work
+rolls back on any exception. So a not-yet-implemented constraint leaves no bad row behind for
+the migration that adds it to trip over. Worth knowing before going looking for one.
+
 ## Never `git checkout --` a file you are working on
 
 `git checkout -- path` restores the file to **HEAD**, not to the state before your last
@@ -114,6 +181,14 @@ in that file — the injection *and* everything written this session. Copy the f
 first (`cp file /tmp/file.bak`) and restore from the copy.
 
 ## Verified
+
+2026-08-17 — W5's model-lifecycle slice, compose stack up: **823 Python tests** and the
+frontend's 105. Two new checks proved by injection — skipping `require_if_match` and skipping
+supersession each failed exactly the tests that name them, and nothing else. Four procedures
+added above, all of them found by a test failing for the *right* reason and the wrong one:
+a status-CHECK test that passed against a table with no such constraint (the other CHECKs
+refused the row first), a `pg_constraint` lookup that found nothing, an attempt to un-fit a
+model, and an insert straight to `fitted`.
 
 2026-08-15 — W5's banding and grouping slice, run with the compose stack up: 740 Python
 tests and both alembic directions. **Corrects this skill's previous claim that

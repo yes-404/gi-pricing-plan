@@ -57,6 +57,7 @@ __all__ = [
     "list_factors",
     "load_factors",
     "load_model",
+    "load_model_by_id",
     "record_fit",
     "reserve_model",
     "spec_hash",
@@ -547,16 +548,29 @@ def _require_transition(row: ModelRow, target: ModelStatus) -> ModelStatus:
     return current
 
 
-async def _for_update(session: AsyncSession, workspace_id: UUID, model_id: UUID) -> ModelRow:
-    """The row, locked. Every transition is a check-then-act on `status`."""
-    row = (
-        await session.execute(
-            select(ModelRow).where(ModelRow.id == model_id).with_for_update()
-        )
-    ).scalar_one_or_none()
+async def load_model_by_id(
+    session: AsyncSession, *, workspace_id: UUID, model_id: UUID, for_update: bool = False
+) -> ModelRow:
+    """A model by id, optionally locked.
+
+    `for_update` is not a caller's convenience: every transition is a check-then-act on
+    `status`, and the route that checks an `If-Match` precondition has to read the same row
+    the transition will write. Two unlocked reads in one request is how a precondition
+    passes against a state that has already moved.
+    """
+    query = select(ModelRow).where(ModelRow.id == model_id)
+    if for_update:
+        query = query.with_for_update()
+    row = (await session.execute(query)).scalar_one_or_none()
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError("NOT_FOUND", "Model not found", 404, f"No model {model_id}.")
     return row
+
+
+async def _for_update(session: AsyncSession, workspace_id: UUID, model_id: UUID) -> ModelRow:
+    return await load_model_by_id(
+        session, workspace_id=workspace_id, model_id=model_id, for_update=True
+    )
 
 
 async def submit_for_review(
@@ -702,12 +716,18 @@ async def apply_approval_decision(
         )
     ).scalar_one_or_none()
     if row is None:
-        raise PlatformError(
-            "NOT_FOUND",
-            "The approval request names a model that does not exist",
-            404,
-            f"No {request.artifact_ref}.",
-        )
+        # **Tolerated, not an error, and the distinction is load-bearing.**
+        # `POST /approval-requests` accepts any well-formed `{type}:{slug}@{version}`
+        # string, so a request can name a model that was never created — and if this
+        # 404'd, that request could never be decided and would sit open for ever. A dead
+        # row nobody can close is worse than a decision that moves nothing.
+        #
+        # Nothing reachable through this platform produces such a ref: `submit_for_review`
+        # holds the row it names, and a fitted model cannot be deleted (`02` R2, enforced
+        # by trigger). The hole is in governance's own submission path, which pins a
+        # version without checking that it exists — recorded as `06` FR-GOV-36 with an
+        # owner rather than half-closed from the module on the wrong side of DEP-1.
+        return None
 
     target = _target_status(ApprovalStatus(request.status))
     if target is None or ModelStatus(row.status) is target:

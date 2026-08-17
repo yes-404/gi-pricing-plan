@@ -607,6 +607,22 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > algorithm version exists to make legible: every `v1:` digest is findable with
 > `LIKE 'v1:%'` and reported stale by `spec_hash_is_current`.
 
+> **`flags` and `approval_request_id` are live from 2026-08-17 (W5, the lifecycle).** Both
+> were on OQ-MODEL-8's list of fields declared and dead; the slice that creates an approval
+> request is the one that can populate the second, which is that question's own "re-widen it
+> as the slices land".
+>
+> **`flags` is computed, not stored, and that is a decision rather than an implementation
+> detail.** `01` FR-DATA-23 makes validation re-runnable on an already-validated version, so
+> a dataset that passed under an older rule set can reach `failed` long after a model was
+> fitted on it. A column written at fit time would then answer `[]` for exactly the model
+> FR-MODEL-67 exists to stop. It is derived from the Dataset Version's *current* status on
+> every read that gates on it, and recorded in the audit event at submission so that "was it
+> flagged when it was submitted?" survives the dataset moving again.
+>
+> `transparency_artifact_id` and `custom_objective_ref` stay declared and unbuilt, and
+> OQ-MODEL-8 stays open for them.
+
 **Invariants** — `status ≥ fitted` ⟹ `diagnostics_id` set; `model_type ≠ glm` and
 `status = approved` ⟹ `transparency_artifact_id` set (R3); `custom_objective_ref` set and
 `status = approved` ⟹ that objective version is `approved` (R4); `booster_blob` present
@@ -696,7 +712,8 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-MODEL-57) |
 | `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-MODEL-56) |
 | `POST` | `/api/v1/models/{id}/predict` | Score rows (dev/debug scale; production scoring is `03`) |
-| `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) |
+| `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required |
+| `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-MODEL-64), `If-Match` required |
 | `POST` | `/api/v1/custom-objectives` | Create → `draft` (FR-MODEL-38) |
 | `POST` | `/api/v1/custom-objectives/{id}/derive` | Symbolically derive gradient/hessian from `loss` (FR-MODEL-40) |
 | `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-MODEL-42) |
@@ -769,6 +786,36 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 > The `spec_hash` precondition the same question named is delivered: the digest now reads
 > `v1:sha256:…` and `spec_hash_is_current` answers whether a stored one is still matchable.
 
+> **Amended 2026-08-17 (W5, the model lifecycle).** `POST /models/{id}/submit` is built, and
+> one route is **added to the table above**:
+>
+> * `POST /api/v1/models/{id}/archive` — FR-MODEL-64 names `archived` and no endpoint reached
+>   it. Leaving one state of a six-state machine unreachable is how a partial machine gets
+>   recorded as complete, and an endpoint present in neither the spec nor the contract is
+>   invisible to the endpoint audit — the omission `01`'s reference lifecycle made.
+>
+> Three decisions the building settled, recorded here rather than left in the code:
+>
+> * **Both lifecycle routes take `{id}`, not `{slug}?version=`.** Every *read* route in this
+>   module defaults the version to the latest, which the 2026-08-15 amendment above made
+>   deliberate. For a **mutation** that default is the race `If-Match` exists to catch:
+>   "submit the latest" resolves its own target below the precondition. The spec's original
+>   `{id}` is therefore kept, against the module's own read convention.
+> * **`If-Match` is required on both** (`00` §5.4, FR-PLAT-47), and what it guards is stated
+>   rather than assumed: a precondition on the **caller's view**, not a lost update to a
+>   field — `02` R2 makes a Model's numbers immutable and the transition table already
+>   refuses every unsafe move under a row lock. Its contribution is that a stale client is
+>   told "what you read is stale" instead of "your transition is invalid", which are the same
+>   409 and only one of them is actionable. W4 deferred the header for being the second kind
+>   of guard; that reading was right about the mechanism and wrong about the value.
+> * **A submission returns 200, not 202.** No Job is queued: the transition, the approval
+>   request and the audit events are one transaction. `POST /models` answers 202 because a
+>   fit is work; a submission is a decision that has already completed by the time the
+>   response is written.
+>
+> Still declared and unbuilt after this slice: transparency, backtests, comparison,
+> prediction, custom objectives, metrics and peril structures.
+
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
 `GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_DID_NOT_CONVERGE`,
@@ -779,6 +826,13 @@ iff `model_type ∈ {xgboost, lightgbm}`.
 `OBJECTIVE_GRAMMAR_VIOLATION`, `OBJECTIVE_NONFINITE_DERIVATIVE`,
 `TRANSPARENCY_ARTIFACT_REQUIRED`, `MODEL_IMMUTABLE`, `PICKLE_PERSISTENCE_REFUSED`,
 `PERIL_STRUCTURE_RECONCILIATION_FAILED`.
+
+An **invalid lifecycle transition** (FR-MODEL-64) is `VALIDATION_FAILED` at `409`, not a code
+of its own — the same answer `01` gives for a Dataset Version's transitions, and for the same
+reason: the request was well formed, the artifact's state is what makes it impossible, and a
+caller branching on the code should not have to tell a malformed body from a stale view of a
+lifecycle. `EVIDENCE_INCOMPLETE` and `ARTIFACT_FLAGGED` are `06`'s and are raised from this
+module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 
 ### 5.2 `pricing-core` interfaces
 

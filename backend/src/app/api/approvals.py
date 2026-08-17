@@ -39,6 +39,7 @@ from app.db.models import ApprovalDecisionRow, ApprovalRequestRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as service
+from app.platform import modelling as modelling_service
 from model_schema import (
     ApprovalPolicy,
     ApprovalStatus,
@@ -219,6 +220,21 @@ async def get_request(
 async def decide_request(
     request_id: UUID, body: Decide, caller: Decider, database: DatabaseDep
 ) -> dict[str, Any]:
+    """The decision, and the artifact transition it implies, in **one** transaction.
+
+    `06` FR-GOV-9 stops the approval machine at `approved` — "post-approval states belong to
+    the owning module" — so something has to carry the decision across, and the direction
+    settles where. `MODEL` depends on `GOV` and never the reverse (DEP-1), so a hook inside
+    `approvals.decide` calling back into modelling is the one design that is not available.
+    This route holds both and is above both, which is the same seam `withdraw` uses for
+    `artifact_is_live`.
+
+    One transaction is not a tidiness preference: a model left in `review` after its request
+    reached `approved` is a model no Rating Version may reference and no screen can explain,
+    and two transactions is all it takes to produce one. It also makes FR-MODEL-67's block
+    work — the flag refusal rolls the decision back with it, so an approver is told the
+    model is flagged rather than finding their approval recorded against nothing.
+    """
     async with database.unit_of_work() as session:
         row = await service.decide(
             session,
@@ -228,6 +244,7 @@ async def decide_request(
             decision=body.decision,
             comment=body.comment,
         )
+        await _carry_to_the_artifact(session, caller=caller, request=row)
         decisions = list(
             (
                 await session.execute(
@@ -257,6 +274,10 @@ async def withdraw_request(
             reason=body.reason,
             artifact_is_live=body.artifact_is_live,
         )
+        # A withdrawn request leaves the artifact where a rejected one does: back in its
+        # pre-submission state. Without this the model would sit in `review` for ever with
+        # no open request behind it — reviewable by nobody and resubmittable by nobody.
+        await _carry_to_the_artifact(session, caller=caller, request=row)
         return service.to_dict(row, [])
 
 
@@ -282,3 +303,22 @@ async def put_policy(
         return await service.set_policy(
             session, workspace_id=caller.workspace_id, actor=caller.principal, policy=body
         )
+
+
+async def _carry_to_the_artifact(
+    session: Any, *, caller: Caller, request: ApprovalRequestRow
+) -> None:
+    """Drive the owning module's transition for whatever type this request is about.
+
+    One call per artifact type rather than a branch here: each module's function returns
+    `None` for a request that is not its own, so adding a type is a change in that module
+    and not in this route. Today only `model` has a lifecycle in code — a Custom Objective,
+    a Peril Structure and a Rating Version each gain one with the slice that builds them,
+    and until then their requests decide without an artifact to move.
+    """
+    await modelling_service.apply_approval_decision(
+        session,
+        workspace_id=caller.workspace_id,
+        actor=caller.principal,
+        request=request,
+    )

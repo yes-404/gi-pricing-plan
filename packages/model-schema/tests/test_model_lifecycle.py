@@ -70,7 +70,7 @@ def test_an_approved_model_supersedes_rather_than_archiving_directly() -> None:
 
 @pytest.mark.req("FR-MODEL-64")
 def test_archived_is_the_only_end_state() -> None:
-    assert TERMINAL_MODEL_STATUSES == frozenset({ModelStatus.ARCHIVED})
+    assert frozenset({ModelStatus.ARCHIVED}) == TERMINAL_MODEL_STATUSES
     assert VALID_MODEL_TRANSITIONS[ModelStatus.ARCHIVED] == frozenset()
 
 
