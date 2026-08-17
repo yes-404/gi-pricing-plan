@@ -421,3 +421,51 @@ async def test_a_second_artifact_appends_rather_than_replacing(
             )
 
     assert ids[0] != ids[1], "the second build replaced the first instead of appending"
+
+
+@pytest.mark.req("FR-MODEL-89")
+async def test_a_gbm_cannot_reach_review_until_an_artifact_names_it(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """`02` §4.8 R3, enforced in the direction the link actually runs (FR-MODEL-89).
+
+    R3 used to read `⟹ transparency_artifact_id set`, and could not be enforced: the
+    artifact carries `model_id` and nothing writes a column back onto the model, so the
+    invariant was a field-set claim about a field nobody populates — the same shape as
+    `status ≥ fitted ⟹ diagnostics_id`, which is the failure OQ-MODEL-8 was written around.
+
+    Both halves are asserted, because the refusal alone would pass against a build that
+    refuses every GBM submission. FR-MODEL-64 puts the gate at `review` rather than at
+    `approved`: an approver's attention should not be spent on a model that was never
+    eligible.
+    """
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    actor = await _actuary(database, workspace_id)
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as refused:
+            await model_service.submit_for_review(
+                session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+                change_summary="submitted with no transparency artifact",
+            )
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert "transparency artifact names it" in (refused.value.detail or "")
+
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_TRANSPARENCY,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id), "sample": 2_000},
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            change_summary="submitted with the artifact the invariant asks for",
+        )
+    assert ModelStatus(row.status) is ModelStatus.REVIEW

@@ -31,6 +31,19 @@ dependencies = [
     # prediction time that FR-MODEL-72 exists for). A major bump re-opens both questions.
     "xgboost>=3.4,<4",
     "lightgbm>=4.5,<5",
+    # FR-MODEL-85 (OQ-MODEL-9, decided 2026-08-17): `tree` banding (FR-MODEL-9) and
+    # `tree` grouping (FR-MODEL-14) fit a single depth-limited `DecisionTreeRegressor`.
+    #
+    # This declaration installs nothing new — `glum` 3.4.1 already requires scikit-learn,
+    # so 1.9.0 is in every environment this package has ever had. It is declared because
+    # the package now *imports* it: relying on a transitive dependency is the pandera
+    # state `01` found in reverse, named in four places and depended on by nothing.
+    #
+    # A one-tree booster would have added no dependency at all, and was rejected: XGBoost
+    # selects splits under `lambda`, `min_child_weight` and `gamma`, so its cut points are
+    # not the CART cut points the method is named for, and shipping them as `tree` is the
+    # same mislabelling the quantile substitution was refused for.
+    "scikit-learn>=1.5,<2",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and

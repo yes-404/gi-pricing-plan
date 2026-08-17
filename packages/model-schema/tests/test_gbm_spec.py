@@ -302,3 +302,35 @@ def test_early_stopping_on_a_holdout_that_was_never_declared_is_refused() -> Non
     """
     with pytest.raises(pydantic.ValidationError, match="split_ref"):
         _spec(split_ref=None)
+
+
+@pytest.mark.req("FR-MODEL-87")
+def test_the_glm_arm_refuses_the_nested_regularisation_block_the_spec_used_to_show() -> None:
+    """`02` §4.4 showed a nested `regularisation` object; `GlmSpec` takes the two penalty
+    parameters flat, as `glum` does.
+
+    OQ-MODEL-8 (decided 2026-08-17) separated the fields *awaiting a slice* from the ones
+    *present under a different shape*, and this was the only member of the second kind: a
+    caller copying the page would have sent a body the contract rejects. The page is
+    corrected; this test is what stops it drifting back, because `extra="forbid"` is the
+    thing that makes the divergence loud rather than silent.
+    """
+    with pytest.raises(pydantic.ValidationError, match="regularisation"):
+        GlmSpec(
+            model_family_slug="motor-ad-frequency",
+            dataset_version_id=new_uuid7(),
+            response_column="ad_claim_count",
+            offset=EXPOSURE,
+            seed=7,
+            regularisation={"kind": "elastic_net", "alpha": 0.001, "l1_ratio": 0.0},
+        )
+    flat = GlmSpec(
+        model_family_slug="motor-ad-frequency",
+        dataset_version_id=new_uuid7(),
+        response_column="ad_claim_count",
+        offset=EXPOSURE,
+        seed=7,
+        alpha=0.001,
+        l1_ratio=0.0,
+    )
+    assert (flat.alpha, flat.l1_ratio, flat.max_iter, flat.tolerance) == (0.001, 0.0, 200, 1e-8)

@@ -198,6 +198,7 @@ def test_a_missing_column_fails_loudly_at_resolution() -> None:
 
 
 @pytest.mark.req("FR-MODEL-1")
+@pytest.mark.req("FR-MODEL-88")
 def test_a_factor_type_that_is_not_implemented_says_so() -> None:
     """Silently treating a `spline` as its raw column would produce a fit nobody could
     tell from a correct one.
@@ -212,6 +213,28 @@ def test_a_factor_type_that_is_not_implemented_says_so() -> None:
     )
     with pytest.raises(FactorResolutionError, match="does not resolve yet"):
         resolve_factors(_frequency_data(100), [splined])
+
+
+@pytest.mark.req("FR-MODEL-88")
+def test_an_expression_factor_can_be_declared_and_can_never_be_resolved() -> None:
+    """FR-MODEL-88 states this verdict rather than leaving it to be discovered.
+
+    `FactorType.EXPRESSION` is a live member of FR-MODEL-1's closed set and `Factor` carries
+    no field to hold the expression, so the type is selectable and the payload cannot be
+    supplied. OQ-MODEL-8 (decided 2026-08-17) called that contained rather than corrected:
+    the refusal is at resolution, which is the boundary where an unresolved factor would
+    otherwise become a fit nobody could tell from a correct one. The field and its validator
+    arm are Phase 1b's, with the rest of the expression work.
+    """
+    factor = Factor(
+        id=uuid4(), slug="age_over_ncd", dataset_id=uuid4(), version=1,
+        type=FactorType.EXPRESSION, source_columns=("driv_age",),
+    )
+    assert not hasattr(factor, "expression"), (
+        "an `expression` field would make this factor resolvable and FR-MODEL-88 wrong"
+    )
+    with pytest.raises(FactorResolutionError, match="'expression'"):
+        resolve_factors(_frequency_data(100), [factor])
 
 
 @pytest.mark.req("FR-MODEL-4")

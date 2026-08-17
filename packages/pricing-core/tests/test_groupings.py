@@ -141,6 +141,97 @@ def test_clustering_recovers_the_levels_that_share_a_rate() -> None:
     assert all(len(targets) == 1 for targets in by_truth.values()), grouping.mapping
 
 
+@pytest.mark.req("FR-MODEL-85")
+def test_a_tree_grouping_partitions_the_rate_order_and_separates_the_signal() -> None:
+    """What a greedy weighted-SSE partition guarantees, and what it recovers.
+
+    The guarantee is structural: leaves of a tree on one sorted feature are contiguous
+    intervals of that feature, so the targets read as an ordered banding of a categorical —
+    which is what a rate table can carry.
+
+    The recovery claim is deliberately weaker than
+    `test_clustering_recovers_the_levels_that_share_a_rate`'s, because on **this** book the
+    two methods genuinely differ: the observed rates of the 0.072 and 0.104 groups overlap
+    (`L09` at 0.086, `L10` at 0.098), and the greedy cut falls inside that overlap where
+    Ward's merge order does not. Asserting the exact partition would be asserting the noise.
+    So it asserts what is not noise — the two extremes stay whole and stay apart.
+    """
+    tree = propose_grouping(
+        _book(), _proposal(method=GroupingMethod.TREE), dataset_id=DATASET, slug="vg-tree"
+    )
+    assert len(tree.target_levels) == 4
+    assert set(tree.mapping) == set(_TRUE_EFFECT)
+
+    cheapest = {tree.mapping[f"L{i:02d}"] for i in range(5)}
+    dearest = {tree.mapping[f"L{i:02d}"] for i in range(15, 20)}
+    assert len(cheapest) == 1
+    assert len(dearest) == 1
+    assert cheapest != dearest
+
+    stats = tree.evidence.target_level_stats if tree.evidence else []
+    rates = [row.claim_count / float(row.exposure_years) for row in stats]
+    assert rates == sorted(rates), "leaves of a tree on one feature are contiguous in it"
+
+
+@pytest.mark.req("FR-MODEL-14")
+def test_a_tree_grouping_is_not_ward_linkage_under_another_name() -> None:
+    """FR-MODEL-14 names both, and substituting one for the other was refused.
+
+    A test that only checked the tree finds the right groups would pass just as well if
+    `tree` dispatched to `_hierarchical`, which is the substitution the refusal existed to
+    prevent — so this asks the two methods to disagree on the same book.
+    """
+    mappings = {
+        method: propose_grouping(
+            _book(), _proposal(method=method), dataset_id=DATASET, slug="vg-cmp"
+        ).mapping
+        for method in (GroupingMethod.TREE, GroupingMethod.HIERARCHICAL_CLUSTERING)
+    }
+    assert mappings[GroupingMethod.TREE] != mappings[GroupingMethod.HIERARCHICAL_CLUSTERING]
+
+
+@pytest.mark.req("FR-MODEL-85")
+def test_a_tree_grouping_records_enough_to_reproduce_itself() -> None:
+    """`n_groups` is on the proposal; `random_state` is only on the artifact if put there."""
+    first = propose_grouping(
+        _book(), _proposal(method=GroupingMethod.TREE), dataset_id=DATASET, slug="vg-tree"
+    )
+    again = propose_grouping(
+        _book(), _proposal(method=GroupingMethod.TREE), dataset_id=DATASET, slug="vg-tree"
+    )
+    assert first.mapping == again.mapping
+    assert first.method_params["random_state"] == 0
+    assert first.method_params["min_samples_leaf"] == 1
+
+
+@pytest.mark.req("FR-MODEL-11")
+def test_a_tree_grouping_still_places_every_level_it_cannot_rate() -> None:
+    """A level with no exposure has no rate to split on, and no target level of its own.
+
+    It goes to the largest cluster, as `hierarchical_clustering` already does — never to a
+    group of its own, which would be FR-MODEL-11's target level with no data behind it.
+    """
+    frame = pl.concat(
+        [
+            _book(),
+            pl.DataFrame(
+                {
+                    "vehicle_group": ["L99"],
+                    "exposure_years": [0.0],
+                    "claim_count": [0.0],
+                    "claim_amount_minor": [0],
+                }
+            ).with_columns(pl.col("claim_amount_minor").cast(pl.Int64)),
+        ]
+    )
+    grouping = propose_grouping(
+        frame, _proposal(method=GroupingMethod.TREE), dataset_id=DATASET, slug="vg-zero"
+    )
+    assert len(grouping.target_levels) == 4
+    assert set(grouping.mapping) == set(_TRUE_EFFECT) | {"L99"}
+    assert grouping.mapping["L99"] in grouping.target_levels
+
+
 @pytest.mark.req("FR-MODEL-15")
 def test_the_evidence_says_what_the_merge_cost() -> None:
     """FR-MODEL-15: a grouping is a modelling decision and must be defensible as one.
@@ -221,7 +312,6 @@ def test_buhlmann_straub_is_refused_rather_than_silently_substituted() -> None:
     ("method", "fragment"),
     [
         (GroupingMethod.MANUAL, "nothing to propose"),
-        (GroupingMethod.TREE, "tree"),
         (GroupingMethod.REFERENCE_HIERARCHY, "reference_hierarchy"),
     ],
 )
