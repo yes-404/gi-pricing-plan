@@ -106,6 +106,44 @@ uv run alembic upgrade head
 uv run alembic downgrade -1 && uv run alembic upgrade head   # prove the downgrade too
 ```
 
+## Assert on a metric that responds to what the fixture changed
+
+Two fits of the same factor differing only in regularisation **tie on Gini**, and a test that
+expected the unpenalised one to win fails for a reason that looks like a bug and is not: Gini
+is computed from the *ordering* of predicted rates, and shrinkage moves every level toward the
+grand mean without ever swapping two of them. Rank-based metrics — Gini, lift, anything built
+on `_bin_index` — cannot see a change that preserves order.
+
+Pick the metric by what the fixture perturbed:
+
+| The fixture changed | Assert on |
+|---|---|
+| which factors are in the model | Gini, normalised Gini, lift |
+| the *magnitude* of a prediction (regularisation, an offset, a base level) | deviance, A/E, calibration |
+| the ordering of two models against each other | double lift |
+
+And prefer a fixture whose answer you can state before the run. "The model fitted on the
+factor that drives the risk must beat the one fitted on noise" is a known answer; "the leader
+is not null" passes against a leader chosen by dictionary order.
+
+## Getting a *different* weighting scheme into a fixture
+
+`_weighting` reads the spec: an exposure offset means `exposure`, a weight column means
+`claim_count`, neither means `count`. Building a second scheme is not as simple as dropping the
+offset, because `GlmSpec` refuses a Poisson model without one (FR-MODEL-19) — the only route
+the contract allows is a genuine severity model:
+
+```python
+GlmSpec(..., response_column="avg_cost", family="gamma",
+        offset=OffsetSpec(kind="none"),
+        weight=WeightSpec(kind="column", column="claim_count"))
+```
+
+Two consequences for the fixture: the response column must be **strictly positive** (Gamma
+refuses zeros outright, and a book's `claim_count` has plenty), and it should be fitted on
+claim-bearing rows only — otherwise `glum` divides by a zero weight and the run is noisy for a
+reason that has nothing to do with the test.
+
 ## Constructing a **fitted** model row: the write order is forced
 
 Three guards on `models` interact, and only one order satisfies all three. A fixture that
@@ -181,6 +219,13 @@ in that file — the injection *and* everything written this session. Copy the f
 first (`cp file /tmp/file.bak`) and restore from the copy.
 
 ## Verified
+
+2026-08-17 — W5's comparison slice, compose stack up: **855 Python tests** and the frontend's
+105, plus both alembic directions. Two new checks proved by injection (the shared-split refusal
+and the runner's `job_id` injection), each failing exactly the tests that name it. The two
+procedures added above both came from a test that failed for the *right* reason and the wrong
+one: a Gini assertion that could never hold, and a weighting fixture the `GlmSpec` contract
+refuses.
 
 2026-08-17 — W5's model-lifecycle slice, compose stack up: **823 Python tests** and the
 frontend's 105. Two new checks proved by injection — skipping `require_if_match` and skipping

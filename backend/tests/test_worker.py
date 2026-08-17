@@ -77,6 +77,56 @@ async def test_a_successful_job_reaches_succeeded_with_its_result(
     assert row.finished_at is not None
 
 
+@pytest.mark.req("FR-PLAT-7")
+async def test_the_runner_tells_the_handler_which_job_it_is(
+    database: Database, workspace_id, principal
+) -> None:
+    """The provenance link every artifact handler already tried to use — and none could.
+
+    Three handlers read `parameters.get("job_id")` to stamp the artifact they produce with the
+    Job that produced it, and no caller ever put it in the payload: `job_identity` carries the
+    actor and the workspace, `fit_payload` carries the model. So `diagnostics.job_id` and
+    `models.job_id` were silently always NULL, and the trail from an artifact back to the run
+    that made it did not exist. Found 2026-08-17 by the comparison slice, whose artifact is
+    keyed on it.
+
+    Tested here rather than in one handler's own tests because the fix is the **runner's**, and
+    a test per handler would let the next handler be written without it.
+    """
+    seen: dict[str, Any] = {}
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        seen.update(params)
+        return JobResult(kind="artifact", ref=SUCCEEDED_REF)
+
+    handlers.register_handler(JobKind.MODEL_FIT, handler)
+    job = await _submit(database, workspace_id, principal)
+
+    assert await execute_job(database, job.id) is JobStatus.SUCCEEDED
+    assert seen["job_id"] == str(job.id)
+
+
+@pytest.mark.req("FR-PLAT-7")
+async def test_the_runners_job_id_overrides_one_supplied_in_the_payload(
+    database: Database, workspace_id, principal
+) -> None:
+    """A handler stamping an artifact with somebody else's Job id is worse than one stamping
+    nothing, so the runner is authoritative rather than deferring to the payload."""
+    seen: dict[str, Any] = {}
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        seen.update(params)
+        return JobResult(kind="artifact", ref=SUCCEEDED_REF)
+
+    handlers.register_handler(JobKind.MODEL_FIT, handler)
+    impostor = str(new_uuid7())
+    job = await _submit(database, workspace_id, principal, parameters={"job_id": impostor})
+
+    assert await execute_job(database, job.id) is JobStatus.SUCCEEDED
+    assert seen["job_id"] == str(job.id)
+    assert seen["job_id"] != impostor
+
+
 @pytest.mark.req("FR-GOV-20")
 async def test_worker_transitions_are_audited_and_chained(
     database: Database, workspace_id, principal

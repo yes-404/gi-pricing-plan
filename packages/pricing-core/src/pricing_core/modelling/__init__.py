@@ -10,6 +10,7 @@ from pricing_core.modelling.bandings import (
     check_banding,
     propose_banding,
 )
+from pricing_core.modelling.comparison import ComparisonCandidate, compare_models
 from pricing_core.modelling.diagnostics import (
     DiagnosticsResult,
     compute_diagnostics,
@@ -37,6 +38,7 @@ from pricing_core.modelling.predict import (
 
 __all__ = [
     "BandingError",
+    "ComparisonCandidate",
     "DiagnosticsResult",
     "FactorMatrix",
     "FactorResolutionError",
@@ -48,6 +50,7 @@ __all__ = [
     "apply_grouping",
     "band_statistics",
     "check_banding",
+    "compare_models",
     "compute_diagnostics",
     "deviance",
     "fit_glm",
