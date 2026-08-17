@@ -122,6 +122,32 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # able to tell apart from a malformed request. Added to `02` §5.1's catalogue in the
         # same commit, and raised by `pricing-core` as well as by the platform.
         "MODELS_NOT_COMPARABLE",
+        # The GBM slice, 2026-08-17. Every one of these is raised by `pricing-core` and
+        # mapped straight into a `PlatformError` by the fit handler — which is exactly the
+        # path that raised `ValueError: unknown error code` for `GLM_SEPARATION_DETECTED`
+        # until the diagnostics slice noticed. Registering them with the code that raises
+        # them, rather than when a caller trips one in production.
+        "MONOTONE_CONSTRAINT_CONFLICT",
+        "EARLY_STOPPING_REQUIRES_HOLDOUT",
+        "OBJECTIVE_NOT_APPLICABLE",
+        "OBJECTIVE_NOT_APPROVED",
+        "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
+        # FR-MODEL-71's own code, and it earns one: "the offset cannot be reconstructed" is
+        # a distinct failure from "this frame is missing a feature", and it is the one that
+        # would otherwise score silently wrong on both backends.
+        "OFFSET_NOT_RECONSTRUCTABLE",
+        "GBM_NO_FEATURES",
+        "SCORING_FEATURES_MISMATCH",
+        "INTERACTION_FEATURE_UNKNOWN",
+        "LOSS_TREATMENT_UNIMPLEMENTED",
+        # The transparency slice. `MODEL_ALREADY_TRANSPARENT` is a refusal rather than a
+        # no-op on purpose: a GLM approximating itself reports perfect fidelity, and an
+        # artifact that satisfies R3 while carrying no information is worse than none.
+        "MODEL_NOT_FITTED",
+        "MODEL_ALREADY_TRANSPARENT",
+        "MODEL_TYPE_UNSUPPORTED",
+        "APPROXIMATION_TARGET_NOT_POSITIVE",
+        "SHAP_SAMPLE_EMPTY",
     }
 )
 

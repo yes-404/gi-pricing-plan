@@ -46,6 +46,11 @@ from pricing_core.modelling.predict import (
     linear_predictor,
     predict_glm,
 )
+from pricing_core.modelling.transparency import (
+    build_glm_approximation,
+    build_shap_summary,
+    fidelity_statement,
+)
 
 __all__ = [
     "SUPPORTED_GBM_OBJECTIVES",
@@ -64,11 +69,14 @@ __all__ = [
     "apply_grouping",
     "apply_loss_treatment",
     "band_statistics",
+    "build_glm_approximation",
+    "build_shap_summary",
     "check_banding",
     "compare_models",
     "compute_diagnostics",
     "compute_gbm_diagnostics",
     "deviance",
+    "fidelity_statement",
     "fit_gbm",
     "fit_glm",
     "grouping_evidence",

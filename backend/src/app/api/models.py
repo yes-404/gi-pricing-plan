@@ -40,6 +40,7 @@ from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as service
 from app.platform import transformations as transform_service
+from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from model_schema import (
     Banding,
@@ -60,6 +61,7 @@ from model_schema import (
     ModelSpec,
     MonotonicDirection,
     SpecValidation,
+    TransparencyArtifact,
 )
 from model_schema import Permission as Perm
 
@@ -703,4 +705,82 @@ async def get_comparison(
     async with database.session() as session:
         return await comparison_service.load_comparison(
             session, workspace_id=caller.workspace_id, comparison_id=comparison_id
+        )
+
+
+class BuildTransparency(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    sample: int = Field(
+        default=200_000, ge=1,
+        description="Rows the SHAP summary is computed on (FR-MODEL-35). Persisted on the "
+        "artifact with the seed, because a summary computed on a different sample is a "
+        "different summary.",
+    )
+
+
+@router.post(
+    "/models/{model_id}/transparency",
+    summary="Build a transparency artifact for a non-GLM model",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def build_transparency(
+    model_id: UUID,
+    body: BuildTransparency,
+    caller: FitModels,
+    database: DatabaseDep,
+    response: Response,
+) -> Job:
+    """**202** with a Job (FR-MODEL-33, R3).
+
+    Work, not a lookup: it scores the booster over the modelling population, fits a GLM to
+    those predictions and walks every tree for TreeSHAP.
+
+    Both refusals happen **here**, before a Job exists — a model with no fit has nothing to
+    explain, and a GLM needs no artifact at all. The second matters more than it looks:
+    building one would produce a GLM approximating itself, reporting 100 % fidelity, which
+    is worse than no artifact because it reads as evidence.
+    """
+    async with database.unit_of_work() as session:
+        await transparency_service.fitted_gbm_or_refuse(
+            session, workspace_id=caller.workspace_id, model_id=model_id
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_TRANSPARENCY,
+            {**job_identity(caller), "model_id": str(model_id), "sample": body.sample},
+            caller.principal,
+            workspace_id=caller.workspace_id,
+            queue=JobQueue.COMPUTE,
+        )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
+
+
+@router.get(
+    "/models/{model_id}/transparency",
+    summary="A model's transparency artifact",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_transparency(
+    model_id: UUID, caller: ReadModels, database: DatabaseDep
+) -> TransparencyArtifact:
+    """**Added to `02` §5.1 with this slice** (FR-MODEL-84).
+
+    The table declared the `POST` and no `GET` — a 202 whose artifact nothing can read,
+    which is complete to the endpoint audit and unusable to a caller. The same omission
+    `01`'s reference publish lifecycle made, and the same one the comparison artifact had
+    until `#81`.
+
+    The **latest** artifact: FR-MODEL-33 allows several, and a SHAP summary recomputed on a
+    larger sample is a second artifact rather than a correction. An approval cites one by
+    id, and that path resolves the row directly.
+
+    `model:read`, not `model:fit`: building an explanation spends compute, reading one does
+    not.
+    """
+    async with database.session() as session:
+        return await transparency_service.load_transparency(
+            session, workspace_id=caller.workspace_id, model_id=model_id
         )

@@ -27,6 +27,7 @@ from backend.tests.test_model_jobs import (
 
 from app.db.models import BlobRow, ModelRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
@@ -267,3 +268,156 @@ async def test_early_stopping_uses_the_split_the_spec_declares(
     assert diagnostics.gbm.eval_curve
     assert all(p.holdout is not None for p in diagnostics.gbm.eval_curve)
     assert all(p.train is not None for p in diagnostics.gbm.eval_curve)
+
+
+# --------------------------------------------------------------------------------------
+# `02` §3.6 — the transparency artifact
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-33")
+async def test_a_transparency_artifact_is_built_and_read_back(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-33 end to end, through the Job that builds it and the route that reads it.
+
+    Both halves matter. A `POST` whose artifact nothing can fetch is complete to the
+    endpoint audit and useless to a caller — the omission FR-MODEL-84 was appended to close.
+    """
+    from app.platform import transparency as transparency_service
+
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+
+    actor = await _actuary(database, workspace_id)
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_TRANSPARENCY,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id), "sample": 2_000},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        artifact = await transparency_service.load_transparency(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+
+    assert artifact.model_id == model_id
+    assert artifact.glm_approximation is not None
+    assert artifact.shap_summary is not None
+    assert artifact.shap_summary.sample_rows <= 2_000
+    # FR-MODEL-36: prose that says where, not a score that says how much.
+    assert "%" in artifact.fidelity_statement
+
+
+@pytest.mark.req("FR-MODEL-33")
+async def test_a_glm_is_refused_a_transparency_artifact(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-33 applies to **non-GLM** models, and the refusal is the interesting half.
+
+    A GLM approximating itself would report perfect fidelity — an artifact that satisfies
+    R3 and carries no information, which is worse than none because it reads as evidence.
+    """
+    from backend.tests.test_model_jobs import _spec as _glm_spec
+
+    from app.platform import transparency as transparency_service
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_glm_spec(version_id, (area,), split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as refusal:
+            await transparency_service.fitted_gbm_or_refuse(
+                session, workspace_id=workspace_id, model_id=model_id
+            )
+    assert refusal.value.code == "MODEL_ALREADY_TRANSPARENT"
+    assert refusal.value.status_code == 409
+
+
+@pytest.mark.req("FR-MODEL-84")
+async def test_a_model_with_no_artifact_reports_that_rather_than_an_empty_one(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """404, naming the model and the route that would build one.
+
+    An empty artifact would satisfy R3's presence check while explaining nothing — the same
+    state `TransparencyArtifact` refuses at the type.
+    """
+    from app.platform import transparency as transparency_service
+
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as missing:
+            await transparency_service.load_transparency(
+                session, workspace_id=workspace_id, model_id=model_id
+            )
+    assert missing.value.code == "NOT_FOUND"
+    # The refusal names the route that would fix it: a 404 that only says "not found"
+    # makes the caller guess whether the model, the artifact or the workspace is wrong.
+    assert "POST /api/v1/models/{id}/transparency" in str(missing.value)
+
+
+@pytest.mark.req("FR-MODEL-33")
+async def test_a_second_artifact_appends_rather_than_replacing(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-33 allows several, and FR-MODEL-36 makes each one evidence.
+
+    A re-sampled SHAP summary is a second artifact, not a correction of the first: an
+    approval that cited the earlier one must still resolve to what the approver read. The
+    table has no unique constraint on `model_id` for exactly this reason, and the read path
+    takes the latest.
+    """
+    from app.platform import transparency as transparency_service
+
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    actor = await _actuary(database, workspace_id)
+
+    ids = []
+    for sample in (1_000, 2_000):
+        async with database.unit_of_work() as session:
+            job = await job_service.submit(
+                session, JobKind.MODEL_TRANSPARENCY,
+                {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+                 "model_id": str(model_id), "sample": sample},
+                actor, workspace_id=workspace_id,
+            )
+        assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+        async with database.session() as session:
+            ids.append(
+                (
+                    await transparency_service.load_transparency(
+                        session, workspace_id=workspace_id, model_id=model_id
+                    )
+                ).id
+            )
+
+    assert ids[0] != ids[1], "the second build replaced the first instead of appending"

@@ -24,12 +24,15 @@ from app.db.models import BlobRow, DatasetSplitRow, DatasetVersionRow, ModelRow
 from app.errors import PlatformError
 from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
+from app.platform import diagnostics as diagnostics_service
 from app.platform import modelling as model_service
 from app.platform import transformations as transform_service
+from app.platform import transparency as transparency_service
 from app.platform.blobs import to_ref
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import register_handler
 from model_schema import (
+    FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     Banding,
     Diagnostics,
@@ -44,6 +47,7 @@ from model_schema import (
     JobKind,
     JobResult,
     ModelSpec,
+    TransparencyArtifact,
     new_uuid7,
 )
 from pricing_core import ProgressCallback, ScaledProgress
@@ -455,6 +459,127 @@ def _compare(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
     return JobResult(kind="artifact", ref=f"model_comparison:{comparison_id}")
 
 
+
+def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`model.transparency` — explain a fitted non-GLM model (FR-MODEL-33..37, R3).
+
+    Both forms are built when both can be: FR-MODEL-33 allows either and this produces
+    both, because they answer different questions. The GLM approximation says what the
+    model would look like as a rate table and where that table would misprice; the SHAP
+    summary says which factors the booster is actually using and, on XGBoost, which pairs
+    are worth an actuary authoring an `interaction` Factor for (FR-MODEL-79).
+
+    The model is scored over the **training** partition of its own split, so the fidelity
+    statement describes the population the model was fitted on. Approximating on the
+    holdout would report how well a surrogate generalises, which is a different question
+    and not the one R3 asks.
+    """
+    progress = _bridge(callback)
+    blob_store = progress.blob_store
+    actor, workspace_id = _actor(parameters), _workspace(parameters)
+    model_id = UUID(parameters["model_id"])
+    sample = int(parameters.get("sample", 200_000))
+    progress.update(0.05, "loading the model")
+
+    async def load() -> tuple[
+        GbmSpec, GbmFitResult, bytes, list[Factor], _Transformations, pl.DataFrame
+    ]:
+        async with progress.database.session() as session:
+            row = await transparency_service.fitted_gbm_or_refuse(
+                session, workspace_id=workspace_id, model_id=model_id
+            )
+            spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+            result = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+            if not isinstance(spec, GbmSpec) or not isinstance(result, GbmFitResult):
+                raise PlatformError(
+                    "MODEL_TYPE_UNSUPPORTED",
+                    "This model type has no transparency builder",
+                    409,
+                    f"{spec.model_type!r} is not a gradient boosting model.",
+                )
+            factors = await model_service.load_factors(
+                session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+            )
+            transformations = _Transformations(
+                bandings=await transform_service.load_bandings(
+                    session, workspace_id=workspace_id,
+                    ids=[f.banding_id for f in factors if f.banding_id],
+                ),
+                groupings=await transform_service.load_groupings(
+                    session, workspace_id=workspace_id,
+                    ids=[f.grouping_id for f in factors if f.grouping_id],
+                ),
+            )
+            version = await dataset_service.fittable_or_refuse(
+                session, workspace_id=workspace_id, version_id=spec.dataset_version_id
+            )
+            parent = await _frame_of(session, blob_store, version)
+            train, _ = await _split_frames(
+                session, blob_store, workspace_id=workspace_id, spec=spec, parent=parent
+            )
+            booster = await blob_store.read(result.booster_blob)
+            return spec, result, booster, factors, transformations, train
+
+    spec, result, booster, factors, transformations, frame = progress.run_on_loop(load())
+
+    from pricing_core.modelling import (
+        build_glm_approximation,
+        build_shap_summary,
+        fidelity_statement,
+    )
+
+    progress.update(0.20, "fitting the GLM approximation")
+    approximation = build_glm_approximation(
+        result, booster, spec, factors, frame,
+        bandings=transformations.bandings,
+        groupings=transformations.groupings,
+        progress=ScaledProgress(progress, start=0.20, end=0.60),
+    )
+    progress.update(0.60, "tree shap")
+    summary = build_shap_summary(
+        result, booster, spec, factors, frame,
+        sample=sample,
+        bandings=transformations.bandings,
+        groupings=transformations.groupings,
+        progress=ScaledProgress(progress, start=0.60, end=0.90),
+    )
+
+    async def store() -> UUID:
+        async with progress.database.unit_of_work() as session:
+            # FR-MODEL-52's monotonicity check, carried up to the artifact R3 reads. Taken
+            # from the diagnostics rather than recomputed: the diagnostics swept the factors
+            # at fit time, and a second sweep here could disagree with the evidence the
+            # model was approved against.
+            diagnostics = await diagnostics_service.load_diagnostics(
+                session, workspace_id=workspace_id, model_id=model_id
+            )
+            checks = diagnostics.gbm.monotonicity if diagnostics.gbm else ()
+            artifact = TransparencyArtifact(
+                id=new_uuid7(),
+                model_id=model_id,
+                created_at=datetime.now(UTC),
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+                glm_approximation=approximation,
+                shap_summary=summary,
+                fidelity_statement=fidelity_statement(approximation, summary),
+                monotonicity_verified=(
+                    all(check.holds for check in checks) if checks else None
+                ),
+            )
+            row = await transparency_service.record_transparency(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                model_id=model_id,
+                artifact=artifact,
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+            )
+            return row.id
+
+    artifact_id = progress.run_on_loop(store())
+    progress.update(1.0, "done")
+    return JobResult(kind="artifact", ref=f"transparency:{artifact_id}")
+
 def register_model_handlers() -> None:
     """Register the `model.*` handlers, idempotently — see `register_data_handlers`."""
     from app.worker import handlers as handler_registry
@@ -463,3 +588,5 @@ def register_model_handlers() -> None:
         register_handler(JobKind.MODEL_FIT, _fit)
     if JobKind.MODEL_COMPARE not in handler_registry.HANDLERS:
         register_handler(JobKind.MODEL_COMPARE, _compare)
+    if JobKind.MODEL_TRANSPARENCY not in handler_registry.HANDLERS:
+        register_handler(JobKind.MODEL_TRANSPARENCY, _transparency)
