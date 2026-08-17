@@ -66,6 +66,43 @@ unchanged — silently, so a following `gh pr view` is the only way to notice. T
 above works where the `gh` subcommand does not, which generalises: when `gh` fails on a
 field it did not need, reach for `gh api`.
 
+## Rebasing a branch another worktree has checked out
+
+A stale branch is often checked out **in another worktree with uncommitted work on top** —
+this repository runs parallel sessions, and `git worktree list` is how you find out before
+you destroy something. `git rebase` there refuses outright (`cannot rebase: You have
+unstaged changes`), and stashing or committing on someone else's behalf is not the fix.
+
+Rebase in a **scratch worktree of your own** and push only the remote ref:
+
+```bash
+git worktree add --detach "$CLAUDE_JOB_DIR/tmp/w" origin/main
+cd "$CLAUDE_JOB_DIR/tmp/w" && git cherry-pick <tip>          # or rebase --onto
+git push --force-with-lease=refs/heads/<branch>:<old-sha> \
+    origin HEAD:refs/heads/<branch>
+```
+
+**A force-push moves the remote ref and nothing local.** The peer's branch still points at
+the old commit and their working files are untouched; only their upstream reads `[gone]`
+after the merge, which is cosmetic. Use the fully-qualified
+`--force-with-lease=<ref>:<sha>` form — from a detached HEAD the bare `--force-with-lease`
+has no remote-tracking ref to lease against.
+
+Two `gh` behaviours follow from the detached HEAD, both harmless once expected:
+
+- `gh pr merge --squash --delete-branch` **merges, then fails** with `could not determine
+  current branch` while trying the local delete. The merge already happened — re-running it
+  reports `already merged`, so check before assuming it did not.
+- Run from the main checkout instead and the local delete is **refused** by git: `cannot
+  delete branch '<branch>' used by worktree at …`. That refusal is the protection, not a
+  problem to force past. Leave the branch; the peer still needs it.
+
+The reason to bother rather than opening the PR from the stale branch: its three-dot diff
+carries every commit since the merge base, and squash-merges make already-merged work look
+unmerged by ancestry. `git diff --stat origin/main <branch>` — **two dots** — is what shows
+the real delta, and a large deletion count there means the branch is behind, not that it
+deletes anything.
+
 ## Deleting branches after a squash-merge
 
 Squash-merge rewrites history, so `git branch -d` **refuses** even when the content is
@@ -163,3 +200,12 @@ demonstration that the same-commit rule above is a rule and not a preference.
 
 2026-08-15 — W6a close. The `pull_request` `paths:` behaviour above was learned by
 pushing a commit as a proof it could not be.
+
+**2026-08-17 — the worktree case, found by hitting all four steps.** `oq-model-3-8-9-revise`
+sat four squash-merges behind `main` and was checked out in a peer worktree carrying ten
+files of uncommitted work. The scratch-worktree cherry-pick, the fully-qualified lease, the
+`gh pr merge` that merged before reporting failure, and git's refusal to delete the local
+branch all behaved exactly as above; the peer's ten files were verified intact afterwards.
+The one conflict was a single table row where `main` had escaped a pipe and the branch had
+escaped it *and* added text — resolvable only by reading both sides, which is the argument
+for rebasing before the PR rather than after review starts.
