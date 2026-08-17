@@ -22,6 +22,8 @@ Checks (all non-destructive, exit 1 on any failure):
  18. The notes index and the directory agree, in both directions.
  19. Every reference a note makes resolves — links, FR-/NFR- ids, OQ- ids, ADRs, NT- ids.
  20. No note defines a requirement id; only docs/specs/ may do that.
+ 21. Every endpoint and pricing-core function a workflow journey cites is declared
+     in the owning module's §5.1 or §5.2 (FR-OVR-17, OQ-OVR-6).
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -51,6 +53,51 @@ def fail(msg: str) -> None:
     failures.append(msg)
 
 
+
+
+#: `| \`GET\` | \`/api/v1/datasets\` | … |` — a §5.1 REST API row. The method cell may hold
+#: several (\`GET\`/\`PUT\`); the path cell may hold several paths. Deliberately the same
+#: shape `scope-audit.py` uses, because the two scripts read the same tables and a second
+#: parser would eventually disagree with the first about what the spec declares.
+_ENDPOINT_ROW = re.compile(r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|([^|]+)\|")
+
+
+def _path_segments(path: str) -> tuple[str, ...]:
+    """A path as comparable segments, with `{placeholders}` collapsed.
+
+    The `/api/v1` prefix is dropped: the specs' tables carry it and the journeys do not, and
+    the prefix is a deployment fact rather than part of which endpoint is meant. A query
+    string documents filters, not a different route (`scope-audit.py` settled that).
+    """
+    clean = path.split("?")[0].removeprefix("/api/v1")
+    return tuple(
+        "{}" if segment.startswith("{") and segment.endswith("}") else segment
+        for segment in clean.strip("/").split("/")
+    )
+
+
+def _placeholder_match(
+    key: tuple[str, tuple[str, ...]], declared: dict[tuple[str, tuple[str, ...]], str]
+) -> str | None:
+    """A declared `{}` segment matches a literal one in a citation.
+
+    Needed because a journey is concrete where the spec is general — wf-04 deploys to `prod`,
+    and `03` §5.1 declares `/environments/{env}/deployments`. Refusing that would report four
+    working, declared endpoints as missing, and a check that cries wolf is one everybody
+    learns to skip.
+
+    Exact matches are tried **first** by the caller, so this only runs when nothing matched
+    literally. It is the one place the check is weaker than a strict comparison: a citation of
+    `/models/nonsense` would match a declared `/models/{}`. The caller counts every use and
+    prints the count, so the looseness is visible rather than assumed away.
+    """
+    method, segments = key
+    for (dm, ds), owner in declared.items():
+        if dm != method or len(ds) != len(segments):
+            continue
+        if all(d == s or d == "{}" for d, s in zip(ds, segments, strict=True)):
+            return owner
+    return None
 
 def check_open_question_columns() -> None:
     """15. Every OQ row has an owner and a status drawn from a known set.
@@ -484,6 +531,76 @@ def main() -> int:
 
     # 15. open-question rows have an owner and a recognised status
     check_open_question_columns()
+
+    # 21. journey citations resolve to a declared interface (FR-OVR-17, OQ-OVR-6)
+    #
+    # `scope-audit.py --endpoints` compares a spec's §5.1 table against the published
+    # contract. This is the same idea one level up: the **journeys** cite endpoints and
+    # `pricing-core` functions, and a journey citing something no spec declares is drift
+    # nothing else in this repository can see. `audit-docs.py` check 14's "workflow coverage"
+    # measures whether a journey *mentions* a requirement id, which is a different and much
+    # weaker question — the one plan review 2 found it was answering.
+    #
+    # It earned its place on the first run: wf-01 A8 cited `profile_version()`, and `01`
+    # §5.2 was corrected to `profile_frame` / `profile_parquet` on 2026-08-15 without the
+    # journey being updated.
+    declared_paths: dict[tuple[str, tuple[str, ...]], str] = {}
+    for f in specs:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            row = _ENDPOINT_ROW.match(line)
+            if not row:
+                continue
+            for path in (p for p in re.findall(r"`([^`]+)`", row.group(2)) if p.startswith("/")):
+                for method in re.split(r"`?/`?", row.group(1)):
+                    key = (method.strip("`"), _path_segments(path))
+                    declared_paths.setdefault(key, f.name)
+
+    declared_functions: dict[str, str] = {}
+    for f in specs:
+        for m in re.finditer(r"^def ([a-z_][a-z0-9_]*)\(", f.read_text(encoding="utf-8"), re.M):
+            declared_functions.setdefault(m.group(1), f.name)
+
+    journeys = sorted(ROOT.glob("workflows/wf-*.md"))
+    cited_paths = cited_functions = loose = undeclared = 0
+    for f in journeys:
+        body = f.read_text(encoding="utf-8")
+        for m in re.finditer(r"`(GET|POST|PUT|PATCH|DELETE) ([^`]+)`", body):
+            # A journey may show the request body after the path — `POST /x {"to":"y"}`.
+            segments = _path_segments(m.group(2).split(" ")[0])
+            key = (m.group(1), segments)
+            cited_paths += 1
+            if key in declared_paths:
+                continue
+            match = _placeholder_match(key, declared_paths)
+            if match is not None:
+                # A journey writes `/environments/prod/deployments` where `03` §5.1 declares
+                # `/environments/{env}/deployments`, and the journey is **right** to be
+                # concrete — which environment is deployed to is the step's content. So a
+                # declared `{}` segment matches a literal one. Counted and reported rather
+                # than silent: it is the one place this check is looser than an exact
+                # comparison, and a reader should be able to see how often it is used.
+                loose += 1
+                continue
+            undeclared += 1
+            fail(
+                f"{f.name}: cites `{m.group(1)} {m.group(2)}`, which no spec declares in "
+                "its §5.1 REST API table (FR-OVR-17)"
+            )
+        for m in re.finditer(r"`([a-z_][a-z0-9_]*)\(\)`", body):
+            cited_functions += 1
+            if m.group(1) not in declared_functions:
+                undeclared += 1
+                fail(
+                    f"{f.name}: cites `pricing-core` function `{m.group(1)}()`, which no "
+                    "spec declares in its §5.2 interface block (FR-OVR-17)"
+                )
+    # The verdict goes in the summary line, not just in the failure list. A note reading
+    # "all declared" above a `FAILED` block is the shape of thing this audit exists to catch.
+    verdict = "all declared" if not undeclared else f"**{undeclared} undeclared**"
+    notes.append(
+        f"journey citations: {cited_paths} endpoints, {cited_functions} functions, "
+        f"{verdict} ({loose} matched a declared path placeholder)"
+    )
 
     # 16-20. the working notes in .claude/notes/
     check_notes(set(defined), in_file, adrs)

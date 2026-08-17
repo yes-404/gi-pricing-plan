@@ -1599,6 +1599,52 @@ dictionary order gave.
 | OQ-GOV-7's evidence floor | **Still open, and now cheaper.** This slice created the second evidence kind the floor needs; the recommendation stands and the decision is the maintainer's |
 | An intercept-only "null model" baseline | **Not available, and noticed here.** `fit_glm` refuses a spec with no factors — "the design matrix has no columns" — so the standard actuarial baseline of comparing against a constant-rate model cannot be built. No requirement asks for it; recorded because a comparison feature is where someone will look for it |
 
+### W5 — `wf-01`'s citation audit, 2026-08-17 *(in progress, not closed)*
+
+The eighth slice, and the smallest: FR-OVR-17(i), `audit-docs.py`'s **check 21**. The roadmap
+put it before `wf-01`'s journey test, and that ordering was right — the audit is what gives the
+journey test something to stand on, because a journey citing an interface no spec declares is
+drift no other check in this repository can see. `audit-docs.py` check 14's "workflow coverage"
+measures whether a journey *mentions* a requirement id, which is the weaker question plan
+review 2 found it was answering.
+
+| Delivered | Evidence |
+|---|---|
+| Check 21 | Every `` `METHOD /path` `` and `` `name()` `` in `wf-01…05` must be declared in a spec's §5.1 or §5.2. Current run: **30 endpoint citations, 7 function citations, all declared** |
+| It runs in CI already | `docs.yml` triggers on `docs/**` and runs the script; no workflow change was needed, which is what FR-OVR-17's "on every docs change" asked for |
+| The enforcement is **visible** | `tests/test_repository_invariants.py` marks it `FR-OVR-17`, so `req-coverage.py` can see it. Re-auditing W1 reported half its scope missing while the enforcement worked perfectly in CI; this is the fix for that class of blindness, applied at the time rather than later |
+| A citation **form**, in `docs/workflows/README.md` | An endpoint is `` `METHOD /path` ``; a `pricing-core` function is `` `name()` `` — the parentheses are what distinguish a citation from a column name, a parameter or prose in the same cell. Without them the check is a heuristic over every backticked token in a row, and `control`, `_rejected`, `f`, `where` and `Piecewise` all appear in exactly those rows |
+| Both halves proved by injection | An undeclared endpoint and an undeclared function each failed, and the summary line reports the count rather than saying "all declared" above a `FAILED` block |
+
+**It found real drift on its first run.** wf-01 A8 cited `profile_version()`; `01` §5.2 was
+corrected to `profile_frame` / `profile_parquet` on 2026-08-15 and the journey was not updated,
+so the journey named a function that never existed. The spec was right and the journey wrong —
+resolved by correcting the journey to `profile_frame()`, which is what the profiling handler
+actually calls.
+
+**One deliberate looseness, counted and printed.** A journey writes
+`POST /environments/prod/deployments` where `03` §5.1 declares `/environments/{env}/deployments`
+— and the journey is *right* to be concrete, since which environment is deployed to is the
+step's content. So a declared `{}` segment matches a literal one, after an exact match is tried
+first. The cost is that a citation of `/models/nonsense` would match a declared `/models/{}`;
+the audit prints how many citations used the fallback (currently 4, all of them environments)
+so the looseness is visible rather than assumed away. Refusing it instead would report four
+declared, working endpoints as missing, and a check that cries wolf is one everybody learns to
+skip.
+
+**One thing worth a plan-review question rather than a unilateral change.** The *number* of
+checks is stated in six places — `CLAUDE.md` three times, `docs.yml`'s comment,
+`.claude/skills/README.md`, and the `docs-audit` skill's frontmatter — and adding one check
+meant editing all six. `CLAUDE.md` §0's own rule is that counts which change do not belong in
+it, and this is a count that changes. Updated everywhere for now; whether the number should be
+stated at all is the maintainer's call.
+
+**Not delivered:** FR-OVR-17(ii), one end-to-end test per journey. Still W5's for `wf-01`, and
+now writable — both arms of that journey run, selection (E1/E2) since the comparison slice and
+approval (E6–E10) since the lifecycle slice. The requirement's own text refuses the cheap
+version: marking an existing test with a journey id claims a journey where one slice is
+covered.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -1609,7 +1655,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: seven slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, and model comparison; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the journey test and, before it, the citation audit that gives the claim something to stand on (FR-OVR-17) |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: eight slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, and `wf-01`'s citation audit; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the journey test and, before it, the citation audit that gives the claim something to stand on (FR-OVR-17) |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 

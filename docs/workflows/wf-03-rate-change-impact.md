@@ -40,7 +40,7 @@
 | B1 | Pricing Actuary | Configures the run: objective `blend(w_profit=0.7, w_volume=0.3)`, profit defined explicitly, decision variable `segment_factor` over age × area × channel (384 segments), bounds ±10 %. | `04` FR-OPT-8..10 |
 | B2 | Pricing Actuary | Declares constraints: portfolio premium change −1 % to +3 %, expected volume ≥ 1.2 M, expected loss ratio ≤ 0.72, smoothness ≤ 3 pp between adjacent age bands, minimum premium £280, **GIPP as a hard constraint**. | `04` FR-OPT-11/21 |
 | B3 | Frontend → Backend | `POST /optimisation-runs` → `202` + Job (`optimisation.run`, queue `compute`). | `07` FR-PLAT-13 |
-| B4 | Worker → pricing-core | `optimise` with SLSQP; Monte Carlo over demand parameters (2 000 samples, seed persisted) for uncertainty. | `04` FR-OPT-13, NFR-OPT-1 |
+| B4 | Worker → pricing-core | `optimise()` with SLSQP; Monte Carlo over demand parameters (2 000 samples, seed persisted) for uncertainty. | `04` FR-OPT-13, NFR-OPT-1 |
 | B5 | Worker | First attempt returns `CONSTRAINT_SET_INFEASIBLE` within 40 s, naming the culprits: volume ≥ 1.2 M and loss ratio ≤ 0.72 cannot both hold at the current mix. | `04` NFR-OPT-4 |
 | B6 | Pricing Actuary | Relaxes the loss-ratio constraint to 0.74 and re-runs. **The infeasibility was itself the finding** — the current book cannot hit both targets, which is worth knowing before proposing a rate change. | `04` FR-OPT-11 |
 | B7 | Worker | Converges in 187 iterations. Expected: −3.2 % policies, +2.1 % premium, +8.4 % profit, each with a 90 % interval. | `04` FR-OPT-13 |

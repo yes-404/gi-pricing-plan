@@ -94,6 +94,40 @@ def test_money_discipline_is_enforced_by_the_docs_audit() -> None:
     assert "All checks passed" in result.stdout
 
 
+@pytest.mark.req("FR-OVR-17")
+def test_journey_citations_are_audited_in_ci() -> None:
+    """FR-OVR-17(i): the mechanical citation audit, and the marker that makes it visible.
+
+    The check lives in `scripts/audit-docs.py` (check 21) and `docs.yml` runs that script on
+    every `docs/**` change, so the enforcement is real. But `req-coverage.py` reads
+    `@pytest.mark.req` markers, and a check enforced only by a script reads as an unevidenced
+    requirement — the failure re-auditing W1 produced, where half the scope looked missing
+    while the enforcement was working perfectly in CI. This test is the link.
+
+    It asserts three things rather than one, because each can rot independently: the check is
+    still in the script, CI still runs the script on docs changes, and the audit still passes.
+
+    **What it deliberately does not assert** is FR-OVR-17(ii) — one end-to-end test per
+    journey. That is not built, and a marker here claiming the whole requirement is precisely
+    the "a marker on an existing test is not evidence" failure the requirement's own text
+    refuses.
+    """
+    audit = (ROOT / "scripts" / "audit-docs.py").read_text(encoding="utf-8")
+    assert "FR-OVR-17" in audit, "check 21 is gone from the docs audit"
+    assert "_path_segments" in audit, "the citation path parser is gone"
+
+    workflow = (ROOT / ".github" / "workflows" / "docs.yml").read_text(encoding="utf-8")
+    assert "scripts/audit-docs.py" in workflow, "CI no longer runs the docs audit"
+    assert "docs/**" in workflow, "the docs audit no longer triggers on a docs change"
+
+    result = subprocess.run(
+        ["python3", "scripts/audit-docs.py"], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "journey citations:" in result.stdout, "check 21 did not run"
+    assert "undeclared" not in result.stdout, result.stdout
+
+
 @pytest.mark.req("NFR-GOV-8")
 def test_the_governance_negative_tests_exist_in_ci() -> None:
     """NFR-GOV-8: separation of duties, append-only audit and permission enforcement are
