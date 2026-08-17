@@ -307,7 +307,14 @@ The key value itself appears exactly once, in the creation response (FR-PLAT-3).
 `JOB_RESOURCE_BUDGET_EXCEEDED`, `JOB_HANDLER_NOT_REGISTERED`, `JOB_HANDLER_FAILED`,
 `IDEMPOTENCY_KEY_CONFLICT`,
 `RATE_LIMITED`, `BLOB_NOT_FOUND`, `SECRET_NOT_FOUND`, `SETTING_INVALID`,
-`PROMOTION_ORDER_VIOLATION`, `MIGRATION_REQUIRED`.
+`PROMOTION_ORDER_VIOLATION`, `MIGRATION_REQUIRED`, `CONFLICT_STALE_WRITE`.
+
+`CONFLICT_STALE_WRITE` was declared in `00` §5.4 from Phase 0 and belonged to no module's
+list until 2026-08-17. It is `07`'s because FR-PLAT-47 owns "the API implements `00` §5
+exactly" — the convention is platform-wide, not one module's. Two workstreams recorded it as
+still absent from the error registry (W2, then W4) before the first routes that require the
+header arrived with the model lifecycle in W5, which is the only reason it was findable
+rather than forgotten.
 
 `JOB_HANDLER_NOT_REGISTERED` and `JOB_HANDLER_FAILED` were added in W2 (2026-08-14). The worker dispatches on Job
 kind, and the platform is deployable before every kind has an implementation — the scoring

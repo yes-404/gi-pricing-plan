@@ -1278,6 +1278,10 @@ class ModelRow(Base):
     parent_model_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     change_reason: Mapped[str | None] = mapped_column(Text)
     job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: `02` §4.8's `approval_request_id`, live from the lifecycle slice. Not a foreign key:
+    #: `MODEL` depends on `GOV` and never the reverse (DEP-1), and a FK here would make
+    #: governance's tables undroppable by a modelling migration.
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -1301,7 +1305,17 @@ class ModelRow(Base):
             "status IN ('draft', 'archived') OR diagnostics_id IS NOT NULL",
             name="fitted_model_has_diagnostics",
         ),
+        # FR-MODEL-64's six states, at the layer a direct `UPDATE` cannot walk past. The
+        # column is a `String(16)`: without this, `'live'` was a legal status and a model
+        # holding one is skipped by every lifecycle query rather than refused.
+        CheckConstraint(
+            "status IN ('draft', 'fitted', 'review', 'approved', 'superseded', 'archived')",
+            name="model_status_is_in_the_lifecycle",
+        ),
         Index("ix_models_dataset_version", "workspace_id", "dataset_version_id"),
+        # Supersession asks "which earlier versions of this family are approved?" on every
+        # approval, and archiving asks the same question of one family.
+        Index("ix_models_family_status", "workspace_id", "model_family_slug", "status"),
     )
 
 

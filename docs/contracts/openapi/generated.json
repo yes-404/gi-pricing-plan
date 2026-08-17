@@ -3559,6 +3559,18 @@
         "additionalProperties": false,
         "description": "A fitted model for one peril and response (`02` §4.8).\n\nImmutable once fitted (R2). Refitting produces a **new version** with\n`parent_model_id` set; there is no operation that edits a coefficient, which is what\nmakes a Rating Version's reference to a model version mean something.",
         "properties": {
+          "approval_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Request Id"
+          },
           "change_reason": {
             "anyOf": [
               {
@@ -3600,7 +3612,7 @@
           "flags": {
             "default": [],
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ModelFlag"
             },
             "title": "Flags",
             "type": "array"
@@ -3677,6 +3689,14 @@
         ],
         "title": "ModelCreate",
         "type": "object"
+      },
+      "ModelFlag": {
+        "description": "Conditions raised elsewhere that gate this model's approval (`06` FR-GOV-17).\n\nNamed rather than free strings because two surfaces branch on them — `02` FR-MODEL-67's\nblock on `approved`, and the approvals inbox — and a flag spelled two ways is a gate\nthat holds on one screen and not the other.",
+        "enum": [
+          "dataset_invalidated"
+        ],
+        "title": "ModelFlag",
+        "type": "string"
       },
       "ModelSpecValidate": {
         "additionalProperties": false,
@@ -5842,6 +5862,22 @@
         "title": "SubmitApproval",
         "type": "object"
       },
+      "SubmitModel": {
+        "additionalProperties": false,
+        "properties": {
+          "change_summary": {
+            "description": "What changed and why (`06` FR-GOV-10). An approval with no statement of what changed asks the approver to derive it from a diff.",
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_summary"
+        ],
+        "title": "SubmitModel",
+        "type": "object"
+      },
       "TableCreate": {
         "additionalProperties": false,
         "properties": {
@@ -6980,6 +7016,7 @@
     },
     "/api/v1/approval-requests/{request_id}/decide": {
       "post": {
+        "description": "The decision, and the artifact transition it implies, in **one** transaction.\n\n`06` FR-GOV-9 stops the approval machine at `approved` — \"post-approval states belong to\nthe owning module\" — so something has to carry the decision across, and the direction\nsettles where. `MODEL` depends on `GOV` and never the reverse (DEP-1), so a hook inside\n`approvals.decide` calling back into modelling is the one design that is not available.\nThis route holds both and is above both, which is the same seam `withdraw` uses for\n`artifact_is_live`.\n\nOne transaction is not a tidiness preference: a model left in `review` after its request\nreached `approved` is a model no Rating Version may reference and no screen can explain,\nand two transactions is all it takes to produce one. It also makes FR-MODEL-67's block\nwork — the flag refusal rolls the decision back with it, so an approver is told the\nmodel is flagged rather than finding their approval recorded against nothing.",
         "operationId": "decide_request_api_v1_approval_requests__request_id__decide_post",
         "parameters": [
           {
@@ -12035,8 +12072,273 @@
         ]
       }
     },
+    "/api/v1/models/{model_id}/archive": {
+      "post": {
+        "description": "`draft | fitted | superseded → archived` — the lifecycle's only end state.\n\nNot declared in `02` §5.1 before this slice, and added to that table with it: leaving one\nstate of a six-state machine unreachable is how a partial machine gets recorded as\ncomplete. An `approved` model is refused — it is a Rating Version's referent, and the\noperation that removes one names its replacement.",
+        "operationId": "archive_model_api_v1_models__model_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The entity's current `ETag`, from a prior `GET`. Required (`00` §5.4); a mismatch or an absent header yields `409 CONFLICT_STALE_WRITE`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current `ETag`, from a prior `GET`. Required (`00` §5.4); a mismatch or an absent header yields `409 CONFLICT_STALE_WRITE`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Model"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Archive a model",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/{model_id}/submit": {
+      "post": {
+        "description": "`fitted → review`, and the approval request that goes with it (`wf-01` E6/E7).\n\n**Addressed by id, not by `{slug}?version=`.** Every read route in this module defaults\nthe version to the latest, which is right for a read and wrong for a mutation: \"submit\nthe latest\" is exactly the race `If-Match` exists to catch, and defaulting the target\nwould build it in below the precondition.\n\nThe precondition is checked **inside the transaction that holds the row lock**: a\nprecondition compared against an unlocked read is a precondition that passes against a\nstate which has already moved by the time the write lands.",
+        "operationId": "submit_model_api_v1_models__model_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The entity's current `ETag`, from a prior `GET`. Required (`00` §5.4); a mismatch or an absent header yields `409 CONFLICT_STALE_WRITE`.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entity's current `ETag`, from a prior `GET`. Required (`00` §5.4); a mismatch or an absent header yields `409 CONFLICT_STALE_WRITE`.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Model"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Submit a model for approval",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/models/{slug}": {
       "get": {
+        "description": "The artifact, with the `ETag` a lifecycle transition requires (`00` §5.4).\n\n`flags` are computed here rather than read from a column (FR-MODEL-67): the flag tracks\nthe dataset version's *current* standing, and a model fitted this morning on a version\ninvalidated this afternoon must not answer `[]`.",
         "operationId": "get_model_api_v1_models__slug__get",
         "parameters": [
           {

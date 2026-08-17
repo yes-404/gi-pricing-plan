@@ -25,12 +25,14 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query, Request, Response, status
-from pydantic import BaseModel, ConfigDict, model_validator
+from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.api.authz import requires
+from app.api.concurrency import IF_MATCH_DESCRIPTION, etag_for, require_if_match
 from app.api.deps import Caller, SettingsDep, job_identity
 from app.api.responses import problems
+from app.db.models import ModelRow
 from app.db.session import Database
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
@@ -65,6 +67,21 @@ router = APIRouter(tags=["modelling"])
 
 ReadModels = Annotated[Caller, Depends(requires(Perm.MODEL_READ))]
 FitModels = Annotated[Caller, Depends(requires(Perm.MODEL_FIT))]
+SubmitModels = Annotated[Caller, Depends(requires(Perm.MODEL_SUBMIT))]
+
+
+def _model_etag(row: ModelRow) -> str:
+    """The ETag a lifecycle transition is preconditioned on (`00` §5.4).
+
+    Over the identity **and the status**, because status is the only thing a transition
+    changes — a model's numbers are immutable (`02` R2), so an ETag over the whole
+    representation would be an ETag over one mutable field with noise around it.
+
+    `GET /models/{slug}` and the transition routes both call this, which is what makes the
+    value a caller reads the value the server will compare against. Two expressions of the
+    same tag is a precondition that fails for callers doing everything right.
+    """
+    return etag_for("model", f"{row.model_family_slug}@{row.version}", row.status)
 
 
 def _database(request: Request) -> Database:
@@ -436,13 +453,24 @@ async def get_model(
     slug: str,
     caller: ReadModels,
     database: DatabaseDep,
+    response: Response,
     version: Annotated[int | None, Query(ge=1)] = None,
 ) -> Model:
+    """The artifact, with the `ETag` a lifecycle transition requires (`00` §5.4).
+
+    `flags` are computed here rather than read from a column (FR-MODEL-67): the flag tracks
+    the dataset version's *current* standing, and a model fitted this morning on a version
+    invalidated this afternoon must not answer `[]`.
+    """
     async with database.session() as session:
         row = await service.load_model(
             session, workspace_id=caller.workspace_id, slug=slug, version=version
         )
-        return service.to_model(row)
+        flags = await service.flags_for(
+            session, workspace_id=caller.workspace_id, row=row
+        )
+        response.headers["ETag"] = _model_etag(row)
+        return service.to_model(row, flags=flags)
 
 
 @router.get(
@@ -502,3 +530,94 @@ async def validate_model_spec(
             actor=caller.principal,
             spec=body.spec,
         )
+
+
+class SubmitModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    change_summary: str = Field(
+        min_length=1,
+        description="What changed and why (`06` FR-GOV-10). An approval with no statement "
+        "of what changed asks the approver to derive it from a diff.",
+    )
+
+
+@router.post(
+    "/models/{model_id}/submit",
+    summary="Submit a model for approval",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def submit_model(
+    model_id: UUID,
+    body: SubmitModel,
+    caller: SubmitModels,
+    database: DatabaseDep,
+    response: Response,
+    if_match: Annotated[
+        str | None, Header(alias="If-Match", description=IF_MATCH_DESCRIPTION)
+    ] = None,
+) -> Model:
+    """`fitted → review`, and the approval request that goes with it (`wf-01` E6/E7).
+
+    **Addressed by id, not by `{slug}?version=`.** Every read route in this module defaults
+    the version to the latest, which is right for a read and wrong for a mutation: "submit
+    the latest" is exactly the race `If-Match` exists to catch, and defaulting the target
+    would build it in below the precondition.
+
+    The precondition is checked **inside the transaction that holds the row lock**: a
+    precondition compared against an unlocked read is a precondition that passes against a
+    state which has already moved by the time the write lands.
+    """
+    async with database.unit_of_work() as session:
+        row = await service.load_model_by_id(
+            session, workspace_id=caller.workspace_id, model_id=model_id, for_update=True
+        )
+        require_if_match(if_match, _model_etag(row))
+        row, _request_row = await service.submit_for_review(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            model_id=model_id,
+            change_summary=body.change_summary,
+        )
+        flags = await service.flags_for(
+            session, workspace_id=caller.workspace_id, row=row
+        )
+        response.headers["ETag"] = _model_etag(row)
+        return service.to_model(row, flags=flags)
+
+
+@router.post(
+    "/models/{model_id}/archive",
+    summary="Archive a model",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def archive_model(
+    model_id: UUID,
+    caller: SubmitModels,
+    database: DatabaseDep,
+    response: Response,
+    if_match: Annotated[
+        str | None, Header(alias="If-Match", description=IF_MATCH_DESCRIPTION)
+    ] = None,
+) -> Model:
+    """`draft | fitted | superseded → archived` — the lifecycle's only end state.
+
+    Not declared in `02` §5.1 before this slice, and added to that table with it: leaving one
+    state of a six-state machine unreachable is how a partial machine gets recorded as
+    complete. An `approved` model is refused — it is a Rating Version's referent, and the
+    operation that removes one names its replacement.
+    """
+    async with database.unit_of_work() as session:
+        row = await service.load_model_by_id(
+            session, workspace_id=caller.workspace_id, model_id=model_id, for_update=True
+        )
+        require_if_match(if_match, _model_etag(row))
+        row = await service.archive(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            model_id=model_id,
+        )
+        response.headers["ETag"] = _model_etag(row)
+        return service.to_model(row)
