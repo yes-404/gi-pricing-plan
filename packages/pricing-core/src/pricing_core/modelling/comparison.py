@@ -60,7 +60,7 @@ from pricing_core.modelling.diagnostics import (
     deviance,
 )
 from pricing_core.modelling.errors import ModellingError
-from pricing_core.modelling.predict import predict_glm
+from pricing_core.modelling.predict import score_fitted
 
 __all__ = ["ComparisonCandidate", "compare_models"]
 
@@ -217,33 +217,17 @@ def _refuse_an_incomparable_set(
 def _score(candidate: ComparisonCandidate, holdout: pl.DataFrame) -> npt.NDArray[np.float64]:
     """One candidate's holdout predictions, on the mean scale, whichever kind it is.
 
-    `wf-01` E1 compares the GLM against the GBM, which is the comparison the phase exists
-    for — an actuary weighing a booster's lift against a GLM's transparency. This dispatch
-    is all that separated the two: everything below is computed from `μ` and the response.
+    The GLM/GBM dispatch moved to `predict.score_fitted` when the peril structure needed the
+    same thing (`02` §3.9): two copies of it would be two places for the kinds to diverge.
     """
-    if isinstance(candidate.fit, GbmFitResult):
-        from pricing_core.modelling.gbm import predict_gbm
-
-        assert candidate.booster is not None  # `__post_init__` refuses the alternative
-        return np.asarray(
-            predict_gbm(
-                candidate.fit,
-                candidate.booster,
-                holdout,
-                candidate.factors,
-                bandings=candidate.bandings,
-                groupings=candidate.groupings,
-            ).to_numpy(),
-            dtype=np.float64,
-        )
-    assert isinstance(candidate.spec, GlmSpec)
-    return predict_glm(
+    return score_fitted(
         candidate.fit,
+        candidate.spec,
         holdout,
         candidate.factors,
-        candidate.spec,
         bandings=candidate.bandings,
         groupings=candidate.groupings,
+        booster=candidate.booster,
     )
 
 

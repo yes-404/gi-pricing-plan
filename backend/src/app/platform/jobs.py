@@ -64,6 +64,9 @@ DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
     JobKind.MODEL_TRANSPARENCY: JobQueue.COMPUTE,
     JobKind.MODEL_BACKTEST: JobQueue.COMPUTE,
     JobKind.MODEL_COMPARE: JobQueue.COMPUTE,
+    # `compute`: reconciling scores every peril's models over the whole holdout, which is
+    # the same work a comparison does once per candidate.
+    JobKind.PERIL_STRUCTURE_RECONCILE: JobQueue.COMPUTE,
     JobKind.OBJECTIVE_CERTIFY: JobQueue.COMPUTE,
     JobKind.RATING_COMPILE: JobQueue.DEFAULT,
     JobKind.RATING_REGRESSION: JobQueue.COMPUTE,

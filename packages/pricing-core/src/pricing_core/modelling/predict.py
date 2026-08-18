@@ -21,10 +21,19 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from model_schema import Banding, Factor, GlmFitResult, GlmSpec, Grouping
+from model_schema import (
+    Banding,
+    Factor,
+    FitResult,
+    GbmFitResult,
+    GlmFitResult,
+    GlmSpec,
+    Grouping,
+    ModelSpec,
+)
 from pricing_core.modelling.factors import resolve_factors
 
-__all__ = ["PredictionError", "linear_predictor", "predict_glm"]
+__all__ = ["PredictionError", "linear_predictor", "predict_glm", "score_fitted"]
 
 #: `slug[level]` — the shape `glm._design` writes for a categorical dummy.
 _DUMMY = re.compile(r"^(?P<slug>.+)\[(?P<level>.*)\]$")
@@ -160,3 +169,45 @@ def predict_glm(
         linear_predictor(fit, data, factors, spec, bandings=bandings, groupings=groupings),
         spec.link,
     )
+
+
+def score_fitted(
+    fit: FitResult,
+    spec: ModelSpec,
+    data: pl.DataFrame,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+    booster: bytes | None = None,
+) -> npt.NDArray[np.float64]:
+    """`μ` for a fitted model of **either** kind, on the mean scale.
+
+    The dispatch is the only thing that separates scoring a GLM from scoring a GBM, and two
+    callers need it: the comparison (`wf-01` E1, an actuary weighing a booster's lift
+    against a GLM's transparency) and the peril structure (E4, where each peril's models are
+    scored before they are summed). It lives here rather than in either, because a second
+    copy of a dispatch is a second place for the two kinds to diverge — and a peril priced
+    through the wrong branch is a silently wrong risk premium.
+
+    A GBM's `booster` is required: a GLM's fit result *is* its model, a GBM's is a reference
+    to bytes the caller must fetch (ADR-0001 keeps that fetch out of this package).
+    """
+    if isinstance(fit, GbmFitResult):
+        from pricing_core.modelling.gbm import predict_gbm
+
+        if booster is None:
+            raise PredictionError(
+                "MODEL_NOT_FITTED",
+                "a GBM cannot be scored without its booster bytes: its fit result is a "
+                "reference to them, not the model itself",
+            )
+        return np.asarray(
+            predict_gbm(
+                fit, booster, data, factors, bandings=bandings, groupings=groupings
+            ).to_numpy(),
+            dtype=np.float64,
+        )
+    assert isinstance(fit, GlmFitResult)
+    assert isinstance(spec, GlmSpec)
+    return predict_glm(fit, data, factors, spec, bandings=bandings, groupings=groupings)

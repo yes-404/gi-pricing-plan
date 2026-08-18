@@ -37,7 +37,7 @@ from __future__ import annotations
 import datetime as _datetime
 import enum
 from decimal import Decimal
-from typing import Annotated, Final, Self
+from typing import Annotated, Any, Final, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
@@ -309,6 +309,25 @@ class Reconciliation(BaseModel):
         description="Declared fractional tolerance on |ratio - 1| (FR-MODEL-60)."
     )
     computed_at: _datetime.datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_derived(cls, data: Any) -> Any:
+        """Discard any incoming `ratio` or `status` rather than refusing them.
+
+        They are `computed_field`s, so they **are** serialised — a caller reading a
+        reconciliation gets the verdict without reimplementing the rounding rule, and
+        `02` §4.10 shows both. That makes them appear in any payload round-tripped back
+        through this type, which `extra="forbid"` would otherwise reject.
+
+        Dropping rather than comparing is deliberate: a stored or hand-edited `ratio` then
+        has no way to be believed, which is the same guarantee as never storing it, without
+        making every consumer derive it. `TransparencyArtifact.kinds` reached the other
+        answer — a plain property — because nothing needs it on the wire.
+        """
+        if isinstance(data, dict):
+            data = {k: v for k, v in data.items() if k not in {"ratio", "status"}}
+        return data
 
     @computed_field  # type: ignore[prop-decorator]
     @property

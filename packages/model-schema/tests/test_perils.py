@@ -288,6 +288,23 @@ def test_status_and_ratio_are_derived_not_stored() -> None:
 
 
 @pytest.mark.req("FR-MODEL-60")
+def test_a_reconciliation_round_trips_through_its_own_serialised_form() -> None:
+    """The derived fields **are** serialised, so any payload round-tripped back carries
+    them — and `extra="forbid"` would otherwise reject the artifact's own output.
+
+    They are dropped and recomputed rather than compared: a stored or hand-edited `ratio`
+    then has no way to be believed, which is the guarantee "derived, not stored" is for.
+    This is not hypothetical — the platform's `load_structure` hit it on the first run.
+    """
+    original = _reconciliation()
+    again = Reconciliation.model_validate(original.model_dump(mode="json"))
+    assert again == original
+
+    tampered = original.model_dump(mode="json") | {"ratio": "9.999999", "status": "pass"}
+    assert Reconciliation.model_validate(tampered).ratio == original.ratio
+
+
+@pytest.mark.req("FR-MODEL-60")
 def test_outside_the_declared_tolerance_is_a_fail() -> None:
     reconciliation = _reconciliation(
         modelled_burning_cost_minor=15_000,
