@@ -22,16 +22,16 @@ describe("money and exact decimals as they cross into TypeScript", () => {
     expectTypeOf<OneWayRow["claim_amount_minor"]>().toEqualTypeOf<number>();
   });
 
-  it("marks the two ratios that merely look like money", () => {
-    // `severity_minor` and `burning_cost_minor` end in `_minor` and are **floats**: they
-    // are statistics (amount ÷ claims, amount ÷ exposure), not amounts. Formatting all
-    // three `_minor` fields identically as currency is the mistake this guards.
-    expectTypeOf<OneWayRow["severity_minor"]>().toEqualTypeOf<number | null | undefined>();
-    expectTypeOf<OneWayRow["burning_cost_minor"]>().toEqualTypeOf<number | null | undefined>();
+  it("marks the two ratios that are means, not amounts", () => {
+    // `mean_severity` and `mean_burning_cost` are **floats**: they are statistics
+    // (amount ÷ claims, amount ÷ exposure), not amounts — FR-DATA-46 renamed them off
+    // `_minor` for exactly this reason, so their names no longer look like money at all.
+    expectTypeOf<OneWayRow["mean_severity"]>().toEqualTypeOf<number | null | undefined>();
+    expectTypeOf<OneWayRow["mean_burning_cost"]>().toEqualTypeOf<number | null | undefined>();
   });
 
-  it("names the fields whose suffix does not mean an exact amount", () => {
-    const ratios = ["severity_minor", "burning_cost_minor"] as const;
+  it("names the fields distinctly from the one exact amount on the row", () => {
+    const ratios = ["mean_severity", "mean_burning_cost"] as const;
     const exact = ["claim_amount_minor"] as const;
     expect(new Set([...ratios, ...exact]).size).toBe(3);
   });

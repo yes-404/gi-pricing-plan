@@ -108,29 +108,15 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     money_like = re.compile(r"(_minor$|relativity|premium|exposure)", re.I)
     offenders: list[str] = []
 
-    #: `01` FR-DATA-26's one-way row carries a **mean** severity and a **mean** burning
-    #: cost. They are statistics, not amounts: `01` keeps them as floats deliberately,
-    #: because rounding a mean to whole minor units would lose the precision the confidence
-    #: interval beside it is expressing.
-    #:
-    #: The `_minor` suffix is what makes the scan flag them, and the suffix is the part that
-    #: is wrong — FR-OVR-7 reserves it for integer minor units. Excluded here by name rather
-    #: than by weakening the pattern, and **raised as OQ-OVR-7** rather than settled: the
-    #: rename touches `01`'s published profile contract and every screen that reads it.
-    #:
-    #: Nothing else is excluded. These two surfaced only when `banding` and `grouping` began
-    #: generating (they embed the one-way row); the scan had never reached them before.
-    ratio_statistics = {"severity_minor", "burning_cost_minor"}
-
     #: `x_per_y` is a **ratio**, not a quantity of `x`. FR-MODEL-81's
     #: `exposure_per_parameter` is exposure divided by a count, and dividing a decimal
     #: exposure by an integer does not produce a decimal exposure — it produces a number
     #: whose precision carries no monetary meaning.
     #:
-    #: A rule rather than two more names in `ratio_statistics`. OQ-OVR-7 objects to
-    #: money-discipline exceptions maintained as a hand-written list precisely because such
-    #: lists only grow; this one recognises a *shape* of name, so the next ratio needs no
-    #: entry and no decision.
+    #: A rule rather than a hand-written list of names. OQ-OVR-7 objects to money-discipline
+    #: exceptions maintained as a hand-written list precisely because such lists only grow;
+    #: this one recognises a *shape* of name, so the next ratio needs no entry and no
+    #: decision.
     #:
     #: Deliberately **not** a general `_per_\\w+$`: `premium_per_policy` is an average
     #: premium and is money, so a blanket ratio rule would open the hole this test exists to
@@ -147,8 +133,8 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: Two `02` types every number on which is a **fitted estimate**, not a quantity:
     #: `Coefficient` and `RelativityLevel` carry `exp(β)` and the exposure it was measured
     #: over, each beside its own confidence interval. Rounding an estimate to a money grid
-    #: would misstate the interval printed next to it, which is the same reason
-    #: `ratio_statistics` above exists.
+    #: would misstate the interval printed next to it — the same reason `01`'s one-way row
+    #: keeps its own mean fields as floats (FR-DATA-46).
     #:
     #: Excluded by **owning type**, never by field name. `relativity` is also what a Rate
     #: Table entry is called (`03`), and that one *is* on the rating path, where
@@ -165,7 +151,6 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
                 owner = owning_type.search(path)
                 if (
                     money_like.search(key)
-                    and key not in ratio_statistics
                     and not ratio_suffix.search(key)
                     and not (owner and owner.group(1) in estimate_types)
                     and isinstance(value, dict)

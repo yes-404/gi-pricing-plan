@@ -229,15 +229,16 @@ const PSI_TONE: Record<string, string> = {
                 <td class="py-2 text-right">
                   {{ row.frequency?.toFixed(4) ?? "—" }}
                 </td>
-                <!-- `severity_minor` and `burning_cost_minor` end in `_minor` and are
-                     **float ratios**, not amounts: amount ÷ claims and amount ÷ exposure.
-                     Formatting them as currency would imply an exactness they do not have,
-                     so they are shown as the statistics they are. -->
+                <!-- `mean_severity` and `mean_burning_cost` are **float ratios**, not
+                     amounts: amount ÷ claims and amount ÷ exposure. Formatting them as
+                     currency would imply an exactness they do not have, so they are shown
+                     as the statistics they are. Still expressed in minor units — only the
+                     name changed (FR-DATA-46) — so the `/ 100` scaling stays. -->
                 <td class="py-2 text-right">
-                  {{ row.severity_minor == null ? "—" : (row.severity_minor / 100).toFixed(2) }}
+                  {{ row.mean_severity == null ? "—" : (row.mean_severity / 100).toFixed(2) }}
                 </td>
                 <td class="py-2 text-right">
-                  {{ row.burning_cost_minor == null ? "—" : (row.burning_cost_minor / 100).toFixed(2) }}
+                  {{ row.mean_burning_cost == null ? "—" : (row.mean_burning_cost / 100).toFixed(2) }}
                 </td>
               </tr>
             </tbody>

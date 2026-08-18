@@ -45,9 +45,9 @@ const ONE_WAY = {
       claim_amount_minor: 26758000,
       frequency: 0.138859,
       frequency_ci: [0.1253, 0.1534],
-      severity_minor: 70788.36,
+      mean_severity: 70788.36,
       severity_ci: null,
-      burning_cost_minor: 9829.44,
+      mean_burning_cost: 9829.44,
     },
   ],
 };
@@ -101,9 +101,9 @@ describe("the profile view", () => {
 
     // `claim_amount_minor` is the one exact amount on the row: 26 758 000 cents.
     expect(within(table).getByText(/267,580\.00/)).toBeInTheDocument();
-    // `severity_minor` and `burning_cost_minor` end in `_minor` and are float **ratios**
-    // — amount ÷ claims and amount ÷ exposure. Rendering them as currency would imply an
-    // exactness they do not have, so they appear as plain statistics.
+    // `mean_severity` and `mean_burning_cost` are float **ratios** — amount ÷ claims and
+    // amount ÷ exposure. Rendering them as currency would imply an exactness they do not
+    // have, so they appear as plain statistics.
     expect(within(table).getByText("707.88")).toBeInTheDocument();
     expect(within(table).getByText("98.29")).toBeInTheDocument();
     expect(within(table).queryByText(/€707\.88/)).not.toBeInTheDocument();

@@ -42,9 +42,9 @@ function band(level: string, exposure: string, claims: number, frequency: number
     claim_amount_minor: claims * 100_000,
     frequency,
     frequency_ci: [frequency * 0.9, frequency * 1.1],
-    severity_minor: 100_000,
+    mean_severity: 100_000,
     severity_ci: null,
-    burning_cost_minor: frequency * 100_000,
+    mean_burning_cost: frequency * 100_000,
   };
 }
 

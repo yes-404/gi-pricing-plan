@@ -708,9 +708,9 @@ def _one_way_row(
             if basis > 0
             else None
         ),
-        severity_minor=amount / claims if claims else None,
+        mean_severity=amount / claims if claims else None,
         severity_ci=gamma_severity_interval(amount, claims, confidence=confidence),
-        burning_cost_minor=amount / basis if basis > 0 else None,
+        mean_burning_cost=amount / basis if basis > 0 else None,
     )
 
 

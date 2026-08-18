@@ -112,9 +112,10 @@ class ColumnProfile(BaseModel):
 class OneWayRow(BaseModel):
     """One level of a one-way summary (FR-DATA-26).
 
-    Money is integer minor units and exposure a decimal string (FR-OVR-7). Frequency and
-    severity are ratios and stay floats: they are statistics, not amounts, and rounding
-    them to minor units would lose the precision the confidence interval is expressing.
+    Money is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,
+    `mean_severity` and `mean_burning_cost` are ratios and stay floats: they are
+    statistics, not amounts, and rounding them to minor units would lose the precision
+    the confidence interval is expressing (FR-DATA-46).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -126,9 +127,9 @@ class OneWayRow(BaseModel):
 
     frequency: float | None = None
     frequency_ci: tuple[float, float] | None = None
-    severity_minor: float | None = None
+    mean_severity: float | None = None
     severity_ci: tuple[float, float] | None = None
-    burning_cost_minor: float | None = None
+    mean_burning_cost: float | None = None
 
 
 class OneWaySummary(BaseModel):

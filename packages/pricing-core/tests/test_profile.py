@@ -96,10 +96,28 @@ def test_a_one_way_reports_exposure_claims_frequency_severity_and_burning_cost()
     assert row.claim_count >= 0
     assert row.frequency == pytest.approx(row.claim_count / float(row.exposure_years))
     if row.claim_count:
-        assert row.severity_minor == pytest.approx(row.claim_amount_minor / row.claim_count)
-    assert row.burning_cost_minor == pytest.approx(
+        assert row.mean_severity == pytest.approx(row.claim_amount_minor / row.claim_count)
+    assert row.mean_burning_cost == pytest.approx(
         row.claim_amount_minor / float(row.exposure_years)
     )
+
+
+@pytest.mark.req("FR-DATA-46")
+def test_the_one_way_means_are_named_as_means_not_as_minor_units() -> None:
+    """FR-OVR-7 reserves `_minor` for integer minor units; both of these are float means."""
+    summary = one_way(
+        FRAME,
+        column="vehicle_group",
+        exposure_column="exposure_years",
+        claim_count_column="claim_count",
+        claim_amount_column="claim_amount_minor",
+    )
+    row = summary.rows[0]
+
+    assert row.mean_severity is not None
+    assert row.mean_burning_cost is not None
+    assert not hasattr(row, "severity_minor")
+    assert not hasattr(row, "burning_cost_minor")
 
 
 @pytest.mark.req("FR-DATA-26")
@@ -322,7 +340,7 @@ def test_a_one_way_row_is_internally_consistent() -> None:
     summary = one_way(frame, column="vehicle_group")
     for row in summary.rows:
         assert row.frequency == pytest.approx(row.claim_count / float(row.exposure_years))
-        assert row.burning_cost_minor == pytest.approx(
+        assert row.mean_burning_cost == pytest.approx(
             row.claim_amount_minor / float(row.exposure_years)
         )
 
