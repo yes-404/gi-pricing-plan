@@ -38,6 +38,40 @@ wrong thing **cannot** happen, not merely that the right thing can:
 A suite that only demonstrates the happy path will pass while the invariant it exists to
 protect is quietly broken.
 
+### …and then write the happy path, because the refusal alone can pass over a broken feature
+
+The converse of the rule above, and it has cost real time here. The GBM slice's
+interaction-constraint **refusal** passed the whole time every *valid* constraint was also
+being rejected — XGBoost resolves constraints against the `DMatrix`'s `feature_names` and
+refuses indices, LightGBM takes indices, and the refusal test could not tell "rejected
+because it is invalid" from "rejected because nothing works". Writing the happy path
+**after** the refusal is what found it.
+
+So a refusal test is finished when a passing case sits beside it. Two assertions, and the
+pair is the claim: *this* is rejected, *that* is accepted.
+
+### Parametrize over every backend that claims to do the same thing
+
+Two libraries behind one interface will agree at the point you looked and disagree
+somewhere else. XGBoost and LightGBM agree at fit time and diverge at prediction time,
+which is why FR-MODEL-72 exists as a round-trip requirement rather than a fit-time one. A
+test that exercises only the primary backend reports the pair healthy — and `libgomp1`
+showed the same shape from the other side, where the secondary could not even import while
+the suite stayed green.
+
+### A registry that refuses unknown values needs a test over the *source*, not a scenario
+
+`PlatformError` validates its `code` against an enumerated set and raises
+`ValueError: unknown error code` for anything else — **from inside the error path**, so the
+symptom is an unrelated 500 where a named refusal was meant to be. Eleven codes were
+unregistered at once, and no scenario test would have found them: reaching each one needs
+the specific failure that raises it.
+
+The instrument is an **AST scan over the source** asserting every code a `raise
+PlatformError(...)` mentions is in the registry — `tests/test_repository_invariants.py`.
+Same class of blindness as W1's invisible enforcement: a check nothing exercises is
+indistinguishable from a check that passes.
+
 ## Pin the case where a choice actually bites
 
 Prefer an assertion that fails if the behaviour changes over one that merely documents it:
@@ -292,6 +326,12 @@ unpromotable since the spec was amended three days earlier. Fixtures produced al
 hard fail; nothing in between.
 
 ## Verified
+
+2026-08-18 — the three rules above (happy path after the refusal, parametrise over
+backends, AST-scan a registry) were carried out of a local handover note that was being
+deleted. Each was learned in W5 and each had been recorded only in an untracked file, so
+none of them would have survived it — which is the argument for `.claude/skills/` over a
+scratch file, made concrete.
 
 2026-08-18 — W5, peril structures. The migration-skip rule above was found in a worktree:
 eleven DB-backed tests failed with `UndefinedTableError` and no skip, because the guard
