@@ -3096,6 +3096,21 @@
             "title": "Fit Seconds",
             "type": "number"
           },
+          "inverse_link": {
+            "anyOf": [
+              {
+                "enum": [
+                  "exp",
+                  "logistic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inverse Link"
+          },
           "library_versions": {
             "additionalProperties": {
               "type": "string"
@@ -3310,6 +3325,16 @@
               }
             ],
             "title": "Peril"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "response_column": {
             "title": "Response Column",
@@ -3728,6 +3753,16 @@
               }
             ],
             "title": "Peril"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "response_column": {
             "title": "Response Column",
@@ -6866,6 +6901,18 @@
         },
         "title": "ResourceBudget",
         "type": "object"
+      },
+      "ResponseKind": {
+        "description": "What a Model Spec is modelling, as distinct from which column holds it.\n\n`02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was\nbuilt to it, because nothing needed it: the fitting path reads the column, and the\nfamily says what the numbers mean. FR-MODEL-44 needs it — an objective declares the\nresponses it applies to, and a column name cannot be checked against that list. So the\nfield goes live here, under FR-MODEL-87's staging rule, with the slice that populates\nit.\n\nThe first three are FR-MODEL-44's own examples. `conversion` and `retention` are\n`04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`\n(§4.5) exists for exactly them — a catalogue entry whose applicability could not be\nwritten would be a catalogue entry nothing could use.",
+        "enum": [
+          "claim_count",
+          "claim_severity",
+          "burning_cost",
+          "conversion",
+          "retention"
+        ],
+        "title": "ResponseKind",
+        "type": "string"
       },
       "RetryPolicy": {
         "description": "`infrastructure_only` retries a lost worker, never a rejected input.\n\nRetrying a deterministic failure burns a worker pool to produce the same error, and on\na job that writes artifacts it risks producing them more than once.",

@@ -218,13 +218,24 @@ def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> No
     sys.path.insert(0, str(ROOT / "backend" / "src"))
     from app.errors import MODELLING_ERROR_CODES
 
-    raisers = {"GbmFitError", "GlmFitError", "ModellingError", "FactorResolutionError"}
+    modelling = ROOT / "packages" / "pricing-core" / "src" / "pricing_core" / "modelling"
+    trees = {path: ast.parse(path.read_text(encoding="utf-8")) for path in modelling.glob("*.py")}
+
+    # Derived, not listed. This was a literal set of four names until 2026-08-18, and by then
+    # the module defined nine error classes — so `PredictionError` and `ObjectiveError` were
+    # invisible to the very check written to make an unregistered code impossible, and four
+    # of `predict.py`'s codes had been reachable and unregistered since the prediction slice.
+    # A hand-maintained list of what to scan fails the same way as a hand-maintained list of
+    # what to register, one release later.
+    raisers = {
+        node.name
+        for tree in trees.values()
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ClassDef) and node.name.endswith("Error")
+    }
     raised: dict[str, str] = {}
 
-    for path in (ROOT / "packages" / "pricing-core" / "src" / "pricing_core" / "modelling").glob(
-        "*.py"
-    ):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
+    for path, tree in trees.items():
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue

@@ -1267,7 +1267,11 @@ triggers.
 `OFFSET_NOT_RECONSTRUCTABLE`, `GBM_NO_FEATURES`, `SCORING_FEATURES_MISMATCH`,
 `INTERACTION_FEATURE_UNKNOWN`, `LOSS_TREATMENT_UNIMPLEMENTED`, `MODEL_NOT_FITTED`,
 `MODEL_ALREADY_TRANSPARENT`, `MODEL_TYPE_UNSUPPORTED`, `APPROXIMATION_TARGET_NOT_POSITIVE`,
-`SHAP_SAMPLE_EMPTY`.
+`SHAP_SAMPLE_EMPTY`, `OBJECTIVE_NOT_SUPPLIED`, `OBJECTIVE_REF_MISMATCH`,
+`OBJECTIVE_RESPONSE_UNDECLARED`, `OBJECTIVE_REQUIRES_OFFSET`,
+`OBJECTIVE_EARLY_STOPPING_UNSUPPORTED`, `OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED`,
+`MODEL_TERM_UNRESOLVED`, `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING`,
+`MODEL_INTERVAL_UNAVAILABLE`.
 
 > **Added 2026-08-17 (W5, the GBM and transparency slices).** The ten codes above are new;
 > five *existing* ones are now raised for the first time by the GBM path rather than being
@@ -1280,6 +1284,27 @@ triggers.
 > `SCORING_FEATURES_MISMATCH`: FR-MODEL-71 exists because omitting the offset at scoring
 > time fails *silently* on both backends, so "this frame cannot rebuild the offset" must be
 > distinguishable from "this frame is missing a column" by anything reading the code.
+
+> **Added 2026-08-18 (W5, custom objectives).** Six `OBJECTIVE_*` codes arrive with the
+> path that raises them. Each one is a *refusal to fit*, and they are separate codes rather
+> than one because the workbench branches on them differently: `OBJECTIVE_NOT_SUPPLIED` and
+> `OBJECTIVE_REF_MISMATCH` are the caller's wiring (ADR-0001 — `pricing-core` is handed the
+> artifact and never resolves a reference, so "you named one and passed none" is not the
+> same fault as "you passed a different one"); `OBJECTIVE_RESPONSE_UNDECLARED` and
+> `OBJECTIVE_REQUIRES_OFFSET` are FR-MODEL-44's applicability, refused before any boosting
+> round; `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` is the honest edge of what is built, since a
+> custom eval metric is FR-MODEL-45 and deferred; `OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED`
+> is FR-MODEL-43 meeting a template with no Gauss-Newton form to drop a term from.
+>
+> **And four codes that were live and unregistered.** `MODEL_TERM_UNRESOLVED`,
+> `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING` and `MODEL_INTERVAL_UNAVAILABLE` have
+> been raised by `predict.py` since the prediction slice and mapped straight into a
+> `PlatformError` by `_unscoreable` — which refuses a code it does not know, so each was a
+> `ValueError: unknown error code` waiting inside the error path. The repository invariant
+> written to make exactly this impossible could not see them: it scanned for a **hand-listed
+> set of exception names**, and neither `PredictionError` nor `ObjectiveError` was on it. The
+> list is now derived from the classes `pricing_core.modelling` actually defines, which is
+> the only version of that check that stays true as the module grows.
 
 An **invalid lifecycle transition** (FR-MODEL-64) is `VALIDATION_FAILED` at `409`, not a code
 of its own — the same answer `01` gives for a Dataset Version's transitions, and for the same
