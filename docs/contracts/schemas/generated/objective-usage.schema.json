@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "ObjectiveStatus": {
+      "description": "FR-MODEL-46's lifecycle.",
+      "enum": [
+        "draft",
+        "certified",
+        "review",
+        "approved",
+        "deprecated"
+      ],
+      "title": "ObjectiveStatus",
+      "type": "string"
+    },
+    "ObjectiveUsageModel": {
+      "additionalProperties": false,
+      "description": "One Model fitted under an objective version (FR-MODEL-47).\n\nSlug, version and status rather than the whole Model: the blast-radius question is\n\"what does a defect in this loss reach, and how far has each of them got?\" — a `draft`\nmodel is a experiment to re-fit and an `approved` one is a decision to revisit, and\nthose are different pieces of work.",
+      "properties": {
+        "dataset_version_id": {
+          "format": "uuid",
+          "title": "Dataset Version Id",
+          "type": "string"
+        },
+        "model_family_slug": {
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+          "title": "Model Family Slug",
+          "type": "string"
+        },
+        "model_id": {
+          "format": "uuid",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_id",
+        "model_family_slug",
+        "version",
+        "status",
+        "dataset_version_id"
+      ],
+      "title": "ObjectiveUsageModel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "FR-MODEL-47's blast radius for one Custom Objective version.\n\n**`rating_versions` and `deployments` are named and always empty in Phase 1**, and this\nis FR-MODEL-87's staging rule rather than an oversight: `03 — Rating Engine` is not\nbuilt, so there is no table to query and no row that could appear. Naming them here\nmeans the slice that builds `03` fills a field the frontend already renders, instead of\nchanging a response shape that clients have learned. The field's emptiness is stated in\n`02` §5.1 with its date, so a reader does not have to infer \"none\" from \"not yet\".\n\nNot paginated, deliberately. This is read when a defect is found, and a truncated blast\nradius is the one answer here that is worse than a slow one.",
+  "properties": {
+    "custom_objective_id": {
+      "format": "uuid",
+      "title": "Custom Objective Id",
+      "type": "string"
+    },
+    "deployments": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Deployments",
+      "type": "array"
+    },
+    "models": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ObjectiveUsageModel"
+      },
+      "title": "Models",
+      "type": "array"
+    },
+    "rating_versions": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Rating Versions",
+      "type": "array"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ObjectiveStatus"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "custom_objective_id",
+    "slug",
+    "version",
+    "status"
+  ],
+  "title": "ObjectiveUsage",
+  "type": "object"
+}

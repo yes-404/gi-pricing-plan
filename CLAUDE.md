@@ -83,12 +83,13 @@ the maths.
 │   ├── model-schema/         ✔ shapes crossing a boundary (ADR-0002)   [W1, W2, W4]
 │   └── pricing-core/         ◐ progress + money + the `data/` maths, and `modelling/`:
 │                               factors, bandings, groupings, GLM, GBM,
-│                               diagnostics, transparency             [W1, W4, W5]
+│                               diagnostics, transparency, custom
+│                               objectives                            [W1, W4, W5]
 │
 ├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals,
 │                               datasets, validation, profiling, reference,
 │                               the demo guide, factors/bandings/groupings/models,
-│                               GBM fits and transparency artifacts
+│                               GBM fits, transparency artifacts and custom objectives
 │                                                     [W2✔ W3✔ W4✔ W7b✔ W5]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
 ├── frontend/                 ◐ Vue 3 SPA — `01` §5.3's 7 views routed, plus `/demo`

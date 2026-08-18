@@ -250,6 +250,21 @@ def test_a_check_must_say_what_it_found() -> None:
 
 
 @pytest.mark.req("FR-MODEL-42")
+def test_a_certificate_over_a_coarse_grid_is_refused() -> None:
+    """The published contract's floor of 1 000 points, at the type (2026-08-18).
+
+    An empty grid is refused above because every check passes over no points. A grid of
+    ten fails the same way more quietly: §4.7's convexity and scale checks report a share
+    of sampled points, and a share of ten is a number that looks like evidence.
+    """
+    with pytest.raises(pydantic.ValidationError, match="greater than or equal to 1000"):
+        SamplingSpec(
+            n_points=10, seed=1, y_range=(0.0, 1e7), f_range=(-20.0, 20.0),
+            w_range=(1e-3, 1e4),
+        )
+
+
+@pytest.mark.req("FR-MODEL-42")
 def test_a_certificate_over_an_empty_grid_is_refused() -> None:
     """Every check passes over no points, and the certificate would say `certified`."""
     with pytest.raises(pydantic.ValidationError, match="samples nothing"):

@@ -132,6 +132,43 @@
         "title": "AeCell",
         "type": "object"
       },
+      "Applicability": {
+        "additionalProperties": false,
+        "description": "Where an objective may be used (FR-MODEL-44).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
+        "properties": {
+          "backends": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveBackend"
+            },
+            "title": "Backends",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "offset_required": {
+            "default": false,
+            "title": "Offset Required",
+            "type": "boolean"
+          },
+          "responses": {
+            "items": {
+              "$ref": "#/components/schemas/ResponseKind"
+            },
+            "title": "Responses",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "y_domain": {
+            "$ref": "#/components/schemas/YDomain",
+            "default": {}
+          }
+        },
+        "required": [
+          "responses",
+          "backends"
+        ],
+        "title": "Applicability",
+        "type": "object"
+      },
       "ApprovalPolicy": {
         "additionalProperties": false,
         "description": "A workspace's approval policy (FR-GOV-12).",
@@ -848,6 +885,93 @@
         "title": "CalibrationBin",
         "type": "object"
       },
+      "CertificateCheck": {
+        "additionalProperties": false,
+        "description": "One named check and what it found.\n\n`detail` is prose and is required — FR-MODEL-69 makes a branch discontinuity a\n*reported finding* rather than an exclusion, and a `warn` with no sentence beside it is\nexactly the finding nobody acts on.",
+        "properties": {
+          "detail": {
+            "minLength": 1,
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckStatus"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "detail"
+        ],
+        "title": "CertificateCheck",
+        "type": "object"
+      },
+      "CertificateOutcome": {
+        "description": "§4.7's `overall`. A `failed` certificate blocks submission entirely (FR-MODEL-42).",
+        "enum": [
+          "certified",
+          "certified_with_findings",
+          "failed"
+        ],
+        "title": "CertificateOutcome",
+        "type": "string"
+      },
+      "CertificateResult": {
+        "additionalProperties": false,
+        "description": "What certification found, before the platform gives it an identity (ADR-0001).\n\n`overall` is **derived from the checks and enforced**, not asserted: a certificate whose\nverdict its own checks contradict is the one artifact in this module that must be\nimpossible, since submission reads the verdict and an approver reads the checks.",
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CertificateCheck"
+            },
+            "minItems": 1,
+            "title": "Checks",
+            "type": "array"
+          },
+          "library_versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Library Versions",
+            "type": "object"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/CertificateOutcome"
+          },
+          "sampling": {
+            "$ref": "#/components/schemas/SamplingSpec"
+          }
+        },
+        "required": [
+          "checks",
+          "sampling",
+          "overall"
+        ],
+        "title": "CertificateResult",
+        "type": "object"
+      },
+      "CertifyRequest": {
+        "additionalProperties": false,
+        "description": "§4.7's sampling grid, or nothing.\n\nOmitted means `default_sampling` derives it from the objective's applicability — a\nprobability response, a count and money in minor units need spans of 1, 20 and 10⁶, and\none default for all three would certify most of the catalogue on a domain it never sees.\nA caller who names a grid gets exactly it, and the certificate records which was used.",
+        "properties": {
+          "sampling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SamplingSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CertifyRequest",
+        "type": "object"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "The result of recomputing the chain (FR-GOV-24).",
@@ -896,6 +1020,17 @@
         ],
         "title": "ChainVerification",
         "type": "object"
+      },
+      "CheckStatus": {
+        "description": "One certificate check's verdict.\n\n§4.7's example shows `pass`, `warn` and `violated`. `failed` is the fourth, and the\ndistinction it draws is the one FR-MODEL-43 turns on: `violated` is a *stated property\nbreach the platform tolerates with a declared mitigation* — a non-convex loss is a\nlegitimate pricing loss — where `failed` is a check that cannot pass at all, and an\nobjective whose derivatives disagree with the numeric ones is not usable at any\napproval level. `02` §4.7 carries a dated note adding it to the vocabulary.",
+        "enum": [
+          "pass",
+          "warn",
+          "violated",
+          "failed"
+        ],
+        "title": "CheckStatus",
+        "type": "string"
       },
       "Coefficient": {
         "additionalProperties": false,
@@ -1407,6 +1542,74 @@
         "title": "ComponentStatus",
         "type": "string"
       },
+      "CreateCustomObjective": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-38's artifact. Every range and rule is `CustomObjective`'s, not this one's.\n\n`kind` is here rather than assumed so that a caller asking for an `expression`\nobjective is *answered* — FR-MODEL-75 makes that a named refusal, and a body that\nsilently forbade the field would leave them reading a 422 about an unexpected key.",
+        "properties": {
+          "applicability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Applicability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hessian_min": {
+            "default": 1e-06,
+            "exclusiveMinimum": 0.0,
+            "title": "Hessian Min",
+            "type": "number"
+          },
+          "hessian_strategy": {
+            "$ref": "#/components/schemas/HessianStrategy",
+            "default": "clip_to_min"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ObjectiveKind",
+            "default": "template"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectiveTemplate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "CreateCustomObjective",
+        "type": "object"
+      },
       "CreatePerilStructure": {
         "additionalProperties": false,
         "description": "FR-MODEL-58's composition. Every invariant is the contract type's, not this one's.",
@@ -1536,6 +1739,115 @@
         ],
         "title": "CredibilityModel",
         "type": "string"
+      },
+      "CustomObjective": {
+        "additionalProperties": false,
+        "description": "A named, versioned, reusable objective (FR-MODEL-38, §4.5).\n\nVersioned rather than edited: FR-MODEL-46 makes editing an approved objective a new\nversion requiring fresh certification, and a Model referencing\n`custom_objective:<slug>@<version>` must keep meaning the loss it was fitted under.",
+        "properties": {
+          "applicability": {
+            "$ref": "#/components/schemas/Applicability"
+          },
+          "approval_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Request Id"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "hessian_min": {
+            "default": 1e-06,
+            "exclusiveMinimum": 0.0,
+            "title": "Hessian Min",
+            "type": "number"
+          },
+          "hessian_strategy": {
+            "$ref": "#/components/schemas/HessianStrategy",
+            "default": "clip_to_min"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ObjectiveKind",
+            "default": "template"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ObjectiveStatus",
+            "default": "draft"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectiveTemplate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "version",
+          "applicability"
+        ],
+        "title": "CustomObjective",
+        "type": "object"
       },
       "DataDictionaryEntry": {
         "additionalProperties": false,
@@ -4139,6 +4451,16 @@
         "title": "GroupingProposalRequest",
         "type": "object"
       },
+      "HessianStrategy": {
+        "description": "FR-MODEL-43's three declared treatments of a negative hessian.\n\nAlways declared, never inferred: boosting divides by the hessian, so what happens where\nit is negative decides what the fit *is*, and a default chosen inside the fitting code\nwould be a modelling decision made where no reviewer reads it.",
+        "enum": [
+          "clip_to_min",
+          "abs",
+          "gauss_newton"
+        ],
+        "title": "HessianStrategy",
+        "type": "string"
+      },
       "Job": {
         "additionalProperties": false,
         "description": "A tracked asynchronous unit of work, as returned by the API (`07` §4.1).",
@@ -5092,6 +5414,201 @@
           "holds"
         ],
         "title": "MonotonicityCheck",
+        "type": "object"
+      },
+      "ObjectiveBackend": {
+        "description": "FR-MODEL-44's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-MODEL-87 records as absent entirely and\nowned by Phase 1b. The member exists because FR-MODEL-44 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
+        "enum": [
+          "xgboost",
+          "lightgbm",
+          "glm"
+        ],
+        "title": "ObjectiveBackend",
+        "type": "string"
+      },
+      "ObjectiveCertificate": {
+        "additionalProperties": false,
+        "description": "The persisted certificate (§4.7, FR-MODEL-42).\n\nImmutable, for the reason `Backtest` is: it is what an approval argues from, and\nevidence that can change after the decision is not evidence. Attached to one objective\n*version* — re-certifying produces another row rather than editing this one, so the\nhistory of what was believed when survives a library upgrade.",
+        "properties": {
+          "certified_at": {
+            "format": "date-time",
+            "title": "Certified At",
+            "type": "string"
+          },
+          "custom_objective_id": {
+            "format": "uuid",
+            "title": "Custom Objective Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "objective_version": {
+            "minimum": 1.0,
+            "title": "Objective Version",
+            "type": "integer"
+          },
+          "result": {
+            "$ref": "#/components/schemas/CertificateResult"
+          }
+        },
+        "required": [
+          "id",
+          "custom_objective_id",
+          "objective_version",
+          "certified_at",
+          "result"
+        ],
+        "title": "ObjectiveCertificate",
+        "type": "object"
+      },
+      "ObjectiveKind": {
+        "description": "FR-MODEL-38's two kinds. Only `template` is constructible in Phase 1.",
+        "enum": [
+          "template",
+          "expression"
+        ],
+        "title": "ObjectiveKind",
+        "type": "string"
+      },
+      "ObjectiveStatus": {
+        "description": "FR-MODEL-46's lifecycle.",
+        "enum": [
+          "draft",
+          "certified",
+          "review",
+          "approved",
+          "deprecated"
+        ],
+        "title": "ObjectiveStatus",
+        "type": "string"
+      },
+      "ObjectiveTemplate": {
+        "description": "§4.5's shipped catalogue — the whole of Phase 1's custom-objective surface.",
+        "enum": [
+          "poisson",
+          "gamma",
+          "tweedie",
+          "capped_gamma",
+          "spliced_severity",
+          "asymmetric_squared",
+          "asymmetric_poisson",
+          "huber",
+          "pseudo_huber",
+          "quantile",
+          "zero_inflated_poisson",
+          "focal_binomial"
+        ],
+        "title": "ObjectiveTemplate",
+        "type": "string"
+      },
+      "ObjectiveUsage": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-47's blast radius for one Custom Objective version.\n\n**`rating_versions` and `deployments` are named and always empty in Phase 1**, and this\nis FR-MODEL-87's staging rule rather than an oversight: `03 — Rating Engine` is not\nbuilt, so there is no table to query and no row that could appear. Naming them here\nmeans the slice that builds `03` fills a field the frontend already renders, instead of\nchanging a response shape that clients have learned. The field's emptiness is stated in\n`02` §5.1 with its date, so a reader does not have to infer \"none\" from \"not yet\".\n\nNot paginated, deliberately. This is read when a defect is found, and a truncated blast\nradius is the one answer here that is worse than a slow one.",
+        "properties": {
+          "custom_objective_id": {
+            "format": "uuid",
+            "title": "Custom Objective Id",
+            "type": "string"
+          },
+          "deployments": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Deployments",
+            "type": "array"
+          },
+          "models": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveUsageModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "rating_versions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Rating Versions",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ObjectiveStatus"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "custom_objective_id",
+          "slug",
+          "version",
+          "status"
+        ],
+        "title": "ObjectiveUsage",
+        "type": "object"
+      },
+      "ObjectiveUsageModel": {
+        "additionalProperties": false,
+        "description": "One Model fitted under an objective version (FR-MODEL-47).\n\nSlug, version and status rather than the whole Model: the blast-radius question is\n\"what does a defect in this loss reach, and how far has each of them got?\" — a `draft`\nmodel is a experiment to re-fit and an `approved` one is a decision to revisit, and\nthose are different pieces of work.",
+        "properties": {
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "model_family_slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Model Family Slug",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_id",
+          "model_family_slug",
+          "version",
+          "status",
+          "dataset_version_id"
+        ],
+        "title": "ObjectiveUsageModel",
         "type": "object"
       },
       "OffsetSpec": {
@@ -7261,6 +7778,72 @@
         "title": "RunBacktest",
         "type": "object"
       },
+      "SamplingSpec": {
+        "additionalProperties": false,
+        "description": "The grid the checks ran over (§4.7).\n\nPart of the certificate rather than a run parameter thrown away afterwards: §4.7's own\nnote says the convexity share \"is strongly dependent on `y_range`/`f_range`, so the\nshare is only meaningful alongside the sampling block\". A finding without its grid is\na percentage of nothing.",
+        "properties": {
+          "f_range": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "F Range",
+            "type": "array"
+          },
+          "n_points": {
+            "minimum": 1000.0,
+            "title": "N Points",
+            "type": "integer"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "w_range": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "W Range",
+            "type": "array"
+          },
+          "y_range": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Y Range",
+            "type": "array"
+          }
+        },
+        "required": [
+          "n_points",
+          "seed",
+          "y_range",
+          "f_range",
+          "w_range"
+        ],
+        "title": "SamplingSpec",
+        "type": "object"
+      },
       "SchemaCorrection": {
         "additionalProperties": false,
         "properties": {
@@ -7872,6 +8455,21 @@
           "change_summary"
         ],
         "title": "SubmitApproval",
+        "type": "object"
+      },
+      "SubmitCustomObjective": {
+        "additionalProperties": false,
+        "properties": {
+          "change_summary": {
+            "minLength": 1,
+            "title": "Change Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "change_summary"
+        ],
+        "title": "SubmitCustomObjective",
         "type": "object"
       },
       "SubmitModel": {
@@ -8739,6 +9337,58 @@
           "mean_abs_error_pct"
         ],
         "title": "WorstRegion",
+        "type": "object"
+      },
+      "YDomain": {
+        "additionalProperties": false,
+        "description": "The valid range of the response for an objective (FR-MODEL-44).\n\n§4.6's example writes `{\"min_inclusive\": 0}`; the exclusive bounds are added here\nbecause the Gamma family needs `y > 0` and an inclusive zero is the one value at which\nits loss is undefined. At most one bound per side.",
+        "properties": {
+          "max_exclusive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Exclusive"
+          },
+          "max_inclusive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Inclusive"
+          },
+          "min_exclusive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Exclusive"
+          },
+          "min_inclusive": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Inclusive"
+          }
+        },
+        "title": "YDomain",
         "type": "object"
       }
     }
@@ -10415,6 +11065,742 @@
         "summary": "Download a blob",
         "tags": [
           "blobs"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives": {
+      "post": {
+        "description": "**201** with the objective, as a `draft` (`wf-05` A1, FR-MODEL-38).\n\n201 rather than 202: authoring is not work. The parameters are checked against §4.5's\nranges and the applicability against the template's, both by the contract, and what is\nwritten is a declaration. The *certification* is the work, and it is a separate call for\nexactly that reason — FR-MODEL-42 makes it the evidence, not a side effect of authoring.",
+        "operationId": "create_custom_objective_api_v1_custom_objectives_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomObjective"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomObjective"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create or version a Custom Objective",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/{objective_id}": {
+      "get": {
+        "description": "**Added to `02` §5.1 with this slice** (FR-MODEL-95) — see the module docstring.",
+        "operationId": "get_custom_objective_api_v1_custom_objectives__objective_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Objective Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomObjective"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "A Custom Objective",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/{objective_id}/certificate": {
+      "get": {
+        "description": "**Added to `02` §5.1 with this slice** (FR-MODEL-95).\n\nWithout it the certificate is produced by a Job and readable nowhere — and it is what\nan approver is asked to read (`06` §4.2 names `objective_certificate` as the evidence).",
+        "operationId": "get_certificate_api_v1_custom_objectives__objective_id__certificate_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Objective Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectiveCertificate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "The latest certificate for a Custom Objective",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/{objective_id}/certify": {
+      "post": {
+        "description": "**202** with a Job (`wf-05` A2, FR-MODEL-42).\n\n202 because §4.7's checks end in a smoke fit: a booster is trained, over a sampled grid,\nand a synchronous endpoint would hold the request open across it. What is answered\nbefore the Job exists is what can be — the permission, and whether re-certifying would\nmove evidence a live decision already rests on.",
+        "operationId": "certify_custom_objective_api_v1_custom_objectives__objective_id__certify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Objective Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Run the certificate checks over a Custom Objective",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/{objective_id}/derive": {
+      "post": {
+        "description": "Always refused in Phase 1 with `OBJECTIVE_KIND_NOT_ENABLED` (FR-MODEL-40, 75).\n\nBuilt as a refusal rather than left out: FR-MODEL-75 names this endpoint as one of the\ntwo that answer that code, and the distinction between \"no such concept\" and \"not until\nPhase 2\" is exactly what a 404 would destroy. The return type is the one Phase 2 will\nanswer with; nothing reaches it yet.",
+        "operationId": "derive_custom_objective_api_v1_custom_objectives__objective_id__derive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Objective Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomObjective"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Derive gradient and hessian from a loss expression",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/{objective_id}/submit": {
+      "post": {
+        "description": "`certified → review` (`wf-05` A3, FR-MODEL-46).\n\nGated on `model:submit` for the reason a Model's submission is: putting an artifact in\nfront of an approver starts a governed process, and the role that may author is not\nautomatically the role that may do that.",
+        "operationId": "submit_custom_objective_api_v1_custom_objectives__objective_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Objective Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitCustomObjective"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomObjective"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Submit a Custom Objective for approval",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/{objective_id}/usage": {
+      "get": {
+        "description": "FR-MODEL-47's blast radius.\n\n`rating_versions` and `deployments` are named and always empty in Phase 1 — `03` is not\nbuilt — which is FR-MODEL-87's staging rule rather than an oversight. The models are\nreal, and they are the half that exists to be found.",
+        "operationId": "get_usage_api_v1_custom_objectives__objective_id__usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Objective Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectiveUsage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "What was fitted under this Custom Objective",
+        "tags": [
+          "modelling"
         ]
       }
     },

@@ -832,9 +832,19 @@ def _agreement(
     A pure relative error is meaningless where the derivative passes through zero: the
     numeric estimate there is cancellation noise of size `eps * |value| / h`, and dividing
     a noise-sized difference by a noise-sized derivative reports `O(1)` disagreement for an
-    exactly correct formula. `magnitude` is the quantity being differenced, so the floor is
-    the noise *at that point* — which is what makes the tolerance step-aware (FR-MODEL-70)
+    exactly correct formula. `magnitude` is the quantity being differenced, so the noise is
+    the one *at that point* — which is what makes the tolerance step-aware (FR-MODEL-70)
     rather than a constant chosen to make the check pass.
+
+    The noise enters **twice**, and it has to: as a floor under the denominator, and
+    subtracted from the difference. Flooring alone is not enough wherever the derivative is
+    orders of magnitude smaller than the quantity differenced — a Gamma hessian at
+    `y=1.8, f=13.9` is `5.5e-07` against a gradient of `0.33`, so the cancellation noise in
+    the numeric estimate is `6e-12` absolute while the hessian it is compared against is
+    `5.5e-07`. A difference of `9e-13` — well inside what the method can resolve — then
+    divided out as a relative error of `1.6e-06` and warned, which is an exactly correct
+    derivative reported as a suspect one. (Found 2026-08-18, when the grid floor rose to
+    1 000 points and three of the twelve templates warned.)
     """
     if not mask.any():
         return 0.0, 0
@@ -842,7 +852,7 @@ def _agreement(
     noise = 8.0 * _EPS * np.abs(magnitude[mask]) / h
     denom = np.maximum(np.maximum(np.abs(a), np.abs(n)), noise)
     with np.errstate(invalid="ignore", divide="ignore"):
-        error = np.abs(a - n) / denom
+        error = np.maximum(np.abs(a - n) - noise, 0.0) / denom
     error = error[np.isfinite(error)]
     return (float(error.max()) if error.size else 0.0), int(mask.sum())
 

@@ -3,11 +3,15 @@
   "$id": "https://contracts.gi-pricing.dev/custom-objective.schema.json",
   "title": "CustomObjective",
   "description": "Named, versioned, approvable loss definition. See 02-modelling.md §4.5 and §4.6.",
+  "$comment": "Amended 2026-08-18 (W5, custom objectives), when this contract first met a generated counterpart. Two resolutions, both the code's (CLAUDE.md §0): the template block is `params`, not `template_params` — §4.5 names a Params column and no field, the API body has always been `params`, and `kind: template` already says whose they are; and `hessian_strategy`/`hessian_min` are top-level rather than expression-only, because a template objective has a hessian to floor exactly as a user-written one does (a `quantile` loss has a zero second derivative everywhere, and `clip_to_min` is what makes it fittable at all). `description` and `approval_request_id` are named here for the first time: the second is the trail from an approved objective to the decision behind it, and a contract that omits it describes an artifact a reviewer cannot get back from.",
   "type": "object",
   "required": ["kind", "applicability"],
   "properties": {
     "kind": {"enum": ["template", "expression"]},
     "status": {"enum": ["draft", "certified", "review", "approved", "deprecated"]},
+    "description": {"type": ["string", "null"]},
+    "hessian_strategy": {"enum": ["none", "clip_to_min", "abs", "gauss_newton"]},
+    "hessian_min": {"type": "number", "exclusiveMinimum": 0},
     "applicability": {
       "type": "object",
       "required": ["responses", "backends", "offset_required"],
@@ -20,26 +24,27 @@
           "properties": {"min_inclusive": {"type": "number"}, "max_inclusive": {"type": "number"}}}
       }
     },
-    "certificate_id": {"type": ["string", "null"], "format": "uuid"}
+    "certificate_id": {"type": ["string", "null"], "format": "uuid"},
+    "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
   },
   "allOf": [
     {"$ref": "common/artifact-envelope.schema.json"},
     {
       "if": {"properties": {"kind": {"const": "template"}}, "required": ["kind"]},
       "then": {
-        "required": ["template", "template_params"],
+        "required": ["template", "params"],
         "properties": {
           "template": {"enum": ["poisson", "gamma", "tweedie", "capped_gamma", "spliced_severity",
                                 "asymmetric_squared", "asymmetric_poisson", "huber", "pseudo_huber",
                                 "quantile", "zero_inflated_poisson", "focal_binomial"]},
-          "template_params": {"type": "object"}
+          "params": {"type": "object", "additionalProperties": {"type": "number"}}
         }
       }
     },
     {
       "if": {"properties": {"kind": {"const": "expression"}}, "required": ["kind"]},
       "then": {
-        "required": ["bound_symbols", "parameters", "loss", "derived", "hessian_strategy"],
+        "required": ["bound_symbols", "parameters", "loss", "derived"],
         "properties": {
           "bound_symbols": {"type": "array", "items": {"enum": ["y", "f", "w"]}},
           "parameters": {
@@ -69,9 +74,7 @@
               "derivation_version": {"type": "string"},
               "derived_at": {"type": "string", "format": "date-time"}
             }
-          },
-          "hessian_strategy": {"enum": ["none", "clip_to_min", "abs", "gauss_newton"]},
-          "hessian_min": {"type": "number", "exclusiveMinimum": 0}
+          }
         }
       }
     }

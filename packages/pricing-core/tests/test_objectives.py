@@ -16,6 +16,7 @@ checks warning.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 from uuid import uuid4
 
@@ -42,7 +43,7 @@ from pricing_core.modelling import (
     make_xgb_objective,
 )
 from pricing_core.modelling.errors import NonFiniteDerivativeError, ObjectiveError
-from pricing_core.modelling.objectives import _finite_or_abort
+from pricing_core.modelling.objectives import _TEMPLATES, _finite_or_abort
 
 T = ObjectiveTemplate
 
@@ -107,7 +108,7 @@ def _objective(
     )
 
 
-def _sampling(template: ObjectiveTemplate, *, n_points: int = 600) -> SamplingSpec:
+def _sampling(template: ObjectiveTemplate, *, n_points: int = 1_000) -> SamplingSpec:
     y_range, f_range = _GRIDS.get(template, (_MONEY_Y, _MONEY_F))
     return SamplingSpec(
         n_points=n_points, seed=_SEED, y_range=y_range, f_range=f_range, w_range=(0.1, 3.0)
@@ -281,6 +282,71 @@ def test_the_derivative_tolerance_is_step_aware() -> None:
     detail = _detail(result, "analytic_vs_numeric_hessian")
     assert "h=" in detail
     assert "1e-04" in detail or "0.0001" in detail
+
+
+def _with_a_broken_derivative(
+    monkeypatch: pytest.MonkeyPatch,
+    template: ObjectiveTemplate,
+    which: str,
+    break_it: Any,
+) -> None:
+    """Swap one of a template's analytic derivatives for a deliberately wrong one.
+
+    Patching the catalogue entry rather than `ObjectiveFns` keeps the break upstream of
+    `compile_objective`, so the whole public path — compile, sample, difference, grade —
+    runs exactly as it does for a real objective.
+    """
+    good = _TEMPLATES[template]
+    fn = getattr(good, which)
+    monkeypatch.setitem(
+        _TEMPLATES,
+        template,
+        replace(good, **{which: lambda y, f, params: break_it(fn(y, f, params))}),
+    )
+
+
+@pytest.mark.req("FR-MODEL-76")
+@pytest.mark.parametrize("which", ["grad", "hess"])
+def test_a_wrong_derivative_fails_certification(
+    monkeypatch: pytest.MonkeyPatch, which: str
+) -> None:
+    """§13.4: the check is shown to fail on deliberately broken input.
+
+    A derivative 1 % too large is the shape of the mistake certification exists to catch —
+    a dropped constant or a mis-transcribed term, not a sign error a fit would blow up on.
+    It must reach `failed` rather than `certified_with_findings`: a finding is carried to
+    the approver (FR-MODEL-43), and an objective whose gradient is simply wrong is not
+    something an approver should be offered.
+    """
+    _with_a_broken_derivative(monkeypatch, T.GAMMA, which, lambda d: d * 1.01)
+
+    result = certify_objective(_objective(T.GAMMA), sampling=_sampling(T.GAMMA))
+
+    name = "analytic_vs_numeric_gradient" if which == "grad" else "analytic_vs_numeric_hessian"
+    assert _status(result, name) is CheckStatus.FAILED
+    assert result.overall is CertificateOutcome.FAILED
+
+
+@pytest.mark.req("FR-MODEL-70")
+def test_a_wrong_derivative_is_caught_where_the_true_one_is_near_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The noise term is a floor on what the method can resolve, not a place to hide.
+
+    `_agreement` subtracts the finite-difference noise from the difference as well as
+    flooring the denominator (added 2026-08-18, when a correct Gamma hessian of `5.5e-07`
+    was warned over a difference of `9e-13`). Loosening a tolerance is how a check stops
+    checking, so this pins the other side of it: an error of `1e-08` — absolutely tiny, and
+    two hundred times the noise at the points where the Gamma hessian is smallest — is
+    still `failed`. Sampled `y/mu` never approaches 1 closely enough for the *gradient* to
+    reach that regime, which is why this fixes the hessian specifically.
+    """
+    _with_a_broken_derivative(monkeypatch, T.GAMMA, "hess", lambda d: d + 1e-8)
+
+    result = certify_objective(_objective(T.GAMMA), sampling=_sampling(T.GAMMA))
+
+    assert _status(result, "analytic_vs_numeric_hessian") is CheckStatus.FAILED
+    assert _status(result, "analytic_vs_numeric_gradient") is CheckStatus.PASS
 
 
 # --- compilation -----------------------------------------------------------------------

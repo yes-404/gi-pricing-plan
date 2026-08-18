@@ -64,6 +64,8 @@ __all__ = [
     "ObjectiveKind",
     "ObjectiveStatus",
     "ObjectiveTemplate",
+    "ObjectiveUsage",
+    "ObjectiveUsageModel",
     "SamplingSpec",
     "TemplateParameter",
     "YDomain",
@@ -598,7 +600,14 @@ class SamplingSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    n_points: int = Field(ge=1)
+    #: **At least 1 000.** The floor is the published contract's
+    #: (`objective-certificate.schema.json`, Phase 0) and it is a governance claim rather
+    #: than a performance one: §4.7's convexity and scale checks report a *share of sampled
+    #: points*, and over a coarse grid every one of them passes by not looking. Enforced
+    #: here rather than at the API because `record_certificate` is not the only door —
+    #: a certificate is evidence wherever it is made. (Added 2026-08-18, when the generated
+    #: contract first met the authored one and the type admitted a grid of 1.)
+    n_points: int = Field(ge=1_000)
     seed: int
     y_range: tuple[float, float]
     f_range: tuple[float, float]
@@ -680,3 +689,48 @@ class ObjectiveCertificate(BaseModel):
     certified_at: _datetime.datetime
     job_id: UUID | None = None
     result: CertificateResult
+
+
+class ObjectiveUsageModel(BaseModel):
+    """One Model fitted under an objective version (FR-MODEL-47).
+
+    Slug, version and status rather than the whole Model: the blast-radius question is
+    "what does a defect in this loss reach, and how far has each of them got?" — a `draft`
+    model is a experiment to re-fit and an `approved` one is a decision to revisit, and
+    those are different pieces of work.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_id: UUID
+    model_family_slug: Slug
+    version: int = Field(ge=1)
+    status: str
+    dataset_version_id: UUID
+
+
+class ObjectiveUsage(BaseModel):
+    """FR-MODEL-47's blast radius for one Custom Objective version.
+
+    **`rating_versions` and `deployments` are named and always empty in Phase 1**, and this
+    is FR-MODEL-87's staging rule rather than an oversight: `03 — Rating Engine` is not
+    built, so there is no table to query and no row that could appear. Naming them here
+    means the slice that builds `03` fills a field the frontend already renders, instead of
+    changing a response shape that clients have learned. The field's emptiness is stated in
+    `02` §5.1 with its date, so a reader does not have to infer "none" from "not yet".
+
+    Not paginated, deliberately. This is read when a defect is found, and a truncated blast
+    radius is the one answer here that is worse than a slow one.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    custom_objective_id: UUID
+    slug: Slug
+    version: int = Field(ge=1)
+    status: ObjectiveStatus
+    models: tuple[ObjectiveUsageModel, ...] = ()
+    #: Rating Versions referencing a model fitted under this objective (`03`, unbuilt).
+    rating_versions: tuple[str, ...] = ()
+    #: Live Deployments carrying one of those Rating Versions (`03`/`07`, unbuilt).
+    deployments: tuple[str, ...] = ()

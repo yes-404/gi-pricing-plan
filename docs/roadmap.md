@@ -1954,6 +1954,71 @@ with an owner rather than fixed here, because it is a different requirement's sc
 | A backtest cited as approval evidence (`06` §3.3) | **Not started.** `06` §3.3's evidence table has no `backtest` kind, and adding one is a governance decision rather than a modelling one — the shape OQ-GOV-7 is already about |
 
 
+#### W5 slice — custom objectives, and the tolerance that stopped checking, 2026-08-18
+
+`02` §3.7 was the largest unbuilt block in the spec — **1 of 16 requirements evidenced**, and
+five of `MODEL`'s six unpublished endpoints. It is now **16/17**, and `MODEL` moves
+**27/33 → 34/35** endpoints (97%); the denominator rises because FR-MODEL-95 declares the two
+read routes the §5.1 table omitted, and the one still unpublished is `POST /custom-metrics`.
+
+**Templates only, per the 2026-08-15 decision — and that is what made the certification
+machinery cheap rather than what made it unnecessary.** The twelve templates are the
+platform's own analytic derivatives, so §4.7's checks are not verifying a user's arithmetic;
+they are verifying a *parameterisation*, at the values this objective was actually given —
+and two of the three findings below come from running them.
+
+| Delivered | Evidence |
+|---|---|
+| `pricing_core.modelling.objectives` — the twelve-template catalogue, `compile_objective`, `certify_objective` | 23 tests, parametrised over the catalogue, so a thirteenth template inherits every one of them |
+| The nine §4.7 checks, **all emitted for every objective, always** | Richardson-extrapolated central differences at `h = 1e-4`, with the agreement tolerance floored *and* offset by each point's own finite-difference noise. `certified_with_findings` is the ordinary outcome for a pricing loss; only `failed` blocks |
+| `ObjectiveCertificate` wrapping `CertificateResult` | ADR-0001, made concrete: `pricing-core` cannot allocate an id, read a clock or know about a Job, so identity sits outside and findings inside. `CertificateResult.outcome_of` is the single place the verdict rule lives, enforced by a `model_validator` |
+| `custom_objectives`, `objective_certificates`, migration `d0e1f2a3b4c5` | The definition is immutable while the lifecycle columns move — a certificate certifies the parameters it ran against, so an `UPDATE ... SET params` on a `certified` row is refused by trigger and proved so by test. Certificates are append-only |
+| Seven endpoints (FR-MODEL-42/46/47/**95**, and `derive` refusing) | `POST /derive` exists **in order to refuse**, with `OBJECTIVE_KIND_NOT_ENABLED`: a declared endpoint that 404s says "wrong URL" where the truth is "not in this phase" |
+| `fit_gbm`'s custom branch, both backends | Seven refusals by name, every one before the fit: not supplied, ref mismatch, not approved, response undeclared, not applicable, offset required, early stopping unsupported |
+| FR-GOV-13 extended: a Custom Objective returns to **`certified`**, not `draft` | The certificate is pinned to the objective version (FR-MODEL-42) and the version did not change when an approver asked a question. Returning it to `draft` would discard evidence that is still valid |
+
+**Three things the tests found rather than confirmed.**
+
+**A defect in `predict_gbm`, in code this slice only had to read.** The LightGBM branch applied
+`np.exp` to the raw score unconditionally, though `_OBJECTIVES` had carried the inverse link
+as its third element all along. Correct for three of the four builtin objectives and wrong for
+`binary:logistic`, which returned `exp(f)` where the model means `1 / (1 + exp(-f))` — a
+"probability" above 1 for every row the model thought likely, and the two agree to within 1 %
+at `f = 0`, so a weak-signal book would not have shown it. Nothing had yet asked a LightGBM
+binomial model for a prediction. The custom path needed the link recorded anyway
+(FR-MODEL-94), and the defect was visible the moment it was. Fixed, with a regression test
+parametrised over both backends and over builtin/custom; artifacts predating the field keep
+the old behaviour deliberately, because silently changing what a stored model predicts is the
+worse failure. `02` §4.3 carries the note.
+
+**Certification caught the platform's own arithmetic.** `minimum_at_truth` failed for
+`asymmetric_poisson`: the implemented loss was not minimised at `f = log(y)`, and the spec was
+right about what the objective meant. The code was fixed and the spec left alone — the one
+direction of `CLAUDE.md` §0's rule that is easy to get backwards when the code is newer than
+the words.
+
+**The tolerance stopped checking, and nothing would have said so.** Raising the sampling floor
+from 600 to 1 000 points made three of twelve templates warn on derivatives that were exactly
+correct — the extra points reach where the true derivative is near zero and the difference
+quotient is all noise. The fix was to subtract each point's own noise floor from the tolerance,
+which is right, and which also loosens the check that exists to catch a wrong derivative. So
+the loosening is now pinned from the other side: a 1 % relative error in either derivative
+reaches `failed`, and an absolute error of `1e-08` in the Gamma hessian — two hundred times the
+noise where that hessian is smallest — still reaches `failed`. The general rule went into
+`.claude/skills/python-test`, because this will not be the last tolerance that gets loosened.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| **FR-MODEL-40/41's `expression` kind** — the grammar, the SymPy derivation, `POST /derive` | **Phase 2**, behind `expression_objectives_enabled`, and refused by name rather than absent. FR-MODEL-41 is evidenced only for the half that binds a template — the definition cannot be rewritten — not for the parser. Owner: the maintainer, with OQ-GOV-8 |
+| **FR-MODEL-45 custom metrics**, and `POST /custom-metrics` — `MODEL`'s last unpublished endpoint | **Deferred to Phase 1b.** Evidenced only as the shape of its absence: under a callable objective both backends hand a builtin metric the raw score, so the metric early stopping names is not the metric it stops on. Refused with `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` and FR-MODEL-45 named in the message, because a wrongly-stopped fit produces a model that is merely worse and never one that errors |
+| The sandbox question (`CLAUDE.md` §3's "arbitrary-code objective is a governance risk") | **Not answered, and deliberately not.** Templates execute no user text at all, so Phase 1 buys the capability without owing the answer. It comes due with the `expression` kind, not before |
+| `02` §5.3's two views — `/objectives`, `/objectives/:slug@:version/certificate` | **Not started.** Owner: W6b. The §5.3 note records two things the views will need that the spec has wrong: "pass/warn/fail" is four statuses, and the expression editor has nothing to parse in Phase 1 |
+| `06` §4.1's `custom_objective:author` / `custom_objective:submit` | **Superseded 2026-08-18.** The permissions do not exist and the spec was the wrong side; the built surface checks `model:read` / `model:fit` / `model:submit`, and separation of duty is bought by FR-GOV-11 and FR-MODEL-46 instead. Whether authoring an objective deserves its own permission is **OQ-GOV-8**, to be decided *with* the `expression` kind |
+| `wf-05` Route B, and Phase C's compiled expression tree | **Phase 2**, unchanged. Route A is now real end to end except A3, and the journey carries a dated note saying which of its steps read differently |
+
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -1964,7 +2029,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: twelve slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, and interaction factors; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: fifteen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, and custom objectives; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 

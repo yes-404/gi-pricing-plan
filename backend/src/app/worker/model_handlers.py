@@ -29,6 +29,7 @@ from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import modelling as model_service
+from app.platform import objectives as objective_service
 from app.platform import perils as peril_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
@@ -39,6 +40,7 @@ from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     Banding,
+    CustomObjective,
     Diagnostics,
     Factor,
     FitResult,
@@ -54,6 +56,7 @@ from model_schema import (
     PerilStructure,
     ReconciledPeril,
     Reconciliation,
+    SamplingSpec,
     TransparencyArtifact,
     new_uuid7,
 )
@@ -166,7 +169,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     progress.update(0.05, "loading the model spec")
 
     async def load() -> tuple[
-        ModelSpec, list[Factor], _Transformations, pl.DataFrame, pl.DataFrame
+        ModelSpec,
+        list[Factor],
+        _Transformations,
+        pl.DataFrame,
+        pl.DataFrame,
+        CustomObjective | None,
     ]:
         async with progress.database.session() as session:
             row = await session.get(ModelRow, model_id)
@@ -228,9 +236,21 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             train, holdout = await _split_frames(
                 session, blob_store, workspace_id=workspace_id, spec=spec, parent=frame
             )
-            return spec, factors, transformations, train, holdout
+            # The Custom Objective the spec names, resolved here for the reason the
+            # bandings are: `pricing-core` computes and does not resolve a reference
+            # (ADR-0001). `fit_gbm` refuses a `custom` objective that arrives without its
+            # artifact, one whose ref does not match, and one whose status is not
+            # fittable — so this loads it and lets the maths keep the invariants.
+            objective = (
+                await objective_service.resolve_ref(
+                    session, workspace_id=workspace_id, ref=spec.objective.ref or ""
+                )
+                if isinstance(spec, GbmSpec) and spec.objective.kind == "custom"
+                else None
+            )
+            return spec, factors, transformations, train, holdout, objective
 
-    spec, factors, transformations, frame, holdout = progress.run_on_loop(load())
+    spec, factors, transformations, frame, holdout, objective = progress.run_on_loop(load())
 
     from pricing_core.modelling import GbmFitError, GlmFitError, fit_gbm, fit_glm
     from pricing_core.modelling.factors import FactorResolutionError
@@ -253,6 +273,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 holdout=holdout,
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
+                objective=objective,
                 progress=fitting,
             )
             result, booster, eval_curve = fit.result, fit.booster_bytes, fit.eval_curve
@@ -738,6 +759,8 @@ def register_model_handlers() -> None:
         register_handler(JobKind.MODEL_BACKTEST, _backtest)
     if JobKind.PERIL_STRUCTURE_RECONCILE not in handler_registry.HANDLERS:
         register_handler(JobKind.PERIL_STRUCTURE_RECONCILE, _reconcile)
+    if JobKind.OBJECTIVE_CERTIFY not in handler_registry.HANDLERS:
+        register_handler(JobKind.OBJECTIVE_CERTIFY, _certify)
 
 
 def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
@@ -908,3 +931,55 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
     return JobResult(
         kind="artifact", ref=f"peril_structure:{structure.slug}@{structure.version}"
     )
+
+
+def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`objective.certify` — §4.7's checks over a Custom Objective (FR-MODEL-42).
+
+    A **failing** certificate is a successful Job, for `_reconcile`'s reason: the finding
+    that an objective's analytic hessian disagrees with the numeric one *is* the answer the
+    run was asked for, and a job that failed would leave an actuary re-running it to read
+    the same number. What a `failed` certificate blocks is `submit`, and that is
+    `submit_for_review`'s answer.
+
+    The grid comes from the parameters rather than being re-derived here. The API resolved
+    it — from the caller's request or `default_sampling` — and returned a 202 that implies
+    it; re-deriving would let a change to the default rule silently change what an
+    already-queued Job measures.
+    """
+    from pricing_core.modelling import certify_objective
+
+    progress = _bridge(callback)
+    actor, workspace_id = _actor(parameters), _workspace(parameters)
+    objective_id = UUID(parameters["objective_id"])
+    sampling = SamplingSpec.model_validate(parameters["sampling"])
+    progress.update(0.05, "loading the objective")
+
+    async def load() -> CustomObjective:
+        async with progress.database.session() as session:
+            return await objective_service.load_objective(
+                session, workspace_id=workspace_id, objective_id=objective_id
+            )
+
+    objective = progress.run_on_loop(load())
+    result = certify_objective(
+        objective,
+        sampling=sampling,
+        progress=ScaledProgress(progress, start=0.1, end=0.9),
+    )
+
+    async def store() -> UUID:
+        async with progress.database.unit_of_work() as session:
+            _, certificate = await objective_service.record_certificate(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                objective_id=objective_id,
+                result=result,
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+            )
+            return certificate.id
+
+    certificate_id = progress.run_on_loop(store())
+    progress.update(1.0, "done")
+    return JobResult(kind="artifact", ref=f"objective_certificate:{certificate_id}")

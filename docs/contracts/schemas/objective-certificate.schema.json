@@ -3,41 +3,56 @@
   "$id": "https://contracts.gi-pricing.dev/objective-certificate.schema.json",
   "title": "ObjectiveCertificate",
   "description": "Mathematical evidence gating objective submission. See 02-modelling.md §4.7.",
+  "$comment": "Amended 2026-08-18 (W5, custom objectives), when this contract first met a generated counterpart. Three resolutions, each the code's (CLAUDE.md §0): (1) the findings moved into `result`, because certification runs in pricing-core and ADR-0001 forbids it an id, a clock or a job — `CertificateResult` is what it returns and this shape is what the platform persists around it; (2) the checks are named `analytic_vs_numeric_*`, not `symbolic_vs_numeric_*`: with expression objectives deferred to Phase 2 (OQ-MODEL-1) nothing is symbolic, and the derivatives compared are the hand-written analytic ones; `branch_discontinuity` joins the list as a ninth named check (FR-MODEL-69); (3) the failing status is `failed`, matching CheckStatus and the `failed` overall, rather than `fail`. The one place the contract was right and the code was not is `sampling.n_points`: the model admitted a grid of 1, and now carries this floor.",
   "type": "object",
-  "required": ["custom_objective_id", "objective_version", "checks", "sampling", "overall"],
+  "required": ["id", "custom_objective_id", "objective_version", "certified_at", "result"],
   "properties": {
+    "id": {"type": "string", "format": "uuid"},
     "custom_objective_id": {"type": "string", "format": "uuid"},
     "objective_version": {"type": "integer", "minimum": 1},
-    "checks": {
-      "type": "array", "minItems": 8,
-      "items": {
-        "type": "object",
-        "required": ["name", "status", "detail"],
-        "properties": {
-          "name": {"enum": ["symbolic_vs_numeric_gradient", "symbolic_vs_numeric_hessian",
-                            "finiteness", "convexity", "minimum_at_truth", "monotone_loss",
-                            "scale_behaviour", "smoke_fit"]},
-          "status": {"enum": ["pass", "warn", "violated", "fail"]},
-          "detail": {"type": "string"}
-        }
-      }
+    "certified_at": {"type": "string", "format": "date-time"},
+    "job_id": {
+      "type": ["string", "null"], "format": "uuid",
+      "description": "The certification Job, where one ran. Null for a certificate recorded outside the job path."
     },
-    "sampling": {
+    "result": {
       "type": "object",
-      "required": ["n_points", "seed", "y_range", "f_range", "w_range"],
+      "required": ["checks", "sampling", "overall"],
       "properties": {
-        "n_points": {"type": "integer", "minimum": 1000},
-        "seed": {"type": "integer"},
-        "y_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
-        "f_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
-        "w_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}
+        "checks": {
+          "type": "array", "minItems": 8,
+          "items": {
+            "type": "object",
+            "required": ["name", "status", "detail"],
+            "properties": {
+              "name": {"enum": ["analytic_vs_numeric_gradient", "analytic_vs_numeric_hessian",
+                                "finiteness", "convexity", "branch_discontinuity",
+                                "minimum_at_truth", "monotone_loss", "scale_behaviour",
+                                "smoke_fit"]},
+              "status": {"enum": ["pass", "warn", "violated", "failed"]},
+              "detail": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "sampling": {
+          "type": "object",
+          "required": ["n_points", "seed", "y_range", "f_range", "w_range"],
+          "properties": {
+            "n_points": {"type": "integer", "minimum": 1000},
+            "seed": {"type": "integer"},
+            "y_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+            "f_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+            "w_range": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}
+          }
+        },
+        "overall": {"enum": ["certified", "certified_with_findings", "failed"]},
+        "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
       }
-    },
-    "overall": {"enum": ["certified", "certified_with_findings", "failed"]},
-    "library_versions": {"type": "object", "additionalProperties": {"type": "string"}}
+    }
   },
   "invariants": [
     "overall == 'failed' blocks submission entirely (FR-MODEL-42)",
+    "overall is derived from the checks and enforced: any 'failed' check fails the certificate, any 'warn' or 'violated' makes it 'certified_with_findings'",
     "convexity status 'violated' requires the objective to declare a hessian_strategy and escalates to two approvers (FR-MODEL-43)"
   ]
 }

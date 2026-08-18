@@ -1,0 +1,285 @@
+{
+  "$defs": {
+    "Applicability": {
+      "additionalProperties": false,
+      "description": "Where an objective may be used (FR-MODEL-44).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
+      "properties": {
+        "backends": {
+          "items": {
+            "$ref": "#/$defs/ObjectiveBackend"
+          },
+          "title": "Backends",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "offset_required": {
+          "default": false,
+          "title": "Offset Required",
+          "type": "boolean"
+        },
+        "responses": {
+          "items": {
+            "$ref": "#/$defs/ResponseKind"
+          },
+          "title": "Responses",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "y_domain": {
+          "$ref": "#/$defs/YDomain",
+          "default": {
+            "max_exclusive": null,
+            "max_inclusive": null,
+            "min_exclusive": null,
+            "min_inclusive": null
+          }
+        }
+      },
+      "required": [
+        "responses",
+        "backends"
+      ],
+      "title": "Applicability",
+      "type": "object"
+    },
+    "HessianStrategy": {
+      "description": "FR-MODEL-43's three declared treatments of a negative hessian.\n\nAlways declared, never inferred: boosting divides by the hessian, so what happens where\nit is negative decides what the fit *is*, and a default chosen inside the fitting code\nwould be a modelling decision made where no reviewer reads it.",
+      "enum": [
+        "clip_to_min",
+        "abs",
+        "gauss_newton"
+      ],
+      "title": "HessianStrategy",
+      "type": "string"
+    },
+    "ObjectiveBackend": {
+      "description": "FR-MODEL-44's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-MODEL-87 records as absent entirely and\nowned by Phase 1b. The member exists because FR-MODEL-44 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
+      "enum": [
+        "xgboost",
+        "lightgbm",
+        "glm"
+      ],
+      "title": "ObjectiveBackend",
+      "type": "string"
+    },
+    "ObjectiveKind": {
+      "description": "FR-MODEL-38's two kinds. Only `template` is constructible in Phase 1.",
+      "enum": [
+        "template",
+        "expression"
+      ],
+      "title": "ObjectiveKind",
+      "type": "string"
+    },
+    "ObjectiveStatus": {
+      "description": "FR-MODEL-46's lifecycle.",
+      "enum": [
+        "draft",
+        "certified",
+        "review",
+        "approved",
+        "deprecated"
+      ],
+      "title": "ObjectiveStatus",
+      "type": "string"
+    },
+    "ObjectiveTemplate": {
+      "description": "§4.5's shipped catalogue — the whole of Phase 1's custom-objective surface.",
+      "enum": [
+        "poisson",
+        "gamma",
+        "tweedie",
+        "capped_gamma",
+        "spliced_severity",
+        "asymmetric_squared",
+        "asymmetric_poisson",
+        "huber",
+        "pseudo_huber",
+        "quantile",
+        "zero_inflated_poisson",
+        "focal_binomial"
+      ],
+      "title": "ObjectiveTemplate",
+      "type": "string"
+    },
+    "ResponseKind": {
+      "description": "What a Model Spec is modelling, as distinct from which column holds it.\n\n`02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was\nbuilt to it, because nothing needed it: the fitting path reads the column, and the\nfamily says what the numbers mean. FR-MODEL-44 needs it — an objective declares the\nresponses it applies to, and a column name cannot be checked against that list. So the\nfield goes live here, under FR-MODEL-87's staging rule, with the slice that populates\nit.\n\nThe first three are FR-MODEL-44's own examples. `conversion` and `retention` are\n`04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`\n(§4.5) exists for exactly them — a catalogue entry whose applicability could not be\nwritten would be a catalogue entry nothing could use.",
+      "enum": [
+        "claim_count",
+        "claim_severity",
+        "burning_cost",
+        "conversion",
+        "retention"
+      ],
+      "title": "ResponseKind",
+      "type": "string"
+    },
+    "YDomain": {
+      "additionalProperties": false,
+      "description": "The valid range of the response for an objective (FR-MODEL-44).\n\n§4.6's example writes `{\"min_inclusive\": 0}`; the exclusive bounds are added here\nbecause the Gamma family needs `y > 0` and an inclusive zero is the one value at which\nits loss is undefined. At most one bound per side.",
+      "properties": {
+        "max_exclusive": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Exclusive"
+        },
+        "max_inclusive": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Inclusive"
+        },
+        "min_exclusive": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Exclusive"
+        },
+        "min_inclusive": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Inclusive"
+        }
+      },
+      "title": "YDomain",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A named, versioned, reusable objective (FR-MODEL-38, §4.5).\n\nVersioned rather than edited: FR-MODEL-46 makes editing an approved objective a new\nversion requiring fresh certification, and a Model referencing\n`custom_objective:<slug>@<version>` must keep meaning the loss it was fitted under.",
+  "properties": {
+    "applicability": {
+      "$ref": "#/$defs/Applicability"
+    },
+    "approval_request_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approval Request Id"
+    },
+    "certificate_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Certificate Id"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "hessian_min": {
+      "default": 1e-06,
+      "exclusiveMinimum": 0.0,
+      "title": "Hessian Min",
+      "type": "number"
+    },
+    "hessian_strategy": {
+      "$ref": "#/$defs/HessianStrategy",
+      "default": "clip_to_min"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/ObjectiveKind",
+      "default": "template"
+    },
+    "params": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "title": "Params",
+      "type": "object"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ObjectiveStatus",
+      "default": "draft"
+    },
+    "template": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectiveTemplate"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "version",
+    "applicability"
+  ],
+  "title": "CustomObjective",
+  "type": "object"
+}
