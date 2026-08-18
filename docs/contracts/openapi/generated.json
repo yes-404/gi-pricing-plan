@@ -2593,6 +2593,15 @@
             ],
             "title": "Monotonic Rationale"
           },
+          "operand_factor_ids": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Operand Factor Ids",
+            "type": "array"
+          },
           "prohibited": {
             "default": false,
             "title": "Prohibited",
@@ -2614,10 +2623,10 @@
             "type": "string"
           },
           "source_columns": {
+            "default": [],
             "items": {
               "type": "string"
             },
-            "minItems": 1,
             "title": "Source Columns",
             "type": "array"
           },
@@ -2635,8 +2644,7 @@
           "slug",
           "dataset_id",
           "version",
-          "type",
-          "source_columns"
+          "type"
         ],
         "title": "Factor",
         "type": "object"
