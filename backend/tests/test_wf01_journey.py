@@ -10,21 +10,25 @@ what this exists to catch is the seam between phases: a version that validates b
 fitted on, a split both candidates claim to share, a model that reaches an approver with no
 evidence. Those failures live between the slices, which is where nothing else looks.
 
-**One step of `wf-01` cannot execute today**, and it is pinned at the bottom as an inverted
-assertion rather than skipped in silence:
+**Every step of `wf-01` now runs.** For most of this file's life three did not — D7's
+interaction factor, and E4/E5's Peril Structure and reconciliation — and each was pinned at
+the bottom as an **inverted assertion**: one that passes while the capability is absent and
+fails the day it lands. All three fired exactly as designed and were driven by the slice
+that broke them: E4/E5 on 2026-08-18 with `PerilStructure`, D7 the same day with
+`interaction`. The pinned test is gone because its list is empty, and FR-OVR-17(ii) for
+`wf-01` is **delivered** rather than partial.
 
-* **D7** — an `annual_mileage x driver_age` interaction factor. `resolve_factors` implements
-  `identity`, `banding` and `grouping`; `interaction` is refused by name.
+Two divergences from the journey's own wording are recorded rather than pinned, because both
+are limits of this fixture and not of the platform:
 
-The assertion **passes while the capability is absent and fails the day it lands**, so this
-file cannot quietly stay partial once the slice arrives. FR-OVR-17(ii) is therefore recorded
-as *partial for `wf-01`*, with that step named — not as delivered.
+* **E4 composes AD as burning cost**, where `wf-01` composes it as frequency x severity —
+  severity responds to cost *per claim*, and every claim-free row in this book carries a zero
+  a Gamma refuses.
+* **D7 crosses banded age with vehicle group**, where `wf-01` names
+  `annual_mileage x driver_age` — this book has no mileage column.
 
-**E4 and E5 were on that list until 2026-08-18** and are now walked in full: the Peril
-Structure is composed over the selected model, reconciled through the real worker, and
-submitted and approved alongside it, which is what `wf-01` E6 and E10 ask for. The pinned
-assertion went red the day `PerilStructure` landed and was the cue to write those steps —
-the mechanism working, rather than a test to silence.
+`packages/pricing-core/tests/test_perils.py` and `test_interactions.py` drive both shapes
+directly, on books built for them.
 """
 
 from __future__ import annotations
@@ -418,6 +422,35 @@ async def test_wf01_dataset_to_approved_model(
     assert glm_diagnostics.universal.holdout.ae_overall > 0
     assert glm_diagnostics.glm is not None
 
+    # D7: the interaction factor. `wf-01` names `annual_mileage x driver_age`; this book has
+    # no mileage column, so the cross is **banded age x vehicle group** — a divergence in the
+    # variables rather than in the step, and the one the fixture allows. Crossing the *banded*
+    # age is the point either way: crossing raw ages would give one cell per age-year.
+    interaction_id = await _create_factor(
+        database, workspace_id, analyst, dataset_id,
+        "age_x_vehicle", "driver_age",
+        type=FactorType.INTERACTION,
+        source_columns=(),
+        operand_factor_ids=(age_factor, vehicle_factor),
+        monotonic_direction=MonotonicDirection.NONE,
+    )
+    interaction_spec = _glm_spec(version_id, (interaction_id,), split)
+    interaction_model_id = await _fit_model(
+        database, blob_store, workspace_id, analyst, interaction_spec
+    )
+    async with database.session() as session:
+        interacted = model_service.to_model(
+            await session.get(ModelRow, interaction_model_id)
+        )
+    assert interacted.fit_result is not None
+    # The relativity table is keyed by the crossed factor and its levels are cells. A table
+    # keyed by either operand alone would mean the cross never ran, and one with the
+    # operands as separate terms would mean the design carried collinear main effects.
+    assert set(interacted.fit_result.relativities) == {"age_x_vehicle"}
+    cells = [row.level for row in interacted.fit_result.relativities["age_x_vehicle"]]
+    assert cells, "the cross produced no levels"
+    assert all(" | " in cell for cell in cells), cells
+
     # D9 comes **before** D8 here, because the refusal is about a spec that never fits: a
     # counting objective with no offset and no acknowledgement is refused at the type.
     with pytest.raises(pydantic.ValidationError, match="offset"):
@@ -795,39 +828,23 @@ async def _fit_model(
     return model_id
 
 
-# -- The step of `wf-01` the platform cannot execute ---------------------------------------
-
-
-@pytest.mark.req("FR-OVR-17")
-def test_wf01_names_the_step_it_cannot_yet_drive() -> None:
-    """D7, pinned rather than skipped.
-
-    The assertion here is **inverted**: it passes while the capability is absent and fails
-    the day it lands. A comment would have said the same thing and gone stale; this cannot,
-    because the slice that builds it breaks this test and has to come back and extend the
-    journey above.
-
-    **E4 and E5 were here and are not any more** (2026-08-18, the peril-structure slice).
-    They went red on the day `PerilStructure` landed, exactly as designed, and the journey
-    above now drives them: the structure is composed, reconciled through the real worker,
-    submitted and approved. That is the mechanism working — the red was the cue to extend
-    the walk, and the assertion's own failure message said so.
-
-    FR-OVR-17(ii) stays *partial for `wf-01`* on the strength of the one step below.
-    """
-    import polars as pl
-
-    from pricing_core.modelling.factors import FactorResolutionError, resolve_factors
-
-    # D7 — an `annual_mileage x driver_age` interaction factor. `resolve_factors` names the
-    # unimplemented type explicitly rather than falling back to a raw column, which is why
-    # this is a refusal to assert against rather than a silently wrong fit.
-    interaction = Factor(
-        id=uuid4(), slug="mileage_x_age", dataset_id=uuid4(), version=1,
-        type=FactorType.INTERACTION, source_columns=("annual_mileage", "driver_age"),
-    )
-    with pytest.raises(FactorResolutionError) as unbuilt:
-        resolve_factors(
-            pl.DataFrame({"annual_mileage": [1.0], "driver_age": [30.0]}), [interaction]
-        )
-    assert "interaction" in str(unbuilt.value).lower()
+# -- Every step of `wf-01` now runs ---------------------------------------------------------
+#
+# **The pinned list is empty, and the test that held it is gone** (2026-08-18, the
+# interaction slice). It carried D7, E4 and E5 as *inverted* assertions — each passing while
+# its capability was absent and failing the day it landed — and every one of them did exactly
+# that: E4/E5 went red when `PerilStructure` landed and the peril-structure slice drove them,
+# D7 went red when `interaction` became resolvable and this slice drove it above.
+#
+# Deleting the test is the correct end state rather than a loss of coverage: the assertions
+# were placeholders *for* the journey steps, and the journey now contains the steps. Keeping
+# an empty pin would be a test asserting that nothing is missing, which is what the walk
+# above already says, at length and with data.
+#
+# FR-OVR-17(ii) for `wf-01` is therefore **delivered**, not partial. One divergence remains
+# recorded rather than pinned, because both halves are fixture limits and not platform ones:
+# `wf-01` E4 composes AD as frequency x severity and the journey composes it as burning cost
+# (severity responds to cost per claim, and every claim-free row here carries a zero a Gamma
+# refuses), and D7 names `annual_mileage x driver_age` where this book has no mileage column,
+# so the cross is banded age x vehicle group. `packages/pricing-core/tests/` drives both
+# shapes directly.

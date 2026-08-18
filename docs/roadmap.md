@@ -1851,6 +1851,54 @@ penny-drift test reports 99 against 100.
 | `wf-01` **D7**, the interaction factor | **Not started**, unchanged. Still pinned as the one inverted assertion |
 | `wf-01` E4 as **frequency × severity** | **Driven as burning cost**, a fixture limit rather than a platform one — severity responds to cost *per claim* and every claim-free row in the fixture book carries a zero a Gamma refuses. The arithmetic is covered directly in `packages/pricing-core/tests/test_perils.py`. Recorded in the journey test and in FR-OVR-17 |
 
+#### W5 slice — interaction factors, and `wf-01` complete, 2026-08-18
+
+FR-MODEL-1 has listed `interaction` as a Factor type since Phase 0 and the contract had no
+field to express one, so the type was selectable and unresolvable. `operand_factor_ids` is
+that field and FR-MODEL-91 is the rule. §3.1 moves **6/8 → 7/9**; FR-MODEL-88's list of
+unimplemented arms drops from **five to four**.
+
+**`wf-01` is now driven end to end, and the pinned test is deleted.** It held three inverted
+assertions — D7, E4, E5 — each passing while its capability was absent and failing the day it
+landed. Every one fired as designed and was driven by the slice that broke it. **FR-OVR-17(ii)
+for `wf-01` is delivered**, the first of the five journeys to get there.
+
+**The design decision, and why it was not silently taken.** An interaction crosses **Factors,
+not columns**: every other place the spec names one names factors, and an operand is usually
+itself a banding or a grouping — crossing raw `driver_age` with raw `region` gives one cell
+per policy, crossing `driver_age_banded` with `vehicle_group_rated` gives a table. What an
+interaction may cross is the genuinely open half, and it is **OQ-MODEL-12** rather than a
+choice buried in a commit: a continuous operand is refused by name with its remedy, because
+refusing is additive to undo and a product term shipped today is a model someone has fitted
+by the time `03` finds no rate-table cell for it.
+
+**Three consequences the build forced, each a defect if left implicit:**
+
+1. **Only observed combinations become levels.** A full Cartesian product puts a coefficient
+   on cells with no exposure, and on any real cross most cells have none.
+2. **An operand contributes no design column of its own.** A full cross spans every cell, so
+   its operands' main effects are collinear with it. This was not a preference: with the rule
+   removed the fit test fails with `the design matrix is singular`, which is the broken-input
+   run saying it.
+3. **Type III now compares an interaction against the *main-effects* model.** It falls out of
+   (2) — drop the cross and its operands become terms again — and it is the better question:
+   "does this interaction earn its place over the main effects" is what an actuary means.
+
+**Found by the tests rather than confirmed by them:** `diagnostics._term_count` resolved each
+factor **alone** to count its degrees of freedom, which an interaction cannot survive, and
+`_type_iii` would have dropped an operand out of the list and left the cross unresolvable.
+Both are seams no unit test reaches — the fit and the diagnostics run in one handler — and
+the end-to-end backend test is what surfaced them.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| A **continuous** operand (a varying slope) | **Refused by name**, OQ-MODEL-12, with the recommendation and its reasoning on file. Owner: the maintainer, revisited when `03`'s rate-table shape is built rather than specified |
+| `spline`, `polynomial`, `offset`, `expression` | **Not started**, unchanged. FR-MODEL-88 now names four rather than five; each needs its own contract field and its own argument |
+| The factor workbench's interaction UI (`02` §5.3, FR-MODEL-79's suggestions with exposure share and holdout lift) | **Not started.** Owner: W6b, unchanged |
+| `wf-01` as a **Phase 1b exit** claim | **Still not yet**, and unchanged by this slice: the exit is the journey on freMTPL2 through the UI. What is delivered is FR-OVR-17(ii)'s *test* |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -1861,7 +1909,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: eleven slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, and peril structures with their reconciliation; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the citation audit and the journey test, both landed 2026-08-17; the journey test remains *partial*, but with **one** step named rather than three, E4/E5 having been driven for real by the peril-structure slice on 2026-08-18 (FR-OVR-17) |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: twelve slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, and interaction factors; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
