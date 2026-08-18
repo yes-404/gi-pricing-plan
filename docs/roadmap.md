@@ -140,7 +140,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 |---|---|---|
 | ~~**1 Phase-2 decision (OQ-GOV-8)**~~ ✔ **none left** | decisions | Before Phase 2. Was five: OQ-RATE-2 decided by spike, OQ-MODEL-3 on 2026-08-17, and OQ-MODEL-11, OQ-MODEL-12, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6 and OQ-PLAT-3 all on 2026-08-18. **OQ-GOV-8 is correctly the last one standing** rather than the one nobody got to: it asks whether an `expression` Custom Objective needs an authoring permission distinct from `model:fit`, and `expression` objectives are themselves Phase 2 — deciding it against the template catalogue would be deciding it against the wrong artifact. **Deferred 2026-08-18 with a trigger rather than left open**: `06` FR-GOV-38 makes answering it a precondition of lifting `expression_objectives_enabled`, so W30 cannot ship the capability without closing it |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
-| 6 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
+| ~~6 Phase-3~~ ✔ *all decided 2026-08-18* · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
@@ -2362,9 +2362,35 @@ you never block on a decision you have not reached.
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
 | ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18* | 12 (0 open) |
 | ~~**Before Phase 2**~~ ✔ **all decided** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18* | 10 (0 open) |
-| **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
+| ~~**Before Phase 3**~~ ✔ **all decided** | ~~OQ-GOV-1..6~~ ✔ *2026-08-18*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (0 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 13 (4 open) |
+
+**2026-08-18 — the six `GOV` questions decided, and Phase 3's gate closes.** OQ-GOV-1 (the
+audit chain stays per workspace and self-held, claimed as tamper-*evident* against modification
+below the application, with an optional chain-head anchor — FR-GOV-40), OQ-GOV-2 (the IdP owns
+identity and role membership, the platform owns scope — FR-GOV-41), OQ-GOV-3 (an Admin may
+override a flag, and it leaves a permanent scar — FR-GOV-42), OQ-GOV-4 (`risk_tier` on Model
+Family and Rating Algorithm, which the policy may key on — FR-GOV-43), OQ-GOV-5 (exactly two
+mandatory Commentary Blocks, no default text — FR-GOV-44) and OQ-GOV-6 (TAS 200 v2.0 **does**
+cover pricing — FR-GOV-45). All are Phase 3 obligations: a later phase is a spec change and not
+code (`CLAUDE.md` §0).
+
+**OQ-GOV-6 was not a design choice and was not decided like one.** The row said so — *"a lookup
+with a spec consequence"* — and the lookup was done: TAS 200 v2.0 §1.2 lists **Pricing
+frameworks** among the work in scope, and its glossary defines a pricing framework as the
+pricing principles *and the methodologies, assumptions and models implementing them* behind an
+insurer's premium rates. `insurer` carries no life/general split. So the conservative interim
+position the row recommended — assume TAS 100 only — was the wrong way round, and the platform's
+models, assumptions and rationale are framework components by the standard's own definition.
+Two things the question did not anticipate: the unit of scope is the **framework, not the
+quote**, and there is **no pricing-specific provisions section**, so §1's P1.1–P1.4 bind
+together with TAS 100. Verified against the FRC's published PDF rather than a summary — the
+row's warning that public summaries do not state the scope was accurate.
+
+**Every decision gate on this table is now closed except Phase 4's and the any-time rows.**
+Phases 1a, 1b, 2 and 3 all read 0 open, while Phase 1a is still being built — which is the
+order §10 exists to produce, and the first time the table has been in it.
 
 **2026-08-18 (same day, at the maintainer's direction) — OQ-GOV-8 decided, and every gate
 on this table is now closed.** An `expression` Custom Objective needs `custom_objective:author`,
