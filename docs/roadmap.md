@@ -138,7 +138,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 
 | Task | Kind | Due |
 |---|---|---|
-| 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-PLAT-3, OQ-GOV-8) | decisions | Before Phase 2 — OQ-RATE-2 decided by spike, OQ-MODEL-3 decided 2026-08-17, and OQ-MODEL-11 (which it raised) decided 2026-08-18. **OQ-GOV-8 replaces it on this list rather than the count going to four**: it was raised 2026-08-18 and reached neither this row nor §10's table, which is the same defect in two places |
+| **1 Phase-2 decision (OQ-GOV-8)** | decisions | Before Phase 2. Was five: OQ-RATE-2 decided by spike, OQ-MODEL-3 on 2026-08-17, and OQ-MODEL-11, OQ-MODEL-12, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6 and OQ-PLAT-3 all on 2026-08-18. **OQ-GOV-8 is correctly the last one standing** rather than the one nobody got to: it asks whether an `expression` Custom Objective needs an authoring permission distinct from `model:fit`, and `expression` objectives are themselves Phase 2 — deciding it against the template catalogue would be deciding it against the wrong artifact |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
 | 6 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
@@ -2159,6 +2159,44 @@ every elastic-net default approximate. Both are pinned by tests rather than left
 | A coefficient surface that renders the basis | **Not started, and nothing to start on.** Regularisation has no UI and nothing in `02` §4.11's comparison reads the intervals — which is why FR-MODEL-21's half ships as a property with a stated reader rather than as a rendered label |
 | Suppressing `glum`'s warning now that the platform states the same fact | **Rejected.** The warning is the library telling the truth about its own return value, and a repository that silences it keeps the fact only where its own code remembers to look |
 
+#### W5 slice — the boundary that keeps a scoring image cheap, 2026-08-18
+
+OQ-PLAT-3 decided that scoring ships in the same image through Phases 1–2 and gets its own
+from Phase 3. The image is Phase 3 and stays there. What cannot wait is the property that
+makes it a repackaging rather than a rewrite: **the scoring path must never grow a dependency
+on the libraries that fit models**, and two phases of modelling work sit between the decision
+and the split.
+
+`07` **NFR-PLAT-11** is that property, and it is enforced by scoring a real Model in a
+subprocess where `glum`, `scikit-learn`, `celery` and `dagster` cannot be imported — asserting
+the Poisson identity, so the design reconstructs, the base level resolves and the offset
+applies with the fitting stack absent. ADR-0003 is what makes that possible at all; this is
+the first check that it is *still* true.
+
+**An import-linter contract is the wrong instrument, learnt by writing one.** The obvious
+mechanism was a fourth contract in `.importlinter`, and it reported four violations on its
+first run — `predict → glm → glum`, `predict → factors → bandings → sklearn`, and two more.
+Every one of those imports is **already at its call site**, inside `fit_glm`,
+`propose_banding` and `propose_grouping`, which is exactly the discipline the requirement
+wants. import-linter reads the AST and cannot tell a function-scope import from a module-scope
+one, so the only ways to green the contract were to weaken it or to move modules that have no
+other reason to move. The requirement records this, because the next person to reach for
+import-linter here should not have to rediscover it.
+
+| Delivered | Evidence |
+|---|---|
+| `test_scoring_without_the_fitting_stack.py` | Fit in the parent, score in a child with a `MetaPathFinder` refusing the fitting stack. Artifacts cross as JSON, which is also the shape a scoring service receives them in (ADR-0003) |
+| A test that the blocker blocks | Without it a `Blocker` returning `None` for everything would let the first test pass while importing `glum` freely — a green check proving nothing, which is what this kind of test is most prone to |
+| `xgboost` / `lightgbm` deliberately **not** blocked | `02` FR-MODEL-62 scores a GBM by loading its JSON booster. Found by checking the requirement against FR-MODEL-62 rather than by reasoning about what a scoring service obviously needs — the first draft had both on the forbidden side |
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| The separate scoring image | **Phase 3**, unchanged by this. Building it now would be building ahead of the phase; the point of the slice is that it will be a repackaging |
+| The scoring API entry point in the test's scope | **Not started — there is no scoring API.** `03` is Phase 2. The requirement names the extension explicitly: the slice that builds it adds that path to this test rather than adding a second mechanism |
+| `03` FR-RATE-62/63/64 | **Spec only, Phase 2**, which is the rule and not a shortfall (`CLAUDE.md` §0) |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2323,10 +2361,34 @@ you never block on a decision you have not reached.
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
 | ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18* | 12 (0 open) |
-| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔ *both 2026-08-18 — each decided now and **revisited** here, against a rate table that exists rather than one that is specified*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-PLAT-3, **OQ-GOV-8** | 10 (5 open) |
+| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔ *all 2026-08-18*, **OQ-GOV-8** | 10 (1 open) |
 | **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 13 (4 open) |
+
+**2026-08-18 — the four Phase-2 design questions decided, leaving one.** OQ-RATE-3 (rate
+tables as rows, spilling to parquet above a configurable cell count — `03` FR-RATE-62),
+OQ-RATE-4 (one algorithm for the risk price, refund maths in a sub-graph mounted on `purpose`
+— FR-RATE-63), OQ-RATE-6 (annual premium plus an optional `instalment_loading` rung; APR and
+schedules stay downstream — FR-RATE-64) and OQ-PLAT-3 (one image now, a scoring image from
+Phase 3 — `07` NFR-PLAT-11, **built**). **Only OQ-GOV-8 still gates Phase 2**, and it is
+correctly waiting: it asks whether an `expression` Custom Objective needs its own authoring
+permission, and `expression` objectives are themselves Phase 2.
+
+Three of the four are **spec changes only**, which is the rule rather than a shortage of
+appetite: a later phase's capability is not built early (`CLAUDE.md` §0). The fourth is not an
+exception to that rule but an instance of a different one — OQ-PLAT-3's *decision* is a Phase
+3 image, and what shipped is the **boundary that keeps that image cheap to build**, which is
+worth nothing if it arrives with the image.
+
+**Two defects the decisions found in the specification they were being written into.**
+OQ-RATE-4's recommendation mounts its sub-graph on `purpose ∈ {mid_term_adjustment,
+cancellation}` and **`cancellation` was not a value `purpose` had** — `03` §2 and §4.4 both
+enumerated four — so the recommendation as filed keyed on something that did not exist. And
+NFR-PLAT-11's first draft forbade `xgboost` and `lightgbm` on the scoring path, which `02`
+FR-MODEL-62 contradicts outright: a GBM is scored by *loading its JSON booster*, so a boosting
+library is a scoring dependency by design. Both were caught by checking the decision against
+the spec it cited rather than against what sounded right.
 
 **2026-08-18 (later the same day) — OQ-MODEL-14 closes the 1b gate.** A penalised GLM reports its standard errors and its interval as before, and every response carrying them now says which matrix they came from (`02` FR-MODEL-99, **built**). **Every question gating Phase 1b is decided**, three days after the gate was placed and while 1a is still open — which is the order this table exists to produce. What remains is Phase 2's five, Phase 3's six, Phase 4's eleven and four any-time.
 

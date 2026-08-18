@@ -60,7 +60,7 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 | Term | Definition |
 |---|---|
 | **Rating Input** | A named, typed field the algorithm expects from the caller (`driver_age: int`, `postcode: string`). The input contract is part of the Rating Version and is versioned with it. |
-| **Quote Context** | The complete input to one scoring call: rating inputs, a quote timestamp, an effective date, and a `purpose` (`new_business` \| `renewal` \| `mid_term_adjustment` \| `what_if`). |
+| **Quote Context** | The complete input to one scoring call: rating inputs, a quote timestamp, an effective date, and a `purpose` (`new_business` \| `renewal` \| `mid_term_adjustment` \| `cancellation` \| `what_if`). `cancellation` was added 2026-08-18 with FR-RATE-63: OQ-RATE-4's answer mounts the refund sub-graph on `purpose`, and the value it keys on has to exist. |
 | **Derived Value** | A named intermediate produced by a step and consumable by downstream steps. The DAG's edges are these name references, not hand-drawn arrows. |
 | **Rate Table Version** | An immutable version of one rate table. Rate tables version independently of the algorithm so a pure rate change does not require touching structure. |
 | **Bundle** | The serialised, self-contained artifact a Rating Version compiles to: algorithm + tables + model artifacts + reference slices + input contract. What gets deployed and cached. |
@@ -84,6 +84,7 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 | **FR-RATE-4** | Every step has a stable `step_id`, a human label, an optional note, and declares exactly which Derived Values it consumes and which it produces. Renaming a label never changes a `step_id`. |
 | **FR-RATE-5** | The graph is evaluated in topological order. Evaluation is deterministic: no wall-clock reads, no randomness, no external calls except pinned model invocations (FR-OVR-8). |
 | **FR-RATE-6** | An algorithm can be composed from **sub-graphs** (reusable fragments, e.g. "no-claims-discount ladder", "IPT and fees") that are versioned artifacts referenced by the parent and inlined at bundle time. |
+| **FR-RATE-63** | **A mid-term adjustment or cancellation is priced by the same Rating Algorithm for the *risk price*, with pro-rata, refund and charge logic in a separately-versioned sub-graph (FR-RATE-6) mounted only when `purpose ∈ {mid_term_adjustment, cancellation}`.** (OQ-RATE-4, decided 2026-08-18; **Phase 2**.) One risk price, because two algorithms that must agree about risk are two things that will disagree about risk — and the disagreement surfaces as a customer charged one price at renewal and another for the same cover mid-term. Separate policy-administration maths, because pro-rata, cancellation charges and refund rules are genuinely not new-business maths, and folding them in would put an MTA-only branch in every graph that never performs one. The mount is **declared on the Rating Version and version-pinned like any other sub-graph**, so "which refund rules were in force for this cancellation" is answered by the same pinning that answers it for a rate table. A version that mounts no such sub-graph refuses an MTA or cancellation quote rather than pricing it as new business — pricing it as new business is the failure this requirement exists to prevent, and it is silent. |
 | **FR-RATE-7** | Algorithm edits are diffable: the UI and API expose a structural diff between two algorithm versions (steps added/removed/changed, tables re-pointed), which is attached to the approval request. |
 
 ### 3.2 Rating step types
@@ -119,6 +120,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-RATE-15** | Rate Table Versions are immutable. Editing produces a new version with a required change note. The previous version stays referenceable by existing Rating Versions. |
 | **FR-RATE-16** | A rate table can be **seeded from a Model**: a GLM's relativity table (or a GBM's GLM-approximation relativities) is imported as a starting point, recording the source model reference. Subsequent manual edits are diffed against that seed, so "how far have we moved from the technical rate?" is always answerable. |
 | **FR-RATE-17** | Rate table edits are diffable cell-by-cell against any prior version, with the diff showing absolute and relative change and the exposure weight behind each cell (from the portfolio dataset), so an actuary sees which edits matter. |
+| **FR-RATE-62** | **A Rate Table Version's cells are stored as PostgreSQL rows up to a workspace-configurable cell count (default 250 000) and spill to a content-addressed parquet blob above it, under one contract either way.** (OQ-RATE-3, decided 2026-08-18; **Phase 2**, with the rate-table slice.) Rows are the default because they are what makes the rest of this section cheap: FR-RATE-17's cell diff is a SQL join, its exposure weighting is a join to the portfolio dataset, and the editor pages without a job. Blobs exist because a vehicle × area table reaches millions of cells, where rows stop being free — and the tail must not dictate the design for the many small tables that are the common case. **The threshold is a stored property of the version, not a runtime decision**: `storage` is `rows | parquet` on `RateTableVersion` (§4.2), fixed when the version is written and immutable with it, so a reader never has to ask which form a past version took and a change of threshold cannot silently re-home existing versions. **What degrades above the threshold is stated rather than discovered:** FR-RATE-17's diff and its exposure weighting become a Job returning the same artifact, and the API answers 202 rather than 200 for them (`07` FR-PLAT-15's model). Everything a caller may *ask* is identical; only the latency and the status code differ. |
 | **FR-RATE-18** | Bulk operations are first-class and recorded as such: uplift a whole table by a percentage, uplift a subset by key filter, floor/cap values, and rebase to a chosen base level. Each records its parameters, not just the resulting cells. |
 | **FR-RATE-19** | Rate tables validate on save: complete coverage of the declared key domain (or an explicit default row), no null values, values within declared bounds, and no key duplication. |
 | **FR-RATE-20** | Rate tables can be exported to and imported from CSV/XLSX for offline work, with a strict round-trip check on import: keys, types, and completeness must match, and the import is presented as a diff for confirmation before it creates a version. |
@@ -157,6 +159,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 |---|---|
 | **FR-RATE-34** | **Real-time scoring**: `POST /api/v1/score` evaluates one Quote Context against the Rating Version currently live in the target environment, returning the ladder, outputs, and (optionally) a Trace. Target p99 < 50 ms server-side (NFR-OVR-1). |
 | **FR-RATE-35** | Scoring accepts an explicit `rating_version_ref` for what-if and testing; in `prod` this is permitted only for `approved` versions and is recorded as a `what_if` purpose, never as a quotable price. |
+| **FR-RATE-64** | **The platform prices the *annual* payable premium, and instalment loading is an optional final ladder rung (`instalment_loading`) read from a rate table. APR calculation and schedule generation are downstream and are not built here.** (OQ-RATE-6, decided 2026-08-18; **Phase 2**.) The loading exists because it changes the price the customer actually compares, and without it `04-optimisation.md`'s demand model is fitted against a price nobody was offered. It stops at a loading because APR and schedule generation carry a consumer-credit regulatory surface — disclosure, the regulated APR formula, and rules about what may be charged — that belongs to a billing system with its own compliance obligations, and taking it on here would make every rating release a consumer-credit release. **The boundary is drawn where the maths stops being rating maths**: the platform outputs an annual premium and, where the rung is mounted, the loaded annual equivalent; it never emits a payment schedule, an APR figure, or a credit agreement term. A Quote Context asking for one is refused rather than answered approximately, because an APR that is nearly right is a compliance defect and not a rounding one. |
 | **FR-RATE-36** | **Batch scoring**: `POST /api/v1/score/batch` re-rates a Dataset Version against one or more Rating Versions as a Job, writing results to a new content-addressed parquet output with the quote key, ladder, and selected outputs per row. |
 | **FR-RATE-37** | Batch scoring is chunked, resumable, and progress-reporting, and uses the identical compiled bundle and code path as real-time scoring — never a separate "batch implementation" that could diverge. |
 | **FR-RATE-38** | Scoring errors are typed and per-quote: contract violation, reference miss, table miss, constraint decline, model failure. A batch run reports counts and samples per error type and does not abort on individual failures unless the failure rate exceeds a declared threshold. |
@@ -233,7 +236,8 @@ engine is exact; the binding is not, and the binding is what the platform talks 
      "description": "Age of main driver at policy inception"},
     {"name": "postcode_outcode", "type": "string", "nullable": false, "pattern": "^[A-Z]{1,2}[0-9][A-Z0-9]?$"},
     {"name": "effective_date", "type": "date", "nullable": false},
-    {"name": "purpose", "type": "enum", "domain": ["new_business", "renewal", "mid_term_adjustment", "what_if"]}
+    {"name": "purpose", "type": "enum",
+     "domain": ["new_business", "renewal", "mid_term_adjustment", "cancellation", "what_if"]}
   ],
   "outputs": [
     {"name": "payable_premium_minor", "type": "money_minor", "required": true},
@@ -281,6 +285,7 @@ and unreferenced by an `output` (FR-RATE-1).
   "slug": "motor-driver-age-relativity",
   "version": 6,
   "rateable": true,
+  "storage": "rows",
   "keys": [{"name": "driver_age_band", "type": "string", "banding_ref": "banding:driver-age-actuarial-v2@2"}],
   "value": {"name": "relativity", "type": "relativity", "min": 0.2, "max": 5.0},
   "default_row": null,
@@ -298,6 +303,14 @@ and unreferenced by an `output` (FR-RATE-1).
 ```
 
 Values are stored as decimal strings, never JSON floats (R2).
+
+> **`storage` added 2026-08-18 with FR-RATE-62** (OQ-RATE-3). `rows` or `parquet`, decided
+> against the workspace's cell-count threshold when the version is written and **immutable
+> with the version**, so a reader never has to ask which form a past version took and raising
+> the threshold cannot silently re-home versions already written. Above the threshold `rows`
+> is absent from this document and the cells are addressed by a `BlobRef`; every other field
+> here, and every question a caller may ask, is unchanged — what changes is that FR-RATE-17's
+> diff and its exposure weighting answer **202 with a Job** rather than 200.
 
 ### 4.3 `RatingVersion`
 
@@ -457,7 +470,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 | `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version with change note |
 | `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-RATE-16) |
 | `POST` | `/api/v1/rate-tables/{slug}/bulk-operation` | Uplift / floor / cap / rebase, recorded as parameters (FR-RATE-18) |
-| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | Cell-level diff with exposure weights (FR-RATE-17) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-RATE-17); **202** with a Job where either version is `storage: parquet` (FR-RATE-62) |
 | `POST` | `/api/v1/rate-tables/{slug}/import` | Import CSV/XLSX → returns a diff for confirmation (FR-RATE-20) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-RATE-25) |
@@ -643,7 +656,7 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 |---|---|
 | **OQ-RATE-1** | ~~Does the ZEN Engine preserve exact decimal semantics for money?~~ **Resolved 2026-08-14** — it represents numbers as `rust_decimal::Decimal`, so engine arithmetic is exact and ADR-0004 stands. The risk moved to the boundaries and is now specified as FR-RATE-56/57/58; the S1 spike is re-scoped, not cancelled. See [`research`](../research/track-a-findings.md) F1. |
 | **OQ-RATE-2** | ~~Is `model_call` in `exact` mode viable inside the 50 ms p99 budget?~~ **RESOLVED 2026-08-14 by spike S2 — comfortably yes.** A 500-tree × 60-feature booster scores a single row at **p99 1.09 ms** including `DMatrix` construction (0.33 ms predict-only) — about 2 % of the budget. `nthread=1` beat all-cores at the tail (p99 1.09 vs 1.48 ms; max 4.5 vs 19.9 ms), so per-request single-threading is correct. **OQ-MODEL-3 is therefore a genuine design choice, not one forced by latency.** |
-| **OQ-RATE-3** | Should rate tables live in PostgreSQL as rows (queryable, diffable in SQL, joinable to exposure) or as content-addressed parquet blobs (consistent with datasets, cheaper for very large tables)? Large tables — vehicle × area — could reach millions of cells. |
-| **OQ-RATE-4** | How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path? Pro-rata and cancellation maths differs enough that one algorithm may be a false economy. |
+| **OQ-RATE-3** | ~~Should rate tables live in PostgreSQL as rows or as content-addressed parquet blobs?~~ **DECIDED 2026-08-18: rows to a configurable cell count, spilling to parquet above it under one contract — FR-RATE-62**, with `storage` recorded on the version and the diff degrading to a Job above the threshold. |
+| **OQ-RATE-4** | ~~How do mid-term adjustments and refunds work — a `purpose` on the same algorithm, or a genuinely separate calculation path?~~ **DECIDED 2026-08-18: the same algorithm for the risk price, with pro-rata/refund/charge logic in a separately-versioned sub-graph mounted on `purpose` — FR-RATE-63.** §2's `purpose` gained `cancellation` in the same edit, because the answer keys on a value that did not exist. |
 | **OQ-RATE-5** | Do we support multi-product bundling (motor + home in one quote with a bundle discount) in Phase 2, or is each product a separate Rating Version with bundling left to the Consumer System? |
-| **OQ-RATE-6** | Should the platform own instalment/APR calculation, or is that a downstream billing concern? It affects the payable premium the customer sees and therefore the demand model in `04`. |
+| **OQ-RATE-6** | ~~Should the platform own instalment/APR calculation, or is that a downstream billing concern?~~ **DECIDED 2026-08-18: price the annual premium, offer `instalment_loading` as a final ladder rung, and leave APR and schedules downstream — FR-RATE-64.** Enough for `04`'s demand model; not enough to make a rating release a consumer-credit release. |
