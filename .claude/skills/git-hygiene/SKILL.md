@@ -129,6 +129,13 @@ Ignore build output, caches, environments and editor state. **Do not ignore:**
 Adding a tool that generates files? **Update `.gitignore` in the same commit.** Otherwise
 the first `git add -A` sweeps its cache in.
 
+**Worktrees inside the repo are ignored — `.claude/worktrees/`.** `EnterWorktree` writes
+them there rather than under `$CLAUDE_JOB_DIR/tmp` like the scratch worktree above, so a
+second checkout of this repo sits in the tree. It does *not* get swept in file by file:
+each carries a `.git` file, so `git add -A` adds the directory as an **embedded git
+repository** — a gitlink no clone can resolve, and a commit nobody can use. Parallel
+sessions make a kept worktree normal, and it may be someone else's live work.
+
 **`.gitignore` does not untrack what is already tracked.** Once a file is in the index, a
 new pattern is ignored for it — the giveaway is `git status` showing it as *modified*
 rather than untracked. Recovery:
@@ -184,6 +191,11 @@ grows one miss at a time; the standing plan (`CLAUDE.md` §2) is an always-runni
 aggregator job once branch protection arrives.
 
 ## Verified
+
+**2026-08-18 — `.claude/worktrees/` added to `.gitignore`.** It had been untracked since
+the harness started creating worktrees there, and a peer session's `w5-backtest` was live
+in it at the time. The embedded-repository behaviour above was confirmed with
+`git add -An`, not assumed: git warns and adds a gitlink rather than the files.
 
 2026-08-14 — Written after the trap fired twice. Confirmed: `git diff --stat main <branch>`
 correctly identified `chore/skills-library` and `spike/s3-…` as fully superseded before
