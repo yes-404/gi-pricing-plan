@@ -28,6 +28,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from model_schema.money import DecimalStr
+from model_schema.prediction import UncertaintyBasis
 from model_schema.profiles import OneWayRow
 from model_schema.refs import BlobRef
 
@@ -833,6 +834,26 @@ class GlmSpec(ModelSpecCommon):
     max_iter: int = Field(default=200, ge=1)
     tolerance: float = Field(default=1e-8, gt=0.0)
 
+    @property
+    def uncertainty_basis(self) -> UncertaintyBasis:
+        """What a fit of this spec can say about its own uncertainty (FR-MODEL-99).
+
+        **The single derivation, and it is derived rather than stored on purpose.** `alpha`
+        is already in the spec, the spec is pinned to the fit by `spec_hash`, and both are
+        immutable — so a copy on the fit result could only ever agree or be wrong, and
+        `CLAUDE.md` §2's rule about a shape defined twice applies to a fact as much as to a
+        field.
+
+        Read from `alpha` rather than from `glum`'s warning text: the fit swallows that
+        warning inside `catch_warnings`, and a library's prose is not a mechanism — it can
+        be reworded in a patch release without anything failing.
+        """
+        return (
+            UncertaintyBasis.UNPENALISED_INFORMATION_MATRIX
+            if self.alpha > 0.0
+            else UncertaintyBasis.INFORMATION_MATRIX
+        )
+
     @model_validator(mode="after")
     def _a_tweedie_power_lies_between_the_two_families_it_spans(self) -> GlmSpec:
         """`CLAUDE.md` §7: burning cost is Tweedie with 1 < p < 2.
@@ -1321,6 +1342,21 @@ class Model(BaseModel):
     #: place afterwards: it is how a reader gets from an approved model to the decision and
     #: the comment behind it, which is the trail FR-GOV-14's pinning exists to leave.
     approval_request_id: UUID | None = None
+
+    @property
+    def uncertainty_basis(self) -> UncertaintyBasis | None:
+        """What this model's standard errors and intervals are read off (FR-MODEL-99).
+
+        `None` for a GBM, where the question does not arise: FR-MODEL-77 refuses an
+        interval outright rather than qualifying one, so there is no matrix to describe.
+
+        This is the reader for FR-MODEL-21's half of OQ-MODEL-14 — the coefficient table's
+        `std_error` and `ci_95` come from the same `V` as FR-MODEL-63's interval, so any
+        surface that renders them states this beside them rather than deriving `alpha > 0`
+        for itself. There is no such surface yet: regularisation has no UI, which
+        FR-MODEL-99 records with an owner rather than leaving to be discovered.
+        """
+        return self.spec.uncertainty_basis if isinstance(self.spec, GlmSpec) else None
 
     @model_validator(mode="after")
     def _a_fitted_model_has_a_fit(self) -> Model:

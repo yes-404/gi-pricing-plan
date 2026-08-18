@@ -55,6 +55,7 @@ from model_schema import (
     ModelStatus,
     Principal,
     UnavailableReason,
+    UncertaintyBasis,
     UncertaintyKind,
     new_uuid7,
 )
@@ -67,12 +68,16 @@ ROWS = [
 
 
 async def _fitted_glm(
-    database: Database, blob_store, workspace_id, *, spare: bool = False
+    database: Database, blob_store, workspace_id, *, spare: bool = False, alpha: float = 0.0
 ) -> tuple[Principal, UUID] | tuple[Principal, UUID, UUID]:
     """One GLM fitted through the real Job, so its covariance blob is really in the store.
 
     With `spare=True` a second model is reserved on the same factors and left at `draft`,
     for the one test that needs a row whose `fit_result` can still be written.
+
+    `alpha > 0` fits a **penalised** model, which is the case FR-MODEL-99 is about: `glum`
+    returns the unpenalised information matrix and warns that it is incorrect, and the
+    prediction has to say so rather than pass the interval off as exact.
     """
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
@@ -85,7 +90,7 @@ async def _fitted_glm(
     async with database.unit_of_work() as session:
         row, _ = await model_service.reserve_model(
             session, workspace_id=workspace_id, actor=actor,
-            spec=_spec(version_id, (area,), split_ref=split),
+            spec=_spec(version_id, (area,), split_ref=split, alpha=alpha),
         )
         model_id = row.id
         job = await job_service.submit(
@@ -352,3 +357,55 @@ def test_a_caller_without_model_read_is_refused_at_the_edge(
         headers=_headers(principal.id, workspace_id),
     )
     assert refused.status_code == 403
+
+
+@pytest.mark.req("FR-MODEL-99")
+async def test_a_penalised_fits_interval_says_which_matrix_it_came_from(
+    database, blob_store, workspace_id
+) -> None:
+    """OQ-MODEL-14, decided 2026-08-18: report it, and say what it is.
+
+    `glum` warns on every penalised fit that the covariance matrix "will be incorrect" — it
+    is the information matrix of the unpenalised problem, which knows nothing about the
+    shrinkage that produced the coefficients. The interval is therefore the one an
+    unpenalised fit of this design would earn: wider than the estimate warrants, and
+    conservative is not the same as right.
+
+    What is under test is that the qualification **reaches the caller**. The warning itself
+    is swallowed by the fit's `catch_warnings`, so without this the only trace of it is a
+    line in pytest's warnings summary that no API consumer will ever see.
+    """
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id, alpha=25.0)
+
+    async with database.session() as session:
+        prediction = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+
+    assert prediction.uncertainty.kind is UncertaintyKind.CONFIDENCE_INTERVAL_MEAN
+    assert prediction.uncertainty.basis is UncertaintyBasis.UNPENALISED_INFORMATION_MATRIX
+    #: The interval is still returned. Refusing it would have had to take FR-MODEL-21's
+    #: standard errors with it, since both are read off this matrix — which is the reason
+    #: OQ-MODEL-14 could not be decided for the interval alone.
+    assert all(row.lower is not None and row.upper is not None for row in prediction.rows)
+
+
+@pytest.mark.req("FR-MODEL-99")
+async def test_an_unpenalised_fit_claims_the_matrix_it_actually_used(
+    database, blob_store, workspace_id
+) -> None:
+    """The other half, without which the label above proves nothing.
+
+    A `basis` field that read `unpenalised_information_matrix` for every model would pass
+    the test above and describe nothing — the value has to move with `alpha`.
+    """
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        prediction = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+
+    assert prediction.uncertainty.basis is UncertaintyBasis.INFORMATION_MATRIX

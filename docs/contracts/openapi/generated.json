@@ -8706,6 +8706,16 @@
         "additionalProperties": false,
         "description": "The claim attached to every prediction in a response, once, for all its rows.\n\nOn the response rather than on each row because it is a property of the *model* and the\nscoring path, not of a row: either the covariance matrix was available for this model or\nit was not, and repeating that verdict per row invites a reader to look for a row where\nit differs.",
         "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UncertaintyBasis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "kind": {
             "$ref": "#/components/schemas/UncertaintyKind"
           },
@@ -8738,6 +8748,15 @@
         ],
         "title": "Uncertainty",
         "type": "object"
+      },
+      "UncertaintyBasis": {
+        "description": "What the covariance matrix behind an interval actually is (FR-MODEL-99).\n\n`UncertaintyKind` says which *quantity* the interval covers; this says what the matrix\nit came from **is**, which for a penalised fit is not the matrix the estimate deserves.\n\nOne vocabulary for both halves of `02`'s uncertainty, deliberately: FR-MODEL-21's\ncoefficient standard errors and FR-MODEL-63's interval are read off the same `V`, so a\nqualification that applied to one and not the other would be describing a matrix that\ndoes not exist (OQ-MODEL-14, decided 2026-08-18).",
+        "enum": [
+          "information_matrix",
+          "unpenalised_information_matrix"
+        ],
+        "title": "UncertaintyBasis",
+        "type": "string"
       },
       "UncertaintyKind": {
         "description": "What the interval on a prediction *is*, or that there is not one.\n\nDeliberately not `prediction_interval`: see the module docstring. The value a caller\nreads is the claim the platform is making about the number beside it.",
