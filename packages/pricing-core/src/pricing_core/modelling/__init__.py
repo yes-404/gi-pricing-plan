@@ -24,6 +24,8 @@ from pricing_core.modelling.errors import (
     FactorResolutionError,
     GroupingError,
     ModellingError,
+    NonFiniteDerivativeError,
+    ObjectiveError,
 )
 from pricing_core.modelling.factors import FactorMatrix, rateable, resolve_factors
 from pricing_core.modelling.gbm import (
@@ -48,6 +50,13 @@ from pricing_core.modelling.groupings import (
     apply_grouping,
     grouping_evidence,
     propose_grouping,
+)
+from pricing_core.modelling.objectives import (
+    ObjectiveFns,
+    certify_objective,
+    compile_objective,
+    make_lgb_objective,
+    make_xgb_objective,
 )
 from pricing_core.modelling.predict import (
     PredictionError,
@@ -74,6 +83,9 @@ __all__ = [
     "GlmFitError",
     "GroupingError",
     "ModellingError",
+    "NonFiniteDerivativeError",
+    "ObjectiveError",
+    "ObjectiveFns",
     "PredictionError",
     "apply_banding",
     "apply_grouping",
@@ -82,8 +94,10 @@ __all__ = [
     "band_statistics",
     "build_glm_approximation",
     "build_shap_summary",
+    "certify_objective",
     "check_banding",
     "compare_models",
+    "compile_objective",
     "compute_diagnostics",
     "compute_gbm_diagnostics",
     "decode_covariance",
@@ -94,6 +108,8 @@ __all__ = [
     "fit_glm",
     "grouping_evidence",
     "linear_predictor",
+    "make_lgb_objective",
+    "make_xgb_objective",
     "objective_family",
     "predict_gbm",
     "predict_glm",

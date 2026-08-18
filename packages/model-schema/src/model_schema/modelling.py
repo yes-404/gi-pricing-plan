@@ -69,6 +69,7 @@ __all__ = [
     "MonotonicDirection",
     "OffsetSpec",
     "RelativityLevel",
+    "ResponseKind",
     "SpecProblem",
     "SpecProblemKind",
     "SpecValidation",
@@ -757,6 +758,29 @@ class LossTreatment(BaseModel):
         return self
 
 
+class ResponseKind(enum.StrEnum):
+    """What a Model Spec is modelling, as distinct from which column holds it.
+
+    `02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was
+    built to it, because nothing needed it: the fitting path reads the column, and the
+    family says what the numbers mean. FR-MODEL-44 needs it — an objective declares the
+    responses it applies to, and a column name cannot be checked against that list. So the
+    field goes live here, under FR-MODEL-87's staging rule, with the slice that populates
+    it.
+
+    The first three are FR-MODEL-44's own examples. `conversion` and `retention` are
+    `04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`
+    (§4.5) exists for exactly them — a catalogue entry whose applicability could not be
+    written would be a catalogue entry nothing could use.
+    """
+
+    CLAIM_COUNT = "claim_count"
+    CLAIM_SEVERITY = "claim_severity"
+    BURNING_COST = "burning_cost"
+    CONVERSION = "conversion"
+    RETENTION = "retention"
+
+
 class ModelSpecCommon(BaseModel):
     """`02` §4.4's common block — every arm of the tagged union carries these.
 
@@ -775,6 +799,11 @@ class ModelSpecCommon(BaseModel):
     #: where the status is, rather than here.
     split_ref: SplitRef | None = None
     peril: str | None = None
+    #: `02` §4.4's `response`. Optional because every spec written before this slice
+    #: declared only the column, and a required field would invalidate them; **required
+    #: whenever the objective is a Custom Objective**, where FR-MODEL-44's applicability
+    #: check has nothing to read without it and the spec validator refuses the pairing.
+    response: ResponseKind | None = None
     response_column: str
     offset: OffsetSpec = OffsetSpec()
     weight: WeightSpec = WeightSpec()
