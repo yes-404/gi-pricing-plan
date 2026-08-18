@@ -1,0 +1,404 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^(banding|custom_metric|custom_objective|dataset|dataset_version|dossier|factor|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "BlobRef": {
+      "description": "A content-addressed object reference (ID-4).",
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "part_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Count"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes",
+        "media_type"
+      ],
+      "title": "BlobRef",
+      "type": "object"
+    },
+    "ExcludedPeril": {
+      "additionalProperties": false,
+      "description": "A peril present in the data and deliberately not modelled (FR-MODEL-60).\n\nThe reason is required and non-blank. \"Every peril is either modelled or explicitly\nexcluded with a reason\" is the requirement; an exclusion with an empty reason satisfies\nits letter and none of its purpose.",
+      "properties": {
+        "peril": {
+          "pattern": "^[A-Z][A-Z0-9_]{0,31}$",
+          "title": "Peril",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "peril",
+        "reason"
+      ],
+      "title": "ExcludedPeril",
+      "type": "object"
+    },
+    "LargeLossKind": {
+      "description": "FR-MODEL-59's four treatments.",
+      "enum": [
+        "none",
+        "capped",
+        "separate_model",
+        "flat_loading"
+      ],
+      "title": "LargeLossKind",
+      "type": "string"
+    },
+    "LargeLossTreatment": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-59 — how large losses are handled for one peril.\n\nModelled as one type with a `kind` discriminator and per-kind requirements rather than\nfour types in a union: the four share `evidence_blob`, every caller reads `kind` first,\nand a union would put the shared requirement in four places.",
+      "properties": {
+        "attachment_minor": {
+          "anyOf": [
+            {
+              "description": "Amount in minor units (pence/cents) of the workspace currency.",
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attachment Minor"
+        },
+        "cap_minor": {
+          "anyOf": [
+            {
+              "description": "Amount in minor units (pence/cents) of the workspace currency.",
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cap Minor"
+        },
+        "evidence_blob": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "excess_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "$ref": "#/$defs/LargeLossKind"
+        },
+        "loading_factor": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loading Factor"
+        },
+        "restoration_loading": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Multiplier restoring the capped mean. Never below 1 (FR-MODEL-59).",
+          "title": "Restoration Loading"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "LargeLossTreatment",
+      "type": "object"
+    },
+    "PerilComponent": {
+      "additionalProperties": false,
+      "description": "One peril's route to a cost (FR-MODEL-58).\n\nModel references are pinned by version because `ArtifactRef` carries `@version` (ID-3)\nand artifacts are immutable (FR-OVR-1) — which is what makes FR-MODEL-58's \"pinned by\nversion\" structural rather than a rule someone has to remember.",
+      "properties": {
+        "burning_cost_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frequency_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "large_loss": {
+          "$ref": "#/$defs/LargeLossTreatment"
+        },
+        "method": {
+          "$ref": "#/$defs/PerilMethod"
+        },
+        "peril": {
+          "pattern": "^[A-Z][A-Z0-9_]{0,31}$",
+          "title": "Peril",
+          "type": "string"
+        },
+        "severity_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "peril",
+        "method",
+        "large_loss"
+      ],
+      "title": "PerilComponent",
+      "type": "object"
+    },
+    "PerilMethod": {
+      "description": "FR-MODEL-58's two routes to a peril's cost.",
+      "enum": [
+        "frequency_severity",
+        "burning_cost"
+      ],
+      "title": "PerilMethod",
+      "type": "string"
+    },
+    "PerilStructureStatus": {
+      "description": "The structure's own lifecycle (FR-MODEL-61).\n\n`reconciled` is this artifact's `fitted`: the state in which its evidence exists.",
+      "enum": [
+        "draft",
+        "reconciled",
+        "review",
+        "approved",
+        "superseded",
+        "archived"
+      ],
+      "title": "PerilStructureStatus",
+      "type": "string"
+    },
+    "ReconciledPeril": {
+      "additionalProperties": false,
+      "description": "One peril's contribution to the modelled total, with its treatment (FR-MODEL-74).",
+      "properties": {
+        "large_loss_kind": {
+          "$ref": "#/$defs/LargeLossKind"
+        },
+        "modelled_burning_cost_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "minimum": 0,
+          "title": "Modelled Burning Cost Minor",
+          "type": "integer"
+        },
+        "peril": {
+          "pattern": "^[A-Z][A-Z0-9_]{0,31}$",
+          "title": "Peril",
+          "type": "string"
+        }
+      },
+      "required": [
+        "peril",
+        "large_loss_kind",
+        "modelled_burning_cost_minor"
+      ],
+      "title": "ReconciledPeril",
+      "type": "object"
+    },
+    "Reconciliation": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-60's persisted coherence check, FR-MODEL-74's treatment statement.\n\nThe modelled figure is **after** restoration: a capped model reconciled against uncapped\nobserved data without restoring its mean looks like a modelling error rather than an\nintended adjustment, which is the whole of FR-MODEL-74.",
+      "properties": {
+        "computed_at": {
+          "format": "date-time",
+          "title": "Computed At",
+          "type": "string"
+        },
+        "dataset_version_id": {
+          "format": "uuid",
+          "title": "Dataset Version Id",
+          "type": "string"
+        },
+        "modelled_burning_cost_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "minimum": 0,
+          "title": "Modelled Burning Cost Minor",
+          "type": "integer"
+        },
+        "observed_burning_cost_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Observed Burning Cost Minor",
+          "type": "integer"
+        },
+        "part": {
+          "minLength": 1,
+          "title": "Part",
+          "type": "string"
+        },
+        "perils": {
+          "items": {
+            "$ref": "#/$defs/ReconciledPeril"
+          },
+          "minItems": 1,
+          "title": "Perils",
+          "type": "array"
+        },
+        "tolerance": {
+          "description": "Declared fractional tolerance on |ratio - 1| (FR-MODEL-60).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Tolerance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataset_version_id",
+        "part",
+        "perils",
+        "observed_burning_cost_minor",
+        "modelled_burning_cost_minor",
+        "tolerance",
+        "computed_at"
+      ],
+      "title": "Reconciliation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "FR-MODEL-58..61 — the composition, its coherence and its lifecycle.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "excluded_perils": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ExcludedPeril"
+      },
+      "title": "Excluded Perils",
+      "type": "array"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "perils": {
+      "items": {
+        "$ref": "#/$defs/PerilComponent"
+      },
+      "minItems": 1,
+      "title": "Perils",
+      "type": "array"
+    },
+    "reconciliation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Reconciliation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/PerilStructureStatus",
+      "default": "draft"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "version",
+    "perils",
+    "created_at"
+  ],
+  "title": "PerilStructure",
+  "type": "object"
+}

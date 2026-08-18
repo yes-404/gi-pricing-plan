@@ -1785,6 +1785,72 @@ is the point of having both measures.
 | FR-OVR-17(ii) for `wf-02…05` | **Outstanding**, each owned by the phase whose exit criterion names it (`§12`) — unchanged by this slice |
 | `wf-01` as a **Phase 1b exit** claim | **Not yet.** The exit is the journey end to end *on freMTPL2* through the UI; this test drives the platform on a synthetic frame, which is what makes it a test rather than the demo. W7's modelling half is the other half |
 
+#### W5 slice — peril structures and the risk-premium reconciliation, 2026-08-18
+
+`02` §3.9 built end to end: FR-MODEL-58, 59, 60, 61 and **FR-MODEL-74**, which the GBM slice
+reassigned here. `scope-audit MODEL --sections 3.9` moves from **0 of 4** to **5 of 5** — the fifth is
+FR-MODEL-90, appended by this slice — and §3.5 completes at **12 of 12**, FR-MODEL-74 having
+been the one requirement the GBM arm reassigned rather than evidenced. Declared endpoints go
+from **20 of 30** to **24 of 32**: two of the four new routes were declared and unbuilt, and
+two the spec did not declare at all.
+
+**The inverted assertion did what it was built to do.** `wf-01`'s
+`test_wf01_names_the_steps_it_cannot_yet_drive` went red the moment `PerilStructure` landed,
+which was this slice's cue to drive E4/E5 for real rather than to delete the assertion. The
+journey now composes a structure over the selected model, reconciles it through the real
+worker, and submits and approves it beside the model. FR-OVR-17(ii) for `wf-01` stays
+**partial** with **one** step named instead of three.
+
+**Five spec defects found by building, all resolved in the spec rather than absorbed:**
+
+1. **`02` §5.2's two signatures were unwritable** — the *fifth* instance of the
+   Model-parameter defect, and the two `TODO.local.md` predicted by name. A `PerilStructure`
+   carries model refs, and resolving one needs the database ADR-0001 forbids `pricing-core`.
+2. **§5.1 declared a create and a reconcile and no read** — a `POST` whose artifact nothing
+   can fetch, plus an approvable artifact with no way to submit it. FR-MODEL-90 appended.
+   Invisible to the endpoint audit for the third time now, for the structural reason it will
+   stay invisible: the audit compares the spec against the contract, and an endpoint in
+   neither is in neither.
+3. **FR-MODEL-61 was unreachable.** `approvals.submit` is fully generic and `peril_structure`
+   has been a valid artifact type since Phase 0 — but `06` §4.2's `DEFAULT_POLICY` had no
+   entry, so submission was refused with "no approval policy for this artifact type". A
+   correct refusal, which is exactly what made it invisible.
+4. **§4.10's example was not a contract**, and building one settled six things it left open
+   — derived `ratio`/`status`, the per-peril breakdown FR-MODEL-74 needs, required
+   calibration evidence, `BlobRef` as an object rather than a string, exact-decimal money,
+   and a lifecycle whose `draft → review` edge does not exist.
+5. **FR-MODEL-60 does not say where observed burning cost comes from**, and it cannot be
+   derived. The caller declares the column, with no default.
+
+**Three things the tests found rather than confirmed:**
+
+- **`job_kind` is a Postgres ENUM.** This is the first slice ever to add a `JobKind`, so the
+  Job insert was refused by the database from inside `job_service.submit` — after the route
+  had validated everything it could see. The migration carries the `ALTER TYPE`; a downgrade
+  cannot remove the value and says so.
+- **A `computed_field` breaks its own artifact's round trip.** `ratio` and `status`
+  serialise, and `extra="forbid"` then rejects the payload coming back — which
+  `load_structure` hit on its first run. They are dropped and recomputed on input, so a
+  stored or hand-edited ratio has no way to be believed.
+- **A punitive tolerance does not produce a failing reconciliation** on this book: the fit
+  reconciles to the penny. The failing test doubles a restoration loading instead, which
+  drives FR-MODEL-74 through the platform path and is a better test than the one intended.
+
+**Enforcement proven against deliberately broken input** (§13.4), not assumed: with the
+restoration loading removed, the same capped peril fails the reconciliation it passes with
+it; with the total rounded independently instead of summed from the rounded parts, the
+penny-drift test reports 99 against 100.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| **`separate_model`** large-loss treatment (FR-MODEL-59) | **Deferred**, refused by name with `LOSS_TREATMENT_UNIMPLEMENTED` in `pricing-core` *and* before the Job is queued. It needs an excess-layer model, which nothing fits. Contract-level from the start, because FR-MODEL-59 names all four kinds. Owner: the slice that fits an excess-layer model |
+| **`/peril-structures/:slug@:version`** view (`02` §5.3) | **Not started.** Owner: W6b, unchanged |
+| **`03-rating-engine`'s consumption** of an approved structure (FR-MODEL-61's second half) | **Not started, and correctly so** — Phase 2. A later phase is a spec change, not code (`CLAUDE.md` §0) |
+| `wf-01` **D7**, the interaction factor | **Not started**, unchanged. Still pinned as the one inverted assertion |
+| `wf-01` E4 as **frequency × severity** | **Driven as burning cost**, a fixture limit rather than a platform one — severity responds to cost *per claim* and every claim-free row in the fixture book carries a zero a Gamma refuses. The arithmetic is covered directly in `packages/pricing-core/tests/test_perils.py`. Recorded in the journey test and in FR-OVR-17 |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -1795,7 +1861,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: ten slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, and `wf-01` driven end to end; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the citation audit and the journey test, both landed 2026-08-17, the journey test *partial* with D7 and E4/E5 named and owned (FR-OVR-17) |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: eleven slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, and peril structures with their reconciliation; see the slice records below. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`** — the citation audit and the journey test, both landed 2026-08-17; the journey test remains *partial*, but with **one** step named rather than three, E4/E5 having been driven for real by the peril-structure slice on 2026-08-18 (FR-OVR-17) |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 

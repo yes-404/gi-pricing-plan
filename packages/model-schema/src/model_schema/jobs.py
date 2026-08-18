@@ -47,6 +47,7 @@ class JobKind(enum.StrEnum):
     MODEL_TRANSPARENCY = "model.transparency"
     MODEL_BACKTEST = "model.backtest"
     MODEL_COMPARE = "model.compare"
+    PERIL_STRUCTURE_RECONCILE = "peril_structure.reconcile"
     OBJECTIVE_CERTIFY = "objective.certify"
     RATING_COMPILE = "rating.compile"
     RATING_REGRESSION = "rating.regression"

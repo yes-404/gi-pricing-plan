@@ -68,6 +68,11 @@ GENERATED_SHAPES: dict[str, str] = {
     # hand-authored Phase-0 contract that nothing has ever compared against code, and R3
     # makes this the artifact a Rating Version's approval hangs from.
     "transparency-artifact": "TransparencyArtifact",
+    # Added 2026-08-18 (W5, peril structures). No hand-authored Phase-0 counterpart: `02`
+    # §4.10 printed an example and defined no contract, so this is the shape's first
+    # written form. It is also the artifact `03-rating-engine.md` will reference, which
+    # makes it the one an external consumer reads before anything downstream exists.
+    "peril-structure": "PerilStructure",
 }
 
 

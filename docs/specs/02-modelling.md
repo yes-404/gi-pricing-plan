@@ -199,6 +199,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-59** | The structure declares how large losses are handled per peril: `none`, `capped` (with the cap and the loading applied to restore the mean), `separate_model` (an excess-layer model), or `flat_loading`. Whatever is chosen is recorded with its calibration evidence. |
 | **FR-MODEL-60** | The structure is validated for coherence: every peril present in the dataset is either modelled or explicitly excluded with a reason; total modelled burning cost reconciles to observed burning cost within a declared tolerance on the holdout, and the reconciliation is persisted. |
 | **FR-MODEL-61** | A Peril Structure is an approvable artifact in its own right and is what `03-rating-engine.md` references — a Rating Version references a Peril Structure, not a scatter of individual models. |
+| **FR-MODEL-90** | **A Peril Structure is readable and submittable.** `GET /api/v1/peril-structures/{id}` returns the structure with its reconciliation, or a 404 naming it; `POST /api/v1/peril-structures/{id}/submit` moves `reconciled → review` and creates the approval request FR-MODEL-61 makes it eligible for. Added 2026-08-18 (W5, the peril-structure slice): §5.1 declared a create and a reconcile and neither of these, which is a `POST` whose artifact nothing can fetch and an approvable artifact with no way to submit it. The same omission FR-MODEL-84 repaired for the transparency artifact and FR-MODEL-56 for the comparison — and invisible to the endpoint audit for the same reason each time, since it compares the spec against the contract and an endpoint missing from both is in neither. FR-MODEL-61 additionally needed a `peril_structure` entry in `06` §4.2's `DEFAULT_POLICY`: the approval machine is fully generic and `peril_structure` has been a valid artifact type since Phase 0, but with no policy entry a submission is refused with "no approval policy for this artifact type" — a correct refusal of an artifact nobody could ever approve. Its evidence kind is `reconciliation`, which is what FR-MODEL-60 makes it. |
 
 ### 3.10 Prediction and lifecycle
 
@@ -752,12 +753,58 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
   "excluded_perils": [{"peril": "COURTESY_CAR", "reason": "Bundled service cost, loaded flat in the rating algorithm."}],
   "reconciliation": {
     "dataset_version_id": "uuid", "part": "holdout",
+    "perils": [{"peril": "AD", "large_loss_kind": "capped",
+                "modelled_burning_cost_minor": 15_000},
+               {"peril": "TP_BI", "large_loss_kind": "separate_model",
+                "modelled_burning_cost_minor": 2_337},
+               {"peril": "WINDSCREEN", "large_loss_kind": "none",
+                "modelled_burning_cost_minor": 1_000}],
     "observed_burning_cost_minor": 18_412, "modelled_burning_cost_minor": 18_337,
-    "ratio": 0.9959, "tolerance": 0.02, "status": "pass"
+    "ratio": "0.995927", "tolerance": "0.02", "status": "pass",
+    "computed_at": "2026-08-18T09:14:02Z"
   },
   "status": "approved"
 }
 ```
+
+**Six corrections, 2026-08-18 (W5, the peril-structure slice).** §4.10 printed an example
+and defined no contract; `peril-structure.schema.json` is generated from the built type, and
+building it settled six things the example left open:
+
+- **`ratio` and `status` are derived, never stored.** The example prints both beside the
+  numbers they follow from, and two statements of one fact disagree eventually — this one is
+  the evidence an approval cites. They are computed from `modelled`, `observed` and the
+  declared `tolerance`, and any incoming value for either is **dropped and recomputed**
+  rather than refused, so a hand-edited ratio has no way to be believed. (§4.9's `kinds`
+  reached the same conclusion and became a plain property; these stay serialised because a
+  caller reading a reconciliation should not have to reimplement the rounding rule.)
+- **The reconciliation carries a per-peril breakdown**, which is new. It is where
+  FR-MODEL-74's treatment is stated beside the number it produced, and the total is checked
+  to be the sum of those figures. A total that is not the sum is a third number nobody can
+  source. The per-peril figures are rounded to minor units first and the total is their sum
+  — rounding both independently drifts by a penny and the invariant would then reject a
+  correct reconciliation.
+- **Every large-loss treatment but `none` carries its `evidence_blob`**, which is
+  FR-MODEL-59's "recorded with its calibration evidence" made structural. A restoration
+  loading of 1.043 with nothing behind it asks an approver to accept a number because it is
+  written down. `restoration_loading` is refused below 1: restoration puts the capped mean
+  back, and below 1 it caps a second time.
+- **`evidence_blob` is a `BlobRef` object, not the string `"blob:sha256:…"`** the example
+  prints. Every other blob reference in the contract is the object (`01` §4.x,
+  `02` §4.9); the string form appears nowhere in `model-schema`.
+- **Money is integer minor units and `ratio`/`tolerance` are exact decimals rendered as
+  strings** (FR-OVR-7), which the example's bare `0.9959` did not show.
+- **A structure has a lifecycle**: `draft → reconciled → review → approved → superseded →
+  archived`. `draft → review` is **not** an edge — FR-MODEL-60 makes the reconciliation the
+  evidence FR-MODEL-61's approval reads, so a structure reaching an approver without one is
+  not a state to refuse later but a state with no edge into it. `VALID_MODEL_TRANSITIONS`
+  reached the same shape from the same argument about diagnostics, and `approved → archived`
+  is absent here for the same reason it is absent there: an approved structure is a Rating
+  Version's referent, and archiving would remove it while naming no replacement.
+
+Submission additionally refuses a reconciliation whose status is `fail`. FR-MODEL-60 makes
+reconciling within the declared tolerance part of the coherence check, and the tolerance is
+the submitter's own number — a structure that misses it has failed a test it set itself.
 
 ### 4.11 `ModelComparison`
 
@@ -869,8 +916,10 @@ required evidence for a Model approval where a predecessor exists.
 | `POST` | `/api/v1/custom-objectives/{id}/submit` | Submit for approval (FR-MODEL-46) |
 | `GET` | `/api/v1/custom-objectives/{id}/usage` | Blast radius: models, rating versions, deployments (FR-MODEL-47) |
 | `POST` | `/api/v1/custom-metrics` | Same lifecycle for eval metrics (FR-MODEL-45) |
-| `POST` | `/api/v1/peril-structures` | Create/version a Peril Structure (FR-MODEL-58) |
+| `POST` | `/api/v1/peril-structures` | **201** Create/version a Peril Structure (FR-MODEL-58) |
+| `GET` | `/api/v1/peril-structures/{id}` | The structure and its reconciliation (FR-MODEL-90) |
 | `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-MODEL-60) |
+| `POST` | `/api/v1/peril-structures/{id}/submit` | Submit for approval, `reconciled → review` (FR-MODEL-90) |
 
 > **Amended 2026-08-15 (W5, the GLM spine).** Two corrections, made by building it:
 >
@@ -1137,8 +1186,10 @@ def build_shap_summary(model: Model, data: pl.DataFrame, *, sample: int,
                        seed: int) -> ShapSummary
 
 # pricing_core/modelling/perils.py
-def assemble_risk_premium(structure: PerilStructure, data: pl.DataFrame) -> pl.DataFrame
-def reconcile(structure: PerilStructure, data: pl.DataFrame) -> Reconciliation
+def assemble_risk_premium(predictions: Sequence[PerilPrediction]) -> pl.DataFrame
+def reconcile(assembled: pl.DataFrame, *, observed: NDArray[float64],
+              exposure: NDArray[float64], tolerance: Decimal,
+              treatments: Mapping[str, LargeLossKind]) -> ReconciliationResult
 ```
 
 > **Two signatures corrected, 2026-08-16 (W5, diagnostics).** `predict_glm` and
@@ -1182,6 +1233,37 @@ def reconcile(structure: PerilStructure, data: pl.DataFrame) -> Reconciliation
 > `apply_loss_treatment` is new and was declared nowhere — FR-MODEL-73's cap is applied to
 > the response at fit time, and it belongs beside the fit rather than inside it, because
 > the GLM path will need the same function.
+
+> **Corrected a fifth time, 2026-08-18 (W5, peril structures).** `assemble_risk_premium`
+> and `reconcile` were declared taking a `PerilStructure`. They cannot, for the reason four
+> earlier signatures could not take a `Model`: a structure carries model *references*
+> (`model:motor-ad-frequency@7`), and resolving one needs the database ADR-0001 forbids
+> this package. `PerilPrediction` is that resolution — one peril's arrays plus the treatment
+> to apply — and it carries the ref only as a label.
+>
+> Three further departures, each forced by something the declaration did not know:
+>
+> * **`reconcile` returns a `ReconciliationResult`, not the persisted `Reconciliation`**,
+>   which carries a `dataset_version_id`, a `part` and a `computed_at` only the platform
+>   can supply. Exactly the `compute_diagnostics` / `DiagnosticsResult` split.
+> * **`observed`, `exposure` and `tolerance` are parameters.** FR-MODEL-60 compares modelled
+>   burning cost to *observed* burning cost and does not say where the observed figure comes
+>   from — and it cannot be derived: a severity model responds to its own peril's cost, not
+>   the total, and the exposure a frequency model offsets by is not necessarily the exposure
+>   the burning cost is expressed per. The caller declares both columns, with **no default**;
+>   a default would reconcile against whichever column happened to match and report a ratio
+>   for it.
+> * **`treatments` is a parameter rather than read from the frame.** The assembled frame
+>   carries numbers and not their provenance, and FR-MODEL-74 requires the treatment to be
+>   stated beside the number. A peril whose treatment nobody supplied would be recorded as
+>   `none`, which is a claim about how the number was produced.
+>
+> **`separate_model` is refused by name** with `LOSS_TREATMENT_UNIMPLEMENTED`, in
+> `pricing-core` *and* before the Job is queued. It needs an excess-layer model's own
+> predictions; reconciling it as though it were `none` would under-state the premium by
+> exactly the excess layer, in silence. `capped` and `flat_loading` are both computed —
+> they are the same multiplication from different provenance, so computing one and refusing
+> the other would have been an arbitrary line.
 
 Sketch of the compiled objective handed to XGBoost — note the platform, not the user,
 owns this function; the user only ever supplied `loss` (§4.6):

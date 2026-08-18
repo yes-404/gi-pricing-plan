@@ -154,6 +154,11 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "MODEL_TYPE_UNSUPPORTED",
         "APPROXIMATION_TARGET_NOT_POSITIVE",
         "SHAP_SAMPLE_EMPTY",
+        # The peril-structure slice, 2026-08-18. `02` §5.1 has declared this code since
+        # Phase 0 and nothing raised it; `LOSS_TREATMENT_UNIMPLEMENTED` above was
+        # registered by the GBM slice for the same reason and is raised for the first time
+        # here, by `separate_model`.
+        "PERIL_STRUCTURE_RECONCILIATION_FAILED",
     }
 )
 

@@ -10,21 +10,26 @@ what this exists to catch is the seam between phases: a version that validates b
 fitted on, a split both candidates claim to share, a model that reaches an approver with no
 evidence. Those failures live between the slices, which is where nothing else looks.
 
-**Three steps of `wf-01` cannot execute today**, and they are pinned at the bottom as
-inverted assertions rather than skipped in silence:
+**One step of `wf-01` cannot execute today**, and it is pinned at the bottom as an inverted
+assertion rather than skipped in silence:
 
 * **D7** — an `annual_mileage x driver_age` interaction factor. `resolve_factors` implements
   `identity`, `banding` and `grouping`; `interaction` is refused by name.
-* **E4/E5** — the Peril Structure and its reconciliation. FR-MODEL-58..61 has no contract,
-  no table and no code.
 
-Each assertion **passes while the capability is absent and fails the day it lands**, so this
-file cannot quietly stay partial once the slices arrive. FR-OVR-17(ii) is therefore recorded
-as *partial for `wf-01`*, with those three steps named — not as delivered.
+The assertion **passes while the capability is absent and fails the day it lands**, so this
+file cannot quietly stay partial once the slice arrives. FR-OVR-17(ii) is therefore recorded
+as *partial for `wf-01`*, with that step named — not as delivered.
+
+**E4 and E5 were on that list until 2026-08-18** and are now walked in full: the Peril
+Structure is composed over the selected model, reconciled through the real worker, and
+submitted and approved alongside it, which is what `wf-01` E6 and E10 ask for. The pinned
+assertion went red the day `PerilStructure` landed and was the cue to write those steps —
+the mechanism working, rather than a test to silence.
 """
 
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pydantic
@@ -50,6 +55,7 @@ from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as model_service
+from app.platform import perils as peril_service
 from app.platform import rbac
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
@@ -64,6 +70,7 @@ from model_schema import (
     BandingProposal,
     DatasetStatus,
     DecisionKind,
+    ExcludedPeril,
     Factor,
     FactorIntent,
     FactorType,
@@ -72,11 +79,17 @@ from model_schema import (
     GlmSpec,
     JobKind,
     JobStatus,
+    LargeLossKind,
+    LargeLossTreatment,
     ModelStatus,
     MonotonicDirection,
     OffsetSpec,
     OverallOutcome,
+    PerilComponent,
+    PerilMethod,
+    PerilStructureStatus,
     Principal,
+    ReconciliationStatus,
     RuleOutcome,
     ScopeType,
     Severity,
@@ -482,6 +495,103 @@ async def test_wf01_dataset_to_approved_model(
     # behind that choice, which is the whole reason it is persisted.
     selected = glm_id
 
+    # E3, the step the journey delegates in one line — "repeats phases C-E for the remaining
+    # perils and for severity models". AD's *cost* model is fitted here because E4 needs one:
+    # the model selected at E2 is a **frequency** model, and composing it as a peril's cost
+    # would reconcile expected claim counts against observed claim amounts.
+    #
+    # **`wf-01` E4 composes AD as frequency x severity and this composes it as burning
+    # cost**, which is a fixture limit rather than a platform one: severity responds to cost
+    # *per claim*, and every claim-free row in this book carries a zero a Gamma refuses.
+    # `packages/pricing-core/tests/test_perils.py` drives the frequency x severity arm
+    # directly, so the arithmetic is covered where it can be exercised honestly.
+    burning_cost_id = await _fit_model(
+        database, blob_store, workspace_id, analyst,
+        GlmSpec(
+            model_family_slug=f"wf01-bc-{new_uuid7().hex[-6:]}",
+            dataset_version_id=version_id,
+            split_ref=split,
+            peril="AD",
+            response_column="claim_amount_minor",
+            family="tweedie",
+            family_params={"power": 1.5},
+            offset=OffsetSpec(kind="log_column", column="exposure_years"),
+            factors=(age_factor, vehicle_factor),
+            seed=20260818,
+        ),
+    )
+
+    # E4: the Peril Structure. `wf-01`'s own has three perils; this book has one modelled
+    # peril, so the other two are **excluded with reasons** — which is FR-MODEL-60's actual
+    # demand, that every peril be one or the other, rather than a demand for three models.
+    async with database.session() as session:
+        selected_row = await session.get(ModelRow, burning_cost_id)
+        selected_ref = f"model:{selected_row.model_family_slug}@{selected_row.version}"
+
+    async with database.unit_of_work() as session:
+        structure_row = await peril_service.create_structure(
+            session,
+            workspace_id=workspace_id,
+            actor=analyst,
+            slug=f"wf01-motor-{new_uuid7().hex[-6:]}",
+            perils=[
+                PerilComponent(
+                    peril="AD",
+                    method=PerilMethod.BURNING_COST,
+                    burning_cost_model=selected_ref,
+                    large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+                )
+            ],
+            excluded_perils=[
+                ExcludedPeril(
+                    peril="TP_BI", reason="Modelled in the TP_BI structure, not this one."
+                ).model_dump(mode="json"),
+                ExcludedPeril(
+                    peril="WINDSCREEN", reason="Loaded flat in the rating algorithm."
+                ).model_dump(mode="json"),
+            ],
+        )
+        structure_id, structure_slug = structure_row.id, structure_row.slug
+        structure_version = structure_row.version
+
+    # E5: the reconciliation, through the real worker. The tolerance is the actuary's own
+    # declaration — `wf-01` E5 declares 0.02 against a book of hundreds of thousands of
+    # policy-years; this fixture is twenty-one, so the number is wider and the *mechanism*
+    # is what the journey is asserting.
+    async with database.unit_of_work() as session:
+        reserved = await peril_service.request_reconciliation(
+            session, workspace_id=workspace_id, actor=analyst,
+            structure_id=structure_id, tolerance=Decimal("0.9"),
+        )
+        reconcile_payload = peril_service.reconcile_payload(
+            reserved,
+            tolerance=Decimal("0.9"),
+            observed_column="claim_amount_minor",
+            exposure_column="exposure_years",
+        )
+    assert await _run(
+        database, blob_store, workspace_id, analyst,
+        JobKind.PERIL_STRUCTURE_RECONCILE, dict(reconcile_payload),
+    ) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        reconciled = await peril_service.load_structure(
+            session, workspace_id=workspace_id, structure_id=structure_id
+        )
+    assert reconciled.status is PerilStructureStatus.RECONCILED
+    assert reconciled.reconciliation is not None
+    assert reconciled.reconciliation.status is ReconciliationStatus.PASS
+    # FR-MODEL-74: the treatment is stated beside the number it produced, per peril — so a
+    # capped model reconciling to uncapped data cannot read as a modelling error.
+    assert [p.large_loss_kind for p in reconciled.reconciliation.perils] == [
+        LargeLossKind.NONE
+    ]
+    # FR-MODEL-58's sum, checked rather than assumed.
+    assert (
+        sum(p.modelled_burning_cost_minor for p in reconciled.reconciliation.perils)
+        == reconciled.reconciliation.modelled_burning_cost_minor
+    )
+
     # E6: submitted for approval. The evidence bundle is assembled and pinned here.
     async with database.unit_of_work() as session:
         _, request = await model_service.submit_for_review(
@@ -518,6 +628,38 @@ async def test_wf01_dataset_to_approved_model(
         )
     assert approved_row is not None
     assert approved_row.status == ModelStatus.APPROVED.value
+
+    # E6/E10 for the **structure**, which the journey submits and approves alongside the
+    # models. It needed no new approval machinery — `06` FR-GOV-9's machine takes an
+    # `ArtifactRef` — but it did need a `peril_structure` entry in the policy, without which
+    # a submission is refused for an artifact nobody could ever approve.
+    async with database.unit_of_work() as session:
+        _, structure_request = await peril_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=analyst,
+            structure_id=structure_id,
+            change_summary="AD burning cost on the approved GLM; TP_BI and windscreen excluded",
+        )
+        structure_request_id = structure_request.id
+    assert structure_request.artifact_ref == (
+        f"peril_structure:{structure_slug}@{structure_version}"
+    )
+
+    # E9 again, on the structure: the same separation of duties, and it is the generic
+    # machine enforcing it rather than a second implementation.
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as structure_self_approval:
+            await approval_service.decide(
+                session, workspace_id=workspace_id, request_id=structure_request_id,
+                approver=analyst, decision=DecisionKind.APPROVE, comment="mine, approved",
+            )
+    assert structure_self_approval.value.code == "SUBMITTER_CANNOT_APPROVE"
+
+    async with database.unit_of_work() as session:
+        await approval_service.decide(
+            session, workspace_id=workspace_id, request_id=structure_request_id,
+            approver=approver, decision=DecisionKind.APPROVE,
+            comment="reconciles within the declared tolerance; exclusions are reasoned",
+        )
 
     # The journey's postcondition: an `approved` Model a Rating Version may reference.
     async with database.session() as session:
@@ -653,23 +795,28 @@ async def _fit_model(
     return model_id
 
 
-# -- The three steps of `wf-01` the platform cannot execute --------------------------------
+# -- The step of `wf-01` the platform cannot execute ---------------------------------------
 
 
 @pytest.mark.req("FR-OVR-17")
-def test_wf01_names_the_steps_it_cannot_yet_drive() -> None:
-    """D7, E4 and E5, pinned rather than skipped.
+def test_wf01_names_the_step_it_cannot_yet_drive() -> None:
+    """D7, pinned rather than skipped.
 
-    Every assertion here is **inverted**: it passes while the capability is absent and fails
+    The assertion here is **inverted**: it passes while the capability is absent and fails
     the day it lands. A comment would have said the same thing and gone stale; this cannot,
-    because the slice that builds any of these breaks this test and has to come back and
-    extend the journey above.
+    because the slice that builds it breaks this test and has to come back and extend the
+    journey above.
 
-    FR-OVR-17(ii) is recorded as *partial for `wf-01`* on the strength of exactly this list.
+    **E4 and E5 were here and are not any more** (2026-08-18, the peril-structure slice).
+    They went red on the day `PerilStructure` landed, exactly as designed, and the journey
+    above now drives them: the structure is composed, reconciled through the real worker,
+    submitted and approved. That is the mechanism working — the red was the cue to extend
+    the walk, and the assertion's own failure message said so.
+
+    FR-OVR-17(ii) stays *partial for `wf-01`* on the strength of the one step below.
     """
     import polars as pl
 
-    import model_schema
     from pricing_core.modelling.factors import FactorResolutionError, resolve_factors
 
     # D7 — an `annual_mileage x driver_age` interaction factor. `resolve_factors` names the
@@ -684,10 +831,3 @@ def test_wf01_names_the_steps_it_cannot_yet_drive() -> None:
             pl.DataFrame({"annual_mileage": [1.0], "driver_age": [30.0]}), [interaction]
         )
     assert "interaction" in str(unbuilt.value).lower()
-
-    # E4/E5 — the Peril Structure and its reconciliation (FR-MODEL-58..61). No contract, so
-    # nothing downstream of it exists either; FR-MODEL-74's loss-treatment reconciliation is
-    # reassigned to the slice that builds this.
-    assert not hasattr(model_schema, "PerilStructure"), (
-        "E4/E5 are buildable now — extend the journey test above rather than deleting this"
-    )

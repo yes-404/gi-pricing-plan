@@ -150,6 +150,18 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("diagnostics",),
         ),
+        # Added 2026-08-18 (W5, peril structures). FR-MODEL-61 makes a Peril Structure
+        # approvable and `peril_structure` has been a valid artifact type since Phase 0 —
+        # but with no entry here `submit` refuses with "no approval policy for this
+        # artifact type", which is a correct refusal of an artifact nobody could ever
+        # approve. Its evidence is the reconciliation, because FR-MODEL-60 makes that the
+        # coherence check the approver is being asked to accept.
+        ApprovalPolicyEntry(
+            artifact_type="peril_structure",
+            approvers_required=1,
+            approver_roles=("approver",),
+            evidence=("reconciliation",),
+        ),
         ApprovalPolicyEntry(
             artifact_type="rating_version",
             approvers_required=2,

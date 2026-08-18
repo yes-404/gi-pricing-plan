@@ -255,6 +255,41 @@ directory. `CLAUDE.md` §11 is right; run it from the root.
 uv run alembic upgrade head            # from the repo root, always
 ```
 
+## Adding a `JobKind` needs an `ALTER TYPE`, because `job_kind` is a Postgres ENUM
+
+`jobs.kind` is a real enum type created by `df53696a2682`, not a `String` with a CHECK. Adding
+a member to `model_schema.JobKind` therefore changes nothing in the database, and the failure
+arrives from `job_service.submit` as
+
+```
+asyncpg.exceptions.InvalidTextRepresentationError:
+  invalid input value for enum job_kind: "peril_structure.reconcile"
+```
+
+— *after* the route has validated everything it can see, so it reads as a platform bug rather
+than a missing migration. Every kind up to 2026-08-18 was in the type as originally created,
+which is why nothing had hit this before.
+
+```python
+op.execute(
+    "ALTER TYPE job_kind ADD VALUE IF NOT EXISTS 'peril_structure.reconcile' "
+    "AFTER 'model.compare'"
+)
+```
+
+`ADD VALUE` is allowed inside a transaction on PostgreSQL 12+ **provided the new value is not
+used in the same one** — fine in a migration, which only adds the label.
+
+**The downgrade cannot remove it**, and should say so rather than pretending. PostgreSQL has
+no `DROP VALUE`; rebuilding the type would rewrite every historical `jobs` row to drop a label
+none of them uses, which is more blast radius than the upgrade had.
+
+Three places move together for a new kind: the enum in `model_schema/jobs.py`, the
+hand-written `docs/contracts/schemas/job.schema.json`, and
+`DEFAULT_QUEUE_FOR_KIND` in `app/platform/jobs.py`. `test_every_kind_has_a_queue` and
+`test_celery_routes_every_kind_to_a_queue` catch the third; nothing but the database catches
+the migration.
+
 ## `PlatformError` exposes `status_code`, not `status`
 
 `excinfo.value.status` raises `AttributeError` inside `pytest.raises`, which pytest
@@ -442,6 +477,11 @@ session; only `Database.unit_of_work()` commits. If a service needs its own tran
 that is the bug — not the guard.
 
 ## Verified
+
+2026-08-18 — W5, peril structures. The `job_kind` `ALTER TYPE` rule was found the way it
+is described: the first `JobKind` this repository has ever added was refused by the
+database from inside `job_service.submit`, with the route's own validation already past.
+1026 tests pass with the migration in place.
 
 2026-08-14 — W2 OIDC slice. 218 tests pass, the suite run five times to confirm it after
 three genuine flakes were found and fixed — two of them real defects in the code and test

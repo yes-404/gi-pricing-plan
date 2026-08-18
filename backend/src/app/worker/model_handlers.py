@@ -15,10 +15,12 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
 import polars as pl
+from sqlalchemy import select
 
 from app.db.models import BlobRow, DatasetSplitRow, DatasetVersionRow, ModelRow
 from app.errors import PlatformError
@@ -26,6 +28,7 @@ from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import modelling as model_service
+from app.platform import perils as peril_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import to_ref
@@ -47,6 +50,9 @@ from model_schema import (
     JobKind,
     JobResult,
     ModelSpec,
+    PerilStructure,
+    ReconciledPeril,
+    Reconciliation,
     TransparencyArtifact,
     new_uuid7,
 )
@@ -598,3 +604,175 @@ def register_model_handlers() -> None:
         register_handler(JobKind.MODEL_COMPARE, _compare)
     if JobKind.MODEL_TRANSPARENCY not in handler_registry.HANDLERS:
         register_handler(JobKind.MODEL_TRANSPARENCY, _transparency)
+    if JobKind.PERIL_STRUCTURE_RECONCILE not in handler_registry.HANDLERS:
+        register_handler(JobKind.PERIL_STRUCTURE_RECONCILE, _reconcile)
+
+
+def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`peril_structure.reconcile` — FR-MODEL-60's coherence check, FR-MODEL-74's basis.
+
+    Every peril's models are scored on the **one** holdout they all cite —
+    `_refuse_unshared_holdout` guarantees there is exactly one before this Job exists, which
+    is what makes the reconciliation's `dataset_version_id` and `part` derivable rather than
+    a caller's third answer.
+
+    A **failing** reconciliation is a successful Job. FR-MODEL-60 asks for the check to be
+    persisted, and the finding that a structure does not reconcile is the finding; a job
+    that failed would leave an actuary re-running it to see the same number. What a `fail`
+    blocks is `review`, and that is `submit_for_review`'s answer.
+    """
+    from pricing_core.modelling.perils import (
+        PerilPrediction,
+        assemble_risk_premium,
+        reconcile,
+    )
+    from pricing_core.modelling.predict import score_fitted
+
+    progress = _bridge(callback)
+    blob_store = progress.blob_store
+    actor, workspace_id = _actor(parameters), _workspace(parameters)
+    structure_id = UUID(parameters["structure_id"])
+    tolerance = Decimal(parameters["tolerance"])
+    observed_column = str(parameters["observed_column"])
+    exposure_column = str(parameters["exposure_column"])
+    progress.update(0.05, "loading the structure")
+
+    async def load() -> tuple[PerilStructure, dict[str, Any], pl.DataFrame, UUID, str]:
+        async with progress.database.session() as session:
+            structure = await peril_service.load_structure(
+                session, workspace_id=workspace_id, structure_id=structure_id
+            )
+            candidates: dict[str, Any] = {}
+            rows: list[ModelRow] = []
+            for peril in structure.perils:
+                for ref in (
+                    peril.frequency_model,
+                    peril.severity_model,
+                    peril.burning_cost_model,
+                ):
+                    if ref is None or str(ref) in candidates:
+                        continue
+                    row = (
+                        await session.execute(
+                            select(ModelRow).where(
+                                ModelRow.workspace_id == workspace_id,
+                                ModelRow.model_family_slug == ref.slug,
+                                ModelRow.version == ref.version,
+                            )
+                        )
+                    ).scalar_one_or_none()
+                    if row is None:
+                        raise PlatformError(
+                            "NOT_FOUND", "Model not found", 404, f"No model {ref}."
+                        )
+                    rows.append(row)
+                    candidates[str(ref)] = await _resolve_candidate(
+                        session, blob_store, workspace_id=workspace_id, row=row
+                    )
+
+            # One holdout, read through the same `_split_frames` the fit used — a second
+            # reader of the same split could drift from the first.
+            spec = candidates[next(iter(candidates))].spec
+            version = await dataset_service.fittable_or_refuse(
+                session, workspace_id=workspace_id, version_id=spec.dataset_version_id
+            )
+            parent = await _frame_of(session, blob_store, version)
+            _, holdout = await _split_frames(
+                session, blob_store, workspace_id=workspace_id, spec=spec, parent=parent
+            )
+            part = spec.split_ref.holdout_part if spec.split_ref else "test"
+            return structure, candidates, holdout, spec.dataset_version_id, part
+
+    structure, candidates, holdout, dataset_version_id, part = progress.run_on_loop(load())
+    progress.update(0.4, "scoring the perils")
+
+    for column in (observed_column, exposure_column):
+        if column not in holdout.columns:
+            raise PlatformError(
+                "PERIL_STRUCTURE_RECONCILIATION_FAILED",
+                "The declared column is not in the holdout",
+                422,
+                f"Column {column!r} is not among the holdout's columns. FR-MODEL-60's "
+                "observed burning cost is declared by the caller precisely because it "
+                "cannot be derived, so a name that does not resolve is refused rather "
+                "than substituted.",
+            )
+
+    def _score(ref: Any) -> Any:
+        candidate = candidates[str(ref)]
+        return score_fitted(
+            candidate.fit,
+            candidate.spec,
+            holdout,
+            candidate.factors,
+            bandings=candidate.bandings,
+            groupings=candidate.groupings,
+            booster=candidate.booster,
+        )
+
+    predictions = [
+        PerilPrediction(
+            peril=peril.peril,
+            method=peril.method,
+            frequency=_score(peril.frequency_model) if peril.frequency_model else None,
+            severity=_score(peril.severity_model) if peril.severity_model else None,
+            burning_cost=(
+                _score(peril.burning_cost_model) if peril.burning_cost_model else None
+            ),
+            large_loss=peril.large_loss,
+        )
+        for peril in structure.perils
+    ]
+
+    from pricing_core.modelling import ModellingError
+
+    try:
+        assembled = assemble_risk_premium(predictions)
+        result = reconcile(
+            assembled,
+            observed=holdout[observed_column].cast(pl.Float64).to_numpy(),
+            exposure=holdout[exposure_column].cast(pl.Float64).to_numpy(),
+            tolerance=tolerance,
+            treatments={p.peril: p.large_loss.kind for p in structure.perils},
+        )
+    except ModellingError as exc:
+        # `pricing-core` names the failure; the platform gives it the HTTP shape, so the
+        # Job's stored error carries `02` §5.1's code rather than a library traceback.
+        raise PlatformError(
+            exc.code, "The peril structure could not be reconciled", 409, str(exc)
+        ) from exc
+
+    progress.update(0.9, "storing the reconciliation")
+
+    async def store() -> UUID:
+        async with progress.database.unit_of_work() as session:
+            row = await peril_service.record_reconciliation(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                structure_id=structure_id,
+                reconciliation=Reconciliation(
+                    dataset_version_id=dataset_version_id,
+                    part=part,
+                    perils=tuple(
+                        ReconciledPeril(
+                            peril=p.peril,
+                            large_loss_kind=p.large_loss_kind,
+                            modelled_burning_cost_minor=p.modelled_burning_cost_minor,
+                        )
+                        for p in result.perils
+                    ),
+                    observed_burning_cost_minor=result.observed_burning_cost_minor,
+                    modelled_burning_cost_minor=result.modelled_burning_cost_minor,
+                    tolerance=result.tolerance,
+                    computed_at=datetime.now(UTC),
+                ),
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+            )
+            return row.id
+
+    progress.run_on_loop(store())
+    progress.update(1.0, "done")
+    return JobResult(
+        kind="artifact", ref=f"peril_structure:{structure.slug}@{structure.version}"
+    )

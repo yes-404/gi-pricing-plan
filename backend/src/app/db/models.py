@@ -1414,3 +1414,68 @@ class DiagnosticsRow(Base):
         UniqueConstraint("model_id", name="uq_diagnostics_model"),
         Index("ix_diagnostics_workspace", "workspace_id"),
     )
+
+
+class PerilStructureRow(Base):
+    """A Peril Structure (`02` §4.10, FR-MODEL-58..61).
+
+    Versioned and approvable in its own right, so it is shaped like `ModelRow` rather than
+    like `ModelComparisonRow`: a slug and a version, a lifecycle, and an approval request —
+    FR-MODEL-61 makes it the artifact a Rating Version references, and a referent reached
+    only by id is one nothing can cite by name.
+
+    **The composition freezes when the reconciliation is written**, enforced by a trigger
+    rather than only by the service. The reconciliation measures a specific set of models;
+    editing the set afterwards leaves a number attached to a composition that never produced
+    it, which is the same failure `models_fit_immutable` exists to prevent one table over.
+    """
+
+    __tablename__ = "peril_structures"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+
+    #: The `PerilComponent` list and the `ExcludedPeril` list, whole. Same reasoning as
+    #: `models.spec`: the platform reads them back through the contract type, and a
+    #: normalised peril table would be a second definition of a shape `model-schema` owns.
+    perils: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    excluded_perils: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    #: FR-MODEL-60's persisted reconciliation. Null only while `draft` — the CHECK below is
+    #: the layer a direct `UPDATE` cannot walk past.
+    reconciliation: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: Not a foreign key, for the reason `models.approval_request_id` is not: `MODEL`
+    #: depends on `GOV` and never the reverse (DEP-1).
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_peril_structures_slug_version"
+        ),
+        CheckConstraint("version >= 1", name="peril_structure_version_starts_at_one"),
+        # FR-MODEL-61's lifecycle, at the layer a direct `UPDATE` cannot walk past. Without
+        # it a structure could hold `live`, and a status no query branches on is skipped
+        # rather than refused — `model_status_is_in_the_lifecycle`'s lesson.
+        CheckConstraint(
+            "status IN ('draft', 'reconciled', 'review', 'approved', 'superseded', "
+            "'archived')",
+            name="peril_structure_status_is_in_the_lifecycle",
+        ),
+        # FR-MODEL-60: the reconciliation is the evidence an approval reads, so every state
+        # that can be approved or was approved carries one. `fitted_model_has_diagnostics`
+        # is the same invariant about the same kind of evidence.
+        CheckConstraint(
+            "status IN ('draft', 'archived') OR reconciliation IS NOT NULL",
+            name="reconciled_peril_structure_has_a_reconciliation",
+        ),
+        Index("ix_peril_structures_slug_status", "workspace_id", "slug", "status"),
+    )

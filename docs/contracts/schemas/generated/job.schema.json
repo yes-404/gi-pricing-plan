@@ -64,6 +64,7 @@
         "model.transparency",
         "model.backtest",
         "model.compare",
+        "peril_structure.reconcile",
         "objective.certify",
         "rating.compile",
         "rating.regression",
