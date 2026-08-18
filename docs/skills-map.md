@@ -241,7 +241,7 @@ that order.
 | Standard / practice | Relates to | Depth | Skills to research | Resources |
 |---|---|---|---|---|
 | **TAS 100 — Principles for Technical Actuarial Work** *(general)* | `06` dossiers §4.4; `02` diagnostics | ★★★ | The FRC's **general** standard, applying to all technical actuarial work regardless of domain. Requirements on judgement, data, assumptions, models and communications; what "sufficient documentation for another actuary to understand the work" means in practice — precisely what the generated dossier is trying to be. Read it *against* the §4.4 section list and check for gaps | [FRC — TAS 100 and TAG](https://www.frc.org.uk/library/standards-codes-policy/actuarial/tas-100/) |
-| **TAS 200 — Insurance** *(sector-specific)* | `01` assumptions & data; `02` model build; `06` dossiers | ★★★ | The **insurance-specific** standard that sits on top of TAS 100 — one of three Specific TASs (200 Insurance, 300 Pensions, 400 Funeral Plans) applying where public-interest risk is highest. **v2.0, published 20 Sep 2024, effective 1 Jan 2025.** The revision closed gaps in **assumption setting**, insurance transformations and audit, and added material to help practitioners consider the implications of the FCA's **Consumer Duty** — which makes it the standard that ties this platform's assumption/documentation trail to the fair-value work in `04`. **Scope caveat below.** | [FRC — TAS 200](https://www.frc.org.uk/library/standards-codes-policy/actuarial/tas-200/), [FRC revision announcement](https://www.frc.org.uk/news-and-events/news/2024/09/frc-publishes-revised-technical-actuarial-standards-for-the-insurance-sector/) |
+| **TAS 200 — Insurance** *(sector-specific)* | `01` assumptions & data; `02` model build; `06` dossiers | ★★★ | The **insurance-specific** standard that sits on top of TAS 100 — one of three Specific TASs (200 Insurance, 300 Pensions, 400 Funeral Plans) applying where public-interest risk is highest. **v2.0, published 20 Sep 2024, effective 1 Jan 2025.** The revision closed gaps in **assumption setting**, insurance transformations and audit, and added material to help practitioners consider the implications of the FCA's **Consumer Duty** — which makes it the standard that ties this platform's assumption/documentation trail to the fair-value work in `04`. **In scope — see below.** | [FRC — TAS 200](https://www.frc.org.uk/library/standards-codes-policy/actuarial/tas-200/), [FRC revision announcement](https://www.frc.org.uk/news-and-events/news/2024/09/frc-publishes-revised-technical-actuarial-standards-for-the-insurance-sector/) |
 | **APS X2 — Review of Actuarial Work** | `06` approval workflow; FR-GOV-11 | ★★ | The IFoA's standard on independent peer review: when it is required, what independence means, and how the reviewer's work is itself evidenced. Maps directly onto separation of duties and the evidence bundle | [IFoA — APS X2](https://actuaries.org.uk/standards/) |
 | **Model risk management principles** | `06` governance; OQ-GOV-4 risk tiering | ★★★ | Model identification and **tiering**, governance and ownership, development/implementation/use controls, independent validation, and an MRM policy. **Caveat worth knowing: PRA SS1/23 is written for banks, not insurers** — it does not apply to a GI insurer directly, but it is the clearest articulation of these principles in UK regulation and insurers commonly align to it voluntarily. Its five principles map almost one-to-one onto spec `06`, and it is the strongest argument for OQ-GOV-4 | [PRA SS1/23](https://www.bankofengland.co.uk/prudential-regulation/publication/2023/may/model-risk-management-principles-for-banks) (read with the applicability caveat above) |
 | **Three lines of defence** | `06` §1.4 actors; FR-GOV-4/5 | ★★ | Who owns what: the pricing team owns the model (first line), model risk and compliance challenge it (second), internal audit assures the whole framework (third). This is the organisational shape the RBAC roles must be able to express — particularly the read-everything, write-nothing **Auditor** role, which exists for the third line | [IIA — Three Lines Model (2020)](https://www.theiia.org/en/content/position-papers/2020/the-iias-three-lines-model/) |
@@ -250,21 +250,38 @@ that order.
 | **FCA Consumer Duty — price and value** | `04` GIPP and fairness constraints | ★★ | Fair value assessments, what evidence supports one, and how pricing decisions must be justified in outcome terms rather than technical ones. Sits alongside **ICOBS 6B** (§3b and above — the binding pricing rules, of which PS21/5 was merely the announcement), and **TAS 200 v2.0 added material specifically to help actuaries reason about Consumer Duty implications** — so read the two together rather than separately | [FCA PS22/9 — A new Consumer Duty](https://www.fca.org.uk/publications/policy-statements/ps22-9-new-consumer-duty) |
 | **Audit engagement practice** | `06` FR-GOV-32 regulatory export | ★★ | What an auditor *tests* versus what they *read*; preparing a walkthrough; control design versus operating effectiveness; sampling; assembling an evidence pack that answers the question asked rather than the one you prepared for. The regulatory export exists to make this a retrieval task rather than an archaeology project | IIA practice guides; ISAE 3402 / SOC 2 control-testing concepts as a mental model |
 
-#### Scope caveat on TAS 200 — resolve this before relying on it
+#### Scope of TAS 200 — resolved 2026-08-18, and it applies
 
-**TAS 100 applies to this platform's output regardless** — it is the general standard and
-covers all technical actuarial work. TAS 200 is narrower, and whether **pricing and premium
-rating** fall inside its scope could not be established from the FRC's public summaries;
-the scope statement lives in the standard text itself.
+**TAS 200 v2.0 covers this platform's work**, through the `Pricing frameworks` item in its
+§1.2 scope list: *"Technical actuarial work to support pricing frameworks"*. The glossary
+defines a **pricing framework** as the product pricing principles *and the methodologies,
+assumptions and models implementing those principles* that support an insurer's premium
+rates or product charges — and `insurer` is any undertaking effecting or carrying out
+contracts of insurance or reinsurance, with **no life/general split**. The models,
+assumptions and rationale this platform produces are framework components by the standard's
+own definition. Recorded as `06` **FR-GOV-45** (OQ-GOV-6).
 
-This is not a detail. If pricing is in scope, TAS 200's assumption-setting requirements
-bear directly on `02`'s factor, banding and grouping rationale and on `01`'s validation
-evidence, and the generated dossier (`06` §4.4) has to satisfy them. If it is not, TAS 100
-alone governs and the dossier's bar is lower.
+The caveat this section used to carry was right about one thing and wrong about the answer
+it guessed: the scope statement is indeed absent from the FRC's public summaries and had to
+be read in the standard, and the conservative interim position — *assume TAS 100 only* —
+turned out to be the wrong way round.
 
-**Read the standard and record the determination** — in `06` if it changes the dossier's
-required sections, otherwise here. Do not cite TAS 200 as binding on pricing work until
-someone has confirmed it is.
+**Three things worth knowing before citing it:**
+
+- **The unit of scope is the framework, not the quote.** A scoring call is not technical
+  actuarial work; the methodology, assumptions and models behind the rates are.
+- **There is no pricing-specific provisions section.** Sections 2–6 cover valuation, capital,
+  transformations, audit and with-profits. What binds pricing work is **§1, Provisions for
+  all work in scope** — P1.1 (document material factors arising from customer-outcome
+  obligations, which is where **Consumer Duty** enters the standard), P1.2 (assumptions
+  consistent with those used for business planning, reserving and capital), P1.3 (a
+  persistent gap between actual and assumed experience considered and documented), P1.4
+  (communications describe material inconsistencies).
+- **TAS 200 work is TAS 100 work** (§1.4), so the two-layer reading order above still holds,
+  and it applies to work completed on or after **1 January 2025** (§1.3).
+
+`06` §4.4 gained sections **18** and **19** to carry P1.1 and P1.2/P1.4. Verified against the
+FRC's published PDF, not a summary.
 
 ### 9.3 The one thing to internalise
 
