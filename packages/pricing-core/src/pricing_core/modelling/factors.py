@@ -75,6 +75,21 @@ def resolve_factors(
     terms: dict[str, str] = {}
     categorical: list[str] = []
 
+    by_id = {factor.id: factor for factor in factors}
+    #: Every factor named as an operand of some interaction in this call. Such a factor is
+    #: resolved — the cross needs its levels — but contributes **no term of its own**
+    #: (FR-MODEL-91). The cross is a *combined* factor spanning every cell, so its operands'
+    #: main effects are collinear with it; designing on both is a rank deficiency dressed up
+    #: as a richer model. A caller wanting `age` on its own asks for a model without the
+    #: cross, which is a different Model Spec and a comparison between the two.
+    operand_ids = {
+        operand
+        for factor in factors
+        if factor.type is FactorType.INTERACTION
+        for operand in factor.operand_factor_ids
+    }
+    resolved: dict[UUID, pl.Series] = {}
+
     for factor in factors:
         if factor.prohibited:
             raise FactorResolutionError(
@@ -88,6 +103,12 @@ def resolve_factors(
                 "not have (FR-MODEL-2). A factor is defined against a Dataset and resolved "
                 "against a version; this is that resolution failing."
             )
+
+        # Interactions are resolved in a second pass: an operand may appear anywhere in the
+        # sequence, or after the factor that crosses it, and a resolution that depended on
+        # the caller's ordering would be a fit that depended on it.
+        if factor.type is FactorType.INTERACTION:
+            continue
 
         source = factor.source_columns[0]
         if factor.type is FactorType.IDENTITY:
@@ -114,12 +135,74 @@ def resolve_factors(
         column = source if factor.type is FactorType.IDENTITY else f"{factor.slug}__resolved"
         if factor.type is not FactorType.IDENTITY:
             produced[column] = series.alias(column)
+        resolved[factor.id] = series
+        if factor.id in operand_ids:
+            # Resolved for the cross that needs it, and deliberately not a term. See
+            # `operand_ids` above.
+            continue
         terms[factor.slug] = column
         if series.dtype in (pl.String, pl.Categorical, pl.Enum, pl.Boolean):
             categorical.append(column)
 
-    resolved = frame.with_columns(list(produced.values())) if produced else frame
-    return FactorMatrix(frame=resolved, terms=terms, categorical=tuple(categorical))
+    for factor in factors:
+        if factor.type is not FactorType.INTERACTION:
+            continue
+        column = f"{factor.slug}__resolved"
+        series = _cross(factor, by_id, resolved)
+        produced[column] = series.alias(column)
+        terms[factor.slug] = column
+        categorical.append(column)
+
+    out = frame.with_columns(list(produced.values())) if produced else frame
+    return FactorMatrix(frame=out, terms=terms, categorical=tuple(categorical))
+
+
+#: What separates two operands' levels in a crossed level label. A pipe with spaces rather
+#: than an `x`: band labels contain hyphens and digits and group labels can contain almost
+#: anything, and a separator that could occur *inside* a level makes the cross ambiguous to
+#: read back — which the rate table, the relativity table and the model document all do.
+CROSS_SEPARATOR = " | "
+
+
+def _cross(
+    factor: Factor, by_id: Mapping[UUID, Factor], resolved: Mapping[UUID, pl.Series]
+) -> pl.Series:
+    """One interaction's design column: its operands' levels, crossed (FR-MODEL-91).
+
+    Only **observed** combinations become levels, which is what string concatenation gives
+    for free. A full Cartesian product would put a coefficient on cells with no exposure —
+    and on any real cross most cells have none, so that is the ordinary case rather than a
+    corner.
+    """
+    parts: list[pl.Series] = []
+    for operand_id in factor.operand_factor_ids:
+        operand = by_id.get(operand_id)
+        if operand is None:
+            raise FactorResolutionError(
+                f"factor {factor.slug!r} crosses factor {operand_id}, which was not "
+                "supplied. Resolving the cross without one of its sides would produce the "
+                "other side alone, under this factor's name."
+            )
+        if operand.type is FactorType.INTERACTION:
+            raise FactorResolutionError(
+                f"factor {factor.slug!r} crosses {operand.slug!r}, which is itself an "
+                "interaction. Declare a three-way interaction as one factor over three "
+                "operands: nesting gives two names for one design column."
+            )
+        series = resolved[operand_id]
+        if series.dtype not in (pl.String, pl.Categorical, pl.Enum, pl.Boolean):
+            raise FactorResolutionError(
+                f"factor {factor.slug!r} crosses {operand.slug!r}, which resolves to "
+                f"{series.dtype} rather than to levels. Crossing a continuous factor is a "
+                "varying slope, and a rate table has no cell for one — band or group it "
+                "first, then cross the result (OQ-MODEL-12)."
+            )
+        parts.append(series.cast(pl.String))
+
+    crossed = parts[0]
+    for part in parts[1:]:
+        crossed = crossed + CROSS_SEPARATOR + part
+    return crossed
 
 
 def _banding(available: Mapping[UUID, Banding], factor: Factor) -> Banding:
