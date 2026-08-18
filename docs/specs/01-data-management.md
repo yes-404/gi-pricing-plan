@@ -158,6 +158,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-27** | Profiles are computed with DuckDB directly over the version's parquet files and persisted as an artifact. The UI never recomputes a profile client-side or ad-hoc on request. |
 | **FR-DATA-28** | A **profile comparison** between any two Dataset Versions of the same Dataset is available on demand: per-column PSI, mean shift, null-rate shift, new/vanished levels. This is the same computation that the distributional validation layer consumes. |
 | **FR-DATA-46** | *(appended 2026-08-17; OQ-OVR-7, decided)* FR-DATA-26's one-way row names its two mean fields **`mean_severity`** and **`mean_burning_cost`** — not `severity_minor` and `burning_cost_minor`. Both are means and therefore floats, kept as floats deliberately, because rounding a mean to whole minor units would lose the precision the confidence interval beside it expresses. The values are right; the *names* are what FR-OVR-7 objects to, since `_minor` is reserved for integer minor units. Both stay expressed in the workspace currency's minor unit, so only the names change. **Not yet delivered**: the rename touches `01`'s published profile contract, the `banding` and `grouping` schemas that embed the row, the frontend that reads it and the seeded demo, and OQ-OVR-7 decided it lands **in the slice that next changes the profile contract** rather than as a change of its own. Until then both names are excluded by name from the money scan in `backend/tests/test_contracts.py`, with the reason beside them, and **that exclusion may not grow**: a ratio recognisable by shape is excluded by a rule instead (`_per_parameter`), and a third hand-written name means the rename is overdue. Owner: the next slice to change the profile contract. |
+| **FR-DATA-48** | *(appended 2026-08-18; `ColumnProfile` had no `histogram` while `01` §4.7's contract example, `docs/contracts/schemas/profile.schema.json` and §5.3's Profile view all declared one — a divergence recorded in `docs/roadmap.md` and built around in silence since 2026-08-15.)* Profiling additionally produces, for every **numeric non-identifier** column, a **histogram**: `HISTOGRAM_BINS` (20) equal-width bins over the observed `[min, max]`, published as `edges` (one more than there are bins), `counts`, and — where the version carries an exposure column — one exact decimal `exposure` weight per bin. Bins are half-open, `[e(i), e(i+1))`, except the last, which is closed. A constant column yields a single bin. **Equal-width bins over the observed range, computed from edges chosen in Python rather than by either engine's own histogram function**: FR-DATA-27 requires one answer regardless of engine, and every divergence `test_the_two_profiling_paths_agree` has ever caught came from an engine default — tie-breaking, null handling, quantile interpolation. |
 
 
 ### 3.5 Reference data
@@ -579,6 +580,13 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
   ]
 }
 ```
+
+> *(2026-08-18)* The example above has always shown a `histogram`, and so has the committed
+> contract; `ColumnProfile` did not carry one until FR-DATA-48. **The contract was right and
+> the requirement was incomplete** — FR-DATA-25 enumerates the statistics and never named
+> this one. The example's uneven edges were illustrative, not a specification: FR-DATA-48
+> fixes equal-width bins, because two engines must agree and quantile-derived edges collapse
+> to duplicates on a low-cardinality column, with each engine deduplicating differently.
 
 ### 4.8 `ReferenceTable` / `ReferenceTableVersion`
 

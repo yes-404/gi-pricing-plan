@@ -1173,6 +1173,16 @@
             "title": "Dtype",
             "type": "string"
           },
+          "histogram": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Histogram"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "maximum": {
             "anyOf": [
               {
@@ -4460,6 +4470,41 @@
         ],
         "title": "HessianStrategy",
         "type": "string"
+      },
+      "Histogram": {
+        "additionalProperties": false,
+        "description": "The binned distribution of a numeric column (`01` §4.7, FR-DATA-48).\n\nBin *edges* rather than a bin width, because the last bin is closed and the others are\nhalf-open: `[e0, e1) … [e(n-1), en]`. A reader given only a width has to guess which\nend carries the maximum, and the two profiling engines would guess differently.\n\n`exposure` is optional and, when present, holds one exact decimal weight per bin\n(FR-OVR-7). A count histogram of an exposure-weighted book overstates the tail: a bin\nof 200 policies each on risk a fortnight is not the same risk as 200 policies on risk a\nyear, and pricing reads the second.",
+        "properties": {
+          "counts": {
+            "default": [],
+            "items": {
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "array"
+          },
+          "edges": {
+            "default": [],
+            "items": {
+              "type": "number"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "exposure": {
+            "default": [],
+            "items": {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            "title": "Exposure",
+            "type": "array"
+          }
+        },
+        "title": "Histogram",
+        "type": "object"
       },
       "Job": {
         "additionalProperties": false,
