@@ -81,6 +81,13 @@ Thumbs.db
 # ---- Claude Code local state (skills and settings ARE committed) ----
 .claude/settings.local.json
 
+# Harness-created worktrees (EnterWorktree writes them here, unlike the scratch worktrees
+# git-hygiene puts under $CLAUDE_JOB_DIR/tmp). Each one is a second checkout of this repo
+# with a `.git` file, so `git add -A` does not sweep its files in — it adds the directory as
+# an *embedded git repository*, a gitlink no clone can resolve. This repo runs parallel
+# sessions, so a kept worktree is normal and may be someone else's live work.
+.claude/worktrees/
+
 # planning-with-files working memory. The skill writes an agent's live plan state into the
 # working directory; it is per-session scratch, not a record. The durable record of a
 # decision belongs in docs/ or .claude/notes/ (NT-NNNN), which the audit can see — a plan
