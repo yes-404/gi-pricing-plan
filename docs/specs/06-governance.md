@@ -198,6 +198,8 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
     {"artifact_type": "model", "approvers_required": 1,
      "approver_roles": ["approver"],
      "evidence": ["diagnostics", "transparency_artifact_if_non_glm", "model_comparison_if_predecessor"]},
+    {"artifact_type": "peril_structure", "approvers_required": 1,
+     "approver_roles": ["approver"], "evidence": ["reconciliation"]},
     {"artifact_type": "rating_version", "approvers_required": 2,
      "approver_roles": ["approver"],
      "evidence": ["structural_diff", "rate_table_diffs", "regression_run", "dislocation_run", "gipp_check_if_enabled", "change_summary"]},
@@ -212,6 +214,22 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
 ```
 
 `separation_of_duties.configurable: false` is deliberate and is not a placeholder (R1).
+
+> **`peril_structure` added 2026-08-18 (W5, the peril-structure slice).** `02` FR-MODEL-61
+> has made a Peril Structure approvable since Phase 0, and `peril_structure` has been in
+> `ARTIFACT_TYPES` for as long — but with no entry here, `submit` refuses it with "no
+> approval policy for this artifact type". That is a *correct* refusal, which is what made
+> it invisible: the machine was working exactly as FR-GOV-12 specifies, on an artifact
+> nobody could ever approve.
+>
+> Its evidence is the **reconciliation**, because `02` FR-MODEL-60 makes that the coherence
+> check an approver is being asked to accept. It is enforced structurally as well as by
+> policy: `reconciled` is the only state with an edge into `review`, and a reconciliation
+> whose status is `fail` is refused at submission — the tolerance is the submitter's own
+> declaration, so missing it is failing a test they set themselves.
+>
+> This is an **addition** to §3.3's evidence floor and removes nothing, so it sits inside
+> OQ-GOV-7's recommendation rather than pre-empting it.
 
 ### 4.3 `ApprovalRequest` and `ApprovalDecision`
 
