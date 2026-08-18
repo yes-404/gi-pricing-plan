@@ -100,6 +100,49 @@ That pair is worth more than either line alone: it shows the mode changes the an
 is *why* FR-RATE-12 makes rounding an explicit per-step declaration. (The half-even value
 is also the one intuition gets wrong.)
 
+## Loosening a tolerance? Pin the other side of it in the same commit
+
+A numerical check that was made *more permissive* to stop false positives has silently
+become a weaker check, and nothing in the suite notices: every existing test still passes,
+because they all feed it correct input. That is the shape of a check that stops checking.
+
+The rule: when a tolerance, floor or noise term moves, add a test that feeds the check a
+**deliberately wrong** value sized just above the new threshold, and assert it still fails.
+Two tests, because they answer different questions:
+
+```python
+# 1. Broken input is caught at all — a 1 % error in a derivative is the shape of a
+#    dropped constant, and it must reach `failed`, not `warn`.
+_break(monkeypatch, T.GAMMA, "hess", lambda d: d * 1.01)
+
+# 2. Broken input is caught *in the regime the loosening touched* — an absolute error of
+#    1e-08, two hundred times the noise where this hessian is smallest.
+_break(monkeypatch, T.GAMMA, "hess", lambda d: d + 1e-8)
+```
+
+Break it **upstream of compilation**, not in the object the check receives, so the whole
+public path runs exactly as it does for real input:
+
+```python
+good = _TEMPLATES[template]
+fn = getattr(good, which)
+monkeypatch.setitem(
+    _TEMPLATES, template, replace(good, **{which: lambda y, f, p: break_it(fn(y, f, p))})
+)
+```
+
+`dataclasses.replace` on a frozen catalogue entry plus `monkeypatch.setitem` is the whole
+mechanism, and it needs no seam in the production code.
+
+Sizing the perturbation is where the thinking is: it must be **large against the noise the
+check now subtracts** and **small in absolute terms**, or the test proves only that a
+grossly wrong value fails, which was never in doubt. Check where the true quantity is
+*smallest* over the sampled grid — that is where a noise term hides an error, and where the
+test has to bite. If no sampled point reaches that regime, say so in the docstring rather
+than asserting a status the grid happens to produce. (`certify_objective`'s derivative
+check, `02` §4.7 — the gradient never gets near zero on a Gamma money grid, so only the
+hessian can carry this test.)
+
 ## Configuration
 
 - **`--import-mode=importlib`** — the mode pytest recommends for new projects, and required
@@ -382,6 +425,8 @@ unpromotable since the spec was amended three days earlier. Fixtures produced al
 hard fail; nothing in between.
 
 ## Verified
+
+2026-08-18 — W5, custom objectives. The tolerance rule above came from raising a certification grid's floor from 600 to 1 000 points: three of twelve templates then warned on derivatives that were exactly correct, the fix loosened the agreement check, and nothing in the suite would have noticed that it had stopped catching a wrong one. Suite at 1213.
 
 2026-08-18 — W5, prediction. The two rules above came from this slice: the `inverse` link
 was declared in four places and fitted in none, and a legacy-model fixture was refused by the

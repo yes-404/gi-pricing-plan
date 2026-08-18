@@ -14,7 +14,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-__all__ = ["BandingError", "FactorResolutionError", "GroupingError", "ModellingError"]
+__all__ = [
+    "BandingError",
+    "FactorResolutionError",
+    "GroupingError",
+    "ModellingError",
+    "NonFiniteDerivativeError",
+    "ObjectiveError",
+]
 
 
 class ModellingError(RuntimeError):
@@ -46,3 +53,21 @@ class BandingError(ModellingError):
 
 class GroupingError(ModellingError):
     """A Grouping that is not exhaustive, or cannot be proposed (`GROUPING_*`)."""
+
+
+class ObjectiveError(ModellingError):
+    """A Custom Objective that cannot be compiled, certified or used (`OBJECTIVE_*`)."""
+
+
+class NonFiniteDerivativeError(ObjectiveError):
+    """A gradient or hessian went NaN/inf during a fit (`OBJECTIVE_NONFINITE_DERIVATIVE`).
+
+    FR-MODEL-48 requires the abort to name the boosting **round** and the **offending input
+    range**, because "the objective produced NaN" is the one diagnosis that tells an author
+    nothing: every non-finite derivative looks alike, and the input that produced it is the
+    only thing that distinguishes a bad parameter from a bad domain from a bad y.
+    """
+
+    def __init__(self, message: str, *, round_index: int, terms: Sequence[str] = ()) -> None:
+        super().__init__("OBJECTIVE_NONFINITE_DERIVATIVE", message, terms=terms)
+        self.round_index = round_index

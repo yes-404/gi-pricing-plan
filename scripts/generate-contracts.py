@@ -78,6 +78,18 @@ GENERATED_SHAPES: dict[str, str] = {
     # first written form. It is also the artifact `05-monitoring.md` reads as its evidence
     # bridge, which makes publishing it the point rather than a side effect.
     "backtest": "Backtest",
+    # Added 2026-08-18 (W5, custom objectives). Both have hand-authored Phase-0 contracts
+    # and, until now, no generated counterpart — the position `banding` and `grouping` were
+    # in when four divergences had accumulated unseen. `custom-objective` is also the shape
+    # an approver's evidence hangs from (FR-MODEL-42), so a field the contract promises and
+    # the model does not carry is a governance gap rather than a documentation one.
+    "custom-objective": "CustomObjective",
+    "objective-certificate": "ObjectiveCertificate",
+    # No hand-authored counterpart: FR-MODEL-47 named the blast-radius query and no document
+    # defined what it returns. This is the shape's first written form, and it is the one
+    # `03 — Rating Engine` fills in — `rating_versions` and `deployments` are published
+    # empty on purpose (FR-MODEL-87), which is only legible if the shape is published.
+    "objective-usage": "ObjectiveUsage",
 }
 
 

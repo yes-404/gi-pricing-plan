@@ -154,11 +154,14 @@ Ordered by *risk × unfamiliarity*, not by build order:
    mechanics~~ ✔ and ~~LightGBM's `init_score`~~ ✔ (S3 found the scoring-side asymmetry —
    FR-MODEL-72) are settled. **The restricted AST parser is no longer untouched either**:
    `pricing_core.data.expressions` was built in W4 for `01` FR-DATA-10, and it *translates*
-   to a Polars expression rather than sandboxing `eval`. What remains is the **certification
-   checks** (FR-MODEL-68..70), which land in Phase 1 against templates, and — in **Phase 2**,
+   to a Polars expression rather than sandboxing `eval`. ~~What remains is the **certification
+   checks** (FR-MODEL-68..70)~~ ✔ **built 2026-08-18 (W5)**, against the twelve-template
+   catalogue: Richardson-extrapolated central differences at `h = 1e-4`, with the tolerance
+   floored *and* offset by each point's own finite-difference noise (§4.7's amendment records
+   why both). The research this row asked for is discharged; what is left is — in **Phase 2**,
    with `expression` objectives (FR-MODEL-75) — a second compilation target from that same
    parsed tree to vectorised gradient/hessian kernels. That target, not the parser, is where
-   user input reaches the numerical core.
+   user input reaches the numerical core, and it is the only part of this row still open.
 2. **~~ZEN Engine decimal semantics~~ ✔ resolved — study the boundaries instead.** Engine
    arithmetic is exact `rust_decimal`. The remaining risk is `arbitrary_precision` across
    the binding and `maths-nopanic` returning `0` (FR-RATE-56/57).

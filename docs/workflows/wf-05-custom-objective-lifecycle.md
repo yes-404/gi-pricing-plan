@@ -9,6 +9,27 @@
 > objective is a governance risk and a mis-specified objective is a mispricing risk. The
 > whole point of this workflow is that neither can happen quietly.
 
+> **What of this is built — 2026-08-18 (W5, custom objectives).** **Route A is real**, and
+> Route B is not. The twelve-template catalogue, the nine §4.7 checks, the certificate, the
+> FR-MODEL-46 lifecycle and the fit path (Phase C) are built and tested; the `expression`
+> kind is Phase 2 behind `expression_objectives_enabled`, and `POST /custom-objectives/{id}/derive` refuses with
+> `OBJECTIVE_KIND_NOT_ENABLED` rather than 404 — the route exists so that the refusal has
+> somewhere to happen. Four steps in Route A and Phase C read differently now:
+>
+> * **The precondition permission is superseded.** `custom_objective:author` does not exist;
+>   the built surface checks `model:read` / `model:fit` / `model:submit`. `06` §4.1 carries
+>   the resolution and OQ-GOV-8 carries the Phase 2 question.
+> * **A3 is not built** (`02` §5.3, owner W6b) — and the *"implied restoration loading"* it
+>   shows is computed nowhere. `capped_gamma` is the Gamma loss on `min(y, cap)` and carries
+>   no loading: restoring the uncapped mean is a rating-side decision, not part of the loss
+>   (`02` §4.5's 2026-08-18 amendment).
+> * **A7 overstates the common case.** All nine checks are emitted for every template, and a
+>   template can legitimately warn — `certified_with_findings` is the ordinary outcome for a
+>   pricing loss, not the exceptional one. Only `failed` blocks.
+> * **C3's compiled tree is Phase 2's.** In Phase 1 `compile_objective` selects an analytic
+>   gradient and hessian from the catalogue; there is no user text to compile, which is why
+>   the sandbox question could be deferred rather than answered.
+
 ---
 
 ## 1. Preconditions

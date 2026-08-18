@@ -92,7 +92,7 @@ auditor, or a regulator:
 | **FR-GOV-10** | Submission requires: a complete Evidence Bundle (§3.3), a change summary, and a completed checklist for that artifact type. Missing items block submission with a field-level explanation (R4). |
 | **FR-GOV-11** | **Separation of duties**: the submitter cannot approve, and where two approvals are required they must be distinct Principals (R1). Enforced in the backend. |
 | **FR-GOV-12** | An **Approval Policy** per workspace defines, per artifact type (and per target environment for Rating Versions): required approver count, permitted approver roles, and required evidence. Defaults are specified in §4.2. |
-| **FR-GOV-13** | `changes_requested` returns the artifact to **its pre-submission state** and requires a comment. The request and the subsequent resubmission are both audited, so a reviewer's concerns and their resolution are traceable. *(Amended 2026-08-17, W5. This said `draft`, and for a Model that is wrong: `02` uses `draft` for a specification reserved but not yet fitted, and `02` R2 makes a fitted model's coefficients immutable — so a model returned from review cannot un-fit, and `draft` would describe an artifact with numbers as one without. A Model returns to `fitted`; `rejected` and `withdrawn` return it there too. For artifact types whose pre-submission state **is** `draft`, nothing changes.)* |
+| **FR-GOV-13** | `changes_requested` returns the artifact to **its pre-submission state** and requires a comment. The request and the subsequent resubmission are both audited, so a reviewer's concerns and their resolution are traceable. *(Amended 2026-08-17, W5. This said `draft`, and for a Model that is wrong: `02` uses `draft` for a specification reserved but not yet fitted, and `02` R2 makes a fitted model's coefficients immutable — so a model returned from review cannot un-fit, and `draft` would describe an artifact with numbers as one without. A Model returns to `fitted`; `rejected` and `withdrawn` return it there too. For artifact types whose pre-submission state **is** `draft`, nothing changes. **Extended 2026-08-18, W5: a Custom Objective returns to `certified`**, for the same reason and with a sharper edge — a certificate is pinned to the objective version (`02` FR-MODEL-42), the version did not change when an approver asked for one, and returning it to `draft` would discard evidence that is still valid and make re-certification the price of a comment.)* |
 | **FR-GOV-14** | Approvals are **pinned**: the decision records the exact artifact version and evidence artifact ids. If any referenced artifact changes, the approval does not carry over — a new version needs a new approval (FR-OVR-1). |
 | **FR-GOV-15** | An approval can be **withdrawn** before deployment by an Approver or an Admin with a reason; it cannot be withdrawn after the artifact is live (the correct action is then a rollback or a new version). |
 | **FR-GOV-16** | The **Approvals inbox** shows each Approver their pending requests with the evidence inline — diffs, diagnostics, dislocation, GIPP — so review does not require assembling context by hand. |
@@ -184,6 +184,25 @@ auditor, or a regulator:
 
 Notably absent from Pricing Actuary: every `*:approve` permission and
 `rating_version:deploy_*` (R1, FR-GOV-6).
+
+> **Superseded 2026-08-18 (W5, the custom-objectives slice).** The role above lists
+> `custom_objective:author` and `custom_objective:submit`. **Neither exists**, and the built
+> surface checks `model:read`, `model:fit` and `model:submit` instead — the same three
+> permissions that govern the fits those objectives are for.
+>
+> The spec was the wrong side. Phase 1's objectives are the §4.5 template catalogue
+> (FR-MODEL-75): choosing `capped_gamma` with a cap is choosing how a model is fitted, by
+> the person who fits it, and a permission no role would ever grant separately is vocabulary
+> without a decision behind it. The `Permission` enum is closed by design (`06` §3.1) so
+> that a screen can enumerate what a role grants; two strings in it that nothing checks are
+> exactly what a closed enum exists to prevent.
+>
+> **The separation this would have bought is intact and is bought elsewhere**: FR-GOV-11
+> keeps the submitter out of the approval, and `02` FR-MODEL-46 requires an Approver who is
+> not the author. What is *not* settled is Phase 2, where an `expression` objective is
+> author-written maths rather than a parameter on a shipped loss — a case for a distinct
+> authoring permission that the template catalogue does not make. Recorded as **OQ-GOV-8**
+> rather than decided here.
 
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
@@ -504,3 +523,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-GOV-5** | How much commentary is *required* in a dossier before an approval can be submitted? Requiring it improves documentation quality and invites boilerplate; not requiring it produces dossiers that are all numbers and no reasoning. |
 | **OQ-GOV-6** | Does **TAS 200 (Insurance)** cover pricing and premium rating, or only reserving, capital and Solvency II actuarial-function work? TAS 100 applies to this platform's output regardless. If TAS 200 also applies, its assumption-setting requirements (strengthened in v2.0, effective 2025-01-01) bear directly on `02`'s factor/banding/grouping rationale and `01`'s validation evidence, and §4.4's dossier sections must satisfy them. The scope statement is in the standard text, not in the FRC's public summaries. |
 | **OQ-GOV-7** | Does `06` §3.3's per-artifact evidence table or `06` §4.2's `ApprovalPolicy` defaults decide what a submission actually requires? For a **Model** the two disagree: §3.3 requires diagnostics *plus* a transparency artifact where non-GLM, a model comparison where a predecessor exists, factor/banding/grouping rationale and dataset lineage; §4.2's default entry requires `evidence: ["diagnostics"]` and nothing else. The code enforces §4.2, because that is the artifact a workspace can edit (FR-GOV-12) and the only one a check can read. **2026-08-17:** still open, but its precondition has fired — the transparency kind is now built *and* checked at submission (`02` FR-MODEL-89), so it is gated before Phase 1b rather than Phase 3. |
+| **OQ-GOV-8** | Does an `expression` Custom Objective (Phase 2, `02` FR-MODEL-75) need an authoring permission distinct from `model:fit`? Raised 2026-08-18 by superseding `custom_objective:author`/`custom_objective:submit` in §4.1: for a template objective the two are the same act, and for author-written maths they may not be. Recommendation: decide with the `expression` kind, not before. |

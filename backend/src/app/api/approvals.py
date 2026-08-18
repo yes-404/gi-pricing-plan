@@ -40,6 +40,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as service
 from app.platform import modelling as modelling_service
+from app.platform import objectives as objectives_service
 from model_schema import (
     ApprovalPolicy,
     ApprovalStatus,
@@ -312,11 +313,17 @@ async def _carry_to_the_artifact(
 
     One call per artifact type rather than a branch here: each module's function returns
     `None` for a request that is not its own, so adding a type is a change in that module
-    and not in this route. Today only `model` has a lifecycle in code — a Custom Objective,
-    a Peril Structure and a Rating Version each gain one with the slice that builds them,
-    and until then their requests decide without an artifact to move.
+    and not in this route. `model` and `custom_objective` have lifecycles in code — a
+    Peril Structure and a Rating Version each gain one with the slice that builds them, and
+    until then their requests decide without an artifact to move.
     """
     await modelling_service.apply_approval_decision(
+        session,
+        workspace_id=caller.workspace_id,
+        actor=caller.principal,
+        request=request,
+    )
+    await objectives_service.apply_approval_decision(
         session,
         workspace_id=caller.workspace_id,
         actor=caller.principal,

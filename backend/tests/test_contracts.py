@@ -17,6 +17,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from typing import Final
 
 import pytest
 
@@ -250,9 +251,16 @@ def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
 #: the authored one's `properties`, and that is not a divergence.
 ENVELOPE_FIELDS = frozenset({"id", "slug", "version", "dataset_id"})
 
+#: `custom-objective` declares `template` and `params` inside an `if kind == template`
+#: branch rather than in `properties` — the same carry-through as the envelope, for the
+#: same reason: the field is declared, just not where a flat set-comparison looks.
+CONDITIONAL_FIELDS: Final[dict[str, frozenset[str]]] = {
+    "custom-objective": frozenset({"template", "params"}),
+}
+
 
 @pytest.mark.req("FR-OVR-6")
-@pytest.mark.parametrize("slug", ["banding", "grouping"])
+@pytest.mark.parametrize("slug", ["banding", "grouping", "custom-objective"])
 def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:
     """Both directions, for the shapes with a hand-authored Phase-0 contract.
 
@@ -277,7 +285,8 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
 
-    declared, produced = set(authored["properties"]), set(generated["properties"])
+    declared = set(authored["properties"]) | CONDITIONAL_FIELDS.get(slug, frozenset())
+    produced = set(generated["properties"])
     assert not declared - produced, (
         f"the contract declares fields the model lacks: {sorted(declared - produced)}"
     )

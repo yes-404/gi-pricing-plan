@@ -24,8 +24,10 @@ import polars as pl
 import pytest
 
 from model_schema import (
+    TEMPLATE_APPLICABILITY,
     Banding,
     BandingMethod,
+    CustomObjective,
     EarlyStopping,
     Factor,
     FactorType,
@@ -33,7 +35,11 @@ from model_schema import (
     GbmSpec,
     LossTreatment,
     MonotonicDirection,
+    ObjectiveBackend,
+    ObjectiveStatus,
+    ObjectiveTemplate,
     OffsetSpec,
+    ResponseKind,
     SplitRef,
 )
 from pricing_core.modelling.gbm import GbmFitError, fit_gbm, predict_gbm
@@ -438,19 +444,21 @@ def test_an_objective_outside_the_supported_set_is_named_not_passed_through(
         fit_gbm(_frequency_data(), spec, FACTORS)
 
 
-@pytest.mark.req("FR-MODEL-26")
+@pytest.mark.req("FR-MODEL-39")
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_a_custom_objective_is_refused_while_none_can_exist(backend: str) -> None:
-    """FR-MODEL-38's Custom Objectives are unbuilt, and R4 makes an unapproved one
-    unusable anyway.
+def test_a_custom_objective_reference_with_no_artifact_is_refused(backend: str) -> None:
+    """The reference is not the loss, and `pricing-core` cannot fetch the difference.
 
-    Refused by name rather than by an `AttributeError` deeper in, so the message says which
-    capability is missing rather than which line failed.
+    Until 2026-08-18 this refusal read "Custom Objectives are not built"; they are now, and
+    the refusal that remains is ADR-0001's. `pricing-core` does not read the objective
+    store, so a spec naming a reference with no artifact beside it is a caller that
+    resolved nothing, and the message says so rather than failing deeper in.
     """
     spec = _spec(backend, objective=GbmFunctionRef(
         kind="custom", ref="custom_objective:capped-gamma@2"))
-    with pytest.raises(GbmFitError, match="custom_objective:capped-gamma@2"):
+    with pytest.raises(GbmFitError, match="custom_objective:capped-gamma@2") as raised:
         fit_gbm(_frequency_data(), spec, FACTORS)
+    assert raised.value.code == "OBJECTIVE_NOT_SUPPLIED"
 
 
 # --------------------------------------------------------------------------------------
@@ -659,3 +667,318 @@ def test_a_boosted_models_parameter_count_is_its_leaves(backend: str) -> None:
     assert diagnostics.complexity.exposure_per_parameter is not None
     assert diagnostics.gbm.tree_count == 40
     assert diagnostics.gbm.max_depth <= 3
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-39..46 — fitting under a Custom Objective
+# --------------------------------------------------------------------------------------
+
+
+def _custom(
+    template: ObjectiveTemplate = ObjectiveTemplate.POISSON,
+    *,
+    slug: str = "capped-gamma",
+    version: int = 2,
+    status: ObjectiveStatus = ObjectiveStatus.APPROVED,
+    **over: object,
+) -> CustomObjective:
+    """A fittable Custom Objective, defaulting to the template's own applicability.
+
+    `status` defaults past `draft` and so a `certificate_id` is required — the contract
+    refuses one without it, which is FR-MODEL-42 and is tested where it lives.
+    """
+    fields: dict[str, object] = {
+        "id": uuid4(), "slug": slug, "version": version, "template": template,
+        "params": dict(_DEFAULTS.get(template, {})),
+        "applicability": TEMPLATE_APPLICABILITY[template],
+        "status": status, "certificate_id": uuid4(),
+    }
+    fields.update(over)
+    return CustomObjective(**fields)  # type: ignore[arg-type]
+
+
+#: Parameters for the templates used below. The catalogue's own defaults are resolved at
+#: compile time; these are the ones with no default worth guessing at.
+_DEFAULTS: dict[ObjectiveTemplate, dict[str, float]] = {
+    ObjectiveTemplate.FOCAL_BINOMIAL: {"gamma": 2.0},
+}
+
+
+def _custom_spec(backend: str, objective: CustomObjective, **over: object) -> GbmSpec:
+    fields: dict[str, object] = {
+        "objective": GbmFunctionRef(
+            kind="custom",
+            ref=f"custom_objective:{objective.slug}@{objective.version}",
+        ),
+        "response": ResponseKind.CLAIM_COUNT,
+    }
+    fields.update(over)
+    return _spec(backend, **fields)
+
+
+@pytest.mark.req("FR-MODEL-72")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_objective_prediction_scales_exactly_with_exposure(backend: str) -> None:
+    """FR-MODEL-72's test again, and it is not a duplicate of the builtin one.
+
+    A custom objective changes *who applies the inverse link* on both backends at once:
+    XGBoost's `predict` transforms under a builtin objective and cannot under a callable
+    one, having been handed gradients and no link. Both branches of `predict_gbm` are
+    therefore on a different path here from the one the builtin test exercises, and a
+    branch that returned the raw margin would come back as a ratio of `exp(log 2)` — no,
+    of 1, because the margin is additive and the exposure doubling is not in it at all.
+    """
+    data = _frequency_data()
+    objective = _custom()
+    fit = fit_gbm(data, _custom_spec(backend, objective), FACTORS, objective=objective)
+
+    single = predict_gbm(fit.result, fit.booster_bytes, data)
+    doubled = predict_gbm(
+        fit.result, fit.booster_bytes,
+        data.with_columns(pl.col("exposure_years") * 2.0),
+    )
+    ratio = (doubled / single).to_numpy()
+    assert np.allclose(ratio, 2.0, rtol=1e-5), f"{backend}: exposure is not in the score"
+
+
+@pytest.mark.req("FR-MODEL-39")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_poisson_reproduces_the_observed_claim_total(backend: str) -> None:
+    """The `poisson` template *is* `count:poisson`, so the fit it produces must be one.
+
+    Total predicted claims against total observed is the check an actuary makes first, and
+    it is the one that fails loudly when the offset, the link or the gradient is wrong —
+    each of which is on a different code path here from the builtin fit.
+    """
+    data = _frequency_data()
+    objective = _custom()
+    fit = fit_gbm(data, _custom_spec(backend, objective), FACTORS, objective=objective)
+
+    predicted = predict_gbm(fit.result, fit.booster_bytes, data).sum()
+    observed = float(data["claim_count"].sum())
+    assert predicted == pytest.approx(observed, rel=0.05), f"{backend}: {predicted} vs {observed}"
+
+
+@pytest.mark.req("FR-MODEL-94")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_the_artifact_records_who_applies_the_inverse_link(backend: str) -> None:
+    """`inverse_link` is a claim about the *library*, not about the model's link function.
+
+    All four combinations below are log-link Poisson models and only one of them leaves the
+    transform to the backend. Recording the link instead of who applies it would have made
+    these four indistinguishable, and scoring would have had to guess.
+    """
+    data = _frequency_data()
+    objective = _custom()
+
+    builtin = fit_gbm(data, _spec(backend), FACTORS).result
+    custom = fit_gbm(
+        data, _custom_spec(backend, objective), FACTORS, objective=objective
+    ).result
+
+    assert builtin.inverse_link == (None if backend == "xgboost" else "exp")
+    assert custom.inverse_link == "exp"
+
+
+def _conversion_data(n: int = 6_000, seed: int = 20260818) -> pl.DataFrame:
+    """A binomial book with a strong signal, so the fitted scores leave `f = 0` behind.
+
+    That matters for the test below: `exp(f)` and `1 / (1 + exp(-f))` agree to within 1% at
+    `f = 0`, so a book that produced scores near zero would hide the defect this data
+    exists to expose.
+    """
+    rng = np.random.default_rng(seed)
+    urban = rng.integers(0, 2, n)
+    age = rng.integers(18, 80, n)
+    eta = 1.4 + 1.2 * urban + 0.04 * (age - 40)
+    return pl.DataFrame(
+        {
+            "exposure_years": np.ones(n),
+            "area": ["urban" if u else "rural" for u in urban],
+            "driv_age": age.astype(float),
+            "claim_count": rng.binomial(1, 1.0 / (1.0 + np.exp(-eta))).astype(float),
+        }
+    )
+
+
+@pytest.mark.req("FR-MODEL-94")
+@pytest.mark.parametrize("backend", BACKENDS)
+@pytest.mark.parametrize("custom", [False, True], ids=["builtin", "custom"])
+def test_a_binomial_model_is_scored_through_its_own_link(backend: str, custom: bool) -> None:
+    """A probability is at most one, and until 2026-08-18 LightGBM's were not.
+
+    `predict_gbm`'s LightGBM branch exponentiated the raw score unconditionally, so a
+    `binary:logistic` model returned `exp(f)` — above 1 for every row the model thought
+    likely, which is most of them on this book. The builtin case here is the regression
+    test for that defect; the custom case is `focal_binomial`, the one template whose
+    inverse link is not `exp`, and it fails the same way if the link is assumed.
+    """
+    data = _conversion_data()
+    objective = _custom(ObjectiveTemplate.FOCAL_BINOMIAL, slug="focal-conversion")
+    if custom:
+        spec = _spec(
+            backend,
+            objective=GbmFunctionRef(
+                kind="custom",
+                ref=f"custom_objective:{objective.slug}@{objective.version}",
+            ),
+            response=ResponseKind.CONVERSION,
+            offset=OffsetSpec(kind="none"),
+        )
+        fit = fit_gbm(data, spec, FACTORS, objective=objective)
+    else:
+        spec = _spec(
+            backend,
+            objective=GbmFunctionRef(kind="builtin", name="binary:logistic"),
+            offset=OffsetSpec(kind="none"),
+        )
+        fit = fit_gbm(data, spec, FACTORS)
+
+    assert fit.result.inverse_link == (None if backend == "xgboost" and not custom else "logistic")
+    predicted = predict_gbm(fit.result, fit.booster_bytes, data).to_numpy()
+    assert predicted.min() > 0.0
+    assert predicted.max() <= 1.0, f"{backend}: a probability above one is exp(f), not g(f)"
+    urban = data["area"].to_numpy() == "urban"
+    assert predicted[urban].mean() > predicted[~urban].mean(), "the signal is not in the score"
+    if not custom:
+        # A calibrated binomial score averages to the observed rate. Not asserted of the
+        # focal objective: down-weighting the examples it already gets right is what
+        # `gamma` *is*, and the price of it is a score pulled towards 0.5 — a known
+        # property of focal loss, not a defect in the link.
+        assert predicted.mean() == pytest.approx(float(data["claim_count"].mean()), abs=0.05)
+
+
+@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_an_objective_outside_its_declared_applicability_is_refused(backend: str) -> None:
+    """FR-MODEL-44, on each of the three axes an author can narrow.
+
+    Refused before the fit rather than reported after it: every one of these produces a
+    model that converges, and a Poisson loss fitted to severity converges to a number that
+    looks like a severity.
+    """
+    data = _frequency_data()
+
+    severity_only = _custom(ObjectiveTemplate.GAMMA, slug="gamma-severity")
+    spec = _custom_spec(backend, severity_only)
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(data, spec, FACTORS, objective=severity_only)
+    assert raised.value.code == "OBJECTIVE_NOT_APPLICABLE"
+    assert "claim_severity" in str(raised.value)
+
+    other = "lightgbm" if backend == "xgboost" else "xgboost"
+    one_backend = _custom(
+        applicability=TEMPLATE_APPLICABILITY[ObjectiveTemplate.POISSON].model_copy(
+            update={"backends": frozenset({ObjectiveBackend(other)})}
+        ),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(data, _custom_spec(backend, one_backend), FACTORS, objective=one_backend)
+    assert raised.value.code == "OBJECTIVE_NOT_APPLICABLE"
+    assert other in str(raised.value)
+
+    needs_offset = _custom()
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(
+            data,
+            _custom_spec(backend, needs_offset, offset=OffsetSpec(kind="none")),
+            FACTORS,
+            objective=needs_offset,
+        )
+    assert raised.value.code == "OBJECTIVE_REQUIRES_OFFSET"
+
+
+@pytest.mark.req("FR-MODEL-44")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_objective_without_a_declared_response_is_refused(backend: str) -> None:
+    """A builtin objective names its family; a custom one does not, and neither may guess.
+
+    `response` is what FR-MODEL-44's applicability check and the diagnostics deviance are
+    both read from — see `objective_family`. Fitting with it unset would mean picking one
+    of the five, and the fit would be reported under a family nobody chose.
+    """
+    objective = _custom()
+    spec = _custom_spec(backend, objective, response=None)
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, objective=objective)
+    assert raised.value.code == "OBJECTIVE_RESPONSE_UNDECLARED"
+
+
+@pytest.mark.req("FR-MODEL-46")
+@pytest.mark.parametrize(
+    "status", [ObjectiveStatus.DRAFT, ObjectiveStatus.DEPRECATED], ids=lambda s: s.value
+)
+def test_an_objective_that_is_not_fittable_is_refused_by_its_status(
+    status: ObjectiveStatus,
+) -> None:
+    """`02` R4: a model may not be fitted under an uncertified or withdrawn loss.
+
+    Both ends of FR-MODEL-46's lifecycle, because they fail for opposite reasons — a draft
+    has never been certified and a deprecated one has been withdrawn — and a check written
+    as `status is not approved` would pass `deprecated` straight through if the enum ever
+    gained a member.
+    """
+    objective = _custom(status=status, certificate_id=None if status is
+                        ObjectiveStatus.DRAFT else uuid4())
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(
+            _frequency_data(), _custom_spec("xgboost", objective), FACTORS,
+            objective=objective,
+        )
+    assert raised.value.code == "OBJECTIVE_NOT_APPROVED"
+    assert status.value in str(raised.value)
+
+
+@pytest.mark.req("FR-MODEL-39")
+def test_an_artifact_that_is_not_the_one_the_spec_names_is_refused() -> None:
+    """The spec's reference and the artifact handed in must be the same objective.
+
+    Not a redundant check: the caller resolves the reference, so nothing between the spec
+    and the fit compares them. A model fitted under a loss its own spec does not name
+    cannot be reproduced from the spec, which is what a rebuild reads.
+    """
+    objective = _custom(version=3)
+    spec = _spec(
+        "xgboost",
+        objective=GbmFunctionRef(kind="custom", ref="custom_objective:capped-gamma@2"),
+        response=ResponseKind.CLAIM_COUNT,
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, objective=objective)
+    assert raised.value.code == "OBJECTIVE_REF_MISMATCH"
+
+
+@pytest.mark.req("FR-MODEL-39")
+def test_an_artifact_supplied_for_a_builtin_spec_is_refused() -> None:
+    """Two objectives, one fit. Ignoring either silently is the failure this refuses.
+
+    The artifact would lose, since `spec.objective` is what reaches the backend — and the
+    stored result would name the builtin, so nothing downstream could tell that a
+    certified loss had been handed in and dropped.
+    """
+    objective = _custom()
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), _spec("xgboost"), FACTORS, objective=objective)
+    assert raised.value.code == "OBJECTIVE_NOT_APPLICABLE"
+    assert "count:poisson" in str(raised.value)
+
+
+@pytest.mark.req("FR-MODEL-45")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_early_stopping_under_a_custom_objective_is_refused_by_name(backend: str) -> None:
+    """FR-MODEL-45 is not built, and this is the shape of its absence.
+
+    Under a callable objective both backends hand a builtin metric the raw score rather
+    than the transformed prediction, so the metric it stops on is not the metric it names —
+    and stopping on the wrong metric produces a model that is merely worse, never one that
+    errors. Refused with FR-MODEL-45 named, so the message says which capability is
+    missing.
+    """
+    objective = _custom()
+    spec = _custom_spec(
+        backend, objective,
+        early_stopping=EarlyStopping(on="holdout", metric="poisson-nloglik", rounds=5),
+    )
+    with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, objective=objective)
+    assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"

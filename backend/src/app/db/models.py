@@ -24,6 +24,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     Identity,
     Index,
     Integer,
@@ -1523,4 +1524,127 @@ class PerilStructureRow(Base):
             name="reconciled_peril_structure_has_a_reconciliation",
         ),
         Index("ix_peril_structures_slug_status", "workspace_id", "slug", "status"),
+    )
+
+
+class CustomObjectiveRow(Base):
+    """A Custom Objective (`02` §4.5, FR-MODEL-38, FR-MODEL-46).
+
+    Shaped like `PerilStructureRow` rather than like `DiagnosticsRow`: it is versioned,
+    approvable, and referenced **by name** — a Model Spec carries
+    `custom_objective:<slug>@<version>`, so a row reachable only by id could not be resolved
+    from the spec that names it.
+
+    Versioned rather than edited, because FR-MODEL-46 makes editing an approved objective a
+    new version needing fresh certification. That is not a convention the service can be
+    trusted to keep alone: a model fitted last month must still resolve its ref to the loss
+    it was actually fitted under, so `uq_custom_objectives_slug_version` and the
+    `custom_objectives_definition_immutable` trigger together make the definition columns
+    unwritable once the row exists. Only the lifecycle columns move.
+    """
+
+    __tablename__ = "custom_objectives"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+
+    #: `template` for the whole of Phase 1 (FR-MODEL-75). Stored rather than assumed,
+    #: because Phase 2's `expression` rows will live in this table beside these and a
+    #: column added later cannot say what the existing rows were.
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="template")
+    #: §4.5's template name. Null is reserved for the `expression` kind the flag refuses.
+    template: Mapped[str | None] = mapped_column(String(32))
+    #: The author's chosen parameters — **not** §4.5's defaults resolved into them.
+    #: `compile_objective` resolves defaults at fit time on purpose: a stored artifact that
+    #: had silently absorbed them would let a later change to a default rewrite the meaning
+    #: of an already-approved objective.
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    #: FR-MODEL-44's declaration, whole, through the `Applicability` contract.
+    applicability: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    hessian_strategy: Mapped[str] = mapped_column(String(16), nullable=False, default="clip_to_min")
+    hessian_min: Mapped[float] = mapped_column(Float, nullable=False, default=1e-6)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    #: FR-MODEL-42's evidence. Not a foreign key to `objective_certificates` only because
+    #: the certificate points back the other way and one direction is enough; the CHECK
+    #: below is what makes a status past `draft` mean something.
+    certificate_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: Not a foreign key, for the reason `models.approval_request_id` is not: `MODEL`
+    #: depends on `GOV` and never the reverse (DEP-1).
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_custom_objectives_slug_version"
+        ),
+        CheckConstraint("version >= 1", name="custom_objective_version_starts_at_one"),
+        CheckConstraint("hessian_min > 0", name="custom_objective_hessian_min_is_positive"),
+        # FR-MODEL-46's five states. `certified` sits between `draft` and `review` because
+        # FR-MODEL-42 makes certification the condition of submission, not of approval.
+        CheckConstraint(
+            "status IN ('draft', 'certified', 'review', 'approved', 'deprecated')",
+            name="custom_objective_status_is_in_the_lifecycle",
+        ),
+        # FR-MODEL-42, at the layer a direct `UPDATE` cannot walk past. `deprecated` joins
+        # `draft` because it is reachable from `draft`: an objective abandoned before it was
+        # ever certified is withdrawn, not certified. The type says the same thing; this is
+        # the half that survives a migration or a fixture.
+        CheckConstraint(
+            "status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL",
+            name="certified_objective_has_a_certificate",
+        ),
+        # FR-MODEL-75 for the whole of Phase 1. A row whose `kind` is `expression` would
+        # carry no loss at all — every field an expression objective needs is unbuilt — so
+        # this is a refusal to persist an artifact nothing could evaluate, not a feature gate.
+        CheckConstraint(
+            "kind = 'template' AND template IS NOT NULL",
+            name="custom_objective_is_a_template_in_phase_1",
+        ),
+        Index("ix_custom_objectives_slug_status", "workspace_id", "slug", "status"),
+    )
+
+
+class ObjectiveCertificateRow(Base):
+    """An Objective Certificate (`02` §4.7, FR-MODEL-42).
+
+    Insert-only at the privilege layer (FR-DATA-42), for `TransparencyArtifactRow`'s reason:
+    `06` §4.2 makes it the required evidence for a Custom Objective's approval, and evidence
+    that can change after the decision is not evidence.
+
+    Several rows per objective version are expected, not prevented. Re-certifying after a
+    library upgrade is the normal way a finding is found, and the earlier certificate is
+    what an already-granted approval argued from — so the read takes the latest and the
+    older rows stay.
+    """
+
+    __tablename__ = "objective_certificates"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    custom_objective_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    #: Denormalised from the objective row on purpose: a certificate names the *version* it
+    #: certifies, and FR-MODEL-46's "editing creates a new version" is only auditable if the
+    #: evidence says which one it measured without a join to a row that may since have moved.
+    objective_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    certified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: The `CertificateResult` — checks, sampling grid and library versions — whole.
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("objective_version >= 1", name="certificate_version_starts_at_one"),
+        Index(
+            "ix_objective_certificates_objective",
+            "workspace_id",
+            "custom_objective_id",
+            "certified_at",
+        ),
     )

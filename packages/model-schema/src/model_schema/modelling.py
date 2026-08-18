@@ -69,6 +69,7 @@ __all__ = [
     "MonotonicDirection",
     "OffsetSpec",
     "RelativityLevel",
+    "ResponseKind",
     "SpecProblem",
     "SpecProblemKind",
     "SpecValidation",
@@ -757,6 +758,29 @@ class LossTreatment(BaseModel):
         return self
 
 
+class ResponseKind(enum.StrEnum):
+    """What a Model Spec is modelling, as distinct from which column holds it.
+
+    `02` §4.4 declared `response` beside `response_column` from Phase 0 and nothing was
+    built to it, because nothing needed it: the fitting path reads the column, and the
+    family says what the numbers mean. FR-MODEL-44 needs it — an objective declares the
+    responses it applies to, and a column name cannot be checked against that list. So the
+    field goes live here, under FR-MODEL-87's staging rule, with the slice that populates
+    it.
+
+    The first three are FR-MODEL-44's own examples. `conversion` and `retention` are
+    `04-optimisation.md`'s demand-model responses, and are here because `focal_binomial`
+    (§4.5) exists for exactly them — a catalogue entry whose applicability could not be
+    written would be a catalogue entry nothing could use.
+    """
+
+    CLAIM_COUNT = "claim_count"
+    CLAIM_SEVERITY = "claim_severity"
+    BURNING_COST = "burning_cost"
+    CONVERSION = "conversion"
+    RETENTION = "retention"
+
+
 class ModelSpecCommon(BaseModel):
     """`02` §4.4's common block — every arm of the tagged union carries these.
 
@@ -775,6 +799,11 @@ class ModelSpecCommon(BaseModel):
     #: where the status is, rather than here.
     split_ref: SplitRef | None = None
     peril: str | None = None
+    #: `02` §4.4's `response`. Optional because every spec written before this slice
+    #: declared only the column, and a required field would invalidate them; **required
+    #: whenever the objective is a Custom Objective**, where FR-MODEL-44's applicability
+    #: check has nothing to read without it and the spec validator refuses the pairing.
+    response: ResponseKind | None = None
     response_column: str
     offset: OffsetSpec = OffsetSpec()
     weight: WeightSpec = WeightSpec()
@@ -1128,6 +1157,21 @@ class GbmFitResult(BaseModel):
     #: (`iteration_range` / `num_iteration`), and diagnostics are not loaded at scoring
     #: time. The evaluation *curve* went the other way — see `GbmDiagnostics`.
     best_iteration: int = Field(ge=0)
+    #: The inverse link `predict_gbm` must apply to the raw score **itself**, or `None`
+    #: when the booster's own `predict` already returns the mean.
+    #:
+    #: Not "the model's link" — the two are not the same claim, and recording the link
+    #: would leave every reader to work out for themselves whether the library had already
+    #: applied it. That question has three different answers here. XGBoost under a builtin
+    #: objective transforms in `predict` (`None`); XGBoost under a custom objective knows
+    #: no link at all and returns the margin; LightGBM is always asked for the raw score,
+    #: because FR-MODEL-72's offset can only be added on this side of it.
+    #:
+    #: Defaulted for the artifacts written before this field existed, whose LightGBM
+    #: branch exponentiated unconditionally — see the dated note at `02` §4.3. The default
+    #: reproduces exactly what those artifacts already score, and `fit_gbm` sets it
+    #: explicitly on every path, so nothing fitted from here on relies on it.
+    inverse_link: Literal["exp", "logistic"] | None = None
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)

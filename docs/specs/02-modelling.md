@@ -156,6 +156,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-73** | **Large-loss treatment is a modelling decision applied at fit time, not a property baked into the dataset** (OQ-DATA-1, decided 2026-08-14). A Model Spec carries a `loss_treatment` — `none`, `capped` (cap plus the restoration loading that restores the mean), `spliced`, or `excess` — which is applied to the response as the model is fitted, and which forms part of `spec_hash`. Dataset Versions stay assumption-free, so one validated dataset serves many capping assumptions without re-ingestion or re-validation. `01` VR-ACT-10 flags large losses in the data but never removes them. |
 | **FR-MODEL-74** | Because the dataset is uncapped and the model is not, **reconciliation must account for the treatment**: the Peril Structure's reconciliation (FR-MODEL-60) compares modelled burning cost *after* restoration against observed uncapped burning cost, and the generated dossier states the treatment alongside the reconciliation. Without this, a capped model reconciling to uncapped data looks like a modelling error rather than an intended adjustment. |
 | **FR-MODEL-72** | **The offset is symmetric at fit time and asymmetric at scoring time; the scoring path must be implemented per backend.** Both backends include the offset in the raw score handed to a custom objective, so FR-MODEL-27 holds for both. But at prediction time: XGBoost re-applies the offset when it is set on the prediction `DMatrix`, whereas **LightGBM's `Booster.predict()` has no offset parameter at all** — it returns tree contributions only, and the caller must add `init_score` back to the raw score itself. A single "apply the offset" implementation written against XGBoost's API would **silently do nothing** on LightGBM and under-predict by exactly the offset. `pricing-core` therefore implements the scoring-side offset per backend, and a round-trip test asserts that `predict(fit_data)` reproduces the fitted raw score on **each** backend independently (F13). |
+| **FR-MODEL-94** | **The fit artifact records *who applies the inverse link*, and scoring reads it rather than assuming one.** Added 2026-08-18 (W5, custom objectives), and the second half of FR-MODEL-72's asymmetry — the requirement above states the offset half and is silent on this one. Three cases, all reachable: XGBoost under a builtin objective transforms in `predict`; XGBoost under a **custom** objective was handed gradients and no link, so `predict` returns the raw margin; LightGBM is always asked for the raw score, because FR-MODEL-72's offset has to be added before the transform. `GbmFitResult.inverse_link` therefore names the transform *the platform* must apply, or `None` where the library already has — not the model's link, which is the same value in all three cases and so cannot distinguish them. |
 | **FR-MODEL-32** | Categorical handling is explicit: either the Factor supplies a grouping/encoding, or the backend's native categorical support is used with its parameters recorded. Silent label-encoding of an unordered categorical is refused. |
 
 ### 3.6 Transparency (non-GLM models)
@@ -190,6 +191,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-46** | Custom Objective lifecycle is `draft → certified → review → approved → deprecated`. Approval is by an Approver who is not the author; `expression` objectives with `convexity: violated` need two Approvers (FR-MODEL-43). Editing an `approved` objective creates a new version requiring fresh certification and approval. |
 | **FR-MODEL-47** | Objective usage is fully traceable: for any objective version, the platform lists every Model, Rating Version, and live Deployment using it — the blast-radius query needed when a defect is found. |
 | **FR-MODEL-48** | Objective execution is resource-bounded: compiled expressions are evaluated on fixed-size NumPy arrays with no allocation of unbounded intermediates, wall-clock is budgeted per boosting round, and NaN/inf appearing in a gradient or hessian aborts the fit with a named error identifying the round and the offending input range. |
+| **FR-MODEL-95** | **A Custom Objective and its certificate are readable.** `GET /api/v1/custom-objectives/{id}` returns the objective with its status, its certificate outcome and its `approval_request_id`; `GET /api/v1/custom-objectives/{id}/certificate` returns the latest `ObjectiveCertificate` for that version, or a 404 naming it. Added 2026-08-18 (W5), because §5.1 declared five write endpoints and no way to read what they wrote: FR-MODEL-42 makes a certificate the condition of submission and FR-MODEL-46 puts an Approver in front of it, and an approver who cannot fetch the certificate is being asked to approve a verdict they cannot see. Certification is a **202** job (FR-MODEL-42), so a caller that cannot read the result back has no completion signal either. |
 
 ### 3.8 Diagnostics
 
@@ -528,6 +530,22 @@ cap are different models, and must not collide on `spec_hash`.
 > categorical — because scoring must declare exactly what fitting declared, and the
 > encoding maps alone cannot say which a coded feature is.
 
+> **Amended 2026-08-18 (W5, the custom-objectives slice).** **`response` is required
+> whenever `objective.kind` is `custom`.** The common block has declared it beside
+> `response_column` since Phase 0 and nothing read it, because a builtin objective names
+> its own family and the column carries the numbers. A Custom Objective names **no**
+> family, so `response` becomes the only thing FR-MODEL-44's applicability check and the
+> diagnostics deviance can be read from. `ModelSpecCommon.response` is therefore
+> `ResponseKind | None` — optional, so that specs written before this slice stay valid —
+> and `fit_gbm` refuses a custom objective on a spec that leaves it unset, with
+> `OBJECTIVE_RESPONSE_UNDECLARED`. Guessing it would produce a `capped_gamma` severity
+> model whose A/E was computed as a Poisson deviance and reported without comment.
+>
+> `ResponseKind` is `claim_count | claim_severity | burning_cost | conversion | retention`.
+> The last two are `04-optimisation.md`'s demand responses, present because `focal_binomial`
+> (§4.5) exists for exactly them: a catalogue entry whose applicability could not be
+> written would be one nothing could use.
+
 ### 4.5 Custom objective — `template` catalogue
 
 Shipped templates, each with analytic gradient/hessian in `pricing-core` (FR-MODEL-39):
@@ -537,14 +555,14 @@ Shipped templates, each with analytic gradient/hessian in `pricing-core` (FR-MOD
 | `poisson` | — | `μ − y·f` | Frequency baseline |
 | `gamma` | — | `y/μ + f` | Severity baseline |
 | `tweedie` | `p ∈ (1,2)` | `−y·μ^(1−p)/(1−p) + μ^(2−p)/(2−p)` | Burning cost; `p` tunable and CV-selectable |
-| `capped_gamma` | `cap` (minor units) | Gamma loss on `min(y, cap)`, plus a recorded loading to restore the uncapped mean | Large-loss-adjusted severity |
-| `spliced_severity` | `threshold`, `tail_shape` | Gamma below threshold, Pareto-style tail above | Attritional vs large split in one model |
+| `capped_gamma` | `cap` (minor units) | Gamma loss on `min(y, cap)` | Large-loss-adjusted severity |
+| `spliced_severity` | `threshold` (minor units), `tail_shape` = α | Gamma below the threshold; above it a Pareto negative log-likelihood **scaled by μ**, `−α·f + (α+1)·log y − log α` | Attritional vs large split in one model |
 | `asymmetric_squared` | `w_under`, `w_over` | `w_under·(y−μ)²` if `μ < y` else `w_over·(y−μ)²` | Under-pricing penalised harder than over-pricing |
 | `asymmetric_poisson` | `w_under`, `w_over` | Poisson deviance with side-dependent weights | Same intent, count response |
 | `huber` | `delta` | Quadratic within `delta`, linear beyond | Outlier-robust burning cost |
 | `pseudo_huber` | `delta` | Smooth Huber (twice differentiable everywhere) | Preferred where hessian smoothness matters |
 | `quantile` | `alpha` | Pinball loss | Paired quantile models — the only supported GBM prediction interval (FR-MODEL-63, FR-MODEL-78) |
-| `zero_inflated_poisson` | `pi_link` | ZIP negative log-likelihood | Very low-frequency perils |
+| `zero_inflated_poisson` | `pi ∈ (0,1)` | ZIP negative log-likelihood | Very low-frequency perils |
 | `focal_binomial` | `gamma` | Focal loss on logistic | Heavily imbalanced conversion models |
 
 Each template declares its `applicability` block (FR-MODEL-44) and its own parameter
@@ -555,6 +573,37 @@ OQ-MODEL-1 decided 2026-08-15): `expression` objectives ship in Phase 2, behind 
 is off until they do. A template still certifies (§4.7, FR-MODEL-76) — the machinery is
 built here, on losses whose derivatives `pricing-core` already knows, so that the first
 user-authored loss meets a certification path that has been running for a phase.
+
+> **Amended 2026-08-18 (W5), three cells corrected by building the catalogue.**
+>
+> * **`zero_inflated_poisson` takes `pi`, not `pi_link`.** `pi` is the zero-inflation
+>   probability itself, on `(0, 1)` exclusive, declared by the author and held fixed. A
+>   *link* would imply a second linear predictor the booster fits alongside the count one,
+>   which is a two-part model rather than a template — and nothing in Phase 1 fits one.
+> * **`capped_gamma` carries no loading.** Restoring the uncapped mean is
+>   `loss_treatment: {kind: "capped", cap_minor, restoration_loading, evidence_blob}` on the
+>   Model Spec (§4.4, FR-MODEL-73/74), where it is part of `spec_hash` and demands its
+>   evidence. The objective is the loss and nothing else: an objective that quietly
+>   re-inflated its own predictions would make two models with the same `spec_hash` price
+>   differently. The two are used together — the cap in the objective, the loading in the
+>   treatment — and the catalogue cell said so in a way that read as one artifact.
+> * **`spliced_severity`'s tail is scaled by μ, not by the threshold.** "Pareto-style" left
+>   the scale parameter unstated, and the two readings are different models: a
+>   threshold-scaled tail has no dependence on `f` above the threshold, so its gradient is
+>   zero there and the booster learns nothing from a single large claim. Tying the scale to
+>   `μ = exp(f)` keeps the tail responsive to the covariates, which is the reason to splice
+>   rather than to truncate.
+>
+> **`asymmetric_poisson` was already right, and the code was wrong.** The cell says *unit
+> deviance*, and the first implementation used the log-likelihood term `μ − y·f`. §4.7's
+> `minimum_at_truth` check reported that stepping away from the stationary point *lowered*
+> the loss: the likelihood term is negative over most of the domain and does not vanish at
+> `μ = y`, so a `w_under > 1` multiplying a negative number penalises under-prediction by
+> making it cheaper. The deviance `2(y·log(y/μ) − y + μ)` is non-negative and zero exactly
+> at `μ = y`, so the branches meet, the minimum stays at `f = log y`, and only the slopes
+> differ — which is what an asymmetric pricing loss is for. Recorded here because it is the
+> certification machinery catching a defect in the thing it certifies, on the day it was
+> built.
 
 ### 4.6 Restricted expression grammar
 
@@ -667,6 +716,54 @@ For `kind: template` the first two checks are named `analytic_vs_numeric_gradien
 `analytic_vs_numeric_hessian` — the comparison is against `pricing-core`'s analytic
 derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, and the
 `sampling` block that makes the findings interpretable, is identical for both kinds.
+
+> **Amended 2026-08-18 (W5), built.** Six corrections, all in the code's favour bar the
+> last, which is in the contract's.
+>
+> * **The certificate is two objects, not one.** `ObjectiveCertificate` carries the
+>   identity — `id`, `custom_objective_id`, `objective_version`, `certified_at`, `job_id` —
+>   and wraps a `result: CertificateResult` holding `checks`, `sampling`, `overall` and
+>   `library_versions`. The JSON above shows them flat. The split is ADR-0001: `certify_objective`
+>   computes the findings in `pricing-core`, which may not allocate an id, read a clock or
+>   know a Job exists, so what it returns is the `CertificateResult` and the backend stamps
+>   the rest. The same split as `compute_diagnostics`/`DiagnosticsResult`.
+> * **`overall` is derived, never supplied.** `CertificateResult.outcome_of(checks)` is the
+>   single place the rule lives, and a validator refuses a result whose stated `overall`
+>   disagrees with its own checks: any `failed` ⇒ `failed`; otherwise any `warn` or
+>   `violated` ⇒ `certified_with_findings`; otherwise `certified`. A certificate that could
+>   be written with a verdict its findings do not support is not evidence.
+> * **`CheckStatus` is `pass | warn | violated | failed`** — four values, and `failed` is
+>   spelled in full. The published schema said `fail`; a reader deserialising against it
+>   would have rejected every certificate this platform produces.
+> * **All nine checks are emitted for every template, always**, in this order:
+>   `analytic_vs_numeric_gradient`, `analytic_vs_numeric_hessian`, `finiteness`,
+>   `convexity`, `branch_discontinuity`, `minimum_at_truth`, `monotone_loss`,
+>   `scale_behaviour`, `smoke_fit`. A check omitted because it had nothing to report is
+>   indistinguishable from one that was never run, so a template with no branch reports
+>   `branch_discontinuity: pass` with "no branch boundary to exclude near" rather than
+>   dropping the row.
+> * **The step is `h = 1e-4`, not the `1e-6` the illustrative details show.** `1e-6` is
+>   below the point where central-difference cancellation dominates truncation for losses on
+>   this scale, so it makes correct derivatives look wrong. The detail strings report the
+>   step they actually used, which is the reason FR-MODEL-70 asks for it.
+> * **`sampling.n_points` has a floor of 1 000, and it is enforced at the type**
+>   (`SamplingSpec`), not at the API. The floor came from the published schema — the one
+>   place the contract was right and the model was not: `convexity` and `scale_behaviour`
+>   report a *share of sampled points*, and over a coarse grid every check passes by not
+>   looking. It sits on the type because `record_certificate` is not the only door; a
+>   certificate is evidence wherever it is made.
+>
+> **The derivative comparison's tolerance was found wrong by raising that floor**, and the
+> fix is recorded here because the check is the spec's own instrument. `_agreement`
+> subtracts the finite-difference noise from the difference as well as flooring the
+> denominator with it. Flooring alone is not enough where the derivative is orders of
+> magnitude smaller than the quantity being differenced: a Gamma hessian of `5.5e-07`
+> against a gradient of `0.33` carries `6e-12` of cancellation noise, so an agreement to
+> `9e-13` — inside what the method can resolve — divided out as a relative error of
+> `1.6e-06` and warned. Three of the twelve templates warned on exactly correct derivatives
+> at 1 000 points. Loosening a tolerance is how a check stops checking, so the other side is
+> pinned by test: an absolute error of `1e-08` in the Gamma hessian — two hundred times the
+> noise where that hessian is smallest — is still `failed`.
 
 ### 4.8 `Model`
 
@@ -1063,12 +1160,14 @@ triggers.
 | `POST` | `/api/v1/models/{id}/predict` | **200** Score rows with FR-MODEL-63's uncertainty (dev/debug scale, row-capped; production scoring is `03`) |
 | `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required |
 | `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-MODEL-64), `If-Match` required |
-| `POST` | `/api/v1/custom-objectives` | Create → `draft` (FR-MODEL-38) |
-| `POST` | `/api/v1/custom-objectives/{id}/derive` | Symbolically derive gradient/hessian from `loss` (FR-MODEL-40) |
+| `POST` | `/api/v1/custom-objectives` | **201** Create → `draft` (FR-MODEL-38) |
+| `GET` | `/api/v1/custom-objectives/{id}` | The objective, its status and its certificate outcome (FR-MODEL-95) |
+| `POST` | `/api/v1/custom-objectives/{id}/derive` | Symbolically derive gradient/hessian from `loss` (FR-MODEL-40) — Phase 2, refused with `OBJECTIVE_KIND_NOT_ENABLED` (FR-MODEL-75) |
 | `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-MODEL-42) |
+| `GET` | `/api/v1/custom-objectives/{id}/certificate` | The latest `ObjectiveCertificate` for that version (FR-MODEL-95) |
 | `POST` | `/api/v1/custom-objectives/{id}/submit` | Submit for approval (FR-MODEL-46) |
 | `GET` | `/api/v1/custom-objectives/{id}/usage` | Blast radius: models, rating versions, deployments (FR-MODEL-47) |
-| `POST` | `/api/v1/custom-metrics` | Same lifecycle for eval metrics (FR-MODEL-45) |
+| `POST` | `/api/v1/custom-metrics` | Same lifecycle for eval metrics (FR-MODEL-45) — **not built**, see the amendment below |
 | `POST` | `/api/v1/peril-structures` | **201** Create/version a Peril Structure (FR-MODEL-58) |
 | `GET` | `/api/v1/peril-structures/{id}` | The structure and its reconciliation (FR-MODEL-90) |
 | `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-MODEL-60) |
@@ -1266,7 +1365,11 @@ triggers.
 `OFFSET_NOT_RECONSTRUCTABLE`, `GBM_NO_FEATURES`, `SCORING_FEATURES_MISMATCH`,
 `INTERACTION_FEATURE_UNKNOWN`, `LOSS_TREATMENT_UNIMPLEMENTED`, `MODEL_NOT_FITTED`,
 `MODEL_ALREADY_TRANSPARENT`, `MODEL_TYPE_UNSUPPORTED`, `APPROXIMATION_TARGET_NOT_POSITIVE`,
-`SHAP_SAMPLE_EMPTY`.
+`SHAP_SAMPLE_EMPTY`, `OBJECTIVE_NOT_SUPPLIED`, `OBJECTIVE_REF_MISMATCH`,
+`OBJECTIVE_RESPONSE_UNDECLARED`, `OBJECTIVE_REQUIRES_OFFSET`,
+`OBJECTIVE_EARLY_STOPPING_UNSUPPORTED`, `OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED`,
+`MODEL_TERM_UNRESOLVED`, `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING`,
+`MODEL_INTERVAL_UNAVAILABLE`.
 
 > **Added 2026-08-17 (W5, the GBM and transparency slices).** The ten codes above are new;
 > five *existing* ones are now raised for the first time by the GBM path rather than being
@@ -1280,12 +1383,57 @@ triggers.
 > time fails *silently* on both backends, so "this frame cannot rebuild the offset" must be
 > distinguishable from "this frame is missing a column" by anything reading the code.
 
+> **Added 2026-08-18 (W5, custom objectives).** Six `OBJECTIVE_*` codes arrive with the
+> path that raises them. Each one is a *refusal to fit*, and they are separate codes rather
+> than one because the workbench branches on them differently: `OBJECTIVE_NOT_SUPPLIED` and
+> `OBJECTIVE_REF_MISMATCH` are the caller's wiring (ADR-0001 — `pricing-core` is handed the
+> artifact and never resolves a reference, so "you named one and passed none" is not the
+> same fault as "you passed a different one"); `OBJECTIVE_RESPONSE_UNDECLARED` and
+> `OBJECTIVE_REQUIRES_OFFSET` are FR-MODEL-44's applicability, refused before any boosting
+> round; `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` is the honest edge of what is built, since a
+> custom eval metric is FR-MODEL-45 and deferred; `OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED`
+> is FR-MODEL-43 meeting a template with no Gauss-Newton form to drop a term from.
+>
+> **And four codes that were live and unregistered.** `MODEL_TERM_UNRESOLVED`,
+> `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING` and `MODEL_INTERVAL_UNAVAILABLE` have
+> been raised by `predict.py` since the prediction slice and mapped straight into a
+> `PlatformError` by `_unscoreable` — which refuses a code it does not know, so each was a
+> `ValueError: unknown error code` waiting inside the error path. The repository invariant
+> written to make exactly this impossible could not see them: it scanned for a **hand-listed
+> set of exception names**, and neither `PredictionError` nor `ObjectiveError` was on it. The
+> list is now derived from the classes `pricing_core.modelling` actually defines, which is
+> the only version of that check that stays true as the module grows.
+
 An **invalid lifecycle transition** (FR-MODEL-64) is `VALIDATION_FAILED` at `409`, not a code
 of its own — the same answer `01` gives for a Dataset Version's transitions, and for the same
 reason: the request was well formed, the artifact's state is what makes it impossible, and a
 caller branching on the code should not have to tell a malformed body from a stale view of a
 lifecycle. `EVIDENCE_INCOMPLETE` and `ARTIFACT_FLAGGED` are `06`'s and are raised from this
 module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
+
+> **Amended 2026-08-18 (W5, the custom-objectives slice).** Five of the six
+> `custom-objectives` routes are built, and **two are added to the table above** —
+> `GET /custom-objectives/{id}` and `GET /custom-objectives/{id}/certificate`, under
+> FR-MODEL-95. The fifth artifact in this module to declare its writes and no read, and the
+> sharpest case of it: certification is a **202**, so without the read there was no way to
+> learn its verdict, and FR-MODEL-46 puts an Approver in front of a certificate they could
+> not fetch.
+>
+> Three further corrections to the rows themselves:
+>
+> * **`POST /custom-objectives` answers 201**, not 200 — it allocates a version.
+> * **`POST /custom-objectives/{id}/derive` is refused for the whole of Phase 1**, with
+>   `OBJECTIVE_KIND_NOT_ENABLED`. It is the `expression` path, and FR-MODEL-75 gates it
+>   behind `expression_objectives_enabled`, off by default. The route exists and answers
+>   `422` with that code rather than `404`, so a caller learns the capability is not enabled
+>   rather than that the platform has never heard of it.
+> * **`POST /custom-metrics` (FR-MODEL-45) is not built, and is deferred to Phase 1b with
+>   this slice.** A custom *metric* is `feval` — it changes what early stopping optimises
+>   and what the diagnostics report, not what the model fits, so it does not gate the
+>   fitting path this slice exists to open. It shares the objective's lifecycle,
+>   certification and approval machinery, which is now built and is what it was waiting for.
+>   Stated here rather than left silent: an endpoint declared and not built reads as
+>   delivered to anyone auditing the table.
 
 ### 5.2 `pricing-core` interfaces
 
@@ -1338,6 +1486,7 @@ def decode_covariance(payload: bytes, terms: Sequence[str]) -> NDArray[float64]
 # pricing_core/modelling/gbm.py
 def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
             holdout: pl.DataFrame | None = None,
+            objective: CustomObjective | None = None,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
             progress: ProgressCallback | None = None) -> GbmFit   # .result, .booster_bytes
@@ -1351,9 +1500,14 @@ def apply_loss_treatment(response: NDArray[float64], treatment: LossTreatment
 # pricing_core/modelling/objectives.py
 def parse_expression(text: str, bound: Sequence[str], params: Sequence[Parameter]) -> ExprTree
 def derive_derivatives(loss: ExprTree, wrt: str = "f") -> tuple[ExprTree, ExprTree]
-def compile_objective(obj: CustomObjective) -> ObjectiveFns   # .grad(y,f,w), .hess(y,f,w)
+def compile_objective(obj: CustomObjective) -> ObjectiveFns
+    # .loss/.grad/.hess(y,f,w), .stabilise(y,f,w), .inverse_link
 def certify_objective(obj: CustomObjective, *, sampling: SamplingSpec,
-                      seed: int) -> ObjectiveCertificate
+                      progress: ProgressCallback | None = None) -> CertificateResult
+def make_xgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], xgb.DMatrix],
+                                                      tuple[NDArray[float64], NDArray[float64]]]
+def make_lgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], lgb.Dataset],
+                                                      tuple[NDArray[float64], NDArray[float64]]]
 
 # pricing_core/modelling/diagnostics.py
 def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Factor], *,
@@ -1447,6 +1601,27 @@ def reconcile(assembled: pl.DataFrame, *, observed: NDArray[float64],
 > `apply_loss_treatment` is new and was declared nowhere — FR-MODEL-73's cap is applied to
 > the response at fit time, and it belongs beside the fit rather than inside it, because
 > the GLM path will need the same function.
+>
+> > **A defect in this function, found and fixed 2026-08-18 (W5, custom objectives).**
+> > `predict_gbm`'s LightGBM branch applied `np.exp` to the raw score unconditionally,
+> > though `_OBJECTIVES` carried the inverse link as its third element and its own comment
+> > said the raw-score path needed it. Correct for three of the four supported objectives
+> > and wrong for `binary:logistic`, which returned `exp(f)` where the model means
+> > `1 / (1 + exp(-f))` — a "probability" above 1 for every row the model thought likely,
+> > and the two agree to within 1% at `f = 0`, so a book with a weak signal would not have
+> > shown it. Nothing had asked a LightGBM binomial model for a prediction; the custom
+> > objectives slice needed the link recorded anyway (FR-MODEL-94), and the defect was
+> > visible the moment it was. The regression test is
+> > `test_a_binomial_model_is_scored_through_its_own_link`, parametrized over both backends
+> > and over builtin/custom, and the fix is `_apply_inverse_link` reading
+> > `GbmFitResult.inverse_link`.
+> >
+> > **Artifacts fitted before that field existed carry `None`**, and the LightGBM branch
+> > reads that as `exp` — exactly what those artifacts have always been scored with. The
+> > default is the *old* behaviour rather than the correct one on purpose: `None` there
+> > means "nobody recorded it", and silently changing what a stored model predicts is a
+> > worse failure than the one it would fix. `fit_gbm` sets the field explicitly on every
+> > path, so nothing fitted from here on relies on the fallback.
 
 > **Corrected a fifth time, 2026-08-18 (W5, peril structures).** `assemble_risk_premium`
 > and `reconcile` were declared taking a `PerilStructure`. They cannot, for the reason four
@@ -1483,17 +1658,45 @@ Sketch of the compiled objective handed to XGBoost — note the platform, not th
 owns this function; the user only ever supplied `loss` (§4.6):
 
 ```python
-def make_xgb_objective(fns: ObjectiveFns, base_margin: np.ndarray | None):
+def make_xgb_objective(fns: ObjectiveFns):
     def objective(preds: np.ndarray, dtrain: xgb.DMatrix):
         y = dtrain.get_label()
         w = dtrain.get_weight() if dtrain.get_weight().size else np.ones_like(y)
         f = preds                       # base_margin is already in preds (verified, research F5)
-        g, h = fns.grad(y, f, w), fns.hess(y, f, w)
-        if not (np.isfinite(g).all() and np.isfinite(h).all()):
-            raise NonFiniteDerivative(...)                 # FR-MODEL-48
-        return g, np.maximum(h, fns.hessian_min)           # FR-MODEL-43 strategy
+        g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)   # FR-MODEL-43 strategy
+        _finite_or_abort(fns, g, h, y, f, round_index)     # FR-MODEL-48
+        return g, h
     return objective
 ```
+
+> **Four corrections to this section, 2026-08-18 (W5, custom objectives).** Each is the
+> code being right and the sketch being wrong; none changes a requirement.
+>
+> * **`make_xgb_objective` takes no `base_margin`.** The sketch's own comment says the
+>   margin is already in `preds`, so a parameter for it can only be added a second time —
+>   which under a log link doubles the exposure and fits plausibly.
+> * **The hessian strategy is `fns.stabilise(y, f, w)`, not `np.maximum(h, hessian_min)`.**
+>   That expression is `clip_to_min` and only that; `abs` reflects a different number and
+>   `gauss_newton` computes one. Leaving the choice at the call site would have meant each
+>   backend adapter re-implementing FR-MODEL-43, and two of the three strategies silently
+>   becoming the third.
+> * **`make_lgb_objective` is `(preds, dataset)`, not `(y_true, y_pred, weight)`.** The
+>   three-argument form is the scikit-learn wrapper's. `lgb.train` calls
+>   `fobj(inner_predict(0), self.train_set)` — lightgbm 4.7.0, `basic.py:4276` — and the
+>   sklearn shape raises `TypeError` on the first boosting round. Weights come off the
+>   dataset, so the case weights the three-argument form was chosen for are still there.
+>   Both adapters therefore read `get_label`/`get_weight` off their backend's own object,
+>   and `preds` carries the offset on both.
+> * **`certify_objective` returns `CertificateResult` and takes no `seed`.** The
+>   certificate carries an id, a job and a `certified_at` that ADR-0001 forbids this package
+>   to allocate — the same `compute_diagnostics`/`DiagnosticsResult` split, arrived at for
+>   the same reason. The seed is already in `SamplingSpec`; a second one would let a caller
+>   record a certificate whose stated sampling does not reproduce it.
+>
+> `parse_expression` and `derive_derivatives` above are **declared and unbuilt**, and are
+> the whole of `ObjectiveKind.EXPRESSION` (FR-MODEL-40/41). They are gated behind
+> `expression_objectives_enabled`, off throughout Phase 1 (FR-MODEL-75), and W5 shipped the
+> twelve templates only. `compile_objective` refuses a non-template objective by name.
 
 ### 5.3 Frontend views
 
@@ -1536,6 +1739,23 @@ find out whether a grouping was sensible.
 > Also not built: the column list's inline profile one-ways (the `/profile` view has them),
 > and the monotonic-direction and intent controls — those belong with creating the Factor
 > that *pins* a banding, which is the next slice.
+
+> **Not built, 2026-08-18 (W5, custom objectives).** Neither `/objectives` nor
+> `/objectives/:slug@:version/certificate` has a view, and both stay owned by **W6b** with
+> the rest of `02` §5.3. The slice built the API and the certification behind them
+> (FR-MODEL-95 added the two reads a certificate screen needs), so what is missing is the
+> screen and only the screen.
+>
+> Two Contents items are worth flagging before W6b starts, because both are harder than the
+> column implies:
+>
+> * **"Per-check pass/warn/fail" is four statuses, not three.** `CheckStatus` is
+>   `pass | warn | violated | failed` (§4.7), and `violated` is the ordinary result for a
+>   legitimate non-convex pricing loss (FR-MODEL-43) — rendering it as a failure would tell
+>   an approver to reject the objectives this platform exists to support.
+> * **"Editor with live parse errors" has nothing to parse in Phase 1.** Template objectives
+>   are a picker and a parameter form; the expression editor arrives with the `expression`
+>   kind in Phase 2 (FR-MODEL-75).
 
 ---
 
