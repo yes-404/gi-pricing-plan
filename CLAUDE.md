@@ -8,11 +8,10 @@ continuously and consistently. Read it fully before making changes.
 **Phase 0 (Specification) closed 2026-08-14. Phase 1a is active, and writing application
 code is now the expected default** for work inside its scope (§9).
 
-The specification suite in `docs/` is the contract that Phase 1 builds against. It is
-finished, audited, and authoritative: 8 module specs, 5 workflow journeys, 5 ADRs, and the
-artifact contracts and numbered requirements they define. **Read the relevant spec before
-writing the code that implements it** — the specs are precise enough that guessing is never the faster
-path, and a divergence between code and spec is a defect in whichever is wrong.
+The specification suite in `docs/` is the contract Phase 1 builds against: module specs,
+workflow journeys, ADRs, and the artifact contracts and numbered requirements they define.
+**Read the relevant spec before writing the code that implements it** — the specs are
+precise enough that guessing is never the faster path.
 
 ### What this means for the default deliverable
 
@@ -25,10 +24,8 @@ path, and a divergence between code and spec is a defect in whichever is wrong.
 
 When code and spec disagree, **stop and resolve it** rather than quietly making the code
 match or the spec match. Which one is wrong is a real question, and this project's history
-shows it is often the spec: five defects were found by running spikes against it — including
-one that would have rejected every valid custom objective — and implementation has since
-found more, among them a memory budget smaller than the interpreter and an invariant that
-left a report's ordinary state unnamed.
+shows it is often the spec — spikes and implementation have found defects in it repeatedly,
+including one that would have rejected every valid custom objective.
 
 Quietly changing one to match the other destroys the record of which was believed, which is
 the thing a governed system cannot afford to lose.
@@ -38,9 +35,9 @@ the thing a governed system cannot afford to lose.
 - Requirement IDs are permanent (§5). Never renumber; append or mark superseded.
 - **Counts that change are not written here.** `uv run python scripts/req-coverage.py`
   prints how many requirements exist and how many carry evidence. Two of the three totals
-  this file used to state were stale within a fortnight, from requirements added the same
-  afternoon — the same reason FR-PLAT-54 makes the demo guide derived rather than written.
-- Every spec change runs `python3 scripts/audit-docs.py` before commit (21 checks).
+  this file used to state were stale within a fortnight — the same reason FR-PLAT-54 makes
+  the demo guide derived rather than written.
+- Every spec change runs `python3 scripts/audit-docs.py` before commit.
 - `.claude/skills/` holds the procedures for this repo; §12's maintenance rules apply.
 - The retrofit-impossible foundations (`docs/roadmap.md` §5) land in Phase 1a. Audit writes
   share the caller's transaction, artifacts are immutable, money is integer minor units,
@@ -74,8 +71,8 @@ the maths.
 │   ├── specs/                ✔ 00–07, the contract code is written against
 │   ├── workflows/            ✔ wf-01…05, the end-to-end journeys
 │   ├── adr/                  ✔ architecture decisions
-│   ├── contracts/            ◐ JSON Schema + OpenAPI. `openapi/generated.json` and 6
-│   │                           schemas are generated; ~20 are Phase-0 hand-written
+│   ├── contracts/            ◐ JSON Schema + OpenAPI — partly generated, partly Phase-0
+│   │                           hand-written
 │   ├── research/             ✔ spike findings, with what each one changed
 │   ├── roadmap.md            ✔ phases, workstreams, decision gates
 │   ├── open-questions.md     ✔ every unresolved choice, gated by phase
@@ -102,8 +99,8 @@ the maths.
 ├── tests/                    ✔ repository invariants — enforcement the audit can see
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
-├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit checks 16–20)
-└── .claude/skills/           ✔ 40 skills — 12 written here, 28 external (§12)
+├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit-docs checks them)
+└── .claude/skills/           ✔ project procedures, written and vendored (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -123,12 +120,11 @@ make the repository a Python project.
 | `scripts/`, `.github/`, `deploy/`, `.claude/` | mixed | operational | — | as their target |
 
 **CI is path-filtered per component.** GitHub applies `paths:` at workflow level, not per
-job, so each component gets its own workflow file. A docs-only change must not spend two
-minutes resolving Python dependencies, and once the frontend lands neither side should wait
-on the other's toolchain.
+job, so each component gets its own workflow file — a docs-only change must not resolve
+Python dependencies, and neither side should wait on the other's toolchain.
 
 > **If branch protection is ever enabled**, do not mark a path-filtered workflow as a
-> required check. A required check that does not run on a given PR blocks it forever. Add a
+> required check. A required check that does not run on a given PR blocks it forever. Add an
 > always-running aggregator job instead.
 
 ### The seam between backend and frontend
@@ -145,10 +141,9 @@ docs/contracts/            ← JSON Schema + OpenAPI 3.1, committed; CI fails on
 frontend/src/api/generated ← openapi-typescript output, git-ignored, never hand-written
 ```
 
-`docs/contracts/` living under `docs/` is deliberate rather than accidental: the contract
-is a **published specification artifact** that external consumers read, not merely a build
-output. FR-PLAT-48 pins it there. The frontend generates from it; it never defines types of
-its own (`CLAUDE.md` §3).
+`docs/contracts/` sits under `docs/` deliberately: the contract is a **published
+specification artifact** that external consumers read, not merely a build output.
+FR-PLAT-48 pins it there.
 
 **The rule that keeps this honest:** nobody hand-writes a shape that already exists in
 `model-schema`. Not the backend, not the frontend, not a test fixture. A shape defined
@@ -157,17 +152,16 @@ twice will diverge, and in a pricing platform a diverged shape is a mispricing.
 ### How code and documents relate
 
 They are not parallel tracks that occasionally sync. **The specification is the contract
-the code is written against.** Two scripts keep that honest rather than aspirational:
+the code is written against.** Two scripts keep that honest:
 
-- **`scripts/audit-docs.py`** — 21 checks: requirement IDs, cross-references, dependency
-  direction, glossary single-sourcing, money discipline and schema validity over the suite
-  (1–15), the `.claude/notes/` working notes (16–20), and the workflow journeys' citations
-  against the interfaces the specs declare (21, FR-OVR-17).
+- **`scripts/audit-docs.py`** — structural checks over the spec suite (requirement IDs,
+  cross-references, dependency direction, glossary single-sourcing, money discipline,
+  schema validity), the `.claude/notes/` working notes, and the workflow journeys'
+  citations against the interfaces the specs declare (FR-OVR-17).
 - **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which
   requirements the suite covers, failing when a test claims one that does not exist.
 
-**When code and spec disagree, stop and resolve it — §0 has the rule and the reason.** The
-document is not automatically the authority, and neither is the code.
+**When code and spec disagree, stop and resolve it — §0 has the rule and the reason.**
 
 ### Working rhythm
 
@@ -200,7 +194,7 @@ Standing architecture rules (already decided — do not reopen without an ADR):
   arbitrary-code objective is a governance risk, so the spec must cover sandboxing or
   a restricted expression form.
 - Dataset validation: a dedicated validation module over Polars
-  (`01-data-management.md` §3.3, and §4.4's catalogue of 38 rules). **Not pandera** —
+  (`01-data-management.md` §3.3, and §4.4's catalogue of named rules). **Not pandera** —
   §4.4 records why, and the repository depends on it nowhere
 - Rating execution: GoRules ZEN Engine (JSON decision graphs) wrapped by pricing-core
 - Ruff (line 100), mypy --strict on packages/, pytest + hypothesis
@@ -234,7 +228,7 @@ version, rate-change impact, deploy-and-monitor, custom-objective lifecycle. A m
 says what one module does; a workflow says what actually happens, across all of them.
 
 `contracts/` holds JSON Schema and OpenAPI **generated from `model-schema`** and committed;
-CI fails on drift (FR-PLAT-48). It is a published artifact, not a draft — never hand-edit it.
+CI fails on drift (FR-PLAT-48). It is a published artifact — never hand-edit it.
 
 `skills-map.md` maps stack component → where it is used → skills to research (§10).
 `open-questions.md` carries every unresolved choice, gated by phase.
@@ -260,14 +254,11 @@ Requirement IDs are permanent: never renumber, only append or mark superseded.
 
 ## 6. Dataset Validation — *superseded by `01-data-management.md`*
 
-This section was the **brief** for writing that spec, in the phase before it existed: "the
-spec must define these layers…". It is now written, with 40 `FR-DATA` requirements, the
-four layers in §3.3, and a catalogue of 38 named rules in §4.4 — all of them implemented.
+This section was the **brief** for writing that spec. It is now written, with 40 `FR-DATA`
+requirements, four validation layers in §3.3, and a catalogue of named rules in §4.4.
+Read `docs/specs/01-data-management.md`.
 
-A brief that outlives its deliverable becomes a second, vaguer statement of the same thing,
-and the two drift. Read `docs/specs/01-data-management.md`.
-
-The number stays here rather than being reclaimed: **section numbers are cited from twelve
+The number stays here rather than being reclaimed: **section numbers are cited from a dozen
 other files** and behave like every other identifier in this repository (§5) — assigned
 once, never renumbered, never reused.
 
@@ -304,8 +295,7 @@ Actuarial correctness defaults (specs must not contradict these):
 
 Its one binding instruction — **update `docs/skills-map.md` in the same PR as any spec
 change that adds or alters a tech dependency** — is stated in §10 among the other document
-rules, where a reader looking for "what must I update?" will actually find it. The examples
-that filled the rest of this section were the file's own content, restated.
+rules, where a reader looking for "what must I update?" will actually find it.
 
 ## 9. Roadmap — *the plan lives in `docs/roadmap.md`*
 
@@ -314,12 +304,9 @@ that filled the rest of this section were the file's own content, restated.
 
 Everything else about the plan — the phase list, workstream rows, closure records, decision
 gates, the retrofit-impossible list, and which workstreams are closed — is in
-[`docs/roadmap.md`](docs/roadmap.md), and **only** there.
-
-This section used to restate it. It went stale within a fortnight: it still described Phase
-1a as though nothing had shipped, while the roadmap carried eight closure records it knew
-nothing about. Status duplicated in two places disagrees, and the copy nobody updates is the
-one that gets read first.
+[`docs/roadmap.md`](docs/roadmap.md), and **only** there. This section used to restate it
+and went stale within a fortnight; status duplicated in two places disagrees, and the copy
+nobody updates is the one that gets read first.
 
 The two things worth keeping here, because they change how you work rather than what is
 planned:
@@ -368,7 +355,7 @@ uv sync --all-packages --dev
 #
 # Python (.github/workflows/python.yml) and docs (docs.yml):
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
-python3 scripts/audit-docs.py                # 21 checks over docs/ and .claude/notes/
+python3 scripts/audit-docs.py                # structural checks over docs/ and .claude/notes/
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 
@@ -392,22 +379,17 @@ uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item c
 # published to PyPI in Phase 1 — publishing would force semver stability on an API still
 # being discovered — so this is how a reviewer runs the maths outside the platform.
 # From Phase 2 it publishes as `0.x` with an explicit no-stability-guarantee notice.
+# `uv venv` ships no pip, so a bare `pip install -e` fails; use `uv pip install --python`.
 uv venv .venv-review && uv pip install --python .venv-review/bin/python \
-    -e packages/pricing-core               # a reviewer's own venv or notebook kernel
-#
-# `uv venv` ships no pip, so a bare `pip install -e` fails with "No such file or
-# directory" — use `uv pip install --python <venv>/bin/python`, or a `python -m venv`
-# environment if pip is wanted inside it.
+    -e packages/pricing-core
 
 # The demo entrance (FR-PLAT-53). One command from a clean checkout to a browser: compose,
 # migrations, freMTPL2 seeded through the real Job path, the API and the frontend, with a
 # development identity for the seeded workspace. Ctrl-C stops everything it started.
+# It refuses outside local/dev before starting anything — the whole path hangs off
+# `dev_auth_enabled`, False by default and fatal at startup in a deployed environment.
 uv run python scripts/demo.py                # then open http://localhost:5173/demo
 uv run python scripts/demo.py --rows 60000   # a sample; the full seed is 678 013 rows
-#
-# It refuses outside local/dev, before starting anything — the whole path hangs off
-# `dev_auth_enabled`, which is False by default and raises at startup in a deployed
-# environment. There is no second switch to leave on.
 
 # Local infrastructure (deploy/README.md has the credentials and ports).
 docker compose -f deploy/docker-compose.yml up -d --wait
@@ -424,7 +406,6 @@ celery -A app.worker.entrypoint beat
 
 # W6a setup. pnpm is not on this image and `corepack enable pnpm` fails on it, so the way
 # in is `npm config set prefix ~/.npm-global && npm i -g pnpm`, with that bin on PATH.
-# The frontend gate itself is above, with the rest of the gate.
 pnpm --dir frontend dev                      # proxies /api to localhost:8000
 
 # The API the frontend talks to. Compose brings up postgres/redis/minio only — there is no
@@ -438,97 +419,42 @@ uv run alembic upgrade head                  # W2
 ## 12. Skills
 
 Project-specific procedures live in `.claude/skills/`, versioned with the repo so they
-travel with it. `.claude/skills/README.md` is the index — read it when starting work on an
-unfamiliar part of the suite.
+travel with it. **`.claude/skills/README.md` is the index** — it lists every skill, records
+why each was added, and carries the provenance, security-review dates and local
+modifications for the vendored sets. Read it when starting work on an unfamiliar part of
+the suite; it is the authority on what is installed, not this section.
 
-**Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`, `phase-review`,
-`adr-write`, `contract-schema`, `library-spike`, `git-hygiene`, `python-package`,
-`python-test`, `fastapi-service`, `vue-frontend`.
+- **Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`,
+  `phase-review`, `adr-write`, `contract-schema`, `library-spike`, `git-hygiene`,
+  `python-package`, `python-test`, `fastapi-service`, `vue-frontend`.
+- **Vendored, subject matter:** `python-skills` (CI, security, testing, code quality,
+  secret hygiene), `vue3-skills` (Vue 3, router, Pinia, testing, composables),
+  `ui-ux-pro-max` (colour, typography, accessibility, chart choice).
+- **Vendored, process:** `superpowers` — how work is approached, not what it is about.
+- **Vendored, working memory:** `planning-with-files` — plan state on disk that survives
+  `/clear`, compaction and session death.
+- **Installed by its own tool:** `graphify` (`/graphify`) — the repository as a traversable
+  knowledge graph. Refreshed by re-running `graphify install`, never by editing its files;
+  `graphify-out/` is git-ignored. Two things its installer does are deliberately not
+  committed, and re-running it reintroduces both — the README has the detail.
 
-**Vendored** from [`wdm0006/python-skills`](https://github.com/wdm0006/python-skills) (MIT,
-security-reviewed 2026-08-14): `reproducing-ci-locally`, `security-audit`,
-`testing-strategy`, `code-quality`, `secret-hygiene`.
+Skills that teach an approach §3 has decided against were **not** taken (Options API, JSX,
+React/shadcn), because a skill teaching a rejected approach is worse than a missing one.
+Vendored skills are kept as upstream wrote them and excluded from `ruff`, with two recorded
+exceptions — both a path variable that does not resolve for a project-level checkout, both
+evidenced in the README.
 
-**Vendored** from [`yes-404/vue3-skills`](https://github.com/yes-404/vue3-skills), a fork of
-`vuejs-ai/skills` (MIT, security-reviewed 2026-08-15): `vue-best-practices`,
-`vue-router-best-practices`, `vue-pinia-best-practices`, `vue-testing-best-practices`,
-`vue-debug-guides`, `create-adaptable-composable`. Two of the eight were **not** taken —
-`vue-jsx-best-practices` and `vue-options-api-best-practices` document approaches §3 has
-decided against, and a skill teaching a rejected approach is worse than a missing one.
-
-**Vendored** from [`obra/superpowers`](https://github.com/obra/superpowers) (MIT,
-security-reviewed 2026-08-16, upstream v6.3.0): all fourteen — `using-superpowers`,
-`brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`,
-`dispatching-parallel-agents`, `systematic-debugging`, `test-driven-development`,
-`verification-before-completion`, `requesting-code-review`, `receiving-code-review`,
-`using-git-worktrees`, `finishing-a-development-branch`, `writing-skills`. These are
-*process* skills — how work is approached — where the other two sets are subject matter.
-
-**Vendored** from
-[`OthmanAdi/planning-with-files`](https://github.com/OthmanAdi/planning-with-files) (MIT,
-security-reviewed 2026-08-16, upstream v3.10.1): `planning-with-files` — plan state on disk
-that survives `/clear`, compaction and session death. The English canonical skill only; the
-six-language, eighteen-agent mirrors and the bundled Pi extension were not taken.
-
-**Installed** from [`Graphify-Labs/graphify`](https://github.com/Graphify-Labs/graphify)
-(Apache-2.0, security-reviewed 2026-08-16, CLI 0.9.45): `graphify` — the repository as a
-traversable knowledge graph, triggered by `/graphify`. Unlike the three sets above it is
-not hand-vendored: the skill payload is written by the tool's own
-`graphify install --project --platform claude`, so it is refreshed by re-running that, not
-by editing the files. Its output directory `graphify-out/` is git-ignored.
-
-Two things the installer does are **deliberately not committed**, and re-running it
-reintroduces both — `.claude/skills/README.md` has the detail and the reason:
-its `PreToolUse` hooks carry an absolute path from the installing machine and belong in
-`.claude/settings.local.json`, and its `## graphify` append to *this* file asserts a
-knowledge graph exists that a fresh clone does not have. The conditional version lives in
-`.claude/CLAUDE.md`.
-
-**The semantic pass over docs, PDFs and images calls a configured LLM provider.** Code
-extraction is local tree-sitter and always safe; the semantic pass must never be pointed at
-real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is the exception.
-
-**Vendored** from
-[`nextlevelbuilder/ui-ux-pro-max-skill`](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
-(MIT, security-reviewed 2026-08-17, upstream v2.15.0): `ui-ux-pro-max` — a searchable local
-database of design guidance (119 UX guidelines, 192 palettes, 74 font pairings, 25 chart
-types, 22 stacks including Vue), for the design decisions `vue-frontend` and
-`vue-best-practices` do not cover: colour, typography, accessibility and chart choice.
-
-**One of the seven skills that repository ships was taken.** The other six — `ui-styling`,
-`design`, `design-system`, `brand`, `banner-design`, `slides` — are bundled `claudekit`
-skills for brand identity, logo and social-asset generation and slide decks. `ui-styling`
-builds shadcn/ui on Radix, which is React where §3 fixed Vue 3, and `design` calls Google
-Gemini with a key read from `~/.claude/.env`. A skill teaching a rejected framework is the
-same exclusion `vue-jsx-best-practices` got; the rest is subject matter this repository
-does not have.
-
-All vendored skills are kept as upstream wrote them and excluded from `ruff` — with two
-recorded exceptions, both the same root cause: a path variable that does not resolve for a
-project-level `.claude/skills/` checkout.
-
-`ui-ux-pro-max` invokes its own search script through `${CLAUDE_PLUGIN_ROOT}`, which is set
-for plugins and not for a project skill, so as shipped every documented command line
-resolves to `/scripts/search.py` and fails. Its eleven occurrences became
-`${CLAUDE_SKILL_DIR}/scripts/search.py`, which *is* substituted into a skill body at every
-scope. Nothing else changed.
-
-`planning-with-files`' five hook commands search `${CLAUDE_SKILL_DIR}`,
-`~/.claude/skills/` and `~/.claude/plugins/marketplaces/`, none of which reaches a
-project-level `.claude/skills/` checkout, so as shipped the hooks register and silently do
-nothing. Each gained one `$CLAUDE_PROJECT_DIR/...` fallback, and the body's
-`${CLAUDE_PLUGIN_ROOT}` became `${CLAUDE_SKILL_DIR}`. `.claude/skills/README.md` carries the
-evidence, including why substitution does not reach a hook command string.
-
-`.claude/skills/README.md` is the index and records why each was added.
+**graphify's semantic pass over docs, PDFs and images calls a configured LLM provider.**
+Code extraction is local tree-sitter and always safe; the semantic pass must never be
+pointed at real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is
+the exception.
 
 ### Precedence — superpowers first
 
 **When a superpowers skill and any other skill both apply, follow the superpowers one.**
 It sets the *approach*; the others supply this repository's *facts*. Upstream's
-`using-superpowers` states the same rule from its own side — process skills before
-implementation skills — but it also says user instructions outrank skills, so the rule
-only actually binds by being written here.
+`using-superpowers` states the same rule, but it also says user instructions outrank
+skills, so the rule only actually binds by being written here.
 
 The order to work in:
 
@@ -541,11 +467,10 @@ The order to work in:
 3. **This repo's skill for the specifics** — it carries the paths, commands, requirement
    ids and conventions a general skill cannot know.
 
-The one carve-out is narrow and factual, not a licence to prefer the local skill: where
-superpowers gives a *procedure* and a repo skill states a *fact about this repository*,
-the fact wins, because superpowers does not contain it and cannot. `git-hygiene`'s
-`.gitignore` rules and squash-merge-with-auto-delete flow, `python-test`'s
-`@pytest.mark.req` markers and §11's gate commands are facts of that kind —
+The one carve-out is narrow and factual: where superpowers gives a *procedure* and a repo
+skill states a *fact about this repository*, the fact wins, because superpowers does not
+contain it and cannot. `git-hygiene`'s `.gitignore` rules and squash-merge flow and
+`python-test`'s `@pytest.mark.req` markers are facts of that kind —
 `finishing-a-development-branch` still decides *how* a branch ends.
 
 Nothing in superpowers overrides §0, §5 or §13. The phase table, permanent requirement
@@ -572,151 +497,55 @@ general skill is entitled to replace.
 
 A workstream is closed only when every item below is true **and recorded in
 `docs/roadmap.md`**. Closing without this produces a roadmap that reports progress the
-repository does not have.
+repository does not have — which is worse than no roadmap, because the next workstream is
+planned against it.
 
-The procedure is in `.claude/skills/close-workstream`; this section is the standard it
+**The procedure is `.claude/skills/close-workstream`**, which carries the commands, the
+worked examples and the incidents behind each rule. This section is the standard it
 implements.
 
-### 1. Derive the expected scope from the specification — before looking at anything built
-
-**Enumerate what the specification requires, then search for evidence of each item.** In
-that order, and never the reverse.
-
-Auditing from what was built can only confirm what was built. It is silent about everything
-the workstream was supposed to cover and did not, which is precisely the part a closure
-record exists to state. The same applies to recollection: an audit that begins "I
-implemented jobs, blobs and settings" has already chosen its own answer.
-
-```bash
-# Sections a workstream's named areas cover, plus any individual requirements it owns.
-uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 \
-    --extra FR-PLAT-47,FR-PLAT-48
-```
-
-Both of its inputs are documents — requirements from `docs/specs/`, evidence from
-`@pytest.mark.req` markers — so the result does not depend on who runs it. It exits non-zero
-while any in-scope requirement lacks evidence.
-
-**It is a closure tool, not a CI gate.** Most requirements belong to phases that
-have not started, so running it unscoped will always fail; that is the correct behaviour for
-an audit and the wrong behaviour for a build.
-
-**Reconcile the derived count against the roadmap's claim; a disagreement is itself a
-finding.** W2's row said "~35 of 60 `PLAT` requirements" and the sections it names total
-exactly 35 — but the spec holds 61, not 60, because FR-PLAT-51 was appended after that row
-was written.
-
-**Every requirement without evidence needs a verdict**, one of: delivered but untested,
-deferred with an owner, reassigned to another workstream, or not started. Silence is not
-one of them. An independent audit of W2 found six unevidenced in-scope requirements where
-the roadmap acknowledged two, and four of the six were mentioned nowhere in the
-documentation at all.
-
-**A marker is a claim, not a proof.** It says a test asserts *something* about a
-requirement, not that it covers it. Read the ones that matter.
-
-**Requirement coverage is not interface coverage, and not catalogue coverage.** Markers sit
-on unit and service tests, so a module can satisfy every requirement it owns and still
-expose no HTTP route — W4 stood at 49 of 50 requirements with **0 of 28** endpoints
-published, and nothing said so. A requirement can also *summarise* a catalogue it does not
-enumerate: FR-DATA-16 says "validation covers four layers", which one test evidences
-honestly, while `01` §4.4's catalogue of 38 named rules behind it stood at 12.
-
-Both are now derivable, and the same audit answers them:
-
-```bash
-uv run python scripts/scope-audit.py DATA --endpoints --catalogue VR
-```
-
-The endpoint check compares the spec's §5.1 table against the **published contract** rather
-than the running app, because the contract is the artifact external consumers read. The
-catalogue check scans **source only** — it counted a rule named nowhere but in a test as
-implemented until a deliberately-broken run failed to notice a deleted id, which is the
-inversion of what the check exists for.
-
-**Evidence is not only markers.** A requirement can be enforced by an import-linter
-contract, a database privilege, a migration, or a recorded measurement — none of which the
-script can see, so all of which read as unevidenced. Re-auditing W1 reported half its scope
-missing while the enforcement was working perfectly in CI, because W1's whole deliverable
-*is* enforcement machinery.
-
-The answer is to make the enforcement visible rather than to trust it silently: a test that
-runs the check and names the requirement (`tests/test_repository_invariants.py`) links the
-two, so the audit finds it. Where a test genuinely is the wrong instrument — NFR-PLAT-4
-would have CI start containers to assert a number that varies with the runner — record the
-measurement and say why it is not a test.
-
-### 2. Deliverables — audited against the definition, not memory
-
-Re-read the workstream's row in `roadmap.md` §6 and check each named deliverable **exists
-and works**. Those are different claims: W1's compose file existed for days before anyone
-ran it, and NFR-PLAT-4 was unverified the whole time.
-
-### 3. Gates — all green, run locally with the real toolchain
-
-**§11 has the commands**, both halves, and closing a workstream runs all of them — with
-`generate-contracts.py --check` rather than the plain regenerate, because at closure the
-question is whether the committed contract already matches, not whether it can be made to.
-
-Run them **locally**, not merely "CI passed". CI proves the runner; local proves the result
-is reproducible and that you can debug it — and read each command's own exit code, for the
-reason §11 gives.
-
-### 4. Enforcement is proven, not assumed
-
-Any check the workstream introduces must be shown to **fail on deliberately broken input**
-before it is trusted. A silently-passing check is worse than no check, because it is
-mistaken for coverage.
-
-*This is not hypothetical.* The import-linter config was dead for a day — `root_packages`
-was comma-separated on one line, so the parser split it into characters — and it reported
-success the whole time, while the contract enforcing ADR-0001 checked nothing.
-
-**A generated artifact matching its source proves neither is correct.** W2's contract drift
-check passed while the published OpenAPI advertised an error model the platform never emits
-and omitted the one it does — the contract faithfully described the code, and both were
-wrong together. Check generated output against the **requirement**, not only against the
-thing it was generated from.
-
-### 5. NFRs — measured, not asserted
-
-If the workstream claims an NFR, record **the measurement and the budget**: "21 s cold
-start against NFR-PLAT-4's 300 s", never "starts quickly". An unmeasured NFR is an opinion.
-
-### 6. Scope honesty — state what was *not* delivered
-
-Every requirement from step 1 that has no evidence appears here with its verdict and its
-owner. So does §5 of the roadmap, the retrofit list: which items landed, which are
-type-level only, and which workstream owns the remainder.
-
-"Partial" is an acceptable verdict and often the honest one — but say *how* it is partial.
-FR-PLAT-14's retention window is a declared setting with the 13-month floor enforced, while
-nothing purges beyond it; the floor therefore holds by default rather than by design, and
-recording only "delivered" would have hidden that.
-
-**"W1 closed" must not be readable as "the retrofit list is handled."** It was not, and
-that list is the one thing this project cannot fix cheaply later.
-
-### 7. Documents updated in the same PR
-
-The roadmap status table and closure evidence; `CLAUDE.md` §2's layout marks; and any spec
-the implementation proved wrong — when code and spec disagree, resolve it rather than
-quietly changing one (§0).
-
-**And the demo guide** (FR-PLAT-54). It exists, and it is **derived at request time** from
-the specs' §5.3 view tables, the frontend router, the published contract and this
-roadmap's status table — so it cannot describe the previous state, and there is nothing to
-update. What a closure must do instead is *check that it still derives*: a renamed spec
-heading or a restructured status table breaks the derivation silently, and a guide that
-lost a section reads as a platform that lost a capability.
-
-`uv run pytest backend/tests/test_demo_guide.py` is that check, and it runs in the gate.
-
-### 8. Repository clean
-
-No open PRs for the workstream; no tracked build artifacts; branch deleted after merge —
-**verify by content** (`git diff --stat main <branch>`), because squash-merge rewrites
-history and `git branch -d` refuses even when the work is fully merged.
+1. **Derive the expected scope from the specification — before looking at anything built.**
+   Enumerate what the spec requires with `scripts/scope-audit.py`, *then* search for
+   evidence. Reversed, an audit can only confirm what was built and is silent about what is
+   missing — the half a closure record exists to state. Reconcile the derived count against
+   the roadmap's claim; a disagreement is itself a finding. Every requirement without
+   evidence needs a verdict — delivered but untested, deferred with an owner, reassigned,
+   or not started. Silence is not one of them.
+   - **A marker is a claim, not a proof.** Read the ones that matter.
+   - **Requirement coverage is not interface coverage, nor catalogue coverage.** Run
+     `--endpoints` and `--catalogue` too: W4 stood at 49 of 50 requirements with 0 of 28
+     endpoints published, and nothing said so.
+   - **Evidence is not only markers.** An import-linter contract, a database privilege, a
+     migration or a recorded measurement all read as unevidenced. Make the enforcement
+     visible in a test that names the requirement, or record the measurement and say why a
+     test is the wrong instrument.
+2. **Deliverables — audited against the definition, not memory.** Re-read the workstream's
+   row in `roadmap.md` §6 and check each deliverable **exists** *and* **works**. Those are
+   different claims: W1's compose file existed for days before anyone ran it.
+3. **Gates — all green, run locally with the real toolchain.** §11 has the commands, both
+   halves, with `generate-contracts.py --check` rather than the plain regenerate. CI proves
+   the runner; local proves the result is reproducible — and read each command's own exit
+   code.
+4. **Enforcement is proven, not assumed.** Any check the workstream introduces must be shown
+   to **fail on deliberately broken input**. The import-linter config was dead for a day and
+   reported success throughout. And **a generated artifact matching its source proves
+   neither is correct** — check generated output against the requirement, not only against
+   what it was generated from.
+5. **NFRs — measured, not asserted.** Record the measurement and the budget: "21 s cold
+   start against NFR-PLAT-4's 300 s", never "starts quickly".
+6. **Scope honesty — state what was *not* delivered.** Every unevidenced requirement from
+   step 1, with its verdict and owner; plus roadmap §5's retrofit list — which items landed,
+   which are type-level only, and who owns the remainder. "Partial" is often the honest
+   verdict, but say *how* it is partial. **"W1 closed" must not be readable as "the retrofit
+   list is handled."**
+7. **Documents updated in the same PR** — the roadmap status table and closure evidence,
+   §2's layout marks, and any spec the implementation proved wrong (§0: resolve, don't
+   quietly edit). **The demo guide (FR-PLAT-54) is derived, not written**, so there is
+   nothing to update — but check that it still derives:
+   `uv run pytest backend/tests/test_demo_guide.py`, which also runs in the gate.
+8. **Repository clean.** No open PRs for the workstream; no tracked build artifacts; branch
+   deleted after merge — **verify by content** (`git diff --stat main <branch>`), because
+   squash-merge rewrites history and `git branch -d` refuses even when the work is merged.
 
 ### Tests that must exist before closing
 
@@ -725,84 +554,61 @@ history and `git branch -d` refuses even when the work is fully merged.
 - A `@pytest.mark.req` marker on each test, naming the requirement it satisfies.
 - A round-trip or property test wherever the workstream persists or transforms data.
 
----
-
 ## 14. Phase Review Standard
 
 §13 audits **one workstream against its own scope**. Nothing there audits **the plan** —
 whether the phase boundaries, the workstream cuts and the requirement set still make sense
-now that some of the work is real.
+now that some of the work is real. The roadmap was written before any application code
+existed, and code has since contradicted it more than once. Treat the plan as a working
+hypothesis and re-test it **while the phase is still open**, early enough that the answer
+can change what the phase does.
 
-The roadmap was written before any application code existed, and code has since contradicted
-it more than once: W4's `pipelines/` mark, six `PLAT` endpoints missing from a closed
-workstream, a spec that required a version timeline and offered no way to fetch one. Treat
-the plan as a working hypothesis and re-test it **while the phase is still open**, early
-enough that the answer can change what the phase does.
+**The procedure is `.claude/skills/phase-review`**, written after two runs and carrying what
+each of them actually found. This section is the standard.
+*(Raised by the maintainer as `NT-0001`, 2026-08-15.)*
 
-*(Raised by the maintainer as `NT-0001`, 2026-08-15. The note is the raw material; this
-section is the standard.)*
+**When:** at **each workstream close**, and again **before a phase's exit demo**. A fixed
+trigger, not "sometime" — a review that happens when someone remembers is one that happens
+after the mis-cut is expensive.
 
-### When
+**The five questions, in this order:**
 
-At **each workstream close**, and again **before a phase's exit demo**. A fixed trigger, not
-"sometime" — a review that happens when someone remembers is one that happens after the
-mis-cut is expensive.
+1. **Completion.** Which planned tasks are actually done — derived from the specs, then
+   evidenced, never from recollection. This is §13's machinery (`scope-audit.py` with
+   `--sections`, `--endpoints`, `--catalogue`, plus `req-coverage.py`), not a second audit.
+   A disagreement with the roadmap is the finding.
+2. **Omission.** What the phase plainly needs that no workstream row names — absent from the
+   plan rather than behind schedule. `pipelines/` was marked to the wrong workstream; the
+   blob endpoints were declared in a spec and owned by nobody.
+3. **Skills and research.** Which `docs/skills-map.md` and `.claude/skills/README.md`
+   entries are now missing, and which have gone stale against the code. **Re-run the gap
+   analysis** rather than appending to a list — a list only ever grows.
+4. **Specification accuracy — the review's main target, not a tidy-up.** Whether each module
+   spec still describes the code written against it: §5.1 endpoint tables *in both
+   directions*, §5.2 signatures, §5.3 view Contents columns, named catalogues, and the
+   params a caller would copy from the page. Then `docs/roadmap.md`,
+   `docs/open-questions.md` and §2's layout marks.
 
-### The five questions, in this order
-
-1. **Completion.** Which of the phase's planned tasks are actually done — derived from the
-   specs, then evidenced, never from recollection. **This is §13's machinery, not a second
-   audit:** `scope-audit.py` with `--sections`, `--endpoints` and `--catalogue`, plus
-   `req-coverage.py`. If it disagrees with the roadmap, the disagreement is the finding.
-2. **Omission.** What the phase plainly needs that no workstream row names. Distinct from
-   unfinished work: `pipelines/` was marked 1a W4 and belonged to W7; the blob endpoints
-   were declared in `07` §5.1 and owned by nobody. Both were absent from the plan rather
-   than behind schedule.
-3. **Skills and research.** Which entries `docs/skills-map.md` and `.claude/skills/README.md`
-   are now missing, and which have gone stale against the code. **Re-run the gap analysis**
-   rather than appending to a list — a list only ever grows.
-4. **Specification accuracy — the review's main target, not a tidy-up.** Whether each
-   module spec still describes the code that was written against it: the §5.1 endpoint
-   tables *in both directions*, the §5.2 signatures, the §5.3 view Contents columns, the
-   named catalogues, and the params a caller would copy from the page. Then
-   `docs/roadmap.md`, `docs/open-questions.md` and §2's layout marks.
-
-   **The spec is where a stage's findings land**, because it is what the next stage is
-   built against: a divergence left in it is a defect the next workstream inherits and
-   builds on. The first audit to look found pandera named as the structural mechanism in
-   four places while being a dependency of nothing, a rule-format table whose params would
-   make an authored rule fail, and a reference publish lifecycle that existed in the
-   database, the API and no document — which is why the endpoint audit reported a complete
-   surface, since it compares the spec against the contract and an endpoint missing from
-   both is invisible to it.
-
-   **Resolve, never soften** (§0). Where the code is right, amend the spec with a dated
-   note saying which side was wrong and why. Where the *spec* is right and the code does
-   not meet it, the spec gains the precise obligation — an appended requirement, an owner,
-   and a verdict — rather than being edited down to what was built. FR-DATA-41 and
+   **The spec is where a stage's findings land**, because it is what the next stage is built
+   against. **Resolve, never soften** (§0): where the code is right, amend the spec with a
+   dated note saying which side was wrong and why; where the *spec* is right and the code
+   does not meet it, the spec gains the precise obligation — an appended requirement, an
+   owner, a verdict — rather than being edited down to what was built. FR-DATA-41 and
    FR-DATA-42 are what that looks like.
 5. **Shape.** Whether the remaining phases, workstreams and requirements are still cut in
    the right place — split, merge, add, or supersede.
 
-### Four rules that keep a review a review
+**Four rules that keep a review a review:**
 
 - **The output is a proposal, never a change.** Recommendation, rationale, and an explicit
-  maintainer acceptance line with a date — the precedent the 1a/1b split set. A review that
-  edits the roadmap on its own authority is re-planning, not reviewing.
-- **Requirement IDs are permanent** (§5). "Remove a requirement" means *mark superseded*;
-  renumbering is never the answer. An accepted ADR is amended by addendum, not edited.
-- **A later phase's finding is a spec change only** (§0's table). It does not become work
-  now because a review noticed it — mid-phase re-planning is how scope churn and building
-  ahead of the phase both start.
+  maintainer acceptance line with a date. A review that edits the roadmap on its own
+  authority is re-planning.
+- **Requirement IDs are permanent** (§5). "Remove a requirement" means *mark superseded*. An
+  accepted ADR is amended by addendum, not edited.
+- **A later phase's finding is a spec change only** (§0's table) — mid-phase re-planning is
+  how scope churn and building ahead of the phase both start.
 - **Every question gets a written answer, "no change" included.** A silent question is
   indistinguishable from one nobody asked.
 
-### Output
-
-Proposals land in `docs/roadmap.md` and `docs/open-questions.md`, each either accepted with
-a date or recorded as an open question with options and a recommendation.
-
-It has now run twice — reviews 1 and 2, both 2026-08-15 — so the procedure **is**
-`.claude/skills/phase-review`, alongside `close-workstream` (§12). This section stays the
-standard; the skill is how to satisfy it, including what each of the two runs actually
-found, which was in neither case what the question's author expected.
+**Output:** proposals land in `docs/roadmap.md` and `docs/open-questions.md`, each either
+accepted with a date or recorded as an open question with options and a recommendation.

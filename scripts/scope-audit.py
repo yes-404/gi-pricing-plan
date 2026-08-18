@@ -377,7 +377,7 @@ def main() -> int:
         print(
             "\n  Each needs a verdict before closure: delivered but untested, deferred with\n"
             "  an owner, reassigned to another workstream, or not started. Silence is not\n"
-            "  one of the options (CLAUDE.md §13 rule 5)."
+            "  one of the options (CLAUDE.md §13 rule 1)."
         )
         return 1
 
