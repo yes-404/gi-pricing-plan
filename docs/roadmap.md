@@ -138,7 +138,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 
 | Task | Kind | Due |
 |---|---|---|
-| 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-PLAT-3, OQ-MODEL-11) | decisions | Before Phase 2 — OQ-RATE-2 decided by spike, OQ-MODEL-3 decided 2026-08-17 and OQ-MODEL-11 raised by it |
+| 5 Phase-2 decisions (OQ-RATE-3/4/6, OQ-PLAT-3, OQ-GOV-8) | decisions | Before Phase 2 — OQ-RATE-2 decided by spike, OQ-MODEL-3 decided 2026-08-17, and OQ-MODEL-11 (which it raised) decided 2026-08-18. **OQ-GOV-8 replaces it on this list rather than the count going to four**: it was raised 2026-08-18 and reached neither this row nor §10's table, which is the same defect in two places |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
 | 6 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
@@ -2064,6 +2064,62 @@ that keeps the derived test from passing vacuously.
 | `test_transformations.py`'s `SET LOCAL ROLE gip_app` test | **Left as written, and now honest.** It tests layer 1, which is what it does; the owner path it overstates is covered by the new test rather than by rewriting it |
 | An artifact table checked at the ORM layer as well | **Not started, and probably never.** `DiagnosticsRow` and its siblings carry the claim in a docstring only. The database is the layer that cannot be bypassed, which is the whole argument of FR-DATA-42 |
 
+#### W5 slice — five decisions, and §3.3 as an evidence floor, 2026-08-18
+
+Five open questions decided in one pass, and the plan's own gate table repaired while doing
+it. Four of the five appended a requirement and stopped there, which is the correct
+deliverable for a later phase (`CLAUDE.md` §0); the fifth was buildable today and was built.
+
+| Question | Decision | Requirement | Built? |
+|---|---|---|---|
+| **OQ-MODEL-10** | The GLM approximation of a GBM is a **Model** in its own right | `02` FR-MODEL-96 | No — **Phase 1b**, before anything references a transparency artifact by identifier. After that it is a migration rather than a decision |
+| **OQ-MODEL-11** | An `approximation`-mode Rating Version must show a dislocation run against itself in `exact` mode, inside a workspace-declared threshold | `03` FR-RATE-61 | No — **Phase 2**, with the deployment path it gates |
+| **OQ-MODEL-12** | An `interaction` operand must resolve to levels; no product term at any intent | `02` FR-MODEL-97 | Already built — the requirement ratifies the interaction slice's refusal and names the `diagnostic`-intent variant as the likely eventual answer |
+| **OQ-MODEL-13** | One interval kind until a **named consumer** asks for a second | `02` FR-MODEL-98 | Already built — the requirement supplies the trigger the row could not, so "revisit when there is a consumer" stops depending on memory |
+| **OQ-GOV-7** | `06` §3.3 is a **floor**; §4.2 may add and never remove | `06` FR-GOV-37 | **Yes** — its precondition had fired twice over |
+
+**The floor, in three mechanisms.** The objection to a floor was never that it is wrong, it
+is that a submission refused for evidence the policy does not mention is an error nobody can
+act on. So the floor is restated in §4.2's own text; `PUT /approval-policy` refuses a policy
+that drops below it with `POLICY_BELOW_EVIDENCE_FLOOR` naming the artifact type and the
+kinds; and submission checks the **union** of floor and policy, so a policy stored before the
+floor existed cannot sit below it either. `EVIDENCE_FLOOR` lives in `model-schema` beside
+`DEFAULT_POLICY` — one shape, one place (`CLAUDE.md` §2).
+
+**The enforced floor is §3.3's *checkable projection*, and the rest is named with an owner.**
+Submission fails closed on a kind it cannot verify (`06` R4), so a floor naming
+`model_comparison_if_predecessor` — which lives inside a comparison's `payload` and cannot be
+queried — would have refused every model submission rather than raising the standard.
+FR-GOV-37 says which kinds are enforced, which are not, and who owns each remainder.
+
+**Two divergences found while building it, resolved rather than aligned.** `06` §4.2's `model`
+entry lists three evidence kinds and `DEFAULT_POLICY` shipped one; §4.2's `rating_version`
+entry lists six against three. The code was right for the day it was written and the page was
+right about the destination, and §4.2 now carries a dated note saying so. The sharper one:
+the submission check answered a kind it spelled `transparency_artifact` while the spec spells
+it `transparency_artifact_if_non_glm` — so a workspace that copied the kind off the page got
+a **fail-closed refusal for evidence it had**. Both spellings are accepted now and the spec's
+is canonical.
+
+**The gate table was missing four questions and double-counting a fifth.** `OQ-MODEL-12`,
+`OQ-MODEL-13`, `OQ-MODEL-14` and `OQ-GOV-8` had been raised, mirrored and invisible to the
+plan; `OQ-GOV-7` was counted at both 1b and Phase 3 because the Phase 3 row carried a
+parenthetical naming it. That parenthetical is now prose beneath the table, where it cannot
+be counted. This is the fourth time this exact defect has been recorded — `audit-docs.py`
+checks the spec ↔ register mirror and cannot see this table at all, which is the argument for
+the `docs-audit` skill's snippet being run at every raise *and* every decision, not only at a
+raise.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| `02` FR-MODEL-96 — the approximating Model | **Deferred, Phase 1b**, with the deadline stated in the requirement. `approximating_model_id` stays `None` meanwhile, which is FR-MODEL-87's declared-and-unbuilt state with a trigger attached |
+| `03` FR-RATE-61 — the approximation deployment gate | **Deferred, Phase 2.** Needs FR-RATE-46 built; nothing in Phase 1 deploys a Rating Version. Building it now would be building ahead of the phase |
+| `model_comparison_if_predecessor` in the enforced floor | **Deferred**, owner: the slice that gives `model_comparisons` a queryable model reference. Named in FR-GOV-37 rather than left to be noticed |
+| §3.3's factor/banding/grouping **rationale** evidence | **Not started** — unmodelled, no artifact holds it. Owner: Phase 1b |
+| §4.2's `rating_version` and `deployment` entries in `DEFAULT_POLICY` | **Left as they are.** Their floors are declared in `EVIDENCE_FLOOR` and enforced on any workspace that adds an entry; adding entries for artifacts nothing can submit yet would be shipping a policy for a Phase 2 capability |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2227,11 +2283,30 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, **OQ-MODEL-10**, **OQ-GOV-7** | 11 (2 open) |
-| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-PLAT-3, OQ-MODEL-11 | 8 (5 open) |
-| **Before Phase 3** | OQ-GOV-1..6 *(OQ-GOV-7 is gated at 1b, not here — see below)*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
+| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔ *both 2026-08-18*, **OQ-MODEL-14** | 12 (1 open) |
+| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔ *both 2026-08-18 — each decided now and **revisited** here, against a rate table that exists rather than one that is specified*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-PLAT-3, **OQ-GOV-8** | 10 (5 open) |
+| **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
-| **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 12 (4 open) |
+| **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 13 (4 open) |
+
+**2026-08-18 — five decisions, and the table was repaired to take them.** OQ-MODEL-10 (the
+approximation is a Model, `02` FR-MODEL-96), OQ-MODEL-11 (a dislocation gate on
+`approximation` mode, `03` FR-RATE-61), OQ-MODEL-12 (no continuous interaction operand, `02`
+FR-MODEL-97), OQ-MODEL-13 (one interval kind until a named consumer, `02` FR-MODEL-98) and
+OQ-GOV-7 (§3.3 is a floor, `06` FR-GOV-37, **built**). **Before Phase 1b now has one question
+left**, OQ-MODEL-14.
+
+**OQ-GOV-7 is gated at 1b and appears once.** It used to appear twice — the Phase 3 row
+carried a parenthetical naming it, which reads as a placement to a counter that cannot tell
+prose from a cell. Four other ids appeared nowhere at all: **OQ-MODEL-12**, **OQ-MODEL-13**,
+**OQ-MODEL-14** and **OQ-GOV-8**, each raised in a spec, correctly mirrored into
+`open-questions.md`, and invisible to the plan. Two of them were decided on the day they were
+placed, which is the failure mode this table exists to prevent: a question the plan never saw
+cannot be scheduled, and one nobody scheduled gets answered by whoever trips over it.
+**OQ-MODEL-12 and OQ-MODEL-11 sit at Phase 2 while already decided**, because each names a
+revisit that belongs against a rate table that exists; **OQ-MODEL-13** sits in *Deferred* for
+the same reason, holding the trigger FR-MODEL-98 names. A decided row still needs a gate — it
+is where the revisit is scheduled, not only where the answer was due.
 
 **OQ-RATE-1 was the one question able to invalidate an accepted ADR. It has been answered**
 — by a spike, not an opinion — and ADR-0004 survived

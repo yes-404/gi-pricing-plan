@@ -225,9 +225,12 @@ def test_an_operand_that_was_not_supplied_is_refused() -> None:
 
 
 @pytest.mark.req("FR-MODEL-91")
+@pytest.mark.req("FR-MODEL-97")
 def test_a_continuous_operand_is_refused_by_name_with_its_remedy() -> None:
-    """OQ-MODEL-12 — see the module docstring. A product term would fit and would not be
-    rateable, which is the kind of success worth refusing."""
+    """OQ-MODEL-12, decided 2026-08-18 as FR-MODEL-97 — see the module docstring. A product
+    term would fit and would not be rateable, which is the kind of success worth refusing.
+    The decision keeps the `diagnostic`-intent variant open, so what this test pins is the
+    refusal, not the absence of any future product term."""
     banding = _banding()
     age = _age(banding)
     raw = _factor("exposure_raw", "exposure_years")

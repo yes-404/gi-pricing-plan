@@ -10,6 +10,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals, rbac
 from model_schema import (
+    DEFAULT_POLICY,
     ActorKind,
     ApprovalStatus,
     ArtifactRef,
@@ -464,3 +465,82 @@ async def test_a_decision_is_recorded_against_its_approver(
         ).scalar_one()
     assert decision.approver_id == approver.id
     assert decision.comment == "ok"
+
+@pytest.mark.req("FR-GOV-37")
+async def test_a_policy_below_the_evidence_floor_is_refused(
+    database: Database, workspace_id
+) -> None:
+    """Negative: `06` §3.3 is a floor and §4.2 may only add to it (OQ-GOV-7).
+
+    The deciding case, run as written: an admin editing the transparency kind out of the
+    model policy. Submission would enforce the union regardless, so what this refusal
+    protects is the policy *document* — an insurer reading its own policy is entitled to see
+    what a submission will be held to, and one that says less than the platform enforces
+    misleads the only person who can change it.
+    """
+    from model_schema import ApprovalPolicy, ApprovalPolicyEntry
+
+    admin = _user("a")
+    await _with_role(database, workspace_id, admin, "admin")
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await approvals.set_policy(
+                session,
+                workspace_id=workspace_id,
+                actor=admin,
+                policy=ApprovalPolicy(
+                    policies=(
+                        ApprovalPolicyEntry(
+                            artifact_type="model",
+                            approvers_required=1,
+                            approver_roles=("approver",),
+                            evidence=("diagnostics",),
+                        ),
+                    )
+                ),
+            )
+    assert exc.value.code == "POLICY_BELOW_EVIDENCE_FLOOR"
+    assert "transparency_artifact_if_non_glm" in (exc.value.detail or "")
+
+    #: And nothing was stored: a refused edit must leave the previous policy in force,
+    #: rather than a workspace ending up with neither the old policy nor the new one.
+    async with database.unit_of_work() as session:
+        assert await approvals.policy_for(session, workspace_id) == DEFAULT_POLICY
+
+
+@pytest.mark.req("FR-GOV-37")
+async def test_a_policy_stored_below_the_floor_is_still_submitted_against_the_floor(
+    database: Database, workspace_id
+) -> None:
+    """A policy written before FR-GOV-37 cannot dodge the floor by being old.
+
+    Written straight into the table, which is how a pre-2026-08-18 row got there: `set_policy`
+    would refuse it now. Loading it is deliberate — refusing at read time would lock a
+    workspace out of its own approvals — so the floor is applied at the point of use instead.
+    """
+    from app.db.models import ApprovalPolicyRow as PolicyRow
+    from model_schema import ApprovalPolicy, ApprovalPolicyEntry
+
+    legacy = ApprovalPolicy(
+        policies=(
+            ApprovalPolicyEntry(
+                artifact_type="model",
+                approvers_required=1,
+                approver_roles=("approver",),
+                evidence=(),
+            ),
+        )
+    )
+    async with database.unit_of_work() as session:
+        session.add(
+            PolicyRow(workspace_id=workspace_id, policy=legacy.model_dump(mode="json"))
+        )
+
+    async with database.unit_of_work() as session:
+        stored = await approvals.policy_for(session, workspace_id)
+    assert stored.entry_for("model").evidence == ()
+    assert stored.effective_evidence("model") == (
+        "diagnostics",
+        "transparency_artifact_if_non_glm",
+    )

@@ -116,6 +116,10 @@ auditor, or a regulator:
 | **Rating Version** | Structural diff; rate table diffs; passing regression suite; dislocation run with attribution; GIPP check where enabled; change summary (`03` FR-RATE-40) |
 | **Deployment to `prod`** | A complete Rating Version approval; a successful `uat` deployment; Deployer permission (`03` FR-RATE-50) |
 
+| ID | Requirement |
+|---|---|
+| **FR-GOV-37** | **The table above is a floor. §4.2's `ApprovalPolicy` may add to it and may never remove from it.** (OQ-GOV-7, decided 2026-08-18.) The two tables have disagreed since Phase 0 and the code could only enforce one of them, because a check has to read a list and there were two. The deciding case is `02` §4.8 R3: a transparency artifact for a non-GLM model is an invariant of the artifact, not a workspace preference, and a policy edit that removes it is a mispricing waiting for an audit. Three mechanisms, so that neither table can be read alone: (i) the floor is restated in §4.2's own text, so a reader of the defaults sees what the defaults may not drop below — the objection to a floor was always that a submission refused for evidence the policy does not mention is an error nobody can act on; (ii) `PUT /api/v1/approval-policy` refuses an entry whose `evidence` omits a floor kind for that artifact type with `POLICY_BELOW_EVIDENCE_FLOOR`, naming the artifact type and the kinds, because a policy document that says less than it enforces misleads its reader; (iii) submission checks the **union** of the floor and the matching policy entry, so a policy stored before this requirement cannot dodge the floor by being old. **The enforced floor is the checkable projection of §3.3, and the remainder is named with an owner rather than asserted**: for `model` it is `diagnostics` and `transparency_artifact_if_non_glm`; `model_comparison_if_predecessor` stays out until a comparison names its models in a queryable column rather than inside `payload` (owner: the slice that adds it), and §3.3's factor/banding/grouping rationale is unmodelled (owner: Phase 1b). Submission continues to **fail closed** on any evidence kind it cannot verify (R4), so a tightened policy can never silently do nothing. An artifact type with **no §3.3 row has an empty floor** — `peril_structure` is that case — and a floor that says nothing permits anything, which is the right default for an artifact §3.3 predates rather than a gap to be filled by inference. |
+
 ### 3.4 Audit log
 
 | ID | Requirement |
@@ -233,6 +237,25 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
 ```
 
 `separation_of_duties.configurable: false` is deliberate and is not a placeholder (R1).
+
+> **These defaults sit on top of §3.3's floor, and may only add to it (FR-GOV-37, OQ-GOV-7 decided
+> 2026-08-18).** An entry whose `evidence` omits a floor kind for its artifact type is refused when
+> the policy is saved: the floor for `model` is `diagnostics` and `transparency_artifact_if_non_glm`,
+> for `validation_rule` `dry_run_result`, for `custom_objective` `objective_certificate`, and
+> `peril_structure` has no §3.3 row and therefore an empty floor. Submission checks the union of the
+> floor and the entry, so an older stored policy cannot sit below it either.
+>
+> **Which is also where this document was ahead of the build, recorded rather than quietly aligned
+> (`CLAUDE.md` §0).** The `model` entry above lists `transparency_artifact_if_non_glm` and
+> `model_comparison_if_predecessor`; `DEFAULT_POLICY` in `model-schema` shipped `diagnostics` alone,
+> and the `rating_version` entry above lists six kinds against the three it ships. The **defaults in
+> code were right for the day they were written** — an uncheckable kind fails closed (R4), so a
+> default naming `model_comparison_if_predecessor` would have refused every model submission — and
+> the page was right about the destination. FR-GOV-37 is what reconciles them: the checkable kinds
+> become the enforced floor and move into `DEFAULT_POLICY`, the rest keep their place here with an
+> owner. `transparency_artifact_if_non_glm` is the kind's name on both sides from 2026-08-18; the
+> submission check had been answering a kind it called `transparency_artifact`, so a workspace that
+> copied the name off this page got a fail-closed refusal for evidence it had.
 
 > **`peril_structure` added 2026-08-18 (W5, the peril-structure slice).** `02` FR-MODEL-61
 > has made a Peril Structure approvable since Phase 0, and `peril_structure` has been in
@@ -383,8 +406,9 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 **Error codes owned by this module:** `PERMISSION_DENIED`, `SCOPE_DENIED`,
 `SUBMITTER_CANNOT_APPROVE`, `DUPLICATE_APPROVER`, `EVIDENCE_INCOMPLETE`,
-`CHECKLIST_INCOMPLETE`, `ARTIFACT_FLAGGED`, `APPROVAL_PINNED_ARTIFACT_CHANGED`,
-`APPROVAL_ALREADY_DECIDED`, `WITHDRAW_AFTER_DEPLOY_FORBIDDEN`,
+`POLICY_BELOW_EVIDENCE_FLOOR`, `CHECKLIST_INCOMPLETE`, `ARTIFACT_FLAGGED`,
+`APPROVAL_PINNED_ARTIFACT_CHANGED`, `APPROVAL_ALREADY_DECIDED`,
+`WITHDRAW_AFTER_DEPLOY_FORBIDDEN`,
 `BREAK_GLASS_REASON_REQUIRED`, `AUDIT_CHAIN_BROKEN`, `ATTESTATION_OVERDUE`.
 
 ### 5.2 Backend service interfaces
@@ -522,5 +546,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-GOV-4** | Do we need a formal "model risk tiering" concept (tier 1 models needing more approvers, more frequent attestation), or is per-artifact-type policy plus scoped roles sufficient? Tiering is standard in UK insurer model governance. |
 | **OQ-GOV-5** | How much commentary is *required* in a dossier before an approval can be submitted? Requiring it improves documentation quality and invites boilerplate; not requiring it produces dossiers that are all numbers and no reasoning. |
 | **OQ-GOV-6** | Does **TAS 200 (Insurance)** cover pricing and premium rating, or only reserving, capital and Solvency II actuarial-function work? TAS 100 applies to this platform's output regardless. If TAS 200 also applies, its assumption-setting requirements (strengthened in v2.0, effective 2025-01-01) bear directly on `02`'s factor/banding/grouping rationale and `01`'s validation evidence, and §4.4's dossier sections must satisfy them. The scope statement is in the standard text, not in the FRC's public summaries. |
-| **OQ-GOV-7** | Does `06` §3.3's per-artifact evidence table or `06` §4.2's `ApprovalPolicy` defaults decide what a submission actually requires? For a **Model** the two disagree: §3.3 requires diagnostics *plus* a transparency artifact where non-GLM, a model comparison where a predecessor exists, factor/banding/grouping rationale and dataset lineage; §4.2's default entry requires `evidence: ["diagnostics"]` and nothing else. The code enforces §4.2, because that is the artifact a workspace can edit (FR-GOV-12) and the only one a check can read. **2026-08-17:** still open, but its precondition has fired — the transparency kind is now built *and* checked at submission (`02` FR-MODEL-89), so it is gated before Phase 1b rather than Phase 3. |
+| **OQ-GOV-7** | ~~Does `06` §3.3's per-artifact evidence table or `06` §4.2's `ApprovalPolicy` defaults decide what a submission actually requires?~~ **DECIDED 2026-08-18: §3.3 is a floor per artifact type and §4.2 may only add to it — FR-GOV-37**, with the floor restated in §4.2 so a reader of the defaults sees it, refused at policy save, and applied as a union at submission. The enforced floor is §3.3's checkable projection; the uncheckable remainder is named with an owner. |
 | **OQ-GOV-8** | Does an `expression` Custom Objective (Phase 2, `02` FR-MODEL-75) need an authoring permission distinct from `model:fit`? Raised 2026-08-18 by superseding `custom_objective:author`/`custom_objective:submit` in §4.1: for a template objective the two are the same act, and for author-written maths they may not be. Recommendation: decide with the `expression` kind, not before. |

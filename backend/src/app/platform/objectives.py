@@ -723,12 +723,15 @@ async def _require_evidence(
     difference is only which kinds are verifiable here.
     """
     policy = await approvals.policy_for(session, workspace_id)
-    entry = policy.entry_for("custom_objective")
-    if entry is None:  # pragma: no cover — `approvals.submit` refuses this first
-        return
 
     verifiable = {"objective_certificate": row.certificate_id is not None}
-    missing = [kind for kind in entry.evidence if not verifiable.get(kind, False)]
+    #: FR-GOV-37: `06` §3.3's floor unioned with the workspace entry, so an edited policy
+    #: cannot drop the certificate that `02` FR-MODEL-42 makes the thing an approver reads.
+    missing = [
+        kind
+        for kind in policy.effective_evidence("custom_objective")
+        if not verifiable.get(kind, False)
+    ]
     if missing:
         unknown = [kind for kind in missing if kind not in verifiable]
         detail = (
