@@ -156,6 +156,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-73** | **Large-loss treatment is a modelling decision applied at fit time, not a property baked into the dataset** (OQ-DATA-1, decided 2026-08-14). A Model Spec carries a `loss_treatment` — `none`, `capped` (cap plus the restoration loading that restores the mean), `spliced`, or `excess` — which is applied to the response as the model is fitted, and which forms part of `spec_hash`. Dataset Versions stay assumption-free, so one validated dataset serves many capping assumptions without re-ingestion or re-validation. `01` VR-ACT-10 flags large losses in the data but never removes them. |
 | **FR-MODEL-74** | Because the dataset is uncapped and the model is not, **reconciliation must account for the treatment**: the Peril Structure's reconciliation (FR-MODEL-60) compares modelled burning cost *after* restoration against observed uncapped burning cost, and the generated dossier states the treatment alongside the reconciliation. Without this, a capped model reconciling to uncapped data looks like a modelling error rather than an intended adjustment. |
 | **FR-MODEL-72** | **The offset is symmetric at fit time and asymmetric at scoring time; the scoring path must be implemented per backend.** Both backends include the offset in the raw score handed to a custom objective, so FR-MODEL-27 holds for both. But at prediction time: XGBoost re-applies the offset when it is set on the prediction `DMatrix`, whereas **LightGBM's `Booster.predict()` has no offset parameter at all** — it returns tree contributions only, and the caller must add `init_score` back to the raw score itself. A single "apply the offset" implementation written against XGBoost's API would **silently do nothing** on LightGBM and under-predict by exactly the offset. `pricing-core` therefore implements the scoring-side offset per backend, and a round-trip test asserts that `predict(fit_data)` reproduces the fitted raw score on **each** backend independently (F13). |
+| **FR-MODEL-94** | **The fit artifact records *who applies the inverse link*, and scoring reads it rather than assuming one.** Added 2026-08-18 (W5, custom objectives), and the second half of FR-MODEL-72's asymmetry — the requirement above states the offset half and is silent on this one. Three cases, all reachable: XGBoost under a builtin objective transforms in `predict`; XGBoost under a **custom** objective was handed gradients and no link, so `predict` returns the raw margin; LightGBM is always asked for the raw score, because FR-MODEL-72's offset has to be added before the transform. `GbmFitResult.inverse_link` therefore names the transform *the platform* must apply, or `None` where the library already has — not the model's link, which is the same value in all three cases and so cannot distinguish them. |
 | **FR-MODEL-32** | Categorical handling is explicit: either the Factor supplies a grouping/encoding, or the backend's native categorical support is used with its parameters recorded. Silent label-encoding of an unordered categorical is refused. |
 
 ### 3.6 Transparency (non-GLM models)
@@ -1338,6 +1339,7 @@ def decode_covariance(payload: bytes, terms: Sequence[str]) -> NDArray[float64]
 # pricing_core/modelling/gbm.py
 def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
             holdout: pl.DataFrame | None = None,
+            objective: CustomObjective | None = None,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
             progress: ProgressCallback | None = None) -> GbmFit   # .result, .booster_bytes
@@ -1351,9 +1353,14 @@ def apply_loss_treatment(response: NDArray[float64], treatment: LossTreatment
 # pricing_core/modelling/objectives.py
 def parse_expression(text: str, bound: Sequence[str], params: Sequence[Parameter]) -> ExprTree
 def derive_derivatives(loss: ExprTree, wrt: str = "f") -> tuple[ExprTree, ExprTree]
-def compile_objective(obj: CustomObjective) -> ObjectiveFns   # .grad(y,f,w), .hess(y,f,w)
+def compile_objective(obj: CustomObjective) -> ObjectiveFns
+    # .loss/.grad/.hess(y,f,w), .stabilise(y,f,w), .inverse_link
 def certify_objective(obj: CustomObjective, *, sampling: SamplingSpec,
-                      seed: int) -> ObjectiveCertificate
+                      progress: ProgressCallback | None = None) -> CertificateResult
+def make_xgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], xgb.DMatrix],
+                                                      tuple[NDArray[float64], NDArray[float64]]]
+def make_lgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], lgb.Dataset],
+                                                      tuple[NDArray[float64], NDArray[float64]]]
 
 # pricing_core/modelling/diagnostics.py
 def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Factor], *,
@@ -1447,6 +1454,27 @@ def reconcile(assembled: pl.DataFrame, *, observed: NDArray[float64],
 > `apply_loss_treatment` is new and was declared nowhere — FR-MODEL-73's cap is applied to
 > the response at fit time, and it belongs beside the fit rather than inside it, because
 > the GLM path will need the same function.
+>
+> > **A defect in this function, found and fixed 2026-08-18 (W5, custom objectives).**
+> > `predict_gbm`'s LightGBM branch applied `np.exp` to the raw score unconditionally,
+> > though `_OBJECTIVES` carried the inverse link as its third element and its own comment
+> > said the raw-score path needed it. Correct for three of the four supported objectives
+> > and wrong for `binary:logistic`, which returned `exp(f)` where the model means
+> > `1 / (1 + exp(-f))` — a "probability" above 1 for every row the model thought likely,
+> > and the two agree to within 1% at `f = 0`, so a book with a weak signal would not have
+> > shown it. Nothing had asked a LightGBM binomial model for a prediction; the custom
+> > objectives slice needed the link recorded anyway (FR-MODEL-94), and the defect was
+> > visible the moment it was. The regression test is
+> > `test_a_binomial_model_is_scored_through_its_own_link`, parametrized over both backends
+> > and over builtin/custom, and the fix is `_apply_inverse_link` reading
+> > `GbmFitResult.inverse_link`.
+> >
+> > **Artifacts fitted before that field existed carry `None`**, and the LightGBM branch
+> > reads that as `exp` — exactly what those artifacts have always been scored with. The
+> > default is the *old* behaviour rather than the correct one on purpose: `None` there
+> > means "nobody recorded it", and silently changing what a stored model predicts is a
+> > worse failure than the one it would fix. `fit_gbm` sets the field explicitly on every
+> > path, so nothing fitted from here on relies on the fallback.
 
 > **Corrected a fifth time, 2026-08-18 (W5, peril structures).** `assemble_risk_premium`
 > and `reconcile` were declared taking a `PerilStructure`. They cannot, for the reason four
@@ -1483,17 +1511,45 @@ Sketch of the compiled objective handed to XGBoost — note the platform, not th
 owns this function; the user only ever supplied `loss` (§4.6):
 
 ```python
-def make_xgb_objective(fns: ObjectiveFns, base_margin: np.ndarray | None):
+def make_xgb_objective(fns: ObjectiveFns):
     def objective(preds: np.ndarray, dtrain: xgb.DMatrix):
         y = dtrain.get_label()
         w = dtrain.get_weight() if dtrain.get_weight().size else np.ones_like(y)
         f = preds                       # base_margin is already in preds (verified, research F5)
-        g, h = fns.grad(y, f, w), fns.hess(y, f, w)
-        if not (np.isfinite(g).all() and np.isfinite(h).all()):
-            raise NonFiniteDerivative(...)                 # FR-MODEL-48
-        return g, np.maximum(h, fns.hessian_min)           # FR-MODEL-43 strategy
+        g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)   # FR-MODEL-43 strategy
+        _finite_or_abort(fns, g, h, y, f, round_index)     # FR-MODEL-48
+        return g, h
     return objective
 ```
+
+> **Four corrections to this section, 2026-08-18 (W5, custom objectives).** Each is the
+> code being right and the sketch being wrong; none changes a requirement.
+>
+> * **`make_xgb_objective` takes no `base_margin`.** The sketch's own comment says the
+>   margin is already in `preds`, so a parameter for it can only be added a second time —
+>   which under a log link doubles the exposure and fits plausibly.
+> * **The hessian strategy is `fns.stabilise(y, f, w)`, not `np.maximum(h, hessian_min)`.**
+>   That expression is `clip_to_min` and only that; `abs` reflects a different number and
+>   `gauss_newton` computes one. Leaving the choice at the call site would have meant each
+>   backend adapter re-implementing FR-MODEL-43, and two of the three strategies silently
+>   becoming the third.
+> * **`make_lgb_objective` is `(preds, dataset)`, not `(y_true, y_pred, weight)`.** The
+>   three-argument form is the scikit-learn wrapper's. `lgb.train` calls
+>   `fobj(inner_predict(0), self.train_set)` — lightgbm 4.7.0, `basic.py:4276` — and the
+>   sklearn shape raises `TypeError` on the first boosting round. Weights come off the
+>   dataset, so the case weights the three-argument form was chosen for are still there.
+>   Both adapters therefore read `get_label`/`get_weight` off their backend's own object,
+>   and `preds` carries the offset on both.
+> * **`certify_objective` returns `CertificateResult` and takes no `seed`.** The
+>   certificate carries an id, a job and a `certified_at` that ADR-0001 forbids this package
+>   to allocate — the same `compute_diagnostics`/`DiagnosticsResult` split, arrived at for
+>   the same reason. The seed is already in `SamplingSpec`; a second one would let a caller
+>   record a certificate whose stated sampling does not reproduce it.
+>
+> `parse_expression` and `derive_derivatives` above are **declared and unbuilt**, and are
+> the whole of `ObjectiveKind.EXPRESSION` (FR-MODEL-40/41). They are gated behind
+> `expression_objectives_enabled`, off throughout Phase 1 (FR-MODEL-75), and W5 shipped the
+> twelve templates only. `compile_objective` refuses a non-template objective by name.
 
 ### 5.3 Frontend views
 

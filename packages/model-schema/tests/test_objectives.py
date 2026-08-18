@@ -122,9 +122,9 @@ def test_a_required_parameter_with_no_default_cannot_be_omitted() -> None:
 @pytest.mark.req("FR-MODEL-39")
 def test_a_parameter_outside_its_declared_range_is_refused() -> None:
     """`tweedie.p ∈ (1, 2)` **exclusive** — §4.5 says so, and `p = 2` is Gamma."""
-    with pytest.raises(pydantic.ValidationError, match="less than 2.0"):
+    with pytest.raises(pydantic.ValidationError, match=r"less than 2\.0"):
         _objective(ObjectiveTemplate.TWEEDIE, {"p": 2.0})
-    with pytest.raises(pydantic.ValidationError, match="greater than 1.0"):
+    with pytest.raises(pydantic.ValidationError, match=r"greater than 1\.0"):
         _objective(ObjectiveTemplate.TWEEDIE, {"p": 1.0})
 
 

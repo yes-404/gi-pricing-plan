@@ -30,17 +30,19 @@ from __future__ import annotations
 
 import hashlib
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, NamedTuple
+from typing import Any, Final, Literal, NamedTuple
 from uuid import UUID
 
 import numpy as np
 import polars as pl
 
 from model_schema import (
+    FITTABLE_OBJECTIVE_STATUSES,
     Banding,
     BlobRef,
+    CustomObjective,
     Factor,
     FactorType,
     GbmEvalPoint,
@@ -49,10 +51,24 @@ from model_schema import (
     Grouping,
     LossTreatment,
     MonotonicDirection,
+    ObjectiveBackend,
     OffsetSpec,
+    ResponseKind,
 )
+from pricing_core.modelling.errors import ObjectiveError
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.modelling.objectives import (
+    ObjectiveFns,
+    compile_objective,
+    make_lgb_objective,
+    make_xgb_objective,
+)
 from pricing_core.progress import NullProgress, ProgressCallback
+
+#: What each backend's callable-objective hook is handed and returns. XGBoost passes the
+#: raw scores and the `DMatrix`; LightGBM passes labels, scores and weights.
+type XgbObjective = Callable[[np.ndarray, Any], tuple[np.ndarray, np.ndarray]]
+type LgbObjective = Callable[[np.ndarray, Any], tuple[np.ndarray, np.ndarray]]
 
 __all__ = [
     "SUPPORTED_GBM_OBJECTIVES",
@@ -74,7 +90,7 @@ __all__ = [
 #: the fit refuses it again as a backstop. Two hand-written lists would eventually disagree
 #: about which objectives the platform supports, and the disagreement would show up as a
 #: spec that validated and then failed.
-_OBJECTIVES: Final[dict[str, tuple[str, str, str]]] = {
+_OBJECTIVES: Final[dict[str, tuple[str, str, Literal["exp", "logistic"]]]] = {
     "count:poisson": ("count:poisson", "poisson", "exp"),
     "reg:gamma": ("reg:gamma", "gamma", "exp"),
     "reg:tweedie": ("reg:tweedie", "tweedie", "exp"),
@@ -353,15 +369,8 @@ def _monotone(
     return tuple(vector)
 
 
-def _objective(spec: GbmSpec) -> tuple[str, str, str]:
-    if spec.objective.kind == "custom":
-        raise GbmFitError(
-            "OBJECTIVE_NOT_APPROVED",
-            f"objective {spec.objective.ref!r} is a Custom Objective (FR-MODEL-38), which "
-            "no slice has built. `02` R4 would also require it to be approved before a "
-            "model using it could be.",
-            terms=[str(spec.objective.ref)],
-        )
+def _objective(spec: GbmSpec) -> tuple[str, str, Literal["exp", "logistic"]]:
+    """The builtin triple. A custom objective never reaches here — see `_compile_custom`."""
     name = str(spec.objective.name)
     if name not in _OBJECTIVES:
         raise GbmFitError(
@@ -371,6 +380,101 @@ def _objective(spec: GbmSpec) -> tuple[str, str, str]:
             terms=[name],
         )
     return _OBJECTIVES[name]
+
+
+def _compile_custom(spec: GbmSpec, objective: CustomObjective | None) -> ObjectiveFns | None:
+    """Resolve `spec.objective` to compiled functions, or `None` for a builtin.
+
+    The artifact is **passed in**, never looked up: ADR-0001 keeps `pricing-core` free of
+    the store the objective lives in, so the caller that read the row is the caller that
+    supplies it. The checks here are the ones a mismatch would otherwise turn into a fit
+    against the wrong loss.
+    """
+    if spec.objective.kind != "custom":
+        if objective is not None:
+            raise GbmFitError(
+                "OBJECTIVE_NOT_APPLICABLE",
+                f"a Custom Objective ({objective.slug}@{objective.version}) was supplied "
+                f"for a spec whose objective is the builtin {spec.objective.name!r}. One "
+                "of the two would be silently ignored, and the artifact would not say "
+                "which.",
+                terms=[str(spec.objective.name)],
+            )
+        return None
+
+    ref = str(spec.objective.ref)
+    if objective is None:
+        raise GbmFitError(
+            "OBJECTIVE_NOT_SUPPLIED",
+            f"the spec names Custom Objective {ref!r} and no artifact was passed. "
+            "`pricing-core` does not read the objective store (ADR-0001); the caller that "
+            "resolved the reference must hand the artifact to the fit.",
+            terms=[ref],
+        )
+    if f"custom_objective:{objective.slug}@{objective.version}" != ref:
+        raise GbmFitError(
+            "OBJECTIVE_REF_MISMATCH",
+            f"the spec names {ref!r} and the artifact supplied is "
+            f"custom_objective:{objective.slug}@{objective.version}. A model fitted under "
+            "a loss its own spec does not name cannot be reproduced from the spec.",
+            terms=[ref],
+        )
+    if objective.status not in FITTABLE_OBJECTIVE_STATUSES:
+        raise GbmFitError(
+            "OBJECTIVE_NOT_APPROVED",
+            f"Custom Objective {ref!r} is {objective.status.value} (`02` R4, FR-MODEL-46). "
+            f"A fit may use one that is "
+            f"{' or '.join(sorted(s.value for s in FITTABLE_OBJECTIVE_STATUSES))}.",
+            terms=[ref],
+        )
+    if spec.response is None:
+        raise GbmFitError(
+            "OBJECTIVE_RESPONSE_UNDECLARED",
+            f"the spec names Custom Objective {ref!r} and declares no `response` "
+            "(FR-MODEL-44). A builtin objective names its own family; a custom one does "
+            "not, so the response is what the applicability check and the diagnostics "
+            "deviance are both read from, and neither may be guessed.",
+            terms=[ref],
+        )
+    if spec.response not in objective.applicability.responses:
+        allowed = ", ".join(sorted(r.value for r in objective.applicability.responses))
+        raise GbmFitError(
+            "OBJECTIVE_NOT_APPLICABLE",
+            f"Custom Objective {ref!r} declares applicability to {allowed} and the spec "
+            f"models {spec.response.value} (FR-MODEL-44).",
+            terms=[ref],
+        )
+    backend = ObjectiveBackend(spec.model_type)
+    if backend not in objective.applicability.backends:
+        allowed = ", ".join(sorted(b.value for b in objective.applicability.backends))
+        raise GbmFitError(
+            "OBJECTIVE_NOT_APPLICABLE",
+            f"Custom Objective {ref!r} declares applicability to {allowed} and the spec "
+            f"fits on {spec.model_type} (FR-MODEL-44).",
+            terms=[ref],
+        )
+    if objective.applicability.offset_required and spec.offset.kind == "none":
+        raise GbmFitError(
+            "OBJECTIVE_REQUIRES_OFFSET",
+            f"Custom Objective {ref!r} requires an offset and the spec declares none "
+            "(FR-MODEL-27/44). Fitted without one it models claims per record rather than "
+            "claims per year, which converges and prices wrongly.",
+            terms=[ref],
+        )
+    if spec.early_stopping is not None:
+        raise GbmFitError(
+            "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED",
+            f"the spec pairs Custom Objective {ref!r} with early stopping on "
+            f"{spec.early_stopping.metric!r}. Under a callable objective both backends "
+            "hand a builtin metric the **raw score** rather than the transformed "
+            "prediction, so the metric it stops on is not the metric it names. Custom "
+            "eval metrics (FR-MODEL-45) are the answer and are not built.",
+            terms=[ref, str(spec.early_stopping.metric)],
+        )
+    try:
+        return compile_objective(objective)
+    except ObjectiveError as error:
+        raise GbmFitError(error.code, str(error), terms=[ref]) from error
 
 
 def _shared_params(spec: GbmSpec) -> dict[str, Any]:
@@ -390,6 +494,7 @@ def fit_gbm(
     holdout: pl.DataFrame | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
+    objective: CustomObjective | None = None,
     progress: ProgressCallback | None = None,
 ) -> GbmFit:
     """Fit `spec` over `data`, returning the artifact and the booster bytes.
@@ -412,7 +517,22 @@ def fit_gbm(
     response = data[spec.response_column].cast(pl.Float64).to_numpy()
     response = apply_loss_treatment(response, spec.loss_treatment)
 
-    xgb_objective, lgb_objective, _ = _objective(spec)
+    fns = _compile_custom(spec, objective)
+    xgb_objective: str | XgbObjective
+    lgb_objective: str | LgbObjective
+    if fns is None:
+        xgb_objective, lgb_objective, link = _objective(spec)
+    else:
+        xgb_objective, lgb_objective = make_xgb_objective(fns), make_lgb_objective(fns)
+        link = fns.inverse_link
+    # Who applies `g^-1` — the single fact `predict_gbm` cannot work out for itself, since
+    # by then the objective is a string in a spec nobody kept. XGBoost transforms in
+    # `predict` under a builtin objective and cannot under a callable one, having been
+    # handed gradients and no link; LightGBM is always asked for the raw score, because
+    # FR-MODEL-72's offset has to be added before the transform rather than after it.
+    inverse_link: Literal["exp", "logistic"] | None = (
+        None if spec.model_type == "xgboost" and fns is None else link
+    )
     rounds = int(spec.hyperparameters.get("num_boost_round", 100))
     stopping = spec.early_stopping
     if stopping is not None and stopping.on == "holdout" and holdout is None:
@@ -462,6 +582,7 @@ def fit_gbm(
             monotone_constraints=constraints if any(constraints) else (),
             base_margin=spec.offset,
             best_iteration=best,
+            inverse_link=inverse_link,
             rows=data.height,
             fit_seconds=elapsed,
             library_versions=versions,
@@ -540,14 +661,20 @@ def _fit_xgboost(
     order: Sequence[str],
     constraints: tuple[int, ...],
     categorical: frozenset[str],
-    objective: str,
+    objective: str | XgbObjective,
     rounds: int,
 ) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
     import xgboost as xgb
 
     feature_types = ["c" if slug in categorical else "q" for slug in order]
+    custom = not isinstance(objective, str)
     params: dict[str, Any] = {
-        "objective": objective,
+        # A callable is `train(obj=...)`, not a parameter — XGBoost reads `params` into its
+        # C++ configuration and a Python function is not a value it can take. With one,
+        # `base_score` must be pinned: 3.x estimates it from the label under an objective
+        # it no longer knows the link of, and a wrong intercept under a log link is a
+        # multiplicative error on every prediction.
+        **({"base_score": 0.0} if custom else {"objective": objective}),
         "seed": spec.seed,
         # `hist` is deterministic on CPU for a fixed seed and thread count, which is what
         # NFR-MODEL-6 needs. `deterministic_histogram` is **not** set: xgboost 3.4 reports
@@ -586,6 +713,7 @@ def _fit_xgboost(
     booster = xgb.train(
         params, dtrain, num_boost_round=rounds, evals=evals, evals_result=history,
         early_stopping_rounds=stopping.rounds if stopping and evals else None,
+        obj=None if isinstance(objective, str) else objective,
         verbose_eval=False,
     )
     best = int(getattr(booster, "best_iteration", rounds - 1))
@@ -603,7 +731,7 @@ def _fit_lightgbm(
     order: Sequence[str],
     constraints: tuple[int, ...],
     categorical: frozenset[str],
-    objective: str,
+    objective: str | LgbObjective,
     rounds: int,
 ) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
     import lightgbm as lgb
@@ -679,6 +807,20 @@ def _native_categoricals(result: GbmFitResult) -> frozenset[str]:
     return frozenset(slug for slug, dtype in result.feature_dtypes.items() if dtype == "cat")
 
 
+def _apply_inverse_link(raw: np.ndarray, link: Literal["exp", "logistic"]) -> np.ndarray:
+    """`g^-1`, on the one side of the boundary that knows which one it is.
+
+    Written out rather than left as an `np.exp` because three of the four builtin
+    objectives are log-link and the fourth is not: `binary:logistic` under LightGBM was
+    exponentiated here until 2026-08-18, which returns `exp(f)` where the model means
+    `1 / (1 + exp(-f))` — the same number nowhere, and both plausible probabilities near
+    `f = 0`.
+    """
+    if link == "logistic":
+        return np.asarray(1.0 / (1.0 + np.exp(-raw)), dtype=np.float64)
+    return np.asarray(np.exp(raw), dtype=np.float64)
+
+
 def predict_gbm(
     result: GbmFitResult,
     booster: bytes,
@@ -751,18 +893,29 @@ def predict_gbm(
                            for slug in result.feature_order],
             enable_categorical=True,
         )
-        values = loaded.predict(frame, iteration_range=(0, result.best_iteration))
+        values = np.asarray(
+            loaded.predict(frame, iteration_range=(0, result.best_iteration)),
+            dtype=np.float64,
+        )
+        # A builtin objective leaves `inverse_link` unset and `predict` has already
+        # transformed; a custom one was a callable, so the booster holds gradients and no
+        # link and this is the raw margin.
+        if result.inverse_link is not None:
+            values = _apply_inverse_link(values, result.inverse_link)
     else:
         import lightgbm as lgb
 
         lgb_booster = lgb.Booster(model_str=booster.decode())
-        raw = lgb_booster.predict(x, raw_score=True)
-        raw = np.asarray(raw, dtype=np.float64)
+        raw = np.asarray(lgb_booster.predict(x, raw_score=True), dtype=np.float64)
         if margin is not None:
             raw = raw + margin
-        values = np.exp(raw)
+        # `or "exp"` is the fallback for an artifact fitted before `inverse_link` existed,
+        # when this line was an unconditional `np.exp` — which is what those artifacts have
+        # always been scored with, correctly for three of the four objectives. See the
+        # dated note at `02` §4.3.
+        values = _apply_inverse_link(raw, result.inverse_link or "exp")
 
-    return pl.Series("prediction", np.asarray(values, dtype=np.float64))
+    return pl.Series("prediction", values)
 
 
 #: FR-MODEL-26's objectives as the exponential-dispersion families the deviance functions
@@ -776,15 +929,46 @@ _FAMILIES: Final[dict[str, tuple[str, float]]] = {
 }
 
 
+#: The deviance a **response** is measured under, for a spec whose objective does not name
+#: one. `CLAUDE.md` §7's actuarial defaults, and deliberately the response rather than the
+#: loss: a severity model fitted under `capped_gamma` or `huber` is still a severity model,
+#: and its A/E is compared against gamma-fitted ones. The loss is how it was fitted; the
+#: family is how it is measured, and a custom objective is precisely the case where those
+#: two stop being the same question.
+_RESPONSE_FAMILIES: Final[dict[ResponseKind, tuple[str, float]]] = {
+    ResponseKind.CLAIM_COUNT: ("poisson", 1.5),
+    ResponseKind.CLAIM_SEVERITY: ("gamma", 1.5),
+    ResponseKind.BURNING_COST: ("tweedie", 1.5),
+    ResponseKind.CONVERSION: ("binomial", 1.5),
+    ResponseKind.RETENTION: ("binomial", 1.5),
+}
+
+
 def objective_family(spec: GbmSpec) -> tuple[str, float]:
     """The family and Tweedie power implied by a GBM's objective.
 
-    A GBM spec has no `family` field — the objective *is* the family, spelled the
+    A GBM spec has no `family` field — a builtin objective *is* the family, spelled the
     backend's way. Diagnostics need it in the deviance functions' vocabulary, and deriving
     it here keeps the mapping in one place rather than beside every caller.
+
+    A **Custom Objective names no family**, and the artifact that would is not in scope
+    here (ADR-0001: this function takes a spec, not a store). `spec.response` is what
+    carries the answer, which is why `_compile_custom` refuses to fit a custom objective
+    on a spec that leaves it unset — the alternative is a `capped_gamma` severity model
+    whose A/E was computed as a Poisson deviance, reported without comment.
     """
-    name = str(spec.objective.name)
-    family, default_power = _FAMILIES.get(name, ("poisson", 1.5))
+    if spec.objective.kind == "custom":
+        if spec.response is None:  # pragma: no cover — `_compile_custom` refuses first
+            raise GbmFitError(
+                "OBJECTIVE_RESPONSE_UNDECLARED",
+                f"objective {spec.objective.ref!r} is custom and the spec declares no "
+                "`response`, so the deviance its diagnostics would be measured under is "
+                "not determined.",
+                terms=[str(spec.objective.ref)],
+            )
+        family, default_power = _RESPONSE_FAMILIES[spec.response]
+    else:
+        family, default_power = _FAMILIES.get(str(spec.objective.name), ("poisson", 1.5))
     power = float(spec.hyperparameters.get("tweedie_variance_power", default_power))
     return family, power
 

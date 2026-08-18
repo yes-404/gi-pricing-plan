@@ -367,7 +367,11 @@ def test_abs_preserves_the_magnitude_a_clip_would_discard() -> None:
 
 
 class _DMatrix:
-    """The two methods `make_xgb_objective` reads off a `DMatrix`, and nothing else."""
+    """The two methods the adapters read off a `DMatrix` or a `Dataset`, and nothing else.
+
+    Both backends expose `get_label` and `get_weight` under those names, so one stub serves
+    both adapters — which is also the reason the two are as close in shape as they are.
+    """
 
     def __init__(self, y: np.ndarray, w: np.ndarray) -> None:
         self._y, self._w = y, w
@@ -398,14 +402,21 @@ def test_the_xgboost_adapter_returns_the_weighted_pair() -> None:
 
 
 @pytest.mark.req("FR-MODEL-48")
-def test_the_lightgbm_adapter_takes_the_three_argument_form() -> None:
-    """The two-argument form drops the case weights, which fits a different model."""
+def test_the_lightgbm_adapter_takes_the_form_lgb_train_calls() -> None:
+    """`(preds, dataset)` — `lgb.train`'s form, not the sklearn wrapper's `(y, f, w)`.
+
+    §5.2 sketched the three-argument form; `lgb.train` calls
+    `fobj(inner_predict(0), self.train_set)` and the sklearn shape raises `TypeError` on
+    the first boosting round. The weights come off the dataset, so the case weights the
+    three-argument form was chosen for are still there — asserted below, since dropping
+    them fits a different model and raises nothing.
+    """
     fns = compile_objective(_objective(T.POISSON))
     y = np.array([0.0, 1.0, 3.0])
     w = np.array([0.5, 1.0, 2.0])
     f = np.array([-0.5, 0.0, 0.5])
 
-    grad, hess = make_lgb_objective(fns)(y, f, w)
+    grad, hess = make_lgb_objective(fns)(f, _DMatrix(y, w))
 
     assert np.allclose(grad, fns.grad(y, f, w))
     assert np.allclose(hess, fns.stabilise(y, f, w))

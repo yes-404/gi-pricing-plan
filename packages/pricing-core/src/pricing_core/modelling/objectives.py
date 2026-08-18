@@ -40,7 +40,7 @@ import math
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -119,6 +119,11 @@ class _Template:
     y_anchors: Callable[[_P], tuple[float, ...]] | None = None
     #: What the branch *is*, for the certificate's prose. `None` where the loss is smooth.
     branch_description: str | None = None
+    #: `g^-1`, the transform from the booster's score to the mean. Every template here
+    #: models `mu = exp(f)` bar the binomial one; it is recorded rather than inferred
+    #: because a custom objective leaves the backend with no link of its own, so scoring
+    #: has nothing else to read.
+    inverse_link: Literal["exp", "logistic"] = "exp"
 
 
 def _mu(f: _Arr) -> _Arr:
@@ -541,7 +546,9 @@ _TEMPLATES: Final[dict[ObjectiveTemplate, _Template]] = {
         y_anchors=_zip_anchors,
         branch_description="the zero-inflation branch, y = 0 — a branch in y, not in f",
     ),
-    ObjectiveTemplate.FOCAL_BINOMIAL: _Template(_focal_loss, _focal_grad, _focal_hess),
+    ObjectiveTemplate.FOCAL_BINOMIAL: _Template(
+        _focal_loss, _focal_grad, _focal_hess, inverse_link="logistic"
+    ),
 }
 
 
@@ -568,6 +575,17 @@ class ObjectiveFns:
     hessian_min: float
     y_domain: YDomain
     _template: _Template
+
+    @property
+    def inverse_link(self) -> Literal["exp", "logistic"]:
+        """`g^-1`, for the caller that has to turn a score into a mean.
+
+        Neither backend can supply this once the objective is a callable: XGBoost's
+        `predict` returns the margin, and LightGBM's raw-score path never transformed
+        anything. `fit_gbm` copies it onto `GbmFitResult` so `predict_gbm` does not need
+        the objective artifact to score.
+        """
+        return self._template.inverse_link
 
     def loss(self, y: _Arr, f: _Arr, w: _Arr) -> _Arr:
         return w * self._template.loss(y, f, self.params)
@@ -685,19 +703,28 @@ def make_xgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
     return objective
 
 
-def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, _Arr, _Arr], tuple[_Arr, _Arr]]:
+def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _Arr]]:
     """The callable LightGBM's `params["objective"]` accepts.
 
-    Its three-argument form is the one that receives the case weights; the two-argument
-    form does not, and a weighted fit that silently drops its weights is FR-MODEL-72's
-    failure mode in a different place.
+    **`(preds, dataset)`, not §5.2's three-argument `(y_true, y_pred, weight)`** — that
+    form is the scikit-learn wrapper's, and `lgb.train` calls
+    `fobj(self.__inner_predict(data_idx=0), self.train_set)` (lightgbm 4.7.0,
+    `basic.py:4276`). Passing the sklearn shape here raises `TypeError: missing 1 required
+    positional argument` on the first boosting round, which is how this was found. The
+    weights are read off the dataset instead, so nothing is dropped; §5.2 carries the
+    dated correction.
+
+    `preds` is the raw score with `init_score` already added, exactly as XGBoost's `preds`
+    carries `base_margin` — so neither adapter adds the offset, and FR-MODEL-72's
+    asymmetry is a *scoring*-time one only.
     """
     counter = {"round": 0}
 
-    def objective(y_true: _Arr, y_pred: _Arr, weight: _Arr) -> tuple[_Arr, _Arr]:
-        y = np.asarray(y_true, dtype=np.float64)
-        f = np.asarray(y_pred, dtype=np.float64)
-        w = np.asarray(weight, dtype=np.float64) if weight is not None else np.ones_like(y)
+    def objective(preds: _Arr, dataset: Any) -> tuple[_Arr, _Arr]:
+        y = np.asarray(dataset.get_label(), dtype=np.float64)
+        f = np.asarray(preds, dtype=np.float64)
+        weight = dataset.get_weight()
+        w = np.ones_like(y) if weight is None else np.asarray(weight, dtype=np.float64)
         g, h = fns.grad(y, f, w), fns.stabilise(y, f, w)
         _finite_or_abort(fns, g, h, y, f, counter["round"])
         counter["round"] += 1

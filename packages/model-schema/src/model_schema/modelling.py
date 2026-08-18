@@ -1157,6 +1157,21 @@ class GbmFitResult(BaseModel):
     #: (`iteration_range` / `num_iteration`), and diagnostics are not loaded at scoring
     #: time. The evaluation *curve* went the other way — see `GbmDiagnostics`.
     best_iteration: int = Field(ge=0)
+    #: The inverse link `predict_gbm` must apply to the raw score **itself**, or `None`
+    #: when the booster's own `predict` already returns the mean.
+    #:
+    #: Not "the model's link" — the two are not the same claim, and recording the link
+    #: would leave every reader to work out for themselves whether the library had already
+    #: applied it. That question has three different answers here. XGBoost under a builtin
+    #: objective transforms in `predict` (`None`); XGBoost under a custom objective knows
+    #: no link at all and returns the margin; LightGBM is always asked for the raw score,
+    #: because FR-MODEL-72's offset can only be added on this side of it.
+    #:
+    #: Defaulted for the artifacts written before this field existed, whose LightGBM
+    #: branch exponentiated unconditionally — see the dated note at `02` §4.3. The default
+    #: reproduces exactly what those artifacts already score, and `fit_gbm` sets it
+    #: explicitly on every path, so nothing fitted from here on relies on it.
+    inverse_link: Literal["exp", "logistic"] | None = None
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)
