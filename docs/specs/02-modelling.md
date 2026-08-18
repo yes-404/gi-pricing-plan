@@ -1125,8 +1125,10 @@ question, with nothing to say which of the two a review cited.
 
 **Immutable, at both layers** (FR-DATA-42) — privileges narrowed to `SELECT, INSERT` *and* the
 `artifact_append_only` triggers, because revoking `UPDATE` from the owner does nothing.
-See `01` FR-DATA-47 for the three W5 artifact tables that have the privileges and not the
-triggers.
+Every artifact table in this module now carries both — `diagnostics`, `model_comparisons`,
+`transparency_artifacts`, `objective_certificates`, `bandings` and `groupings` had the
+privileges and not the row trigger until `e1f2a3b4c5d6` (2026-08-18); `01` FR-DATA-47 has
+the measurement and the invariant that now checks it.
 
 
 ---

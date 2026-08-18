@@ -1949,7 +1949,7 @@ with an owner rather than fixed here, because it is a different requirement's sc
 |---|---|
 | A **list** of a model's backtests (`GET /models/{id}/backtests`) | **Not built, deliberately.** It is what `05-monitoring.md` reads and nothing consumes it yet; `CLAUDE.md` §0 puts a later phase's capability in the spec rather than the code. Named in FR-MODEL-92. Owner: the monitoring workstream |
 | `POST /models/{id}/predict` (FR-MODEL-63, 77, 78) | **Not started.** The other of the two shortest remaining endpoints; 63 still needs the covariance blob `predict_glm`'s signature deliberately does not take |
-| `01` FR-DATA-47's three tables | **Not started, and not this slice's.** Owner: W5's next slice or W13, whichever reaches it first. The migration is three tables through the loop `a1b2c3d4e5f6` already writes, plus a negative test each |
+| `01` FR-DATA-47's three tables | **Not started, and not this slice's.** Owner: W5's next slice or W13, whichever reaches it first. The migration is three tables through the loop `a1b2c3d4e5f6` already writes, plus a negative test each. **Taken up 2026-08-18** by the FR-DATA-47 slice below, which found six tables rather than three |
 | A backtest view (`02` §5.3) | **W6b**, a Vue view. No frontend work in this slice |
 | A backtest cited as approval evidence (`06` §3.3) | **Not started.** `06` §3.3's evidence table has no `backtest` kind, and adding one is a governance decision rather than a modelling one — the shape OQ-GOV-7 is already about |
 
@@ -2019,6 +2019,51 @@ noise where that hessian is smallest — still reaches `failed`. The general rul
 | `wf-05` Route B, and Phase C's compiled expression tree | **Phase 2**, unchanged. Route A is now real end to end except A3, and the journey carries a dated note saying which of its steps read differently |
 
 
+#### W5 slice — FR-DATA-47, and a comment that had been wrong for three days, 2026-08-18
+
+The backtest slice (#99) found three artifact tables carrying FR-DATA-42's grants and no
+trigger, and raised FR-DATA-47 with an owner. This slice is that owner. It found **six**.
+
+The difference is how the second measurement was taken. The first read the three tables it
+already suspected; the second asked the database which tables the *schema* declares
+append-only — grants of exactly `SELECT, INSERT` and nothing else — and then asked which of
+those carry both triggers:
+
+| Table | Layer 1 | Layer 2, before | After |
+|---|---|---|---|
+| `diagnostics`, `model_comparisons`, `transparency_artifacts` | grants | **nothing** | both |
+| `objective_certificates` | grants | `TRUNCATE` only | both |
+| `bandings`, `groupings` | grants | `TRUNCATE` only | both |
+
+`objective_certificates` is mine, from the slice merged two hours earlier. `bandings` and
+`groupings` are the ones worth recording: `c3d4e5f6a7b8` states the protection in a comment
+— *"Insert-only at the privilege layer, so the rule survives a direct `UPDATE` from a psql
+session"* — and then creates the `TRUNCATE` trigger alone. The sentence had been in the tree,
+false, since #72 on 2026-08-15, and `test_transformations.py`'s test of it passes
+because it does `SET LOCAL ROLE gip_app` first, which is the one connection the claim was not
+about.
+
+| Delivered | Evidence |
+|---|---|
+| `e1f2a3b4c5d6` attaches `artifact_append_only()` to all six | six `_no_modify` triggers, three `_no_truncate` |
+| A negative test per table, run as the **owner** | `test_an_artifact_cannot_be_rewritten_from_the_owner_connection`, parametrised over the six: `UPDATE`, `DELETE` and `TRUNCATE` each refused, and the row still there |
+| The invariant, checked as an invariant | `test_every_table_the_grants_call_append_only_carries_both_triggers` derives its table list from the grants, so a seventh table built with layer 1 alone fails on the day it is added |
+| The derived test's own blind spot, closed | `test_the_application_role_holds_only_select_and_insert` now pins all eleven tables explicitly: a table regranted `UPDATE` would otherwise drop out of the derived set and be checked by nobody |
+| `01` FR-DATA-47 and `02` §4.12 amended | The requirement is now stated as the invariant rather than as a list of three, with the corrected count and the date |
+
+**Enforcement proven against broken input**, both layers: dropping `groupings_no_modify`
+fails two tests (`DID NOT RAISE DBAPIError`, and `missing a trigger: [('groupings', 0, 1)]`);
+granting `UPDATE` back on `diagnostics` fails two others, including the set-equality guard
+that keeps the derived test from passing vacuously.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| The false comment in `c3d4e5f6a7b8` | **Left as written.** A merged migration is a dated record; `e1f2a3b4c5d6`'s docstring and this entry record that the claim was untrue and when it stopped being so. Editing the old file would remove the only evidence of how long it stood |
+| `test_transformations.py`'s `SET LOCAL ROLE gip_app` test | **Left as written, and now honest.** It tests layer 1, which is what it does; the owner path it overstates is covered by the new test rather than by rewriting it |
+| An artifact table checked at the ORM layer as well | **Not started, and probably never.** `DiagnosticsRow` and its siblings carry the claim in a docstring only. The database is the layer that cannot be bypassed, which is the whole argument of FR-DATA-42 |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2029,7 +2074,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: fifteen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, and custom objectives; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: sixteen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, and FR-DATA-47's artifact triggers; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 

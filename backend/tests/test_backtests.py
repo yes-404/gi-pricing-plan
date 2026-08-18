@@ -11,8 +11,8 @@ things only the platform can be wrong about:
   seen, so this is the only layer that can refuse them, and refusing them is the whole
   difference between a backtest and the fit-time holdout figure under a later-period
   heading;
-* **the artifact is immutable in the database**, at both layers — and this is the first test
-  in the repository to exercise the trigger rather than only the grants;
+* **the artifact is immutable in the database**, at both layers — the first test here to
+  exercise the trigger rather than only the grants, and the one that found FR-DATA-47;
 * **both routes are in the published contract**, the omission FR-MODEL-84, FR-MODEL-56 and
   FR-MODEL-90 each had to repair.
 
@@ -297,9 +297,11 @@ async def test_a_backtest_cannot_be_rewritten_at_either_layer(
     implicit privileges. The grants below are what stops the application; the `UPDATE` that
     follows is run as the owner and must still be refused.
 
-    This is the first test in the repository to exercise an artifact table's trigger rather
-    than only its grants — `diagnostics`, `model_comparisons` and `transparency_artifacts`
-    have the grants and no trigger at all, which `findings.md` carries as an open thread.
+    This was the first test in the repository to exercise an artifact table's trigger rather
+    than only its grants, and writing it is what found FR-DATA-47: three tables with the
+    grants and no trigger at all. `e1f2a3b4c5d6` closed that, and six tables rather than
+    three — `backend/tests/test_artifact_immutability.py` now derives the list from the
+    grants, so this test is no longer the only one of its kind.
     """
     async with database.session() as session:
         granted = (
