@@ -24,6 +24,10 @@ Checks (all non-destructive, exit 1 on any failure):
  20. No note defines a requirement id; only docs/specs/ may do that.
  21. Every endpoint and pricing-core function a workflow journey cites is declared
      in the owning module's §5.1 or §5.2 (FR-OVR-17, OQ-OVR-6).
+ 22. Every markdown table row has its own header's cell count — catching a literal
+     `|` inside a cell, which shifts every column after it while still rendering.
+ 22. Every markdown table row has its own header's cell count — catching a literal
+     `|` inside a cell, which shifts every column after it while still rendering.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -262,6 +266,52 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
         for ref in sorted(refs - set(seen)):
             fail(f"{rel(f)}: references NT-{ref}, for which no note exists")
     notes.append(f"{len(files)} working notes, indexed and numbered")
+
+
+def check_table_rows(md: list[pathlib.Path]) -> None:
+    """Check 22: every table row has as many cells as its own header.
+
+    The defect this catches is a literal `|` inside a table cell. GFM decides cell
+    boundaries **before** it parses anything inline, so a pipe inside a code span still
+    splits the row — `` `rows | parquet` `` silently becomes two cells, and every column
+    after it shifts right. The row still renders, which is why nothing noticed: the table
+    looks intact and the last cell's content has quietly moved into a column that means
+    something else. Escaping (`` `rows \| parquet` ``) is the only fix, and it works inside
+    a code span even though a backslash escape normally does not.
+
+    Found 2026-08-18 in two rows written the same day — `03` FR-RATE-62 and OQ-RATE-3's
+    register entry — where the Owner column had become part of the recommendation.
+
+    Rows are compared against their **own table's** header rather than a per-file majority:
+    a document legitimately holds tables of different widths, and this suite's files nearly
+    all do.
+    """
+    for f in md:
+        fenced = False
+        header_cells: int | None = None
+        for lineno, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            stripped = line.lstrip()
+            if stripped.startswith("```"):
+                fenced = not fenced
+                continue
+            if fenced or not stripped.startswith("|"):
+                # A blank line (or any prose) ends the table, so the next one sets its own
+                # width. Without this the second table in a file is measured against the
+                # first, which is the false positive that makes a check like this ignorable.
+                header_cells = None
+                continue
+            cells = len(re.findall(r"(?<!\\)\|", line)) - 1
+            if header_cells is None:
+                header_cells = cells
+                continue
+            if cells != header_cells:
+                where = f"{f.relative_to(REPO)}:{lineno}"
+                offenders = re.findall(r"`[^`]*(?<!\\)\|[^`]*`", line)
+                detail = f" — unescaped pipe in {offenders[0]}" if offenders else ""
+                fail(
+                    f"table row has {cells} cells, its header has {header_cells} "
+                    f"({where}){detail}"
+                )
 
 
 def main() -> int:
@@ -601,6 +651,11 @@ def main() -> int:
         f"journey citations: {cited_paths} endpoints, {cited_functions} functions, "
         f"{verdict} ({loose} matched a declared path placeholder)"
     )
+
+    # 22. every table row has its header's cell count. `CLAUDE.md` is included even though
+    # the other checks scan `docs/` only: it is the most-read document here, it is full of
+    # tables, and `docs.yml` already runs on a change to it.
+    check_table_rows([*md, REPO / "CLAUDE.md"])
 
     # 16-20. the working notes in .claude/notes/
     check_notes(set(defined), in_file, adrs)
