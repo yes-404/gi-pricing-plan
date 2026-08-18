@@ -27,6 +27,7 @@ from model_schema.refs import ArtifactRef
 
 __all__ = [
     "DEFAULT_POLICY",
+    "EVIDENCE_FLOOR",
     "VALID_APPROVAL_TRANSITIONS",
     "ApprovalDecision",
     "ApprovalPolicy",
@@ -72,6 +73,28 @@ VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]
     ApprovalStatus.APPROVED: frozenset({ApprovalStatus.WITHDRAWN}),
     ApprovalStatus.REJECTED: frozenset(),
     ApprovalStatus.WITHDRAWN: frozenset(),
+}
+
+
+#: `06` §3.3's per-artifact evidence table, as the **floor** a workspace policy may add to
+#: and may never remove from (FR-GOV-37, OQ-GOV-7 decided 2026-08-18).
+#:
+#: This is §3.3's **checkable projection**, not the whole table, and the difference is
+#: deliberate: submission fails closed on an evidence kind it cannot verify (`06` R4), so a
+#: floor naming `model_comparison_if_predecessor` — which lives inside a comparison's
+#: `payload` and cannot be queried — would refuse every model submission rather than raise
+#: the standard. The uncheckable remainder is named in FR-GOV-37 with an owner, which is
+#: the difference between a deferral and a silence.
+#:
+#: An artifact type absent here has an **empty** floor. `peril_structure` is that case: it
+#: has no §3.3 row at all, and a floor that says nothing permits anything, which is the
+#: right default for an artifact §3.3 predates.
+EVIDENCE_FLOOR: Final[dict[str, tuple[str, ...]]] = {
+    "validation_rule": ("dry_run_result",),
+    "custom_objective": ("objective_certificate",),
+    "model": ("diagnostics", "transparency_artifact_if_non_glm"),
+    "rating_version": ("structural_diff", "regression_run", "dislocation_run"),
+    "deployment": ("rating_version_approval", "uat_deployment"),
 }
 
 
@@ -128,6 +151,42 @@ class ApprovalPolicy(BaseModel):
         ]
         return general[0] if general else None
 
+    def effective_evidence(
+        self, artifact_type: str, environment: str | None = None
+    ) -> tuple[str, ...]:
+        """What a submission of this artifact type must actually show (FR-GOV-37).
+
+        The union of `EVIDENCE_FLOOR` and the matching entry's own `evidence`, floor first
+        and order otherwise preserved. It is a union rather than a lookup because a policy
+        stored before FR-GOV-37 existed is still loaded by `policy_for`: refusing it at
+        read time would lock a workspace out of its own approvals, and trusting it would
+        let the floor be dodged by being old.
+        """
+        entry = self.entry_for(artifact_type, environment)
+        required = list(EVIDENCE_FLOOR.get(artifact_type, ()))
+        if entry is not None:
+            required += [kind for kind in entry.evidence if kind not in required]
+        return tuple(required)
+
+    def below_floor(self) -> dict[str, tuple[str, ...]]:
+        """Entries whose `evidence` drops below `EVIDENCE_FLOOR`, by artifact type.
+
+        Empty for a policy that satisfies FR-GOV-37. `set_policy` refuses a non-empty
+        result: `effective_evidence` would enforce the floor anyway, so this exists to stop
+        a policy document from *saying* less than the platform enforces — an insurer
+        reading its own policy is entitled to see what a submission will be held to.
+        """
+        below: dict[str, tuple[str, ...]] = {}
+        for entry in self.policies:
+            missing = tuple(
+                kind
+                for kind in EVIDENCE_FLOOR.get(entry.artifact_type, ())
+                if kind not in entry.evidence
+            )
+            if missing:
+                below[entry.artifact_type] = missing
+        return below
+
 
 #: The defaults `06` §4.2 documents. A workspace may edit them; it starts here.
 DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
@@ -144,11 +203,18 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("objective_certificate",),
         ),
+        # `transparency_artifact_if_non_glm` joined this entry on 2026-08-18 with
+        # FR-GOV-37. It was enforced before it was named — `02` §4.8 R3 is checked at
+        # submission whatever the policy says — but a default that omits the kind teaches a
+        # workspace editing its policy that the kind is optional, and it is not. The name is
+        # `06` §4.2's, which the submission check had been spelling `transparency_artifact`:
+        # a workspace copying the kind off the page got a fail-closed refusal for evidence
+        # it had.
         ApprovalPolicyEntry(
             artifact_type="model",
             approvers_required=1,
             approver_roles=("approver",),
-            evidence=("diagnostics",),
+            evidence=("diagnostics", "transparency_artifact_if_non_glm"),
         ),
         # Added 2026-08-18 (W5, peril structures). FR-MODEL-61 makes a Peril Structure
         # approvable and `peril_structure` has been a valid artifact type since Phase 0 —

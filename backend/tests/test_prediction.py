@@ -112,6 +112,7 @@ async def _fitted_glm(
 
 
 @pytest.mark.req("FR-MODEL-63")
+@pytest.mark.req("FR-MODEL-98")
 async def test_the_covariance_blob_survives_the_fit_the_store_and_the_prediction(
     database, blob_store, workspace_id
 ) -> None:

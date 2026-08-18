@@ -276,7 +276,13 @@ async def test_submission_without_the_policys_evidence_is_refused(
                         artifact_type="model",
                         approvers_required=1,
                         approver_roles=("approver",),
-                        evidence=("diagnostics", "model_comparison"),
+                        # The floor kinds are present because FR-GOV-37 refuses a policy
+                        # without them; `model_comparison` is the addition under test.
+                        evidence=(
+                            "diagnostics",
+                            "transparency_artifact_if_non_glm",
+                            "model_comparison",
+                        ),
                     ),
                 )
             ),

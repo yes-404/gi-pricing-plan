@@ -719,6 +719,11 @@ async def _require_evidence(
     satisfied would let a policy tightening silently do nothing, which is worse than a
     submission refused with the reason named.
 
+    **The list it reads is the union of `06` §3.3's floor and the workspace policy**
+    (FR-GOV-37, OQ-GOV-7 decided 2026-08-18). The two tables disagreed for a Model and this
+    check could only read one of them; §3.3 is now the floor and §4.2 may only add to it, so
+    a workspace cannot edit its way past `02` §4.8 R3.
+
     **`transparency` became checkable on 2026-08-17 and this function was still failing
     closed on it.** The artifact exists now, so the policy kind is answered by looking for
     one rather than by refusing — and FR-MODEL-89's R3 is enforced here whether or not any
@@ -746,17 +751,23 @@ async def _require_evidence(
         )
 
     policy = await approvals.policy_for(session, workspace_id)
-    entry = policy.entry_for("model")
-    if entry is None:
-        return
 
-    #: What this slice can actually verify, and what answers each one.
+    #: What this slice can actually verify, and what answers each one. The two spellings of
+    #: the transparency kind are both live on purpose: `06` §4.2 and `EVIDENCE_FLOOR` name
+    #: it `transparency_artifact_if_non_glm`, and a workspace policy stored before
+    #: 2026-08-18 may still say `transparency_artifact`. Refusing the older spelling as
+    #: uncheckable would fail a submission closed on evidence the model has.
+    transparency_satisfied = model_type == "glm" or has_transparency
     verifiable = {
         "diagnostics": row.diagnostics_id is not None,
-        "transparency_artifact": has_transparency,
+        "transparency_artifact_if_non_glm": transparency_satisfied,
+        "transparency_artifact": transparency_satisfied,
     }
 
-    missing = [kind for kind in entry.evidence if not verifiable.get(kind, False)]
+    #: FR-GOV-37: the union of `06` §3.3's floor and the workspace's own entry, so a policy
+    #: stored before the floor existed cannot sit below it.
+    required = policy.effective_evidence("model")
+    missing = [kind for kind in required if not verifiable.get(kind, False)]
     if missing:
         unknown = [kind for kind in missing if kind not in verifiable]
         detail = (

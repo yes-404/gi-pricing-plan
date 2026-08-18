@@ -7,6 +7,7 @@ this package un-generatable and un-shareable.
 
 from model_schema.approvals import (
     DEFAULT_POLICY,
+    EVIDENCE_FLOOR,
     VALID_APPROVAL_TRANSITIONS,
     ApprovalDecision,
     ApprovalPolicy,
@@ -246,6 +247,7 @@ __all__ = [
     "ARTIFACT_TYPES",
     "BUILTIN_ROLES",
     "DEFAULT_POLICY",
+    "EVIDENCE_FLOOR",
     "FITTABLE_OBJECTIVE_STATUSES",
     "FIT_RESULT_ADAPTER",
     "MODELLING_FORBIDDEN_PII",

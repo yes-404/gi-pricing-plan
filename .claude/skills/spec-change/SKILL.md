@@ -58,6 +58,12 @@ question the register has closed. Recount the row rather than decrementing it: O
 been decided before it ever reached the table, so the row went 9 (3 open) → 10 (2 open) in
 one edit.
 
+**A decided question keeps its gate row** — the row is where the *revisit* is scheduled, not
+only where the answer was due. OQ-MODEL-11 and OQ-MODEL-12 were both decided on 2026-08-18 and
+both sit at **Before Phase 2**, because each names something to re-examine against `03`'s rate
+table once it exists; OQ-MODEL-13 sits in *Deferred* holding the trigger its requirement names.
+Striking the id and leaving it in place is the edit — deleting the row loses the appointment.
+
 **Deciding one is the same edit in three places**, and the register's own precedent shows
 the shape: strike the question and prefix `**DECIDED <date>: …**`; leave the options column
 as it was, because it records what was believed at the time; rewrite the recommendation
@@ -82,6 +88,15 @@ explicit status enums. Avoid "the system should handle…". Small illustrative s
 encouraged; full implementations are not.
 
 ## Verified
+
+2026-08-18 — Confirmed while recording five maintainer decisions (OQ-MODEL-10..13, OQ-GOV-7 →
+FR-MODEL-96/97/98, FR-RATE-61, FR-GOV-37; 456 → 461 requirements). Both halves of the
+"a decision appends a requirement" rule appeared again: FR-GOV-37 shipped with its code and its
+negative test, while FR-MODEL-96 and FR-RATE-61 are deliberately undelivered and each carries a
+phase, an owner and a deadline in the requirement itself. Two of the five ratify behaviour that
+was **already built** (FR-MODEL-97, FR-MODEL-98) — those still append a requirement, and the
+cheap way to keep them honest is a second `@pytest.mark.req` on the test that already proves the
+behaviour, so the decision is evidenced rather than merely stated.
 
 2026-08-17 — Confirmed while recording two maintainer decisions (OQ-OVR-7 → `01`
 FR-DATA-46, OQ-DATA-8 → FR-DATA-45). Both halves of "a decision appends a requirement"

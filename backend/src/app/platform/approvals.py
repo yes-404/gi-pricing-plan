@@ -76,6 +76,21 @@ async def set_policy(
         principal=actor,
         permission=Permission.ADMIN_MANAGE_ROLES,
     )
+    below = policy.below_floor()
+    if below:
+        named = "; ".join(
+            f"{artifact_type} omits {', '.join(kinds)}"
+            for artifact_type, kinds in sorted(below.items())
+        )
+        raise PlatformError(
+            "POLICY_BELOW_EVIDENCE_FLOOR",
+            "The policy drops below the required evidence floor",
+            422,
+            f"`06` §3.3 is a floor and §4.2 may only add to it (FR-GOV-37): {named}. "
+            "Submission enforces the union either way, so a policy saved below the floor "
+            "would say less than the platform requires — which is the reader of the policy "
+            "being misled rather than a gate being opened.",
+        )
     before = await policy_for(session, workspace_id)
 
     row = await session.get(ApprovalPolicyRow, workspace_id)

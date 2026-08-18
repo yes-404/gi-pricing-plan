@@ -125,6 +125,19 @@ PY
 
 All three must print `none`.
 
+**`duplicated` fires on prose inside a table row, not only on a real second placement.** The
+Phase 3 row carried a parenthetical — *(OQ-GOV-7 is gated at 1b, not here — see below)* — and
+the snippet counts ids per row, so an id was placed twice by a note whose whole purpose was
+to say it was placed once. Keep cross-gate notes in the prose **beneath** the table, where no
+row can claim them. Found 2026-08-18, together with four ids the table was missing outright.
+
+**`missing` is the expensive one, and it does not clear itself.** OQ-MODEL-12, OQ-MODEL-13,
+OQ-MODEL-14 and OQ-GOV-8 were each raised in a spec, correctly mirrored into
+`open-questions.md`, and invisible to the plan — `audit-docs.py` passed throughout, because it
+checks the spec ↔ register mirror and cannot see the roadmap at all. Two of the four were
+decided on the day they were finally placed, which is the point: a question the plan never
+saw cannot be scheduled, so it gets answered by whoever trips over it.
+
 ## Adding a check
 
 Extend `scripts/audit-docs.py` — it is production code, not a scratch script. **Verify a
@@ -137,6 +150,11 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-18 — Confirmed while recording five maintainer decisions (OQ-MODEL-10..13, OQ-GOV-7).
+The script passed before and after; the **gate-table snippet did not**, and the two failures it
+reported are written up above. Run the snippet at every raise *and* every decision — a decided
+question still needs a row, because a row is where the revisit is scheduled.
 
 2026-08-17 — Extended with **check 21**, the journeys' interface citations (FR-OVR-17(i)).
 Proven on deliberately broken input in both halves — an undeclared endpoint and an undeclared
