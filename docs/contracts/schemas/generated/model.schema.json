@@ -479,6 +479,17 @@
           "title": "Converged",
           "type": "boolean"
         },
+        "covariance_blob": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "deviance": {
           "anyOf": [
             {

@@ -18,18 +18,23 @@ What this module owes its caller, in the spec's own terms:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import time
 import warnings
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 from scipy import stats
 
 from model_schema import (
     Banding,
+    BlobRef,
     Coefficient,
     Factor,
     GlmFitResult,
@@ -40,7 +45,14 @@ from model_schema import (
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 from pricing_core.progress import NullProgress, ProgressCallback
 
-__all__ = ["GlmFitError", "fit_glm"]
+__all__ = [
+    "COVARIANCE_MEDIA_TYPE",
+    "GlmFit",
+    "GlmFitError",
+    "decode_covariance",
+    "encode_covariance",
+    "fit_glm",
+]
 
 #: The exact two-sided 97.5 % normal quantile. Spelled out because 1.96 is a rounding of
 #: it, and a rounded interval is a different interval.
@@ -49,6 +61,10 @@ _NORMAL_975 = 1.959963984540054
 #: |β| past which a fit is separation rather than an effect. `exp(20)` is 4.9e8 — a
 #: relativity no book contains.
 _SEPARATION_ETA = 20.0
+
+#: The covariance blob is JSON, for the reason the booster is `xgboost_json` and never a
+#: pickle (ADR-0003): a stored artifact must be readable by something that did not fit it.
+COVARIANCE_MEDIA_TYPE = "application/json"
 
 
 class GlmFitError(RuntimeError):
@@ -62,6 +78,105 @@ class GlmFitError(RuntimeError):
         super().__init__(message)
         self.code = code
         self.terms = tuple(terms)
+
+
+@dataclass(frozen=True)
+class GlmFit:
+    """What a GLM fit returns: the artifact, and the covariance bytes it addresses.
+
+    Two values rather than one for the reason `GbmFit` is two — `pricing-core` cannot store
+    a blob (ADR-0001) and the artifact cannot hold a `p x p` matrix (`02` §4.8, and the
+    field comment on `covariance_blob`). The `BlobRef` inside `result` is already complete,
+    because a content-addressed reference is a pure function of the payload, so the caller's
+    job is to store `covariance_bytes` under that digest — and a caller that forgets has a
+    reference resolving to nothing rather than a model that half exists.
+
+    The GBM arm reached this shape first and this is the GLM arm arriving at it, not a
+    second convention: one dataclass per fit, carrying the artifact and the bytes it names.
+    """
+
+    result: GlmFitResult
+    covariance_bytes: bytes
+
+
+def encode_covariance(terms: Sequence[str], matrix: npt.NDArray[np.float64]) -> bytes:
+    """Serialise `V` with the term order that makes it readable.
+
+    **The term order is stored inside the blob, not merely alongside it.** A covariance
+    matrix is positional, and `x'Vx` computed against a design built in a different order
+    is a variance for a model nobody fitted — which comes out a plausible positive number,
+    so nothing downstream would catch it. Storing the names lets the scorer *assert* the
+    order it is about to use, which is what FR-MODEL-71 does for the GBM's `base_margin`
+    and for the same reason: the silent failure is the one worth a byte.
+
+    Canonical JSON — sorted keys, no incidental whitespace — because the digest is taken
+    over these bytes and two encodings of one matrix must not be two blobs.
+    """
+    if matrix.shape != (len(terms), len(terms)):
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            f"the covariance matrix is {matrix.shape} for {len(terms)} terms. A "
+            "non-square matrix, or one that does not match the coefficient vector, cannot "
+            "be paired with the terms it is supposed to describe.",
+            terms=terms,
+        )
+    payload = {
+        "terms": list(terms),
+        "matrix": [[float(value) for value in row] for row in matrix],
+    }
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+
+
+def decode_covariance(
+    payload: bytes, terms: Sequence[str]
+) -> npt.NDArray[np.float64]:
+    """Read `V` back, **refusing** a blob whose term order is not the one asked for.
+
+    The check is the reason this is a named function rather than a `json.loads`. A stored
+    covariance matrix is positional: pair it with a design built in a different order and
+    `x'Vx` is the variance of a linear combination nobody estimated. That comes out a
+    plausible positive number, so no downstream assertion catches it and the interval is
+    simply wrong — the failure mode FR-MODEL-71 guards for the GBM's `base_margin`, in the
+    other direction.
+
+    `terms` is the caller's expected order, intercept first, as `encode_covariance` wrote it.
+    """
+    try:
+        document = json.loads(payload)
+        stored = list(document["terms"])
+        matrix = np.asarray(document["matrix"], dtype=np.float64)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            "the covariance blob is not a covariance matrix this module wrote: "
+            f"{exc}. An interval cannot be derived from it.",
+            terms=terms,
+        ) from exc
+    if stored != list(terms):
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            "the covariance blob was written for a different set of terms than the "
+            "coefficients it is being paired with. Using it positionally would report the "
+            "variance of a linear combination that was never estimated, which reads as a "
+            "valid interval.",
+            terms=terms,
+        )
+    if matrix.shape != (len(stored), len(stored)):
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            f"the covariance blob holds a {matrix.shape} matrix for {len(stored)} terms.",
+            terms=terms,
+        )
+    return matrix
+
+
+def _covariance_ref(payload: bytes) -> BlobRef:
+    """The complete reference, computed here so the caller only has to store the bytes."""
+    return BlobRef(
+        sha256=hashlib.sha256(payload).hexdigest(),
+        bytes=len(payload),
+        media_type=COVARIANCE_MEDIA_TYPE,
+    )
 
 
 def _levels(series: pl.Series, exposure: pl.Series | None) -> list[str]:
@@ -130,7 +245,7 @@ def fit_glm(
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
-) -> GlmFitResult:
+) -> GlmFit:
     """Fit `spec` over `data`, returning data rather than an estimator.
 
     `factors`, `bandings` and `groupings` are passed explicitly rather than read from the
@@ -142,7 +257,7 @@ def fit_glm(
     failure FR-PLAT-8 exists to prevent. The stages are the four that actually take time,
     reported before each rather than after, so the label names what is happening now.
     """
-    from glum import GeneralizedLinearRegressor  # type: ignore[import-untyped]
+    from glum import GeneralizedLinearRegressor, TweedieLink  # type: ignore[import-untyped]
 
     report = progress or NullProgress()
     report.check_cancelled()
@@ -191,9 +306,18 @@ def fit_glm(
     if family == "tweedie":
         family = f"tweedie({float(spec.family_params.get('power', 1.5))})"
 
+    # `glum` has no `"inverse"` spelling. Its link vocabulary is identity/log/logit/cloglog/
+    # tweedie, and the string reaches `fit` unrecognised and raises a bare `ValueError` from
+    # inside the library. The link is not missing, only unnamed: `TweedieLink(p)` is
+    # `mu**(1-p)`, so `TweedieLink(2)` **is** `1/mu`. FR-MODEL-18 declares `inverse`
+    # supported and `GlmSpec.link` accepts it, and `predict._inverse_link` has always
+    # implemented it — the gap was here, in the translation, and it killed every Gamma fit
+    # on the canonical link at `estimator.fit`.
+    link: Any = TweedieLink(2) if spec.link == "inverse" else spec.link
+
     estimator = GeneralizedLinearRegressor(
         family=family,
-        link=spec.link,
+        link=link,
         alpha=spec.alpha,
         l1_ratio=spec.l1_ratio,
         max_iter=spec.max_iter,
@@ -231,29 +355,35 @@ def fit_glm(
         )
 
     report.update(0.80, "standard errors and intervals")
-    coefficients = _coefficients(
-        estimator, design.columns, x, response,
-        offset=offset, weights=weights, link=spec.link,
+    covariance = _covariance(
+        estimator, design.columns, x, response, offset=offset, weights=weights
     )
+    coefficients = _coefficients(estimator, design.columns, covariance, link=spec.link)
     _refuse_separation(coefficients)
     report.update(0.95, "relativity tables")
     relativities = _relativities(matrix, levels, coefficients, spec, link=spec.link)
 
+    covariance_bytes = encode_covariance(["intercept", *design.columns], covariance)
+
     report.update(1.0, "fitted")
-    return GlmFitResult(
-        converged=True,
-        iterations=int(getattr(estimator, "n_iter_", 0) or 0),
-        fit_seconds=round(elapsed, 3),
-        coefficients=coefficients,
-        relativities=relativities,
-        dispersion=_dispersion(estimator, x, response, weights=weights, offset=offset),
-        deviance=None,
-        rows=data.height,
-        library_versions=_versions(),
+    return GlmFit(
+        result=GlmFitResult(
+            converged=True,
+            iterations=int(getattr(estimator, "n_iter_", 0) or 0),
+            fit_seconds=round(elapsed, 3),
+            coefficients=coefficients,
+            relativities=relativities,
+            dispersion=_dispersion(estimator, x, response, weights=weights, offset=offset),
+            deviance=None,
+            rows=data.height,
+            library_versions=_versions(),
+            covariance_blob=_covariance_ref(covariance_bytes),
+        ),
+        covariance_bytes=covariance_bytes,
     )
 
 
-def _coefficients(
+def _covariance(
     estimator: Any,
     terms: Sequence[str],
     x: np.ndarray,
@@ -261,18 +391,16 @@ def _coefficients(
     *,
     offset: np.ndarray | None,
     weights: np.ndarray | None,
-    link: str,
-) -> tuple[Coefficient, ...]:
-    """Estimates with the uncertainty `02` R5 makes non-optional.
+) -> npt.NDArray[np.float64]:
+    """`V`, the coefficient covariance matrix — FR-MODEL-21's errors and FR-MODEL-63's.
 
-    **The standard errors come from `glum`.** They used to be computed here from a working
-    weight derived from the *link* — `W = mu` for a log link, `1` otherwise — which is the
-    Fisher information for Poisson and for nothing else. It ignores the family's variance
-    function and the dispersion φ, so a Gamma severity model over amounts in minor units
-    reported intervals roughly **forty-eight times too narrow**: a nominal 95 % interval
-    with measured coverage of 7 %. `02` §8 had already recorded that glum's `std_errors()`
-    was "verified to exist, not assumed"; this hand-rolled a replacement for a verified
-    path and got it wrong for every family the spec supports except one.
+    **This replaced a call to `estimator.std_errors()`, and costs nothing extra.** glum's
+    `std_errors` is defined as `sqrt(covariance_matrix(...).diagonal())` — verified against
+    the installed source, not assumed — so the matrix was already being computed on every
+    fit and everything off the diagonal thrown away. FR-MODEL-63's interval needs
+    `x'Vx`, which is off-diagonal: `Var(sum b_j x_j)` is not the sum of the coefficient
+    variances unless the estimates are independent, which for a design with a shared
+    intercept they never are. Keeping what was already computed is the whole change.
 
     `robust=False` is explicit because **glum's default is `True`** — the HC-1 sandwich.
     That is a defensible estimator and a different one, and FR-MODEL-21 asks for the
@@ -282,14 +410,10 @@ def _coefficients(
     Verified rather than assumed — a column with a hundredth of the variance of its
     neighbour carries the correspondingly larger standard error at the expected index.
     """
-    coef = np.asarray(estimator.coef_, dtype=np.float64)
-    intercept = float(getattr(estimator, "intercept_", 0.0))
-    beta = np.concatenate([[intercept], coef])
     names = ["intercept", *terms]
-
     try:
-        std_errors = np.asarray(
-            estimator.std_errors(
+        matrix = np.asarray(
+            estimator.covariance_matrix(
                 x, y, sample_weight=weights, offset=offset, robust=False
             ),
             dtype=np.float64,
@@ -297,11 +421,56 @@ def _coefficients(
     except (np.linalg.LinAlgError, ValueError) as exc:
         raise GlmFitError(
             "GLM_RANK_DEFICIENT",
-            "the standard errors could not be computed: the information matrix is "
-            "singular, so two or more terms are collinear and their coefficients are not "
-            "separately identified.",
+            "the coefficient covariance matrix could not be computed: the information "
+            "matrix is singular, so two or more terms are collinear and their coefficients "
+            "are not separately identified.",
             terms=names,
         ) from exc
+    if matrix.shape != (len(names), len(names)):
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            f"the estimator returned a {matrix.shape} covariance matrix for {len(names)} "
+            "coefficients. Pairing it with the terms by position would attach a variance "
+            "to the wrong term, which is worse than reporting none.",
+            terms=names,
+        )
+    return matrix
+
+
+def _coefficients(
+    estimator: Any,
+    terms: Sequence[str],
+    covariance: npt.NDArray[np.float64],
+    *,
+    link: str,
+) -> tuple[Coefficient, ...]:
+    """Estimates with the uncertainty `02` R5 makes non-optional.
+
+    **The standard errors come from `glum`**, as the diagonal of the matrix `_covariance`
+    obtained from it. They used to be computed here from a working weight derived from the
+    *link* — `W = mu` for a log link, `1` otherwise — which is the Fisher information for
+    Poisson and for nothing else. It ignores the family's variance function and the
+    dispersion φ, so a Gamma severity model over amounts in minor units reported intervals
+    roughly **forty-eight times too narrow**: a nominal 95 % interval with measured
+    coverage of 7 %. `02` §8 had already recorded that glum's `std_errors()` was "verified
+    to exist, not assumed"; this hand-rolled a replacement for a verified path and got it
+    wrong for every family the spec supports except one.
+    """
+    coef = np.asarray(estimator.coef_, dtype=np.float64)
+    intercept = float(getattr(estimator, "intercept_", 0.0))
+    beta = np.concatenate([[intercept], coef])
+    names = ["intercept", *terms]
+
+    variances = covariance.diagonal()
+    if np.any(variances < 0):
+        raise GlmFitError(
+            "GLM_RANK_DEFICIENT",
+            "a coefficient has a negative variance on the diagonal of the covariance "
+            "matrix, which is not a covariance matrix. Reported rather than square-rooted "
+            "into a NaN standard error that would read as an unidentified term.",
+            terms=[name for name, v in zip(names, variances, strict=True) if v < 0],
+        )
+    std_errors = np.sqrt(variances)
 
     if len(std_errors) != len(beta):
         raise GlmFitError(

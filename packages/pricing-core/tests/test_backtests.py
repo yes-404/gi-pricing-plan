@@ -78,7 +78,7 @@ def _fitted(frame: pl.DataFrame, factors: list[Factor]) -> tuple[object, GlmSpec
         factors=tuple(f.id for f in factors),
         family="poisson",
     )
-    return fit_glm(frame, spec, factors, seed=1), spec
+    return fit_glm(frame, spec, factors, seed=1).result, spec
 
 
 @pytest.mark.req("FR-MODEL-57")

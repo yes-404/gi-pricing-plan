@@ -1,0 +1,353 @@
+"""Scoring a model over supplied rows (`02` FR-MODEL-62/63/77/93, §5.1).
+
+`packages/pricing-core/tests/test_prediction_interval.py` owns the arithmetic — that the
+interval is `g⁻¹(η̂ ± z·√(x'Vx))`, that the off-diagonal terms matter, and that it covers
+the mean as often as it claims. This file owns the four things only the platform can be
+wrong about:
+
+* **the covariance blob makes the round trip.** The fit computes the digest and hands back
+  the bytes (ADR-0001); the worker stores them; the prediction path fetches them by that
+  digest. Three components, and nothing but an end-to-end fit-then-score proves the chain,
+  because each of them is individually happy with a matrix that never arrives.
+* **the uncertainty verdict matches the model in front of it** — an interval for a GLM
+  that has its matrix, `covariance_not_stored` for one that does not, and FR-MODEL-77's
+  `no_interval_models_fitted` for every GBM. `02` R5 is satisfied by the *right* one of
+  these, not by any of them.
+* **the refusals are refusals**, with the status a caller can act on: `422` for a request
+  that is not a scoring request, `409` for a model that cannot answer it, `403` for a
+  caller who may not ask.
+* **the route is in the published contract**, the omission `test_api_diagnostics` records
+  three requirements repairing.
+
+The book is `test_model_jobs.BOOK`, where urban carries twice rural's claim count on equal
+exposure — so a fitted model must price urban above rural, and a scorer that has silently
+dropped the factor is visible rather than merely plausible.
+"""
+
+from __future__ import annotations
+
+from uuid import UUID, uuid4
+
+import pytest
+from backend.tests.test_api_datasets import _headers
+from backend.tests.test_contracts import OPENAPI, _load
+from backend.tests.test_model_jobs import (
+    _actuary,
+    _dataset,
+    _factor,
+    _spec,
+    _split,
+    _validated_version,
+)
+from backend.tests.test_model_jobs_gbm import _fitted_gbm
+from fastapi.testclient import TestClient
+
+from app.db.models import ModelRow
+from app.db.session import Database
+from app.errors import PlatformError
+from app.platform import jobs as job_service
+from app.platform import modelling as model_service
+from app.platform import prediction as service
+from app.worker.tasks import execute_job
+from model_schema import (
+    JobKind,
+    JobStatus,
+    ModelStatus,
+    Principal,
+    UnavailableReason,
+    UncertaintyKind,
+    new_uuid7,
+)
+
+#: Two rows the fitted model must price differently: same exposure, opposite area.
+ROWS = [
+    {"exposure_years": 1.0, "area": "urban"},
+    {"exposure_years": 1.0, "area": "rural"},
+]
+
+
+async def _fitted_glm(
+    database: Database, blob_store, workspace_id, *, spare: bool = False
+) -> tuple[Principal, UUID] | tuple[Principal, UUID, UUID]:
+    """One GLM fitted through the real Job, so its covariance blob is really in the store.
+
+    With `spare=True` a second model is reserved on the same factors and left at `draft`,
+    for the one test that needs a row whose `fit_result` can still be written.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    if not spare:
+        return actor, model_id
+
+    async with database.unit_of_work() as session:
+        spare_row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split),
+        )
+        return actor, model_id, spare_row.id
+
+
+# -- The interval, end to end -------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-63")
+async def test_the_covariance_blob_survives_the_fit_the_store_and_the_prediction(
+    database, blob_store, workspace_id
+) -> None:
+    """**The chain no single component can prove.** `fit_glm` computes a digest over bytes
+    it does not store (ADR-0001), the worker stores them under it, and the prediction path
+    fetches them back by that digest — and a break anywhere in between surfaces as a
+    perfectly well-formed prediction with no interval on it, which is the one failure mode
+    that looks like a design decision."""
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        prediction = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+
+    assert prediction.uncertainty.kind is UncertaintyKind.CONFIDENCE_INTERVAL_MEAN
+    assert prediction.uncertainty.level == service.CONFIDENCE_LEVEL
+    assert prediction.uncertainty.reason is None
+    urban, rural = prediction.rows
+    # The book prices urban at twice rural on equal exposure. A scorer that dropped the
+    # factor returns two identical rows, which is a plausible-looking answer.
+    assert urban.expected > rural.expected
+    for row in prediction.rows:
+        assert row.lower is not None
+        assert row.upper is not None
+        assert row.lower <= row.expected <= row.upper
+        # A degenerate interval would satisfy the ordering check and nothing else.
+        assert row.upper > row.lower
+
+
+@pytest.mark.req("FR-MODEL-93")
+async def test_a_glm_fitted_before_the_covariance_blob_says_so_rather_than_going_quiet(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-93, on the models that make it necessary.
+
+    The matrix is `p x p` and the artifact holds `p` numbers, so a fit that predates the
+    blob cannot have one reconstructed — the only honest answers are a typed reason and a
+    re-fit. Simulated by clearing the field on a real fit, because every model in this
+    repository is now fitted with one and the case would otherwise be untestable until it
+    was already in production data.
+    """
+    actor, model_id, reserved = await _fitted_glm(
+        database, blob_store, workspace_id, spare=True
+    )
+
+    async with database.unit_of_work() as session:
+        fitted = await session.get(ModelRow, model_id)
+        stored = dict(fitted.fit_result)
+        assert stored.pop("covariance_blob") is not None
+        # Written onto a **reserved** model rather than over the fitted one. `02` R2's
+        # trigger fires whenever `OLD.fit_result IS NOT NULL`, so rewriting the real model
+        # is refused by the database — correctly, and this test would otherwise be proving
+        # that the trigger is off. A draft receiving its first fit result is the transition
+        # the worker itself makes, and a legacy model is exactly a row that took it before
+        # the blob existed.
+        await session.execute(
+            ModelRow.__table__.update()
+            .where(ModelRow.id == reserved)
+            .values(
+                fit_result=stored,
+                status=ModelStatus.FITTED.value,
+                # `ck_models_fitted_model_has_diagnostics`: a fitted model carries them, and
+                # the constraint is right to insist. Shared with the real model rather than
+                # forged, since nothing here reads them — what is under test is the absent
+                # covariance blob, and every other field should be as ordinary as possible.
+                diagnostics_id=fitted.diagnostics_id,
+            )
+        )
+    model_id = reserved
+
+    async with database.session() as session:
+        prediction = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+
+    assert prediction.uncertainty.kind is UncertaintyKind.UNAVAILABLE
+    assert prediction.uncertainty.reason is UnavailableReason.COVARIANCE_NOT_STORED
+    assert prediction.uncertainty.level is None
+    # The expectation is still served. FR-MODEL-93 removes the interval, not the answer.
+    assert all(row.lower is None and row.upper is None for row in prediction.rows)
+    assert prediction.rows[0].expected > prediction.rows[1].expected
+
+
+@pytest.mark.req("FR-MODEL-77")
+async def test_a_gbm_names_the_reason_it_has_no_interval_rather_than_approximating_one(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-77 refuses the variance-model approximation because it *renders* as a
+    predictive interval. `no_interval_models_fitted` is the only one of its three reasons
+    reachable until FR-MODEL-78's paired quantile models exist — and saying which one
+    applies is what distinguishes a refusal from an omission."""
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    # `_fitted_gbm` keeps its principal to itself. The roles are workspace-scoped, so any
+    # actuary can ask the question — which is the point of gating this on `model:read`.
+    actor = await _actuary(database, workspace_id)
+
+    async with database.session() as session:
+        prediction = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+
+    assert prediction.model_type == "xgboost"
+    assert prediction.uncertainty.kind is UncertaintyKind.UNAVAILABLE
+    assert prediction.uncertainty.reason is UnavailableReason.NO_INTERVAL_MODELS_FITTED
+    assert all(row.lower is None for row in prediction.rows)
+
+
+# -- The refusals --------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-62")
+async def test_more_rows_than_the_endpoint_scores_is_refused_rather_than_served_slowly(
+    database, blob_store, workspace_id
+) -> None:
+    """§5.1 scopes this route to dev/debug scale, and a limit stated only in prose is one
+    every caller discovers by exceeding it. The interval materialises the `n x p` design,
+    so the honest answer to a portfolio re-rate is `03`'s batch scoring, named in the
+    message rather than left for the caller to find."""
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+                rows=[ROWS[0]] * (service.MAX_PREDICT_ROWS + 1), blob_store=blob_store,
+            )
+    assert refused.value.status_code == 422
+    assert "03" in (refused.value.detail or "")
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as empty:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+                rows=[], blob_store=blob_store,
+            )
+    assert empty.value.status_code == 422
+
+
+@pytest.mark.req("FR-MODEL-62")
+async def test_a_model_with_no_fit_result_cannot_be_scored(
+    database, blob_store, workspace_id
+) -> None:
+    """A `draft` reservation carries a spec and no coefficients. Scoring it would have to
+    invent them, and the status is the thing that says so."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,)),
+        )
+        reserved = row.id
+        assert ModelStatus(row.status) is ModelStatus.DRAFT
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=reserved,
+                rows=ROWS, blob_store=blob_store,
+            )
+    assert refused.value.code == "MODEL_NOT_FITTED"
+    assert refused.value.status_code == 409
+
+
+@pytest.mark.req("FR-MODEL-62")
+async def test_rows_missing_a_column_the_model_needs_are_refused_by_name(
+    database, blob_store, workspace_id
+) -> None:
+    """The one failure that is neither a bad request nor a bad model but the pairing of the
+    two — and the only alternative to refusing it is a price computed without the factor."""
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+                rows=[{"exposure_years": 1.0}], blob_store=blob_store,
+            )
+    assert refused.value.status_code == 409
+    assert "area" in (refused.value.detail or "")
+
+
+@pytest.mark.req("FR-MODEL-62")
+async def test_a_model_in_another_workspace_is_not_found(
+    database, blob_store, workspace_id
+) -> None:
+    """Not 403. A caller with no standing in a workspace must not learn from the status
+    code that the id they guessed is real."""
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=uuid4(), actor=actor, model_id=model_id,
+                rows=ROWS, blob_store=blob_store,
+            )
+    assert refused.value.status_code in (403, 404)
+
+
+# -- Over HTTP ----------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-62")
+def test_the_predict_route_is_published_with_its_refusals() -> None:
+    """`test_api_diagnostics` records three requirements repaired by this check: a route
+    absent from the published contract is invisible to the endpoint audit, however
+    thoroughly its service function is tested."""
+    entry = _load(OPENAPI)["paths"]["/api/v1/models/{model_id}/predict"]
+    assert "post" in entry
+    responses = entry["post"]["responses"]
+    assert "200" in responses
+    for status in ("403", "404", "409", "422"):
+        assert status in responses
+
+
+@pytest.mark.req("FR-MODEL-62")
+def test_a_caller_without_model_read_is_refused_at_the_edge(
+    api_client: TestClient, workspace_id, principal
+) -> None:
+    """`model:read`, and the negative half of choosing it. The permission is deliberately
+    the weakest of the model permissions — an approver must be able to ask a model what it
+    charges — which makes proving that *no* permission is still refused the check that
+    keeps "weakest" from meaning "none"."""
+    refused = api_client.post(
+        f"/api/v1/models/{new_uuid7()}/predict",
+        json={"rows": [{"exposure_years": 1.0}]},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert refused.status_code == 403

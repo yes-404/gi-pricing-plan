@@ -104,6 +104,9 @@ def build_glm_approximation(
         seed=spec.seed,
     )
     report.update(0.35, "fitting the approximation")
+    # `.result` and not the covariance bytes beside it: the surrogate is a *description* of
+    # the booster, and FR-MODEL-63's interval belongs to the model that priced the row, not
+    # to an approximation of it. Storing this one would give a GBM a GLM's interval.
     fitted = fit_glm(
         data.with_columns(pl.Series(surrogate_column, target)),
         approximation_spec,
@@ -111,7 +114,7 @@ def build_glm_approximation(
         seed=spec.seed,
         bandings=bandings,
         groupings=groupings,
-    )
+    ).result
 
     report.update(0.75, "measuring fidelity")
     from pricing_core.modelling.diagnostics import deviance

@@ -12,17 +12,33 @@
 | `POST` | `/groupings/evaluate` | Change in fit for an **edited** mapping (FR-MODEL-83) |
 | `POST` | `/groupings` | Persist a Grouping (FR-MODEL-16) |
 | `GET` | `/groupings` | List groupings |
+| `POST` | `/model-specs/validate` | Check a spec without fitting (FR-MODEL-64) |
 | `POST` | `/models` | **202** Fit → Job; returns the existing model on `spec_hash` match |
 | `GET` | `/models/{slug}` | The model artifact, latest or a named version |
+| `GET` | `/models/{slug}/diagnostics` | The stored diagnostics for a fitted model |
+| `POST` | `/models/{id}/submit` | Move a model to `pending_approval` |
+| `POST` | `/models/{id}/archive` | Retire a model |
+| `POST` | `/models/compare` | **202** Compare models on their shared holdout → Job |
+| `GET` | `/models/comparisons/{id}` | A stored comparison |
+| `POST` | `/models/{id}/backtest` | **202** Backtest against another dataset version → Job |
+| `GET` | `/models/backtests/{id}` | A stored backtest |
+| `POST` | `/models/{id}/transparency` | **202** Build a GBM transparency artifact → Job |
+| `GET` | `/models/{id}/transparency` | A model's transparency artifact (FR-MODEL-40) |
+| `POST` | `/models/{id}/predict` | Score rows, with the interval where there is one |
 
 `POST /models` answers **202 with a Job** for a new fit and **200 with the model** when the
 specification has already been fitted (FR-MODEL-66). Two status codes for one route because
 they are two different facts: work has started, or the answer already exists.
+
+`POST /models/{id}/predict` is the one write-shaped route that answers **200**, because it
+writes nothing: it is dev/debug scoring at a capped row count (`03-rating-engine.md` owns
+the production path), and a Job for work measured in milliseconds would cost more to
+poll for than to do.
 """
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
@@ -40,6 +56,7 @@ from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as service
+from app.platform import prediction as prediction_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
@@ -63,6 +80,7 @@ from model_schema import (
     ModelComparison,
     ModelSpec,
     MonotonicDirection,
+    Prediction,
     SpecValidation,
     TransparencyArtifact,
 )
@@ -876,4 +894,56 @@ async def get_transparency(
     async with database.session() as session:
         return await transparency_service.load_transparency(
             session, workspace_id=caller.workspace_id, model_id=model_id
+        )
+
+
+class PredictRows(BaseModel):
+    """Rows to score, as records — the shape a caller already has (`02` §5.1)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rows: tuple[dict[str, Any], ...] = Field(
+        description="One record per risk to score, each carrying the model's factor source "
+        "columns and its offset column. At most "
+        f"{prediction_service.MAX_PREDICT_ROWS} — this endpoint is dev/debug scale and a "
+        "portfolio re-rate is `03`'s batch scoring.",
+    )
+
+
+@router.post(
+    "/models/{model_id}/predict",
+    summary="Score rows with a fitted model",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def predict(
+    model_id: UUID,
+    body: PredictRows,
+    caller: ReadModels,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+) -> Prediction:
+    """**200**, synchronously (FR-MODEL-62, FR-MODEL-63).
+
+    The only compute route in this module that is not a 202. `02` §5.1 marks the others with
+    a status code and this one with none, and the distinction is real rather than
+    editorial: a fit, a comparison, a backtest and a transparency artifact all read a whole
+    dataset version, while this reads at most
+    `prediction_service.MAX_PREDICT_ROWS` rows the caller sent in the request. A Job for
+    that would be a queue hop, a poll and a blob fetch to return a number the caller could
+    have had before the Job row committed.
+
+    Nothing is persisted, so there is nothing to `GET` afterwards — the omission every
+    other 202 in this module has had to repair (FR-MODEL-56, FR-MODEL-84, FR-MODEL-90,
+    FR-MODEL-92) does not arise for a route whose answer *is* its response.
+
+    `model:read`: see `prediction_service.predict_rows` for why this one is not `model:fit`.
+    """
+    async with database.session() as session:
+        return await prediction_service.predict_rows(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            model_id=model_id,
+            rows=[dict(row) for row in body.rows],
+            blob_store=blob_store,
         )

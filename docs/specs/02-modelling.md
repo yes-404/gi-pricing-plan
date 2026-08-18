@@ -121,6 +121,19 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | ID | Requirement |
 |---|---|
 | **FR-MODEL-18** | GLMs are fitted with `glum`. Supported families: `poisson`, `negative_binomial`, `gamma`, `inverse_gaussian`, `tweedie(p)`, `binomial`, `gaussian`. Supported links: `log`, `logit`, `identity`, `inverse`, `power(k)`. |
+
+> **The `inverse` link was declared here, accepted by `GlmSpec`, implemented in the scorer,
+> and could not be fitted — corrected 2026-08-18 (W5, the prediction slice).** `spec.link`
+> reached `glum` as the string `"inverse"`, which is not in that library's link vocabulary
+> (`identity`, `log`, `logit`, `cloglog`, `tweedie`), so every attempt died on a bare
+> `ValueError` raised from inside `_glm.py` — not a named `GlmFitError`, and nothing
+> FR-MODEL-23 would recognise as a surfaced failure. **The spec was right and the code was
+> wrong**, which is worth stating because the cheap repair was to delete `inverse` from
+> this row: it is the canonical Gamma link, and the platform could already *score* a model
+> on it. `glum`'s `TweedieLink(p)` is `mu**(1-p)`, so `TweedieLink(2)` **is** `1/mu`, and
+> the gap was one line of translation. `power(k)` remains declared and unbuilt — `GlmSpec`
+> has no spelling for it and no slice has needed one — and is named here under
+> FR-MODEL-87's staging rule rather than quietly dropped.
 | **FR-MODEL-19** | Actuarial defaults are applied unless explicitly overridden, and any override is recorded with a justification: **frequency** → Poisson, log link, `offset = log(exposure)`; **severity** → Gamma, log link, `weight = claim_count`; **burning cost** → Tweedie with `1 < p < 2`, log link, `weight = exposure`; **conversion/retention** → binomial, logit link. |
 | **FR-MODEL-20** | Regularisation (L1, L2, elastic net) is supported with a documented path and a cross-validated selection option. The selected penalty and the full CV path are persisted as diagnostics. |
 | **FR-MODEL-21** | Fitting returns, for every coefficient: estimate, standard error, z/t statistic, p-value, and confidence interval; and for every categorical Factor: the relativity table with the base level marked. These are persisted in the Model artifact (ADR-0003) and are re-scorable without `glum`. |
@@ -209,7 +222,27 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 |---|---|
 | **FR-MODEL-62** | `pricing-core` can score any persisted Model from its declarative artifact alone (ADR-0003), with no dependency on the fitting session. GLM scoring requires no `glum`; GBM scoring loads the JSON booster. |
 | **FR-MODEL-63** | Prediction returns the expectation plus an uncertainty measure: GLM prediction intervals from the covariance matrix; GBM either quantile-model-based intervals or an explicit `uncertainty: unavailable` with the reason (R5). |
+| **FR-MODEL-93** | **A GLM fitted before the covariance matrix was stored reports `uncertainty: unavailable` with reason `covariance_not_stored`, and still returns the expectation.** Added 2026-08-18 (W5, the prediction slice). FR-MODEL-63's interval needs `V`, which is `p x p`; the Model artifact holds `p` coefficients and cannot have it reconstructed from them, so for a model fitted before `covariance_blob` existed the only honest answers are a typed absence and a refit. It is a fourth reason beside FR-MODEL-77's three and it is **not** one of them: nothing about a GLM makes an interval impossible, the inputs to one were simply not kept. **A blob that should exist and does not is a platform fault and surfaces as one** — this reason is reachable only when the artifact itself records no blob, never when the store fails to resolve one, because a missing-blob incident reported as a modelling limitation is an incident nobody investigates. |
 | **FR-MODEL-77** | **A GBM prediction states `uncertainty: unavailable` with a typed `reason` unless interval models were fitted for it** (OQ-MODEL-2, decided 2026-08-15) — `no_interval_models_fitted`, `interval_models_not_approved`, or `interval_models_stale` (fitted against a superseded Model version). **The variance-model approximation is not offered at all**, at any setting: it is cheap, it renders as a predictive interval, and it is not one — and a wrong interval on a price is worse than no interval. R5 is satisfied by the explicit statement of absence, never by an approximation that reads like a measurement. |
+
+> **FR-MODEL-63 says "prediction intervals" and delivers a confidence interval on the
+> expectation — the requirement is amended rather than the code renamed, 2026-08-18 (W5,
+> the prediction slice).** They are two quantities and the covariance matrix yields only
+> the first: `x'Vx` is the sampling variance of the estimated linear predictor, so
+> `g⁻¹(η̂ ± z·√(x'Vx))` says how precisely the fit located `E[Y|x]`. A **prediction**
+> interval for an individual outcome adds the process variance `φ·V(μ)`, which `V` does not
+> contain — and for a frequency model on one policy that term dominates so completely that
+> the honest interval is very nearly "0 or 1 claims", which is true and prices nothing.
+>
+> Pricing reads the expectation, so the useful interval is the one on the expectation, and
+> the contract names it what it is: `UncertaintyKind.confidence_interval_mean`, never
+> `prediction_interval`. **FR-MODEL-77 already refuses a GBM approximation on exactly this
+> reasoning** — *it renders as a predictive interval and is not one* — and a correctly
+> computed interval carrying the wrong name fails the same test one step later, in the
+> reader rather than in the arithmetic. The level is fixed at 0.95, matching
+> `Coefficient.ci_95`: an interval on a prediction and an interval on the coefficient it
+> came from, reported at two different levels, is a comparison nobody can make.
+
 | **FR-MODEL-78** | **Paired quantile models are the supported route to a GBM prediction interval, opt-in and explicit** (OQ-MODEL-2). Each bound is a Model in its own right — same Model Family, same dataset version, split and factor set, fitted with the `quantile` template (§4.5) at a declared `alpha` — carrying `interval_for`, which names the central Model version and the alpha it estimates, so the 2–3× fit cost is a choice the actuary makes and can see. Crossing quantiles (a lower bound above its upper at any prediction) are **detected, reported in the diagnostics, and never silently reordered**: crossing means the pair does not describe one distribution, which the reader must be told rather than protected from. Whether §4.8 carries `interval_for` before the slice that fits one exists is OQ-MODEL-8's question, not this one. |
 | **FR-MODEL-64** | Model lifecycle is `draft → fitted → review → approved → superseded → archived`. `fitted` requires diagnostics; `review` requires diagnostics, a transparency artifact where applicable, and a completed model-document draft; `approved` is by an Approver who is not the author (`06-governance.md`). |
 | **FR-MODEL-65** | Model lineage records `parent_model_id` and a typed `change_reason` (`refit_new_data`, `respecified`, `rebanded`, `regrouped`, `hyperparameter_change`, `objective_change`, `bug_fix`) so a family's history reads as a narrative. |
@@ -691,6 +724,19 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > algorithm version exists to make legible: every `v1:` digest is findable with
 > `LIKE 'v1:%'` and reported stale by `spec_hash_is_current`.
 
+> **`covariance_blob` is live from 2026-08-18 (W5, the prediction slice)** — FR-MODEL-87's
+> staging rule, and the first field to go live where the *absence* also needed a spelling.
+> It is a blob rather than a field because it is `p x p`: a model with 150 terms carries
+> ~250 KB that every read of the Model row would otherwise pay for, and only the prediction
+> path needs it. The bytes are canonical JSON carrying the term order **inside** the
+> payload, so a matrix decoded against a different coefficient set is refused rather than
+> silently transposed into a plausible interval.
+>
+> **It is optional, and every Model fitted before this date has none.** That is what
+> FR-MODEL-93 exists for: the artifact holds `p` numbers where the matrix is `p x p`, so no
+> migration can backfill it and a refit is the only route to an interval. The typed reason
+> is the difference between saying so and an interval quietly missing from the response.
+
 > **`flags` and `approval_request_id` are live from 2026-08-17 (W5, the lifecycle).** Both
 > were on OQ-MODEL-8's list of fields declared and dead; the slice that creates an approval
 > request is the one that can populate the second, which is that question's own "re-widen it
@@ -1014,7 +1060,7 @@ triggers.
 | `GET` | `/api/v1/models/backtests/{id}` | The stored backtest artifact (§4.12, FR-MODEL-92) |
 | `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-MODEL-56) |
 | `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) |
-| `POST` | `/api/v1/models/{id}/predict` | Score rows (dev/debug scale; production scoring is `03`) |
+| `POST` | `/api/v1/models/{id}/predict` | **200** Score rows with FR-MODEL-63's uncertainty (dev/debug scale, row-capped; production scoring is `03`) |
 | `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required |
 | `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-MODEL-64), `If-Match` required |
 | `POST` | `/api/v1/custom-objectives` | Create → `draft` (FR-MODEL-38) |
@@ -1268,7 +1314,7 @@ def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
             seed: int = 0,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
-            progress: ProgressCallback | None = None) -> GlmFitResult
+            progress: ProgressCallback | None = None) -> GlmFit   # .result, .covariance_bytes
 
 # pricing_core/modelling/predict.py
 def linear_predictor(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
@@ -1279,6 +1325,15 @@ def predict_glm(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor]
                 spec: GlmSpec, *,
                 bandings: Mapping[UUID, Banding] | None = None,
                 groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
+def predict_glm_interval(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
+                         spec: GlmSpec, *, covariance_bytes: bytes, level: float = 0.95,
+                         bandings: Mapping[UUID, Banding] | None = None,
+                         groupings: Mapping[UUID, Grouping] | None = None
+                         ) -> tuple[NDArray[float64], NDArray[float64], NDArray[float64]]
+
+# pricing_core/modelling/glm.py — the covariance blob's own codec
+def encode_covariance(terms: Sequence[str], matrix: NDArray[float64]) -> bytes
+def decode_covariance(payload: bytes, terms: Sequence[str]) -> NDArray[float64]
 
 # pricing_core/modelling/gbm.py
 def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
@@ -1347,6 +1402,23 @@ def reconcile(assembled: pl.DataFrame, *, observed: NDArray[float64],
 > stores as a blob this signature does not receive. A half-interval derived from the
 > coefficient standard errors alone would read as a prediction interval and not be one,
 > so the parameter is absent until the slice that can honour it.
+>
+> > **That slice landed 2026-08-18, and the deferred parameter is a second function rather
+> > than a flag.** `predict_glm_interval` takes the `covariance_bytes` the caller fetched
+> > (ADR-0001 keeps the blob store out of this package) and returns
+> > `(expected, lower, upper)`. Two entry points, not one with a flag, because they have
+> > genuinely different costs: `predict_glm` accumulates the linear predictor one term at a
+> > time and never holds a design matrix, while `x'Vx` needs the whole `n x p` design at
+> > once — 542 MB on the 678k-row book the backtest path scores, which is why that path
+> > must keep the streaming version and why `/predict` is row-capped. The standard-error
+> > shortcut the note refuses is still refused, and now demonstrably wrong rather than
+> > merely suspect: `test_the_off_diagonal_terms_change_the_interval_materially` fits a
+> > model whose diagonal-only interval is *narrower* than the truth, so the shortcut does
+> > not even err on the safe side.
+> >
+> > `fit_glm` returns `GlmFit` — `.result` plus `.covariance_bytes` — the same split
+> > `fit_gbm` already made for the booster, and for the same ADR-0001 reason: `pricing-core`
+> > computes the digest and the caller stores the bytes.
 >
 > `compute_diagnostics` returns `DiagnosticsResult` — the computed numbers — rather than
 > the persisted `Diagnostics` artifact, which carries an id, a `model_id` and a
@@ -1604,3 +1676,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-MODEL-10** | Is the GLM approximation of a GBM (FR-MODEL-34) a **Model** in its own right, or a block inside the transparency artifact? §4.9's `approximating_model_id` implies the first; the built artifact carries the coefficients and relativities and leaves that field `None`, because a Model whose response column is another model's prediction means something different by `dataset_version_id`, `spec_hash` and R1 — and would need diagnostics of a surrogate against a surrogate target to reach `fitted` (§4.8). Bound to **OQ-MODEL-3**: the approximation needs an independent identity only if something may rate on it. Raised by building it, 2026-08-17. **Unblocked 2026-08-17**: OQ-MODEL-3 is decided, so something may rate on the approximation — and a Rating Version pins what it rates on, while the transparency artifact carries no status for FR-OVR-14's approved-or-better pin check to read. |
 | **OQ-MODEL-11** | What must a GLM approximation prove before a Rating Version may **deploy** in `approximation` mode? FR-MODEL-36's fidelity statement is descriptive — computed, stored, shown, and nothing refuses anything on it — so a mode whose deployed prices are by construction not the validated model has no floor. Options: a numeric floor on the artifact, a dislocation-based gate (`03` FR-RATE-46) with a premium-deviation threshold, or nothing beyond the statement. Carved out of OQ-MODEL-3 when it was decided, 2026-08-17; Phase 2, with the deployment path it gates. |
 | **OQ-MODEL-12** | May an `interaction` Factor cross a **continuous** operand? FR-MODEL-91 crosses levels and a continuous operand has none, so the only arithmetic available is a product term — a varying slope, which `03`'s rating DAG of tables has no cell for. This slice **refuses it by name** and states the remedy (band or group first), which is additive to undo; allowing a product term is not, because a model fitted on one outlives the decision. Options and the recommendation are in `open-questions.md`. |
+| **OQ-MODEL-13** | Should the platform ever offer a **true prediction interval** — one carrying the process variance `φ·V(μ)` — and under what name? FR-MODEL-63 asked for one; the covariance matrix yields only a confidence interval on `E[Y|x]`, which is what this slice ships and names. For a frequency model on one policy the predictive interval is very nearly "0 or 1 claims" — true, and it prices nothing. Options and the recommendation are in `open-questions.md`. |
+| **OQ-MODEL-14** | What uncertainty should a **penalised** GLM (`alpha > 0`) report? `glum` warns on every such fit that the covariance matrix it returns *"will be incorrect"* — it is the unpenalised information matrix, which does not know about the shrinkage — and both FR-MODEL-21's standard errors and FR-MODEL-63's interval are read off it. `alpha` defaults to `0.0`, so the default path is unaffected. Raised 2026-08-18 (W5, the prediction slice), from the warning rather than from a wrong number. **The interval inherits this from the standard errors and must not be decided apart from them.** Options and the recommendation are in `open-questions.md`. |
