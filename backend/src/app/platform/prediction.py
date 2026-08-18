@@ -237,7 +237,13 @@ async def _score_glm(
         lower,
         upper,
         Uncertainty(
-            kind=UncertaintyKind.CONFIDENCE_INTERVAL_MEAN, level=CONFIDENCE_LEVEL
+            kind=UncertaintyKind.CONFIDENCE_INTERVAL_MEAN,
+            level=CONFIDENCE_LEVEL,
+            # FR-MODEL-99. Read from the spec, which is the one derivation (OQ-MODEL-14):
+            # for `alpha > 0` this interval comes from the unpenalised information matrix
+            # and is wider than the shrunk estimate warrants. Stating it is the whole of the
+            # decision — the alternative is a number a reader takes for exact inference.
+            basis=spec.uncertainty_basis,
         ),
     )
 

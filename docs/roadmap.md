@@ -2120,6 +2120,45 @@ raise.
 | §3.3's factor/banding/grouping **rationale** evidence | **Not started** — unmodelled, no artifact holds it. Owner: Phase 1b |
 | §4.2's `rating_version` and `deployment` entries in `DEFAULT_POLICY` | **Left as they are.** Their floors are declared in `EVIDENCE_FLOOR` and enforced on any workspace that adds an entry; adding entries for artifacts nothing can submit yet would be shipping a policy for a Phase 2 capability |
 
+#### W5 slice — what a penalised fit may claim, 2026-08-18
+
+`glum` warns on every penalised fit that its covariance matrix *"will be incorrect"*, and the
+suite has been printing that warning since the prediction slice. It is right: the matrix is
+the information matrix of the **unpenalised** problem, and it knows nothing about the
+shrinkage that produced the coefficients beside it. OQ-MODEL-14 asked what such a fit may
+report. **`02` FR-MODEL-99 is the answer: report both numbers, and state the basis.**
+
+**The recommendation on file was a rule about how to decide, not an answer** — *decide
+FR-MODEL-21 and FR-MODEL-63 together, not for the interval alone* — and honouring it is what
+settled the choice. The interval inherits the matrix from the standard errors rather than
+introducing it, so refusing the interval would have had to take the standard errors with it,
+leaving a penalised fit reporting **no uncertainty at all**. That is what ruled the honest-
+looking option out: not that it was wrong about the matrix, but what it would have cost the
+half of the question nobody was asking about.
+
+| Delivered | Evidence |
+|---|---|
+| `UncertaintyBasis` — `information_matrix` \| `unpenalised_information_matrix` | One vocabulary for both halves, in `model-schema` beside `UncertaintyKind`. `02` R5 is about what the platform *claims*, and this is the claim |
+| `GlmSpec.uncertainty_basis`, the **single** derivation | Derived from `alpha`, never stored on the fit result: the spec is pinned by `spec_hash` and immutable, so a stored copy could only agree or be wrong (`CLAUDE.md` §2). No migration, no nullable, no fallback |
+| `Model.uncertainty_basis` | The reader for FR-MODEL-21's half — a coefficient surface asks the Model rather than deriving `alpha > 0` for itself. `None` for a GBM, where FR-MODEL-77 refuses an interval outright and there is no matrix to describe |
+| `Uncertainty.basis` on every prediction | Populated from the spec in `_score_glm`. The validator **refuses an interval with no basis**, so the qualification cannot be dropped by the next caller rather than merely being present in this one |
+| Both directions tested end to end | A penalised fit through the real Job reports `unpenalised_information_matrix`; an unpenalised one reports `information_matrix`. Without the second, a field hard-coded to the first would pass |
+
+**Two things the build decided that the question had left open.** The basis is read from
+`alpha`, **not** from `glum`'s warning text — the fit swallows that warning inside
+`catch_warnings`, and a library's prose is not a mechanism; it can be reworded in a patch
+release without anything failing. And `l1_ratio` alone does not make a fit penalised: at
+`alpha = 0` there is no penalty to mix, so reading the basis off the mix would have labelled
+every elastic-net default approximate. Both are pinned by tests rather than left in a comment.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| The **correct** penalised covariance — bootstrap or a penalty-aware sandwich | **Deferred with a named trigger**, which is the half of this decision that stops it decaying: built when the first consumer needs valid penalised inference — a surface that renders coefficient intervals on a penalised fit, or an approval that cites them. ~200 refits is a different cost class from a fit, so it is a Job and not a fit-time step. Owner: the slice that builds the first such consumer |
+| A coefficient surface that renders the basis | **Not started, and nothing to start on.** Regularisation has no UI and nothing in `02` §4.11's comparison reads the intervals — which is why FR-MODEL-21's half ships as a property with a stated reader rather than as a rendered label |
+| Suppressing `glum`'s warning now that the platform states the same fact | **Rejected.** The warning is the library telling the truth about its own return value, and a repository that silences it keeps the fact only where its own code remembers to look |
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2283,18 +2322,28 @@ you never block on a decision you have not reached.
 | Gate | Questions | Count |
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| **Before Phase 1b** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔ *both 2026-08-18*, **OQ-MODEL-14** | 12 (1 open) |
+| ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18* | 12 (0 open) |
 | **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔ *both 2026-08-18 — each decided now and **revisited** here, against a rate table that exists rather than one that is specified*, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6, OQ-PLAT-3, **OQ-GOV-8** | 10 (5 open) |
 | **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 13 (4 open) |
+
+**2026-08-18 (later the same day) — OQ-MODEL-14 closes the 1b gate.** A penalised GLM reports its standard errors and its interval as before, and every response carrying them now says which matrix they came from (`02` FR-MODEL-99, **built**). **Every question gating Phase 1b is decided**, three days after the gate was placed and while 1a is still open — which is the order this table exists to produce. What remains is Phase 2's five, Phase 3's six, Phase 4's eleven and four any-time.
+
+The decision is worth one line of why, because the recommendation on file was a *sequencing*
+rule rather than an answer — decide FR-MODEL-21 and FR-MODEL-63 together — and following it
+is what produced the answer: both are read off one matrix, so refusing the interval would
+have had to take the coefficient standard errors with it. A rule about *how* to decide,
+honoured, decided it.
 
 **2026-08-18 — five decisions, and the table was repaired to take them.** OQ-MODEL-10 (the
 approximation is a Model, `02` FR-MODEL-96), OQ-MODEL-11 (a dislocation gate on
 `approximation` mode, `03` FR-RATE-61), OQ-MODEL-12 (no continuous interaction operand, `02`
 FR-MODEL-97), OQ-MODEL-13 (one interval kind until a named consumer, `02` FR-MODEL-98) and
 OQ-GOV-7 (§3.3 is a floor, `06` FR-GOV-37, **built**). **Before Phase 1b now has one question
-left**, OQ-MODEL-14.
+left**, OQ-MODEL-14 — *decided later the same day, which is what the note above records; this
+sentence is left as it was written rather than corrected, because when the gate stood at one
+is part of how fast it closed.*
 
 **OQ-GOV-7 is gated at 1b and appears once.** It used to appear twice — the Phase 3 row
 carried a parenthetical naming it, which reads as a placement to a counter that cannot tell

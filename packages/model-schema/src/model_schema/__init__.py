@@ -194,6 +194,7 @@ from model_schema.prediction import (
     Prediction,
     UnavailableReason,
     Uncertainty,
+    UncertaintyBasis,
     UncertaintyKind,
 )
 from model_schema.problem import FieldError, ProblemDetail
@@ -437,6 +438,7 @@ __all__ = [
     "TypeIIITest",
     "UnavailableReason",
     "Uncertainty",
+    "UncertaintyBasis",
     "UncertaintyKind",
     "UniversalDiagnostics",
     "UnseenLevelBehaviour",

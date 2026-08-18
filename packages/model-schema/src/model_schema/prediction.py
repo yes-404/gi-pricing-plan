@@ -45,8 +45,35 @@ __all__ = [
     "Prediction",
     "UnavailableReason",
     "Uncertainty",
+    "UncertaintyBasis",
     "UncertaintyKind",
 ]
+
+
+class UncertaintyBasis(enum.StrEnum):
+    """What the covariance matrix behind an interval actually is (FR-MODEL-99).
+
+    `UncertaintyKind` says which *quantity* the interval covers; this says what the matrix
+    it came from **is**, which for a penalised fit is not the matrix the estimate deserves.
+
+    One vocabulary for both halves of `02`'s uncertainty, deliberately: FR-MODEL-21's
+    coefficient standard errors and FR-MODEL-63's interval are read off the same `V`, so a
+    qualification that applied to one and not the other would be describing a matrix that
+    does not exist (OQ-MODEL-14, decided 2026-08-18).
+    """
+
+    #: An unpenalised fit (`alpha == 0`): the model-based information matrix, and the
+    #: standard errors and interval it yields are the ones the estimate deserves.
+    INFORMATION_MATRIX = "information_matrix"
+    #: A **penalised** fit (`alpha > 0`). `glum` warns on every one of them that "the
+    #: covariance matrix will be incorrect", and it is right: what it returns is the
+    #: information matrix of the *unpenalised* problem, which knows nothing about the
+    #: shrinkage that produced the coefficients beside it. The error has a known direction —
+    #: the interval is the one an unpenalised fit of the same design would earn, so it is
+    #: **wider** than the shrunk estimate warrants — which makes it conservative and still
+    #: wrong. With `l1_ratio > 0` it additionally ignores that the penalty *selected* the
+    #: terms; the member is the same because the remedy is (FR-MODEL-99's bootstrap).
+    UNPENALISED_INFORMATION_MATRIX = "unpenalised_information_matrix"
 
 
 class UncertaintyKind(enum.StrEnum):
@@ -112,6 +139,11 @@ class Uncertainty(BaseModel):
     #: `Coefficient.ci_95`: an interval on a prediction and an interval on the coefficient
     #: it came from reported at different levels is a comparison nobody can make.
     level: float | None = Field(default=None, gt=0.0, lt=1.0)
+    #: What the matrix behind the interval is (FR-MODEL-99). Required alongside a `level`
+    #: and forbidden without one, by the same validator and for the same reason: an
+    #: interval whose basis is unstated is one a reader will assume is exact, and for a
+    #: penalised fit that assumption is the defect OQ-MODEL-14 was raised about.
+    basis: UncertaintyBasis | None = None
 
     @model_validator(mode="after")
     def _the_kind_and_its_evidence_agree(self) -> Uncertainty:
@@ -134,6 +166,12 @@ class Uncertainty(BaseModel):
                     "confidence level on an interval that does not exist reads as one that "
                     "does."
                 )
+            if self.basis is not None:
+                raise ValueError(
+                    f"uncertainty is 'unavailable' and carries basis={self.basis!r}. A "
+                    "basis describes the matrix an interval came from; there is no "
+                    "interval here."
+                )
         else:
             if self.level is None:
                 raise ValueError(
@@ -144,6 +182,13 @@ class Uncertainty(BaseModel):
                 raise ValueError(
                     f"uncertainty is {self.kind!r} and carries reason={self.reason!r}. A "
                     "reason explains an absence; there is no absence here."
+                )
+            if self.basis is None:
+                raise ValueError(
+                    f"uncertainty is {self.kind!r} with no basis. FR-MODEL-99: an interval "
+                    "read off a penalised fit's covariance matrix is not the interval that "
+                    "fit deserves, and a response that does not say which matrix it used "
+                    "leaves the reader to assume the flattering one."
                 )
         return self
 
