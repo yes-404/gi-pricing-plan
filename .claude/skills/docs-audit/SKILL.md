@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty-one checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, and every endpoint and pricing-core function a workflow journey cites — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty-two checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, and table-row cell counts — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -23,6 +23,9 @@ It exits non-zero and lists failures. Passing output looks like:
 
 All checks passed.
 ```
+
+Check 22 is silent when it passes — it has no count worth printing, and a table whose
+rows all match their header is the unremarkable case.
 
 **On Windows**, the script reads every file as UTF-8 explicitly. It did not always: bare
 `read_text()` picked up cp1252 and the audit died on the first em-dash in the suite, which
