@@ -24,6 +24,7 @@ from sqlalchemy import select
 
 from app.db.models import BlobRow, DatasetSplitRow, DatasetVersionRow, ModelRow
 from app.errors import PlatformError
+from app.platform import backtests as backtest_service
 from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import diagnostics as diagnostics_service
@@ -594,6 +595,123 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     progress.update(1.0, "done")
     return JobResult(kind="artifact", ref=f"transparency:{artifact_id}")
 
+def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`model.backtest` — FR-MODEL-57, one model measured on data it never saw.
+
+    Every rule that makes this a backtest rather than a re-score is answered in
+    `request_backtest`, before the Job exists: the model carries a fit result, the version is
+    validated, it is not the version the model was fitted on nor a part of its split, and it
+    declares the columns the score needs. What is left here is resolution and arithmetic.
+
+    Both arms, through `backtest_model`'s `score_fitted` dispatch. A GBM's booster bytes are
+    fetched here for the reason `_resolve_candidate` fetches them — resolving a blob needs a
+    store `pricing-core` may not import (ADR-0001).
+    """
+    progress = _bridge(callback)
+    blob_store = progress.blob_store
+    actor, workspace_id = _actor(parameters), _workspace(parameters)
+    model_id = UUID(parameters["model_id"])
+    version_id = UUID(parameters["dataset_version_id"])
+    progress.update(0.05, "loading the model")
+
+    async def load() -> tuple[
+        ModelSpec, FitResult, bytes | None, list[Factor], _Transformations,
+        pl.DataFrame, str, str, str, Any, Any,
+    ]:
+        async with progress.database.session() as session:
+            row = await session.get(ModelRow, model_id)
+            if row is None or row.workspace_id != workspace_id:
+                raise PlatformError(
+                    "NOT_FOUND", "Model not found", 404, f"No model {model_id}."
+                )
+            if row.fit_result is None:
+                raise PlatformError(
+                    "MODEL_NOT_FITTED",
+                    "A model with no fit result cannot be backtested",
+                    409,
+                    f"{row.model_family_slug}@{row.version} has no fit result.",
+                )
+            spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+            fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+            factors = await model_service.load_factors(
+                session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+            )
+            transformations = _Transformations(
+                bandings=await transform_service.load_bandings(
+                    session, workspace_id=workspace_id,
+                    ids=[f.banding_id for f in factors if f.banding_id],
+                ),
+                groupings=await transform_service.load_groupings(
+                    session, workspace_id=workspace_id,
+                    ids=[f.grouping_id for f in factors if f.grouping_id],
+                ),
+            )
+            version = await dataset_service.fittable_or_refuse(
+                session, workspace_id=workspace_id, version_id=version_id
+            )
+            fitted_on = await session.get(DatasetVersionRow, spec.dataset_version_id)
+            if fitted_on is None:
+                raise PlatformError(
+                    "NOT_FOUND", "The version the model was fitted on is gone", 404,
+                    f"Model {model_id} cites version {spec.dataset_version_id}.",
+                )
+            frame = await _frame_of(session, blob_store, version)
+            booster = (
+                await blob_store.read(fit.booster_blob)
+                if isinstance(fit, GbmFitResult)
+                else None
+            )
+            return (
+                spec, fit, booster, factors, transformations, frame,
+                f"model:{row.model_family_slug}@{row.version}",
+                await backtest_service.version_ref(
+                    session, workspace_id=workspace_id, version=version
+                ),
+                await backtest_service.version_ref(
+                    session, workspace_id=workspace_id, version=fitted_on
+                ),
+                version.period_from, version.period_to,
+            )
+
+    (
+        spec, fit, booster, factors, transformations, frame,
+        model_ref, target_ref, fitted_on_ref, period_from, period_to,
+    ) = progress.run_on_loop(load())
+
+    from pricing_core.modelling import backtest_model
+
+    progress.update(0.2, "scoring the period")
+    summary = backtest_model(
+        fit, spec, factors, frame,
+        model_ref=model_ref,
+        dataset_version_ref=target_ref,
+        fitted_on_ref=fitted_on_ref,
+        period_from=period_from,
+        period_to=period_to,
+        booster=booster,
+        bandings=transformations.bandings,
+        groupings=transformations.groupings,
+        progress=ScaledProgress(progress, start=0.2, end=0.9),
+    )
+
+    async def store() -> UUID:
+        async with progress.database.unit_of_work() as session:
+            row = await backtest_service.record_backtest(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                model_id=model_id,
+                dataset_version_id=version_id,
+                summary=summary,
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+            )
+            return row.id
+
+    backtest_id = progress.run_on_loop(store())
+    progress.update(1.0, "done")
+    return JobResult(kind="artifact", ref=f"backtest:{backtest_id}")
+
+
 def register_model_handlers() -> None:
     """Register the `model.*` handlers, idempotently — see `register_data_handlers`."""
     from app.worker import handlers as handler_registry
@@ -604,6 +722,8 @@ def register_model_handlers() -> None:
         register_handler(JobKind.MODEL_COMPARE, _compare)
     if JobKind.MODEL_TRANSPARENCY not in handler_registry.HANDLERS:
         register_handler(JobKind.MODEL_TRANSPARENCY, _transparency)
+    if JobKind.MODEL_BACKTEST not in handler_registry.HANDLERS:
+        register_handler(JobKind.MODEL_BACKTEST, _backtest)
     if JobKind.PERIL_STRUCTURE_RECONCILE not in handler_registry.HANDLERS:
         register_handler(JobKind.PERIL_STRUCTURE_RECONCILE, _reconcile)
 

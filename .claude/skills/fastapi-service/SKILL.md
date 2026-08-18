@@ -476,7 +476,40 @@ per test.
 session; only `Database.unit_of_work()` commits. If a service needs its own transaction,
 that is the bug — not the guard.
 
+## Order the refusals: the specific one before the generic gate
+
+When a request can fail two checks, the one that fires is the one the caller acts on. Putting
+a generic gate first is how a service tells someone to do exactly the wrong thing.
+
+W5's backtest slice, concretely. `POST /models/{id}/backtest` must refuse the version the
+model was fitted on — including the `train` and `test` parts of its split, which are derived
+Dataset Versions in their own right. Those parts stay `draft`, so `01` §1.3's validated gate
+answered first:
+
+> This version has status 'draft'; fitting requires 'validated'.
+
+True, unhelpful, and an **instruction to go and validate the holdout** — after which the
+request would have been allowed and the fit-time holdout figure returned under a heading that
+said later period. Reordering so the definitional refusal runs first turns it into:
+
+> This version is the 'test' part of split 'motor-2024-split', which motor-ad-frequency@7 was
+> fitted and judged on.
+
+Two consequences for how the code is written:
+
+- **A shared gate helper often bundles the load with the check** — `fittable_or_refuse` is
+  `_load` plus `01` §1.3. To run something between them, split the loader out and make it
+  public (`datasets.load_version`) rather than inlining a second `session.get` and a second
+  404 message.
+- **The test that catches this asserts the *message*, not the status.** Both refusals are
+  409s from `PlatformError`, so a test checking only `status_code == 409` passes against the
+  wrong one. Assert on the substring a caller would act on.
+
+`PlatformError`'s attribute is `status_code`, not `status`.
+
 ## Verified
+
+2026-08-18 — W5, backtests. The refusal-ordering rule above was found by a test that expected the specific message and got the generic gate's. Gate green both halves at 1073 Python / 105 frontend.
 
 2026-08-18 — W5, peril structures. The `job_kind` `ALTER TYPE` rule was found the way it
 is described: the first `JobKind` this repository has ever added was refused by the

@@ -349,6 +349,109 @@
         "title": "AuditEventView",
         "type": "object"
       },
+      "Backtest": {
+        "additionalProperties": false,
+        "description": "The persisted artifact (`02` §4.12, FR-MODEL-57).\n\nImmutable, and enforced at the privilege layer as well as here (FR-DATA-42): a backtest\nis what a monitoring review and a re-approval argue from, and evidence that can change\nafter the decision is not evidence.\n\nNo slug and no version of its own, for the reason `Diagnostics` and `ModelComparison`\nhave none — it is always reached by id, from the Job that produced it or the record that\ncites it. Unlike `Diagnostics` it is **not** one-per-model: a model backtested against\nfour quarters has four, which is the point.",
+        "properties": {
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/BacktestSummary"
+          }
+        },
+        "required": [
+          "id",
+          "model_id",
+          "dataset_version_id",
+          "computed_at",
+          "summary"
+        ],
+        "title": "Backtest",
+        "type": "object"
+      },
+      "BacktestSummary": {
+        "additionalProperties": false,
+        "description": "What a backtest found, before the platform gives it an identity.\n\nThe `DiagnosticsResult` and `ComparisonSummary` split, for the same reason:\n`pricing-core` computes, and does not allocate ids, know about rows in a database, or\nread a clock (ADR-0001).\n\nThe weighting scheme is inside `partition` and is not restated: it is a function of the\nmodel's spec (FR-MODEL-55), and a backtest scores its own model's spec, so it cannot\ndiffer from the fit-time scheme the reader will compare against.",
+        "properties": {
+          "dataset_version_ref": {
+            "title": "Dataset Version Ref",
+            "type": "string"
+          },
+          "fitted_on_ref": {
+            "title": "Fitted On Ref",
+            "type": "string"
+          },
+          "model_ref": {
+            "title": "Model Ref",
+            "type": "string"
+          },
+          "partition": {
+            "$ref": "#/components/schemas/PartitionDiagnostics"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          }
+        },
+        "required": [
+          "model_ref",
+          "dataset_version_ref",
+          "fitted_on_ref",
+          "partition"
+        ],
+        "title": "BacktestSummary",
+        "type": "object"
+      },
       "Banding": {
         "additionalProperties": false,
         "description": "A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).\n\nThe invariants below are `02` §4.2's, at the type. They are not tidiness: a banding\nwith overlapping intervals assigns one row to two levels, and a label list one short\ndoes not drop the last band — it renames every band after the gap. Both produce a model\nthat fits, reads correctly, and is wrong.\n\n**Versioned, never edited** (FR-MODEL-12). A Model pins the Banding version it was\nfitted with, so re-cutting a boundary allocates a new version and leaves every existing\nmodel describing what it actually did.",
@@ -2267,12 +2370,8 @@
       },
       "Diagnostics": {
         "additionalProperties": false,
-        "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\". `cross_validation` and `backtest` are still\ndeclared and always `None` — the fields exist because the contract the frontend\ngenerates from declares them, and their producers (FR-MODEL-53, 57) are later slices.",
+        "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is still declared and always `None`: FR-MODEL-53 computes it **at fit\ntime**, so this artifact is where it will land, and its producer is a later slice.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
         "properties": {
-          "backtest": {
-            "title": "Backtest",
-            "type": "null"
-          },
           "complexity": {
             "$ref": "#/components/schemas/ComplexityDiagnostic"
           },
@@ -5406,7 +5505,7 @@
       },
       "PartitionDiagnostics": {
         "additionalProperties": false,
-        "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nOne of these describes train and another describes holdout; neither is meaningful\nwithout the other, which is why they are only ever held together\n(`UniversalDiagnostics`).",
+        "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nAt fit time one of these describes train and another describes holdout, and neither is\nmeaningful without the other — which is why a *fit* only ever holds them together\n(`UniversalDiagnostics`).\n\nA backtest holds exactly one (`backtests.BacktestSummary`, FR-MODEL-57), and that is not\nthe same defect: its population was never split, so there is no counterpart to withhold,\nand what it is read against is the model's own fit-time holdout on a different artifact.",
         "properties": {
           "ae_by_factor": {
             "default": [],
@@ -6981,6 +7080,22 @@
           "rules"
         ],
         "title": "RuleSetReplace",
+        "type": "object"
+      },
+      "RunBacktest": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_version_id": {
+            "description": "The Dataset Version to measure the model on. Must be validated, and must not be the version the model was fitted on nor a part of its split (FR-MODEL-57) — typically a later period.",
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_version_id"
+        ],
+        "title": "RunBacktest",
         "type": "object"
       },
       "SchemaCorrection": {
@@ -13927,6 +14042,100 @@
         ]
       }
     },
+    "/api/v1/models/backtests/{backtest_id}": {
+      "get": {
+        "description": "**Added to `02` §5.1 with this slice** (FR-MODEL-92).\n\nThe table declared the `POST` and no `GET`, which is a 202 whose artifact nothing can\nfetch — complete to the endpoint audit, since that compares the spec against the\ncontract and an endpoint missing from both is in neither, and unusable to every caller.\nThe fourth time: FR-MODEL-84 repaired it for the transparency artifact, FR-MODEL-56 for\nthe comparison, FR-MODEL-90 for the peril structure.\n\nBy backtest id rather than by model, because unlike `Diagnostics` a model has many —\none per period it has been measured against. The Job's result carries the id\n(`backtest:{id}`), which is how a caller who has just requested one reaches it.\n\n`model:read`, not `model:fit`: running a backtest spends compute, reading one someone\nelse produced does not.",
+        "operationId": "get_backtest_api_v1_models_backtests__backtest_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "backtest_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Backtest Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Backtest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "A stored backtest",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/models/compare": {
       "post": {
         "description": "**202** with a Job (`wf-01` E1, FR-MODEL-56).\n\n202 rather than 200 because the comparison is work: it reads the holdout and scores every\ncandidate over it. `POST /models` draws the same line for the same reason — 202 when work\nstarts, 200 when the answer already exists.\n\nEvery comparability rule is answered **here**, before a Job exists: two or more models,\nall fitted, one shared split, a baseline among them. A caller who is refused gets a 409\nnaming what differs rather than a failed job twenty seconds later.",
@@ -14250,6 +14459,125 @@
           }
         },
         "summary": "Archive a model",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/{model_id}/backtest": {
+      "post": {
+        "description": "**202** with a Job (FR-MODEL-57).\n\nWork, not a lookup: it reads the whole target version and scores every row.\n\nEvery refusal happens **here**, before a Job exists — the model carries a fit result, the\nversion is validated, it is not the data the model learned on, and it declares the\ncolumns the score needs. `request_comparison` set the precedent and the reason: a caller\nrefused after the queue hop learns it from a failed job twenty seconds later, which is a\nworse answer to the same question.",
+        "operationId": "run_backtest_api_v1_models__model_id__backtest_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunBacktest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Backtest a model against another dataset version",
         "tags": [
           "modelling"
         ]

@@ -205,6 +205,30 @@ And prefer a fixture whose answer you can state before the run. "The model fitte
 factor that drives the risk must beat the one fitted on noise" is a known answer; "the leader
 is not null" passes against a leader chosen by dictionary order.
 
+### A GBM fixture must be asserted **converged** before its calibration is read
+
+A boosted model with too few rounds is not a weaker model — it is a model that has barely
+left its base rate, and every calibration figure you read off it is shrinkage wearing the
+costume of a finding.
+
+Concretely, W5's backtest slice: 30 rounds at `eta=0.1` gave the booster a **train A/E of
+0.53** on its own training frame. Scored against a book carrying 30 % more claims, it read
+0.65 — so a test written to assert "deterioration shows up as A/E > 1" failed, and the
+tempting fix is to widen the bound until it passes. That bound would then have been
+calibrated against an unconverged fit and would have accepted almost any arithmetic.
+
+The rule: **assert the fit reconciles on its own training data first**, in the same test.
+
+```python
+on_train = backtest_model(fit.result, spec, factors, train, ...)
+assert on_train.partition.ae_overall == pytest.approx(1.0, abs=0.01)   # it is a model
+assert 1.1 < later.partition.ae_overall < 1.35                          # now read the finding
+```
+
+300 rounds got train A/E to 1.000 here. The number is fixture-specific; the ordering of the
+two assertions is not. A GLM needs no equivalent — its fit solves rather than approaches, so
+the Poisson identity holds at the first iteration.
+
 ## Getting a *different* weighting scheme into a fixture
 
 `_weighting` reads the spec: an exposure offset means `exposure`, a weight column means
@@ -326,6 +350,8 @@ unpromotable since the spec was amended three days earlier. Fixtures produced al
 hard fail; nothing in between.
 
 ## Verified
+
+2026-08-18 — W5, backtests. The GBM-convergence rule above was found by a test that failed for a reason that looked like a broken scoring path and was an unconverged fixture: train A/E 0.53 at 30 rounds, 1.000 at 300. Suite at 1073.
 
 2026-08-18 — the three rules above (happy path after the refusal, parametrise over
 backends, AST-scan a registry) were carried out of a local handover note that was being

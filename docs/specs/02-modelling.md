@@ -88,6 +88,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-5** | A Factor may declare a **prohibited** flag with a reason (e.g. a protected characteristic or a proxy the insurer has decided not to use). Prohibited factors cannot be added to any Model Spec; the attempt is refused and audited. |
 | **FR-MODEL-82** | **Proxy detection is a Phase 3 deliverable, and never an automated block** (OQ-MODEL-7, decided 2026-08-15). Through Phases 1–2 the platform's only treatment of a protected characteristic is FR-MODEL-5's `prohibited` flag, which refuses direct use and audits the attempt; the platform holds no protected characteristics of its own (`00` FR-OVR-9). From Phase 3 an optional **proxy assessment** consumes an insurer-supplied reference table that does carry the characteristic, measures each candidate Factor's association with it — mutual information, and the AUC of the factor predicting it, exposure-weighted, with the reference population and its date recorded — and attaches the result to the approval request as evidence. It never refuses a Factor: whether an association amounts to unlawful discrimination is a legal judgement, not a statistical one, and a platform that answered it automatically would be answering a different question from the one asked. `04` FR-OPT-24 applies the same principle to price change. |
 | **FR-MODEL-91** | **An `interaction` Factor crosses two or more other Factors, named by id in `operand_factor_ids`, and resolves to the combined levels of their resolved values.** Added 2026-08-18 (W5, the interaction slice): FR-MODEL-1 has listed the type since Phase 0 and §4.1 carried no field to express one, so the type was selectable and unresolvable — FR-MODEL-88's position for five arms, now four. **Operands are Factors rather than columns** because every other place the specification names an interaction names factors (§4.4's `interaction_constraints`, §4.9's `top_interactions`), and because an operand is usually itself a banding or a grouping: crossing raw `driver_age` with raw `region` gives one cell per policy, while crossing `driver_age_banded` with `vehicle_group_rated` gives a table an actuary can rate on. Three consequences the implementation forced, each a defect if left implicit: **(i)** only *observed* combinations become levels, because a cell with no exposure would carry a coefficient fitted on nothing and on any real cross most cells are empty; **(ii)** an operand contributes **no design column of its own** — a full cross spans every cell, so its operands' main effects are collinear with it and a design carrying both is rank-deficient; **(iii)** FR-MODEL-51's Type III test therefore compares the interaction against the **main-effects** model rather than against no term at all, which is the question an actuary means by "does this interaction earn its place". A **continuous** operand is refused by name (OQ-MODEL-12), and FR-MODEL-5's prohibition reaches through the cross: a prohibited Factor that could enter a spec crossed with something else would not be prohibited. |
+| **FR-MODEL-92** | **A backtest is readable.** `GET /api/v1/models/backtests/{id}` returns the stored artifact, or a 404 naming it. Added 2026-08-18 (W5, the backtest slice): §5.1 declared the `POST` and no read, which is a 202 whose artifact nothing can fetch — complete to the endpoint audit, since that compares the spec against the contract and an endpoint missing from both is in neither, and unusable to every caller. **The fourth time**: FR-MODEL-84 repaired it for the transparency artifact, FR-MODEL-56 for the comparison, FR-MODEL-90 for the peril structure. By backtest id rather than by model, because unlike `Diagnostics` a model has many — one per period it has been measured against — and the Job's result names the one just produced (`backtest:{id}`). A **list** by model is what `05-monitoring.md` will read and is deliberately not built here: nothing consumes it yet, and `CLAUDE.md` §0 puts a later phase's capability in the spec rather than the code. |
 | **FR-MODEL-6** | `expression` factors use the restricted grammar of §4.6 — the same grammar as custom objectives and preparation recipes — evaluated over dataset columns only. |
 | **FR-MODEL-7** | Factor definitions are reusable across Models and Model Families and are versioned independently; a Model Spec pins the exact Factor version it used. |
 
@@ -190,7 +191,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-55** | Metrics are recorded with their weighting scheme explicit (exposure-weighted vs unweighted vs claim-count-weighted). An unweighted metric on an exposure-weighted problem is labelled as such in the UI. |
 | **FR-MODEL-81** | **Model complexity is a diagnostic by default, and a gate only where a workspace asks for one** (OQ-MODEL-6, decided 2026-08-15). Every fit records its factor count, its fitted-parameter count, and its exposure-per-parameter and claims-per-parameter ratios in the diagnostics, beside whatever thresholds are in force. The workspace settings `modelling.max_factor_count` and `modelling.min_exposure_per_parameter` (`07` FR-PLAT-45) are **unset by default**; where a workspace sets one, `POST /model-specs/validate` and `POST /models` refuse a breaching spec with `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT` before any compute is spent, and the refusal is audited. There is no platform-wide constant: a large book legitimately supports a large model, and whether *this* model is overfitted is a judgement for the Approver with the diagnostic in front of them (`06`), not for a number chosen here. |
 | **FR-MODEL-56** | Model comparison is a first-class operation: two or more Models fitted on the same holdout can be compared on aligned metrics, double-lift, and factor-by-factor relativity differences, producing a persisted comparison artifact citable in an approval request. |
-| **FR-MODEL-57** | A **backtest** on a later Dataset Version is supported and produces the same diagnostic shapes, marked with the version it ran against. Backtests are the evidence bridge into `05-monitoring.md`. |
+| **FR-MODEL-57** | A **backtest** on a later Dataset Version is supported and produces the same diagnostic shapes, marked with the version it ran against. Backtests are the evidence bridge into `05-monitoring.md`. *(Amended 2026-08-18, W5, the backtest slice, with what building it settled.* **A backtest is its own artifact — §4.12 — and `Diagnostics.backtest` is removed.** That field was declared from Phase 0 and typed `null`, and nothing could ever have filled it: FR-MODEL-49 computes diagnostics once at fit time, while a backtest runs later and again for every period after that. It is the same defect FR-MODEL-50's `double_lift` had, found the same way. **"The same diagnostic shapes" means one `PartitionDiagnostics`, not a `UniversalDiagnostics`:** the backtested population was never split, so FR-MODEL-54's both-partitions rule does not apply and calling the single partition a holdout would claim a split nobody made. **"Other than the one it was fitted on" reaches the split parts**, which are Dataset Versions in their own right (`01` FR-DATA-36) — the refusal the type cannot see and the platform must, and it runs *before* the validated gate for the reason §4.12 gives. Both model types are backtested through one path; FR-MODEL-57 says nothing about model type, and a backtest that worked only for GLMs would leave the GBM an actuary trusts least as the one nothing re-measures.)* |
 
 ### 3.9 Peril structure and risk premium
 
@@ -899,6 +900,92 @@ question a selection decision (`wf-01` E2) actually turns on.
 **Immutable, and enforced at the privilege layer** (FR-DATA-42): `06` §3.3 makes a comparison
 required evidence for a Model approval where a predecessor exists.
 
+### 4.12 `Backtest`
+
+*Added 2026-08-18 (W5, the backtest slice).* FR-MODEL-57 has named the operation since Phase
+0 and **no section defined what it produces** — so this is the shape's first written form,
+and `backtest.schema.json` is generated from it.
+
+```json
+{
+  "id": "uuid",
+  "model_id": "uuid",
+  "dataset_version_id": "uuid",
+  "computed_at": "2026-08-18T12:41:07Z",
+  "job_id": "uuid|null",
+  "summary": {
+    "model_ref": "model:motor-ad-frequency@7",
+    "dataset_version_ref": "dataset_version:motor-gb-2025h2@4",
+    "fitted_on_ref": "dataset_version:motor-gb-2024@1",
+    "period_from": "2025-07-01",
+    "period_to": "2025-12-31",
+    "partition": {
+      "weighting": "exposure",
+      "rows": 182_447,
+      "ae_overall": 1.074,
+      "ae_by_factor": [
+        {"factor": "driver_age_banded", "level": "17-20", "actual": 0.1912,
+         "expected": 0.1655, "ae": 1.155, "ci_95": [1.061, 1.258],
+         "exposure_years": "9184.300000"}
+      ],
+      "lift": [{"bin": 1, "rows": 18_244, "predicted": 0.0421, "actual": 0.0468,
+                "exposure_years": "15203.100000"}],
+      "gini": 0.301,
+      "gini_normalised": 0.398,
+      "calibration": [{"bin": 1, "rows": 18_244, "predicted": 0.0421, "actual": 0.0468}]
+    }
+  }
+}
+```
+
+**Three shape decisions, each made when this was built rather than transcribed:**
+
+**A backtest is its own artifact, not a field on `Diagnostics`.** `Diagnostics.backtest` was
+declared from Phase 0 and typed `null`, and nothing could ever have populated it: FR-MODEL-49
+makes diagnostics computed once at fit time and read thereafter, while a backtest runs later —
+and again for every subsequent period, which one field on one immutable artifact has no room
+for. **That field is removed with this slice**, for the reason
+`PartitionDiagnostics.double_lift` was removed before it (FR-MODEL-50, 2026-08-17): a field
+that is structurally always null reads as a measurement that came out empty. `cross_validation`
+stays: FR-MODEL-53 computes it *at fit time*, so `Diagnostics` is where it will land.
+
+**One `PartitionDiagnostics`, and it is not called a holdout.** FR-MODEL-54's "train and
+holdout, side by side" is a statement about a *fit*; a backtest population was never split, so
+there is no counterpart being withheld and naming the single partition a holdout would claim a
+split nobody made. The fit-time counterpart is not copied in either — it lives on the model's
+own diagnostics, which `model_id` reaches, and a second immutable copy of an immutable number
+buys only a second thing to keep true.
+
+**The version it was fitted on is stored, not merely differed from.** `fitted_on_ref` is
+derivable, and it is stored for the reason §4.11 stores the `split_ref` it verified: the
+artifact's defining claim is *this is not the data it learned on*, and an approval or a
+monitoring review that cites a backtest should be able to check that claim without
+re-deriving it.
+
+**Invariants** — `dataset_version_ref ≠ fitted_on_ref`, refused at the type, because a model
+measured on its own training data reports how well it memorised and that number renders
+identically to out-of-time performance; `period_from ≤ period_to` where both are present, and
+both may be absent because a version need not declare a period.
+
+**The platform refuses more than the type can see.** A split's `train` and `holdout` parts are
+themselves Dataset Versions (`01` FR-DATA-36) with ids the contract has never been shown, so
+backtesting "the holdout" satisfies every invariant here and reproduces the fit-time holdout
+figure under a heading that says later period. `backtests.request_backtest` refuses them, and
+**refuses them before `01` §1.3's validated gate** — the parts are derived versions and stay
+`draft`, so the gate would otherwise answer "that version is not validated", which is an
+instruction to go and validate the holdout, after which the request would be allowed.
+
+**Not one per model.** Unlike `Diagnostics`, a model has as many backtests as periods it has
+been measured against; that series is what `05-monitoring.md` reads. Uniqueness is on
+`(model_id, dataset_version_id)`: re-running one pair would be a second answer to one
+question, with nothing to say which of the two a review cited.
+
+**Immutable, at both layers** (FR-DATA-42) — privileges narrowed to `SELECT, INSERT` *and* the
+`artifact_append_only` triggers, because revoking `UPDATE` from the owner does nothing.
+See `01` FR-DATA-47 for the three W5 artifact tables that have the privileges and not the
+triggers.
+
+
 ---
 
 ## 5. Interfaces
@@ -924,6 +1011,7 @@ required evidence for a Model approval where a predecessor exists.
 | `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-MODEL-33) |
 | `GET` | `/api/v1/models/{id}/transparency` | The model's most recent artifact (FR-MODEL-84) |
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-MODEL-57) |
+| `GET` | `/api/v1/models/backtests/{id}` | The stored backtest artifact (§4.12, FR-MODEL-92) |
 | `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-MODEL-56) |
 | `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) |
 | `POST` | `/api/v1/models/{id}/predict` | Score rows (dev/debug scale; production scoring is `03`) |
@@ -1091,6 +1179,34 @@ required evidence for a Model approval where a predecessor exists.
 > proxy, which for a GBM is a bound rather than an estimate; it is already documented as
 > deliberately conservative, and it only gates where a workspace sets a limit.
 
+> **Amended 2026-08-18 (W5, the backtest slice).** `POST /models/{id}/backtest` is built, and
+> one route is **added to the table above**:
+>
+> * `GET /api/v1/models/backtests/{id}` — FR-MODEL-92. The table declared the `POST` and no
+>   read, the fourth artifact in this module to need the repair. An endpoint missing from
+>   both the spec and the contract is invisible to the endpoint audit, which is why the
+>   surface kept reading complete.
+>
+> Three decisions the building settled, recorded here rather than left in the code:
+>
+> * **`backtest_model` lives in `diagnostics.py` and reuses `_partition`.** FR-MODEL-57's
+>   "the same diagnostic shapes" is only true if it is the same arithmetic; a second
+>   implementation that agreed today would drift. The test that proves it is the degenerate
+>   one — backtest a model against its own training frame and every figure equals the fit's
+>   train partition.
+> * **The refusals are ordered, and the order is load-bearing.** The definitional refusal
+>   runs before `01` §1.3's validated gate, because a split's parts are derived versions that
+>   stay `draft`: the gate would answer a request to backtest the holdout with "that version
+>   is not validated", which is an instruction to go and validate it, after which the request
+>   would be allowed. Found by a test that expected the other message.
+> * **A missing column is refused from the version's declared `arrow_schema`**, not
+>   discovered inside `resolve_factors` twenty seconds later. A later period that renamed a
+>   field is the ordinary way a backtest fails, and `request_comparison` set both the
+>   precedent and the reason.
+>
+> Still declared and unbuilt after this slice: prediction, custom objectives and custom
+> metrics.
+
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
 `GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_DID_NOT_CONVERGE`,
@@ -1197,6 +1313,13 @@ def unit_deviance(y, mu, *, family: str, power: float = 1.5) -> NDArray[float64]
 def deviance(y, mu, *, family: str, power: float = 1.5, weights=None) -> float
 def compare_models(candidates: Sequence[ComparisonCandidate], holdout: pl.DataFrame, *,
                    baseline: str | None = None) -> ComparisonSummary
+
+def backtest_model(fit: FitResult, spec: ModelSpec, factors: Sequence[Factor],
+                   data: pl.DataFrame, *, model_ref: str, dataset_version_ref: str,
+                   fitted_on_ref: str, period_from: date | None = None,
+                   period_to: date | None = None, booster: bytes | None = None,
+                   bandings=None, groupings=None,
+                   progress: ProgressCallback | None = None) -> BacktestSummary
 
 # pricing_core/modelling/transparency.py
 def build_glm_approximation(model: Model, data: pl.DataFrame,

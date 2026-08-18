@@ -1444,7 +1444,7 @@ requirements; §3.8 is 6 of 10. The verdicts:
 | FR-MODEL-52 — GBM diagnostics | **Not started.** Nothing fits a GBM yet; the roadmap's own risk row makes FR-MODEL-50 the gate and 51/52 incremental. Owned by the GBM slice |
 | FR-MODEL-53 — cross-validation | **Not started.** Interacts with FR-MODEL-20's unimplemented regularisation path, which is where `select_by: cv` lives. Owned with it |
 | FR-MODEL-56 — model comparison | **Not started.** Its own endpoint and artifact; `wf-01` E1 needs it |
-| FR-MODEL-57 — backtest | **Not started.** The evidence bridge into `05`; owned by the slice that needs it |
+| FR-MODEL-57 — backtest | ~~**Not started.**~~ **Delivered 2026-08-18** — its own artifact (`02` §4.12), two endpoints and a migration. The record is this file's backtest slice |
 | FR-MODEL-63, 77, 78 — prediction intervals | **Not started.** 63 needs the covariance blob the fit stores but this signature does not receive; 77/78 need a GBM and the `quantile` template |
 | FR-MODEL-64 — the rest of the lifecycle | **Partial.** `draft → fitted` is enforced at three layers; `review`, `approved`, `superseded` and `archived` have no transitions. Owned by the submission slice |
 | FR-MODEL-67 — `dataset_invalidated` | **Not started.** Unowned |
@@ -1595,7 +1595,7 @@ dictionary order gave.
 | Item | Verdict |
 |---|---|
 | A GBM among the candidates (`wf-01` E1 compares a GLM *and* an XGBoost) | **Deferred — §3.5 is 0/12 and no GBM exists to compare.** `ComparisonCandidate` is shaped so a non-`glm` model is a new arm rather than a new subsystem. Owner: the GBM slice |
-| FR-MODEL-57's backtest | **Not started** — its own requirement and endpoint |
+| FR-MODEL-57's backtest | ~~**Not started**~~ **Delivered 2026-08-18**, its own requirement, artifact and two endpoints |
 | `02` §5.3's comparison view (`/models/compare?ids=`) | **W6b**, a Vue view |
 | OQ-GOV-7's evidence floor | **Still open, and now cheaper.** This slice created the second evidence kind the floor needs; the recommendation stands and the decision is the maintainer's |
 | An intercept-only "null model" baseline | **Not available, and noticed here.** `fit_glm` refuses a spec with no factors — "the design matrix has no columns" — so the standard actuarial baseline of comparing against a constant-rate model cannot be built. No requirement asks for it; recorded because a comparison feature is where someone will look for it |
@@ -1898,6 +1898,61 @@ the end-to-end backend test is what surfaced them.
 | `spline`, `polynomial`, `offset`, `expression` | **Not started**, unchanged. FR-MODEL-88 now names four rather than five; each needs its own contract field and its own argument |
 | The factor workbench's interaction UI (`02` §5.3, FR-MODEL-79's suggestions with exposure share and holdout lift) | **Not started.** Owner: W6b, unchanged |
 | `wf-01` as a **Phase 1b exit** claim | **Still not yet**, and unchanged by this slice: the exit is the journey on freMTPL2 through the UI. What is delivered is FR-OVR-17(ii)'s *test* |
+
+#### W5 slice — backtests, and a `Diagnostics` field nothing could ever fill, 2026-08-18
+
+FR-MODEL-57 has named the backtest since Phase 0 and **no section defined what it produces**.
+`02` §4.12 is that definition, `FR-MODEL-92` is the read endpoint the table omitted, and
+`MODEL` moves **24/32 → 26/33** endpoints — the denominator rises because the read route the table omitted is now declared in it.
+
+**`Diagnostics.backtest` is removed rather than populated.** It was declared from Phase 0 and
+typed `null`, and nothing could ever have filled it: FR-MODEL-49 computes diagnostics once at
+fit time, while a backtest runs later — and again for every period after that, which one field
+on one immutable artifact has no room for. It is the same defect FR-MODEL-50's `double_lift`
+had, found the same way and resolved the same way. `cross_validation` stays, because
+FR-MODEL-53 computes it at fit time and `Diagnostics` is where it will land.
+
+| Delivered | Evidence |
+|---|---|
+| `pricing_core.modelling.backtest_model` | Reuses `_partition`, so "the same diagnostic shapes" is the same arithmetic and not two implementations that agree today. Proved by the degenerate case: backtest against the training frame and every figure equals the fit's train partition |
+| Both model types, one path | `score_fitted`'s dispatch; parametrised over XGBoost **and** LightGBM, for FR-MODEL-72's reason — the scoring-side offset is per backend, and dropping it would report the offset as deterioration |
+| `POST /models/{id}/backtest` → 202 Job, `GET /models/backtests/{id}` | FR-MODEL-57 and **FR-MODEL-92**. Four refusals, all before the queue hop |
+| `backtests` table, migration `c9d0e1f2a3b4` | Unique on `(model_id, dataset_version_id)` — a model has many backtests, one per period, and re-running one pair would be a second answer to one question |
+| The **first test in this repository to exercise an artifact trigger** | `backend/tests/test_backtests.py` runs an `UPDATE` as the owner and asserts it is refused. Every other artifact table's test checks the grants only |
+| `SCOREABLE_MODEL_STATUSES` consolidated into `model-schema` | Two private copies already existed (comparison, peril structures) and this slice needed a third. `CLAUDE.md` §2's rule, applied at the point it became visible |
+
+**Two things the tests found rather than confirmed.**
+
+**The refusal order is load-bearing.** A split's `train` and `test` parts are derived Dataset
+Versions that stay `draft`, so `01` §1.3's validated gate answered a request to backtest the
+model's own holdout with *"that version is not validated"* — true, unhelpful, and an
+instruction to go and validate the holdout, after which the request would have been allowed.
+The definitional refusal now runs first. `datasets.load_version` was made public for it, which
+is the gate-free half `fittable_or_refuse` was already built from.
+
+**A GBM test asserting calibration must first assert it converged.** At 30 boosting rounds the
+booster's own train A/E was 0.53, and the backtest on a book with 30 % more claims read 0.65 —
+a number that is entirely shrinkage. A test that checked only the later figure would have
+calibrated its bound against an unconverged fit. It now runs 300 rounds and asserts train
+A/E ≈ 1.000 before reading the backtest.
+
+**`01` FR-DATA-47 appended, from a gap this slice measured.** FR-DATA-42's trigger exists
+because revoking `UPDATE` from the *owner* does nothing. `diagnostics`, `model_comparisons`
+and `transparency_artifacts` were each created with the grants and **no trigger at all** —
+verified on a migrated database: two triggers each on the FR-DATA-42 tables and on
+`backtests`, zero on those three. Each is evidence something is approved against. Recorded
+with an owner rather than fixed here, because it is a different requirement's scope.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| A **list** of a model's backtests (`GET /models/{id}/backtests`) | **Not built, deliberately.** It is what `05-monitoring.md` reads and nothing consumes it yet; `CLAUDE.md` §0 puts a later phase's capability in the spec rather than the code. Named in FR-MODEL-92. Owner: the monitoring workstream |
+| `POST /models/{id}/predict` (FR-MODEL-63, 77, 78) | **Not started.** The other of the two shortest remaining endpoints; 63 still needs the covariance blob `predict_glm`'s signature deliberately does not take |
+| `01` FR-DATA-47's three tables | **Not started, and not this slice's.** Owner: W5's next slice or W13, whichever reaches it first. The migration is three tables through the loop `a1b2c3d4e5f6` already writes, plus a negative test each |
+| A backtest view (`02` §5.3) | **W6b**, a Vue view. No frontend work in this slice |
+| A backtest cited as approval evidence (`06` §3.3) | **Not started.** `06` §3.3's evidence table has no `backtest` kind, and adding one is a governance decision rather than a modelling one — the shape OQ-GOV-7 is already about |
+
 
 ### Phase 1b — Modelling Workbench
 

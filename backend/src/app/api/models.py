@@ -34,6 +34,7 @@ from app.api.deps import Caller, SettingsDep, job_identity
 from app.api.responses import problems
 from app.db.models import ModelRow
 from app.db.session import Database
+from app.platform import backtests as backtest_service
 from app.platform import comparison as comparison_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
@@ -43,6 +44,8 @@ from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from model_schema import (
+    MODEL_SPEC_ADAPTER,
+    Backtest,
     Banding,
     BandingEvaluation,
     BandingProposal,
@@ -707,6 +710,96 @@ async def get_comparison(
             session, workspace_id=caller.workspace_id, comparison_id=comparison_id
         )
 
+
+class RunBacktest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_version_id: UUID = Field(
+        description="The Dataset Version to measure the model on. Must be validated, and "
+        "must not be the version the model was fitted on nor a part of its split "
+        "(FR-MODEL-57) — typically a later period.",
+    )
+
+
+@router.post(
+    "/models/{model_id}/backtest",
+    summary="Backtest a model against another dataset version",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def run_backtest(
+    model_id: UUID,
+    body: RunBacktest,
+    caller: FitModels,
+    database: DatabaseDep,
+    response: Response,
+) -> Job:
+    """**202** with a Job (FR-MODEL-57).
+
+    Work, not a lookup: it reads the whole target version and scores every row.
+
+    Every refusal happens **here**, before a Job exists — the model carries a fit result, the
+    version is validated, it is not the data the model learned on, and it declares the
+    columns the score needs. `request_comparison` set the precedent and the reason: a caller
+    refused after the queue hop learns it from a failed job twenty seconds later, which is a
+    worse answer to the same question.
+    """
+    async with database.unit_of_work() as session:
+        model, version = await backtest_service.request_backtest(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            model_id=model_id,
+            dataset_version_id=body.dataset_version_id,
+        )
+        spec = MODEL_SPEC_ADAPTER.validate_python(model.spec)
+        backtest_service.refuse_missing_columns(
+            model=model,
+            spec=spec,
+            version=version,
+            factors=await service.load_factors(
+                session, workspace_id=caller.workspace_id, factor_ids=list(spec.factors)
+            ),
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {**job_identity(caller), **backtest_service.backtest_payload(model, version)},
+            caller.principal,
+            workspace_id=caller.workspace_id,
+            queue=JobQueue.COMPUTE,
+        )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
+
+
+@router.get(
+    "/models/backtests/{backtest_id}",
+    summary="A stored backtest",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_backtest(
+    backtest_id: UUID, caller: ReadModels, database: DatabaseDep
+) -> Backtest:
+    """**Added to `02` §5.1 with this slice** (FR-MODEL-92).
+
+    The table declared the `POST` and no `GET`, which is a 202 whose artifact nothing can
+    fetch — complete to the endpoint audit, since that compares the spec against the
+    contract and an endpoint missing from both is in neither, and unusable to every caller.
+    The fourth time: FR-MODEL-84 repaired it for the transparency artifact, FR-MODEL-56 for
+    the comparison, FR-MODEL-90 for the peril structure.
+
+    By backtest id rather than by model, because unlike `Diagnostics` a model has many —
+    one per period it has been measured against. The Job's result carries the id
+    (`backtest:{id}`), which is how a caller who has just requested one reaches it.
+
+    `model:read`, not `model:fit`: running a backtest spends compute, reading one someone
+    else produced does not.
+    """
+    async with database.session() as session:
+        return await backtest_service.load_backtest(
+            session, workspace_id=caller.workspace_id, backtest_id=backtest_id
+        )
 
 class BuildTransparency(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")

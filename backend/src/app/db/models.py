@@ -1354,6 +1354,51 @@ class ModelComparisonRow(Base):
     )
 
 
+
+class BacktestRow(Base):
+    """A model measured on a Dataset Version it was not fitted on (`02` §4.12, FR-MODEL-57).
+
+    Insert-only, and here with **both** layers: privileges narrowed to `SELECT, INSERT`, and
+    the `artifact_append_only` triggers. `a1b2c3d4e5f6` installed the trigger pattern and
+    gave its reason — revoking from the *owner* does nothing, because ownership carries
+    implicit privileges — so a table with privileges alone is protected against the
+    application role and not against a direct connection.
+
+    Unlike `DiagnosticsRow` this is **not** one per model. FR-MODEL-57's backtest is per
+    dataset version, and a model measured against four successive quarters has four rows;
+    that is the series `05-monitoring.md` reads. Uniqueness is therefore on
+    `(model_id, dataset_version_id)`: re-running the same pair would produce a second answer
+    to one question, with nothing to say which one a review cited.
+    """
+
+    __tablename__ = "backtests"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    model_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        Index("ix_backtests_workspace", "workspace_id"),
+        # The series a model's backtests form, read newest-first.
+        Index("ix_backtests_model", "model_id", "computed_at"),
+        UniqueConstraint(
+            "model_id", "dataset_version_id", name="uq_backtests_model_version"
+        ),
+        Index(
+            "uq_backtests_job",
+            "job_id",
+            unique=True,
+            postgresql_where=job_id.isnot(None),
+        ),
+    )
+
+
 class TransparencyArtifactRow(Base):
     """A non-GLM model's explanation (`02` FR-MODEL-33..37, R3).
 

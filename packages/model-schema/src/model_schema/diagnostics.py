@@ -131,9 +131,13 @@ class ResidualSummary(BaseModel):
 class PartitionDiagnostics(BaseModel):
     """Every universal metric, for one partition (FR-MODEL-50).
 
-    One of these describes train and another describes holdout; neither is meaningful
-    without the other, which is why they are only ever held together
+    At fit time one of these describes train and another describes holdout, and neither is
+    meaningful without the other — which is why a *fit* only ever holds them together
     (`UniversalDiagnostics`).
+
+    A backtest holds exactly one (`backtests.BacktestSummary`, FR-MODEL-57), and that is not
+    the same defect: its population was never split, so there is no counterpart to withhold,
+    and what it is read against is the model's own fit-time holdout on a different artifact.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -383,9 +387,18 @@ class Diagnostics(BaseModel):
     Immutable: computed at fit time and read thereafter (FR-MODEL-49).
 
     `gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which
-    is the honest reading of "GBM-specific". `cross_validation` and `backtest` are still
-    declared and always `None` — the fields exist because the contract the frontend
-    generates from declares them, and their producers (FR-MODEL-53, 57) are later slices.
+    is the honest reading of "GBM-specific".
+
+    `cross_validation` is still declared and always `None`: FR-MODEL-53 computes it **at fit
+    time**, so this artifact is where it will land, and its producer is a later slice.
+
+    **`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed
+    `None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics
+    computed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against
+    a *later* Dataset Version — after this artifact is written, and again for every period
+    after that, which one field has no room for. It is its own artifact (`backtests.Backtest`,
+    `02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same
+    reason, that `PartitionDiagnostics.double_lift` got.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -399,4 +412,3 @@ class Diagnostics(BaseModel):
     glm: GlmDiagnostics | None = None
     gbm: GbmDiagnostics | None = None
     cross_validation: None = None
-    backtest: None = None

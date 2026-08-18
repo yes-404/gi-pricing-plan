@@ -21,6 +21,7 @@ from model_schema.audit import (
     canonical_payload,
     compute_event_hash,
 )
+from model_schema.backtests import Backtest, BacktestSummary
 from model_schema.comparison import (
     ComparisonMetric,
     ComparisonSummary,
@@ -96,6 +97,7 @@ from model_schema.jobs import (
 from model_schema.modelling import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
+    SCOREABLE_MODEL_STATUSES,
     TERMINAL_MODEL_STATUSES,
     VALID_MODEL_TRANSITIONS,
     AboveRangePolicy,
@@ -216,6 +218,7 @@ __all__ = [
     "MODELLING_FORBIDDEN_PII",
     "MODEL_SPEC_ADAPTER",
     "READ_PERMISSIONS",
+    "SCOREABLE_MODEL_STATUSES",
     "TERMINAL_DATASET_STATUSES",
     "TERMINAL_MODEL_STATUSES",
     "TERMINAL_PERIL_STRUCTURE_STATUSES",
@@ -239,6 +242,8 @@ __all__ = [
     "ArtifactRef",
     "AuditEvent",
     "AuditEventCore",
+    "Backtest",
+    "BacktestSummary",
     "Banding",
     "BandingEvaluation",
     "BandingMethod",

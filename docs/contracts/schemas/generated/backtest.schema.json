@@ -1,0 +1,378 @@
+{
+  "$defs": {
+    "AeCell": {
+      "additionalProperties": false,
+      "description": "Actual versus expected for one level of one factor (FR-MODEL-50).\n\n`ci_95` is on the **ratio**, not on the actual: an A/E of 1.19 whose interval excludes\n1.0 is a finding, and one whose interval spans it is noise. Without the interval the\ntwo render identically, which is how a thin cell becomes a rating decision.",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "ae": {
+          "title": "Ae",
+          "type": "number"
+        },
+        "ci_95": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ci 95"
+        },
+        "expected": {
+          "title": "Expected",
+          "type": "number"
+        },
+        "exposure_years": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Years"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "factor",
+        "level",
+        "actual",
+        "expected",
+        "ae"
+      ],
+      "title": "AeCell",
+      "type": "object"
+    },
+    "BacktestSummary": {
+      "additionalProperties": false,
+      "description": "What a backtest found, before the platform gives it an identity.\n\nThe `DiagnosticsResult` and `ComparisonSummary` split, for the same reason:\n`pricing-core` computes, and does not allocate ids, know about rows in a database, or\nread a clock (ADR-0001).\n\nThe weighting scheme is inside `partition` and is not restated: it is a function of the\nmodel's spec (FR-MODEL-55), and a backtest scores its own model's spec, so it cannot\ndiffer from the fit-time scheme the reader will compare against.",
+      "properties": {
+        "dataset_version_ref": {
+          "title": "Dataset Version Ref",
+          "type": "string"
+        },
+        "fitted_on_ref": {
+          "title": "Fitted On Ref",
+          "type": "string"
+        },
+        "model_ref": {
+          "title": "Model Ref",
+          "type": "string"
+        },
+        "partition": {
+          "$ref": "#/$defs/PartitionDiagnostics"
+        },
+        "period_from": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period From"
+        },
+        "period_to": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period To"
+        }
+      },
+      "required": [
+        "model_ref",
+        "dataset_version_ref",
+        "fitted_on_ref",
+        "partition"
+      ],
+      "title": "BacktestSummary",
+      "type": "object"
+    },
+    "CalibrationBin": {
+      "additionalProperties": false,
+      "description": "Predicted against observed within a predicted-decile bin (FR-MODEL-50).",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "bin": {
+          "minimum": 1,
+          "title": "Bin",
+          "type": "integer"
+        },
+        "predicted": {
+          "title": "Predicted",
+          "type": "number"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bin",
+        "rows",
+        "predicted",
+        "actual"
+      ],
+      "title": "CalibrationBin",
+      "type": "object"
+    },
+    "LiftBin": {
+      "additionalProperties": false,
+      "description": "One predicted-decile bin of a lift/gains curve (FR-MODEL-50).",
+      "properties": {
+        "actual": {
+          "title": "Actual",
+          "type": "number"
+        },
+        "bin": {
+          "minimum": 1,
+          "title": "Bin",
+          "type": "integer"
+        },
+        "exposure_years": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Years"
+        },
+        "predicted": {
+          "title": "Predicted",
+          "type": "number"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bin",
+        "rows",
+        "predicted",
+        "actual"
+      ],
+      "title": "LiftBin",
+      "type": "object"
+    },
+    "PartitionDiagnostics": {
+      "additionalProperties": false,
+      "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nAt fit time one of these describes train and another describes holdout, and neither is\nmeaningful without the other — which is why a *fit* only ever holds them together\n(`UniversalDiagnostics`).\n\nA backtest holds exactly one (`backtests.BacktestSummary`, FR-MODEL-57), and that is not\nthe same defect: its population was never split, so there is no counterpart to withhold,\nand what it is read against is the model's own fit-time holdout on a different artifact.",
+      "properties": {
+        "ae_by_factor": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AeCell"
+          },
+          "title": "Ae By Factor",
+          "type": "array"
+        },
+        "ae_overall": {
+          "minimum": 0.0,
+          "title": "Ae Overall",
+          "type": "number"
+        },
+        "calibration": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/CalibrationBin"
+          },
+          "title": "Calibration",
+          "type": "array"
+        },
+        "gini": {
+          "title": "Gini",
+          "type": "number"
+        },
+        "gini_normalised": {
+          "title": "Gini Normalised",
+          "type": "number"
+        },
+        "lift": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/LiftBin"
+          },
+          "title": "Lift",
+          "type": "array"
+        },
+        "residual_summary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResidualSummary"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "weighting": {
+          "$ref": "#/$defs/Weighting"
+        }
+      },
+      "required": [
+        "weighting",
+        "rows",
+        "ae_overall",
+        "gini",
+        "gini_normalised"
+      ],
+      "title": "PartitionDiagnostics",
+      "type": "object"
+    },
+    "ResidualSummary": {
+      "additionalProperties": false,
+      "description": "Distribution summary of the working residuals (FR-MODEL-50).",
+      "properties": {
+        "maximum": {
+          "title": "Maximum",
+          "type": "number"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number"
+        },
+        "minimum": {
+          "title": "Minimum",
+          "type": "number"
+        },
+        "p01": {
+          "title": "P01",
+          "type": "number"
+        },
+        "p99": {
+          "title": "P99",
+          "type": "number"
+        },
+        "std": {
+          "title": "Std",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mean",
+        "std",
+        "minimum",
+        "maximum",
+        "p01",
+        "p99"
+      ],
+      "title": "ResidualSummary",
+      "type": "object"
+    },
+    "Weighting": {
+      "description": "How a metric was weighted (FR-MODEL-55).\n\n`EXPOSURE` for frequency and burning cost, `CLAIM_COUNT` for severity, `COUNT` where\nthe metric genuinely counts rows. The UI labels an unweighted metric on an\nexposure-weighted problem *as such* — which it can only do if the fit said which.",
+      "enum": [
+        "exposure",
+        "count",
+        "claim_count"
+      ],
+      "title": "Weighting",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The persisted artifact (`02` §4.12, FR-MODEL-57).\n\nImmutable, and enforced at the privilege layer as well as here (FR-DATA-42): a backtest\nis what a monitoring review and a re-approval argue from, and evidence that can change\nafter the decision is not evidence.\n\nNo slug and no version of its own, for the reason `Diagnostics` and `ModelComparison`\nhave none — it is always reached by id, from the Job that produced it or the record that\ncites it. Unlike `Diagnostics` it is **not** one-per-model: a model backtested against\nfour quarters has four, which is the point.",
+  "properties": {
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "dataset_version_id": {
+      "format": "uuid",
+      "title": "Dataset Version Id",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "model_id": {
+      "format": "uuid",
+      "title": "Model Id",
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/BacktestSummary"
+    }
+  },
+  "required": [
+    "id",
+    "model_id",
+    "dataset_version_id",
+    "computed_at",
+    "summary"
+  ],
+  "title": "Backtest",
+  "type": "object"
+}

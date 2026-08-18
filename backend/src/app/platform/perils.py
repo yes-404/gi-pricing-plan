@@ -32,6 +32,7 @@ from app.db.models import ApprovalRequestRow, ModelRow, PerilStructureRow
 from app.errors import PlatformError
 from app.platform import approvals, audit, rbac
 from model_schema import (
+    SCOREABLE_MODEL_STATUSES,
     VALID_PERIL_STRUCTURE_TRANSITIONS,
     ArtifactRef,
     JobSource,
@@ -55,18 +56,6 @@ __all__ = [
     "submit_for_review",
     "to_structure",
 ]
-
-#: The statuses that carry coefficients, so the statuses a peril may cite. Identical to the
-#: comparison's list and for the identical reason: a `draft` has not been fitted and an
-#: `archived` one may never have been, so neither can price a peril.
-_SCOREABLE_STATUSES = frozenset(
-    {
-        ModelStatus.FITTED,
-        ModelStatus.REVIEW,
-        ModelStatus.APPROVED,
-        ModelStatus.SUPERSEDED,
-    }
-)
 
 
 def to_structure(row: PerilStructureRow) -> PerilStructure:
@@ -422,7 +411,7 @@ async def _resolve_models(
                     f"Peril {peril.peril} references {key}, which resolves to no model in "
                     "this workspace.",
                 )
-            if ModelStatus(row.status) not in _SCOREABLE_STATUSES or row.fit_result is None:
+            if ModelStatus(row.status) not in SCOREABLE_MODEL_STATUSES or row.fit_result is None:
                 raise PlatformError(
                     "MODEL_NOT_FITTED",
                     "A referenced model has not been fitted",
