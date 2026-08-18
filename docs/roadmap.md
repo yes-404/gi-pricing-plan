@@ -138,7 +138,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 
 | Task | Kind | Due |
 |---|---|---|
-| **1 Phase-2 decision (OQ-GOV-8)** | decisions | Before Phase 2. Was five: OQ-RATE-2 decided by spike, OQ-MODEL-3 on 2026-08-17, and OQ-MODEL-11, OQ-MODEL-12, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6 and OQ-PLAT-3 all on 2026-08-18. **OQ-GOV-8 is correctly the last one standing** rather than the one nobody got to: it asks whether an `expression` Custom Objective needs an authoring permission distinct from `model:fit`, and `expression` objectives are themselves Phase 2 — deciding it against the template catalogue would be deciding it against the wrong artifact |
+| **1 Phase-2 decision (OQ-GOV-8)** | decisions | Before Phase 2. Was five: OQ-RATE-2 decided by spike, OQ-MODEL-3 on 2026-08-17, and OQ-MODEL-11, OQ-MODEL-12, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6 and OQ-PLAT-3 all on 2026-08-18. **OQ-GOV-8 is correctly the last one standing** rather than the one nobody got to: it asks whether an `expression` Custom Objective needs an authoring permission distinct from `model:fit`, and `expression` objectives are themselves Phase 2 — deciding it against the template catalogue would be deciding it against the wrong artifact. **Deferred 2026-08-18 with a trigger rather than left open**: `06` FR-GOV-38 makes answering it a precondition of lifting `expression_objectives_enabled`, so W30 cannot ship the capability without closing it |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
 | 6 Phase-3 · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
@@ -2282,7 +2282,7 @@ dislocation, and serves a live quote inside the latency budget.
 | **W13** | Dislocation with attribution | FR-RATE-46..49 |
 | **W14** | Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-0006 requires** | FR-RATE-50..55; `07` FR-PLAT-28..31, and added 2026-08-15 by OQ-OVR-1's decision: **FR-PLAT-56** (a deployment refuses to start against another tenant's database) and **FR-OVR-16** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-OVR-16's column rather than wait for this |
 | **W15** | Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project |
-| **W30** | **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` | Added 2026-08-15 by OQ-MODEL-1's decision, which moved this work out of W5 rather than deleting it: `02` FR-MODEL-40/41, FR-MODEL-75, §4.6, and `wf-05` Route B. It depends on nothing in W9–W15 and could equally be pulled into 1b if W5 finishes early — but it must not start before the certification machinery it fronts (FR-MODEL-76) has run for a phase, which is the whole point of the decision |
+| **W30** | **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **after answering OQ-GOV-8, which `06` FR-GOV-38 makes a precondition of lifting it** | Added 2026-08-15 by OQ-MODEL-1's decision, which moved this work out of W5 rather than deleting it: `02` FR-MODEL-40/41, FR-MODEL-75, §4.6, and `wf-05` Route B. It depends on nothing in W9–W15 and could equally be pulled into 1b if W5 finishes early — but it must not start before the certification machinery it fronts (FR-MODEL-76) has run for a phase, which is the whole point of the decision |
 
 ### Requirement coverage
 
@@ -2361,10 +2361,26 @@ you never block on a decision you have not reached.
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
 | ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18* | 12 (0 open) |
-| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔ *all 2026-08-18*, **OQ-GOV-8** | 10 (1 open) |
+| **Before Phase 2** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔ *all 2026-08-18*, **OQ-GOV-8** *deferred 2026-08-18 with a trigger — `06` FR-GOV-38 makes it a precondition of lifting `expression_objectives_enabled`, owned by W30* | 10 (1 deferred) |
 | **Before Phase 3** | OQ-GOV-1..6, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (6 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 13 (4 open) |
+
+**2026-08-18 — OQ-GOV-8 deferred to Phase 2, with a trigger and an owner.** Whether an
+`expression` Custom Objective needs an authoring permission distinct from `model:fit` is not
+answerable yet, and the register says so rather than manufacturing an answer: it turns on how
+much of the review an Objective Certificate can carry, which nobody knows until a
+user-authored loss has been through one. **The deferral is the decision, and `06` FR-GOV-38 is
+what makes it one** — the question must be answered *before* `expression_objectives_enabled`
+may be lifted, and **W30 owns it** because W30 is the workstream that lifts the flag. A
+deferral with a trigger, an owner and a written form binds something; a deferral with only a
+phase attached is a note nobody is holding.
+
+So **Before Phase 2 now reads 10 (1 deferred) rather than 10 (1 open)**, and no gate row on
+this table is unowned. What is deferred is an *additional* control, not the only one:
+FR-GOV-11 keeps the submitter out of the approval and `02` FR-MODEL-46 requires a non-author
+Approver, both of which apply to an expression objective the day it exists. That is why
+waiting is affordable — and stating it is what stops the deferral being read as a gap.
 
 **2026-08-18 — the four Phase-2 design questions decided, leaving one.** OQ-RATE-3 (rate
 tables as rows, spilling to parquet above a configurable cell count — `03` FR-RATE-62),
