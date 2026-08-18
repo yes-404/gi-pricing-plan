@@ -132,6 +132,24 @@ single source of truth, so an undeclared field does not exist.
 **Discriminated unions** survive to JSON Schema as `oneOf` + `discriminator`, and a
 `Literal` covering two tags maps both onto one branch. Verified: research F6.
 
+**A `computed_field` and `extra="forbid"` break the artifact's own round trip.** A computed
+field **is** serialised, so `model_validate(x.model_dump(mode="json"))` hands the model a
+key it has no field for, and `extra="forbid"` rejects it. Nothing warns; the first symptom
+is a `ValidationError` from the *read* path of whatever persists the artifact, naming a
+field the writer never set.
+
+Three answers, and which to pick depends on whether the value belongs on the wire:
+
+| | Use |
+|---|---|
+| Nothing outside the process needs it | a plain `@property` — `TransparencyArtifact.kinds` |
+| A caller would otherwise reimplement the rule | `computed_field` **plus** a `model_validator(mode="before")` that drops the key — `Reconciliation.ratio` / `.status` |
+| It is genuinely stored | an ordinary field, and accept that two statements of one fact can disagree |
+
+Drop rather than compare in the second case. A stored or hand-edited value then has no way
+to be believed, which is the guarantee "derived, not stored" exists for — and comparing
+would turn a tampered row into a validation error at read time rather than a corrected one.
+
 ## Typing
 
 `mypy --strict` over `packages/`. Prefer `Protocol` over ABCs for injected collaborators —
@@ -146,6 +164,11 @@ Ruff, line length 100. Match the surrounding code. Comments explain *why* — th
 the spec, and a comment restating the code is noise that rots.
 
 ## Verified
+
+2026-08-18 — W5, peril structures. The `computed_field` round-trip rule, found when
+`load_structure` re-validated a stored `Reconciliation` and `extra="forbid"` rejected the
+artifact's own `ratio` and `status`. The round-trip test that would have caught it is now
+in `packages/model-schema/tests/test_perils.py`.
 
 2026-08-17 — W5's `wf-01` journey slice: the LightGBM abort above, found when a monotone
 constraint on a banded factor met `categorical_handling: "native"` for the first time. The

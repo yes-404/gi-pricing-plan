@@ -106,6 +106,21 @@ uv run alembic upgrade head
 uv run alembic downgrade -1 && uv run alembic upgrade head   # prove the downgrade too
 ```
 
+### The skip guard checks that migrations exist, not that they are at head
+
+`conftest_db.py` skips when `SELECT count(*) FROM alembic_version` fails — which is a test
+for *any* migration having been applied. A branch that adds one gets no skip and no warning:
+the database is a version behind, and every test touching the new table fails with
+
+```
+asyncpg.exceptions.UndefinedTableError: relation "peril_structures" does not exist
+```
+
+reported as an error in the code under test rather than as an out-of-date database. It bites
+hardest in a **worktree**, where `uv sync --all-packages --dev` has to be run again anyway
+and it is easy to assume the shared Postgres came with it. Run `alembic upgrade head` after
+checking out any branch that adds a migration, before reading a single failure.
+
 ## A gate run is only valid if the tree held still for all of it
 
 The gate is eight commands over several minutes, and every one of them reads the working
@@ -277,6 +292,10 @@ unpromotable since the spec was amended three days earlier. Fixtures produced al
 hard fail; nothing in between.
 
 ## Verified
+
+2026-08-18 — W5, peril structures. The migration-skip rule above was found in a worktree:
+eleven DB-backed tests failed with `UndefinedTableError` and no skip, because the guard
+only asks whether *any* migration has run. Suite at 1026 with the stack up.
 
 2026-08-17 — Two sessions, one working directory. The bracket above was written after a
 gate run began at one revision and ended at another, and after a `checkout` in the same
