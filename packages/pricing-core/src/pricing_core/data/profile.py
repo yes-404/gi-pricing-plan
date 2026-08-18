@@ -176,6 +176,7 @@ def profile_frame(
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
+    job_id: UUID | None = None,
 ) -> Profile:
     """Profile a frame (FR-DATA-25, FR-DATA-26).
 
@@ -185,6 +186,9 @@ def profile_frame(
 
     The frame-based entry point exists so profiling is testable and notebook-runnable;
     `profile_parquet` is the DuckDB path FR-DATA-27 requires for real versions.
+
+    `job_id` is recorded on the returned artifact (FR-OVR-3) when the caller has one; a
+    frame profiled from a notebook or a test fixture has none.
     """
     columns: list[ColumnProfile] = []
     height = frame.height
@@ -289,9 +293,11 @@ def profile_frame(
         id=uuid4(),
         dataset_version_id=dataset_version_id,
         computed_at=datetime.now(UTC),
+        job_id=job_id,
         row_count=height,
         columns=tuple(columns),
         one_ways=one_ways,
+        weight_column=exposure_column,
         library_versions={"polars": pl.__version__},
     )
 
@@ -461,6 +467,7 @@ def profile_parquet(
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
+    job_id: UUID | None = None,
 ) -> Profile:
     """Profile parquet files with DuckDB (FR-DATA-27, NFR-DATA-3).
 
@@ -534,9 +541,11 @@ def profile_parquet(
         id=uuid4(),
         dataset_version_id=dataset_version_id,
         computed_at=datetime.now(UTC),
+        job_id=job_id,
         row_count=row_count,
         columns=tuple(columns),
         one_ways=one_ways,
+        weight_column=exposure_column,
         library_versions={"polars": pl.__version__, "duckdb": duckdb.__version__},
     )
 

@@ -32,6 +32,14 @@ def _load(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _resolve(document: dict, node: dict) -> dict:
+    """Follow a local `$ref` one hop. Pydantic nests models through `$defs`."""
+    ref = node.get("$ref")
+    if ref is None:
+        return node
+    return document["$defs"][ref.rsplit("/", 1)[-1]]
+
+
 @pytest.mark.req("FR-PLAT-48")
 def test_committed_contracts_match_the_models() -> None:
     """The check CI runs. A failure here means someone changed a model without regenerating."""
@@ -245,7 +253,7 @@ CONDITIONAL_FIELDS: Final[dict[str, frozenset[str]]] = {
 
 
 @pytest.mark.req("FR-OVR-6")
-@pytest.mark.parametrize("slug", ["banding", "grouping", "custom-objective"])
+@pytest.mark.parametrize("slug", ["banding", "grouping", "custom-objective", "profile"])
 def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:
     """Both directions, for the shapes with a hand-authored Phase-0 contract.
 
@@ -278,6 +286,32 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     assert not produced - declared - ENVELOPE_FIELDS, (
         "the model produces fields the contract does not declare: "
         f"{sorted(produced - declared - ENVELOPE_FIELDS)}"
+    )
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_the_column_profile_shape_matches_its_contract() -> None:
+    """The profile's divergences live one level down, where the flat tests do not look.
+
+    `test_an_artifact_shape_carries_exactly_what_its_contract_declares` compares top-level
+    properties. `ColumnProfile` is nested inside `columns.items`, which is where the
+    histogram was missing for three days and where `min`/`minimum` still disagreed — so a
+    flat comparison would have reported this contract as conforming throughout.
+    """
+    generated = _load(GENERATED / "profile.schema.json")
+    authored = _load(AUTHORED / "profile.schema.json")
+
+    produced = set(
+        _resolve(generated, generated["properties"]["columns"]["items"])["properties"]
+    )
+    declared = set(authored["properties"]["columns"]["items"]["properties"])
+
+    assert not declared - produced, (
+        f"the contract declares column fields the model lacks: {sorted(declared - produced)}"
+    )
+    assert not produced - declared, (
+        "the model produces column fields the contract does not declare: "
+        f"{sorted(produced - declared)}"
     )
 
 

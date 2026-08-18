@@ -90,6 +90,13 @@ GENERATED_SHAPES: dict[str, str] = {
     # `03 — Rating Engine` fills in — `rating_versions` and `deployments` are published
     # empty on purpose (FR-MODEL-87), which is only legible if the shape is published.
     "objective-usage": "ObjectiveUsage",
+    # Added 2026-08-18 (W5, the profile contract). `profile.schema.json` is a hand-authored
+    # Phase-0 contract that nothing has ever compared against code — the position `banding`
+    # and `grouping` were in when four divergences had accumulated unseen. It is also the
+    # artifact `02`'s factor workbench reads and never recomputes (FR-DATA-27), so a field
+    # the contract promises and the model does not carry is a wrong number on a screen
+    # rather than a documentation defect.
+    "profile": "Profile",
 }
 
 

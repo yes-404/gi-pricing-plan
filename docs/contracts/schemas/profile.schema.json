@@ -4,17 +4,24 @@
   "title": "Profile",
   "description": "Descriptive statistics and one-way summaries for a Dataset Version. Computed once at ingestion and read thereafter; the UI never recomputes one (01 FR-DATA-25..27).",
   "type": "object",
-  "required": ["dataset_version_id", "computed_at", "columns", "one_ways"],
+  "required": ["id", "dataset_version_id", "computed_at", "row_count", "columns", "one_ways"],
   "properties": {
+    "id": {"type": "string", "format": "uuid"},
     "dataset_version_id": {"type": "string", "format": "uuid"},
     "computed_at": {"type": "string", "format": "date-time"},
-    "job_id": {"type": "string", "format": "uuid"},
+    "job_id": {"type": ["string", "null"], "format": "uuid"},
+    "row_count": {"type": "integer", "minimum": 0, "description": "The Dataset Version's row count, as at computation (FR-DATA-25)."},
     "weight_column": {"type": "string", "default": "exposure_years"},
+    "library_versions": {
+      "type": "object",
+      "description": "The engine(s) that computed this profile and their versions — reproducibility evidence for FR-DATA-27's single computed-once artifact.",
+      "additionalProperties": {"type": "string"}
+    },
     "columns": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "semantic_type", "dtype", "null_count", "null_rate", "distinct_count"],
+        "required": ["name", "semantic_type", "dtype", "null_count", "null_rate", "distinct_count", "row_count"],
         "properties": {
           "name": {"type": "string"},
           "semantic_type": {"enum": ["identifier", "categorical", "ordinal", "continuous", "date", "money", "boolean"]},
@@ -22,8 +29,9 @@
           "null_count": {"type": "integer", "minimum": 0},
           "null_rate": {"type": "number", "minimum": 0, "maximum": 1},
           "distinct_count": {"type": "integer", "minimum": 0},
-          "min": {},
-          "max": {},
+          "row_count": {"type": "integer", "minimum": 0, "description": "The Dataset Version's row count, carried per column so a consumer of one ColumnProfile alone (e.g. VR-DST-6's standard-error check) does not need the parent Profile."},
+          "minimum": {},
+          "maximum": {},
           "mean": {"type": ["number", "null"]},
           "std": {"type": ["number", "null"]},
           "quantiles": {

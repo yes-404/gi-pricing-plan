@@ -159,6 +159,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-28** | A **profile comparison** between any two Dataset Versions of the same Dataset is available on demand: per-column PSI, mean shift, null-rate shift, new/vanished levels. This is the same computation that the distributional validation layer consumes. |
 | **FR-DATA-46** | *(appended 2026-08-17; OQ-OVR-7, decided)* FR-DATA-26's one-way row names its two mean fields **`mean_severity`** and **`mean_burning_cost`** — not `severity_minor` and `burning_cost_minor`. Both are means and therefore floats, kept as floats deliberately, because rounding a mean to whole minor units would lose the precision the confidence interval beside it expresses. The values are right; the *names* are what FR-OVR-7 objects to, since `_minor` is reserved for integer minor units. Both stay expressed in the workspace currency's minor unit, so only the names change. **Delivered 2026-08-18**, in the slice that added FR-DATA-48's histogram — the change to the profile contract OQ-OVR-7 was waiting for. The hand-written money-scan exclusion in `backend/tests/test_contracts.py` is deleted: `mean_severity` and `mean_burning_cost` do not match the scan's pattern, so nothing needs excluding. |
 | **FR-DATA-48** | *(appended 2026-08-18; `ColumnProfile` had no `histogram` while `01` §4.7's contract example, `docs/contracts/schemas/profile.schema.json` and §5.3's Profile view all declared one — a divergence recorded in `docs/roadmap.md` and built around in silence since 2026-08-15.)* Profiling additionally produces, for every **numeric non-identifier** column, a **histogram**: `HISTOGRAM_BINS` (20) equal-width bins over the observed `[min, max]`, published as `edges` (one more than there are bins), `counts`, and — where the version carries an exposure column — one exact decimal `exposure` weight per bin. Bins are half-open, `[e(i), e(i+1))`, except the last, which is closed. A constant column yields a single bin. **Equal-width bins over the observed range, computed from edges chosen in Python rather than by either engine's own histogram function**: FR-DATA-27 requires one answer regardless of engine, and every divergence `test_the_two_profiling_paths_agree` has ever caught came from an engine default — tie-breaking, null handling, quantile interpolation. |
+| **FR-DATA-49** | *(appended 2026-08-18, Task 6 — the profile contract's generated counterpart, comparing `docs/contracts/schemas/profile.schema.json` against `ColumnProfile` for the first time.)* **`ColumnProfile.top_levels` must carry `exposure_years` per level, not only `count`.** FR-DATA-25 asks for "top-20 levels by exposure and by count", and the contract has always declared each top level as `{level, count, exposure_years}` — but the model carries `top_levels: tuple[tuple[str, int], ...]`, a two-element tuple with no exposure weight and no field names, so a top-20 by count is silently substituted for a top-20 by exposure wherever it is read. **Not fixed in this slice, on the controller's ruling**: closing the gap means computing per-level exposure in both profiling engines (`profile_frame` and `profile_parquet`) and reworking every reader that treats `top_levels` as `(str, int)` — `compare_profiles` and `psi_from_weights` in `pricing_core.data.profile`, the distributional validation layer's `_level_counts`/PSI checks in `pricing_core.data.validate`, and `ProfileView.vue`'s chip list — 22 call sites across 7 non-generated files by the count taken 2026-08-18. That is a feature the size of FR-DATA-48's histogram work, not a reconciliation, so `backend/tests/test_contracts.py`'s nested conformance test compares `ColumnProfile`'s property *names* only (where `top_levels` exists on both sides and this gap is invisible) rather than each item's shape. **Owner: W5's next slice or whoever picks up FR-DATA-49**, no trigger beyond "before `top_levels` is read anywhere the exposure-vs-count distinction matters for a pricing decision". |
 
 
 ### 3.5 Reference data
@@ -563,7 +564,7 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
     {
       "name": "driver_age", "semantic_type": "continuous", "dtype": "int32",
       "null_count": 412, "null_rate": 0.0000854, "distinct_count": 74,
-      "min": 17, "max": 92, "mean": 43.8, "std": 15.2,
+      "minimum": 17, "maximum": 92, "mean": 43.8, "std": 15.2,
       "quantiles": {"p1": 19, "p5": 22, "p25": 32, "p50": 43, "p75": 55, "p95": 71, "p99": 80},
       "histogram": {"edges": [17, 21, 25, 30, 40, 50, 60, 70, 93], "counts": [...], "exposure": [...]}
     }
@@ -587,6 +588,32 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
 > this one. The example's uneven edges were illustrative, not a specification: FR-DATA-48
 > fixes equal-width bins, because two engines must agree and quantile-derived edges collapse
 > to duplicates on a low-cardinality column, with each engine deduplicating differently.
+
+> *(2026-08-18, Task 6 — `profile.schema.json` generated and compared against `Profile` for
+> the first time.)* **The contract's `min`/`max` are renamed here to `minimum`/`maximum`,
+> matching the model rather than the other way round.** `min` and `max` are Python
+> builtins, `ColumnProfile` has named these fields `minimum`/`maximum` since Phase 1a, and
+> every consumer — the validation layer's `_reference_column` reads, `ProfileView.vue` —
+> already reads those names. Renaming the model to match a document nobody had compared it
+> against would have broken a working consumer to tidy a schema; the example above is
+> updated to match.
+>
+> The same comparison found the contract silent on five fields the model has always
+> produced — `id`, `job_id`, `row_count` (on `Profile` and, separately, on each
+> `ColumnProfile` — the count `VR-DST-6`'s standard-error check divides by), and
+> `library_versions` — now added to the contract. `job_id` and `weight_column` ran the other
+> way: the contract declared both and the model carried neither, so `Profile` gains
+> `job_id: UUID | None` (matching the `job_id` every other per-Job artifact in this
+> repository already carries, per `00` FR-OVR-3's `produced_by_job_id`) and
+> `weight_column: str = "exposure_years"` (recording, on the artifact itself, which column
+> `one_ways` was weighted by). Both are wired from the real profiling path, not left
+> decorative: `profile_frame`/`profile_parquet` accept `job_id` and record their
+> `exposure_column` argument as `weight_column`, and the worker's `_profile_version` handler
+> now passes its own Job's id through — which it had never done, because `JobProgress`
+> carried no public accessor for it before this slice added one.
+>
+> `top_levels`' item shape is a divergence this comparison found and did **not** fix: see
+> FR-DATA-49.
 
 ### 4.8 `ReferenceTable` / `ReferenceTableVersion`
 

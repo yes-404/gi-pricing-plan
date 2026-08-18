@@ -1,0 +1,401 @@
+{
+  "$defs": {
+    "ColumnProfile": {
+      "additionalProperties": false,
+      "description": "Per-column statistics (`01` §4.7).",
+      "properties": {
+        "distinct_count": {
+          "minimum": 0,
+          "title": "Distinct Count",
+          "type": "integer"
+        },
+        "dtype": {
+          "title": "Dtype",
+          "type": "string"
+        },
+        "histogram": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Histogram"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "null_count": {
+          "minimum": 0,
+          "title": "Null Count",
+          "type": "integer"
+        },
+        "null_rate": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Null Rate",
+          "type": "number"
+        },
+        "quantiles": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Quantiles",
+          "type": "object"
+        },
+        "row_count": {
+          "minimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "semantic_type": {
+          "$ref": "#/$defs/SemanticType"
+        },
+        "std": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std"
+        },
+        "top_levels": {
+          "default": [],
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Top Levels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "dtype",
+        "semantic_type",
+        "row_count",
+        "null_count",
+        "null_rate",
+        "distinct_count"
+      ],
+      "title": "ColumnProfile",
+      "type": "object"
+    },
+    "Histogram": {
+      "additionalProperties": false,
+      "description": "The binned distribution of a numeric column (`01` §4.7, FR-DATA-48).\n\nBin *edges* rather than a bin width, because the last bin is closed and the others are\nhalf-open: `[e0, e1) … [e(n-1), en]`. A reader given only a width has to guess which\nend carries the maximum, and the two profiling engines would guess differently.\n\n`exposure` is optional and, when present, holds one exact decimal weight per bin\n(FR-OVR-7). A count histogram of an exposure-weighted book overstates the tail: a bin\nof 200 policies each on risk a fortnight is not the same risk as 200 policies on risk a\nyear, and pricing reads the second.",
+      "properties": {
+        "counts": {
+          "default": [],
+          "items": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "array"
+        },
+        "edges": {
+          "default": [],
+          "items": {
+            "type": "number"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "exposure": {
+          "default": [],
+          "items": {
+            "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "type": "string"
+          },
+          "title": "Exposure",
+          "type": "array"
+        }
+      },
+      "title": "Histogram",
+      "type": "object"
+    },
+    "OneWayRow": {
+      "additionalProperties": false,
+      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
+      "properties": {
+        "claim_amount_minor": {
+          "default": 0,
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Claim Amount Minor",
+          "type": "integer"
+        },
+        "claim_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Claim Count",
+          "type": "integer"
+        },
+        "exposure_years": {
+          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Exposure Years",
+          "type": "string"
+        },
+        "frequency": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequency"
+        },
+        "frequency_ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequency Ci"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "mean_burning_cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Burning Cost"
+        },
+        "mean_severity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Severity"
+        },
+        "severity_ci": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity Ci"
+        }
+      },
+      "required": [
+        "level",
+        "exposure_years"
+      ],
+      "title": "OneWayRow",
+      "type": "object"
+    },
+    "OneWaySummary": {
+      "additionalProperties": false,
+      "description": "A candidate rating column summarised by level (FR-DATA-26).\n\nComputed here, once, because `02`'s factor workbench and the pricing actuary looking at\na dataset must see the same numbers — and because recomputing per request is the\ndifference between an interactive screen and a spinner.",
+      "properties": {
+        "banding": {
+          "default": "levels",
+          "title": "Banding",
+          "type": "string"
+        },
+        "column": {
+          "title": "Column",
+          "type": "string"
+        },
+        "rows": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OneWayRow"
+          },
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "column"
+      ],
+      "title": "OneWaySummary",
+      "type": "object"
+    },
+    "SemanticType": {
+      "description": "What a column *means*, inferred separately from its dtype (FR-DATA-25).\n\nA dtype says `int32`; a semantic type says whether that is a policy id, a vehicle\ngroup, or an age. The distinction decides whether a one-way summary is meaningful —\nbanding a policy id produces a chart with five million bars.",
+      "enum": [
+        "identifier",
+        "categorical",
+        "ordinal",
+        "continuous",
+        "date",
+        "money",
+        "boolean"
+      ],
+      "title": "SemanticType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The profile artifact for one Dataset Version (`01` §4.7, FR-DATA-25/26/27).",
+  "properties": {
+    "columns": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ColumnProfile"
+      },
+      "title": "Columns",
+      "type": "array"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "dataset_version_id": {
+      "format": "uuid",
+      "title": "Dataset Version Id",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "library_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Library Versions",
+      "type": "object"
+    },
+    "one_ways": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/OneWaySummary"
+      },
+      "title": "One Ways",
+      "type": "array"
+    },
+    "row_count": {
+      "minimum": 0,
+      "title": "Row Count",
+      "type": "integer"
+    },
+    "weight_column": {
+      "default": "exposure_years",
+      "title": "Weight Column",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "dataset_version_id",
+    "computed_at",
+    "row_count"
+  ],
+  "title": "Profile",
+  "type": "object"
+}

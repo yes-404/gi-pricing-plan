@@ -148,16 +148,26 @@ class OneWaySummary(BaseModel):
 
 
 class Profile(BaseModel):
-    """The profile artifact for one Dataset Version (`01` §4.7)."""
+    """The profile artifact for one Dataset Version (`01` §4.7, FR-DATA-25/26/27)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
     dataset_version_id: UUID
     computed_at: datetime
+    #: The Job that produced this Profile (FR-OVR-3's `produced_by_job_id`), matching the
+    #: convention every other per-Job artifact in this repository carries directly —
+    #: `Diagnostics`, `Backtest`, `ModelComparison` and `TransparencyArtifact` all declare
+    #: their own `job_id: UUID | None`. `None` for a profile built outside a Job (a test
+    #: fixture, a notebook).
+    job_id: UUID | None = None
     row_count: Annotated[int, Field(ge=0)]
     columns: tuple[ColumnProfile, ...] = ()
     one_ways: tuple[OneWaySummary, ...] = ()
+    #: The column the one-ways in `one_ways` were weighted by (FR-DATA-26). Recorded on the
+    #: artifact so a reader of `one_ways` alone — without the Job that produced it — can
+    #: tell what "exposure" meant for this profile.
+    weight_column: str = "exposure_years"
     library_versions: dict[str, str] = Field(default_factory=dict)
 
     def column(self, name: str) -> ColumnProfile | None:

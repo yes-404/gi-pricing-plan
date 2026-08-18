@@ -166,11 +166,18 @@ def _profile_version(
 
         first = next(iter(tables.values())) if tables else pl.DataFrame()
         profile = profile_frame(
-            first, dataset_version_id=version_id, one_way_columns=_ONE_WAY_SELECTION
+            first,
+            dataset_version_id=version_id,
+            one_way_columns=_ONE_WAY_SELECTION,
+            job_id=progress.job_id,
         )
         async with progress.database.unit_of_work() as session:
             stored = await profile_service.store_profile(
-                session, workspace_id=workspace_id, actor=actor, profile=profile
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                profile=profile,
+                job_id=profile.job_id,
             )
             return UUID(str(stored.id))
 
