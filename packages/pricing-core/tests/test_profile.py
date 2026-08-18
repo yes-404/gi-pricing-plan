@@ -424,3 +424,104 @@ def test_a_column_with_too_many_levels_is_not_a_rating_factor() -> None:
 
     assert "region" in chosen
     assert "postcode" not in chosen, f"300 levels exceeds {MAX_ONE_WAY_LEVELS}"
+
+
+# -- FR-DATA-48: histograms ------------------------------------------------------------
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_a_numeric_column_gets_a_histogram() -> None:
+    profile = profile_frame(FRAME, dataset_version_id=uuid4())
+    age = profile.column("driver_age")
+
+    assert age is not None
+    assert age.histogram is not None
+    assert len(age.histogram.edges) == len(age.histogram.counts) + 1
+    assert age.histogram.edges[0] == age.minimum
+    assert age.histogram.edges[-1] == age.maximum
+    # Every non-null row lands in exactly one bin, the maximum included.
+    assert sum(age.histogram.counts) == FRAME.height - age.null_count
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_an_identifier_and_a_categorical_get_no_histogram() -> None:
+    profile = profile_frame(FRAME, dataset_version_id=uuid4())
+    policy_id, vehicle_group = profile.column("policy_id"), profile.column("vehicle_group")
+
+    assert policy_id is not None
+    assert policy_id.histogram is None
+    assert vehicle_group is not None
+    assert vehicle_group.histogram is None
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_the_maximum_lands_in_the_last_bin_not_past_it() -> None:
+    """The closed last bin. Without it the maximum falls in bin 20 of 20 and is lost."""
+    frame = pl.DataFrame({"x": [float(i) for i in range(101)]})
+    column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
+
+    assert column is not None
+    assert column.histogram is not None
+    assert sum(column.histogram.counts) == 101
+    assert column.histogram.counts[-1] > 0
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_a_constant_column_is_one_bin_not_twenty_empty_ones() -> None:
+    frame = pl.DataFrame({"x": [3.0] * 50})
+    column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
+
+    assert column is not None
+    assert column.histogram is not None
+    assert column.histogram.counts == (50,)
+    assert column.histogram.edges == (3.0, 4.0)
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_the_histogram_carries_exposure_when_the_column_is_present() -> None:
+    age = profile_frame(FRAME, dataset_version_id=uuid4()).column("driver_age")
+
+    assert age is not None
+    assert age.histogram is not None
+    assert len(age.histogram.exposure) == len(age.histogram.counts)
+    # FRAME carries exactly 1.0 exposure year per row, so bin exposure equals bin count.
+    assert [float(e) for e in age.histogram.exposure] == [float(c) for c in age.histogram.counts]
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_no_exposure_column_means_no_weights_not_zeroes() -> None:
+    frame = pl.DataFrame({"x": [1.0, 2.0, 3.0]})
+    column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
+
+    assert column is not None
+    assert column.histogram is not None
+    assert column.histogram.exposure == ()
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_nulls_are_excluded_from_every_bin() -> None:
+    frame = pl.DataFrame({"x": [1.0, 2.0, None, 4.0]})
+    column = profile_frame(frame, dataset_version_id=uuid4()).column("x")
+
+    assert column is not None
+    assert column.histogram is not None
+    assert sum(column.histogram.counts) == 3
+
+
+@pytest.mark.req("FR-DATA-48")
+def test_both_engines_bin_a_column_identically(tmp_path: Path) -> None:
+    frame = pl.DataFrame(
+        {
+            "driver_age": [17 + (i % 60) for i in range(400)],
+            "exposure_years": [0.5 + (i % 3) / 4 for i in range(400)],
+        }
+    )
+    path = tmp_path / "ages.parquet"
+    frame.write_parquet(path)
+
+    from_frame = profile_frame(frame, dataset_version_id=uuid4()).column("driver_age")
+    from_parquet = profile_parquet([str(path)], dataset_version_id=uuid4()).column("driver_age")
+
+    assert from_frame is not None
+    assert from_parquet is not None
+    assert from_frame.histogram == from_parquet.histogram
