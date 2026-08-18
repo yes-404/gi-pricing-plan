@@ -41,6 +41,7 @@ from model_schema import (
     DatasetStatus,
     Diagnostics,
     Factor,
+    FactorType,
     FitResult,
     GlmFitResult,
     JobSource,
@@ -231,29 +232,63 @@ async def list_factors(
 async def load_factors(
     session: AsyncSession, *, workspace_id: UUID, factor_ids: list[UUID]
 ) -> list[Factor]:
-    """The factors a spec pins, in the order it pins them.
+    """The factors a spec pins, in the order it pins them, **plus the operands they cross**.
 
     Order is the spec's, not the database's: the design matrix's column order follows it,
     and a fit whose columns reordered between runs would produce a different `spec_hash`
     for the same model.
+
+    **Interaction operands are loaded transitively** (FR-MODEL-91, 2026-08-18). A spec pins
+    an `interaction` Factor by id and says nothing about what it crosses, so without this
+    every such fit failed in `pricing-core` with "crosses factor …, which was not supplied"
+    — a refusal that is correct, arriving from the wrong layer, about something the caller
+    never had a way to provide. `ModelSpec.factors` stays flat, which is what makes the
+    spec readable; the platform resolves the tree.
+
+    Operands are appended *after* the pinned factors rather than woven in, and that is safe
+    precisely because an operand contributes no design column of its own — `resolve_factors`
+    excludes it — so nothing about the column order changes.
+
+    One level of expansion is enough. An operand that is itself an interaction is loaded
+    here and refused at resolution, which is where the "declare a three-way as one factor"
+    message belongs.
     """
-    rows = (
-        await session.execute(
-            select(FactorRow).where(
-                FactorRow.workspace_id == workspace_id, FactorRow.id.in_(factor_ids)
+    async def _load(ids: list[UUID], what: str) -> dict[UUID, FactorRow]:
+        rows = (
+            await session.execute(
+                select(FactorRow).where(
+                    FactorRow.workspace_id == workspace_id, FactorRow.id.in_(ids)
+                )
             )
-        )
-    ).scalars().all()
-    by_id = {row.id: row for row in rows}
-    missing = [str(fid) for fid in factor_ids if fid not in by_id]
-    if missing:
-        raise PlatformError(
-            "NOT_FOUND",
-            "The spec names factors that do not exist",
-            404,
-            f"Unknown factor id(s): {', '.join(missing)}.",
-        )
-    return [to_factor(by_id[fid]) for fid in factor_ids]
+        ).scalars().all()
+        by_id = {row.id: row for row in rows}
+        missing = [str(fid) for fid in ids if fid not in by_id]
+        if missing:
+            raise PlatformError(
+                "NOT_FOUND",
+                f"The spec names {what} that do not exist",
+                404,
+                f"Unknown factor id(s): {', '.join(missing)}.",
+            )
+        return by_id
+
+    pinned = [to_factor(row) for row in (await _load(factor_ids, "factors")).values()]
+    by_id = {factor.id: factor for factor in pinned}
+    ordered = [by_id[fid] for fid in factor_ids]
+
+    operand_ids = [
+        operand
+        for factor in ordered
+        if factor.type is FactorType.INTERACTION
+        for operand in factor.operand_factor_ids
+        if operand not in by_id
+    ]
+    if not operand_ids:
+        return ordered
+
+    deduped = list(dict.fromkeys(operand_ids))
+    operands = await _load(deduped, "interaction operands")
+    return ordered + [to_factor(operands[fid]) for fid in deduped]
 
 
 async def reserve_model(

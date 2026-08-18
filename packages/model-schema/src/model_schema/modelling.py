@@ -127,7 +127,12 @@ class Factor(BaseModel):
     dataset_id: UUID
     version: int = Field(ge=1)
     type: FactorType
-    source_columns: tuple[str, ...] = Field(min_length=1)
+    #: The dataset columns this factor reads. **Not** unconditionally non-empty since
+    #: 2026-08-18: an `interaction` sources no columns of its own — its columns are its
+    #: operands' — and listing them again would be a second statement of one fact. The
+    #: requirement is re-imposed per type in the validator below, so every other arm is as
+    #: strict as it was and the interaction arm is stricter.
+    source_columns: tuple[str, ...] = ()
     intent: FactorIntent = FactorIntent.RISK
     monotonic_direction: MonotonicDirection = MonotonicDirection.NONE
     monotonic_rationale: str | None = None
@@ -141,6 +146,12 @@ class Factor(BaseModel):
     #: would change meaning the next time someone re-cut a boundary.
     banding_id: UUID | None = None
     grouping_id: UUID | None = None
+    #: `02` §4.1, added 2026-08-18. The Factors an `interaction` crosses, in the order they
+    #: are crossed. **Factors, not columns**: every place the specification names an
+    #: interaction it names factors — §4.4's `interaction_constraints`, §4.9's
+    #: `top_interactions` — and an operand is usually itself a banding or a grouping, which
+    #: a column reference cannot express. Pinned by id for the reason `banding_id` is.
+    operand_factor_ids: tuple[UUID, ...] = ()
     #: The level relativities are expressed against. Null until the fit picks one, because
     #: `largest_exposure` cannot be known without the data (FR-MODEL-21).
     base_level: str | None = None
@@ -175,7 +186,74 @@ class Factor(BaseModel):
                     f"{field}. Nothing would apply it, and a transformation recorded on an "
                     "artifact that ignores it reads as one the model used."
                 )
+        self._the_interaction_arm()
+        self._columns_match_the_type()
         return self
+
+    def _the_interaction_arm(self) -> None:
+        """`operand_factor_ids` is the interaction's transformation (`02` §4.1).
+
+        Four refusals, and each is a design column that would otherwise be wrong rather
+        than absent:
+
+        * **no operands** — the same state as a `banding` factor with no Banding: a name
+          with no transformation behind it;
+        * **one operand** — a cross of one *is* that factor, so the model document would
+          carry two names for one design column and the relativity table could not say
+          which produced it;
+        * **a repeated operand** — `age x age` is `age`, with every off-diagonal cell empty
+          by construction;
+        * **crossing itself** — a cycle, and the resolver would not terminate.
+        """
+        if self.type is not FactorType.INTERACTION:
+            if self.operand_factor_ids:
+                raise ValueError(
+                    f"factor {self.slug!r} is of type {self.type.value!r} and names "
+                    "operand_factor_ids. Nothing would cross them, and operands recorded "
+                    "on an artifact that ignores them read as ones the model used."
+                )
+            return
+
+        if len(self.operand_factor_ids) < 2:
+            raise ValueError(
+                f"factor {self.slug!r} is an interaction over "
+                f"{len(self.operand_factor_ids)} operand(s). An interaction crosses **two "
+                "or more** Factors (`02` §4.1); a cross of one is that factor under a "
+                "second name, and a cross of none has no transformation behind it. The "
+                "field is `operand_factor_ids`."
+            )
+        if len(set(self.operand_factor_ids)) != len(self.operand_factor_ids):
+            raise ValueError(
+                f"factor {self.slug!r} names an operand more than once. Crossing a factor "
+                "with itself reproduces it, with every off-diagonal cell empty."
+            )
+        if self.id in self.operand_factor_ids:
+            raise ValueError(
+                f"factor {self.slug!r} names itself among its operands. Resolving it would "
+                "not terminate."
+            )
+
+    def _columns_match_the_type(self) -> None:
+        """Every arm but `interaction` reads at least one column of its own.
+
+        This was `Field(min_length=1)` until the interaction arm arrived. Moved here rather
+        than dropped: the interaction is the *only* type that sources nothing, and relaxing
+        the field without re-imposing the rule would have let an `identity` factor over no
+        column through — a factor that resolves to nothing and reports no error.
+        """
+        if self.type is FactorType.INTERACTION:
+            if self.source_columns:
+                raise ValueError(
+                    f"factor {self.slug!r} is an interaction and names source_columns "
+                    f"{list(self.source_columns)}. Its columns are its operands'; naming "
+                    "them again is a second statement of one fact, and the two disagree "
+                    "the first time an operand is re-versioned onto another column."
+                )
+        elif not self.source_columns:
+            raise ValueError(
+                f"factor {self.slug!r} is of type {self.type.value!r} and names no "
+                "source_columns. Only an interaction sources none."
+            )
 
     @model_validator(mode="after")
     def _reasons_accompany_their_flags(self) -> Factor:

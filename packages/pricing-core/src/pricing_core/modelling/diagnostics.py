@@ -42,6 +42,7 @@ from model_schema import (
     CalibrationBin,
     ComplexityDiagnostic,
     Factor,
+    FactorType,
     FeatureImportance,
     GbmDiagnostics,
     GbmEvalPoint,
@@ -467,8 +468,20 @@ def _type_iii(
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
     power = float(spec.family_params.get("power", 1.5))
 
+    # A factor that exists only to be crossed contributes no design column (FR-MODEL-91),
+    # so there is no term to test: dropping it would leave the interaction unresolvable,
+    # and "keeping" it changes nothing. The interaction itself is tested instead.
+    operand_ids = {
+        operand
+        for factor in factors
+        if factor.type is FactorType.INTERACTION
+        for operand in factor.operand_factor_ids
+    }
+
     tests: list[TypeIIITest] = []
     for factor in factors:
+        if factor.id in operand_ids:
+            continue
         remaining = [f for f in factors if f.id != factor.id]
         reduced_spec = spec.model_copy(update={"factors": tuple(f.id for f in remaining)})
         try:
@@ -489,7 +502,7 @@ def _type_iii(
             reduced, data, remaining, reduced_spec, bandings=bandings, groupings=groupings
         )
         delta = deviance(y, reduced_mu, family=spec.family, power=power) - full_deviance
-        df = _term_count(factor, data, bandings, groupings)
+        df = _term_count(factor, factors, data, bandings, groupings)
         p = float(stats.chi2.sf(max(delta, 0.0), df))
         tests.append(TypeIIITest(factor=factor.slug, deviance_delta=delta, df=df, p_value=p))
     return tuple(tests)
@@ -497,12 +510,24 @@ def _type_iii(
 
 def _term_count(
     factor: Factor,
+    factors: Sequence[Factor],
     data: pl.DataFrame,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> int:
-    """Degrees of freedom a factor spends: levels - 1 for a categorical, 1 otherwise."""
-    matrix = resolve_factors(data, [factor], bandings=bandings, groupings=groupings)
+    """Degrees of freedom a factor spends: levels - 1 for a categorical, 1 otherwise.
+
+    Resolved with its **operands** rather than alone: an `interaction` has no columns of
+    its own (FR-MODEL-91), so resolving it by itself raises rather than counting. The
+    operands come from the model's own factor list, which is why the whole list is a
+    parameter — the alternative, resolving every factor here, would recompute the design
+    once per term.
+    """
+    needed = [factor]
+    if factor.type is FactorType.INTERACTION:
+        by_id = {f.id: f for f in factors}
+        needed += [by_id[o] for o in factor.operand_factor_ids if o in by_id]
+    matrix = resolve_factors(data, needed, bandings=bandings, groupings=groupings)
     column = matrix.terms.get(factor.slug)
     if column is None or column not in matrix.categorical:
         return 1
