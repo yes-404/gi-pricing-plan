@@ -163,6 +163,13 @@ from model_schema.permissions import (
     ScopeType,
     role_permissions,
 )
+from model_schema.prediction import (
+    PredictedRow,
+    Prediction,
+    UnavailableReason,
+    Uncertainty,
+    UncertaintyKind,
+)
 from model_schema.problem import FieldError, ProblemDetail
 from model_schema.profiles import (
     ColumnComparison,
@@ -335,6 +342,8 @@ __all__ = [
     "Permission",
     "PermutationImportance",
     "PiiClass",
+    "PredictedRow",
+    "Prediction",
     "Principal",
     "ProblemDetail",
     "Profile",
@@ -377,6 +386,9 @@ __all__ = [
     "TransparencyArtifact",
     "TransparencyKind",
     "TypeIIITest",
+    "UnavailableReason",
+    "Uncertainty",
+    "UncertaintyKind",
     "UniversalDiagnostics",
     "UnseenLevelBehaviour",
     "ValidationLayer",

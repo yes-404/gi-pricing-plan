@@ -57,7 +57,7 @@ def _spec(factors: list[Factor]) -> GlmSpec:
 
 def _fitted(frame: pl.DataFrame, factors: list[Factor]):
     spec = _spec(factors)
-    return fit_glm(frame, spec, factors, seed=1), spec
+    return fit_glm(frame, spec, factors, seed=1).result, spec
 
 
 @pytest.mark.req("FR-MODEL-62")
@@ -196,7 +196,7 @@ def test_a_tweedie_fit_reports_no_aic_rather_than_a_wrong_one() -> None:
     spec = _spec(factors).model_copy(
         update={"family": "tweedie", "family_params": {"power": 1.5}}
     )
-    fit = fit_glm(frame[:3000], spec, factors, seed=1)
+    fit = fit_glm(frame[:3000], spec, factors, seed=1).result
     result = compute_diagnostics(
         fit, spec, factors, train=frame[:3000], holdout=frame[3000:], type_iii=False
     )

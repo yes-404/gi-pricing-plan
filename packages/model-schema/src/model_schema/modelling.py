@@ -1067,6 +1067,17 @@ class GlmFitResult(BaseModel):
     dispersion: float | None = None
     deviance: float | None = None
     rows: int = Field(default=0, ge=0)
+    #: FR-MODEL-63's covariance matrix `V`, content-addressed beside the booster it mirrors
+    #: (FR-MODEL-31). A blob rather than a field: it is `p x p` for `p` terms, so a model
+    #: with 150 of them carries ~250 KB that every read of the Model row would otherwise
+    #: pay for, and only the prediction path needs it. `pricing-core` computes the digest
+    #: and hands back the bytes for the caller to store (ADR-0001) — the same split
+    #: `GbmFit` makes for the booster.
+    #:
+    #: **Optional, and the absence is meaningful.** Every Model fitted before this field
+    #: existed has none, and FR-MODEL-93 makes that a typed `covariance_not_stored` on the
+    #: prediction rather than an interval quietly omitted.
+    covariance_blob: BlobRef | None = None
     library_versions: dict[str, str] = Field(default_factory=dict)
 
     @property

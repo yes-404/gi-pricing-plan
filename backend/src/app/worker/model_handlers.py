@@ -240,6 +240,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     # FR-PLAT-8 exists to prevent and `00` §5.5 already required.
     fitting = ScaledProgress(progress, start=0.10, end=0.85)
     booster: bytes | None = None
+    covariance: bytes | None = None
     eval_curve: tuple[GbmEvalPoint, ...] = ()
     result: FitResult
     try:
@@ -256,12 +257,17 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             )
             result, booster, eval_curve = fit.result, fit.booster_bytes, fit.eval_curve
         else:
-            result = fit_glm(
+            glm_fit = fit_glm(
                 frame, spec, factors, seed=spec.seed,
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 progress=fitting,
             )
+            # The same split the GBM arm makes above, and for the same reason: the artifact
+            # carries a `BlobRef` and the bytes travel beside it, because `pricing-core`
+            # cannot store a blob (ADR-0001). FR-MODEL-63's interval is computed from these
+            # bytes at predict time.
+            result, covariance = glm_fit.result, glm_fit.covariance_bytes
     except (GbmFitError, GlmFitError) as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
@@ -328,6 +334,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 assert isinstance(result, GbmFitResult)
                 await progress.blob_store.put(
                     session, booster, result.booster_blob.media_type
+                )
+            if covariance is not None:
+                assert isinstance(result, GlmFitResult)
+                assert result.covariance_blob is not None
+                await progress.blob_store.put(
+                    session, covariance, result.covariance_blob.media_type
                 )
             await model_service.record_fit(
                 session,

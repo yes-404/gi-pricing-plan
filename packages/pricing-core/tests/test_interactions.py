@@ -321,7 +321,7 @@ def test_a_glm_on_a_crossed_factor_recovers_the_cell_rates() -> None:
     result = fit_glm(
         book, spec, [age, region, crossed],
         bandings={banding.id: banding}, groupings={grouping.id: grouping},
-    )
+    ).result
 
     cells = {row.level: row for row in result.relativities["age_x_region"]}
     assert len(cells) == 6

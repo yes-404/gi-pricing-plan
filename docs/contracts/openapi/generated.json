@@ -3547,6 +3547,16 @@
             "title": "Converged",
             "type": "boolean"
           },
+          "covariance_blob": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "deviance": {
             "anyOf": [
               {
@@ -5798,6 +5808,112 @@
         "title": "PiiClass",
         "type": "string"
       },
+      "PredictRows": {
+        "additionalProperties": false,
+        "description": "Rows to score, as records — the shape a caller already has (`02` §5.1).",
+        "properties": {
+          "rows": {
+            "description": "One record per risk to score, each carrying the model's factor source columns and its offset column. At most 1000 — this endpoint is dev/debug scale and a portfolio re-rate is `03`'s batch scoring.",
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "PredictRows",
+        "type": "object"
+      },
+      "PredictedRow": {
+        "additionalProperties": false,
+        "description": "One scored row: the expectation, and its bounds where there are any.\n\n`lower` and `upper` are `None` together or set together, and which it is follows the\nresponse's single `Uncertainty` — the validator on `Prediction` is what ties them, since\nneither claim is checkable from a row alone.",
+        "properties": {
+          "expected": {
+            "title": "Expected",
+            "type": "number"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "expected"
+        ],
+        "title": "PredictedRow",
+        "type": "object"
+      },
+      "Prediction": {
+        "additionalProperties": false,
+        "description": "The response to `POST /models/{id}/predict` (FR-MODEL-62, §5.1).\n\nCarries the model it came from by id *and* by family/version, because a prediction\npasted into a review is unreadable without knowing which version produced it, and the\nid alone is not something a human recognises.",
+        "properties": {
+          "model_family_slug": {
+            "title": "Model Family Slug",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "model_type": {
+            "enum": [
+              "glm",
+              "xgboost",
+              "lightgbm"
+            ],
+            "title": "Model Type",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PredictedRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "uncertainty": {
+            "$ref": "#/components/schemas/Uncertainty"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_id",
+          "model_family_slug",
+          "version",
+          "model_type",
+          "uncertainty",
+          "rows"
+        ],
+        "title": "Prediction",
+        "type": "object"
+      },
       "Principal": {
         "additionalProperties": false,
         "description": "An authenticated identity: User, Service Account, or the platform itself.",
@@ -7929,6 +8045,63 @@
         ],
         "title": "TypeIIITest",
         "type": "object"
+      },
+      "UnavailableReason": {
+        "description": "Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's.\n\n**Only two of these are reachable today**, and FR-MODEL-87's staging rule requires that\nto be said in place rather than discovered:\n\n* `NO_INTERVAL_MODELS_FITTED` — every GBM, since FR-MODEL-78's `interval_for` is not\n  built and so no paired quantile model can exist to be found.\n* `COVARIANCE_NOT_STORED` — a GLM fitted before the covariance blob was written\n  (FR-MODEL-93).\n\n`INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` are declared and unreachable\nuntil FR-MODEL-78's paired quantile models land (Phase 1b). They are declared now\nbecause they are FR-MODEL-77's contract and a caller matching on this enum should not\nhave to widen its match when the slice that fits one arrives.",
+        "enum": [
+          "no_interval_models_fitted",
+          "interval_models_not_approved",
+          "interval_models_stale",
+          "covariance_not_stored"
+        ],
+        "title": "UnavailableReason",
+        "type": "string"
+      },
+      "Uncertainty": {
+        "additionalProperties": false,
+        "description": "The claim attached to every prediction in a response, once, for all its rows.\n\nOn the response rather than on each row because it is a property of the *model* and the\nscoring path, not of a row: either the covariance matrix was available for this model or\nit was not, and repeating that verdict per row invites a reader to look for a row where\nit differs.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/UncertaintyKind"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnavailableReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Uncertainty",
+        "type": "object"
+      },
+      "UncertaintyKind": {
+        "description": "What the interval on a prediction *is*, or that there is not one.\n\nDeliberately not `prediction_interval`: see the module docstring. The value a caller\nreads is the claim the platform is making about the number beside it.",
+        "enum": [
+          "confidence_interval_mean",
+          "unavailable"
+        ],
+        "title": "UncertaintyKind",
+        "type": "string"
       },
       "UniversalDiagnostics": {
         "additionalProperties": false,
@@ -14578,6 +14751,125 @@
           }
         },
         "summary": "Backtest a model against another dataset version",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/models/{model_id}/predict": {
+      "post": {
+        "description": "**200**, synchronously (FR-MODEL-62, FR-MODEL-63).\n\nThe only compute route in this module that is not a 202. `02` §5.1 marks the others with\na status code and this one with none, and the distinction is real rather than\neditorial: a fit, a comparison, a backtest and a transparency artifact all read a whole\ndataset version, while this reads at most\n`prediction_service.MAX_PREDICT_ROWS` rows the caller sent in the request. A Job for\nthat would be a queue hop, a poll and a blob fetch to return a number the caller could\nhave had before the Job row committed.\n\nNothing is persisted, so there is nothing to `GET` afterwards — the omission every\nother 202 in this module has had to repair (FR-MODEL-56, FR-MODEL-84, FR-MODEL-90,\nFR-MODEL-92) does not arise for a route whose answer *is* its response.\n\n`model:read`: see `prediction_service.predict_rows` for why this one is not `model:fit`.",
+        "operationId": "predict_api_v1_models__model_id__predict_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "model_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Model Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictRows"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Prediction"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Score rows with a fitted model",
         "tags": [
           "modelling"
         ]

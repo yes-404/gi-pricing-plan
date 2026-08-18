@@ -204,7 +204,7 @@ def test_a_glm_through_a_banding_and_a_grouping_recovers_the_step_relativities()
         factors,
         bandings={banding.id: banding},
         groupings={grouping.id: grouping},
-    )
+    ).result
 
     age = {row.level: row for row in result.relativities["age_banded"]}
     assert set(age) == set(_BAND_STEP)

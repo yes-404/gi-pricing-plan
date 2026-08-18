@@ -36,7 +36,14 @@ from pricing_core.modelling.gbm import (
     predict_gbm,
     tree_summary,
 )
-from pricing_core.modelling.glm import GlmFitError, fit_glm
+from pricing_core.modelling.glm import (
+    COVARIANCE_MEDIA_TYPE,
+    GlmFit,
+    GlmFitError,
+    decode_covariance,
+    encode_covariance,
+    fit_glm,
+)
 from pricing_core.modelling.groupings import (
     apply_grouping,
     grouping_evidence,
@@ -54,6 +61,7 @@ from pricing_core.modelling.transparency import (
 )
 
 __all__ = [
+    "COVARIANCE_MEDIA_TYPE",
     "SUPPORTED_GBM_OBJECTIVES",
     "BandingError",
     "ComparisonCandidate",
@@ -62,6 +70,7 @@ __all__ = [
     "FactorResolutionError",
     "GbmFit",
     "GbmFitError",
+    "GlmFit",
     "GlmFitError",
     "GroupingError",
     "ModellingError",
@@ -77,7 +86,9 @@ __all__ = [
     "compare_models",
     "compute_diagnostics",
     "compute_gbm_diagnostics",
+    "decode_covariance",
     "deviance",
+    "encode_covariance",
     "fidelity_statement",
     "fit_gbm",
     "fit_glm",

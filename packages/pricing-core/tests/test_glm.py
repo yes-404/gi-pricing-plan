@@ -80,7 +80,7 @@ def test_the_fit_recovers_the_coefficients_that_generated_the_data() -> None:
     data = _frequency_data()
     factors = [_factor("area", "area"), _factor("driv_age", "driv_age")]
 
-    result = fit_glm(data, _spec(), factors)
+    result = fit_glm(data, _spec(), factors).result
 
     by_term = {c.term: c for c in result.coefficients}
     # Intercept absorbs the centring: the generator used 0.03 x (age - 40).
@@ -95,7 +95,7 @@ def test_the_fit_recovers_the_coefficients_that_generated_the_data() -> None:
 def test_every_coefficient_carries_its_uncertainty() -> None:
     """`02` R5. A point estimate alone is half a result, and the half that reads as
     more certain than it is."""
-    result = fit_glm(_frequency_data(), _spec(), [_factor("area", "area")])
+    result = fit_glm(_frequency_data(), _spec(), [_factor("area", "area")]).result
 
     for coefficient in result.coefficients:
         assert coefficient.std_error > 0.0
@@ -118,7 +118,7 @@ def test_the_relativity_table_marks_its_base_level() -> None:
 
     Omitting it is how a reader ends up believing a factor has one fewer level than it has.
     """
-    result = fit_glm(_frequency_data(), _spec(), [_factor("area", "area")])
+    result = fit_glm(_frequency_data(), _spec(), [_factor("area", "area")]).result
 
     table = result.relativities["area"]
     assert [level.level for level in table] == ["rural", "urban"]
@@ -311,8 +311,8 @@ def test_the_standard_error_of_a_severity_model_does_not_depend_on_the_currency_
         offset=OffsetSpec(kind="none"), weight=WeightSpec(kind="column", column="claim_count"),
     )
 
-    pounds = fit_glm(_gamma_severity(scale=1.0), spec, factors)
-    pence = fit_glm(_gamma_severity(scale=100.0), spec, factors)
+    pounds = fit_glm(_gamma_severity(scale=1.0), spec, factors).result
+    pence = fit_glm(_gamma_severity(scale=100.0), spec, factors).result
 
     def area_term(result: object) -> Coefficient:
         """Whichever level is *not* the base — the base is chosen by exposure now, so its
@@ -343,7 +343,7 @@ def test_the_reported_interval_actually_covers_the_truth() -> None:
             _gamma_severity(n=1_500, seed=seed),
             _spec(family="gamma", response_column="severity", offset=OffsetSpec(kind="none")),
             [_factor("area", "area")],
-        )
+        ).result
         term = next(c for c in result.coefficients if c.term.startswith("area["))
         low, high = term.ci_95
         # ±0.5 depending on which level is the base; the interval must cover its own truth.
@@ -373,8 +373,8 @@ def test_a_weight_column_changes_the_answer() -> None:
         weight=WeightSpec(kind="column", column="claim_count"),
     )
 
-    unweighted = fit_glm(data, spec, [_factor("area", "area")])
-    weighted = fit_glm(data, weighted_spec, [_factor("area", "area")])
+    unweighted = fit_glm(data, spec, [_factor("area", "area")]).result
+    weighted = fit_glm(data, weighted_spec, [_factor("area", "area")]).result
 
     def se(result: object) -> float:
         return next(c for c in result.coefficients if c.term.startswith("area[")).std_error  # type: ignore[attr-defined]
@@ -409,7 +409,7 @@ def test_a_burning_cost_model_fits_at_all() -> None:
             offset=OffsetSpec(kind="log_column", column="exposure_years"),
         ),
         [_factor("area", "area")],
-    )
+    ).result
     assert result.dispersion is not None
     assert all(c.std_error > 0 for c in result.coefficients)
 
@@ -479,7 +479,7 @@ def test_a_non_multiplicative_link_reports_no_relativity_rather_than_one() -> No
         _spec(family="binomial", link="logit", response_column="converted",
               offset=OffsetSpec(kind="none")),
         [_factor("area", "area")],
-    )
+    ).result
     table = result.relativities["area"]
     assert all(level.relativity is None for level in table)
     # ...and the effect is still readable, on the scale it exists on.
@@ -508,7 +508,7 @@ def test_the_base_level_is_the_one_carrying_the_most_exposure() -> None:
             "claim_count": rng.poisson(0.1, n).astype(float),
         }
     )
-    result = fit_glm(data, _spec(), [_factor("area", "area")])
+    result = fit_glm(data, _spec(), [_factor("area", "area")]).result
     base = next(level for level in result.relativities["area"] if level.is_base)
     assert base.level == "c"
 
@@ -532,6 +532,51 @@ def test_a_boolean_factor_fits_rather_than_being_called_collinear() -> None:
             "claim_count": rng.poisson(np.exp(-2.0 + 0.4 * telematics)).astype(float),
         }
     )
-    result = fit_glm(data, _spec(), [_factor("telematics", "telematics")])
+    result = fit_glm(data, _spec(), [_factor("telematics", "telematics")]).result
     term = next(c for c in result.coefficients if c.term.startswith("telematics["))
     assert term.estimate == pytest.approx(0.4, abs=0.15)
+
+
+@pytest.mark.req("FR-MODEL-18")
+def test_the_inverse_link_fits_rather_than_dying_inside_the_library() -> None:
+    """FR-MODEL-18 declares `inverse` supported, and it is the canonical Gamma link.
+
+    It reached `glum` as the string `"inverse"`, which is not in that library's link
+    vocabulary, and every such fit died on a bare `ValueError` raised from inside
+    `_glm.py` — not a `GlmFitError`, and not anything a caller could act on. The link
+    itself was never missing: `TweedieLink(p)` is `mu**(1-p)`, so `TweedieLink(2)` is
+    `1/mu`. `predict._inverse_link` had implemented it all along, so the platform could
+    score a model on a link it could not fit.
+
+    The assertion is on the recovered coefficient, not merely on the absence of an
+    exception: a link mapped to the *wrong* Tweedie power would also fit, and would
+    return a number for every row.
+    """
+    rng = np.random.default_rng(20260818)
+    n = 8_000
+    age = rng.integers(18, 80, n).astype(float)
+    # 1/mu = 0.5 + 0.004·(age - 40), so the fit has a right answer on the link scale.
+    eta = 0.5 + 0.004 * (age - 40)
+    data = pl.DataFrame(
+        {"driv_age": age, "cost": rng.gamma(50.0, 1.0 / (50.0 * eta), n)}
+    )
+    spec = GlmSpec(
+        model_family_slug="motor-severity",
+        dataset_version_id=uuid4(),
+        response_column="cost",
+        offset=OffsetSpec(kind="none"),
+        family="gamma",
+        link="inverse",
+    )
+
+    result = fit_glm(data, spec, [_factor("driv_age", "driv_age")]).result
+
+    assert result.converged
+    slope = next(c for c in result.coefficients if c.term.startswith("driv_age"))
+    assert slope.estimate == pytest.approx(0.004, abs=5e-4)
+    intercept = result.intercept
+    assert intercept is not None
+    assert intercept.estimate == pytest.approx(0.5 - 0.004 * 40, abs=5e-3)
+    # FR-MODEL-21: no relativity under a non-multiplicative link — `exp(β)` means nothing
+    # when the effect is additive on `1/mu`.
+    assert slope.relativity is None
