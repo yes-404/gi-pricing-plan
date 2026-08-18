@@ -73,6 +73,11 @@ GENERATED_SHAPES: dict[str, str] = {
     # written form. It is also the artifact `03-rating-engine.md` will reference, which
     # makes it the one an external consumer reads before anything downstream exists.
     "peril-structure": "PerilStructure",
+    # Added 2026-08-18 (W5, backtests). No hand-authored Phase-0 counterpart: FR-MODEL-57
+    # named the operation and no document defined what it produces, so this is the shape's
+    # first written form. It is also the artifact `05-monitoring.md` reads as its evidence
+    # bridge, which makes publishing it the point rather than a side effect.
+    "backtest": "Backtest",
 }
 
 

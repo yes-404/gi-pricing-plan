@@ -556,7 +556,7 @@
     },
     "PartitionDiagnostics": {
       "additionalProperties": false,
-      "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nOne of these describes train and another describes holdout; neither is meaningful\nwithout the other, which is why they are only ever held together\n(`UniversalDiagnostics`).",
+      "description": "Every universal metric, for one partition (FR-MODEL-50).\n\nAt fit time one of these describes train and another describes holdout, and neither is\nmeaningful without the other — which is why a *fit* only ever holds them together\n(`UniversalDiagnostics`).\n\nA backtest holds exactly one (`backtests.BacktestSummary`, FR-MODEL-57), and that is not\nthe same defect: its population was never split, so there is no counterpart to withhold,\nand what it is read against is the model's own fit-time holdout on a different artifact.",
       "properties": {
         "ae_by_factor": {
           "default": [],
@@ -769,13 +769,8 @@
     }
   },
   "additionalProperties": false,
-  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\". `cross_validation` and `backtest` are still\ndeclared and always `None` — the fields exist because the contract the frontend\ngenerates from declares them, and their producers (FR-MODEL-53, 57) are later slices.",
+  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is still declared and always `None`: FR-MODEL-53 computes it **at fit\ntime**, so this artifact is where it will land, and its producer is a later slice.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
   "properties": {
-    "backtest": {
-      "default": null,
-      "title": "Backtest",
-      "type": "null"
-    },
     "complexity": {
       "$ref": "#/$defs/ComplexityDiagnostic"
     },

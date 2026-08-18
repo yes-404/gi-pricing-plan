@@ -24,6 +24,7 @@ from app.db.models import ModelComparisonRow, ModelRow
 from app.errors import PlatformError
 from app.platform import audit, rbac
 from model_schema import (
+    SCOREABLE_MODEL_STATUSES,
     ComparisonSummary,
     JobSource,
     ModelComparison,
@@ -40,18 +41,6 @@ __all__ = [
     "request_comparison",
     "to_comparison",
 ]
-
-#: The statuses that carry coefficients. A `draft` has not been fitted and an `archived` one
-#: may never have been (`02` §4.8's CHECK exempts both), so neither can score a holdout.
-_COMPARABLE_STATUSES = frozenset(
-    {
-        ModelStatus.FITTED,
-        ModelStatus.REVIEW,
-        ModelStatus.APPROVED,
-        ModelStatus.SUPERSEDED,
-    }
-)
-
 
 async def request_comparison(
     session: AsyncSession,
@@ -111,7 +100,7 @@ async def request_comparison(
         )
     ordered = [by_id[i] for i in model_ids]
 
-    unfitted = [r for r in ordered if ModelStatus(r.status) not in _COMPARABLE_STATUSES]
+    unfitted = [r for r in ordered if ModelStatus(r.status) not in SCOREABLE_MODEL_STATUSES]
     if unfitted:
         detail = ", ".join(
             f"{r.model_family_slug}@{r.version} is {r.status!r}" for r in unfitted

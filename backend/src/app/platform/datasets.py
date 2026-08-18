@@ -58,6 +58,7 @@ __all__ = [
     "lineage_of",
     "list_splits",
     "load_dataset",
+    "load_version",
     "new_version",
     "promote_to_validated",
     "purge_subject",
@@ -400,7 +401,7 @@ async def _transition(
     extra_after: dict[str, Any] | None = None,
     also_set: dict[str, Any] | None = None,
 ) -> DatasetVersionRow:
-    row = await _load(session, workspace_id, version_id)
+    row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
     current = DatasetStatus(row.status)
 
     if to_status not in VALID_DATASET_TRANSITIONS[current]:
@@ -500,7 +501,7 @@ async def begin_validation(
     Idempotent for a version already `validating`: a re-run of the same job must not fail
     on a transition to the state it is already in.
     """
-    row = await _load(session, workspace_id, version_id)
+    row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
     if DatasetStatus(row.status) is DatasetStatus.VALIDATING:
         return row
     return await _transition(
@@ -533,7 +534,7 @@ async def conclude_failed_validation(
     exit demo, where version 1 is the deliberate failure the whole criterion is about
     (OQ-DATA-7, decided 2026-08-15).
     """
-    row = await _load(session, workspace_id, version_id)
+    row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
     was_validated = row.validation_report_id is not None
 
     if not was_validated:
@@ -585,7 +586,7 @@ async def fittable_or_refuse(
     One function, so there is one place where "may I fit on this?" is answered and one
     place to read when someone asks how the gate works.
     """
-    row = await _load(session, workspace_id, version_id)
+    row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
     if DatasetStatus(row.status) is not DatasetStatus.VALIDATED:
         raise PlatformError(
             "DATASET_NOT_VALIDATED",
@@ -597,9 +598,20 @@ async def fittable_or_refuse(
     return row
 
 
-async def _load(
-    session: AsyncSession, workspace_id: UUID, version_id: UUID
+async def load_version(
+    session: AsyncSession, *, workspace_id: UUID, version_id: UUID
 ) -> DatasetVersionRow:
+    """A version, or a `404` naming it — **without** `01` §1.3's validated gate.
+
+    Public since 2026-08-18 (W5, backtests), which needs to answer a question *before* the
+    gate: a request to backtest the model's own holdout must be refused as "that is the data
+    it learned on", not as "that version is not validated". A split's parts are derived
+    versions and stay `draft`, so the gate answers first — and its answer invites the caller
+    to validate the holdout, after which the request would be allowed. The order of two
+    correct refusals is load-bearing.
+
+    Every other caller wants `fittable_or_refuse`, which is this plus the gate.
+    """
     row = await session.get(DatasetVersionRow, version_id, with_for_update=True)
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError(
@@ -656,7 +668,7 @@ async def derive_version(
             "reproduced, and FR-OVR-8 requires identical inputs to give identical outputs.",
         )
 
-    parent = await _load(session, workspace_id, parent_version_id)
+    parent = await load_version(session, workspace_id=workspace_id, version_id= parent_version_id)
     child = await new_version(
         session,
         workspace_id=workspace_id,
@@ -704,7 +716,7 @@ async def lineage_of(
     version, and getting it wrong means discovering the dependency when a rating version
     stops resolving.
     """
-    row = await _load(session, workspace_id, version_id)
+    row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
 
     children = (
         await session.execute(
@@ -819,7 +831,7 @@ async def record_split(
     cite, rather than two derivations that were *believed* to match. Recorded on the parts
     instead, the claim becomes unverifiable the moment either part is rebuilt.
     """
-    parent = await _load(session, workspace_id, parent_version_id)
+    parent = await load_version(session, workspace_id=workspace_id, version_id= parent_version_id)
     if len(parts) < 2:
         raise PlatformError(
             "VALIDATION_FAILED",

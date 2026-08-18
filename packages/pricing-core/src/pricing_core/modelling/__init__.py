@@ -13,6 +13,7 @@ from pricing_core.modelling.bandings import (
 from pricing_core.modelling.comparison import ComparisonCandidate, compare_models
 from pricing_core.modelling.diagnostics import (
     DiagnosticsResult,
+    backtest_model,
     compute_diagnostics,
     compute_gbm_diagnostics,
     deviance,
@@ -68,6 +69,7 @@ __all__ = [
     "apply_banding",
     "apply_grouping",
     "apply_loss_treatment",
+    "backtest_model",
     "band_statistics",
     "build_glm_approximation",
     "build_shap_summary",

@@ -27,6 +27,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -38,12 +39,14 @@ from scipy import stats
 
 from model_schema import (
     AeCell,
+    BacktestSummary,
     Banding,
     CalibrationBin,
     ComplexityDiagnostic,
     Factor,
     FactorType,
     FeatureImportance,
+    FitResult,
     GbmDiagnostics,
     GbmEvalPoint,
     GbmFitResult,
@@ -53,6 +56,7 @@ from model_schema import (
     GlmSpec,
     Grouping,
     LiftBin,
+    ModelSpec,
     ModelSpecCommon,
     MonotonicDirection,
     MonotonicityCheck,
@@ -66,11 +70,12 @@ from model_schema import (
     Weighting,
 )
 from pricing_core.modelling.factors import resolve_factors
-from pricing_core.modelling.predict import predict_glm
+from pricing_core.modelling.predict import predict_glm, score_fitted
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
     "DiagnosticsResult",
+    "backtest_model",
     "compute_diagnostics",
     "compute_gbm_diagnostics",
     "deviance",
@@ -626,6 +631,84 @@ def compute_diagnostics(
             degrees_of_freedom=max(train.height - parameters, 0),
             type_iii_tests=tests,
         ),
+    )
+
+
+def _family_of(spec: ModelSpec) -> tuple[str, float]:
+    """The family and Tweedie power the deviance-based metrics need, for either arm.
+
+    A GLM declares its family; a GBM's is implied by its objective, and `objective_family`
+    is the one place that mapping lives. Read here rather than passed in, because a caller
+    who had to supply it could supply a different one for the backtest than the fit used —
+    and A/E computed under two families is two numbers a reader will place side by side.
+    """
+    if isinstance(spec, GbmSpec):
+        from pricing_core.modelling.gbm import objective_family
+
+        return objective_family(spec)
+    assert isinstance(spec, GlmSpec)
+    return spec.family, float(spec.family_params.get("power", 1.5))
+
+
+def backtest_model(
+    fit: FitResult,
+    spec: ModelSpec,
+    factors: Sequence[Factor],
+    data: pl.DataFrame,
+    *,
+    model_ref: str,
+    dataset_version_ref: str,
+    fitted_on_ref: str,
+    period_from: date | None = None,
+    period_to: date | None = None,
+    booster: bytes | None = None,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+    progress: ProgressCallback | None = None,
+) -> BacktestSummary:
+    """FR-MODEL-57 — one fitted model, measured on data it was not fitted on.
+
+    **The same `_partition` the fit ran**, which is the whole of "produces the same
+    diagnostic shapes": A/E by level, lift, Gini, calibration and residuals are functions of
+    `(y, mu, weights)`, so a fit-time holdout figure and a backtest figure are comparable
+    because they are the same arithmetic and not because two implementations agree.
+
+    One partition is returned, not two. The backtested population was never split, and
+    labelling it a holdout would claim a split nobody made (`BacktestSummary`).
+
+    Both arms, through `score_fitted` — FR-MODEL-57 says nothing about model type, and a
+    backtest that worked for GLMs alone would mean the GBM an actuary is least sure of is
+    the one nothing re-measures. A GBM needs its `booster` bytes for the reason
+    `score_fitted` gives.
+
+    The refs are parameters rather than derived: `pricing-core` is handed artifacts and
+    never resolves an id (ADR-0001), and `BacktestSummary` is where the "other than the
+    version it was fitted on" invariant is enforced — on the two refs this caller supplies.
+    """
+    report = progress or NullProgress()
+    report.check_cancelled()
+    report.update(0.1, "backtest: scoring")
+    mu = score_fitted(
+        fit, spec, data, factors, bandings=bandings, groupings=groupings, booster=booster
+    )
+
+    report.check_cancelled()
+    report.update(0.5, "backtest: diagnostics")
+    family, power = _family_of(spec)
+    partition = _partition(
+        data, spec, factors,
+        mu=mu, family=family, power=power,
+        bandings=bandings, groupings=groupings,
+    )
+
+    report.update(1.0, "backtest complete")
+    return BacktestSummary(
+        model_ref=model_ref,
+        dataset_version_ref=dataset_version_ref,
+        fitted_on_ref=fitted_on_ref,
+        period_from=period_from,
+        period_to=period_to,
+        partition=partition,
     )
 
 

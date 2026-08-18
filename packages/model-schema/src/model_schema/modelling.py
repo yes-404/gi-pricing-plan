@@ -1215,6 +1215,24 @@ VALID_MODEL_TRANSITIONS: Final[dict[ModelStatus, frozenset[ModelStatus]]] = {
 #: be resubmitted, which is what makes FR-GOV-13's loop a loop.
 TERMINAL_MODEL_STATUSES: Final[frozenset[ModelStatus]] = frozenset({ModelStatus.ARCHIVED})
 
+#: The statuses that carry a fit result, and therefore the statuses a model can be **scored**
+#: in — compared (FR-MODEL-56), priced into a peril structure (FR-MODEL-58) or backtested
+#: (FR-MODEL-57). A `draft` has not been fitted, and an `archived` one may never have been
+#: (`02` §4.8's CHECK exempts both), so neither can score anything.
+#:
+#: Here rather than in the three services that ask the question. Two private copies of this
+#: set already existed — in the comparison and peril-structure services — and the backtest
+#: was about to be the third; `CLAUDE.md` §2 makes `model-schema` the one place a shape
+#: shared across boundaries is written, for the reason a third copy makes obvious.
+SCOREABLE_MODEL_STATUSES: Final[frozenset[ModelStatus]] = frozenset(
+    {
+        ModelStatus.FITTED,
+        ModelStatus.REVIEW,
+        ModelStatus.APPROVED,
+        ModelStatus.SUPERSEDED,
+    }
+)
+
 
 class Model(BaseModel):
     """A fitted model for one peril and response (`02` §4.8).
