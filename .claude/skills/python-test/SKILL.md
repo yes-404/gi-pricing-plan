@@ -50,6 +50,20 @@ because it is invalid" from "rejected because nothing works". Writing the happy 
 So a refusal test is finished when a passing case sits beside it. Two assertions, and the
 pair is the claim: *this* is rejected, *that* is accepted.
 
+### A feature four sites agree on can still not work
+
+`inverse` was declared in FR-MODEL-18, accepted by `GlmSpec`'s literal, implemented in
+`predict._inverse_link`, and tested at the scorer. It could not be fitted: `glum` has no
+such link name, and the string reached the library and raised a bare `ValueError`. The
+translation between the spec's vocabulary and the library's was the fifth site, and nothing
+tested it, because every existing test entered the path *after* it.
+
+**Agreement among declarations is not evidence of a working path.** Where a value is a
+string this repository chose and some library also has to understand, one test must run it
+**end to end into the library** — fit the model, do not merely validate the spec that names
+the family. One such test per enumerated value, and the cheapest form is a parametrised fit
+over the whole literal.
+
 ### Parametrize over every backend that claims to do the same thing
 
 Two libraries behind one interface will agree at the point you looked and disagree
@@ -273,6 +287,24 @@ Every shortcut fails, each for a different reason:
 
 `app/platform/modelling.record_fit` does exactly this, and it is the reference.
 
+### A *legacy* fitted model is built on a reserved draft, never by editing a fitted one
+
+A fixture for "a model fitted before field X existed" cannot strip X from a fitted row — the
+immutability trigger refuses, correctly. Reserve a second draft in the same workspace and
+write the older-shaped `fit_result` onto **it**, which is the transition the worker makes:
+
+```python
+spare, _ = await model_service.reserve_model(session, workspace_id=..., actor=..., spec=...)
+stored = dict(real.fit_result); stored.pop("covariance_blob")     # the older shape
+await session.execute(ModelRow.__table__.update().where(ModelRow.id == spare.id).values(
+    fit_result=stored, status="fitted", diagnostics_id=real.diagnostics_id,
+))
+```
+
+`ck_models_fitted_model_has_diagnostics` applies to the spare too, so it needs a
+`diagnostics_id`; sharing the real model's is right when nothing under test reads it, and
+worth a comment saying so — a reader's next assumption is that it was forged.
+
 ## Query `pg_constraint` by suffix, not by the name you wrote
 
 The metadata naming convention prefixes check constraints: `model_status_is_in_the_lifecycle`
@@ -350,6 +382,10 @@ unpromotable since the spec was amended three days earlier. Fixtures produced al
 hard fail; nothing in between.
 
 ## Verified
+
+2026-08-18 — W5, prediction. The two rules above came from this slice: the `inverse` link
+was declared in four places and fitted in none, and a legacy-model fixture was refused by the
+immutability trigger until it was built on a reserved draft. Suite at 1093.
 
 2026-08-18 — W5, backtests. The GBM-convergence rule above was found by a test that failed for a reason that looked like a broken scoring path and was an unconverged fixture: train A/E 0.53 at 30 rounds, 1.000 at 300. Suite at 1073.
 
