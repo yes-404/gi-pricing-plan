@@ -171,11 +171,20 @@ class CustomMetric(BaseModel):
 
     @model_validator(mode="after")
     def _a_status_past_draft_rests_on_a_certificate(self) -> Self:
-        """FR-MODEL-105 — a claim with no evidence behind it is refused at the type."""
-        if self.status is not MetricStatus.DRAFT and self.certificate_id is None:
+        """FR-MODEL-105 — a claim with no evidence behind it is refused at the type.
+
+        `deprecated` is excluded alongside `draft` because it is reachable from `draft`
+        (`VALID_METRIC_TRANSITIONS[MetricStatus.DRAFT]` includes it): a metric abandoned
+        before it was ever certified is withdrawn, not certified, and withdrawing it must
+        not require inventing a certificate for a metric nobody ever ran. Mirrors
+        `CustomObjective._a_status_past_draft_rests_on_a_certificate` (`objectives.py`).
+        """
+        past_draft = self.status not in {MetricStatus.DRAFT, MetricStatus.DEPRECATED}
+        if past_draft and self.certificate_id is None:
             raise ValueError(
                 f"metric status {self.status.value!r} without a certificate_id; every "
-                "status past `draft` rests on one (FR-MODEL-105)."
+                "status past `draft` (other than `deprecated` reached directly from it) "
+                "rests on one (FR-MODEL-105)."
             )
         return self
 

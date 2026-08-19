@@ -136,6 +136,19 @@ def test_a_status_past_draft_needs_a_certificate() -> None:
 
 
 @pytest.mark.req("FR-MODEL-105")
+def test_a_metric_abandoned_before_certification_is_withdrawn_not_certified() -> None:
+    """`draft -> deprecated` needs no certificate: withdrawing is not claiming proof.
+
+    `VALID_METRIC_TRANSITIONS[MetricStatus.DRAFT]` reaches `deprecated` directly, so this
+    object must be constructible with no `certificate_id` at all — a metric abandoned
+    before anyone ever certified it was never given the chance to earn one.
+    """
+    metric = _metric(status=MetricStatus.DEPRECATED, certificate_id=None)
+    assert metric.status is MetricStatus.DEPRECATED
+    assert metric.certificate_id is None
+
+
+@pytest.mark.req("FR-MODEL-105")
 def test_draft_is_not_fittable_and_certified_is() -> None:
     """A draft metric has no certificate, so its behaviour is unproven."""
     assert MetricStatus.DRAFT not in FITTABLE_METRIC_STATUSES
