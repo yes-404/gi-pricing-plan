@@ -15,6 +15,7 @@ import {
   type ProfileComparison,
 } from "@/api/profiles";
 import { formatDecimalString, formatMinor, getVersion, type DatasetVersion } from "@/api/versions";
+import ColumnDrift from "@/components/ColumnDrift.vue";
 import HistogramChart from "@/components/HistogramChart.vue";
 import OneWayChart from "@/components/OneWayChart.vue";
 
@@ -176,12 +177,6 @@ function driftFor(name: string): ColumnComparison | null | undefined {
 }
 
 onMounted(() => void load());
-
-// `driftFor` has no caller yet in this file — Task 5's per-column drift rendering is the
-// one that calls it, from a `v-for` over `profile.columns`. Exposing it keeps the function
-// (and its three-way contract) reachable and lint-clean in the meantime, the same device
-// `FactorWorkbenchView.vue` uses for `isProblem`.
-defineExpose({ driftFor });
 </script>
 
 <template>
@@ -436,8 +431,8 @@ defineExpose({ driftFor });
                 {{ column.name }}
               </h3>
               <span class="text-xs text-slate-500">{{ column.semantic_type }}</span>
-              <!-- Uncoloured: there is no comparison to band here. `psiBand` waits for
-                   the comparison selector `01` §5.3 also asks for. -->
+              <!-- Uncoloured, always: the dtype label is not a PSI band. `ColumnDrift`
+                   below carries the band, once a comparison is loaded. -->
               <span class="ml-auto text-xs text-slate-500">{{ column.dtype }}</span>
             </header>
             <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums">
@@ -460,6 +455,7 @@ defineExpose({ driftFor });
                 <dd>{{ column.minimum }} – {{ column.maximum }}</dd>
               </template>
             </dl>
+            <ColumnDrift :drift="driftFor(column.name)" />
             <!-- FR-DATA-48. Only continuous columns carry one, so the card shows it only
                  when the profile computed one. -->
             <HistogramChart

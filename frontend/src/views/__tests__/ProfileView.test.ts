@@ -231,16 +231,27 @@ describe("the profile view", () => {
     expect(histograms[0]?.closest("article")).toHaveTextContent("driv_age");
   });
 
-  it("does not colour the dtype label as though it were a PSI band", async () => {
-    // A regression guard rather than a failing test: `psiBand(null)` already resolved to
-    // the neutral tone, so the pixels never differed. What was wrong was the claim — the
-    // view has no comparison to band, and the selector that will is a later slice.
+  it("shows no PSI band until a comparison is loaded", async () => {
+    // The original defect: the dtype label borrowed `psiBand`'s colour when there was no
+    // comparison at all, so the badge showed the colour of a band without the band. The
+    // selector now exists, so the guard is that no band appears *before* one is chosen.
     const { container } = render(ProfileView, { props, ...mounted });
     await screen.findByText(/29,970 rows/);
 
     expect(container.innerHTML).not.toContain("text-amber-700");
     expect(container.innerHTML).not.toContain("text-red-700");
-    expect(container.innerHTML).not.toContain("psi-");
+    expect(screen.queryByText(/^PSI /)).not.toBeInTheDocument();
+  });
+
+  it("bands each column once a reference is chosen", async () => {
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+
+    // veh_brand moved 0.31 — above VR-DST-1's 0.25 fail threshold.
+    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-red-700");
+    // driv_age is continuous: no non-null top_levels, so no PSI and no band.
+    expect(screen.getByText(/PSI not measured/)).toBeInTheDocument();
   });
 
   it("shows a top-level chip's level and count", async () => {
