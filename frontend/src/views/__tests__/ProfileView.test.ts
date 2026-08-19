@@ -240,7 +240,15 @@ describe("the profile view", () => {
 
     expect(container.innerHTML).not.toContain("text-amber-700");
     expect(container.innerHTML).not.toContain("text-red-700");
+    // Carried over from the original guard: never true here, but still a real claim —
+    // no rendered class is named after a PSI band before or after this change.
+    expect(container.innerHTML).not.toContain("psi-");
     expect(screen.queryByText(/^PSI /)).not.toBeInTheDocument();
+    // `ColumnDrift`'s `undefined` branch (nothing) is tested at the component level; this
+    // pins the wiring that delivers `undefined` to it. `driftFor(column.name) ?? null`
+    // would satisfy the component's own tests while making every card claim "new in this
+    // version" before any reference is chosen — this is the assertion that catches that.
+    expect(screen.queryByText(/new in this version/)).not.toBeInTheDocument();
   });
 
   it("bands each column once a reference is chosen", async () => {
@@ -252,6 +260,9 @@ describe("the profile view", () => {
     expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-red-700");
     // driv_age is continuous: no non-null top_levels, so no PSI and no band.
     expect(screen.getByText(/PSI not measured/)).toBeInTheDocument();
+    // driv_age's mean_shift (1.35) is otherwise asserted nowhere: its unit, sign and
+    // `.toFixed(3)` rendering could all change silently.
+    expect(screen.getByText(/\+1\.350 mean/)).toBeInTheDocument();
   });
 
   it("shows a top-level chip's level and count", async () => {

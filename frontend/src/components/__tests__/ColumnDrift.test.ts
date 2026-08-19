@@ -34,6 +34,19 @@ describe("ColumnDrift", () => {
     expect(screen.getByText(/PSI 0\.310/)).toHaveClass("text-red-700");
   });
 
+  it("bands a PSI above VR-DST-1's warn threshold as shifted, not stable", () => {
+    // Pins the band-name -> colour hop, not just psiBand's numeric boundaries (those are
+    // covered in api/__tests__/profiles.test.ts). Swapping TONE.shifted and TONE.stable
+    // would leave every other assertion in this file green.
+    render(ColumnDrift, { props: { drift: { ...MEASURED, psi: 0.11 } } });
+    expect(screen.getByText(/PSI 0\.110/)).toHaveClass("text-amber-700");
+  });
+
+  it("bands a PSI at or below VR-DST-1's warn threshold as stable", () => {
+    render(ColumnDrift, { props: { drift: { ...MEASURED, psi: 0.02 } } });
+    expect(screen.getByText(/PSI 0\.020/)).toHaveClass("text-emerald-700");
+  });
+
   it("does not band a PSI that was never measured", () => {
     // The defect `01` §5.3's note recorded: an unmeasured PSI rendered as a calm band.
     // It must read as absent, and carry no band colour at all.
