@@ -263,6 +263,22 @@ describe("the profile view", () => {
     // driv_age's mean_shift (1.35) is otherwise asserted nowhere: its unit, sign and
     // `.toFixed(3)` rendering could all change silently.
     expect(screen.getByText(/\+1\.350 mean/)).toBeInTheDocument();
+
+    // Pin the comparison's direction. Every field above still renders for the swapped
+    // call — an inverted comparison is a plausible-looking drift screen (every PSI, mean
+    // shift and null-rate shift reads backwards, row_count_ratio is the reciprocal), not a
+    // failure, so nothing else in this file would catch `compareProfiles(id, versionId)`.
+    // `request()` calls `fetch` with a `URL`, not a string, so this reads pathname and
+    // search rather than comparing against a literal — the origin is happy-dom's default.
+    const fetchMock = fetch as unknown as { mock: { calls: unknown[][] } };
+    const compareCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).includes("/compare"),
+    );
+    const compareUrl = new URL(String(compareCall?.[0]));
+    expect(compareUrl.pathname).toBe(
+      `/api/v1/dataset-versions/${PROFILE.dataset_version_id}/compare`,
+    );
+    expect(compareUrl.searchParams.get("against")).toBe(VERSIONS.items[1]?.id);
   });
 
   it("shows a top-level chip's level and count", async () => {
