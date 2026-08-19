@@ -47,6 +47,7 @@ from model_schema import (
     TEMPLATE_APPLICABILITY,
     VALID_METRIC_TRANSITIONS,
     Applicability,
+    ApprovalStatus,
     ArtifactRef,
     CertificateOutcome,
     CertificateResult,
@@ -64,6 +65,7 @@ from model_schema import (
 
 __all__ = [
     "DEFAULT_SEED",
+    "apply_approval_decision",
     "certifiable_or_refuse",
     "create",
     "load_certificate",
@@ -466,6 +468,78 @@ async def submit(
     return row, request
 
 
+
+async def apply_approval_decision(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    request: ApprovalRequestRow,
+) -> CustomMetricRow | None:
+    """Carry a governance decision into the metric (FR-MODEL-45, `06` FR-GOV-13).
+
+    Mirrors `objectives.apply_approval_decision` exactly, including its reason: returns
+    `None` for a request about anything else, so `_carry_to_the_artifact` drives every
+    artifact type through one call; same transaction as the decision, since a metric left
+    in `review` after its request reached `approved` is one no model evaluated on it may be
+    approved under and no screen can explain.
+
+    `changes_requested` returns the metric to **`certified`**, not to `draft` — `06`
+    FR-GOV-13's pre-submission state for a certified artifact is `certified`, and a review
+    decision does not withdraw a certificate.
+    """
+    if request.artifact_type != "custom_metric":
+        return None
+
+    ref = ArtifactRef.model_validate(request.artifact_ref)
+    row = (
+        await session.execute(
+            select(CustomMetricRow)
+            .where(
+                CustomMetricRow.workspace_id == workspace_id,
+                CustomMetricRow.slug == ref.slug,
+                CustomMetricRow.version == ref.version,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        # Tolerated for the reason a Model's and an objective's are: `POST
+        # /approval-requests` accepts any well-formed ref, and a request naming a metric
+        # that was never created must still be decidable rather than sitting open forever
+        # (`06` FR-GOV-36).
+        return None
+
+    target = _target_status(ApprovalStatus(request.status))
+    if target is None or MetricStatus(row.status) is target:
+        # A partial approval: the policy wants another approver and nothing has moved.
+        return row
+
+    before = MetricStatus(row.status)
+    if target not in VALID_METRIC_TRANSITIONS[before]:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Invalid custom metric lifecycle transition",
+            409,
+            f"{ref} is {before.value} and the decision would move it to {target.value}, "
+            "which FR-MODEL-45 does not allow.",
+        )
+    row.status = target.value
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action=f"custom_metric.{target.value}",
+        entity_ref=str(ref),
+        before={"status": before.value},
+        after={"status": target.value, "approval_request_id": str(request.id)},
+    )
+    return row
+
+
 async def usage(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, metric_id: UUID
 ) -> MetricUsage:
@@ -565,11 +639,11 @@ async def _require_evidence(
     """`06` R4 and FR-GOV-10 for this artifact type, failing closed on what it cannot check.
 
     `objectives._require_evidence` carries the reasoning; the shape is the same and the
-    difference is only which kinds are verifiable here. The workspace policy is expected to
-    name `metric_certificate` for `custom_metric`, the way it names `objective_certificate`
-    for `custom_objective` — an entry this slice does not add to `model_schema`'s default
-    policy (see the task report): a workspace without one will 422 here with
-    `EVIDENCE_INCOMPLETE` rather than silently accepting a submission with nothing verified.
+    difference is only which kinds are verifiable here. The workspace policy names
+    `metric_certificate` for `custom_metric`, the way it names `objective_certificate` for
+    `custom_objective` (`model_schema.approvals.DEFAULT_POLICY`) — a workspace that edits
+    that away will 422 here with `EVIDENCE_INCOMPLETE` rather than silently accepting a
+    submission with nothing verified.
     """
     policy = await approvals.policy_for(session, workspace_id)
 
@@ -592,3 +666,20 @@ async def _require_evidence(
                 "requirement as met would make a policy tightening do nothing."
             )
         raise PlatformError("EVIDENCE_INCOMPLETE", "Required evidence is missing", 422, detail)
+
+
+def _target_status(request_status: ApprovalStatus) -> MetricStatus | None:
+    """What a request's status means for the metric behind it.
+
+    Mirrors `objectives._target_status` exactly, including its reason: the three
+    non-approvals return the metric to **`certified`** rather than to `draft`, the same
+    amendment `06` FR-GOV-13 carries for a Model and for an objective — `draft` is the
+    pre-submission state, and for a certified metric that is `certified`. Sending it to
+    `draft` would say the certificate had been withdrawn, which no review decision does.
+    """
+    return {
+        ApprovalStatus.APPROVED: MetricStatus.APPROVED,
+        ApprovalStatus.CHANGES_REQUESTED: MetricStatus.CERTIFIED,
+        ApprovalStatus.REJECTED: MetricStatus.CERTIFIED,
+        ApprovalStatus.WITHDRAWN: MetricStatus.CERTIFIED,
+    }.get(request_status)

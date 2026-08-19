@@ -203,6 +203,19 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approver_roles=("approver",),
             evidence=("objective_certificate",),
         ),
+        # FR-MODEL-45: a Custom Metric follows the same lifecycle and grammar as an
+        # objective, and `platform.metrics._require_evidence` has expected this entry
+        # (`metric_certificate`, mirroring `objective_certificate` above) since the slice
+        # that added `submit`. Its absence was a self-documented gap, not a design choice:
+        # without it, `certified -> review` 409s in every workspace on "no approval policy
+        # for this artifact type" before `_require_evidence` is ever reached, and
+        # `review -> approved` was unreachable regardless (see `apply_approval_decision`).
+        ApprovalPolicyEntry(
+            artifact_type="custom_metric",
+            approvers_required=1,
+            approver_roles=("approver",),
+            evidence=("metric_certificate",),
+        ),
         # `transparency_artifact_if_non_glm` joined this entry on 2026-08-18 with
         # FR-GOV-37. It was enforced before it was named — `02` §4.8 R3 is checked at
         # submission whatever the policy says — but a default that omits the kind teaches a
