@@ -13,8 +13,9 @@ import asyncio
 from uuid import UUID
 
 import pytest
-from backend.tests.test_model_jobs import _actuary
+from backend.tests.test_model_jobs import _actuary, _dataset, _validated_version
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
+from backend.tests.test_prediction import _fitted_glm
 
 from app.db.session import Database
 from app.errors import PlatformError
@@ -40,6 +41,7 @@ from model_schema import (
     TransparencyArtifact,
     new_uuid7,
 )
+from pricing_core.modelling import approximation_spec
 
 register_data_handlers()
 register_model_handlers()
@@ -326,3 +328,83 @@ async def test_a_surrogate_slug_the_column_cannot_hold_is_refused_by_name(
     assert refusal.detail is not None
     assert slug in refusal.detail, "the message names the slug the analyst chose"
     assert "65 characters" in refusal.detail, "and the length that crosses the boundary"
+
+
+# -- FR-MODEL-96: a hand-written surrogate spec is refused --------------------------------
+
+
+@pytest.mark.req("FR-MODEL-96")
+async def test_a_surrogate_of_a_model_that_does_not_exist_is_a_404(
+    database, blob_store, workspace_id
+) -> None:
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+    async with database.session() as session:
+        source = MODEL_SPEC_ADAPTER.validate_python(
+            (await model_service.load_model_by_id(
+                session, workspace_id=workspace_id, model_id=model_id)).spec
+        )
+    spec = approximation_spec(source, source_model_id=new_uuid7())
+
+    with pytest.raises(PlatformError) as caught:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor, spec=spec
+            )
+    assert caught.value.status_code == 404
+    assert caught.value.code == "NOT_FOUND"
+
+
+@pytest.mark.req("FR-MODEL-96")
+async def test_a_surrogate_of_a_glm_is_refused(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-33 applies to non-GLM models: a GLM approximating a GLM reports 100 %
+    fidelity, which looks like evidence and is not — the refusal `fitted_gbm_or_refuse`
+    already makes at the endpoint, now made where a spec can arrive without one."""
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+    async with database.session() as session:
+        source = MODEL_SPEC_ADAPTER.validate_python(
+            (await model_service.load_model_by_id(
+                session, workspace_id=workspace_id, model_id=model_id)).spec
+        )
+    spec = approximation_spec(source, source_model_id=model_id)
+
+    with pytest.raises(PlatformError) as caught:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor, spec=spec
+            )
+    assert caught.value.code == "MODEL_APPROXIMATION_INVALID"
+    assert caught.value.status_code == 409
+
+
+@pytest.mark.req("FR-MODEL-96")
+async def test_a_surrogate_on_a_different_dataset_version_is_refused(
+    database, blob_store, workspace_id
+) -> None:
+    """An approximation fitted over a different population describes a different model, and
+    renders identically to a correct one."""
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+    async with database.session() as session:
+        source = MODEL_SPEC_ADAPTER.validate_python(
+            (await model_service.load_model_by_id(
+                session, workspace_id=workspace_id, model_id=model_id)).spec
+        )
+    other_dataset = await _dataset(database, blob_store, workspace_id, actor)
+    other_version = await _validated_version(
+        database, blob_store, workspace_id, actor, other_dataset
+    )
+    spec = approximation_spec(source, source_model_id=model_id).model_copy(
+        update={"dataset_version_id": other_version}
+    )
+
+    with pytest.raises(PlatformError) as caught:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor, spec=spec
+            )
+    assert caught.value.code == "MODEL_APPROXIMATION_INVALID"
+    assert caught.value.status_code == 409
+    assert "dataset_version_id" in str(caught.value.detail)

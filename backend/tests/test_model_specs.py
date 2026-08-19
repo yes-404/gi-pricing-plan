@@ -26,7 +26,13 @@ from app.errors import PlatformError
 from app.platform import model_specs as spec_service
 from app.platform import modelling as model_service
 from app.platform import settings as settings_service
-from model_schema import Factor, FactorType, SpecProblemKind, new_uuid7
+from model_schema import (
+    SURROGATE_RESPONSE_COLUMN,
+    Factor,
+    FactorType,
+    SpecProblemKind,
+    new_uuid7,
+)
 
 
 async def _set(database, workspace_id, actor, key, value) -> None:
@@ -50,6 +56,36 @@ async def _validate(database, workspace_id, actor, spec):
         return await spec_service.validate_spec(
             session, Settings(), workspace_id=workspace_id, actor=actor, spec=spec
         )
+
+
+@pytest.mark.req("FR-MODEL-102")
+async def test_a_surrogate_spec_is_not_reported_as_missing_its_response(
+    database, blob_store, workspace_id
+) -> None:
+    """`__gbm_prediction__` is not in any dataset version, and never will be."""
+    actor, _, version_id, area, split = await _ready(database, blob_store, workspace_id)
+    spec = _spec(
+        version_id,
+        (area,),
+        split_ref=split,
+        response_column=SURROGATE_RESPONSE_COLUMN,
+        approximates_model_id=new_uuid7(),
+    )
+    result = await _validate(database, workspace_id, actor, spec)
+    assert not [p for p in result.problems if p.kind is SpecProblemKind.RESPONSE_MISSING]
+
+
+@pytest.mark.req("FR-MODEL-102")
+async def test_an_ordinary_spec_still_reports_a_response_column_it_does_not_have(
+    database, blob_store, workspace_id
+) -> None:
+    """The carve-out is for surrogates only — the check it relaxes is the one that catches
+    a typo in a response column, and losing it wholesale would be a worse defect than the
+    one it fixes."""
+    actor, _, version_id, area, split = await _ready(database, blob_store, workspace_id)
+    spec = _spec(version_id, (area,), split_ref=split, response_column="claims_kount")
+    result = await _validate(database, workspace_id, actor, spec)
+    assert [p for p in result.problems if p.kind is SpecProblemKind.RESPONSE_MISSING]
 
 
 @pytest.mark.req("FR-MODEL-44")

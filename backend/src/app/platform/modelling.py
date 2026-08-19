@@ -45,6 +45,7 @@ from model_schema import (
     FitResult,
     GbmSpec,
     GlmFitResult,
+    GlmSpec,
     JobSource,
     Model,
     ModelFlag,
@@ -335,6 +336,12 @@ async def reserve_model(
     await _refuse_mismatched_interval_model(
         session, workspace_id=workspace_id, spec=spec
     )
+    # Before the factor check too, and for the same reason: a surrogate naming the wrong
+    # source model usually also fails factor resolution, and the factor error would send
+    # the caller to re-check factors that were never wrong (FR-MODEL-96).
+    await _refuse_mismatched_approximation(
+        session, workspace_id=workspace_id, spec=spec
+    )
     await _refuse_unusable_factors(
         session, workspace_id=workspace_id, spec=spec, dataset_id=dataset_version.dataset_id
     )
@@ -576,6 +583,71 @@ async def _refuse_mismatched_interval_model(
                 "carries a single `level`, and two bounds on one side leave nothing to say "
                 "which pair produced it.",
             )
+
+
+async def _refuse_mismatched_approximation(
+    session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec
+) -> None:
+    """FR-MODEL-96's rules for what a surrogate may approximate, before a Job exists.
+
+    The type already refuses a spec that claims to be a surrogate while pointing at an
+    observed response column (FR-MODEL-102). What the type cannot see is the *other* model:
+    whether it exists, whether it has predictions to approximate, and whether it was fitted
+    over the same population. An approximation of a model it does not describe fits without
+    complaint and renders identically to a correct one.
+    """
+    if not isinstance(spec, GlmSpec) or spec.approximates_model_id is None:
+        return
+
+    source = await session.get(ModelRow, spec.approximates_model_id)
+    if source is None or source.workspace_id != workspace_id:
+        raise PlatformError(
+            "NOT_FOUND",
+            "The model this approximates does not exist",
+            404,
+            f"approximates_model_id names model {spec.approximates_model_id}, which is "
+            "not a model in this workspace.",
+        )
+    if source.fit_result is None:
+        raise PlatformError(
+            "MODEL_APPROXIMATION_INVALID",
+            "The model this approximates has no fit to approximate",
+            409,
+            f"{source.model_family_slug}@{source.version} is at "
+            f"{source.status!r} and has no predictions. FR-MODEL-34 fits the surrogate to "
+            "the model's own predictions, and a model at `draft` has none.",
+        )
+
+    source_spec = MODEL_SPEC_ADAPTER.validate_python(source.spec)
+    if source_spec.model_type == "glm":
+        raise PlatformError(
+            "MODEL_APPROXIMATION_INVALID",
+            "A GLM needs no approximation",
+            409,
+            f"{source.model_family_slug}@{source.version} is a GLM. FR-MODEL-33 applies to "
+            "non-GLM models: approximating a GLM with another GLM reports 100 % fidelity, "
+            "which looks like evidence and is not.",
+        )
+
+    mismatches = [
+        field
+        for field, mine, theirs in (
+            ("dataset_version_id", spec.dataset_version_id, source_spec.dataset_version_id),
+            ("split_ref", spec.split_ref, source_spec.split_ref),
+            ("factors", set(spec.factors), set(source_spec.factors)),
+        )
+        if mine != theirs
+    ]
+    if mismatches:
+        raise PlatformError(
+            "MODEL_APPROXIMATION_INVALID",
+            "This approximation does not match the model it approximates",
+            409,
+            f"approximates_model_id names {source.model_family_slug}@{source.version}, but "
+            f"the two specifications disagree on {', '.join(mismatches)} (FR-MODEL-96). An "
+            "approximation fitted over a different population or design describes a "
+            "different model, and renders identically to a correct one.",
+        )
 
 
 async def _refuse_a_bound_that_is_not_a_quantile_fit(
