@@ -191,6 +191,12 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-43** | A non-convex objective (hessian negative anywhere in the sampled domain) is not refused outright — some legitimate pricing losses are non-convex — but is flagged `convexity: violated`, requires the hessian clipping strategy to be declared (`clip_to_min`, `abs`, `gauss_newton`), and requires an additional Approver. |
 | **FR-MODEL-44** | Objectives declare their **applicability**: which responses (`claim_count`, `claim_severity`, `burning_cost`, …), which backends (`xgboost`, `lightgbm`, `glm`), whether an offset is required, and the valid range of `y`. A Model Spec pairing an objective with an inapplicable response is refused at spec validation, before any compute is spent. |
 | **FR-MODEL-45** | Custom eval metrics (`feval`) follow the same lifecycle and grammar as objectives, declared separately so that a metric can be reused across objectives. |
+| **FR-MODEL-103** | A **Custom Metric** is its own versioned artifact (`custom_metric:<slug>@<version>`), declared separately from objectives so one metric can be evaluated across many. In Phase 1 it is templates-only, on OQ-MODEL-1's rule: a metric names an `ObjectiveTemplate` and its parameters, and its value is that template's loss evaluated as an exposure-weighted mean. It carries no `hessian_strategy` and no `hessian_min` — a metric is never differentiated, and a field that is structurally meaningless is worse than an absent one. |
+| **FR-MODEL-104** | A Custom Metric declares its `direction` — `lower_is_better` or `higher_is_better` — and early stopping reads it rather than inferring one. A metric whose direction is guessed stops the fit at the wrong round in exactly half of cases, and produces a fitted model rather than an error. |
+| **FR-MODEL-105** | A Custom Metric carries a `MetricCertificate` before submission, on FR-MODEL-42's argument: a metric that early-stops a fit decides when boosting halts and therefore changes the model. Its checks are `finiteness`, `direction_holds`, `scale_behaviour` and `smoke_evaluation`. §4.7's derivative and convexity checks are **absent, not `not_applicable`** — a metric has no gradient or hessian to compare, so the question is not askable rather than unanswered. The check vocabulary (`CheckStatus`, `SamplingSpec`, `CertificateOutcome`, and `CertificateResult.outcome_of`'s derivation of `overall`) is shared with §4.7 unchanged. |
+| **FR-MODEL-106** | `GbmSpec.eval_metrics` is **honoured**: `kind: builtin` names are passed to the backend's own metric vocabulary, and `kind: custom` refs are resolved by the backend and handed to `pricing-core` as artifacts (ADR-0001). A ref that does not resolve, names a metric whose applicability excludes the spec's response or backend, or names one whose status is outside `FITTABLE_METRIC_STATUSES`, refuses the fit before any boosting round. *(Recorded 2026-08-19: the field was declared from Phase 0 and read by nothing — a spec accepted, silently ignored, and reported to the caller as configured.)* |
+| **FR-MODEL-107** | Early stopping on a **Custom Metric** is supported under a custom objective. `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` narrows to its true scope: a **builtin** metric under a callable objective, where both backends hand the metric the raw score rather than the transformed prediction, so the metric it stops on is not the metric it names. |
+| **FR-MODEL-108** | A Custom Metric is readable and governable over the API: create, read, certify, read the certificate, submit for approval, and list usage — FR-MODEL-95's argument applied to metrics, since an approver who cannot fetch the certificate is being asked to approve a verdict they cannot see. |
 | **FR-MODEL-46** | Custom Objective lifecycle is `draft → certified → review → approved → deprecated`. Approval is by an Approver who is not the author; `expression` objectives with `convexity: violated` need two Approvers (FR-MODEL-43). Editing an `approved` objective creates a new version requiring fresh certification and approval. |
 | **FR-MODEL-47** | Objective usage is fully traceable: for any objective version, the platform lists every Model, Rating Version, and live Deployment using it — the blast-radius query needed when a defect is found. |
 | **FR-MODEL-48** | Objective execution is resource-bounded: compiled expressions are evaluated on fixed-size NumPy arrays with no allocation of unbounded intermediates, wall-clock is budgeted per boosting round, and NaN/inf appearing in a gradient or hessian aborts the fit with a named error identifying the round and the offending input range. |
@@ -823,6 +829,25 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > pinned by test: an absolute error of `1e-08` in the Gamma hessian — two hundred times the
 > noise where that hessian is smallest — is still `failed`.
 
+> **`MetricCertificate` (FR-MODEL-105), added 2026-08-19.** Same two-object split as
+> `ObjectiveCertificate` and for the same ADR-0001 reason: `certify_metric` computes a
+> `CertificateResult` in `pricing-core`, which may not allocate an id, read a clock or know
+> a Job exists, and the backend stamps `id`, `custom_metric_id`, `metric_version`,
+> `certified_at` and `job_id` around it. The four checks:
+>
+> * **`finiteness`** — no NaN or inf over the sampled `(y, f, w)` domain, the same check
+>   §4.7 already runs for objectives.
+> * **`direction_holds`** — the metric is better at `f = log(y)` than at a perturbed `f`, in
+>   the direction the metric declares (FR-MODEL-104). This is the metric's analogue of
+>   `minimum_at_truth`, and it is the check that catches a `direction` declared backwards —
+>   the defect that silently halves the value of early stopping.
+> * **`scale_behaviour`** — how the value moves with the magnitude of `y`, reported so a
+>   reader can tell a metric that spans six orders from one that does not.
+> * **`smoke_evaluation`** — on synthetic data whose answer is computable by hand, the
+>   metric returns that value within tolerance.
+>
+> `overall` is derived by the same `CertificateResult.outcome_of` and never supplied.
+
 ### 4.8 `Model`
 
 ```json
@@ -1216,6 +1241,33 @@ Every artifact table in this module now carries both — `diagnostics`, `model_c
 privileges and not the row trigger until `e1f2a3b4c5d6` (2026-08-18); `01` FR-DATA-47 has
 the measurement and the invariant that now checks it.
 
+### 4.13 `CustomMetric`
+
+```json
+{
+  "id": "uuid", "slug": "capped-gamma-nll", "version": 2,
+  "kind": "template", "template": "capped_gamma",
+  "params": {"cap": 250000.0},
+  "applicability": {"responses": ["claim_severity"], "backends": ["xgboost", "lightgbm"],
+                    "offset_required": false, "y_domain": {"min": 0.0}},
+  "direction": "lower_is_better",
+  "status": "approved",
+  "certificate_id": "uuid", "approval_request_id": "uuid",
+  "description": "Gamma NLL with losses capped at 250k, for early stopping on large-loss-heavy severity fits"
+}
+```
+
+**Invariants.** `template` is required while `kind` is `template`, and Phase 1 admits no
+other kind (FR-MODEL-75's rule, applied to metrics). `params` must be exactly the named
+template's own parameters — an unknown key is refused rather than ignored, because a
+misspelled `cap` that is silently dropped produces an uncapped metric under a name that
+says capped. A status past `draft` requires a `certificate_id` (FR-MODEL-105). `direction`
+has no default (FR-MODEL-104).
+
+**Why the shape is not `CustomObjective`'s.** No `hessian_strategy`, no `hessian_min`: both
+describe what happens where the curvature is negative, and a metric is never
+differentiated. `Applicability`, `ObjectiveTemplate`, `TemplateParameter` and `YDomain` are
+imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 ---
 
@@ -1255,7 +1307,12 @@ the measurement and the invariant that now checks it.
 | `GET` | `/api/v1/custom-objectives/{id}/certificate` | The latest `ObjectiveCertificate` for that version (FR-MODEL-95) |
 | `POST` | `/api/v1/custom-objectives/{id}/submit` | Submit for approval (FR-MODEL-46) |
 | `GET` | `/api/v1/custom-objectives/{id}/usage` | Blast radius: models, rating versions, deployments (FR-MODEL-47) |
-| `POST` | `/api/v1/custom-metrics` | Same lifecycle for eval metrics (FR-MODEL-45) — **not built**, see the amendment below |
+| `POST` | `/api/v1/custom-metrics` | **201** Create → `draft` (FR-MODEL-45, FR-MODEL-103) |
+| `GET` | `/api/v1/custom-metrics/{id}` | The metric, its status and its certificate outcome (FR-MODEL-108) |
+| `POST` | `/api/v1/custom-metrics/{id}/certify` | **202** Run §4.7's metric checks (FR-MODEL-105) |
+| `GET` | `/api/v1/custom-metrics/{id}/certificate` | The latest `MetricCertificate` for that version (FR-MODEL-108) |
+| `POST` | `/api/v1/custom-metrics/{id}/submit` | Submit for approval (FR-MODEL-45's lifecycle) |
+| `GET` | `/api/v1/custom-metrics/{id}/usage` | Blast radius: models using this metric version (FR-MODEL-108) |
 | `POST` | `/api/v1/peril-structures` | **201** Create/version a Peril Structure (FR-MODEL-58) |
 | `GET` | `/api/v1/peril-structures/{id}` | The structure and its reconciliation (FR-MODEL-90) |
 | `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-MODEL-60) |
@@ -1536,8 +1593,11 @@ module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 >   behind `expression_objectives_enabled`, off by default. The route exists and answers
 >   `422` with that code rather than `404`, so a caller learns the capability is not enabled
 >   rather than that the platform has never heard of it.
-> * **`POST /custom-metrics` (FR-MODEL-45) is not built, and is deferred to Phase 1b with
->   this slice.** A custom *metric* is `feval` — it changes what early stopping optimises
+> * ~~**`POST /custom-metrics` (FR-MODEL-45) is not built, and is deferred to Phase 1b with
+>   this slice.**~~ **Built 2026-08-19.** The reasoning below held exactly as written — a
+>   custom metric does not gate the fitting path — and it stopped holding when early
+>   stopping under a custom objective turned out to need one (FR-MODEL-107). A custom
+>   *metric* is `feval` — it changes what early stopping optimises
 >   and what the diagnostics report, not what the model fits, so it does not gate the
 >   fitting path this slice exists to open. It shares the objective's lifecycle,
 >   certification and approval machinery, which is now built and is what it was waiting for.
@@ -2023,3 +2083,6 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-MODEL-15** | `GlmDiagnostic.aliasing` is `tuple[str, ...]` — collinear terms named — while `docs/contracts/schemas/diagnostics.schema.json` declares an array of untyped `object`. Should an aliasing entry be a bare term name, or a record such as `{term, aliased_with, reason}`? Neither side is obviously wrong — a name is what a reader acts on, an object entry says strictly more, and FR-MODEL-51 asks only for "a VIF/aliasing report". Found 2026-08-19 by widening the contract type comparison; pinned meanwhile so a new divergence still fails. Recommendation on file: keep the names, correct the contract, and decide when W6b renders the diagnostic. |
 | **OQ-MODEL-16** | ~~A paired quantile interval covers `Y` while `UncertaintyKind.confidence_interval_mean` covers `E[Y\|x]`, and FR-MODEL-98 fixes the platform at exactly one kind — what does a quantile-pair response call itself?~~ **DECIDED 2026-08-19: a third member, `quantile_pair_interval` — FR-MODEL-101**, which takes neither existing value and leaves FR-MODEL-98's reserved `prediction_interval` waiting for the aggregate consumer that triggers it. FR-MODEL-98 is amended by addendum rather than edited. |
 | **OQ-MODEL-17** | On a rebuild (`should_fit=False`), `model.transparency` pays a full GLM fit plus a full type-III diagnostics pass — one refit per factor — for numbers it then discards, because the surrogate Model already exists; nobody has costed it. Should the Job skip that compute and reuse the surrogate's already-fitted numbers, keep recomputing for a fresh fidelity measurement, or make it conditional? Found 2026-08-19 in the final whole-branch review of FR-MODEL-96 (fix round). Recommendation on file: skip the compute on `should_fit=False` and reuse the stored numbers — `spec_hash` (FR-MODEL-66) already guarantees a rebuild's numbers are identical to the ones stored at the first build, because both the source Model and the surrogate's own spec are immutable once fitted, so recomputing buys nothing; decide before Phase 1b measures the Job's cost against `07`'s job-latency NFRs. |
+| **OQ-MODEL-18** | ~~Should a Custom Metric's certificate run §4.7's full nine-check `ObjectiveCertificate` battery (each derivative/convexity check reporting `not_applicable`, since a metric has no gradient or hessian), or a reduced, metric-specific check set?~~ **DECIDED 2026-08-19: a reduced certificate — `finiteness`, `direction_holds`, `scale_behaviour`, `smoke_evaluation` — FR-MODEL-105**, sharing §4.7's `CheckStatus`, `SamplingSpec`, `CertificateOutcome` and `outcome_of` unchanged rather than its check list. |
+| **OQ-MODEL-19** | ~~Does a Custom Metric define its own value computation — a metric-specific template catalogue or `expression` grammar — or does it name an existing `ObjectiveTemplate` (§4.5) and reuse that template's loss?~~ **DECIDED 2026-08-19: a metric names an `ObjectiveTemplate` and reuses its loss, evaluated as an exposure-weighted mean — FR-MODEL-103**, on OQ-MODEL-1's Phase-1-templates-only rule. |
+| **OQ-MODEL-20** | ~~§5.1 declared one `POST /custom-metrics` row, not built and deferred to Phase 1b (FR-MODEL-45). Now that a metric gates early stopping (FR-MODEL-107), should this slice ship create only, or the full six-endpoint set FR-MODEL-95 built for `custom-objectives`?~~ **DECIDED 2026-08-19: all six — FR-MODEL-108**, the same argument FR-MODEL-95 made for objectives: an approver who cannot fetch a certificate is being asked to approve a verdict they cannot see. |
