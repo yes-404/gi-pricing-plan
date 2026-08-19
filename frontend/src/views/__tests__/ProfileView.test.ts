@@ -39,6 +39,12 @@ const PROFILE: Profile = {
     {
       name: "veh_brand", dtype: "String", semantic_type: "categorical", row_count: 29970,
       null_count: 0, null_rate: 0, distinct_count: 11, quantiles: {},
+      // Mixing a weighted level (B12), an unweighted one (B1) and a null level within one
+      // column is not a shape either profiling engine can produce — both set
+      // `exposure_years` uniformly per column: present on every level or absent from all
+      // of them. This fixture is deliberately unproducible; it exists only to exercise
+      // the chip's three render branches (with exposure, without, null level) in one
+      // column instead of three, and must not be read as documenting a real profile.
       top_levels: [
         { level: "B12", count: 8000, exposure_years: "4123.5" },
         { level: "B1", count: 5000, exposure_years: null },

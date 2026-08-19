@@ -119,6 +119,26 @@ def test_top_levels_exposure_is_none_without_an_exposure_column() -> None:
 
 
 @pytest.mark.req("FR-DATA-49")
+def test_top_levels_exposure_is_none_without_an_exposure_column_duckdb(tmp_path: Path) -> None:
+    """The DuckDB sibling of the Polars-only test above. Both engines must agree that
+    "no exposure column" reports `None` on every level rather than a fabricated `0` — the
+    Polars path having it right says nothing about the SQL path, which computes the
+    aggregate independently (FR-DATA-27)."""
+    frame = FRAME.drop("exposure_years")
+    path = tmp_path / "no-exposure.parquet"
+    frame.write_parquet(path)
+
+    profile = profile_parquet(
+        [str(path)], dataset_version_id=uuid4(), exposure_column="exposure_years"
+    )
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    assert len(group.top_levels) > 0
+    assert all(level.exposure_years is None for level in group.top_levels)
+
+
+@pytest.mark.req("FR-DATA-49")
 def test_a_zero_exposure_level_is_distinguishable_from_no_exposure_column() -> None:
     """Negative: a level that genuinely carries no exposure must report `0`, not `None` —
     the two are different facts and a profile that conflates them cannot be read for a

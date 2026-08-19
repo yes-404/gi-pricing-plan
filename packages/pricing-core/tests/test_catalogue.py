@@ -714,6 +714,38 @@ def test_vr_dst_3_vanished_level_top_levels_fallback_is_judged_on_exposure() -> 
     )
 
 
+@pytest.mark.req("FR-DATA-49")
+def test_vr_dst_3_vanished_level_primary_branch_does_not_report_a_phantom_null() -> None:
+    """The regression: `OneWayRow.level` still coerces a null level to the string "None"
+    (unchanged by FR-DATA-49), so the primary `one_ways`-derived branch of
+    `_vanished_level` used to carry a `"None"` key that the present side — built by
+    `_level_counts`, which now drops nulls — could never match. On a byte-identical
+    current frame with a material null share, that made `"None"` report as vanished on
+    every run. `one_ways=["vehicle_group"]` exercises the primary branch (not the
+    `top_levels` fallback the sibling test above covers)."""
+    reference = pl.DataFrame(
+        {
+            "vehicle_group": ["G1"] * 600 + [None] * 400,
+            "exposure_years": [1.0] * 1000,
+        }
+    )
+    current = reference.clone()
+    context = ValidationContext(
+        reference_tables={},
+        reference_frames={},
+        reference_profile=_profiled(reference, ["vehicle_group"]),
+    )
+
+    outcome = run(
+        "vanished_level",
+        {"t": current},
+        context=context,
+        target={"table": "t", "column": "vehicle_group"},
+    )
+    assert outcome.violating_rows == 0
+    assert outcome.offending_sample == ()
+
+
 @pytest.mark.req("FR-DATA-24")
 def test_vr_dst_6_mean_shift_is_measured_in_standard_errors() -> None:
     """VR-DST-6. The same 2 % move means different things on ten million observations and

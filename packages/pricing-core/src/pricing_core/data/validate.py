@@ -38,6 +38,7 @@ from model_schema import (
     ValidationRule,
     ValidationRuleSet,
 )
+from pricing_core.data.profile import TOP_LEVELS
 from pricing_core.progress import ProgressCallback
 
 __all__ = ["CHECKS", "CheckOutcome", "register_check", "run_validation"]
@@ -1387,13 +1388,13 @@ def _reference_column(ctx: ValidationContext, rule: ValidationRule, column: str)
     return ctx.reference_profile.column(column)
 
 
-def _level_counts(frame: pl.DataFrame, column: str, *, top: int = 20) -> dict[str, float]:
+def _level_counts(frame: pl.DataFrame, column: str, *, top: int = TOP_LEVELS) -> dict[str, float]:
     """The current frame's top level counts, shaped like a Profile's `top_levels`.
 
-    Capped at the same 20 the Profile keeps, or the two sides of a PSI would be computed
-    over different level sets and the number would mean nothing. `nulls_last=True` matches
-    both profiling engines' `NULLS LAST` tie-break, so a level tied on count with a null
-    lands in the same top-20 cut here as it would in a `ColumnProfile`.
+    Capped at the same `TOP_LEVELS` the Profile keeps, or the two sides of a PSI would be
+    computed over different level sets and the number would mean nothing. `nulls_last=True`
+    matches both profiling engines' `NULLS LAST` tie-break, so a level tied on count with a
+    null lands in the same top-20 cut here as it would in a `ColumnProfile`.
     """
     counts = (
         frame.group_by(column)
@@ -1526,8 +1527,16 @@ def _vanished_level(
     if ctx.reference_profile is not None:
         for summary in ctx.reference_profile.one_ways:
             if summary.column == column:
+                # `OneWayRow.level` still coerces a null level to the string "None"
+                # (unlike `LevelCount.level`, which FR-DATA-49 left nullable — see the
+                # fallback below). Excluded here for the same reason the `top_levels`
+                # fallback excludes a real null: `_level_counts` on the present side has
+                # already dropped nulls, so keeping a "None" key here would make a
+                # byte-identical current frame report its own null share as vanished.
                 reference_weights = {
-                    row.level: float(row.exposure_years) for row in summary.rows
+                    row.level: float(row.exposure_years)
+                    for row in summary.rows
+                    if row.level != "None"
                 }
     if not reference_weights:
         profiled = _reference_column(ctx, rule, column)
