@@ -375,6 +375,17 @@
           "title": "Interaction Constraints",
           "type": "array"
         },
+        "interval_for": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntervalFor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "loss_treatment": {
           "$ref": "#/$defs/LossTreatment",
           "default": {
@@ -748,6 +759,35 @@
         "response_column"
       ],
       "title": "GlmSpec",
+      "type": "object"
+    },
+    "IntervalFor": {
+      "additionalProperties": false,
+      "description": "This model is one side of another model's prediction interval (FR-MODEL-78).\n\n**On the spec, so it joins `spec_hash`** (FR-MODEL-100). FR-MODEL-96 set the precedent\nfor a Model that exists relative to another Model — `approximates_model_id` on the\napproximating Model's spec — and the reason is the same one: the pairing is part of\nwhat this model *is*. Two bounds identical but for the central model they bound would\notherwise share a digest, and FR-MODEL-66 would hand the second caller the first\ncaller's model: an interval around a model nobody fitted, rendering identically to a\ncorrect one.\n\nThe central model is named by **id and version**. The id is what the lookup uses; the\nversion is what a human reads in a review, where `motor-ad-frequency@7` is recognisable\nand a UUID is not — the same argument `Prediction` carries for holding both.",
+      "properties": {
+        "alpha": {
+          "exclusiveMaximum": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Alpha",
+          "type": "number"
+        },
+        "model_id": {
+          "format": "uuid",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "model_version": {
+          "minimum": 1,
+          "title": "Model Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "model_id",
+        "model_version",
+        "alpha"
+      ],
+      "title": "IntervalFor",
       "type": "object"
     },
     "LossTreatment": {

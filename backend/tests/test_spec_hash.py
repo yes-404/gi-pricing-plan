@@ -21,7 +21,7 @@ import pytest
 from app.db.models import ModelRow
 from app.errors import MODELLING_ERROR_CODES, PlatformError
 from app.platform.modelling import SPEC_HASH_VERSION, spec_hash, spec_hash_is_current
-from model_schema import GlmSpec, OffsetSpec
+from model_schema import GbmFunctionRef, GbmSpec, GlmSpec, IntervalFor, OffsetSpec
 
 
 def _spec(**over: object) -> GlmSpec:
@@ -130,3 +130,89 @@ def test_every_code_the_fit_path_can_raise_is_registered() -> None:
     }
     assert raised, "the parse found no GlmFitError call sites, so it proves nothing"
     assert raised <= MODELLING_ERROR_CODES, sorted(raised - MODELLING_ERROR_CODES)
+
+
+def _bound(**over: object) -> GbmSpec:
+    """A GBM that *is* one side of another model's interval (FR-MODEL-78)."""
+    base: dict[str, object] = {
+        "model_type": "xgboost",
+        "model_family_slug": "motor-ad-frequency",
+        "dataset_version_id": uuid4(),
+        "response_column": "claim_count",
+        "offset": OffsetSpec(kind="log_column", column="exposure_years"),
+        "objective": GbmFunctionRef(kind="builtin", name="count:poisson"),
+        "categorical_handling": "native",
+    }
+    base.update(over)
+    return GbmSpec(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-MODEL-86")
+@pytest.mark.req("FR-MODEL-100")
+def test_the_algorithm_version_moved_with_the_new_field() -> None:
+    """FR-MODEL-86: adding a spec field increments `n` in the same commit as the field.
+
+    Asserted on the constant as well as on a digest. A digest-only test passes just as well
+    after a hand-edit that added the field and forgot the constant — which is the exact
+    mistake the requirement exists to catch, because its symptom is silent: every stored
+    digest stops matching its own spec and FR-MODEL-66's dedup ends with no error to see.
+    """
+    assert SPEC_HASH_VERSION == 4, "interval_for joined the payload; the tag moves with it"
+    assert spec_hash(_bound()).startswith("v4:sha256:")
+    assert spec_hash_is_current("v3:sha256:" + "0" * 64) is False, (
+        "every v3 digest is now stale and must be findable with LIKE 'v3:%'"
+    )
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_two_bounds_against_different_central_models_do_not_collide() -> None:
+    """The whole reason the link lives in the spec rather than beside it.
+
+    Two bounds identical but for the model they bound must hash differently. If they did
+    not, `reserve_model` would answer the second caller with the first caller's model
+    (FR-MODEL-66), and the second central model would silently acquire a bound fitted for
+    another one — an interval around a model nobody fitted, rendering identically.
+    """
+    shared = {"dataset_version_id": uuid4()}
+    left = _bound(
+        interval_for=IntervalFor(model_id=uuid4(), model_version=7, alpha=0.05), **shared
+    )
+    right = _bound(
+        interval_for=IntervalFor(model_id=uuid4(), model_version=7, alpha=0.05), **shared
+    )
+    assert spec_hash(left) != spec_hash(right)
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_the_two_sides_of_one_pair_do_not_collide() -> None:
+    """The alpha is in the payload too, so a lower and an upper bound are distinct specs.
+
+    Otherwise fitting the upper bound after the lower would return the lower one under
+    FR-MODEL-66 and the pair would be one model referenced twice.
+    """
+    central, dataset = uuid4(), uuid4()
+    lower = _bound(
+        interval_for=IntervalFor(model_id=central, model_version=7, alpha=0.05),
+        dataset_version_id=dataset,
+    )
+    upper = _bound(
+        interval_for=IntervalFor(model_id=central, model_version=7, alpha=0.95),
+        dataset_version_id=dataset,
+    )
+    assert spec_hash(lower) != spec_hash(upper)
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_an_ordinary_gbm_and_a_bound_do_not_collide() -> None:
+    """`interval_for=None` must hash differently from any populated one.
+
+    A central model and a bound fitted on the same design differ *only* by this field, so if
+    it did not reach the payload the bound would dedup onto its own central model.
+    """
+    dataset = uuid4()
+    plain = _bound(dataset_version_id=dataset)
+    bound = _bound(
+        interval_for=IntervalFor(model_id=uuid4(), model_version=7, alpha=0.05),
+        dataset_version_id=dataset,
+    )
+    assert spec_hash(plain) != spec_hash(bound)

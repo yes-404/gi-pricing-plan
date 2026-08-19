@@ -97,7 +97,9 @@ __all__ = [
 #: paid the same way: every `v2:` digest describes a spec this build hashes differently, so
 #: a `v2:` model resubmitted today looks new. `spec_hash_is_current` reports them and
 #: `LIKE 'v2:%'` finds them.
-SPEC_HASH_VERSION: Final = 3
+#: `interval_for` moved it `v3` to `v4` (2026-08-19, FR-MODEL-100): a bound's link to
+#: the model it bounds is part of that model's identity, so it joins the payload.
+SPEC_HASH_VERSION: Final = 4
 
 
 def spec_hash(spec: ModelSpec) -> str:

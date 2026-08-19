@@ -61,6 +61,7 @@ __all__ = [
     "GroupingEvidence",
     "GroupingMethod",
     "GroupingProposal",
+    "IntervalFor",
     "LossTreatment",
     "Model",
     "ModelFlag",
@@ -953,6 +954,48 @@ class EarlyStopping(BaseModel):
         return self
 
 
+class IntervalFor(BaseModel):
+    """This model is one side of another model's prediction interval (FR-MODEL-78).
+
+    **On the spec, so it joins `spec_hash`** (FR-MODEL-100). FR-MODEL-96 set the precedent
+    for a Model that exists relative to another Model — `approximates_model_id` on the
+    approximating Model's spec — and the reason is the same one: the pairing is part of
+    what this model *is*. Two bounds identical but for the central model they bound would
+    otherwise share a digest, and FR-MODEL-66 would hand the second caller the first
+    caller's model: an interval around a model nobody fitted, rendering identically to a
+    correct one.
+
+    The central model is named by **id and version**. The id is what the lookup uses; the
+    version is what a human reads in a review, where `motor-ad-frequency@7` is recognisable
+    and a UUID is not — the same argument `Prediction` carries for holding both.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_id: UUID
+    model_version: int = Field(ge=1)
+    #: The quantile this bound estimates. Exclusive at both ends: at `alpha = 0` the pinball
+    #: loss has zero gradient wherever the residual is positive, so the fit converges on
+    #: nothing and returns a bound that cannot be told from a broken one.
+    alpha: float = Field(gt=0.0, lt=1.0)
+
+    @model_validator(mode="after")
+    def _the_median_is_not_a_side(self) -> IntervalFor:
+        """`alpha = 0.5` is a central estimate, and an interval has no central side.
+
+        FR-MODEL-100(iv) allocates one bound per side and finds them by comparing `alpha`
+        with 0.5. A median bound belongs to neither set, so admitting it would make "the
+        lower bound of this model" a question with no answer at exactly the point the
+        prediction path asks it.
+        """
+        if self.alpha == 0.5:
+            raise ValueError(
+                "alpha=0.5 is the median, not a bound. A paired interval has a lower side "
+                "(alpha < 0.5) and an upper side (alpha > 0.5), and the median is neither."
+            )
+        return self
+
+
 class GbmSpec(ModelSpecCommon):
     """`02` §4.4's common block plus the gradient-boosting arm (FR-MODEL-25).
 
@@ -999,6 +1042,10 @@ class GbmSpec(ModelSpecCommon):
     #: The backend-specific escape hatch (`tree_method`, `boosting_type`, …), namespaced so
     #: FR-MODEL-25's single contract does not fork into two.
     backend_params: dict[str, Any] = Field(default_factory=dict)
+    #: FR-MODEL-78/100. Set only on a model that *is* a bound; `None` on every other GBM,
+    #: which is almost all of them. In the spec rather than beside it because it changes
+    #: the model's identity — see `IntervalFor`.
+    interval_for: IntervalFor | None = None
 
     @model_validator(mode="after")
     def _a_frequency_gbm_declares_its_exposure(self) -> GbmSpec:
