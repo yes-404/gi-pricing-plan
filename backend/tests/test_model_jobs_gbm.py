@@ -14,6 +14,7 @@ test_gbm.py` proves the fit. What is proven here is everything the platform adds
 
 from __future__ import annotations
 
+import asyncio
 from uuid import UUID
 
 import pytest
@@ -25,25 +26,40 @@ from backend.tests.test_model_jobs import (
     _validated_version,
 )
 
-from app.db.models import BlobRow, ModelRow
+from app.db.models import BlobRow, CustomMetricRow, CustomObjectiveRow, ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
+from app.platform import metrics as metric_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as model_service
+from app.platform import objectives as objective_service
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
+from app.worker.handlers import handler_for
 from app.worker.model_handlers import register_model_handlers
+from app.worker.progress import JobProgress
 from app.worker.tasks import execute_job
 from model_schema import (
+    TEMPLATE_APPLICABILITY,
+    CertificateCheck,
+    CertificateOutcome,
+    CertificateResult,
+    CheckStatus,
     EarlyStopping,
     GbmFunctionRef,
     GbmSpec,
+    HessianStrategy,
     JobKind,
     JobStatus,
+    MetricDirection,
     ModelStatus,
+    ObjectiveTemplate,
     OffsetSpec,
+    Principal,
+    ResponseKind,
+    SamplingSpec,
     SpecProblemKind,
     new_uuid7,
 )
@@ -96,6 +112,208 @@ async def _fitted_gbm(
         )
 
     return model_id, await execute_job(database, job.id, blob_store)
+
+
+#: A grid dense enough to satisfy `CertificateResult`'s shape and small enough that its
+#: values are never read — both `_certified_metric` and `_certified_objective` below
+#: bypass the real sampling the way `test_custom_metrics.py`'s `_certified` does, so what
+#: is under test is the worker's ref-resolution wiring (FR-MODEL-106/107), not the
+#: certification maths `test_custom_metrics.py`/`test_custom_objectives.py` already cover.
+_CERTIFY_GRID = SamplingSpec(
+    n_points=1_000, y_range=(0.0, 20.0), f_range=(-5.0, 4.0), w_range=(0.01, 10.0), seed=7
+)
+
+
+async def _certified_metric(
+    database: Database, workspace_id, actor: Principal, **over: object
+) -> CustomMetricRow:
+    """One Custom Metric, `certified` by recording a passing certificate directly.
+
+    `TEMPLATE_APPLICABILITY[POISSON]` as-is, not a narrower applicability built by hand:
+    `CustomMetric`'s own validator refuses one wider than its template's
+    (`Applicability.is_within`), and the template's own applicability is always exactly
+    as wide as itself — matching `packages/pricing-core/tests/test_gbm.py`'s `_metric`.
+    """
+    async with database.unit_of_work() as session:
+        row = await metric_service.create(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            slug=over.get("slug") or f"metric-{new_uuid7().hex[-6:]}",  # type: ignore[arg-type]
+            template=ObjectiveTemplate.POISSON,
+            params={},
+            applicability=TEMPLATE_APPLICABILITY[ObjectiveTemplate.POISSON],
+            direction=MetricDirection.LOWER_IS_BETTER,
+            description=None,
+        )
+    passed = CertificateResult(
+        overall=CertificateOutcome.CERTIFIED,
+        sampling=_CERTIFY_GRID,
+        checks=(
+            CertificateCheck(name="finiteness", status=CheckStatus.PASS, detail="finite"),
+        ),
+        library_versions={"numpy": "2.0.0"},
+    )
+    async with database.unit_of_work() as session:
+        certified, _certificate = await metric_service.record_certificate(
+            session, workspace_id=workspace_id, actor=actor, metric_id=row.id, result=passed
+        )
+    return certified
+
+
+async def _certified_objective(
+    database: Database, blob_store: BlobStore, workspace_id, actor: Principal, **over: object
+) -> CustomObjectiveRow:
+    """One Custom Objective, certified through the **real Job** — `test_custom_objectives
+    .py`'s `_certified`, kept local rather than imported: that module imports `_gbm_spec`
+    from this one, and importing `_certified` back would make the two files load each
+    other before either finished defining what the other needs.
+    """
+    async with database.unit_of_work() as session:
+        row = await objective_service.create_objective(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            slug=over.get("slug") or f"obj-{new_uuid7().hex[-6:]}",  # type: ignore[arg-type]
+            template=ObjectiveTemplate.POISSON,
+            params={},
+            applicability=None,
+            hessian_strategy=HessianStrategy.CLIP_TO_MIN,
+            hessian_min=1e-6,
+            description=None,
+        )
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.OBJECTIVE_CERTIFY,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "objective_id": str(row.id),
+                "sampling": _CERTIFY_GRID.model_dump(mode="json"),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    async with database.session() as session:
+        certified = await session.get(CustomObjectiveRow, row.id)
+        assert certified is not None
+        return certified
+
+
+@pytest.mark.req("FR-MODEL-106")
+async def test_a_certified_custom_metric_is_resolved_and_reaches_the_fit(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The worker seam `pricing-core` cannot cross (ADR-0001): `metric_service.resolve_ref`
+    turns the ref the spec names into the artifact `fit_gbm` needs, inside the same
+    session the objective resolution already uses. The resolved metric showing up in the
+    stored diagnostics' curve is the evidence the wiring reached the fit, not that the
+    entry was silently dropped."""
+    actor = await _actuary(database, workspace_id)
+    metric = await _certified_metric(database, workspace_id, actor)
+    ref = f"custom_metric:{metric.slug}@{metric.version}"
+
+    model_id, status = await _fitted_gbm(
+        database, blob_store, workspace_id,
+        response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=ref),),
+    )
+    assert status is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        diagnostics = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+    assert diagnostics.gbm is not None
+    assert ref in {point.metric for point in diagnostics.gbm.eval_curve}
+
+
+@pytest.mark.req("FR-MODEL-106")
+async def test_a_custom_eval_metric_that_was_not_supplied_fails_the_job(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """ADR-0001 at the worker seam: a ref `eval_metrics` names with no Custom Metric row
+    behind it is the caller's bug, and `_resolve_metrics` refuses it by name
+    (`METRIC_REF_UNRESOLVED`) — the same shape as the unsupplied-objective case, now for
+    a metric.
+
+    Goes through the handler directly rather than `execute_job`, which maps every handler
+    exception to `JOB_HANDLER_FAILED`: the code under test is what `PlatformError.code`
+    carries out of the handler, not what the runner does with it once it has it.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_gbm_spec(
+                version_id, (area,), split_ref=split,
+                response=ResponseKind.CLAIM_COUNT,
+                eval_metrics=(GbmFunctionRef(kind="custom", ref="custom_metric:absent@1"),),
+            ),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+
+    handler = handler_for(JobKind.MODEL_FIT)
+    assert handler is not None
+    progress = JobProgress(
+        job.id, database, asyncio.get_running_loop(), blob_store=blob_store
+    )
+    with pytest.raises(PlatformError) as caught:
+        await asyncio.to_thread(
+            handler,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            progress,
+        )
+    assert caught.value.code == "METRIC_REF_UNRESOLVED"
+
+
+@pytest.mark.req("FR-MODEL-107")
+async def test_early_stopping_on_a_custom_metric_reaches_fitted_through_the_job(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The refusal FR-MODEL-45 was deferred behind, retired end to end: a spec pairing a
+    Custom Objective with early stopping on a Custom Metric it declares now fits through
+    the same Job every other GBM does, rather than hitting the unconditional
+    `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` every such spec used to."""
+    actor = await _actuary(database, workspace_id)
+    objective = await _certified_objective(database, blob_store, workspace_id, actor)
+    objective_ref = f"custom_objective:{objective.slug}@{objective.version}"
+    metric = await _certified_metric(database, workspace_id, actor)
+    metric_ref = f"custom_metric:{metric.slug}@{metric.version}"
+
+    model_id, status = await _fitted_gbm(
+        database, blob_store, workspace_id,
+        objective=GbmFunctionRef(kind="custom", ref=objective_ref),
+        response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=metric_ref),),
+        early_stopping=EarlyStopping(on="holdout", metric=metric_ref, rounds=5),
+    )
+    assert status is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        model = model_service.to_model(await session.get(ModelRow, model_id))
+        diagnostics = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+    assert model.status is ModelStatus.FITTED
+    assert diagnostics.gbm is not None
+    assert metric_ref in {point.metric for point in diagnostics.gbm.eval_curve}
 
 
 @pytest.mark.req("FR-MODEL-25")

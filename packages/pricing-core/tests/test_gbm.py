@@ -25,8 +25,10 @@ import pytest
 
 from model_schema import (
     TEMPLATE_APPLICABILITY,
+    Applicability,
     Banding,
     BandingMethod,
+    CustomMetric,
     CustomObjective,
     EarlyStopping,
     Factor,
@@ -34,6 +36,8 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     LossTreatment,
+    MetricDirection,
+    MetricStatus,
     MonotonicDirection,
     ObjectiveBackend,
     ObjectiveStatus,
@@ -41,6 +45,7 @@ from model_schema import (
     OffsetSpec,
     ResponseKind,
     SplitRef,
+    YDomain,
 )
 from pricing_core.modelling.gbm import GbmFitError, fit_gbm, predict_gbm
 
@@ -982,3 +987,146 @@ def test_early_stopping_under_a_custom_objective_is_refused_by_name(backend: str
     with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
         fit_gbm(_frequency_data(), spec, FACTORS, objective=objective)
     assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-106 / FR-MODEL-107 — `eval_metrics` honoured, early stopping on a custom metric
+# --------------------------------------------------------------------------------------
+
+_METRIC_REF = "custom_metric:poisson-nll@1"
+
+
+def _metric(
+    template: ObjectiveTemplate = ObjectiveTemplate.POISSON,
+    *,
+    slug: str = "poisson-nll",
+    version: int = 1,
+    status: MetricStatus = MetricStatus.APPROVED,
+    **over: object,
+) -> CustomMetric:
+    """A fittable Custom Metric, defaulting to the template's own applicability.
+
+    Mirrors `_custom` above (the same defaulting-past-`draft` reasoning applies): a
+    `status` past `draft` needs a `certificate_id`, supplied unconditionally here since
+    `draft` tolerates one too.
+    """
+    fields: dict[str, object] = {
+        "id": uuid4(), "slug": slug, "version": version, "template": template,
+        "params": dict(_DEFAULTS.get(template, {})),
+        "applicability": TEMPLATE_APPLICABILITY[template],
+        "direction": MetricDirection.LOWER_IS_BETTER,
+        "status": status, "certificate_id": uuid4(),
+    }
+    fields.update(over)
+    return CustomMetric(**fields)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_early_stopping_on_a_custom_metric_is_allowed_under_a_custom_objective(
+    backend: str,
+) -> None:
+    """The refusal FR-MODEL-45 was deferred behind is retired for a metric the spec names.
+
+    `evaluate_metric` is written against the raw score by construction, so the reason the
+    unconditional refusal gave — a builtin metric silently sees the wrong quantity under a
+    callable objective — never applied to a custom one.
+    """
+    objective = _custom()
+    metric = _metric()
+    spec = _custom_spec(
+        backend, objective,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+        early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+    )
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=_frequency_data(n=3_000, seed=99),
+        objective=objective, metrics={_METRIC_REF: metric},
+    )
+    assert fit.result.best_iteration is not None
+    assert fit.eval_curve
+    assert {point.metric for point in fit.eval_curve} == {_METRIC_REF}
+    assert all(point.holdout is not None for point in fit.eval_curve)
+    assert all(point.train is not None for point in fit.eval_curve)
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_early_stopping_on_a_builtin_metric_is_still_refused_under_a_custom_objective(
+    backend: str,
+) -> None:
+    """The narrowing must not become a removal — the raw-score problem is unchanged for a
+    metric the spec did not name as one of its own `eval_metrics`.
+
+    A *different* Custom Metric is declared on the same spec, so this also proves the
+    refusal is keyed on the named metric matching a declared ref, not on whether any
+    Custom Metric is declared at all.
+    """
+    objective = _custom()
+    metric = _metric()
+    spec = _custom_spec(
+        backend, objective,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+        early_stopping=EarlyStopping(on="holdout", metric="poisson-nloglik", rounds=5),
+    )
+    with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
+        fit_gbm(
+            _frequency_data(), spec, FACTORS, objective=objective, metrics={_METRIC_REF: metric}
+        )
+    assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"
+
+
+@pytest.mark.req("FR-MODEL-106")
+def test_a_custom_eval_metric_that_was_not_supplied_refuses_the_fit() -> None:
+    """ADR-0001: `pricing-core` does not resolve refs, so an unsupplied one is the
+    caller's bug, not a lookup failure to retry."""
+    spec = _spec(
+        "xgboost", response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref="custom_metric:absent@1"),),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS)
+    assert raised.value.code == "METRIC_REF_UNRESOLVED"
+
+
+@pytest.mark.req("FR-MODEL-106")
+def test_a_metric_whose_applicability_excludes_the_backend_refuses_the_fit() -> None:
+    lightgbm_only = _metric(
+        applicability=Applicability(
+            responses=(ResponseKind.CLAIM_COUNT,),
+            backends=(ObjectiveBackend.LIGHTGBM,),
+            offset_required=True,
+            y_domain=YDomain(min_inclusive=0.0),
+        )
+    )
+    spec = _spec(
+        "xgboost", response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, metrics={_METRIC_REF: lightgbm_only})
+    assert raised.value.code == "METRIC_NOT_APPLICABLE"
+
+
+@pytest.mark.req("FR-MODEL-106")
+def test_a_draft_metric_cannot_be_fitted_with() -> None:
+    """FITTABLE_METRIC_STATUSES excludes draft: an uncertified metric is unproven."""
+    draft = _metric(status=MetricStatus.DRAFT)
+    spec = _spec(
+        "xgboost", response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, metrics={_METRIC_REF: draft})
+    assert raised.value.code == "METRIC_NOT_FITTABLE"
+
+
+@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_builtin_eval_metric_reaches_the_backend(backend: str) -> None:
+    """The half that needed no FR-MODEL-45 machinery and was ignored anyway."""
+    spec = _spec(backend, eval_metrics=(GbmFunctionRef(kind="builtin", name="poisson-nloglik"),))
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=_frequency_data(n=3_000, seed=99)
+    )
+    assert "poisson-nloglik" in {point.metric for point in fit.eval_curve}

@@ -105,30 +105,43 @@ def test_a_separated_fit_can_be_reported_as_the_named_refusal() -> None:
 
 
 @pytest.mark.req("FR-MODEL-23")
-def test_every_code_the_fit_path_can_raise_is_registered() -> None:
+@pytest.mark.parametrize(
+    ("module_path", "exception_name"),
+    [
+        ("pricing_core.modelling.glm", "GlmFitError"),
+        # FR-MODEL-106/107: `gbm.py` gained `METRIC_REF_UNRESOLVED`,
+        # `METRIC_NOT_APPLICABLE` and `METRIC_NOT_FITTABLE` the day `eval_metrics`
+        # started being honoured — the same gap this test caught for `glm.py`, now
+        # covered on the GBM side too rather than trusted by construction.
+        ("pricing_core.modelling.gbm", "GbmFitError"),
+    ],
+)
+def test_every_code_the_fit_path_can_raise_is_registered(
+    module_path: str, exception_name: str
+) -> None:
     """Derived from `pricing-core`, so a new named failure is covered on the day it lands.
 
     The previous test names one code. This one asks the source of truth — the codes
-    `GlmFitError` is actually constructed with — and would have caught the gap without
-    anyone knowing which code was missing.
+    `GlmFitError`/`GbmFitError` are actually constructed with — and would have caught the
+    gap without anyone knowing which code was missing.
     """
     import ast
+    import importlib
     import pathlib
 
-    import pricing_core.modelling.glm as glm_module
-
-    tree = ast.parse(pathlib.Path(glm_module.__file__).read_text())
+    module = importlib.import_module(module_path)
+    tree = ast.parse(pathlib.Path(str(module.__file__)).read_text())
     raised = {
         node.args[0].value
         for node in ast.walk(tree)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id == "GlmFitError"
+        and node.func.id == exception_name
         and node.args
         and isinstance(node.args[0], ast.Constant)
         and isinstance(node.args[0].value, str)
     }
-    assert raised, "the parse found no GlmFitError call sites, so it proves nothing"
+    assert raised, f"the parse found no {exception_name} call sites, so it proves nothing"
     assert raised <= MODELLING_ERROR_CODES, sorted(raised - MODELLING_ERROR_CODES)
 
 

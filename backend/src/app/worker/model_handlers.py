@@ -178,6 +178,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         pl.DataFrame,
         pl.DataFrame,
         CustomObjective | None,
+        dict[str, CustomMetric],
     ]:
         async with progress.database.session() as session:
             row = await session.get(ModelRow, model_id)
@@ -251,9 +252,29 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 if isinstance(spec, GbmSpec) and spec.objective.kind == "custom"
                 else None
             )
-            return spec, factors, transformations, train, holdout, objective
+            # Every `kind: custom` eval metric the spec names, resolved for the same
+            # reason the objective above is: `fit_gbm` takes `metrics` as already-resolved
+            # artifacts (ADR-0001) and refuses a ref that arrives unsupplied
+            # (`METRIC_REF_UNRESOLVED`), one outside its applicability
+            # (`METRIC_NOT_APPLICABLE`) or one not fittable (`METRIC_NOT_FITTABLE`) —
+            # `_resolve_metrics` needs the artifact in hand to say which. Same session,
+            # same transaction as the objective resolution above it: a second
+            # `unit_of_work` here would take a second connection from the pool and
+            # deadlock rather than fail.
+            metrics: dict[str, CustomMetric] = {}
+            if isinstance(spec, GbmSpec):
+                for eval_metric_ref in spec.eval_metrics:
+                    if eval_metric_ref.kind != "custom":
+                        continue
+                    ref = eval_metric_ref.ref or ""
+                    metrics[ref] = await metric_service.resolve_ref(
+                        session, workspace_id=workspace_id, ref=ref
+                    )
+            return spec, factors, transformations, train, holdout, objective, metrics
 
-    spec, factors, transformations, frame, holdout, objective = progress.run_on_loop(load())
+    spec, factors, transformations, frame, holdout, objective, metrics = progress.run_on_loop(
+        load()
+    )
 
     from pricing_core.modelling import GbmFitError, GlmFitError, fit_gbm, fit_glm
     from pricing_core.modelling.factors import FactorResolutionError
@@ -277,6 +298,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 objective=objective,
+                metrics=metrics,
                 progress=fitting,
             )
             result, booster, eval_curve = fit.result, fit.booster_bytes, fit.eval_curve
