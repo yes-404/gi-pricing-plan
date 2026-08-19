@@ -2114,7 +2114,7 @@ raise.
 
 | Item | Verdict |
 |---|---|
-| `02` FR-MODEL-96 — the approximating Model | **Deferred, Phase 1b**, with the deadline stated in the requirement. `approximating_model_id` stays `None` meanwhile, which is FR-MODEL-87's declared-and-unbuilt state with a trigger attached |
+| `02` FR-MODEL-96 — the approximating Model | ~~**Deferred, Phase 1b**, with the deadline stated in the requirement.~~ **Delivered 2026-08-19** (PR #120), and the deadline was the reason it landed when it did: before anything referenced a transparency artifact by identifier, so it stayed a decision instead of becoming a migration. See the GLM-approximation slice record below. *(Original verdict, kept:)* `approximating_model_id` stays `None` meanwhile, which is FR-MODEL-87's declared-and-unbuilt state with a trigger attached |
 | `03` FR-RATE-61 — the approximation deployment gate | **Deferred, Phase 2.** Needs FR-RATE-46 built; nothing in Phase 1 deploys a Rating Version. Building it now would be building ahead of the phase |
 | `model_comparison_if_predecessor` in the enforced floor | **Deferred**, owner: the slice that gives `model_comparisons` a queryable model reference. Named in FR-GOV-37 rather than left to be noticed |
 | §3.3's factor/banding/grouping **rationale** evidence | **Not started** — unmodelled, no artifact holds it. Owner: Phase 1b |
@@ -2473,6 +2473,112 @@ mirrored (was 64) · req-coverage **227 of 482 marked, 47.1 %** (was 224 of 480)
 leaves the unevidenced list**, which falls 21 → 20, and FR-MODEL-100/101 land evidenced —
 113 in scope, 93 with evidence (82 %).
 
+#### W5 slice — the GLM approximation as a Model, 2026-08-19
+
+The twenty-first slice, and the one that discharged a deadline rather than answered a need:
+FR-MODEL-96 had to land before anything referenced a transparency artifact by identifier,
+after which it would have been a migration instead of a decision. **OQ-MODEL-10 was decided
+by the maintainer as option A before execution began** — the inline coefficient table stays
+as a legacy era, exclusive with `approximating_model_id`, rather than being migrated away.
+
+| Delivered | Evidence |
+|---|---|
+| The approximation is a Model in its own right | `GlmSpec.approximates_model_id`, and `approximation_spec(spec, *, source_model_id)` deriving the surrogate's spec from the GBM's — `dataset_version_id`, `split_ref` and `factors` copied, `SURROGATE_RESPONSE_COLUMN` (`__gbm_prediction__`) as the response |
+| The fidelity is measured against the booster **by mechanism** | `diagnostics.py` reads actuals as `data[spec.response_column]`, and that column *is* `__gbm_prediction__` — so the A/E is against the booster because the spec object says so, not because a comment does. Traced end to end in the final review rather than asserted |
+| Two eras, mutually exclusive | A validator refusing a block that carries both inline coefficients and an `approximating_model_id`, and refusing one that carries neither |
+| The legacy era cannot be deleted silently | Positive tests, added in the fix wave. Before them all three `GlmApproximation(` uses asserted *refusal*, so deleting the legacy fields would have left the gate green — the maintainer's option-A decision was protected by nothing the suite could see |
+| A hand-written surrogate spec is refused | `_refuse_mismatched_approximation`, comparing exactly the three fields `approximation_spec` copies; `MODEL_APPROXIMATION_INVALID` declared in `02` §5.1 and registered in `errors.py` |
+| `spec_hash` moved with the field | v4 → v5 in the same commit as `approximates_model_id`, contracts regenerated |
+| FR-MODEL-102 appended | The maximum was 101, not the last id read. It carries the `-approx` slug convention the code needed and no spec stated: a source slug over 57 characters fails against the 64-character column |
+
+**Three open questions raised, none decided here.** **OQ-MODEL-17** — a rebuild
+(`should_fit=False`) pays a full GLM fit plus one type-III refit per factor for numbers it
+then discards, because `store()` only persists them when `should_fit` is `True`.
+**OQ-OVR-9** — nothing in this repository compares a spec's §5.1 error-code table against
+`errors.py`; verified twice on this branch, and structural, applying to every module rather
+than to `02` alone. **OQ-PLAT-7** — a `PlatformError` raised inside a Job handler loses its
+`.code` to `JOB_HANDLER_FAILED`, which is why this slice's two refusal tests had to call the
+handler directly instead of going through `execute_job`.
+
+**A check went red on purpose, from the first commit to the fifth.**
+`test_errors.py::test_spec_error_codes_are_all_constructible` reads the spec's code list, so
+declaring `MODEL_APPROXIMATION_INVALID` in `02` reddened it until the registration landed
+four tasks later. Ruled deliberately rather than worked around: moving the registration into
+the docs commit would have put a backend source edit inside a docs-only commit to buy a green
+intermediate state nothing consumes. Same shape as PR #98 — a check that fires on the
+*contract* goes red at a slice's first commit rather than its last.
+
+**Measured, not asserted.** +0.26 s / ~7 % on the transparency Job, against a
+**single-factor** fixture. That does not bound a multi-factor model — type-III diagnostics
+refit the surrogate once per factor, which is exactly what OQ-MODEL-17 is about.
+`type_iii=False` is the lever if it ever bites, and is not pulled without the maintainer.
+
+**Not delivered, with owners.** No frontend renders the surrogate link or the approximation's
+own model page — `02` §5.3's model-detail view is **W6b**'s. A stored block with *empty*
+coefficients and no id is now refused on read; unreachable in practice, since the old builder
+always emitted at least an intercept, so it is parked rather than guarded.
+
+**Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (125 source files) ·
+**1362 python tests, zero skipped** in 265 s (was 1339) · audit-docs 0 — **483 requirements**
+(was 482), **69 open questions** all mirrored (was 66) · req-coverage **229 of 483 marked,
+47.4 %** (was 227 of 482) · `generate-contracts.py --check` 0, **21 generated contracts
+match**.
+
+**Recorded late, and that is the process finding.** PR #120 updated W5's row in §6 and wrote
+no slice record; this one was written 2026-08-19 from the branch's ledger and the merged
+diff. It is the second such omission in W5 — the prediction slice (PR #102) is the first, and
+is noted in the same row. A row's prose says a slice happened; only a record says what it
+found.
+
+#### W5 — outstanding work, derived 2026-08-19
+
+**Derived from the specification first, then evidenced** (`CLAUDE.md` §13 rule 1):
+`scope-audit.py MODEL`, then `--endpoints`. `02` declares no `XX-YYY-N` catalogue, so unlike
+`01` there is no catalogue axis to check.
+
+| | |
+|---|---|
+| Requirements in scope | **114** |
+| With evidence | **95 (83 %)** |
+| Without evidence | **19** |
+| Endpoints declared in §5.1 | **35** |
+| Endpoints published | **34 (97 %)** |
+
+**Five buildable slices remain**, smallest first:
+
+| Slice | Requirements | State, and what is actually missing |
+|---|---|---|
+| **1. Custom metrics** | FR-MODEL-45's endpoint | `POST /api/v1/custom-metrics` is the one unpublished endpoint of the 35. Deferred to Phase 1b by a dated amendment in `02` §5.1, on the reasoning that a custom *metric* is `feval` — it changes what early stopping optimises and what the diagnostics report, not what the model fits. It shares the objective's lifecycle, certification and approval machinery, which is built. Nothing else gates it |
+| **2. Regularisation and cross-validation** | FR-MODEL-20, FR-MODEL-53 | Already paired by a verdict on file — `select_by: cv` lives in the penalty path. The schema is ahead of the code: `GlmSpec` carries `alpha` and `l1_ratio`, and `cv_folds` exists. Missing are the documented penalty path, the CV selection option, declared fold construction (`random`, `temporal`, `grouped_by_key`) with a persisted seed, and per-fold metrics **and their dispersion** persisted as diagnostics rather than the mean alone |
+| **3. Tweedie power by profile likelihood** | FR-MODEL-22 | Today `GlmSpec` only *validates* that a supplied power lies between the two families it spans. Missing: the grid, the persisted profile curve, and recording an estimated `p` as an estimate with its own uncertainty rather than silently baking it in as a constant |
+| **4. Offset from another model** | FR-MODEL-24 | `offset_model_ref` appears nowhere in `packages/` or `backend/src`. This is residual modelling and "fit on top of the current rating structure", with the referenced model version pinned |
+| **5. EBM** | FR-MODEL-37 | Verdict on file: not started, owner is "the slice that first fits an `ebm` model" — and `ebm` is one of the four Model types in `CLAUDE.md` §7's vocabulary, so W5 owns it unless reassigned. The stated cost is `interpret` as a third heavy dependency serving one requirement |
+
+**The NFR gap — 11 of 12 unevidenced**, and it is not one problem:
+
+| NFRs | Verdict |
+|---|---|
+| NFR-MODEL-3, NFR-MODEL-12 | **Measured 2026-08-15 and recorded in `02` §9**, met for three of the four proposal methods. Unevidenced only because a measurement is not a marker — `CLAUDE.md` §13 rule 1's "evidence is not only markers" case. They need the measurement recognised as the evidence, not a test invented to stand in for it |
+| NFR-MODEL-7, NFR-MODEL-8, NFR-MODEL-9 | **Testable today, no fixture needed.** Export/import round-trip with identical predictions; that user expressions never reach `eval`/`exec` and out-of-grammar input fails with a position-accurate error; that every named creation, fit and status transition emits an Audit Event with before/after state |
+| NFR-MODEL-4, NFR-MODEL-5, NFR-MODEL-11 | **Measurable today** against existing fixtures, because none of the three names a data scale: diagnostics adding no more than 30 % to fit wall-clock is a *ratio*, certification completes under 3 minutes, and a diagnostics artifact stays under 50 MB |
+| NFR-MODEL-1, NFR-MODEL-2, NFR-MODEL-10 | **Blocked on a fixture that does not exist.** All three name 5 M rows × 60 factors; freMTPL2 is 678 013 rows. Either a synthetic fixture is built, or they are measured at a stated smaller scale with the extrapolation written down. NFR-MODEL-2's second clause — a custom `expression` objective adding no more than 25 % — is **Phase 2** regardless, since expression objectives do not exist |
+| NFR-MODEL-6 | **Evidenced.** The only one of the twelve carrying a marker today |
+
+**Not W5, with the reason:**
+
+| Requirement | Owner |
+|---|---|
+| FR-MODEL-40 — `expression` objectives | **Phase 2, W30**, behind `expression_objectives_enabled`. The route exists and answers `422` with that code rather than `404`, so a caller learns the capability is off rather than absent |
+| FR-MODEL-6 — `expression` factors | **Phase 2, W30**, by OQ-MODEL-1's decision — its verdict on file reads "owned by that slice", and that slice is W30. **W30's carry-over list named FR-MODEL-40/41/75 and not FR-MODEL-6**; corrected 2026-08-19, *maintainer acceptance pending* |
+| FR-MODEL-82 — proxy detection | **Phase 3** by OQ-MODEL-7 (decided 2026-08-15), and by the requirement's own text. Through Phases 1–2 the platform's only treatment is FR-MODEL-5's `prohibited` flag, which refuses direct use and audits the attempt |
+| `02` §5.3's model spec builder, model detail and diagnostics views | **W6b**, stated in the gradient-boosting and paired-quantile slice records |
+
+**Three requirements had no verdict anywhere until this pass** — **FR-MODEL-20**,
+**FR-MODEL-22** and **FR-MODEL-24** were unevidenced and unspoken for in every slice record,
+which is the one option `CLAUDE.md` §13 rule 1 does not allow. They are recorded above as not
+started, owner W5, by W5's own scope definition ("every `MODEL` requirement") rather than by
+a new assignment.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2562,7 +2668,7 @@ dislocation, and serves a live quote inside the latency budget.
 
 ### Requirement coverage
 
-≈ **67 `RATE` + ~25 remaining `PLAT`** requirements, plus the `MODEL` requirements W30 carries over (FR-MODEL-40/41/75 and the `expression` half of §4.6/§4.7).
+≈ **67 `RATE` + ~25 remaining `PLAT`** requirements, plus the `MODEL` requirements W30 carries over (FR-MODEL-6, FR-MODEL-40/41/75 and the `expression` half of §4.6/§4.7). **FR-MODEL-6 added 2026-08-19**, *maintainer acceptance pending*: `expression` factors are an expression feature, and the verdict on file sends them to “the slice OQ-MODEL-1 gates”, which is this row — but the list named only the objective half, leaving the requirement owned by a slice that did not list it.
 
 ### Top risks
 
