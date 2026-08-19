@@ -938,21 +938,23 @@ moved.
 "why can I not fit a model on this?" answerable in one screen without scrolling past the
 fold: overall banner → failing rules → warnings needing acknowledgement → everything else.
 
-> *(2026-08-19)* **The Profile row's four Contents items are now three built and one not.**
-> Histograms landed with FR-DATA-48; per-column cards and the one-way charts with their CI
-> bands were built in W6a. The **PSI comparison selector has not been built**:
-> `compareProfiles()` is implemented, typed and exported from `frontend/src/api/profiles.ts`
-> with **zero callers**, and the dtype label that borrowed `psiBand`'s colour has been
-> uncoloured rather than left reading as support the view lacks — `psiBand(null)` returned
-> `"stable"` before any threshold, so the badge was never showing a PSI band, only the
-> colour of one. FR-DATA-28's endpoint exists and is served; the view that reads it is
-> unowned.
+> *(2026-08-19)* **The Profile row's four Contents items are now all four built.** Histograms
+> landed with FR-DATA-48; per-column cards and the one-way charts with their CI bands were
+> built in W6a; the **PSI comparison selector** was built in the slice that closed this note.
+> It reads FR-DATA-28's endpoint through `compareProfiles()` — implemented, typed and exported
+> with zero callers until then — and bands each column against `VR-DST-1`'s thresholds, so a
+> rule's verdict and the screen an actuary is reading cannot disagree about one number.
 >
-> The row keeps the claim rather than losing it (`CLAUDE.md` §14: resolve, never soften).
-> **Owner: the next slice to open `ProfileView.vue`, or W6b** — the selector needs a
-> reference-version picker, which is the first piece of Profile state that must outlive a
-> route, and `docs/roadmap.md`'s W6a record already names it as the trigger for the
-> frontend's first Pinia store.
+> **Three things the build settled that this note had left open.** The reference lives in the
+> **route query** and not in a Pinia store (**OQ-DATA-11**): nothing required the selection to
+> outlive a route, and a URL is shareable where a store is not — `frontend/src/stores/` is
+> still empty, and the first store waits for state that is genuinely global. A version with no
+> stored `profile_id` is **disabled in the picker** rather than offered and then explained,
+> because the endpoint answers 404 for it and `DatasetVersion` already carries the answer. And
+> `psiBand` now **refuses an absent PSI** at the type level: it answered `"stable"` for `null`,
+> which is how an unmeasured continuous column would have rendered as a calm band the moment
+> the function gained a caller — the defect this note recorded, fixed at the source rather
+> than at the one call site that had it.
 >
 > **Resolved 2026-08-19 on the Dataset list row above: status badge, last validated, owner.**
 > The question of which entity carries them was recorded as OQ-DATA-9 rather than picked, and the
