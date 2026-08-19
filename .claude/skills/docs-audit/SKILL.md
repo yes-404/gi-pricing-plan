@@ -128,6 +128,29 @@ PY
 
 All three must print `none`.
 
+**The `N (M open)` count in the third column is hand-maintained, and nothing above checks it.**
+`spec-change` says to *recount* a row rather than decrement it; this recounts every row, reading
+a struck id (`~~OQ-…~~`) as decided and an unstruck one as open:
+
+```bash
+python3 - <<'PY'
+import re, pathlib
+gate = pathlib.Path('docs/roadmap.md').read_text(encoding='utf-8').split('## 10. Decision gates')[1].split('## 11.')[0]
+for row in [l for l in gate.splitlines() if l.startswith('| ') and 'OQ-' in l]:
+    cells = row.split('|')
+    ids = {}
+    for m in re.finditer(r'(~~)?OQ-([A-Z]+)-(\d+)(?:\.\.(\d+))?(~~)?', cells[2]):
+        a, b = int(m.group(3)), m.group(4)
+        for n in range(a, (int(b) if b else a) + 1):
+            ids[f"OQ-{m.group(2)}-{n}"] = 1 if m.group(1) else 0
+    total, decided = len(ids), sum(ids.values())
+    print(f"{cells[1].strip()[:40]:42s} actual {total} ({total - decided} open)  stated {cells[3].strip()}")
+PY
+```
+
+Every `actual` must equal its `stated`. A range written `OQ-GOV-1..5` counts as five, and a range
+struck as a whole counts five decided — which is how the rows are actually written.
+
 **`duplicated` fires on prose inside a table row, not only on a real second placement.** The
 Phase 3 row carried a parenthetical — *(OQ-GOV-7 is gated at 1b, not here — see below)* — and
 the snippet counts ids per row, so an id was placed twice by a note whose whole purpose was
@@ -153,6 +176,15 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-19 — Confirmed while recording OQ-DATA-9 (→ FR-DATA-50, FR-DATA-51). The script passed
+before and after; the gate-table snippet reported `missing: ['OQ-DATA-9']` **before** the edit — a
+question raised in W5 on 2026-08-18, correctly mirrored into the register, and never placed on the
+plan, so the gate it belonged to had already closed by the time it was decided. That is the third
+time the `missing` half has caught a question the plan could not see, and the first where the cost
+was legible: an unplaced question is never scheduled, so it gets answered by whoever trips over it.
+The count-recount snippet above was written here, because striking an id and leaving `12 (0 open)`
+alone is the silent half of the same edit.
 
 2026-08-18 — Confirmed while recording five maintainer decisions (OQ-MODEL-10..13, OQ-GOV-7).
 The script passed before and after; the **gate-table snippet did not**, and the two failures it
