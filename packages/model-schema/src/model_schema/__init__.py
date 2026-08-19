@@ -192,6 +192,7 @@ from model_schema.permissions import (
     role_permissions,
 )
 from model_schema.prediction import (
+    IntervalModels,
     PredictedRow,
     Prediction,
     UnavailableReason,
@@ -353,6 +354,7 @@ __all__ = [
     "HessianStrategy",
     "Histogram",
     "IntervalFor",
+    "IntervalModels",
     "Job",
     "JobError",
     "JobKind",

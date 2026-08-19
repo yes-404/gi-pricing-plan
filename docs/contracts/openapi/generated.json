@@ -4546,6 +4546,42 @@
         "title": "IntervalFor",
         "type": "object"
       },
+      "IntervalModels": {
+        "additionalProperties": false,
+        "description": "The two Models a quantile-pair interval was computed from (FR-MODEL-78).\n\nCarried on the response because the bounds cost the actuary two extra fits and are\nModels in their own right — a reader who wants to know how the interval was made should\nreach them from the prediction rather than from a query they have to construct.\n\nThe alphas are here as well as the ids because `level` is their difference and a reader\nchecking a 0.90 interval should not have to open two artifacts to learn it came from\n0.05 and 0.95 rather than from 0.03 and 0.93.",
+        "properties": {
+          "lower_alpha": {
+            "exclusiveMaximum": 0.5,
+            "exclusiveMinimum": 0.0,
+            "title": "Lower Alpha",
+            "type": "number"
+          },
+          "lower_model_id": {
+            "format": "uuid",
+            "title": "Lower Model Id",
+            "type": "string"
+          },
+          "upper_alpha": {
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.5,
+            "title": "Upper Alpha",
+            "type": "number"
+          },
+          "upper_model_id": {
+            "format": "uuid",
+            "title": "Upper Model Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lower_model_id",
+          "upper_model_id",
+          "lower_alpha",
+          "upper_alpha"
+        ],
+        "title": "IntervalModels",
+        "type": "object"
+      },
       "Job": {
         "additionalProperties": false,
         "description": "A tracked asynchronous unit of work, as returned by the API (`07` §4.1).",
@@ -8869,7 +8905,7 @@
         "type": "object"
       },
       "UnavailableReason": {
-        "description": "Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's.\n\n**Only two of these are reachable today**, and FR-MODEL-87's staging rule requires that\nto be said in place rather than discovered:\n\n* `NO_INTERVAL_MODELS_FITTED` — every GBM, since FR-MODEL-78's `interval_for` is not\n  built and so no paired quantile model can exist to be found.\n* `COVARIANCE_NOT_STORED` — a GLM fitted before the covariance blob was written\n  (FR-MODEL-93).\n\n`INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` are declared and unreachable\nuntil FR-MODEL-78's paired quantile models land (Phase 1b). They are declared now\nbecause they are FR-MODEL-77's contract and a caller matching on this enum should not\nhave to widen its match when the slice that fits one arrives.",
+        "description": "Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's.\n\n**All four are reachable from 2026-08-19** (FR-MODEL-100, the paired-quantile slice).\nTwo of them — `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` — were declared\nhere and returned by nothing until that slice, named in place under FR-MODEL-87's\nstaging rule. That note is removed with the state it described rather than left\ndescribing a platform which has moved on.\n\nWhat those two *mean* was not decided by FR-MODEL-77, which named them and stopped.\nFR-MODEL-100 decides both, as requirements rather than as implementation choices,\nbecause each had two defensible readings and the built one is the one a reader will\nassume was specified.",
         "enum": [
           "no_interval_models_fitted",
           "interval_models_not_approved",
@@ -8887,6 +8923,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/UncertaintyBasis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interval_models": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IntervalModels"
               },
               {
                 "type": "null"
@@ -8939,6 +8985,7 @@
         "description": "What the interval on a prediction *is*, or that there is not one.\n\nDeliberately not `prediction_interval`: see the module docstring. The value a caller\nreads is the claim the platform is making about the number beside it.",
         "enum": [
           "confidence_interval_mean",
+          "quantile_pair_interval",
           "unavailable"
         ],
         "title": "UncertaintyKind",
