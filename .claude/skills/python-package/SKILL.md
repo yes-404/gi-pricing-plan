@@ -150,6 +150,19 @@ Drop rather than compare in the second case. A stored or hand-edited value then 
 to be believed, which is the guarantee "derived, not stored" exists for — and comparing
 would turn a tampered row into a validation error at read time rather than a corrected one.
 
+**`model_copy(update=...)` does not re-run validators.** It is a shallow copy with a dict
+merge, not `model_validate`, so a cross-field `model_validator(mode="after")` never sees the
+updated object. `GlmSpec._a_surrogate_says_so_in_both_places` (FR-MODEL-102) refuses a spec
+where `approximates_model_id` is set without `response_column == SURROGATE_RESPONSE_COLUMN`,
+or the reverse — an **iff** across two fields. Building a surrogate's spec by copying the
+source GBM's spec and patching both fields with `model_copy(update={...})` would produce an
+object that violates its own invariant and never notices, because the validator that would
+have caught it only runs on construction or `model_validate`. `pricing_core.modelling.
+transparency.approximation_spec()` builds the surrogate's `GlmSpec` through `GlmSpec(...)` —
+an ordinary constructor call naming every field — for exactly this reason: a method, not a
+copy, so the iff-validator runs. The rule generalises to any model with a cross-field
+invariant: **`model_copy` is safe only for fields the invariant does not touch.**
+
 ## Typing
 
 `mypy --strict` over `packages/`. Prefer `Protocol` over ABCs for injected collaborators —
@@ -164,6 +177,13 @@ Ruff, line length 100. Match the surrounding code. Comments explain *why* — th
 the spec, and a comment restating the code is noise that rots.
 
 ## Verified
+
+2026-08-19 — W5, the GLM approximation as a Model. The `model_copy(update=...)` rule above,
+found while writing `approximation_spec()`: an earlier draft built the surrogate's `GlmSpec`
+by copying the GBM's spec and patching `approximates_model_id` and `response_column` with
+`model_copy(update={...})`, which produced an object satisfying neither iff-branch of
+`_a_surrogate_says_so_in_both_places` and raised nothing, because the validator never re-ran.
+Rewritten as a plain constructor call.
 
 2026-08-18 — W5, peril structures. The `computed_field` round-trip rule, found when
 `load_structure` re-validated a stored `Reconciliation` and `extra="forbid"` rejected the
