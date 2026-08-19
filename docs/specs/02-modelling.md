@@ -1262,7 +1262,9 @@ other kind (FR-MODEL-75's rule, applied to metrics). `params` must be exactly th
 template's own parameters — an unknown key is refused rather than ignored, because a
 misspelled `cap` that is silently dropped produces an uncapped metric under a name that
 says capped. A status past `draft` requires a `certificate_id` (FR-MODEL-105). `direction`
-has no default (FR-MODEL-104).
+has no default (FR-MODEL-104). `applicability` must be no wider than §4.5's own applicability
+for `template` — an author may narrow it further, never extend it, because widening claims
+the analytic loss is valid somewhere `pricing-core` never established for it (FR-MODEL-103).
 
 **Why the shape is not `CustomObjective`'s.** No `hessian_strategy`, no `hessian_min`: both
 describe what happens where the curvature is negative, and a metric is never

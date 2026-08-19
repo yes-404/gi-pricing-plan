@@ -14,6 +14,7 @@ needs that an early-stopping loop cannot use: see `_direction_is_usable_for_stop
 
 from __future__ import annotations
 
+import datetime as _datetime
 import enum
 from typing import Final, Self
 from uuid import UUID
@@ -22,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.comparison import MetricDirection
 from model_schema.objectives import (
+    TEMPLATE_APPLICABILITY,
     TEMPLATE_PARAMETERS,
     Applicability,
     CertificateResult,
@@ -126,6 +128,28 @@ class CustomMetric(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _applicability_is_within_the_template(self) -> Self:
+        """An author may narrow §4.5's applicability and may not widen it.
+
+        Widening claims the analytic loss is valid somewhere `pricing-core` never
+        established for it — a `capped_gamma` metric declared applicable to `claim_count`
+        evaluates a Gamma loss, `y/μ + f`, on a response that is zero most of the time,
+        which is `inf`. `evaluate_metric` (Task 3) computes exactly that loss, and Task 6's
+        applicability check compares a metric against the *model spec* it is attached to —
+        it never checks the metric against its own template, so this is the only place a
+        widened claim is caught before it reaches a fit.
+        """
+        if self.template is None:  # pragma: no cover — refused above
+            return self
+        if not self.applicability.is_within(TEMPLATE_APPLICABILITY[self.template]):
+            raise ValueError(
+                f"metric {self.slug}@{self.version} declares an applicability wider than "
+                f"template {self.template.value!r}'s (§4.5, FR-MODEL-103). A metric may be "
+                "restricted further than its template and never extended beyond it."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _direction_is_usable_for_stopping(self) -> Self:
         """FR-MODEL-104 — only the two members an early-stopping loop can compare.
 
@@ -164,6 +188,6 @@ class MetricCertificate(BaseModel):
     id: UUID
     custom_metric_id: UUID
     metric_version: int = Field(ge=1)
-    certified_at: str
+    certified_at: _datetime.datetime
     job_id: UUID | None = None
     result: CertificateResult
