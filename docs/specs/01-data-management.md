@@ -157,7 +157,9 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-26** | Profiling additionally produces **one-way summaries** per candidate rating column: exposure, claim count, claim amount, observed frequency, severity, and burning cost by level or banded interval, with Poisson/Gamma confidence intervals. These are the inputs to the factor workbench in `02-modelling.md` and are computed once, here. |
 | **FR-DATA-27** | Profiles are computed with DuckDB directly over the version's parquet files and persisted as an artifact. The UI never recomputes a profile client-side or ad-hoc on request. |
 | **FR-DATA-28** | A **profile comparison** between any two Dataset Versions of the same Dataset is available on demand: per-column PSI, mean shift, null-rate shift, new/vanished levels. This is the same computation that the distributional validation layer consumes. |
-| **FR-DATA-46** | *(appended 2026-08-17; OQ-OVR-7, decided)* FR-DATA-26's one-way row names its two mean fields **`mean_severity`** and **`mean_burning_cost`** — not `severity_minor` and `burning_cost_minor`. Both are means and therefore floats, kept as floats deliberately, because rounding a mean to whole minor units would lose the precision the confidence interval beside it expresses. The values are right; the *names* are what FR-OVR-7 objects to, since `_minor` is reserved for integer minor units. Both stay expressed in the workspace currency's minor unit, so only the names change. **Not yet delivered**: the rename touches `01`'s published profile contract, the `banding` and `grouping` schemas that embed the row, the frontend that reads it and the seeded demo, and OQ-OVR-7 decided it lands **in the slice that next changes the profile contract** rather than as a change of its own. Until then both names are excluded by name from the money scan in `backend/tests/test_contracts.py`, with the reason beside them, and **that exclusion may not grow**: a ratio recognisable by shape is excluded by a rule instead (`_per_parameter`), and a third hand-written name means the rename is overdue. Owner: the next slice to change the profile contract. |
+| **FR-DATA-46** | *(appended 2026-08-17; OQ-OVR-7, decided)* FR-DATA-26's one-way row names its two mean fields **`mean_severity`** and **`mean_burning_cost`** — not `severity_minor` and `burning_cost_minor`. Both are means and therefore floats, kept as floats deliberately, because rounding a mean to whole minor units would lose the precision the confidence interval beside it expresses. The values are right; the *names* are what FR-OVR-7 objects to, since `_minor` is reserved for integer minor units. Both stay expressed in the workspace currency's minor unit, so only the names change. **Delivered 2026-08-18**, in the slice that added FR-DATA-48's histogram — the change to the profile contract OQ-OVR-7 was waiting for. The hand-written money-scan exclusion in `backend/tests/test_contracts.py` is deleted: `mean_severity` and `mean_burning_cost` do not match the scan's pattern, so nothing needs excluding. **Corrected 2026-08-19**: the rename carried the *names* and left the *types* — both fields went on declaring `MoneyMinor`, that is `{"type": "integer"}`, in the hand-authored `profile.schema.json` and `banding.schema.json`, so the published contract asserted exactly the rounding this requirement forbids. The divergence predates the rename; nothing caught it because every conformance test compared field names only. §4.7's note of that date carries the finding, the correction, and the type comparison that now enforces it. |
+| **FR-DATA-48** | *(appended 2026-08-18; `ColumnProfile` had no `histogram` while `01` §4.7's contract example, `docs/contracts/schemas/profile.schema.json` and §5.3's Profile view all declared one — a divergence recorded in `docs/roadmap.md` and built around in silence since 2026-08-15.)* Profiling additionally produces, for every **numeric non-identifier** column, a **histogram**: `HISTOGRAM_BINS` (20) equal-width bins over the observed `[min, max]`, published as `edges` (one more than there are bins), `counts`, and — where the version carries an exposure column — one exact decimal `exposure` weight per bin. Bins are half-open, `[e(i), e(i+1))`, except the last, which is closed. A constant column yields a single bin. **Equal-width bins over the observed range, computed from edges chosen in Python rather than by either engine's own histogram function**: FR-DATA-27 requires one answer regardless of engine, and every divergence `test_the_two_profiling_paths_agree` has ever caught came from an engine default — tie-breaking, null handling, quantile interpolation. |
+| **FR-DATA-49** | *(appended 2026-08-18, Task 6 — the profile contract's generated counterpart, comparing `docs/contracts/schemas/profile.schema.json` against `ColumnProfile` for the first time.)* **`ColumnProfile.top_levels` must carry `exposure_years` per level, not only `count`.** FR-DATA-25 asks for "top-20 levels by exposure and by count", and the contract has always declared each top level as `{level, count, exposure_years}` — but the model carries `top_levels: tuple[tuple[str, int], ...]`, a two-element tuple with no exposure weight and no field names, so a top-20 by count is silently substituted for a top-20 by exposure wherever it is read. **Not fixed in this slice, on the controller's ruling**: closing the gap means computing per-level exposure in both profiling engines (`profile_frame` and `profile_parquet`) and reworking every reader that treats `top_levels` as `(str, int)` — `compare_profiles` and `psi_from_weights` in `pricing_core.data.profile`, the distributional validation layer's `_level_counts`/PSI checks in `pricing_core.data.validate`, and `ProfileView.vue`'s chip list — 22 call sites across 7 non-generated files by the count taken 2026-08-18. That is a feature the size of FR-DATA-48's histogram work, not a reconciliation, so `backend/tests/test_contracts.py`'s nested conformance test compares `ColumnProfile`'s property *names* only (where `top_levels` exists on both sides and this gap is invisible) rather than each item's shape. **Owner: W5's next slice or whoever picks up FR-DATA-49**, no trigger beyond "before `top_levels` is read anywhere the exposure-vs-count distinction matters for a pricing decision". |
 
 
 ### 3.5 Reference data
@@ -556,15 +558,21 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
 
 ```json
 {
+  "id": "uuid",
   "dataset_version_id": "uuid",
+  "job_id": "uuid",
   "computed_at": "2026-08-14T09:16:00Z",
+  "row_count": 4824356,
+  "weight_column": "exposure_years",
+  "library_versions": {"polars": "1.9.0", "duckdb": "1.1.1"},
   "columns": [
     {
       "name": "driver_age", "semantic_type": "continuous", "dtype": "int32",
-      "null_count": 412, "null_rate": 0.0000854, "distinct_count": 74,
-      "min": 17, "max": 92, "mean": 43.8, "std": 15.2,
+      "row_count": 4824356, "null_count": 412, "null_rate": 0.0000854, "distinct_count": 74,
+      "minimum": 17, "maximum": 92, "mean": 43.8, "std": 15.2,
       "quantiles": {"p1": 19, "p5": 22, "p25": 32, "p50": 43, "p75": 55, "p95": 71, "p99": 80},
-      "histogram": {"edges": [17, 21, 25, 30, 40, 50, 60, 70, 93], "counts": [...], "exposure": [...]}
+      "histogram": {"edges": [17, 20.75, 24.5, ..., 88.25, 92], "counts": [...], "exposure": [...]},
+      "top_levels": []
     }
   ],
   "one_ways": [
@@ -573,12 +581,110 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
       "rows": [
         {"level": "17-21", "exposure_years": "82141.20", "claim_count": 9142,
          "claim_amount_minor": 41_882_100_00, "frequency": 0.1113, "frequency_ci": [0.1090, 0.1136],
-         "severity_minor": 458_100, "severity_ci": [449_200, 467_300], "burning_cost_minor": 50_990}
+         "mean_severity": 458_128.42, "severity_ci": [449_200.0, 467_300.0],
+         "mean_burning_cost": 50_987.93}
       ]
     }
   ]
 }
 ```
+
+> *(2026-08-18)* The example above has always shown a `histogram`, and so has the committed
+> contract; `ColumnProfile` did not carry one until FR-DATA-48. **The contract was right and
+> the requirement was incomplete** — FR-DATA-25 enumerates the statistics and never named
+> this one. The example's edges were illustrative, not a specification, and were uneven:
+> FR-DATA-48 fixes equal-width bins, because two engines must agree and quantile-derived
+> edges collapse to duplicates on a low-cardinality column, with each engine deduplicating
+> differently. The example above now shows the equal-width edges the requirement mandates.
+
+> *(2026-08-18, Task 6 — `profile.schema.json` generated and compared against `Profile` for
+> the first time.)* **The contract's `min`/`max` are renamed here to `minimum`/`maximum`,
+> matching the model rather than the other way round.** `min` and `max` are Python
+> builtins, `ColumnProfile` has named these fields `minimum`/`maximum` since Phase 1a, and
+> every consumer — the validation layer's `_reference_column` reads, `ProfileView.vue` —
+> already reads those names. Renaming the model to match a document nobody had compared it
+> against would have broken a working consumer to tidy a schema; the example above is
+> updated to match.
+>
+> The same comparison found the contract silent on five fields the model has always
+> produced — `id`, `job_id`, `row_count` (on `Profile` and, separately, on each
+> `ColumnProfile` — the count `VR-DST-6`'s standard-error check divides by), and
+> `library_versions` — now added to the contract. `job_id` and `weight_column` ran the other
+> way: the contract declared both and the model carried neither, so `Profile` gains
+> `job_id: UUID | None` (matching the `job_id` every other per-Job artifact in this
+> repository already carries, per `00` FR-OVR-3's `produced_by_job_id`) and
+> `weight_column: str = "exposure_years"` (recording, on the artifact itself, which column
+> `one_ways` was weighted by). Both are wired from the real profiling path, not left
+> decorative: `profile_frame`/`profile_parquet` accept `job_id` and record their
+> `exposure_column` argument as `weight_column`, and the worker's `_profile_version` handler
+> now passes its own Job's id through — which it had never done, because `JobProgress`
+> carried no public accessor for it before this slice added one.
+>
+> `top_levels`' item shape is a divergence this comparison found and did **not** fix: see
+> FR-DATA-49.
+
+> *(2026-08-19)* **The example above is corrected to match the model, not the other way
+> round.** It had gone on showing FR-DATA-46's superseded one-way names — `severity_minor`
+> and `burning_cost_minor`, both integer-looking and both `_minor`-suffixed — three commits
+> after the rename to `mean_severity` / `mean_burning_cost` landed in `OneWayRow` and in the
+> committed contract. `severity_ci` keeps its name: it is the interval *around* the mean
+> severity, and renaming an unchanged field to match a neighbour's rename would break
+> `ProfileView.vue` for symmetry alone. The values are unchanged in magnitude and now read
+> as the floats they are: a mean severity is claim amount divided by claim count, a ratio
+> rather than an amount, which is precisely why FR-OVR-7's `_minor` suffix had to go.
+>
+> The example also gained the fields the note above added to the contract — `id`, `job_id`,
+> `row_count` on both `Profile` and each `ColumnProfile`, `weight_column` and
+> `library_versions`. Three of those are `required` — `Profile.id`, `Profile.row_count` and
+> `ColumnProfile.row_count` — so a reader copying the previous example produced an object
+> the contract rejects. Enumerating them in prose was not enough: `01`
+> §5.3's own audit exists because a Contents column was read and a view was not, and an
+> example is read far more often than the paragraph under it.
+
+> *(2026-08-19, found in this slice's closing review)* **FR-DATA-46's rename carried the
+> field names across and left the types behind — the contract was wrong, and is corrected
+> here.** `mean_severity` and `mean_burning_cost` went on `$ref`-ing
+> `common/money.schema.json#/$defs/MoneyMinor`, which is `{"type": "integer"}`, in both
+> `docs/contracts/schemas/profile.schema.json` and `docs/contracts/schemas/banding.schema.json`;
+> `profile.schema.json` additionally typed `severity_ci`'s two interval bounds as integers
+> where `banding.schema.json`'s copy of the identical shape typed them as numbers. The
+> model has declared all three `float` since Phase 1a. A mean severity of 45812.42 — the
+> ordinary case, not an edge one — fails all four declarations, so the published contract
+> asserted precisely the rounding FR-DATA-46 exists to forbid.
+>
+> **All five predate this slice**: the divergence is `severity_minor: MoneyMinor` against
+> `float | None` at the branch base, inherited rather than introduced, and the rename moved
+> it under new names without ever looking beneath them. That is the more useful half of the
+> finding, because it says what the *check* was missing rather than what one commit was.
+>
+> **Nothing compared types.** Every conformance test in `backend/tests/test_contracts.py`
+> compared field *names* — `test_generated_and_authored_agree_on_field_names`,
+> `test_an_artifact_shape_carries_exactly_what_its_contract_declares`, and even
+> `test_the_column_profile_shape_matches_its_contract`, which was written specifically to
+> look one level deeper and still compared only the set of property names it found there.
+> Names agreeing is a much weaker claim than it reads as, and it is the claim four earlier
+> `Banding`/`Grouping` divergences also satisfied. `test_generated_and_authored_agree_on_scalar_types`
+> now compares the JSON types the two documents admit, across all six shapes that have both
+> a generated and a hand-authored contract, following `$ref`s between files and unwrapping
+> `anyOf` so an optional field is read the same way on both sides.
+>
+> Two limits of that comparison, both deliberate. It ignores `null`, because the generated
+> contracts mark every `X | None` nullable and the authored ones mark almost none — a
+> uniform difference of idiom worth reconciling on its own, not inside a test aimed at
+> integer-for-a-float. And it compares only paths present on both sides, so it says nothing
+> about `top_levels`, where the two documents disagree on *structure* rather than type;
+> that one stays FR-DATA-49's, recorded with an owner rather than suppressed by an
+> exemption list here.
+>
+> The non-obvious mechanism, which cost the first version of the walker its teeth:
+> **Pydantic emits a fixed-length tuple as `prefixItems`, not `items`.** A walker reading
+> only `items` is silently blind to every tuple field in every contract — `severity_ci`
+> among them — and reports success. It passed with the bounds deliberately typed as
+> integers, which is how the blindness was found.
+> `test_the_type_comparison_reaches_the_one_way_row` names the three paths rather than
+> counting them: a threshold expressed as a fraction of the walker's own output moves out
+> of the way of the defect it is meant to catch, since a walker that stops descending
+> shrinks the numerator and the denominator together.
 
 ### 4.8 `ReferenceTable` / `ReferenceTableVersion`
 
@@ -809,6 +915,26 @@ moved.
 "why can I not fit a model on this?" answerable in one screen without scrolling past the
 fold: overall banner → failing rules → warnings needing acknowledgement → everything else.
 
+> *(2026-08-19)* **The Profile row's four Contents items are now three built and one not.**
+> Histograms landed with FR-DATA-48; per-column cards and the one-way charts with their CI
+> bands were built in W6a. The **PSI comparison selector has not been built**:
+> `compareProfiles()` is implemented, typed and exported from `frontend/src/api/profiles.ts`
+> with **zero callers**, and the dtype label that borrowed `psiBand`'s colour has been
+> uncoloured rather than left reading as support the view lacks — `psiBand(null)` returned
+> `"stable"` before any threshold, so the badge was never showing a PSI band, only the
+> colour of one. FR-DATA-28's endpoint exists and is served; the view that reads it is
+> unowned.
+>
+> The row keeps the claim rather than losing it (`CLAUDE.md` §14: resolve, never soften).
+> **Owner: the next slice to open `ProfileView.vue`, or W6b** — the selector needs a
+> reference-version picker, which is the first piece of Profile state that must outlive a
+> route, and `docs/roadmap.md`'s W6a record already names it as the trigger for the
+> frontend's first Pinia store.
+>
+> Unchanged and still open on the Dataset list row above: **status badge, last validated,
+> owner**. `Dataset` carries none of the three, and which entity should — recorded as
+> **OQ-DATA-9** rather than picked — is the maintainer's decision.
+
 ---
 
 ## 6. Workflows
@@ -932,3 +1058,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-DATA-7**~~ ✔ | ~~Nothing in the platform ever sets a Dataset Version to `failed`. `DatasetStatus.FAILED` exists in the enum and in `VALID_DATASET_TRANSITIONS`, and no code path transitions to it — so a version whose first validation fails rests in **`validating`**, which every screen reads as "still running". FR-DATA-2 uses `failed` for a broken ingestion run and FR-DATA-23 sends a *re-validated* version back to `draft`; the first-failure case was specified nowhere. Found by exercising Phase 1a's exit demo, 2026-08-15.~~ **Decided and delivered 2026-08-15: `failed`** (FR-DATA-43). |
 | ~~**OQ-DATA-8**~~ ✔ | ~~`sample`, `filter`, `join` and `aggregate` derived versions inherit their parent's rows rather than being produced from them — a 1 % sample holds 100 % of them.~~ **DECIDED 2026-08-17: materialise all four, each in the slice that first needs it, and refuse them until then rather than leaving the silent version.** Specified as FR-DATA-45 and the refusal delivered the same day; `split` remains the one materialised operation (FR-DATA-44). Owner: W7 for `sample`; `filter`, `join` and `aggregate` unowned. Raised 2026-08-16 (W5). |
 | ~~**OQ-DATA-6**~~ ✔ | ~~Is `warn` acknowledgement per-rule-per-report the right granularity, or should an actuary be able to pre-approve a recurring known warning for a defined period (with expiry) to avoid acknowledgement fatigue? |~~ **Decided 2026-08-14: per report as FR-DATA-18 specifies, plus a pre-fill affordance that still requires an explicit, separately audited act.**
+| **OQ-DATA-9** | §5.3 asks the dataset list to display a status badge, a last-validated date and an owner. `Dataset` carries none of the three: status and `validation_report_id` live on `DatasetVersion`, and ownership is only implied by `workspace_id`. Does `Dataset` gain the three fields, or does §5.3 mean the **latest version's** status and validated-at, plus a workspace-level owner? |

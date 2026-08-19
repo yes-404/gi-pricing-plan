@@ -24,6 +24,7 @@ from scipy import stats
 from model_schema import (
     ColumnComparison,
     ColumnProfile,
+    Histogram,
     OneWayRow,
     OneWaySummary,
     Profile,
@@ -33,6 +34,7 @@ from model_schema import (
 
 __all__ = [
     "DEFAULT_QUANTILES",
+    "HISTOGRAM_BINS",
     "MAX_ONE_WAY_LEVELS",
     "RATEABLE_TYPES",
     "candidate_rating_columns",
@@ -52,6 +54,10 @@ DEFAULT_QUANTILES: Final[tuple[float, ...]] = (0.01, 0.05, 0.25, 0.50, 0.75, 0.9
 #: FR-DATA-25 caps categorical detail at the top 20 levels. A high-cardinality column would
 #: otherwise put its entire domain into a persisted artifact.
 TOP_LEVELS: Final = 20
+
+#: Bins in a column histogram (FR-DATA-48). Twenty is enough to show a mode and a tail on a
+#: card-sized chart and few enough that an empty bin is visible rather than a hairline.
+HISTOGRAM_BINS: Final = 20
 
 #: Above this many levels a one-way stops being a summary. `01` §5.3 renders it as a chart
 #: and a table; 200 bars is already unreadable, and the artifact would carry every level of
@@ -170,6 +176,7 @@ def profile_frame(
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
+    job_id: UUID | None = None,
 ) -> Profile:
     """Profile a frame (FR-DATA-25, FR-DATA-26).
 
@@ -179,6 +186,9 @@ def profile_frame(
 
     The frame-based entry point exists so profiling is testable and notebook-runnable;
     `profile_parquet` is the DuckDB path FR-DATA-27 requires for real versions.
+
+    `job_id` is recorded on the returned artifact (FR-OVR-3) when the caller has one; a
+    frame profiled from a notebook or a test fixture has none.
     """
     columns: list[ColumnProfile] = []
     height = frame.height
@@ -224,6 +234,20 @@ def profile_frame(
                 (str(level), int(count)) for level, count in counts.iter_rows()
             )
 
+        histogram = None
+        if numeric and height and minimum is not None and maximum is not None:
+            histogram = _histogram_frame(
+                frame,
+                name,
+                minimum=minimum,
+                maximum=maximum,
+                exposure_column=(
+                    exposure_column
+                    if exposure_column in frame.columns and exposure_column != name
+                    else None
+                ),
+            )
+
         columns.append(
             ColumnProfile(
                 name=name,
@@ -238,6 +262,7 @@ def profile_frame(
                 mean=mean,
                 std=std,
                 quantiles=quantiles,
+                histogram=histogram,
                 top_levels=top,
             )
         )
@@ -268,9 +293,11 @@ def profile_frame(
         id=uuid4(),
         dataset_version_id=dataset_version_id,
         computed_at=datetime.now(UTC),
+        job_id=job_id,
         row_count=height,
         columns=tuple(columns),
         one_ways=one_ways,
+        weight_column=exposure_column,
         library_versions={"polars": pl.__version__},
     )
 
@@ -352,6 +379,86 @@ def _identifier(name: str) -> str:
     return f'"{escaped}"'
 
 
+def _stored_exposure(value: float) -> Decimal:
+    """Exposure as the exact decimal that is *stored*, not the raw float sum.
+
+    Six decimal places. Two engines summing the same column in different orders differ in
+    the last bit, and a published figure that depends on which engine read the file is what
+    FR-DATA-27 exists to prevent. `_one_way_row` and the histogram share this so they cannot
+    drift apart.
+    """
+    return Decimal(str(round(value, 6)))
+
+
+def _histogram_edges(minimum: float, maximum: float) -> tuple[float, ...]:
+    """Equal-width bin edges over the observed range (FR-DATA-48).
+
+    Computed here rather than by Polars' `hist` or DuckDB's `histogram`, so both engines bin
+    against the same numbers. A constant column is one bin of unit width: zero width would
+    divide by zero, and twenty bins of one value is nineteen empty bars.
+    """
+    if not maximum > minimum:
+        return (minimum, minimum + 1.0)
+    width = (maximum - minimum) / HISTOGRAM_BINS
+    return (*(minimum + width * i for i in range(HISTOGRAM_BINS)), maximum)
+
+
+def _bin_index_expression(column: str, edges: tuple[float, ...]) -> pl.Expr:
+    """Which bin a value falls in — the same arithmetic the SQL path uses.
+
+    Half-open bins with a closed last one, expressed as a clamp rather than a comparison:
+    the maximum computes to index `n` and is pulled back to `n - 1`, which is what "the last
+    bin is closed" means in one operation.
+    """
+    bins = len(edges) - 1
+    width = (edges[-1] - edges[0]) / bins
+    return (
+        ((pl.col(column).cast(pl.Float64) - edges[0]) / width)
+        .floor()
+        .clip(0, bins - 1)
+        .cast(pl.Int64)
+        .alias("_bin")
+    )
+
+
+def _histogram_frame(
+    frame: pl.DataFrame,
+    column: str,
+    *,
+    minimum: float,
+    maximum: float,
+    exposure_column: str | None,
+) -> Histogram:
+    edges = _histogram_edges(minimum, maximum)
+    bins = len(edges) - 1
+
+    aggregates = [pl.len().alias("_n")]
+    if exposure_column:
+        aggregates.append(pl.col(exposure_column).cast(pl.Float64).sum().alias("_e"))
+
+    grouped = (
+        frame.filter(pl.col(column).is_not_null())
+        .with_columns(_bin_index_expression(column, edges))
+        .group_by("_bin")
+        .agg(aggregates)
+    )
+
+    # Seeded with zeroes and filled from the groups: an empty bin is a fact about the
+    # distribution, and a group-by only returns the bins that have rows.
+    counts = [0] * bins
+    weights = [Decimal(0)] * bins
+    for row in grouped.iter_rows(named=True):
+        counts[row["_bin"]] = int(row["_n"])
+        if exposure_column:
+            weights[row["_bin"]] = _stored_exposure(float(row["_e"]))
+
+    return Histogram(
+        edges=edges,
+        counts=tuple(counts),
+        exposure=tuple(weights) if exposure_column else (),
+    )
+
+
 def profile_parquet(
     paths: Sequence[str],
     *,
@@ -360,6 +467,7 @@ def profile_parquet(
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
+    job_id: UUID | None = None,
 ) -> Profile:
     """Profile parquet files with DuckDB (FR-DATA-27, NFR-DATA-3).
 
@@ -394,7 +502,13 @@ def profile_parquet(
         row_count = int(counted[0])
 
         columns = [
-            _profile_column(connection, name, dtype, row_count=row_count)
+            _profile_column(
+                connection,
+                name,
+                dtype,
+                row_count=row_count,
+                exposure_column=exposure_column if exposure_column in schema else None,
+            )
             for name, dtype in schema.items()
         ]
         wanted = (
@@ -427,15 +541,22 @@ def profile_parquet(
         id=uuid4(),
         dataset_version_id=dataset_version_id,
         computed_at=datetime.now(UTC),
+        job_id=job_id,
         row_count=row_count,
         columns=tuple(columns),
         one_ways=one_ways,
+        weight_column=exposure_column,
         library_versions={"polars": pl.__version__, "duckdb": duckdb.__version__},
     )
 
 
 def _profile_column(
-    connection: Any, name: str, dtype: Any, *, row_count: int
+    connection: Any,
+    name: str,
+    dtype: Any,
+    *,
+    row_count: int,
+    exposure_column: str | None = None,
 ) -> ColumnProfile:
     """One column's profile, from at most three aggregate queries."""
     quoted = _identifier(name)
@@ -472,6 +593,42 @@ def _profile_column(
                 for q, value in zip(DEFAULT_QUANTILES, row[4], strict=True)
             }
 
+    histogram = None
+    if numeric and row_count and minimum is not None and maximum is not None:
+        edges = _histogram_edges(minimum, maximum)
+        bins = len(edges) - 1
+        width = (edges[-1] - edges[0]) / bins
+        weighted = exposure_column is not None and exposure_column != name
+        # The same arithmetic as `_bin_index_expression`, in SQL. `least(..., bins - 1)` is
+        # the closed last bin; `greatest(0, ...)` guards a value that lands a hair below the
+        # minimum after the subtraction.
+        index = (
+            f"greatest(0, least({bins - 1}, "
+            f"floor(({quoted} - {edges[0]!r}) / {width!r})::BIGINT))"
+        )
+        weight = (
+            f", sum({_identifier(exposure_column)})"
+            if weighted and exposure_column is not None
+            else ", NULL"
+        )
+        binned = connection.execute(
+            f"SELECT {index} AS bin, count(*){weight} FROM src "
+            f"WHERE {quoted} IS NOT NULL GROUP BY 1"
+        ).fetchall()
+
+        counts = [0] * bins
+        weights = [Decimal(0)] * bins
+        for bin_index, count, exposure_sum in binned:
+            counts[int(bin_index)] = int(count)
+            if weighted and exposure_sum is not None:
+                weights[int(bin_index)] = _stored_exposure(float(exposure_sum))
+
+        histogram = Histogram(
+            edges=edges,
+            counts=tuple(counts),
+            exposure=tuple(weights) if weighted else (),
+        )
+
     top: tuple[tuple[str, int], ...] = ()
     if semantic in {SemanticType.CATEGORICAL, SemanticType.ORDINAL, SemanticType.BOOLEAN}:
         levels = connection.execute(
@@ -494,6 +651,7 @@ def _profile_column(
         mean=mean,
         std=std,
         quantiles=quantiles,
+        histogram=histogram,
         top_levels=top,
     )
 
@@ -546,7 +704,7 @@ def _one_way_row(
     # Two engines summing the same column in different orders differ in the last bit, and
     # a reader who divides the published claim count by the published exposure should get
     # the published frequency back — not something that disagrees at the sixteenth digit.
-    stored = Decimal(str(round(exposure, 6)))
+    stored = _stored_exposure(exposure)
     basis = float(stored)
     return OneWayRow(
         level=str(level),
@@ -559,9 +717,9 @@ def _one_way_row(
             if basis > 0
             else None
         ),
-        severity_minor=amount / claims if claims else None,
+        mean_severity=amount / claims if claims else None,
         severity_ci=gamma_severity_interval(amount, claims, confidence=confidence),
-        burning_cost_minor=amount / basis if basis > 0 else None,
+        mean_burning_cost=amount / basis if basis > 0 else None,
     )
 
 

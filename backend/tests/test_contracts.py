@@ -17,7 +17,7 @@ import pathlib
 import re
 import subprocess
 import sys
-from typing import Final
+from typing import Any, Final
 
 import pytest
 
@@ -30,6 +30,14 @@ GENERATOR = ROOT / "scripts" / "generate-contracts.py"
 
 def _load(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _resolve(document: dict, node: dict) -> dict:
+    """Follow a local `$ref` one hop. Pydantic nests models through `$defs`."""
+    ref = node.get("$ref")
+    if ref is None:
+        return node
+    return document["$defs"][ref.rsplit("/", 1)[-1]]
 
 
 @pytest.mark.req("FR-PLAT-48")
@@ -108,29 +116,15 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     money_like = re.compile(r"(_minor$|relativity|premium|exposure)", re.I)
     offenders: list[str] = []
 
-    #: `01` FR-DATA-26's one-way row carries a **mean** severity and a **mean** burning
-    #: cost. They are statistics, not amounts: `01` keeps them as floats deliberately,
-    #: because rounding a mean to whole minor units would lose the precision the confidence
-    #: interval beside it is expressing.
-    #:
-    #: The `_minor` suffix is what makes the scan flag them, and the suffix is the part that
-    #: is wrong — FR-OVR-7 reserves it for integer minor units. Excluded here by name rather
-    #: than by weakening the pattern, and **raised as OQ-OVR-7** rather than settled: the
-    #: rename touches `01`'s published profile contract and every screen that reads it.
-    #:
-    #: Nothing else is excluded. These two surfaced only when `banding` and `grouping` began
-    #: generating (they embed the one-way row); the scan had never reached them before.
-    ratio_statistics = {"severity_minor", "burning_cost_minor"}
-
     #: `x_per_y` is a **ratio**, not a quantity of `x`. FR-MODEL-81's
     #: `exposure_per_parameter` is exposure divided by a count, and dividing a decimal
     #: exposure by an integer does not produce a decimal exposure — it produces a number
     #: whose precision carries no monetary meaning.
     #:
-    #: A rule rather than two more names in `ratio_statistics`. OQ-OVR-7 objects to
-    #: money-discipline exceptions maintained as a hand-written list precisely because such
-    #: lists only grow; this one recognises a *shape* of name, so the next ratio needs no
-    #: entry and no decision.
+    #: A rule rather than a hand-written list of names. OQ-OVR-7 objects to money-discipline
+    #: exceptions maintained as a hand-written list precisely because such lists only grow;
+    #: this one recognises a *shape* of name, so the next ratio needs no entry and no
+    #: decision.
     #:
     #: Deliberately **not** a general `_per_\\w+$`: `premium_per_policy` is an average
     #: premium and is money, so a blanket ratio rule would open the hole this test exists to
@@ -147,8 +141,8 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: Two `02` types every number on which is a **fitted estimate**, not a quantity:
     #: `Coefficient` and `RelativityLevel` carry `exp(β)` and the exposure it was measured
     #: over, each beside its own confidence interval. Rounding an estimate to a money grid
-    #: would misstate the interval printed next to it, which is the same reason
-    #: `ratio_statistics` above exists.
+    #: would misstate the interval printed next to it — the same reason `01`'s one-way row
+    #: keeps its own mean fields as floats (FR-DATA-46).
     #:
     #: Excluded by **owning type**, never by field name. `relativity` is also what a Rate
     #: Table entry is called (`03`), and that one *is* on the rating path, where
@@ -165,7 +159,6 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
                 owner = owning_type.search(path)
                 if (
                     money_like.search(key)
-                    and key not in ratio_statistics
                     and not ratio_suffix.search(key)
                     and not (owner and owner.group(1) in estimate_types)
                     and isinstance(value, dict)
@@ -260,7 +253,7 @@ CONDITIONAL_FIELDS: Final[dict[str, frozenset[str]]] = {
 
 
 @pytest.mark.req("FR-OVR-6")
-@pytest.mark.parametrize("slug", ["banding", "grouping", "custom-objective"])
+@pytest.mark.parametrize("slug", ["banding", "grouping", "custom-objective", "profile"])
 def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:
     """Both directions, for the shapes with a hand-authored Phase-0 contract.
 
@@ -293,6 +286,235 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     assert not produced - declared - ENVELOPE_FIELDS, (
         "the model produces fields the contract does not declare: "
         f"{sorted(produced - declared - ENVELOPE_FIELDS)}"
+    )
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_the_column_profile_shape_matches_its_contract() -> None:
+    """The profile's divergences live one level down, where the flat tests do not look.
+
+    `test_an_artifact_shape_carries_exactly_what_its_contract_declares` compares top-level
+    properties. `ColumnProfile` is nested inside `columns.items`, which is where the
+    histogram was missing for three days and where `min`/`minimum` still disagreed — so a
+    flat comparison would have reported this contract as conforming throughout.
+    """
+    generated = _load(GENERATED / "profile.schema.json")
+    authored = _load(AUTHORED / "profile.schema.json")
+
+    produced = set(
+        _resolve(generated, generated["properties"]["columns"]["items"])["properties"]
+    )
+    declared = set(authored["properties"]["columns"]["items"]["properties"])
+
+    assert not declared - produced, (
+        f"the contract declares column fields the model lacks: {sorted(declared - produced)}"
+    )
+    assert not produced - declared, (
+        "the model produces column fields the contract does not declare: "
+        f"{sorted(produced - declared)}"
+    )
+
+
+#: How many `$ref` hops to follow before concluding the document is cyclic. A contract that
+#: needs more than this is malformed, and looping forever in a test reads as a hung suite.
+_MAX_REF_HOPS: Final = 20
+
+#: JSON type names for the Python values an `enum` list holds. A hand-authored enum is
+#: written `{"enum": [...]}` with no `"type"`; the generated one carries `"type": "string"`
+#: beside the same members. Deriving the type from the members makes the two comparable
+#: instead of reporting every enum in the suite as a divergence.
+_JSON_TYPE_OF: Final[dict[type, str]] = {
+    bool: "boolean",
+    int: "integer",
+    float: "number",
+    str: "string",
+}
+
+def _deref(document: dict[str, Any], node: dict[str, Any], base: pathlib.Path) -> tuple[
+    dict[str, Any], dict[str, Any]
+]:
+    """Follow `$ref`, local or into a sibling file, returning the node and its document.
+
+    `_resolve` follows one local hop, which is all the flat comparisons need. The authored
+    contracts reach across files — `common/money.schema.json#/$defs/MoneyMinor` — and the
+    whole point of comparing types is to see what is on the far end of that reference.
+    """
+    for _ in range(_MAX_REF_HOPS):
+        ref = node.get("$ref")
+        if ref is None:
+            return node, document
+        filename, _, fragment = ref.partition("#")
+        if filename:
+            document = _load(base / filename)
+        cursor: Any = document
+        for part in fragment.lstrip("/").split("/"):
+            if part:
+                cursor = cursor[part]
+        node = cursor
+    raise AssertionError(f"more than {_MAX_REF_HOPS} $ref hops — the document is cyclic")
+
+
+def _variants(
+    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """The node itself plus every `anyOf`/`oneOf`/`allOf` branch beneath it, dereferenced.
+
+    An optional field is `anyOf: [{...}, {"type": "null"}]` when generated and a bare type
+    when authored. Flattening both to the set of branches lets one comparison read them the
+    same way, which is what makes `severity_ci` — an optional *array* — comparable at all.
+    """
+    node, document = _deref(document, node, base)
+    found = [(document, node)]
+    for keyword in ("anyOf", "oneOf", "allOf"):
+        for branch in node.get(keyword, []):
+            found.extend(_variants(document, branch, base))
+    return found
+
+
+def _scalar_types(
+    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+) -> set[str]:
+    """The JSON types this node admits, ignoring `null`.
+
+    `null` is dropped deliberately. The generated contracts mark every `X | None` nullable
+    and the authored ones mark almost none, so comparing nullability would report a
+    divergence on nearly every optional field — a uniform difference of idiom, not the
+    integer-for-a-float this test exists to find. Nullability is worth reconciling, but as
+    its own change against the whole authored suite, not smuggled in here.
+    """
+    admitted: set[str] = set()
+    for owner, variant in _variants(document, node, base):
+        declared = variant.get("type")
+        if isinstance(declared, str):
+            admitted.add(declared)
+        elif isinstance(declared, list):
+            admitted.update(declared)
+        for member in variant.get("enum", ()):
+            named = _JSON_TYPE_OF.get(type(member))
+            if named is not None:
+                admitted.add(named)
+        del owner
+    return admitted - {"null"}
+
+
+def _type_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+) -> dict[str, frozenset[str]]:
+    """Flatten a schema to `dotted.path -> admitted JSON types`, descending into arrays.
+
+    Both array spellings are followed. A variable-length array declares `items`; a
+    **fixed-length tuple declares `prefixItems`**, one entry per position, and Pydantic
+    emits `tuple[float, float]` that way. Reading only `items` makes this walker silently
+    blind to every tuple field — which is exactly what it was, until `severity_ci` failed
+    to fail. Element positions collapse onto one `.[]` path: a contract that types position
+    0 differently from position 1 is a separate defect, and a comparison that reported it
+    as a type mismatch would be describing the wrong problem.
+    """
+    found: dict[str, frozenset[str]] = {}
+    properties: dict[str, Any] = {}
+    elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for owner, variant in _variants(document, node, base):
+        properties.update(variant.get("properties", {}))
+        if "items" in variant:
+            elements.append((owner, variant["items"]))
+        elements.extend((owner, entry) for entry in variant.get("prefixItems", ()))
+
+    if properties:
+        for name, child in sorted(properties.items()):
+            found.update(_type_map(document, child, base, f"{path}.{name}".lstrip(".")))
+        return found
+    if elements:
+        for owner, child in elements:
+            for key, types in _type_map(owner, child, base, f"{path}.[]".lstrip(".")).items():
+                found[key] = found.get(key, frozenset()) | types
+        return found
+
+    types = _scalar_types(document, node, base)
+    if types:
+        found[path] = frozenset(types)
+    return found
+
+
+@pytest.mark.req("FR-OVR-6")
+@pytest.mark.req("FR-DATA-46")
+@pytest.mark.parametrize(
+    "slug", ["banding", "grouping", "custom-objective", "profile", "job", "audit-event"]
+)
+def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
+    """The same field must not be a float in the model and an integer in the contract.
+
+    Every conformance test above this one compares field *names*. Names agreeing is a
+    weaker claim than it looks: `OneWayRow.mean_severity` and `mean_burning_cost` were
+    declared `float | None` by the model and `MoneyMinor` — `{"type": "integer"}` — by the
+    hand-authored contract in both `banding` and `profile`, and `profile`'s `severity_ci`
+    typed its interval bounds as integers while `banding`'s copy of the identical shape
+    typed them as numbers. A mean severity of 45812.42 fails all four. Nothing failed,
+    because the names matched, and the rename in FR-DATA-46 carried the names across
+    without ever looking at the type beneath them.
+
+    That is the divergence FR-DATA-46 exists to prevent, stated in the contract itself: a
+    mean is a statistic, not an amount, and rounding it to minor units discards the
+    precision the confidence interval beside it is expressing.
+
+    Only paths present on **both** sides are compared, so a difference of *structure* is
+    skipped rather than reported. `ColumnProfile.top_levels` is the live example: the model
+    produces an array of `[level, count]` pairs and the contract declares an array of
+    objects, so the two sides have no path in common and this test says nothing about it.
+    That divergence is real, and it is FR-DATA-49's — recorded, with a chosen shape and an
+    owner, rather than suppressed by an exemption here. The scope line is deliberate: a
+    conformance test that grows an exemption list is one nobody reads, and this one is
+    precise about types exactly because it does not try to arbitrate structure.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _type_map(generated, generated, GENERATED)
+    declared = _type_map(authored, authored, AUTHORED)
+
+    compared = set(produced) & set(declared)
+    disagreed = {
+        path: (sorted(produced[path]), sorted(declared[path]))
+        for path in sorted(compared)
+        if produced[path] != declared[path]
+    }
+    assert not disagreed, (
+        "the model and the contract disagree on the type of "
+        + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+    )
+
+
+@pytest.mark.req("FR-DATA-46")
+@pytest.mark.parametrize(
+    ("slug", "row"), [("banding", "band_stats.[]"), ("profile", "one_ways.[].rows.[]")]
+)
+def test_the_type_comparison_reaches_the_one_way_row(slug: str, row: str) -> None:
+    """The control for the test above, which compares only paths present on both sides.
+
+    That scope rule is what keeps the comparison quiet about idiom, and it is also how the
+    comparison could go silent altogether: a walker that stops descending aligns nothing,
+    finds no disagreement, and passes. Counting aligned paths does not catch it — the count
+    of what the walker produced shrinks along with the walker, so any threshold expressed
+    as a fraction of its own output moves out of the way of the defect it is meant to catch.
+
+    So this names the paths instead. All three are fields FR-DATA-46 governs, and
+    `severity_ci` is the one that matters most: it is a `tuple[float, float]`, which Pydantic
+    emits as `prefixItems` rather than `items`, and the first version of the walker read only
+    `items`. Every tuple field in every contract was invisible to it, and nothing said so —
+    the comparison passed with the interval bounds deliberately typed as integers.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+    compared = set(_type_map(generated, generated, GENERATED)) & set(
+        _type_map(authored, authored, AUTHORED)
+    )
+
+    wanted = {f"{row}.mean_severity", f"{row}.mean_burning_cost", f"{row}.severity_ci.[]"}
+    assert wanted <= compared, (
+        f"the type comparison no longer reaches {sorted(wanted - compared)} in {slug} — "
+        "it is passing because it stopped looking, not because the contracts agree"
     )
 
 

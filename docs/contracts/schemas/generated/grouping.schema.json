@@ -102,20 +102,8 @@
     },
     "OneWayRow": {
       "additionalProperties": false,
-      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency and\nseverity are ratios and stay floats: they are statistics, not amounts, and rounding\nthem to minor units would lose the precision the confidence interval is expressing.",
+      "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
       "properties": {
-        "burning_cost_minor": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Burning Cost Minor"
-        },
         "claim_amount_minor": {
           "default": 0,
           "description": "Amount in minor units (pence/cents) of the workspace currency.",
@@ -172,6 +160,30 @@
           "title": "Level",
           "type": "string"
         },
+        "mean_burning_cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Burning Cost"
+        },
+        "mean_severity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mean Severity"
+        },
         "severity_ci": {
           "anyOf": [
             {
@@ -193,18 +205,6 @@
           ],
           "default": null,
           "title": "Severity Ci"
-        },
-        "severity_minor": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Severity Minor"
         }
       },
       "required": [

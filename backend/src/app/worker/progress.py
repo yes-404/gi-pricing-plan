@@ -126,6 +126,17 @@ class JobProgress:
     # -- the data-layer bridge, for handlers ---------------------------------------------
 
     @property
+    def job_id(self) -> UUID:
+        """The Job this progress reports for — a handler's provenance source (FR-OVR-3).
+
+        A platform handler that builds an artifact carrying its own `job_id` field (`01`
+        §4.7's `Profile`, `02`'s `Diagnostics`) reads it from here rather than threading it
+        through `parameters`, which is only populated for Jobs enqueued with their own id
+        already in their body.
+        """
+        return self._job_id
+
+    @property
     def database(self) -> Database:
         """The data layer, for a handler that needs to read or write.
 

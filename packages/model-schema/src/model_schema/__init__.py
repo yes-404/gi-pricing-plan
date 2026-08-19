@@ -201,6 +201,7 @@ from model_schema.problem import FieldError, ProblemDetail
 from model_schema.profiles import (
     ColumnComparison,
     ColumnProfile,
+    Histogram,
     OneWayRow,
     OneWaySummary,
     Profile,
@@ -347,6 +348,7 @@ __all__ = [
     "GroupingMethod",
     "GroupingProposal",
     "HessianStrategy",
+    "Histogram",
     "Job",
     "JobError",
     "JobKind",

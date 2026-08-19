@@ -1173,6 +1173,16 @@
             "title": "Dtype",
             "type": "string"
           },
+          "histogram": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Histogram"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "maximum": {
             "anyOf": [
               {
@@ -4461,6 +4471,41 @@
         "title": "HessianStrategy",
         "type": "string"
       },
+      "Histogram": {
+        "additionalProperties": false,
+        "description": "The binned distribution of a numeric column (`01` §4.7, FR-DATA-48).\n\nBin *edges* rather than a bin width, because the last bin is closed and the others are\nhalf-open: `[e0, e1) … [e(n-1), en]`. A reader given only a width has to guess which\nend carries the maximum, and the two profiling engines would guess differently.\n\n`exposure` is optional and, when present, holds one exact decimal weight per bin\n(FR-OVR-7). A count histogram of an exposure-weighted book overstates the tail: a bin\nof 200 policies each on risk a fortnight is not the same risk as 200 policies on risk a\nyear, and pricing reads the second.",
+        "properties": {
+          "counts": {
+            "default": [],
+            "items": {
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "array"
+          },
+          "edges": {
+            "default": [],
+            "items": {
+              "type": "number"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "exposure": {
+            "default": [],
+            "items": {
+              "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            "title": "Exposure",
+            "type": "array"
+          }
+        },
+        "title": "Histogram",
+        "type": "object"
+      },
       "Job": {
         "additionalProperties": false,
         "description": "A tracked asynchronous unit of work, as returned by the API (`07` §4.1).",
@@ -5654,19 +5699,8 @@
       },
       "OneWayRow": {
         "additionalProperties": false,
-        "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency and\nseverity are ratios and stay floats: they are statistics, not amounts, and rounding\nthem to minor units would lose the precision the confidence interval is expressing.",
+        "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
         "properties": {
-          "burning_cost_minor": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Burning Cost Minor"
-          },
           "claim_amount_minor": {
             "default": 0,
             "description": "Amount in minor units (pence/cents) of the workspace currency.",
@@ -5721,6 +5755,28 @@
             "title": "Level",
             "type": "string"
           },
+          "mean_burning_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Burning Cost"
+          },
+          "mean_severity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Severity"
+          },
           "severity_ci": {
             "anyOf": [
               {
@@ -5741,17 +5797,6 @@
               }
             ],
             "title": "Severity Ci"
-          },
-          "severity_minor": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Severity Minor"
           }
         },
         "required": [
@@ -6589,7 +6634,7 @@
       },
       "Profile": {
         "additionalProperties": false,
-        "description": "The profile artifact for one Dataset Version (`01` §4.7).",
+        "description": "The profile artifact for one Dataset Version (`01` §4.7, FR-DATA-25/26/27).",
         "properties": {
           "columns": {
             "default": [],
@@ -6614,6 +6659,18 @@
             "title": "Id",
             "type": "string"
           },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
           "library_versions": {
             "additionalProperties": {
               "type": "string"
@@ -6633,6 +6690,11 @@
             "minimum": 0.0,
             "title": "Row Count",
             "type": "integer"
+          },
+          "weight_column": {
+            "default": "exposure_years",
+            "title": "Weight Column",
+            "type": "string"
           }
         },
         "required": [

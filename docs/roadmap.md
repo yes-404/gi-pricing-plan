@@ -698,7 +698,7 @@ and on what building the screens found in the API beneath them.
 | Dataset detail | `/data/:slug` | version timeline (newest first, tested), rule set link in both states, data dictionary editor for `description` and `pii_class` | **lineage graph** — `getLineage()` exists, is typed, and is called by nothing while `GET …/lineage` serves it. `semantic_type` is read-only; `unit` and `reference_table` are not rendered |
 | Version detail | `/data/:slug/v/:version` | all five: table inventory, row counts, totals, schema viewer, rejected-rows drawer | — (the drawer's populated branch is untested: both fixtures have zero rejects) |
 | **Validation report** | `…/validation` | all six, and the interaction requirement genuinely holds — DOM order asserted, not presence | the offending sample is a `<ul>`, not the table §5.3 names; `empty_layers` is surfaced on the rule-set screen and not on this one |
-| Profile | `…/profile` | per-column cards; one-way charts with exact Poisson CI whiskers (ECharts) | **histograms** — and `ColumnProfile` has no `histogram` field while `01` §4.4 *and* the committed JSON schema define one. **PSI comparison selector** — `compareProfiles()` has no caller, and `psiBand(null)` colours the dtype label, which reads as PSI support and is not |
+| Profile | `…/profile` | per-column cards; one-way charts with exact Poisson CI whiskers (ECharts); **histograms** — delivered 2026-08-19 by the profile-contract slice, which added `ColumnProfile.histogram` as **FR-DATA-48** and wired `HistogramChart.vue` | **PSI comparison selector** — still absent. `compareProfiles()` is typed, exported and has **zero** callers; the dtype label that borrowed `psiBand`'s colour is uncoloured as of 2026-08-19, so the view no longer reads as offering support it lacks. Owner: the next slice to open `ProfileView.vue`, or **W6b** |
 | Rule set editor | `/data/:slug/rules` | rules by layer, enable/disable (full-membership round-trip tested), severity override, custom-rule builder with dry-run | **threshold editing** — thresholds render read-only; changing one means retyping the whole rule into the builder |
 | Reference tables | `/reference` | all four: table list, version timeline, effective-date viewer, lookup debugger | — **nothing wrong found in this view** |
 
@@ -711,7 +711,7 @@ req-coverage · eslint `--max-warnings 0` · `vue-tsc --build` · **75 frontend 
 |---|---|---|
 | requirements | 48 / 50 | **48 / 50** (NFR-DATA-1/2 measured, not tested — W4's verdict stands) |
 | `--endpoints` | 28 / 28 | **33 / 33** |
-| `--catalogue VR` | 38 / 38 | **38 / 38** |
+| `--catalogue VR` | 38 / 38 | **1 / 38** — *corrected 2026-08-19*. Not a regression: `scope-audit.py`'s catalogue check was fixed on 2026-08-15 (`d4a90c7`) to count ids the code carries **as data** rather than mentions in prose, and this row was left quoting the pre-fix instrument. The number the fixed check reports is recorded in the W7a record below, and has been since that day. Only `VR-STR-5` reaches the code as a string constant at all, and incidentally — inside another rule's error message (`validate.py:1175`); the other 37 rules are implemented but unnameable, which is what `01` §4.4's "rule IDs here are stable and referenced by workflows and by the UI" asks for and does not have. Owner: **W6b**, alongside the rule set editor's threshold editing, which is the first screen that must reference a rule by id |
 
 **What building the screens found in the API — six defects, none in a view.** This is the
 workstream's most useful output and the reason a frontend is not merely a rendering of a
@@ -764,8 +764,8 @@ authentication is **OQ-PLAT-6**, open, recommendation recorded.
 | TanStack Table, Vue Flow | **Later phases** (`03` §5.3). Declared in `skills-map.md`, not installed |
 | Accessibility beyond semantics | **Partial.** Tables carry `aria-label`, alerts carry `role`, and every test queries by role or label — which keeps the semantics honest. NFR-OVR-10's tabular fallback for charts is **not** built; owner W6b |
 | `07` §5.1's six `PLAT` endpoints | Unchanged from W2's record — still owned by W14 |
-| **Six §5.3 Contents items** | **Added 2026-08-15.** Dataset status badge, last validated, owner; lineage graph; histograms; PSI comparison selector. Plus threshold editing in the rule set editor. The original record did not list them because it audited routes and not Contents. Owner: **W6b**, except the two blocked by a model/contract divergence (owner/status/validated, and `histogram`), which need a spec decision first — recorded as unresolved in `01`, not silently designed around |
-| **Two unresolved model/contract divergences** | **Added 2026-08-15.** `Dataset` has no status, validated-at or owner while §5.3 asks to display all three; `ColumnProfile` has no `histogram` while `01` §4.4 *and* `docs/contracts/schemas/profile.schema.json` both define one. Four other divergences from the same fortnight got dated amendment notes; these two were built around in silence, which is the `CLAUDE.md` §0 failure the notes exist to prevent |
+| **Six §5.3 Contents items** | **Added 2026-08-15.** Dataset status badge, last validated, owner; lineage graph; histograms; PSI comparison selector. Plus threshold editing in the rule set editor. The original record did not list them because it audited routes and not Contents. Owner: **W6b**, except the two blocked by a model/contract divergence (owner/status/validated, and `histogram`), which need a spec decision first — recorded as unresolved in `01`, not silently designed around. **One of the six delivered 2026-08-19** — histograms, via FR-DATA-48; five remain, and the PSI comparison selector's `compareProfiles()` still has zero callers |
+| **Two unresolved model/contract divergences** | **Added 2026-08-15.** `Dataset` has no status, validated-at or owner while §5.3 asks to display all three; `ColumnProfile` has no `histogram` while `01` §4.7 *and* `docs/contracts/schemas/profile.schema.json` both define one. Four other divergences from the same fortnight got dated amendment notes; these two were built around in silence, which is the `CLAUDE.md` §0 failure the notes exist to prevent. **Both owned 2026-08-18.** The `ColumnProfile` half is **resolved 2026-08-19** by the profile-contract slice (W5): the contract was right and the requirement was incomplete, so `01` gained **FR-DATA-48**, both profiling engines compute the histogram, and the Profile view renders it. The `Dataset` half is not a slice task: it has two defensible answers, so it is recorded as **OQ-DATA-9** rather than picked, and **stays open** pending the maintainer's decision |
 
 **Retrofit list (`docs/roadmap.md` §5):** unchanged by W6a. The frontend consumes the
 contract; it does not touch audit-in-transaction, artifact immutability, integer money or
@@ -2197,6 +2197,114 @@ import-linter here should not have to rediscover it.
 | The scoring API entry point in the test's scope | **Not started — there is no scoring API.** `03` is Phase 2. The requirement names the extension explicitly: the slice that builds it adds that path to this test rather than adding a second mechanism |
 | `03` FR-RATE-62/63/64 | **Spec only, Phase 2**, which is the rule and not a shortfall (`CLAUDE.md` §0) |
 
+#### W5 slice — the profile contract, and a divergence that had been recorded for four days, 2026-08-19
+
+`docs/roadmap.md` had carried a row since 2026-08-15 saying that `ColumnProfile` has no
+`histogram` while `01` §4.7's example **and** `docs/contracts/schemas/profile.schema.json`
+both declare one. It was recorded and then built around — the state `CLAUDE.md` §0 exists to
+prevent, since a divergence written down and left alone is indistinguishable, from the next
+slice's point of view, from one nobody noticed.
+
+**The contract was right and the requirement was incomplete.** FR-DATA-25 enumerates the
+statistics profiling produces and never named this one, so `01` gains **FR-DATA-48** rather
+than the schema losing a field. Bins are equal-width over the observed `[min, max]` with
+edges chosen in Python, not by either engine's own histogram function: FR-DATA-27 requires
+one answer regardless of engine, and every divergence `test_the_two_profiling_paths_agree`
+has ever caught came from an engine default.
+
+| Delivered | Evidence |
+|---|---|
+| **FR-DATA-48** — `Histogram` on `ColumnProfile` | One frozen shape in `model-schema` with three invariants: one more edge than bins, strictly increasing edges, one exposure weight per bin when exposure is present |
+| Both profiling engines compute it | `profile_frame` (Polars) and `profile_parquet` (DuckDB), sharing `_histogram_edges` so the bin boundaries cannot drift. `test_the_two_profiling_paths_agree` carries the histogram free and **agreed on the first attempt, with no tolerance added** |
+| **FR-DATA-46** delivered | `severity_minor` → `mean_severity`, `burning_cost_minor` → `mean_burning_cost`. Both are ratios, not amounts; `_minor` is reserved for integer minor units (FR-OVR-7). The hand-written money-scan exclusion in `backend/tests/test_contracts.py` is **deleted, not grown** — the new names do not match the scan's pattern |
+| `profile.schema.json` generated for the first time | 21 generated contracts, up from 20. The hand-written Phase-0 schema and the model were compared against each other for the first time and **six divergences** were reconciled, each with a written verdict for which side was wrong |
+| `Profile.job_id` and `Profile.weight_column` | The contract declared both and the model carried neither. Both are now wired from the real profiling path: `store_profile` had always taken a `job_id` that `_profile_version` never passed, so `ProfileRow.job_id` and the `profile.created` audit event had been persisting `NULL` for **every** profiling Job since the handler was written |
+| The Profile view renders histograms | `HistogramChart.vue`, ECharts, exposure plotted beside counts on a second axis when the profile carries it. `01` §5.3's Contents item, one of the six the W6a record listed as missing |
+| The dtype label uncoloured | It was tinted by `psiBand(null)`, which returns `"stable"` before any threshold — so it was never showing a PSI band, only the colour of one, on a view with no comparison in it |
+
+**What it found, beyond the histogram:**
+
+- **`ColumnProfile.row_count`** — the one of the six nobody had predicted. Verdict: model
+  right, and load-bearing: it is `VR-DST-6`'s standard-error divisor and gates the check.
+- **The `job_id`/`weight_column` wiring shipped with zero assertions.** Deleting it left the
+  whole suite green. Closed in `fe3e020`, and the obvious assertion was the wrong one — the
+  model's default for `weight_column` and the fixture's exposure column are both
+  `exposure_years`, so a backend assertion passes whether or not anything records the
+  argument. The real proof profiles a frame whose exposure column is named `earned_years`.
+- **`scope-audit.py DATA --catalogue VR` reads 1 / 38, not 38 / 38** — found by running the
+  audit rather than quoting it. Not a regression; see the corrected W6a row above.
+- **Five scalar-type divergences between the hand-authored contracts and the models**,
+  found in this slice's closing review by reading the branch diff file by file rather than
+  by any check. `mean_severity` and `mean_burning_cost` declared `MoneyMinor` —
+  `{"type": "integer"}` — in both `profile.schema.json` and `banding.schema.json`, against
+  `float` in `OneWayRow`; and `profile.schema.json` typed `severity_ci`'s two bounds as
+  integers where `banding.schema.json`'s copy of the identical shape typed them as numbers.
+  The published contract therefore asserted exactly the rounding **FR-DATA-46** exists to
+  forbid, three commits after the rename that requirement asked for. **All five predate the
+  slice** — `severity_minor: MoneyMinor` against `float | None` at the branch base — so the
+  rename moved a divergence under new names without looking beneath them. Fixed here, with
+  the record in `01` §4.7's note of 2026-08-19.
+
+  The useful half is why nothing caught it: **every conformance test compared field names.**
+  `test_the_column_profile_shape_matches_its_contract` was written specifically to look one
+  level deeper than the flat tests and still compared only the property names it found
+  there — the same claim the four earlier `Banding`/`Grouping` divergences also satisfied.
+  `test_generated_and_authored_agree_on_scalar_types` now compares admitted JSON types
+  across all six shapes carrying both a generated and a hand-authored contract, following
+  `$ref`s between files and unwrapping `anyOf`. It deliberately ignores `null` (the two
+  sides differ on nullability uniformly, which is its own reconciliation) and compares only
+  paths present on both sides, so `top_levels` — a *structural* disagreement — stays
+  FR-DATA-49's with an owner rather than becoming an exemption entry here.
+
+**Not delivered, with verdicts:**
+
+| Item | Verdict |
+|---|---|
+| **FR-DATA-49** — `top_levels` carrying `exposure_years` per level | **Deferred, owned, and appended rather than negotiated away.** The contract declares `{level, count, exposure_years}`; the model carries a two-element `(str, int)`. Closing it means per-level exposure in both engines plus every reader that treats the item as `(str, int)` — 22 call sites across 7 non-generated files, including the distributional validation layer. That is a feature the size of this slice, not a reconciliation. The contract is **not** edited down to what was built (`CLAUDE.md` §14). Owner: W5's next slice, or whoever picks up FR-DATA-49 |
+| **OQ-DATA-9** — `Dataset` has no status, validated-at or owner | **Open, and deliberately not decided.** `01` §5.3's dataset list asks to display all three and §4.1 never defined them. There are two defensible answers — `Dataset` gains the three fields, or §5.3 means the *latest version's* status and validated-at plus a workspace-level owner — so it is recorded with options and a recommendation (read them off the latest version, but give `Dataset` an explicit `owner_id`, because no version carries ownership and `06`'s RBAC will need a subject) and **awaits the maintainer's decision** rather than being silently picked |
+| **`01` §5.3's PSI comparison selector** | **Not built.** `compareProfiles()` is implemented, typed and exported with **zero** callers; FR-DATA-28's endpoint is served. The Contents claim stays in the table with a dated note beside it. Owner: the next slice to open `ProfileView.vue`, or **W6b** — it needs a reference-version picker, which is the first piece of Profile state that must outlive a route |
+| The other four of the W6a record's six §5.3 Contents items | **Unchanged, still W6b's** — dataset status/validated/owner (blocked on OQ-DATA-9), the lineage graph, and threshold editing in the rule set editor |
+| `NFR-DATA-1` / `NFR-DATA-2` | **Unchanged** — measured, not tested; W4's verdict stands |
+
+**Retrofit list (§5):** untouched. No new money field, no new artifact type, no schema
+migration; `mean_severity` and `mean_burning_cost` were floats before the rename and are
+floats after it, which is the whole point of FR-DATA-46. **In the model.** The published
+contract had been calling both of them integers since before this slice began, which is the
+one place a money-discipline claim actually reaches an external consumer — worth stating
+plainly, because "the retrofit list is untouched" was true of the code and not of the
+contract, and the two are the same promise.
+
+**Gate (local, 2026-08-19, both halves, each exit code read on its own):** ruff clean ·
+mypy --strict on 125 source files · import-linter 3 kept / 0 broken · **1264 python tests**,
+zero skipped, with compose up so the Postgres-backed job tests actually ran ·
+docs audit, 476 requirements across 8 specs · req-coverage 223 of 476 marked (46.8 %) ·
+**21 generated contracts match** · `pnpm install --frozen-lockfile` · `generate:api` ·
+eslint · `vue-tsc --build` · **109 frontend tests** · `pnpm build`.
+
+**Enforcement proven against deliberately broken input** (§13 step 4): the nested contract
+conformance test bit on all four mutations, in both directions; `job_id=None` in the worker
+failed the artifact assertion with `assert None == UUID('01a018f2-…')` and, after this
+slice added the assertion on the persisted column, fails there too; and passing
+`weight_column="exposure_years"` in place of the recorded argument failed with
+`assert 'exposure_years' == 'earned_years'`.
+
+The type comparison added in the closing review was broken three ways before being trusted.
+Restoring `MoneyMinor` on `banding`'s `mean_severity` failed with *"the model and the
+contract disagree on the type of `band_stats.[].mean_severity` (model ['number'], contract
+['integer'])"*. Retyping `profile`'s `severity_ci` bounds as integers failed the same way at
+`one_ways.[].rows.[].severity_ci.[]` — **but only after a second fix**: the first walker read
+`items` and not `prefixItems`, and Pydantic emits a fixed-length tuple as `prefixItems`, so
+the deliberately broken interval passed. Every tuple field in every contract was invisible
+and nothing said so. Removing the `prefixItems` line again fails
+`test_the_type_comparison_reaches_the_one_way_row` on both shapes, naming the path it can no
+longer see. That test names its three paths rather than counting them, because the first
+attempt at a control — comparing aligned paths against a fraction of the walker's own output
+— did **not** fire when the walker was crippled: a walker that stops descending shrinks the
+numerator and denominator together, so the threshold moves out of the way of the defect it
+exists to catch. An exemption entry for `top_levels` was written and then deleted for the
+adjacent reason: with the walker fixed, that divergence is a path mismatch rather than a
+type mismatch, so the entry suppressed nothing and only made the list look load-bearing.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2207,7 +2315,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: sixteen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, and FR-DATA-47's artifact triggers; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: seventeen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, and the profile contract; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
