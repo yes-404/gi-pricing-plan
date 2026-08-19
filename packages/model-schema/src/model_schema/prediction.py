@@ -41,6 +41,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 __all__ = [
+    "IntervalModels",
     "PredictedRow",
     "Prediction",
     "UnavailableReason",
@@ -85,6 +86,16 @@ class UncertaintyKind(enum.StrEnum):
 
     #: `g⁻¹(η̂ ± z·√(x'Vx))` — a confidence interval for `E[Y|x]` (FR-MODEL-63).
     CONFIDENCE_INTERVAL_MEAN = "confidence_interval_mean"
+    #: A paired-quantile interval on `Y` itself, from two Models fitted with the `quantile`
+    #: template (FR-MODEL-78, FR-MODEL-101; OQ-MODEL-16, decided 2026-08-19).
+    #:
+    #: **Not** `confidence_interval_mean`, which covers `E[Y|x]` and is a much narrower
+    #: claim; **not** FR-MODEL-98's reserved `prediction_interval`, which names a `φ·V(μ)`
+    #: computation over aggregates and whose trigger would be left with no name to fire
+    #: into if this took it. The value names the *estimator* as well as the quantity,
+    #: because a reader comparing a GBM's bound with a GLM's must be able to see that they
+    #: are not the same kind of claim.
+    QUANTILE_PAIR_INTERVAL = "quantile_pair_interval"
     #: No interval, with a `reason` (FR-MODEL-77, FR-MODEL-93). `02` R5 is satisfied by
     #: saying so, and only by saying so.
     UNAVAILABLE = "unavailable"
@@ -93,25 +104,28 @@ class UncertaintyKind(enum.StrEnum):
 class UnavailableReason(enum.StrEnum):
     """Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's.
 
-    **Only two of these are reachable today**, and FR-MODEL-87's staging rule requires that
-    to be said in place rather than discovered:
+    **All four are reachable from 2026-08-19** (FR-MODEL-100, the paired-quantile slice).
+    Two of them — `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` — were declared
+    here and returned by nothing until that slice, named in place under FR-MODEL-87's
+    staging rule. That note is removed with the state it described rather than left
+    describing a platform which has moved on.
 
-    * `NO_INTERVAL_MODELS_FITTED` — every GBM, since FR-MODEL-78's `interval_for` is not
-      built and so no paired quantile model can exist to be found.
-    * `COVARIANCE_NOT_STORED` — a GLM fitted before the covariance blob was written
-      (FR-MODEL-93).
-
-    `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` are declared and unreachable
-    until FR-MODEL-78's paired quantile models land (Phase 1b). They are declared now
-    because they are FR-MODEL-77's contract and a caller matching on this enum should not
-    have to widen its match when the slice that fits one arrives.
+    What those two *mean* was not decided by FR-MODEL-77, which named them and stopped.
+    FR-MODEL-100 decides both, as requirements rather than as implementation choices,
+    because each had two defensible readings and the built one is the one a reader will
+    assume was specified.
     """
 
     #: FR-MODEL-77. No paired quantile models (FR-MODEL-78) exist for this model.
     NO_INTERVAL_MODELS_FITTED = "no_interval_models_fitted"
-    #: FR-MODEL-77. Declared, unreachable until FR-MODEL-78 lands.
+    #: FR-MODEL-77 / FR-MODEL-100(ii). The pair exists but is less reviewed than the model
+    #: it bounds — an approved Model would otherwise quote an unreviewed number beside a
+    #: reviewed one. Not "unapproved outright": that reading would make the feature unusable
+    #: at exactly the point an actuary is deciding whether the bounds are any good.
     INTERVAL_MODELS_NOT_APPROVED = "interval_models_not_approved"
-    #: FR-MODEL-77. Declared, unreachable until FR-MODEL-78 lands.
+    #: FR-MODEL-77 / FR-MODEL-100(iii). The central Model is `superseded`. It stays
+    #: scoreable, so its bounds are quotable — and quoting them without saying the family
+    #: has moved past this version is the silence FR-MODEL-77 exists to refuse.
     INTERVAL_MODELS_STALE = "interval_models_stale"
     #: FR-MODEL-93. A GLM whose fit predates the covariance blob. Distinct from the GBM
     #: reasons because nothing about this model makes an interval impossible — the inputs
@@ -119,6 +133,26 @@ class UnavailableReason(enum.StrEnum):
     #: where the matrix is `p x p`. A blob that *should* exist and does not is a platform
     #: fault and surfaces as one; it is not this reason.
     COVARIANCE_NOT_STORED = "covariance_not_stored"
+
+
+class IntervalModels(BaseModel):
+    """The two Models a quantile-pair interval was computed from (FR-MODEL-78).
+
+    Carried on the response because the bounds cost the actuary two extra fits and are
+    Models in their own right — a reader who wants to know how the interval was made should
+    reach them from the prediction rather than from a query they have to construct.
+
+    The alphas are here as well as the ids because `level` is their difference and a reader
+    checking a 0.90 interval should not have to open two artifacts to learn it came from
+    0.05 and 0.95 rather than from 0.03 and 0.93.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    lower_model_id: UUID
+    upper_model_id: UUID
+    lower_alpha: float = Field(gt=0.0, lt=0.5)
+    upper_alpha: float = Field(gt=0.5, lt=1.0)
 
 
 class Uncertainty(BaseModel):
@@ -144,14 +178,19 @@ class Uncertainty(BaseModel):
     #: interval whose basis is unstated is one a reader will assume is exact, and for a
     #: penalised fit that assumption is the defect OQ-MODEL-14 was raised about.
     basis: UncertaintyBasis | None = None
+    #: The two Models behind a quantile-pair interval. Required exactly when `kind` is
+    #: `quantile_pair_interval` and forbidden otherwise, by the validator below.
+    interval_models: IntervalModels | None = None
 
     @model_validator(mode="after")
     def _the_kind_and_its_evidence_agree(self) -> Uncertainty:
-        """An unavailable uncertainty carries its reason; an available one carries a level.
+        """Each kind carries exactly its own evidence, and none of anyone else's.
 
         Enforced rather than documented because the whole value of a typed absence is that
-        the caller cannot receive one with the reason left off — which is a null by a
-        longer name, and `02` R5 is not satisfied by a null.
+        the caller cannot receive one with the reason left off — which is a null by a longer
+        name, and `02` R5 is not satisfied by a null. The same argument applies in the other
+        direction: an interval carrying a `reason`, or a quantile pair carrying a `basis`,
+        describes evidence that does not exist.
         """
         if self.kind is UncertaintyKind.UNAVAILABLE:
             if self.reason is None:
@@ -172,24 +211,61 @@ class Uncertainty(BaseModel):
                     "basis describes the matrix an interval came from; there is no "
                     "interval here."
                 )
-        else:
-            if self.level is None:
+            if self.interval_models is not None:
                 raise ValueError(
-                    f"uncertainty is {self.kind!r} with no level. An interval whose "
-                    "coverage is unstated cannot be compared with any other interval."
+                    "uncertainty is 'unavailable' and names interval models. If two bounds "
+                    "were found and scored, this is not an absence."
                 )
-            if self.reason is not None:
+            return self
+
+        if self.level is None:
+            raise ValueError(
+                f"uncertainty is {self.kind!r} with no level. An interval whose coverage is "
+                "unstated cannot be compared with any other interval."
+            )
+        if self.reason is not None:
+            raise ValueError(
+                f"uncertainty is {self.kind!r} and carries reason={self.reason!r}. A reason "
+                "explains an absence; there is no absence here."
+            )
+
+        if self.kind is UncertaintyKind.QUANTILE_PAIR_INTERVAL:
+            if self.basis is not None:
                 raise ValueError(
-                    f"uncertainty is {self.kind!r} and carries reason={self.reason!r}. A "
-                    "reason explains an absence; there is no absence here."
+                    f"a quantile-pair interval carries basis={self.basis!r}. "
+                    "`UncertaintyBasis` describes a covariance matrix, and a pair of "
+                    "quantile fits has none — stating one would claim inference this "
+                    "interval did not do (FR-MODEL-101)."
                 )
-            if self.basis is None:
+            if self.interval_models is None:
                 raise ValueError(
-                    f"uncertainty is {self.kind!r} with no basis. FR-MODEL-99: an interval "
-                    "read off a penalised fit's covariance matrix is not the interval that "
-                    "fit deserves, and a response that does not say which matrix it used "
-                    "leaves the reader to assume the flattering one."
+                    "a quantile-pair interval names no models. The bounds cost two extra "
+                    "fits and are Models in their own right, so a reader must be able to "
+                    "reach them (FR-MODEL-78)."
                 )
+            spread = self.interval_models.upper_alpha - self.interval_models.lower_alpha
+            if abs(spread - self.level) > 1e-9:
+                raise ValueError(
+                    f"level={self.level} does not match the alphas it came from "
+                    f"({self.interval_models.lower_alpha} to "
+                    f"{self.interval_models.upper_alpha}, a spread of {spread}). A 0.05/0.95"
+                    " pair covers 0.90, and a response claiming 0.95 from it overstates its"
+                    " own coverage by exactly the amount a reader cannot see."
+                )
+            return self
+
+        if self.basis is None:
+            raise ValueError(
+                f"uncertainty is {self.kind!r} with no basis. FR-MODEL-99: an interval read "
+                "off a penalised fit's covariance matrix is not the interval that fit "
+                "deserves, and a response that does not say which matrix it used leaves the "
+                "reader to assume the flattering one."
+            )
+        if self.interval_models is not None:
+            raise ValueError(
+                f"uncertainty is {self.kind!r} and names interval models. This interval came "
+                "from a covariance matrix, not from a pair of quantile fits."
+            )
         return self
 
 

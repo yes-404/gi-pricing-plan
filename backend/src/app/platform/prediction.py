@@ -11,9 +11,11 @@ resolving the model, its factors and their bandings and groupings from ids, and 
 blobs (the booster, the covariance matrix) that the artifacts only reference.
 
 **The uncertainty verdict is decided here, once, per model.** A GLM fitted before the
-covariance blob existed reports `covariance_not_stored` (FR-MODEL-93); a GBM reports
-FR-MODEL-77's `no_interval_models_fitted`, which is the only one of its three reasons that
-can be true while FR-MODEL-78's paired quantile models remain unbuilt.
+covariance blob existed reports `covariance_not_stored` (FR-MODEL-93). A GBM reports
+FR-MODEL-78's paired-quantile interval where a complete, current, sufficiently-reviewed
+pair exists, and otherwise one of FR-MODEL-77's three reasons — all of which became
+reachable with the paired-quantile slice (FR-MODEL-100), where before it could only ever
+say `no_interval_models_fitted`.
 """
 
 from __future__ import annotations
@@ -39,9 +41,11 @@ from model_schema import (
     Banding,
     Factor,
     GbmFitResult,
+    GbmSpec,
     GlmFitResult,
     GlmSpec,
     Grouping,
+    IntervalModels,
     ModelSpec,
     ModelStatus,
     Permission,
@@ -146,11 +150,10 @@ async def predict_rows(
         ) from exc
 
     if isinstance(fit, GbmFitResult):
-        expected, uncertainty = await _score_gbm(
-            fit, spec, frame, factors, bandings=bandings, groupings=groupings,
-            blob_store=blob_store,
+        expected, lower, upper, uncertainty = await _score_gbm(
+            session, fit, spec, frame, factors, workspace_id=workspace_id, model=model,
+            bandings=bandings, groupings=groupings, blob_store=blob_store,
         )
-        lower = upper = None
     else:
         assert isinstance(fit, GlmFitResult)
         assert isinstance(spec, GlmSpec)
@@ -249,30 +252,46 @@ async def _score_glm(
 
 
 async def _score_gbm(
+    session: Any,
     fit: GbmFitResult,
     spec: ModelSpec,
     frame: pl.DataFrame,
     factors: Sequence[Factor],
     *,
+    workspace_id: UUID,
+    model: ModelRow,
     bandings: Mapping[UUID, Banding],
     groupings: Mapping[UUID, Grouping],
     blob_store: BlobStore,
-) -> tuple[npt.NDArray[np.float64], Uncertainty]:
-    """`μ` from the booster, and FR-MODEL-77's statement that there is no interval.
+) -> tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64] | None,
+    npt.NDArray[np.float64] | None,
+    Uncertainty,
+]:
+    """`μ` from the booster, and either FR-MODEL-78's pair or FR-MODEL-77's typed absence.
 
-    `no_interval_models_fitted` is the only one of FR-MODEL-77's three reasons reachable
-    today, and will be until FR-MODEL-78's `interval_for` exists to make a paired quantile
-    model findable. The other two are declared in `UnavailableReason` and returned by
-    nothing — named there rather than omitted, so the slice that fits one adds a branch
-    instead of widening the vocabulary a client already matches on.
+    **All four of `UnavailableReason`'s values are reachable from here** (FR-MODEL-100).
+    Until the paired-quantile slice, `no_interval_models_fitted` was the only one a GBM
+    could return and the other two were declared and unreachable; the docstring that said
+    so is gone with the state it described.
 
-    The variance-model approximation FR-MODEL-77 refuses would fit here in four lines. That
-    is the reason the requirement is written down: a wrong interval on a price is worse than
+    The four arms are ordered **most specific first**, and the order is load-bearing: a
+    superseded model whose bounds are also unapproved reports staleness, because the family
+    having moved on is the more useful thing to say. Reordered, the caller is told to get
+    the bounds approved for a model version nobody should be quoting.
+
+    The variance-model approximation FR-MODEL-77 refuses would still fit here in four lines.
+    That is why the requirement is written down: a wrong interval on a price is worse than
     no interval, and its cheapness is what makes refusing it a decision rather than an
     omission.
     """
     from pricing_core.modelling import ModellingError
-    from pricing_core.modelling.predict import PredictionError, score_fitted
+    from pricing_core.modelling.predict import (
+        PredictionError,
+        detect_quantile_crossing,
+        score_fitted,
+    )
 
     try:
         expected = score_fitted(
@@ -286,10 +305,138 @@ async def _score_gbm(
         )
     except (ModellingError, PredictionError) as exc:
         raise _unscoreable(exc) from exc
-    return expected, Uncertainty(
-        kind=UncertaintyKind.UNAVAILABLE,
-        reason=UnavailableReason.NO_INTERVAL_MODELS_FITTED,
+
+    def absent(reason: UnavailableReason) -> tuple[
+        npt.NDArray[np.float64], None, None, Uncertainty
+    ]:
+        return expected, None, None, Uncertainty(
+            kind=UncertaintyKind.UNAVAILABLE, reason=reason
+        )
+
+    bounds = [
+        row
+        for row in await model_service.load_interval_models(
+            session, workspace_id=workspace_id, central_model_id=model.id
+        )
+        if row.fit_result is not None
+    ]
+    sides = {"lower": [], "upper": []}  # type: dict[str, list[ModelRow]]
+    for row in bounds:
+        bound_spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+        assert isinstance(bound_spec, GbmSpec)
+        assert bound_spec.interval_for is not None
+        sides["lower" if bound_spec.interval_for.alpha < 0.5 else "upper"].append(row)
+
+    # 1. Half a pair is not a pair. FR-MODEL-77's vocabulary is closed, and the absence of a
+    #    *pair* is what `no_interval_models_fitted` says — a lone bound needs no new code.
+    if len(sides["lower"]) != 1 or len(sides["upper"]) != 1:
+        return absent(UnavailableReason.NO_INTERVAL_MODELS_FITTED)
+
+    # 2. FR-MODEL-100(iii). `superseded` is scoreable, so this model's bounds are quotable —
+    #    and quoting them without saying the family has moved past this version is exactly
+    #    the silence FR-MODEL-77 exists to refuse.
+    if ModelStatus(model.status) is ModelStatus.SUPERSEDED:
+        return absent(UnavailableReason.INTERVAL_MODELS_STALE)
+
+    # 3. FR-MODEL-100(ii). Not "unapproved outright" — the bounds must be at least as
+    #    reviewed as the model they bound. An approved Model quoting a merely `fitted` bound
+    #    puts a reviewed and an unreviewed number on one line with nothing separating them.
+    lower_row, upper_row = sides["lower"][0], sides["upper"][0]
+    if ModelStatus(model.status) is ModelStatus.APPROVED and any(
+        ModelStatus(row.status) is not ModelStatus.APPROVED
+        for row in (lower_row, upper_row)
+    ):
+        return absent(UnavailableReason.INTERVAL_MODELS_NOT_APPROVED)
+
+    lower_alpha, lower = await _score_bound(
+        session, lower_row, frame, workspace_id=workspace_id, blob_store=blob_store
     )
+    upper_alpha, upper = await _score_bound(
+        session, upper_row, frame, workspace_id=workspace_id, blob_store=blob_store
+    )
+
+    # 4. FR-MODEL-78: crossing is reported, never reordered — and never quietly dropped.
+    #    `PredictedRow` refuses to serialise a reversed pair, so without this the honest
+    #    finding arrives as a 500 with the reason buried in a traceback.
+    rows_crossing, worst_gap = detect_quantile_crossing(lower, upper)
+    if rows_crossing:
+        raise PlatformError(
+            "MODEL_INTERVAL_UNAVAILABLE",
+            "The interval models cross on these rows",
+            409,
+            f"{rows_crossing} of {frame.height} rows have a lower bound above their upper "
+            f"bound (worst gap {worst_gap:.4g}). FR-MODEL-78: a crossing pair does not "
+            "describe one distribution, so the bounds are reported as computed or not at "
+            "all — reordering them would return two plausible numbers that mean nothing. "
+            f"The pair's fit-time crossing is recorded on "
+            f"{upper_row.model_family_slug}@{upper_row.version}'s diagnostics.",
+        )
+
+    return (
+        expected,
+        lower,
+        upper,
+        Uncertainty(
+            kind=UncertaintyKind.QUANTILE_PAIR_INTERVAL,
+            # The coverage the pair actually has, which is the gap between the alphas —
+            # never `CONFIDENCE_LEVEL`, which describes a matrix this interval never used.
+            level=upper_alpha - lower_alpha,
+            interval_models=IntervalModels(
+                lower_model_id=lower_row.id,
+                upper_model_id=upper_row.id,
+                lower_alpha=lower_alpha,
+                upper_alpha=upper_alpha,
+            ),
+        ),
+    )
+
+
+async def _score_bound(
+    session: Any,
+    row: ModelRow,
+    frame: pl.DataFrame,
+    *,
+    workspace_id: UUID,
+    blob_store: BlobStore,
+) -> tuple[float, npt.NDArray[np.float64]]:
+    """One bound's declared alpha and its predictions over `frame`.
+
+    Resolved here rather than in `pricing-core`, which is handed dataframes and artifacts
+    and never ids (ADR-0001).
+    """
+    from pricing_core.modelling import ModellingError
+    from pricing_core.modelling.predict import PredictionError, score_fitted
+
+    spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+    fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+    assert isinstance(spec, GbmSpec)
+    assert spec.interval_for is not None
+    assert isinstance(fit, GbmFitResult)
+
+    factors = await model_service.load_factors(
+        session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+    )
+    bandings = await transform_service.load_bandings(
+        session, workspace_id=workspace_id, ids=[f.banding_id for f in factors if f.banding_id]
+    )
+    groupings = await transform_service.load_groupings(
+        session,
+        workspace_id=workspace_id,
+        ids=[f.grouping_id for f in factors if f.grouping_id],
+    )
+    try:
+        scored = score_fitted(
+            fit,
+            spec,
+            frame,
+            factors,
+            bandings=bandings,
+            groupings=groupings,
+            booster=await blob_store.read(fit.booster_blob),
+        )
+    except (ModellingError, PredictionError) as exc:
+        raise _unscoreable(exc) from exc
+    return spec.interval_for.alpha, scored
 
 
 def _unscoreable(exc: Any) -> PlatformError:

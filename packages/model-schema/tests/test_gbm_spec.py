@@ -24,6 +24,7 @@ from model_schema import (
     GbmSpec,
     GlmFitResult,
     GlmSpec,
+    IntervalFor,
     LossTreatment,
     Model,
     ModelStatus,
@@ -334,3 +335,73 @@ def test_the_glm_arm_refuses_the_nested_regularisation_block_the_spec_used_to_sh
         l1_ratio=0.0,
     )
     assert (flat.alpha, flat.l1_ratio, flat.max_iter, flat.tolerance) == (0.001, 0.0, 200, 1e-8)
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_an_interval_bound_declares_a_two_sided_alpha() -> None:
+    """`alpha` is a quantile, so 0 and 1 are not bounds — they are the whole distribution.
+
+    Exclusive rather than inclusive because the pinball loss at `alpha = 0` has zero
+    gradient everywhere the residual is positive: the fit would run, converge on nothing,
+    and return a bound indistinguishable from a broken one.
+    """
+    for impossible in (0.0, 1.0, -0.1, 1.5):
+        with pytest.raises(pydantic.ValidationError):
+            IntervalFor(model_id=new_uuid7(), model_version=1, alpha=impossible)
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_a_bound_at_the_median_is_not_a_bound() -> None:
+    """`alpha = 0.5` is the median — a central estimate, not a side of an interval.
+
+    Refused at the type because FR-MODEL-100(iv) allocates exactly one bound per side and
+    finds them by comparing `alpha` with 0.5. A median bound belongs to neither set, so
+    admitting it would make "the lower bound of this model" a question with no answer at
+    exactly the point the prediction path asks it.
+    """
+    with pytest.raises(pydantic.ValidationError, match="median"):
+        IntervalFor(model_id=new_uuid7(), model_version=1, alpha=0.5)
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_a_bound_names_a_real_version_of_the_model_it_bounds() -> None:
+    """Version 0 does not exist; `Model.version` is `ge=1` and this must agree with it.
+
+    The pair is read back in a review as `slug@version`, and a zero there is a bound
+    pointing at nothing that still renders as a citation.
+    """
+    with pytest.raises(pydantic.ValidationError):
+        IntervalFor(model_id=new_uuid7(), model_version=0, alpha=0.05)
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_interval_for_is_absent_by_default_and_refused_on_a_glm() -> None:
+    """A GLM has a covariance matrix; FR-MODEL-78's route is the GBM's alone.
+
+    Asserted in both directions. The default matters because almost no GBM is a bound and a
+    non-`None` default would make every ordinary model look like one; the `GlmSpec` refusal
+    matters because it pins that the field was added to the GBM arm rather than to the
+    common block, where it would have changed every GLM's `spec_hash` for nothing.
+    """
+    assert _spec().interval_for is None
+    with pytest.raises(pydantic.ValidationError):
+        GlmSpec(
+            model_family_slug="motor-ad-frequency",
+            dataset_version_id=new_uuid7(),
+            response_column="claim_count",
+            interval_for=IntervalFor(model_id=new_uuid7(), model_version=1, alpha=0.05),
+        )  # type: ignore[call-arg]
+
+
+@pytest.mark.req("FR-MODEL-100")
+def test_a_bound_round_trips_through_the_tagged_union() -> None:
+    """`MODEL_SPEC_ADAPTER` is what the backend validates a stored spec with.
+
+    A field that survives construction but not the union round-trip is one that vanishes on
+    the first read back from the database — which is where every consumer of the pairing
+    looks for it.
+    """
+    bound = _spec(interval_for=IntervalFor(model_id=new_uuid7(), model_version=7, alpha=0.05))
+    restored = MODEL_SPEC_ADAPTER.validate_python(bound.model_dump(mode="json"))
+    assert isinstance(restored, GbmSpec)
+    assert restored.interval_for == bound.interval_for

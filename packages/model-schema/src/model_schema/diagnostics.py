@@ -44,6 +44,7 @@ __all__ = [
     "PartialDependencePoint",
     "PartitionDiagnostics",
     "PermutationImportance",
+    "QuantileCrossing",
     "ResidualSummary",
     "TypeIIITest",
     "UniversalDiagnostics",
@@ -379,6 +380,59 @@ class GbmDiagnostics(BaseModel):
     #: deep tree and a forest of uniformly middling trees have the same mean.
     max_depth: int = Field(ge=0)
     mean_depth: float = Field(ge=0.0)
+    #: FR-MODEL-78. Set on the second bound of a paired-quantile interval and `None`
+    #: on every other model — including the first bound, which had nothing to cross.
+    quantile_crossing: QuantileCrossing | None = None
+
+
+class QuantileCrossing(BaseModel):
+    """Whether this bound contradicts its counterpart, over the fit population (FR-MODEL-78).
+
+    On the **second** bound's diagnostics. The first has no counterpart to cross when it is
+    fitted, and FR-MODEL-49 computes diagnostics once at fit time and reads them thereafter
+    — so the moment both boosters exist is the moment the second one is fitted, and there is
+    no later pass in which to fill this in.
+
+    `counterpart_model_id` names the model it was compared against, so a reader is not left
+    inferring it from the alpha.
+
+    **Crossing is reported, never repaired.** A pair whose lower bound exceeds its upper at
+    some rows does not describe one distribution, and reordering the two would produce an
+    interval that looks well formed and means nothing (OQ-MODEL-2).
+
+    `None` on every model that is not the second bound of a pair.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    counterpart_model_id: UUID
+    rows_checked: int = Field(ge=0)
+    rows_crossing: int = Field(ge=0)
+    #: The largest `lower - upper` over the crossing rows, on the response scale. `0.0` when
+    #: nothing crosses. Beside the count because one row crossing by a factor of ten and a
+    #: thousand rows crossing in the sixth decimal are different findings, and a count
+    #: describes them identically.
+    worst_gap: float = Field(ge=0.0)
+
+    @model_validator(mode="after")
+    def _the_two_numbers_describe_the_same_comparison(self) -> QuantileCrossing:
+        """Three ways the pair of figures can disagree, each meaning a wrong array.
+
+        A count above the rows checked, a gap with no crossing rows, or crossing rows with
+        no gap: each is one of the two numbers computed from something other than the
+        comparison the other one describes.
+        """
+        if self.rows_crossing > self.rows_checked:
+            raise ValueError(
+                f"{self.rows_crossing} crossing rows out of {self.rows_checked} checked."
+            )
+        if (self.rows_crossing == 0) != (self.worst_gap == 0.0):
+            raise ValueError(
+                f"rows_crossing={self.rows_crossing} and worst_gap={self.worst_gap} "
+                "disagree: a gap with no crossing rows, or crossing rows with no gap, is "
+                "one of the two computed from the wrong array."
+            )
+        return self
 
 
 class Diagnostics(BaseModel):
