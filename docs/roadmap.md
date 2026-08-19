@@ -2317,7 +2317,7 @@ round — the same direction the profile-contract slice moved a day earlier.
 
 | Delivered | Evidence |
 |---|---|
-| `LevelCount` in `model-schema` | `{level, count, exposure_years}`, `frozen`, `extra="forbid"`. `exposure_years` carries its own `field_validator` refusing a `float` outright — the one strict `DecimalStr` field in the repository (`OQ-OVR-8` below) |
+| `LevelCount` in `model-schema` | `{level, count, exposure_years}`, `frozen`, `extra="forbid"`. `exposure_years` carried its own `field_validator` refusing a `float` outright — the one strict `DecimalStr` field in the repository. **Superseded 2026-08-19** when `OQ-OVR-8` was decided: the rule moved onto `DecimalStr` itself and the field-scoped validator was deleted (FR-OVR-18) |
 | Both profiling engines compute per-level exposure | `profile_frame` and `profile_parquet` share `_stored_exposure`, so the two cannot compute it two different ways |
 | Every reader moved off positional access | `compare_profiles` and `_psi` in `pricing_core.data.profile`; `validate.py`'s `_level_counts`, `_psi_column` (`VR-DST-1`), `_new_level` (`VR-DST-2`) and `_vanished_level` (`VR-DST-3`) |
 | `VR-DST-3`'s fallback corrected | Where no `one_ways` summary exists, the fallback now reads `exposure_years` and drops to `count` only when the version carried no exposure column — it previously used count *as if* it were exposure, contradicting the rule's own definition ("levels with material reference exposure") |
@@ -2325,25 +2325,18 @@ round — the same direction the profile-contract slice moved a day earlier.
 | The nested conformance test deepened | `test_the_column_profile_shape_matches_its_contract` now descends into `top_levels`' item and compares its property names, closing the exact blind spot that let the shape divergence hide behind a matching container name. **Proven against deliberately broken input**: an invented property added to the authored contract was confirmed named by the test, then reverted (`57a0cc0`) |
 | The Vue chip list shows exposure per level | `ProfileView.vue`'s `top_levels` chips render `exposure_years` beside `count`; no new §5.3 Contents item — this corrected one that already existed |
 
-**Deferred, raised rather than picked:**
+**Both questions decided 2026-08-19** (they were raised by this slice and answered in the
+next one; the slice record is below):
 
-- **`OQ-DATA-10`** — FR-DATA-25 asks for "top-20 levels by exposure **and** by count"; the
-  platform still produces one list, selected by count. Should there be a second,
-  exposure-ordered selection, and should `VR-DST-1`'s PSI weight by exposure rather than
-  count? **The two halves are one question**: an exposure-weighted PSI over a
-  count-selected level set is meaningless, and switching the basis would silently rewrite
-  the meaning of every drift figure already published. Recommendation on file: defer both
-  until a consumer needs an exposure-ordered view, then decide them together — the
-  exposure number is now carried on every level, so the decision is cheap to revisit and
-  was not before.
-- **`OQ-OVR-8`** — `DecimalStr` silently accepts a `float`: `OneWayRow(exposure_years=0.1+0.2)`
-  returns `Decimal('0.30000000000000004')`, binary error preserved inside a field FR-OVR-7
-  calls exact. 26 fields across 7 modules are affected — too wide to fix for one new field
-  without a decision, which is why `LevelCount.exposure_years` alone carries a field-scoped
-  strict validator rather than a change to `DecimalStr` itself. Recommendation on file: make
-  `DecimalStr` reject `float` at validation and audit the callers in the same change,
-  because some legitimately compute in float and need an explicit quantisation rather than
-  outright rejection at the boundary.
+- **`OQ-DATA-10`** — **decided: defer both halves, together, until a consumer needs an
+  exposure-ordered view.** Selection stays by count and `VR-DST-1`'s PSI stays
+  count-weighted. FR-DATA-25 is amended to say so — the spec asked for two selections and
+  the platform produces one, and the spec was the side that was wrong. The deferral, its
+  trigger (a named reader: `02`'s factor workbench or a monitoring view) and its
+  deliberately **unowned** status are **FR-DATA-52**.
+- **`OQ-OVR-8`** — **decided: `DecimalStr` refuses a `float` at validation** (FR-OVR-18),
+  delivered the same day, `Relativity` included. `LevelCount.exposure_years`'s field-scoped
+  validator is deleted rather than duplicated.
 
 **Gate (local, 2026-08-19, both halves, each exit code read on its own):** ruff clean ·
 mypy --strict on 125 source files · import-linter 3 kept / 0 broken · **1281 python tests**,
@@ -2352,6 +2345,47 @@ req-coverage 224 of 478 marked (46.9 %) · **21 generated contracts match** ·
 `pnpm install --frozen-lockfile` · `generate:api` · eslint · `vue-tsc --build` ·
 **113 frontend tests** · `pnpm build`. `backend/tests/test_demo_guide.py` — 11 passed; the
 guide is derived (FR-PLAT-54) and needed no hand edit.
+
+#### Slice — the exact-decimal types refuse a float, and the audit that decided it (2026-08-19)
+
+`OQ-OVR-8` and `OQ-DATA-10`, both raised by the `top_levels` slice the day before, decided
+and applied. `OQ-DATA-10` is a deferral with a trigger (FR-DATA-52); `OQ-OVR-8` is a code
+change (FR-OVR-18). **The audit the recommendation called "the real work" is what this
+record is mostly about**, because it changed three things the decision had assumed.
+
+| Delivered | Evidence |
+|---|---|
+| `DecimalStr` and `Relativity` reject a `float` | A shared `BeforeValidator` in `model_schema.money`. Refusal proven on a Python float, a float nested in a `tuple[DecimalStr, ...]`, `model_validate` of a dict, and `model_validate_json` of a JSON *number*; `str`, `int` and `Decimal` still accepted and the wire form still a string (`test_money.py`, five new `FR-OVR-7` tests) |
+| `LevelCount.exposure_years`'s validator deleted | The inconsistency `OQ-OVR-8` recorded is resolved by generalising the strict field, not by leaving ten lax ones beside it |
+| **The caller audit came back clean** | Every existing caller passes a `str`, an `int` or a `Decimal`. The paths that compute in float — both profiling engines, the numpy lift/AE bins, the double-lift bins — already quantised at the boundary, so `_stored_exposure` is now named in FR-OVR-18 as the pattern to copy. **No caller needed rerouting and the full suite passed unchanged**, which is the opposite of what the recommendation expected |
+| **The affected-field count was wrong** | The question said "26 `DecimalStr` fields across 7 modules". There are **11, across 6** — the 26 was a count of every *line mentioning* `DecimalStr`, imports and `money.py`'s own definition included. Corrected in `docs/open-questions.md`, `00` §7 and here. A figure nobody had recomputed since it was written down, which is why `CLAUDE.md` §0 keeps counts out of prose |
+| **A published contract was declaring three exact decimals as JSON numbers** | `docs/contracts/schemas/peril-structure.schema.json` typed `restoration_loading`, `ratio` and `tolerance` as `{"type": "number"}` while all three are `DecimalStr` the model has always serialised as strings — verified by dumping a real `Reconciliation` (`"1.010000"`, `"0.02"`). Wrong since Phase 0; strict input is what made it *reachable*, since a client following the contract now gets a 422 instead of a silent coercion. All three moved to the `Decimal` `$ref` every other schema in the suite already used, and the undeclared `loading_factor` added |
+| The check that should have caught it, widened | `test_generated_and_authored_agree_on_scalar_types` compared **6** slugs while **12** schemas have both sides — and the six were never chosen, merely never added. Now 11, with `COMPARED_SLUGS` a named constant and `test_every_eligible_schema_is_compared` failing the day an eligible schema is neither compared nor pinned. **The check would have caught this contract on the day it was written** |
+| The one divergence it surfaced is pinned, not fixed | Widening found `diagnostics`: `GlmDiagnostic.aliasing` is `tuple[str, ...]` against a contract declaring an array of untyped `object`. Neither side is obviously wrong — an object entry could carry `{term, aliased_with, reason}` — so it is **`OQ-MODEL-15`**, and `test_the_diagnostics_divergence_is_exactly_the_known_one` pins it at exactly that path. A *new* divergence in `diagnostics` still fails; the day `OQ-MODEL-15` is decided the pin fails and is deleted |
+
+**Enforcement proven against deliberately broken input**, all three, each reverted after:
+the widened comparison fails on the pre-fix `peril-structure` contract; the coverage guard
+fails when a slug is removed from `COMPARED_SLUGS`; the pin fails when a second divergence
+is injected into `diagnostics.schema.json`.
+
+**Not delivered, stated rather than left silent:** `ReconcileRequest.tolerance`
+(`backend/src/app/api/peril_structures.py`) is a bare `Decimal`, so a JSON number is still
+coerced there and stringified into the job parameters — the same hole one layer earlier,
+and outside this change because it is an API request shape rather than an artifact field.
+`ReconciliationResult` in `pricing-core` is a frozen dataclass and therefore unvalidated;
+that is true of every `pricing-core` dataclass and singling one out would be arbitrary.
+Both are recorded in `OQ-MODEL-15`'s neighbourhood rather than fixed here.
+
+**Gate (local, 2026-08-19, both halves, each exit code read on its own):** ruff clean ·
+mypy --strict on 125 source files · import-linter 3 kept / 0 broken · **1300 python tests**,
+zero skipped · docs audit, 480 requirements across 8 specs, 64 open questions all mirrored ·
+req-coverage 224 of 480 marked (46.7 %) · **21 generated contracts match** ·
+`pnpm install --frozen-lockfile` · `generate:api` · eslint · `vue-tsc --build` ·
+**113 frontend tests** · `pnpm build`. The docs audit failed once on the way, correctly: a
+bolded `**FR-DATA-52**` used as a *cross-reference* reads as a second definition of it —
+the trap `.claude/skills/spec-change` already documents, paid for again by not reading the
+skill first.
+
 
 ### Phase 1b — Modelling Workbench
 

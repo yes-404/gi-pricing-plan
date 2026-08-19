@@ -16,6 +16,19 @@ prose is one nobody notices breaking. Two design choices carry the weight:
    `anyOf: [{"type": "number"}, {"type": "string"}]` — which permits the lossy binary-float
    form the specification forbids, so a payload could satisfy the generated contract while
    violating FR-OVR-7. Constraining it here closes that gap at the source.
+
+3. `DecimalStr` **refuses a `float` on the way in** (`OQ-OVR-8`, decided 2026-08-19).
+   Choice 2 fixed the *wire* shape; it left the *input* shape open, and
+   `OneWayRow(exposure_years=0.1 + 0.2)` returned `Decimal('0.30000000000000004')` — the
+   float's binary error preserved verbatim inside a field FR-OVR-7 defines as exact. By the
+   time Pydantic sees a float the precision the source amount carried is already gone, so
+   there is nothing a validator downstream can recover. A caller that legitimately computes
+   in float quantises explicitly first (`pricing_core.data.profile._stored_exposure` is the
+   precedent) — which puts the choice of decimal places in the caller's code, where a
+   reviewer can see it, instead of in whatever binary expansion the hardware produced.
+
+   `int`, `str` and `Decimal` are all still accepted: they are exact, and the string form is
+   what every contract round-trip actually carries.
 """
 
 from __future__ import annotations
@@ -23,7 +36,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Annotated, Any
 
-from pydantic import Field, GetJsonSchemaHandler, PlainSerializer, Strict
+from pydantic import BeforeValidator, Field, GetJsonSchemaHandler, PlainSerializer, Strict
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -51,15 +64,39 @@ MoneyMinor = Annotated[
     Field(description="Amount in minor units (pence/cents) of the workspace currency."),
 ]
 
-#: An exact decimal that crosses every boundary as a string.
+
+def _reject_float(value: Any) -> Any:
+    """Refuse a `float` before it is coerced to `Decimal` (FR-OVR-7, `OQ-OVR-8`).
+
+    `bool` is not caught here and does not need to be: `isinstance(True, float)` is false,
+    and Pydantic rejects a bool for a `Decimal` field on its own.
+    """
+    if isinstance(value, float):
+        raise ValueError(
+            f"{value!r} is a float, and a float has already lost the precision an exact "
+            "decimal is for (FR-OVR-7). Pass a string, an int or a Decimal — quantising "
+            "explicitly first if the value was computed in float."
+        )
+    return value
+
+
+#: An exact decimal that crosses every boundary as a string. Strict on the way in: a float
+#: is a validation error, not a silent coercion (`OQ-OVR-8`).
 DecimalStr = Annotated[
     Decimal,
+    BeforeValidator(_reject_float),
     PlainSerializer(str, return_type=str, when_used="always"),
     _DecimalStrSchema(),
 ]
 
-#: A multiplicative rating factor. Same exactness rules as any other decimal.
-Relativity = Annotated[Decimal, PlainSerializer(str, return_type=str), _DecimalStrSchema()]
+#: A multiplicative rating factor. Same exactness rules as any other decimal — including
+#: choice 3: a factor computed in float is quantised by its caller, not by this type.
+Relativity = Annotated[
+    Decimal,
+    BeforeValidator(_reject_float),
+    PlainSerializer(str, return_type=str),
+    _DecimalStrSchema(),
+]
 
 #: ISO-4217 alphabetic currency code.
 Currency = Annotated[str, Field(pattern=r"^[A-Z]{3}$")]

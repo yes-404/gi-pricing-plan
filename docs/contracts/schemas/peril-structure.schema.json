@@ -25,7 +25,10 @@
             "properties": {
               "kind": {"enum": ["none", "capped", "separate_model", "flat_loading"]},
               "cap_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-              "restoration_loading": {"type": "number", "exclusiveMinimum": 0},
+              "restoration_loading": {"$ref": "common/money.schema.json#/$defs/Decimal",
+                "description": "Exact decimal string; the model enforces >= 1 (a restoration loading below 1 would shrink the mean it exists to restore)."},
+              "loading_factor": {"$ref": "common/money.schema.json#/$defs/Decimal",
+                "description": "Exact decimal string; the flat_loading multiplier."},
               "excess_model": {"$ref": "common/artifact-ref.schema.json"},
               "attachment_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
               "flat_loading_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
@@ -63,8 +66,10 @@
         "part": {"enum": ["train", "holdout", "full"]},
         "observed_burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
         "modelled_burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-        "ratio": {"type": "number", "exclusiveMinimum": 0},
-        "tolerance": {"type": "number", "exclusiveMinimum": 0},
+        "ratio": {"$ref": "common/money.schema.json#/$defs/Decimal",
+          "description": "Derived: modelled over observed, quantised to six places. Exact decimal string, > 0."},
+        "tolerance": {"$ref": "common/money.schema.json#/$defs/Decimal",
+          "description": "Declared fractional tolerance on |ratio - 1| (FR-MODEL-60). Exact decimal string, > 0."},
         "status": {"enum": ["pass", "fail"]}
       }
     }

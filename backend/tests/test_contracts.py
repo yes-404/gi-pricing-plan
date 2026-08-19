@@ -27,6 +27,28 @@ AUTHORED = ROOT / "docs" / "contracts" / "schemas"
 OPENAPI = ROOT / "docs" / "contracts" / "openapi" / "generated.json"
 GENERATOR = ROOT / "scripts" / "generate-contracts.py"
 
+#: Schemas whose authored and generated sides are compared field-type by field-type. Written
+#: out rather than globbed so that adding one is a visible act; `test_every_eligible_schema_
+#: is_compared` is what stops the list going quietly stale, which is how `peril-structure`
+#: sat outside it declaring three exact decimals as JSON numbers (`OQ-OVR-8`, 2026-08-19).
+COMPARED_SLUGS: Final[tuple[str, ...]] = (
+    "audit-event",
+    "banding",
+    "custom-objective",
+    "grouping",
+    "job",
+    "model",
+    "model-spec",
+    "objective-certificate",
+    "peril-structure",
+    "profile",
+    "transparency-artifact",
+)
+
+#: Eligible schemas excused from the comparison, each for a divergence pinned by its own
+#: test. An entry here without that test is the exemption list this suite refuses to grow.
+PINNED_SLUGS: Final[frozenset[str]] = frozenset({"diagnostics"})
+
 
 def _load(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -464,9 +486,7 @@ def _type_map(
 
 @pytest.mark.req("FR-OVR-6")
 @pytest.mark.req("FR-DATA-46")
-@pytest.mark.parametrize(
-    "slug", ["banding", "grouping", "custom-objective", "profile", "job", "audit-event"]
-)
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
 def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     """The same field must not be a float in the model and an integer in the contract.
 
@@ -496,6 +516,22 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     one nobody reads, and this one is precise about types exactly because it does not try
     to arbitrate structure — `test_the_column_profile_shape_matches_its_contract` does
     that, one level into `top_levels`' item.
+
+    **Widened 2026-08-19 (`OQ-OVR-8`).** The list covered six slugs while twelve schemas
+    have both an authored and a generated side, and the six it omitted were not chosen —
+    they were simply never added. `peril-structure` was one of them, and it declared
+    `restoration_loading`, `ratio` and `tolerance` as `{"type": "number"}` while all three
+    are exact decimals the model has always serialised as strings. A client following the
+    published contract would have posted a JSON number; before `OQ-OVR-8` that was silently
+    coerced, after it the request is refused. The check that existed would have caught it on
+    the day it was written, and did not, because the schema was outside its parametrize
+    list — which is the argument for deriving the list rather than curating it. It is still
+    written out here rather than globbed, because a slug appearing without anyone noticing is
+    how the *other* direction of this failure starts; `test_every_eligible_schema_is_compared`
+    below is what keeps the written list honest.
+
+    `diagnostics` is the one eligible slug absent, and deliberately: it carries a known,
+    unresolved divergence pinned by `test_the_diagnostics_divergence_is_exactly_the_known_one`.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
@@ -512,6 +548,59 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     assert not disagreed, (
         "the model and the contract disagree on the type of "
         + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+    )
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_every_eligible_schema_is_compared() -> None:
+    """A curated list is only as good as the thing that notices it went stale.
+
+    The parametrize list above is written out rather than globbed, so that adding a schema
+    is a visible act. This is the other half of that bargain: every slug with both an
+    authored and a generated side must be either compared or explicitly excused, and the
+    only excuse admitted is a pinned divergence. Widening the list on 2026-08-19 found a
+    contract that had been wrong since Phase 0 precisely because nothing enforced this.
+    """
+    eligible = {
+        path.name.split(".")[0]
+        for path in GENERATED.glob("*.schema.json")
+        if (AUTHORED / path.name).exists()
+    }
+    unaccounted = eligible - set(COMPARED_SLUGS) - PINNED_SLUGS
+    assert not unaccounted, (
+        "these schemas have both an authored and a generated side and are neither compared "
+        f"nor pinned: {sorted(unaccounted)}"
+    )
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_the_diagnostics_divergence_is_exactly_the_known_one() -> None:
+    """`diagnostics` is excused from the comparison for one divergence, and one only.
+
+    `GlmDiagnostic.aliasing` is `tuple[str, ...]` — collinear terms **named**, because "2
+    terms aliased" tells a reader something is wrong and not which factor to fix — while the
+    authored contract declares an array of untyped `object`. Neither side is obviously the
+    error: an object entry could carry `{term, aliased_with, reason}`, which is strictly more
+    than a name. That is a design choice the specification leaves open, so it is recorded as
+    `OQ-MODEL-15` rather than resolved by whichever side was edited last (`CLAUDE.md` §0).
+
+    This test pins the divergence at exactly that one path. Any *new* type disagreement in
+    `diagnostics` fails here, so excusing the slug costs no coverage — and the day
+    `OQ-MODEL-15` is decided, this test fails and is deleted rather than quietly relaxed.
+    """
+    generated = _load(GENERATED / "diagnostics.schema.json")
+    authored = _load(AUTHORED / "diagnostics.schema.json")
+
+    produced = _type_map(generated, generated, GENERATED)
+    declared = _type_map(authored, authored, AUTHORED)
+    disagreed = {
+        path
+        for path in set(produced) & set(declared)
+        if produced[path] != declared[path]
+    }
+    assert disagreed == {"glm.aliasing.[]"}, (
+        "diagnostics is excused from the type comparison for OQ-MODEL-15's aliasing "
+        f"divergence alone; this run disagrees on {sorted(disagreed)}"
     )
 
 
