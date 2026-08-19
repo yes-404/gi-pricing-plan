@@ -6,11 +6,11 @@ import { ProblemError, isProblem } from "@/api/problem";
 import {
   getOneWay,
   getProfile,
-  psiBand,
   type OneWaySummary,
   type Profile,
 } from "@/api/profiles";
 import { formatDecimalString, formatMinor, getVersion } from "@/api/versions";
+import HistogramChart from "@/components/HistogramChart.vue";
 import OneWayChart from "@/components/OneWayChart.vue";
 
 const props = defineProps<{ slug: string; version: string; currency?: string }>();
@@ -57,12 +57,6 @@ watch(selected, async (column) => {
 });
 
 onMounted(() => void load());
-
-const PSI_TONE: Record<string, string> = {
-  stable: "text-slate-500",
-  shifted: "text-amber-700 font-medium",
-  broken: "text-red-700 font-medium",
-};
 </script>
 
 <template>
@@ -261,9 +255,9 @@ const PSI_TONE: Record<string, string> = {
                 {{ column.name }}
               </h3>
               <span class="text-xs text-slate-500">{{ column.semantic_type }}</span>
-              <span
-                :class="['ml-auto text-xs', PSI_TONE[psiBand(null)]]"
-              >{{ column.dtype }}</span>
+              <!-- Uncoloured: there is no comparison to band here. `psiBand` waits for
+                   the comparison selector `01` §5.3 also asks for. -->
+              <span class="ml-auto text-xs text-slate-500">{{ column.dtype }}</span>
             </header>
             <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs tabular-nums">
               <dt class="text-slate-500">
@@ -285,6 +279,13 @@ const PSI_TONE: Record<string, string> = {
                 <dd>{{ column.minimum }} – {{ column.maximum }}</dd>
               </template>
             </dl>
+            <!-- FR-DATA-48. Only continuous columns carry one, so the card shows it only
+                 when the profile computed one. -->
+            <HistogramChart
+              v-if="column.histogram"
+              :histogram="column.histogram"
+              class="mt-2"
+            />
             <ul
               v-if="(column.top_levels ?? []).length"
               class="mt-2 flex flex-wrap gap-1"

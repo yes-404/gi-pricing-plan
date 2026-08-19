@@ -253,6 +253,29 @@ Give every table an `aria-label` while you are there. Two unnamed tables on one 
 implementation rather than the view. Stub the chart component and assert the data reaching
 it; test the chart's own option-building separately if it earns it.
 
+**`@vue/test-utils` is not a dependency of this frontend**, and pnpm's isolated
+`node_modules` means `import { mount } from "@vue/test-utils"` does not resolve even though
+`@testing-library/vue` depends on it. Anything written against `mount()` and
+`wrapper.findComponent(...).props("option")` — including the vendored
+`vue-testing-best-practices` — has to be rewritten for `@testing-library/vue`, which every
+test here uses. To assert on a chart's computed `option` without adding a dependency, mock
+the library and let the stub render the option where a DOM query can reach it:
+
+```ts
+vi.mock("vue-echarts", () => ({
+  default: {
+    name: "VChart",
+    props: ["option"],
+    template: "<div data-testid='chart'>{{ JSON.stringify(option) }}</div>",
+  },
+}));
+// then: JSON.parse(screen.getByTestId("chart").textContent ?? "")
+```
+
+It only works for an option that is pure data. `OneWayChart`'s carries a `renderItem`
+function, which `JSON.stringify` drops silently — assert on that one's data series, never on
+the whole object.
+
 ## Setting it up (W6a, first time)
 
 - `pnpm`, not npm or yarn (§3). `frontend/` is **not** a uv workspace member — the root
@@ -364,3 +387,9 @@ could reach the API at all, six views into the workstream.
 
 2026-08-15 — W7b. The three dev-server traps above were found by running `scripts/demo.py`,
 not by testing it: every unit test passed while Ctrl-C was leaving a server behind.
+
+2026-08-19 — `HistogramChart` (FR-DATA-48). The `@vue/test-utils` note above was found by a
+task brief written against `mount()`: the import does not resolve here, and the
+`vue-echarts` mock is what replaced it. The generated-client seam held again — `Histogram`
+arrived in `schema.d.ts` from the regenerated contract and is re-exported through
+`@/api/profiles` rather than declared in the component.

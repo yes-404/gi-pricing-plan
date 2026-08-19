@@ -10,6 +10,14 @@ vi.mock("@/components/OneWayChart.vue", () => ({
   default: { name: "OneWayChart", props: ["summary"], template: "<div data-testid='chart' />" },
 }));
 
+vi.mock("@/components/HistogramChart.vue", () => ({
+  default: {
+    name: "HistogramChart",
+    props: ["histogram"],
+    template: "<div data-testid='histogram' />",
+  },
+}));
+
 /** Shaped on freMTPL2 v2 as the API returns it. */
 const PROFILE = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -27,6 +35,8 @@ const PROFILE = {
       name: "driv_age", dtype: "Int64", semantic_type: "continuous", row_count: 29970,
       null_count: 0, null_rate: 0, distinct_count: 82, mean: 45.2, minimum: 18,
       maximum: 99, std: 14.1, quantiles: {}, top_levels: [],
+      // FR-DATA-48: continuous columns carry one, categorical columns do not.
+      histogram: { edges: [18, 58, 99], counts: [17000, 12970], exposure: ["8100.5", "6200.25"] },
     },
   ],
   one_ways: [
@@ -124,6 +134,29 @@ describe("the profile view", () => {
     await userEvent.selectOptions(select, "region");
     expect(await screen.findByText(/never computes one on request/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("renders a histogram for the column that has one and none for the column that does not", async () => {
+    // `01` §5.3 asks the Profile view for histograms. FR-DATA-48 only produces one for a
+    // continuous column, so a card per column would be a chart of nothing for the rest.
+    render(ProfileView, { props, ...mounted });
+    await screen.findByText(/29,970 rows/);
+
+    const histograms = screen.getAllByTestId("histogram");
+    expect(histograms).toHaveLength(1);
+    expect(histograms[0]?.closest("article")).toHaveTextContent("driv_age");
+  });
+
+  it("does not colour the dtype label as though it were a PSI band", async () => {
+    // A regression guard rather than a failing test: `psiBand(null)` already resolved to
+    // the neutral tone, so the pixels never differed. What was wrong was the claim — the
+    // view has no comparison to band, and the selector that will is a later slice.
+    const { container } = render(ProfileView, { props, ...mounted });
+    await screen.findByText(/29,970 rows/);
+
+    expect(container.innerHTML).not.toContain("text-amber-700");
+    expect(container.innerHTML).not.toContain("text-red-700");
+    expect(container.innerHTML).not.toContain("psi-");
   });
 
   it("summarises what the profile covers", async () => {

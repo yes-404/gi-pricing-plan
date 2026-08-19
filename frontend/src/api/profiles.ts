@@ -3,6 +3,7 @@ import type { components } from "./generated/schema";
 
 export type Profile = components["schemas"]["Profile"];
 export type ColumnProfile = components["schemas"]["ColumnProfile"];
+export type Histogram = components["schemas"]["Histogram"];
 export type OneWaySummary = components["schemas"]["OneWaySummary"];
 export type OneWayRow = components["schemas"]["OneWayRow"];
 export type ProfileComparison = components["schemas"]["ProfileComparison"];
