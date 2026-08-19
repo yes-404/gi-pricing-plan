@@ -35,9 +35,9 @@
           "claim_amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
           "frequency": {"type": "number", "minimum": 0},
           "frequency_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
-          "mean_severity": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+          "mean_severity": {"type": "number"},
           "severity_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
-          "mean_burning_cost": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
+          "mean_burning_cost": {"type": "number"}
         }
       }
     },

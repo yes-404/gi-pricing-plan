@@ -87,9 +87,9 @@
                 "frequency": {"type": "number", "minimum": 0},
                 "frequency_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"},
                   "description": "Exact Poisson interval; not a normal approximation (01 §8)."},
-                "mean_severity": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-                "severity_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer"}},
-                "mean_burning_cost": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
+                "mean_severity": {"type": "number"},
+                "severity_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+                "mean_burning_cost": {"type": "number"}
               }
             }
           }

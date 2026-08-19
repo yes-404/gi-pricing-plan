@@ -25,7 +25,7 @@ wins** — fix the schema.
   citing its requirement ID. `invariants` is a non-standard annotation: validators ignore
   it, reviewers must not.
 
-## Two traps
+## Three traps
 
 **Duplicate keys.** `json.load` silently keeps the last one, so a second `allOf` block
 silently discards the first — including a composed envelope. The audit catches this; do
@@ -35,6 +35,20 @@ not rely on the file merely "parsing".
 `oneOf` + `discriminator`, not the `allOf` + `if`/`then` used in these drafts. Both are
 valid and validate the same documents. Do not "fix" generated output back to the drafted
 form.
+
+**A fixed-length tuple is `prefixItems`, not `items`.** Pydantic emits
+`tuple[float, float]` as `{"type": "array", "minItems": 2, "maxItems": 2, "prefixItems":
+[{...}, {...}]}` — there is no `items` key at all. Anything that walks a schema looking for
+array elements must read both, or it is silently blind to every tuple field in every
+contract while reporting success. This cost `test_generated_and_authored_agree_on_scalar_types`
+its teeth on the day it was written: `OneWayRow.severity_ci` was deliberately retyped from
+number to integer and the comparison passed. Hand-authored schemas spell the same shape as
+`"items"`, so the two sides of a comparison do **not** use the same keyword for it.
+
+Related, when comparing a generated schema against a hand-authored one: the generated side
+marks every `X | None` nullable via `anyOf` and the authored side almost never does. Compare
+the admitted types with `null` removed, or the comparison reports a divergence on nearly
+every optional field and gets ignored.
 
 ## After
 
@@ -85,6 +99,12 @@ the edit in reflow and destroying the layout a reader relies on. Patch the text,
 `json.loads` the result to prove it still parses.
 
 ## Verified
+
+2026-08-19 — W5's profile-contract slice. The `prefixItems` trap above was paid for in
+full. Also confirmed that comparing generated and hand-authored schemas on **field names**
+is a much weaker check than it reads as: five scalar-type divergences (`mean_severity`,
+`mean_burning_cost` and `severity_ci` declared integer against `float` in the model) sat
+under matching names across two contracts, through a rename that touched both sides.
 
 2026-08-15 — Confirmed while applying OQ-MODEL-5's decision to `grouping.schema.json`
 (`credibility_model` default, `credibility_pk`, `credibility_components`). The reformat trap

@@ -2233,6 +2233,28 @@ has ever caught came from an engine default.
   argument. The real proof profiles a frame whose exposure column is named `earned_years`.
 - **`scope-audit.py DATA --catalogue VR` reads 1 / 38, not 38 / 38** — found by running the
   audit rather than quoting it. Not a regression; see the corrected W6a row above.
+- **Five scalar-type divergences between the hand-authored contracts and the models**,
+  found in this slice's closing review by reading the branch diff file by file rather than
+  by any check. `mean_severity` and `mean_burning_cost` declared `MoneyMinor` —
+  `{"type": "integer"}` — in both `profile.schema.json` and `banding.schema.json`, against
+  `float` in `OneWayRow`; and `profile.schema.json` typed `severity_ci`'s two bounds as
+  integers where `banding.schema.json`'s copy of the identical shape typed them as numbers.
+  The published contract therefore asserted exactly the rounding **FR-DATA-46** exists to
+  forbid, three commits after the rename that requirement asked for. **All five predate the
+  slice** — `severity_minor: MoneyMinor` against `float | None` at the branch base — so the
+  rename moved a divergence under new names without looking beneath them. Fixed here, with
+  the record in `01` §4.7's note of 2026-08-19.
+
+  The useful half is why nothing caught it: **every conformance test compared field names.**
+  `test_the_column_profile_shape_matches_its_contract` was written specifically to look one
+  level deeper than the flat tests and still compared only the property names it found
+  there — the same claim the four earlier `Banding`/`Grouping` divergences also satisfied.
+  `test_generated_and_authored_agree_on_scalar_types` now compares admitted JSON types
+  across all six shapes carrying both a generated and a hand-authored contract, following
+  `$ref`s between files and unwrapping `anyOf`. It deliberately ignores `null` (the two
+  sides differ on nullability uniformly, which is its own reconciliation) and compares only
+  paths present on both sides, so `top_levels` — a *structural* disagreement — stays
+  FR-DATA-49's with an owner rather than becoming an exemption entry here.
 
 **Not delivered, with verdicts:**
 
@@ -2246,10 +2268,15 @@ has ever caught came from an engine default.
 
 **Retrofit list (§5):** untouched. No new money field, no new artifact type, no schema
 migration; `mean_severity` and `mean_burning_cost` were floats before the rename and are
-floats after it, which is the whole point of FR-DATA-46.
+floats after it, which is the whole point of FR-DATA-46. **In the model.** The published
+contract had been calling both of them integers since before this slice began, which is the
+one place a money-discipline claim actually reaches an external consumer — worth stating
+plainly, because "the retrofit list is untouched" was true of the code and not of the
+contract, and the two are the same promise.
 
 **Gate (local, 2026-08-19, both halves, each exit code read on its own):** ruff clean ·
-mypy --strict on 125 source files · import-linter 3 kept / 0 broken · **1256 python tests** ·
+mypy --strict on 125 source files · import-linter 3 kept / 0 broken · **1264 python tests**,
+zero skipped, with compose up so the Postgres-backed job tests actually ran ·
 docs audit, 476 requirements across 8 specs · req-coverage 223 of 476 marked (46.8 %) ·
 **21 generated contracts match** · `pnpm install --frozen-lockfile` · `generate:api` ·
 eslint · `vue-tsc --build` · **109 frontend tests** · `pnpm build`.
@@ -2260,6 +2287,23 @@ failed the artifact assertion with `assert None == UUID('01a018f2-…')` and, af
 slice added the assertion on the persisted column, fails there too; and passing
 `weight_column="exposure_years"` in place of the recorded argument failed with
 `assert 'exposure_years' == 'earned_years'`.
+
+The type comparison added in the closing review was broken three ways before being trusted.
+Restoring `MoneyMinor` on `banding`'s `mean_severity` failed with *"the model and the
+contract disagree on the type of `band_stats.[].mean_severity` (model ['number'], contract
+['integer'])"*. Retyping `profile`'s `severity_ci` bounds as integers failed the same way at
+`one_ways.[].rows.[].severity_ci.[]` — **but only after a second fix**: the first walker read
+`items` and not `prefixItems`, and Pydantic emits a fixed-length tuple as `prefixItems`, so
+the deliberately broken interval passed. Every tuple field in every contract was invisible
+and nothing said so. Removing the `prefixItems` line again fails
+`test_the_type_comparison_reaches_the_one_way_row` on both shapes, naming the path it can no
+longer see. That test names its three paths rather than counting them, because the first
+attempt at a control — comparing aligned paths against a fraction of the walker's own output
+— did **not** fire when the walker was crippled: a walker that stops descending shrinks the
+numerator and denominator together, so the threshold moves out of the way of the defect it
+exists to catch. An exemption entry for `top_levels` was written and then deleted for the
+adjacent reason: with the walker fixed, that divergence is a path mismatch rather than a
+type mismatch, so the entry suppressed nothing and only made the list look load-bearing.
 
 ### Phase 1b — Modelling Workbench
 
