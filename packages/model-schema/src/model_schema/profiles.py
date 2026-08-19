@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from model_schema.money import DecimalStr, MoneyMinor
 
@@ -21,6 +21,7 @@ __all__ = [
     "ColumnComparison",
     "ColumnProfile",
     "Histogram",
+    "LevelCount",
     "OneWayRow",
     "OneWaySummary",
     "Profile",
@@ -82,6 +83,46 @@ class Histogram(BaseModel):
         return self
 
 
+class LevelCount(BaseModel):
+    """One level of `ColumnProfile.top_levels` (FR-DATA-25, FR-DATA-49).
+
+    The authored contract (`docs/contracts/schemas/profile.schema.json`) has declared this
+    shape since Phase 0 — `{level, count, exposure_years}`, only `level` and `count`
+    required — while the model carried an unnamed `(str, int)` pair with no exposure
+    weight. FR-DATA-49 closes that gap on the model-schema side.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: `None` is a genuine top-level category — a SQL NULL, not the string `"null"`. The
+    #: contract declares `["string", "null"]`; collapsing a missing level to the literal
+    #: string, as the engines' current `str(level)` coercion does, would make a real gap
+    #: in the data indistinguishable from a level someone actually recorded as "null".
+    level: str | None
+    count: Annotated[int, Field(ge=0)]
+    #: Absent means the version carried no exposure column at all; zero means this level
+    #: carries no exposure. A profile that cannot tell those two apart cannot be read for
+    #: a pricing decision — so this is optional, never defaulted to zero.
+    exposure_years: DecimalStr | None = None
+
+    @field_validator("exposure_years", mode="before")
+    @classmethod
+    def _exposure_years_is_not_a_float(cls, value: object) -> object:
+        """FR-OVR-7: exposure is exact, never a binary float.
+
+        A Python float has already lost whatever precision the source amount carried
+        before Pydantic ever sees it — `DecimalStr` on its own still coerces a float
+        (it exists to keep the *wire* shape a string, not to police the *input* shape).
+        This field is read straight into a pricing decision, so it is refused here
+        rather than silently accepted the way a diagnostic field would be.
+        """
+        if isinstance(value, float):
+            raise ValueError(
+                "exposure_years must be an exact decimal string or Decimal, not a float"
+            )
+        return value
+
+
 class ColumnProfile(BaseModel):
     """Per-column statistics (`01` §4.7)."""
 
@@ -105,8 +146,10 @@ class ColumnProfile(BaseModel):
     #: `top_levels` already is.
     histogram: Histogram | None = None
     #: Top levels by count, for a categorical column. Capped at 20 (FR-DATA-25) — a
-    #: high-cardinality column would otherwise put its whole domain in an artifact.
-    top_levels: tuple[tuple[str, int], ...] = ()
+    #: high-cardinality column would otherwise put its whole domain in an artifact. The
+    #: cap is enforced here, in the model, not only honoured by the engines that populate
+    #: it (FR-DATA-49) — a limit declared in one of two places is not actually enforced.
+    top_levels: Annotated[tuple[LevelCount, ...], Field(max_length=20)] = ()
 
 
 class OneWayRow(BaseModel):
