@@ -172,6 +172,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-96** | **The GLM approximation of a GBM is persisted as a Model in its own right; the transparency artifact references it by `approximating_model_id` and stops carrying its coefficients inline.** (OQ-MODEL-10, decided 2026-08-18; **owner Phase 1b, and before anything references a transparency artifact by identifier**.) The argument is `03` FR-RATE-60's: an `approximation`-mode Rating Version pins what it rates on, FR-OVR-14 requires every pin to resolve to an artifact whose status is `approved` or better, and a `TransparencyArtifact` carries `model_id` and **no status at all** — so the thing that is rated on must be an artifact that has one, and only a Model does. Three obligations follow, and they are the work the answer creates rather than reasons against it: (i) the approximating Model's spec records `approximates_model_id`, and its `dataset_version_id` is the population the approximation was fitted over, so a reader can tell a surrogate from a model fitted on observed claims; (ii) that field joins the `spec_hash` payload and increments `n` with it (FR-MODEL-86); (iii) §4.8's `status ≥ fitted ⟹ diagnostics_id` is met by diagnostics **of the surrogate against the source model's predictions** — the quantity FR-MODEL-36 already measures — recorded as such, never presented as diagnostics against observed claims. Until it is built, `approximating_model_id` stays `None` and the artifact carries the coefficients: declared-and-unbuilt in FR-MODEL-87's sense, with this requirement as the trigger. |
 | **FR-MODEL-84** | **A transparency artifact is readable.** `GET /api/v1/models/{id}/transparency` returns the model's most recent artifact, or a 404 naming the model. Added 2026-08-17 (W5, the transparency slice): §5.1 declared the `POST` and no read, which is a 202 whose artifact nothing can fetch — complete to the endpoint audit, since that compares the spec against the contract and an endpoint missing from both is invisible to it, and unusable to every caller. The same omission `01`'s reference publish lifecycle made, and the one the comparison artifact carried until FR-MODEL-56 was built. A model may hold several artifacts (FR-MODEL-33 allows both forms, and a re-sampled SHAP summary is a second artifact rather than a correction); the route returns the latest, and an approval citing a specific one resolves it by id. |
 | **FR-MODEL-37** | EBM (`interpret`) models are treated as transparent by construction: their term shape functions are exported directly as tables and require no approximation, but they still carry the fidelity/diagnostic sections in the same contract shape. |
+| **FR-MODEL-102** | **A surrogate is identifiable from its spec alone.** Added 2026-08-19 (W5, building FR-MODEL-96). `GlmSpec.approximates_model_id` is set **if and only if** `response_column` is the reserved surrogate column `__gbm_prediction__`, refused at the type in both directions. A spec that named a source model while pointing at an observed response column would describe a model fitted on claims and read as a surrogate; one that fitted the reserved column while naming no source would be a model of a prediction nobody can identify. This is also what makes FR-MODEL-96(iii) enforceable without a second field: the A/E in the surrogate's `Diagnostics` is against the source model's predictions because the spec the diagnostics were computed under says so, and `CLAUDE.md` §2's rule against a fact stated twice keeps it there rather than copied onto the diagnostics document. Two consequences are stated rather than left to be discovered: a surrogate Model **carries no `covariance_blob`**, so FR-MODEL-93's typed absence is what a prediction against it reports — an interval computed from a surrogate's coefficients describes the surrogate and would be read as the GBM's uncertainty; and a surrogate **appears in `GET /api/v1/models`** like any other Model, which is the point of FR-MODEL-96 rather than a side effect. |
 
 ### 3.7 Custom objectives
 
@@ -476,7 +477,8 @@ cap are different models, and must not collide on `spec_hash`.
   "family_params": {},
   "link": "log",
   "alpha": 0.001, "l1_ratio": 0.0,
-  "max_iter": 200, "tolerance": 1e-8
+  "max_iter": 200, "tolerance": 1e-8,
+  "approximates_model_id": null
 }
 ```
 
@@ -583,6 +585,24 @@ cap are different models, and must not collide on `spec_hash`.
 > The last two are `04-optimisation.md`'s demand responses, present because `focal_binomial`
 > (§4.5) exists for exactly them: a catalogue entry whose applicability could not be
 > written would be one nothing could use.
+
+> **`approximates_model_id` is live from 2026-08-19 (W5, FR-MODEL-96)**, on `GlmSpec`
+> rather than on the common block: only a GLM approximates another model, and a field
+> defined on the union rather than on the arm that uses it is a field the other arm will
+> eventually be asked to spell.
+>
+> **It is a bare `UUID`, and that is a deliberate divergence from `interval_for`.**
+> FR-MODEL-100 gave the paired-quantile link a block carrying the central model's id *and*
+> version, because `motor-ad-frequency@7` is what a human reads in a review and a UUID is
+> not. This field is a bare id because FR-MODEL-96 names it that way and a block under a
+> different name would contradict the requirement — and because `interval_for` needed a
+> block regardless, carrying `alpha`, while this carries nothing else. A reviewer resolves
+> one id to get the version.
+>
+> **`spec_hash` moves `v4` to `v5` with it** (FR-MODEL-86): the model a surrogate
+> approximates is part of what that surrogate *is*, and two approximations of two different
+> GBMs over one population would otherwise share a digest — which FR-MODEL-66 would answer
+> by handing the second caller the first caller's model.
 
 ### 4.5 Custom objective — `template` catalogue
 
@@ -872,6 +892,20 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > migration can backfill it and a refit is the only route to an interval. The typed reason
 > is the difference between saying so and an interval quietly missing from the response.
 
+> **A surrogate Model reaches `fitted` on diagnostics against another model's predictions**
+> (FR-MODEL-96(iii), built 2026-08-19). §4.8's `status ≥ fitted ⟹ diagnostics_id` is met
+> the same way every other model meets it, and the quantity is different: the A/E, lift and
+> calibration are the surrogate against the source GBM's predictions over the same split —
+> FR-MODEL-36's quantity, on both partitions. Nothing on the `Diagnostics` document says so,
+> and nothing needs to: FR-MODEL-102 makes the spec say it, and a fact stated in two places
+> diverges.
+>
+> **It carries no `covariance_blob`.** The bytes exist at fit time and are deliberately
+> dropped, so a prediction against a surrogate reports FR-MODEL-93's typed absence rather
+> than an interval. The interval would be a correct statement about the surrogate's
+> coefficients and would be read as the GBM's uncertainty; FR-MODEL-77 already refuses a
+> GBM approximation on exactly this ground.
+
 > **`flags` and `approval_request_id` are live from 2026-08-17 (W5, the lifecycle).** Both
 > were on OQ-MODEL-8's list of fields declared and dead; the slice that creates an approval
 > request is the one that can populate the second, which is that question's own "re-widen it
@@ -930,6 +964,20 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
   "monotonicity_verified": true
 }
 ```
+
+> **`approximating_model_id` is live from 2026-08-19 (W5, FR-MODEL-96).** The block holds
+> the *measurements* — R², deviance explained, worst regions, the relativity-table blob —
+> and the table itself is the approximating Model's `fit_result`, reachable by that id like
+> any other Model's.
+>
+> **Artifacts written before this date carry the table inline and no id, and stay
+> readable.** `coefficients` and `relativities` remain on the block as a legacy era, and
+> the two are exclusive at the type: an artifact carries a model reference or an inline
+> table, never both and never neither. The alternative — dropping the fields — would make
+> every artifact written before today fail validation on read, and those artifacts are the
+> evidence a Rating Version's approval was granted against (FR-MODEL-36). This is the shape
+> `covariance_blob` already has: an absence with a stated meaning rather than a contract
+> that pretends the earlier era did not happen.
 
 ### 4.10 `PerilStructure`
 
@@ -1409,7 +1457,7 @@ the measurement and the invariant that now checks it.
 `OBJECTIVE_RESPONSE_UNDECLARED`, `OBJECTIVE_REQUIRES_OFFSET`,
 `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED`, `OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED`,
 `MODEL_TERM_UNRESOLVED`, `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING`,
-`MODEL_INTERVAL_UNAVAILABLE`, `MODEL_INTERVAL_PAIR_INVALID`.
+`MODEL_INTERVAL_UNAVAILABLE`, `MODEL_INTERVAL_PAIR_INVALID`, `MODEL_APPROXIMATION_INVALID`.
 
 > **`MODEL_INTERVAL_PAIR_INVALID` added 2026-08-19 (W5, the paired-quantile slice).**
 > It refuses a quantile bound whose spec disagrees with the Model its `interval_for`
@@ -1418,6 +1466,14 @@ the measurement and the invariant that now checks it.
 > `VALIDATION_FAILED` because the request is well formed and the model is real: what
 > fails is the pairing of the two, and an interval fitted on a different design
 > renders identically to a correct one.
+
+> **`MODEL_APPROXIMATION_INVALID` added 2026-08-19 (W5, FR-MODEL-96).** It refuses a spec
+> whose `approximates_model_id` names a Model the surrogate cannot be an approximation of —
+> one that is not fitted, one that is itself a GLM (FR-MODEL-33 applies to non-GLM models,
+> and a GLM approximating a GLM reports 100 % fidelity that looks like evidence), or one
+> whose dataset version, split or factor set disagrees with the surrogate's. Its own code
+> rather than `VALIDATION_FAILED` for `MODEL_INTERVAL_PAIR_INVALID`'s reason: the request is
+> well formed and both models are real, and what fails is the relation between them.
 
 > **Added 2026-08-17 (W5, the GBM and transparency slices).** The ten codes above are new;
 > five *existing* ones are now raised for the first time by the GBM path rather than being
@@ -1579,10 +1635,17 @@ def backtest_model(fit: FitResult, spec: ModelSpec, factors: Sequence[Factor],
                    progress: ProgressCallback | None = None) -> BacktestSummary
 
 # pricing_core/modelling/transparency.py
-def build_glm_approximation(model: Model, data: pl.DataFrame,
-                            spec: GlmSpec) -> GlmApproximation
-def build_shap_summary(model: Model, data: pl.DataFrame, *, sample: int,
-                       seed: int) -> ShapSummary
+def approximation_spec(spec: GbmSpec, *, source_model_id: UUID) -> GlmSpec
+def build_glm_approximation(result: GbmFitResult, booster: bytes, spec: GbmSpec,
+                            factors: Sequence[Factor], data: pl.DataFrame, *,
+                            holdout: pl.DataFrame, source_model_id: UUID,
+                            bandings=None, groupings=None,
+                            progress: ProgressCallback | None = None
+                            ) -> GlmApproximationFit
+def build_shap_summary(result: GbmFitResult, booster: bytes, spec: GbmSpec,
+                       factors: Sequence[Factor], data: pl.DataFrame, *, sample: int,
+                       bandings=None, groupings=None,
+                       progress: ProgressCallback | None = None) -> ShapSummary
 
 # pricing_core/modelling/perils.py
 def assemble_risk_premium(predictions: Sequence[PerilPrediction]) -> pl.DataFrame
@@ -1590,6 +1653,12 @@ def reconcile(assembled: pl.DataFrame, *, observed: NDArray[float64],
               exposure: NDArray[float64], tolerance: Decimal,
               treatments: Mapping[str, LargeLossKind]) -> ReconciliationResult
 ```
+
+> **Both corrected 2026-08-19 (W5, FR-MODEL-96)** — the correction the 2026-08-16 note
+> predicted for every function declared as taking a `Model`. `build_shap_summary` had
+> already been built to this shape and the spec had not caught up; `build_glm_approximation`
+> additionally returns `GlmApproximationFit`, because the fitted surrogate is now persisted
+> as a Model and a function that returned only its summary threw away the artifact.
 
 > **Two signatures corrected, 2026-08-16 (W5, diagnostics).** `predict_glm` and
 > `compute_diagnostics` were declared taking a `Model`. They cannot: a `Model` carries
