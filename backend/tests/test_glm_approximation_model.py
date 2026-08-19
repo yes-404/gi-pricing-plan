@@ -10,6 +10,7 @@ than against observed claims, and rebuilding the artifact does not fit it a seco
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -17,6 +18,7 @@ from backend.tests.test_model_jobs import _actuary, _dataset, _validated_version
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
 from backend.tests.test_prediction import _fitted_glm
 
+from app.db.models import TransparencyArtifactRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import diagnostics as diagnostics_service
@@ -39,6 +41,7 @@ from model_schema import (
     ModelStatus,
     Principal,
     TransparencyArtifact,
+    TransparencyKind,
     new_uuid7,
 )
 from pricing_core.modelling import approximation_spec
@@ -328,6 +331,64 @@ async def test_a_surrogate_slug_the_column_cannot_hold_is_refused_by_name(
     assert refusal.detail is not None
     assert slug in refusal.detail, "the message names the slug the analyst chose"
     assert "65 characters" in refusal.detail, "and the length that crosses the boundary"
+
+
+# -- FR-MODEL-96: a pre-branch stored artifact still reads --------------------------------
+
+
+@pytest.mark.req("FR-MODEL-96")
+def test_a_legacy_stored_artifact_still_reads() -> None:
+    """The read-path half of the compatibility guarantee `test_glm_approximation.py`
+    proves at the type.
+
+    That module proves a legacy `GlmApproximation` still *validates*; it never calls the
+    function the read path actually calls. `to_artifact`
+    (`backend/src/app/platform/transparency.py`) re-validates the stored JSON on every
+    read, and every fixture in this file goes through `model.transparency`, which no
+    longer writes the legacy shape — so nothing here had ever exercised `to_artifact`
+    against a row written before 2026-08-19: `glm_approximation` carrying its coefficients
+    and relativities inline, `approximating_model_id` absent. A test proving only that a
+    *new* artifact round-trips cannot protect a guarantee about *old* ones — the row below
+    is built by hand for exactly that reason, in the shape a pre-branch row is actually in.
+    """
+    row = TransparencyArtifactRow(
+        id=new_uuid7(),
+        workspace_id=new_uuid7(),
+        model_id=new_uuid7(),
+        created_at=datetime.now(UTC),
+        job_id=None,
+        payload={
+            "glm_approximation": {
+                "target": "gbm_prediction",
+                "family": "gamma",
+                "link": "log",
+                "r_squared": 0.94,
+                "deviance_explained": 0.9,
+                "coefficients": [
+                    {
+                        "term": "intercept", "estimate": -2.4, "std_error": 0.01,
+                        "z": -199.8, "p_value": 0.0, "ci_95": [-2.44, -2.39],
+                    },
+                ],
+                "relativities": {
+                    "region": [
+                        {"level": "north", "relativity": 1.0, "is_base": True},
+                    ],
+                },
+                "worst_regions": [],
+            },
+            "shap_summary": None,
+            "fidelity_statement": "The approximation explains 94% of deviance.",
+            "monotonicity_verified": None,
+        },
+    )
+
+    artifact = transparency_service.to_artifact(row)
+
+    assert artifact.glm_approximation is not None
+    assert artifact.glm_approximation.approximating_model_id is None
+    assert artifact.glm_approximation.coefficients
+    assert artifact.kinds == (TransparencyKind.GLM_APPROXIMATION,)
 
 
 # -- FR-MODEL-96: a hand-written surrogate spec is refused --------------------------------
