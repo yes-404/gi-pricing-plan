@@ -41,6 +41,7 @@ APPEND_ONLY_TABLES = (
     "bandings",
     "diagnostics",
     "groupings",
+    "metric_certificates",
     "model_comparisons",
     "objective_certificates",
     "profiles",
