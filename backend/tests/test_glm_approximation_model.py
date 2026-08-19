@@ -9,6 +9,7 @@ than against observed claims, and rebuilding the artifact does not fit it a seco
 
 from __future__ import annotations
 
+import asyncio
 from uuid import UUID
 
 import pytest
@@ -16,22 +17,28 @@ from backend.tests.test_model_jobs import _actuary
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
 
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
+from app.worker.handlers import handler_for
 from app.worker.model_handlers import register_model_handlers
+from app.worker.progress import JobProgress
 from app.worker.tasks import execute_job
 from model_schema import (
+    FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     SURROGATE_RESPONSE_COLUMN,
+    GbmSpec,
     JobKind,
     JobStatus,
     ModelStatus,
     Principal,
     TransparencyArtifact,
+    new_uuid7,
 )
 
 register_data_handlers()
@@ -59,6 +66,102 @@ async def _transparency_job(
         return await transparency_service.load_transparency(
             session, workspace_id=workspace_id, model_id=model_id
         )
+
+
+async def _transparency_refusal(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    model_id: UUID,
+    actor: Principal,
+) -> PlatformError:
+    """The refusal `_transparency` raises, caught where the runner would swallow its code.
+
+    `execute_job` turns any handler exception into a `JOB_HANDLER_FAILED` job error, so a
+    test that goes through it can see the message and never the code — and `00` §5.3 makes
+    the *code* the contract. This runs the handler exactly as the runner does,
+    `asyncio.to_thread(handler, parameters, progress)` against a real queued Job, and reads
+    the code off the `PlatformError` itself.
+    """
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_TRANSPARENCY,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id), "sample": 2_000},
+            actor,
+            workspace_id=workspace_id,
+        )
+    handler = handler_for(JobKind.MODEL_TRANSPARENCY)
+    assert handler is not None
+    progress = JobProgress(
+        job.id, database, asyncio.get_running_loop(), blob_store=blob_store
+    )
+    with pytest.raises(PlatformError) as caught:
+        await asyncio.to_thread(
+            handler,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id), "sample": 2_000, "job_id": str(job.id)},
+            progress,
+        )
+    return caught.value
+
+
+async def _fitted_gbm_without_a_split(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, actor: Principal
+) -> UUID:
+    """A fitted GBM whose spec declares no split — a state `model.fit` cannot produce.
+
+    The fit handler refuses `split_ref is None` with the same code this Job does, so the
+    state has to be built deliberately. It is built through the two platform services the
+    fit handler itself calls — `reserve_model` and `record_fit` — and **not** by writing a
+    `ModelRow` directly, so every invariant those two enforce still had to hold for this
+    row: the dataset version is still `validated`, the factors still resolve, the model
+    still reaches `fitted` carrying both a fit result and diagnostics. Only the one
+    condition under test is absent.
+
+    The numbers are a real fit's, borrowed from a GBM that does have a split. Nothing here
+    reads them; what is under test is the refusal that happens before they are ever loaded.
+    """
+    source_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        source = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=source_id
+        )
+        spec = MODEL_SPEC_ADAPTER.validate_python(source.spec)
+        result = FIT_RESULT_ADAPTER.validate_python(source.fit_result)
+        diagnostics = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=source_id
+        )
+    assert isinstance(spec, GbmSpec)
+
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            spec=spec.model_copy(
+                update={
+                    "split_ref": None,
+                    "model_family_slug": f"nosplit-{new_uuid7().hex[-6:]}",
+                }
+            ),
+        )
+        assert should_fit is True
+        model_id = row.id
+        await model_service.record_fit(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            model_id=model_id,
+            fit_result=result,
+            diagnostics=diagnostics.model_copy(
+                update={"id": new_uuid7(), "model_id": model_id}
+            ),
+        )
+    return model_id
 
 
 @pytest.mark.req("FR-MODEL-96")
@@ -148,15 +251,78 @@ async def test_the_surrogates_diagnostics_measure_it_against_the_booster(
     assert surrogate_id is not None
 
     async with database.session() as session:
-        diagnostics = await diagnostics_service.load_diagnostics(
+        surrogate = await diagnostics_service.load_diagnostics(
             session, workspace_id=workspace_id, model_id=surrogate_id
         )
-    assert diagnostics.universal.train.rows > 0
-    assert diagnostics.universal.holdout.rows > 0
-    # The two partitions are two populations. Without this nothing distinguishes the
-    # holdout from a second pass over train, and FR-MODEL-54's obligation would be met by
-    # a handler that reported the train frame twice — which is exactly what the Step 8
-    # enforcement check found nothing else here refuses.
-    assert diagnostics.universal.holdout.rows != diagnostics.universal.train.rows
-    assert diagnostics.glm is not None
-    assert 0.5 < diagnostics.universal.train.ae_overall < 1.5
+        gbm = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+    assert surrogate.universal.train.rows > 0
+    assert surrogate.universal.holdout.rows > 0
+    # **The surrogate's holdout is the source model's holdout.** Both are computed over the
+    # partitions of the one split the two specs share, so this pins the semantics rather
+    # than a number: without it a handler that passed the train frame as both partitions
+    # would satisfy FR-MODEL-54 by reporting the same population twice, and nothing here
+    # would say so. Compared against the GBM's own diagnostics and not against a row count
+    # of its own, because a count only differs by the accident of a split that does not
+    # divide evenly — a 50/50 fixture would turn that into a false red.
+    assert surrogate.universal.holdout.rows == gbm.universal.holdout.rows
+    assert surrogate.universal.train.rows == gbm.universal.train.rows
+    assert surrogate.glm is not None
+    assert 0.5 < surrogate.universal.train.ae_overall < 1.5
+
+
+@pytest.mark.req("FR-MODEL-96")
+async def test_a_model_with_no_split_is_refused_before_a_frame_is_read(
+    database: Database, blob_store: BlobStore, workspace_id: UUID
+) -> None:
+    """The surrogate is a Model, so it needs the evidence every Model needs.
+
+    FR-MODEL-96 gives the approximation a status, and `02` §4.8 makes diagnostics the
+    condition of `fitted`; FR-MODEL-54 makes a diagnostic reported without its holdout
+    counterpart a defect. A source model with no split has no holdout to report, so there
+    is no surrogate this Job could legitimately produce — and it says so instead of failing
+    later inside `_split_frames`.
+    """
+    actor = await _actuary(database, workspace_id)
+    model_id = await _fitted_gbm_without_a_split(database, blob_store, workspace_id, actor)
+
+    refusal = await _transparency_refusal(
+        database, blob_store, workspace_id, model_id, actor
+    )
+
+    assert refusal.code == "MODEL_SPLIT_REQUIRED"
+    assert refusal.status_code == 422
+    assert refusal.detail is not None
+    assert "FR-MODEL-54" in refusal.detail
+
+
+@pytest.mark.req("FR-MODEL-96")
+async def test_a_surrogate_slug_the_column_cannot_hold_is_refused_by_name(
+    database: Database, blob_store: BlobStore, workspace_id: UUID
+) -> None:
+    """`models.model_family_slug` is a `String(64)` and the surrogate's is seven longer.
+
+    Without the guard this is an `asyncpg` `DataError` naming a column, raised after the
+    approximation has been fitted and the SHAP pass has run — a Job that spends its whole
+    budget to report a database detail. The refusal names the analyst's slug and the length
+    it produces, which is the only form of this message anyone can act on.
+    """
+    # 58 is the shortest slug that crosses: 58 + len("-approx") == 65, one past the column.
+    slug = "g" * 58
+    assert len(f"{slug}-approx") == 65
+    model_id, status = await _fitted_gbm(
+        database, blob_store, workspace_id, model_family_slug=slug
+    )
+    assert status is JobStatus.SUCCEEDED, "the source model itself still fits — 58 <= 64"
+    actor = await _actuary(database, workspace_id)
+
+    refusal = await _transparency_refusal(
+        database, blob_store, workspace_id, model_id, actor
+    )
+
+    assert refusal.code == "VALIDATION_FAILED"
+    assert refusal.status_code == 422
+    assert refusal.detail is not None
+    assert slug in refusal.detail, "the message names the slug the analyst chose"
+    assert "65 characters" in refusal.detail, "and the length that crosses the boundary"

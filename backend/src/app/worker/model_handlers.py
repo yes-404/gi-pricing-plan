@@ -833,6 +833,12 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                     job_id=job_id,
                 )
 
+            # On the `should_fit=False` path this block's `r_squared` and `worst_regions`
+            # come from the fit **just computed**, while the Model it names holds the first
+            # one. They agree only because `fit_glm` is deterministic under `spec.seed`,
+            # which `approximation_spec` carries over from the GBM — an artifact that
+            # disagreed with the Model it cites would be the failure this sentence exists
+            # to make visible.
             block = approximation.artifact_block(surrogate.id)
             artifact = TransparencyArtifact(
                 id=new_uuid7(),
