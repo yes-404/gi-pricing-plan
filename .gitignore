@@ -99,6 +99,11 @@ Thumbs.db
 /findings.md
 /progress.md
 /.planning/
+# subagent-driven-development's per-plan workspace — ledger, task briefs, review
+# packages. Same reasoning as /.planning/ above: it is a controller's live scratch,
+# and the skill's own instructions call the directory git-ignored. It was not, so a
+# session running that skill in this repo could commit its ledger.
+/.superpowers/
 
 # Celery beat's scheduler state. Written wherever beat is started, including the repo
 # root during an NFR measurement — it is runtime state, not source.
