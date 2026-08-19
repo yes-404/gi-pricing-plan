@@ -558,15 +558,21 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
 
 ```json
 {
+  "id": "uuid",
   "dataset_version_id": "uuid",
+  "job_id": "uuid",
   "computed_at": "2026-08-14T09:16:00Z",
+  "row_count": 4824356,
+  "weight_column": "exposure_years",
+  "library_versions": {"polars": "1.9.0", "duckdb": "1.1.1"},
   "columns": [
     {
       "name": "driver_age", "semantic_type": "continuous", "dtype": "int32",
-      "null_count": 412, "null_rate": 0.0000854, "distinct_count": 74,
+      "row_count": 4824356, "null_count": 412, "null_rate": 0.0000854, "distinct_count": 74,
       "minimum": 17, "maximum": 92, "mean": 43.8, "std": 15.2,
       "quantiles": {"p1": 19, "p5": 22, "p25": 32, "p50": 43, "p75": 55, "p95": 71, "p99": 80},
-      "histogram": {"edges": [17, 21, 25, 30, 40, 50, 60, 70, 93], "counts": [...], "exposure": [...]}
+      "histogram": {"edges": [17, 20.75, 24.5, ..., 88.25, 92], "counts": [...], "exposure": [...]},
+      "top_levels": []
     }
   ],
   "one_ways": [
@@ -575,7 +581,8 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
       "rows": [
         {"level": "17-21", "exposure_years": "82141.20", "claim_count": 9142,
          "claim_amount_minor": 41_882_100_00, "frequency": 0.1113, "frequency_ci": [0.1090, 0.1136],
-         "severity_minor": 458_100, "severity_ci": [449_200, 467_300], "burning_cost_minor": 50_990}
+         "mean_severity": 458_128.42, "severity_ci": [449_200.0, 467_300.0],
+         "mean_burning_cost": 50_987.93}
       ]
     }
   ]
@@ -585,9 +592,10 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
 > *(2026-08-18)* The example above has always shown a `histogram`, and so has the committed
 > contract; `ColumnProfile` did not carry one until FR-DATA-48. **The contract was right and
 > the requirement was incomplete** — FR-DATA-25 enumerates the statistics and never named
-> this one. The example's uneven edges were illustrative, not a specification: FR-DATA-48
-> fixes equal-width bins, because two engines must agree and quantile-derived edges collapse
-> to duplicates on a low-cardinality column, with each engine deduplicating differently.
+> this one. The example's edges were illustrative, not a specification, and were uneven:
+> FR-DATA-48 fixes equal-width bins, because two engines must agree and quantile-derived
+> edges collapse to duplicates on a low-cardinality column, with each engine deduplicating
+> differently. The example above now shows the equal-width edges the requirement mandates.
 
 > *(2026-08-18, Task 6 — `profile.schema.json` generated and compared against `Profile` for
 > the first time.)* **The contract's `min`/`max` are renamed here to `minimum`/`maximum`,
@@ -614,6 +622,24 @@ checked at promotion (FR-DATA-17), not baked into `overall`.
 >
 > `top_levels`' item shape is a divergence this comparison found and did **not** fix: see
 > FR-DATA-49.
+
+> *(2026-08-19)* **The example above is corrected to match the model, not the other way
+> round.** It had gone on showing FR-DATA-46's superseded one-way names — `severity_minor`
+> and `burning_cost_minor`, both integer-looking and both `_minor`-suffixed — three commits
+> after the rename to `mean_severity` / `mean_burning_cost` landed in `OneWayRow` and in the
+> committed contract. `severity_ci` keeps its name: it is the interval *around* the mean
+> severity, and renaming an unchanged field to match a neighbour's rename would break
+> `ProfileView.vue` for symmetry alone. The values are unchanged in magnitude and now read
+> as the floats they are: a mean severity is claim amount divided by claim count, a ratio
+> rather than an amount, which is precisely why FR-OVR-7's `_minor` suffix had to go.
+>
+> The example also gained the fields the note above added to the contract — `id`, `job_id`,
+> `row_count` on both `Profile` and each `ColumnProfile`, `weight_column` and
+> `library_versions`. Three of those are `required` — `Profile.id`, `Profile.row_count` and
+> `ColumnProfile.row_count` — so a reader copying the previous example produced an object
+> the contract rejects. Enumerating them in prose was not enough: `01`
+> §5.3's own audit exists because a Contents column was read and a view was not, and an
+> example is read far more often than the paragraph under it.
 
 ### 4.8 `ReferenceTable` / `ReferenceTableVersion`
 
@@ -843,6 +869,26 @@ moved.
 **Interaction requirement:** the validation view is the module's centrepiece. It must make
 "why can I not fit a model on this?" answerable in one screen without scrolling past the
 fold: overall banner → failing rules → warnings needing acknowledgement → everything else.
+
+> *(2026-08-19)* **The Profile row's four Contents items are now three built and one not.**
+> Histograms landed with FR-DATA-48; per-column cards and the one-way charts with their CI
+> bands were built in W6a. The **PSI comparison selector has not been built**:
+> `compareProfiles()` is implemented, typed and exported from `frontend/src/api/profiles.ts`
+> with **zero callers**, and the dtype label that borrowed `psiBand`'s colour has been
+> uncoloured rather than left reading as support the view lacks — `psiBand(null)` returned
+> `"stable"` before any threshold, so the badge was never showing a PSI band, only the
+> colour of one. FR-DATA-28's endpoint exists and is served; the view that reads it is
+> unowned.
+>
+> The row keeps the claim rather than losing it (`CLAUDE.md` §14: resolve, never soften).
+> **Owner: the next slice to open `ProfileView.vue`, or W6b** — the selector needs a
+> reference-version picker, which is the first piece of Profile state that must outlive a
+> route, and `docs/roadmap.md`'s W6a record already names it as the trigger for the
+> frontend's first Pinia store.
+>
+> Unchanged and still open on the Dataset list row above: **status badge, last validated,
+> owner**. `Dataset` carries none of the three, and which entity should — recorded as
+> **OQ-DATA-9** rather than picked — is the maintainer's decision.
 
 ---
 

@@ -177,7 +177,10 @@ def _profile_version(
                 workspace_id=workspace_id,
                 actor=actor,
                 profile=profile,
-                job_id=profile.job_id,
+                # The Job that is running, not the id that round-tripped through the
+                # artifact body. Same value today, and the persisted column should depend
+                # on the Job rather than on the artifact serialising correctly.
+                job_id=progress.job_id,
             )
             return UUID(str(stored.id))
 

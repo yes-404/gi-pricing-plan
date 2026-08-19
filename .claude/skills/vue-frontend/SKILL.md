@@ -178,6 +178,27 @@ none of 575 tests noticed: the API tests never fetched an ingested version, the 
 read versions through the service rather than the route, and the frontend mocked the call.
 It surfaced the first time anything asked the live API for a real one.
 
+**Annotate the fixture with its generated type.** It cannot prove the backend serves that
+shape, but it does bind the fixture to the contract — and that is free:
+
+```ts
+import type { OneWaySummary, Profile } from "@/api/profiles";
+
+const PROFILE: Profile = { /* … */ };
+```
+
+Its first run found two fields missing from a fixture whose own comment said "shaped on
+freMTPL2 v2 as the API returns it": `weight_column` on `Profile` and `banding` on every
+`OneWaySummary`. Both are **required in the generated TypeScript while absent from the JSON
+Schema's `required` array**, because `openapi-typescript` treats a property with a `default`
+as always present in a response — which is right, and is exactly the class of drift a bare
+object literal hides. `vitest` runs the type-check (`typecheck.enabled`), so an annotated
+fixture makes contract drift fail `pnpm test` and not merely `pnpm type-check`.
+
+One quirk worth knowing: `vue-tsc` reports the *innermost* mismatch first and the outer
+object's missing property only on the next run, so fix, re-run, repeat until clean rather
+than assuming the first error list is the whole set.
+
 **Before believing a view works, curl the endpoints it calls against the seeded
 workspace.** It costs a minute:
 
@@ -393,3 +414,9 @@ task brief written against `mount()`: the import does not resolve here, and the
 `vue-echarts` mock is what replaced it. The generated-client seam held again — `Histogram`
 arrived in `schema.d.ts` from the regenerated contract and is re-exported through
 `@/api/profiles` rather than declared in the component.
+
+2026-08-19 — the profile-contract slice's close. Typing the two Profile fixtures against the
+generated shapes (above) found `weight_column` and `banding` missing from both. Also: the
+Profile page shows two charts of the same column, so a colour means the same thing in both
+or it means nothing — exposure is `#cbd5e1` in `OneWayChart` and in `HistogramChart` alike,
+and it took a review to notice they had been inverted.

@@ -20,6 +20,7 @@ from sqlalchemy import select
 from app.db.models import (
     DatasetVersionRow,
     JobRow,
+    ProfileRow,
     RoleAssignmentRow,
     RoleRow,
     ValidationRuleSetRow,
@@ -255,6 +256,19 @@ async def test_ingestion_produces_a_version_and_its_profile(
             )
         ).scalar_one()
     assert profile.job_id == ingest_job_id
+    # And the persisted *column*, which is what a lineage query reads — the assertion above
+    # only proves the artifact body carries the id. `store_profile` takes `job_id`
+    # separately from the profile it stores, so the column can be NULL while the body is
+    # right; that is exactly the state this repository shipped until Task 6.
+    async with database.session() as session:
+        stored_job_id = (
+            await session.execute(
+                select(ProfileRow.job_id).where(
+                    ProfileRow.dataset_version_id == version_id
+                )
+            )
+        ).scalar_one()
+    assert stored_job_id == ingest_job_id
     # FR-DATA-26. This one is a round-trip check, not a wiring check: `weight_column`
     # defaults to "exposure_years" and this fixture's exposure column is named that too, so
     # it would pass even if nothing recorded the argument. The wiring itself is proven in

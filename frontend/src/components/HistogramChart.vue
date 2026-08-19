@@ -32,6 +32,10 @@ const labels = computed(() =>
  * Exposure is an exact decimal **string** (FR-OVR-7). `Number()` here is deliberate and
  * safe, for the reason `OneWayChart` gives: a chart coordinate is a float64 either way and
  * nothing computes with the plotted value.
+ *
+ * Colours match `OneWayChart`'s, and the rule is that **exposure is always the pale grey
+ * `#cbd5e1`**. Both charts appear on the Profile page against the same column, so exposure
+ * changing colour between them would read as two different quantities.
  */
 const option = computed(() => ({
   tooltip: { trigger: "axis" as const },
@@ -49,7 +53,7 @@ const option = computed(() => ({
       name: "Rows",
       type: "bar" as const,
       data: counts.value,
-      itemStyle: { color: "#cbd5e1" },
+      itemStyle: { color: "#0f766e" },
       yAxisIndex: 0,
     },
     ...(exposure.value.length
@@ -59,7 +63,7 @@ const option = computed(() => ({
             type: "bar" as const,
             yAxisIndex: 1,
             data: exposure.value.map((e) => Number(e)),
-            itemStyle: { color: "#0f766e" },
+            itemStyle: { color: "#cbd5e1" },
           },
         ]
       : []),

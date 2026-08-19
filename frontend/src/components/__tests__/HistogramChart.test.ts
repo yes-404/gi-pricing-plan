@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
+import type { Histogram } from "@/api/profiles";
+
 import HistogramChart from "../HistogramChart.vue";
 
 // ECharts needs a real canvas and happy-dom has none. The stub keeps the one thing worth
@@ -25,9 +27,10 @@ function option(): Option {
 
 describe("HistogramChart", () => {
   it("labels each bar with its bin interval", () => {
-    render(HistogramChart, {
-      props: { histogram: { edges: [0, 10, 20], counts: [3, 7], exposure: [] } },
-    });
+    // Annotated, not a bare literal: the fixture is bound to the generated contract, so a
+    // future rename in `model-schema` fails type-check here instead of passing silently.
+    const histogram: Histogram = { edges: [0, 10, 20], counts: [3, 7], exposure: [] };
+    render(HistogramChart, { props: { histogram } });
     const chart = option();
 
     // FR-DATA-48's edges array is one longer than its counts: two edges bound one bin.
@@ -39,9 +42,12 @@ describe("HistogramChart", () => {
   });
 
   it("plots exposure when the histogram carries it", () => {
-    render(HistogramChart, {
-      props: { histogram: { edges: [0, 10, 20], counts: [3, 7], exposure: ["1.5", "9.25"] } },
-    });
+    const histogram: Histogram = {
+      edges: [0, 10, 20],
+      counts: [3, 7],
+      exposure: ["1.5", "9.25"],
+    };
+    render(HistogramChart, { props: { histogram } });
     const chart = option();
 
     expect(chart.series.map((s) => s.name)).toContain("Exposure");

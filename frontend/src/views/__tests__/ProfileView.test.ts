@@ -2,6 +2,8 @@ import { render, screen, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { OneWaySummary, Profile } from "@/api/profiles";
+
 import ProfileView from "../ProfileView.vue";
 
 vi.mock("@/components/OneWayChart.vue", () => ({
@@ -18,12 +20,20 @@ vi.mock("@/components/HistogramChart.vue", () => ({
   },
 }));
 
-/** Shaped on freMTPL2 v2 as the API returns it. */
-const PROFILE = {
+/**
+ * Shaped on freMTPL2 v2 as the API returns it.
+ *
+ * Annotated with the generated types rather than left a bare literal: the fixtures are
+ * then bound to the contract, and a `model-schema` rename — FR-DATA-46's was the last one
+ * — fails `type-check` here instead of leaving a test that passes against a shape the API
+ * no longer sends.
+ */
+const PROFILE: Profile = {
   id: "11111111-1111-4111-8111-111111111111",
   dataset_version_id: "22222222-2222-4222-8222-222222222222",
   computed_at: "2026-08-15T11:00:00Z",
   row_count: 29970,
+  weight_column: "exposure_years",
   library_versions: {},
   columns: [
     {
@@ -40,13 +50,14 @@ const PROFILE = {
     },
   ],
   one_ways: [
-    { column: "veh_brand", rows: [] },
-    { column: "region", rows: [] },
+    { column: "veh_brand", banding: "levels", rows: [] },
+    { column: "region", banding: "levels", rows: [] },
   ],
 };
 
-const ONE_WAY = {
+const ONE_WAY: OneWaySummary = {
   column: "veh_brand",
+  banding: "levels",
   rows: [
     {
       level: "B12",
