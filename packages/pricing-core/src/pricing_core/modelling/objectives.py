@@ -66,6 +66,7 @@ __all__ = [
     "compile_objective",
     "make_lgb_objective",
     "make_xgb_objective",
+    "template_loss",
 ]
 
 #: Vectorised arrays throughout; the templates are written against `np.float64` only.
@@ -660,6 +661,16 @@ def compile_objective(objective: CustomObjective) -> ObjectiveFns:
         one = np.array([1.0])
         fns.stabilise(one, np.zeros(1), one)
     return fns
+
+
+def template_loss(template: ObjectiveTemplate) -> _Fn:
+    """The catalogue's loss for one template — the metric path's single source (FR-MODEL-103).
+
+    Public so `metrics.py` reuses this arithmetic rather than copying it. Nothing else about
+    `_TEMPLATES` is exported: the gradient and hessian are the fitting path's business, and a
+    metric has no use for either.
+    """
+    return _TEMPLATES[template].loss
 
 
 def _finite_or_abort(
