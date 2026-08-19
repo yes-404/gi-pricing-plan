@@ -1391,15 +1391,24 @@ def _level_counts(frame: pl.DataFrame, column: str, *, top: int = 20) -> dict[st
     """The current frame's top level counts, shaped like a Profile's `top_levels`.
 
     Capped at the same 20 the Profile keeps, or the two sides of a PSI would be computed
-    over different level sets and the number would mean nothing.
+    over different level sets and the number would mean nothing. `nulls_last=True` matches
+    both profiling engines' `NULLS LAST` tie-break, so a level tied on count with a null
+    lands in the same top-20 cut here as it would in a `ColumnProfile`.
     """
     counts = (
         frame.group_by(column)
         .len()
-        .sort(["len", column], descending=[True, False])
+        .sort(["len", column], descending=[True, False], nulls_last=True)
         .head(top)
     )
-    return {str(level): float(count) for level, count in counts.iter_rows()}
+    # A null level is excluded from the weight map — the same treatment `_psi` in
+    # `profile.py` gives `top_levels` (Ruling 2b). Keeping it here under the coerced key
+    # "None" while the reference side has already dropped the null would make the two
+    # sides of a PSI disagree about their totals and shares for no reason but that
+    # coercion, inventing drift on every column that has a null.
+    return {
+        str(level): float(count) for level, count in counts.iter_rows() if level is not None
+    }
 
 
 @register_check("psi_column")
@@ -1425,7 +1434,15 @@ def _psi_column(
 
     profiled = _reference_column(ctx, rule, column)
     if profiled is not None and profiled.top_levels:
-        reference_weights = {level: float(count) for level, count in profiled.top_levels}
+        # Ruling 2a: PSI stays on count, deliberately — VR-DST-1 must not silently start
+        # weighting by exposure, or every drift figure already published would change
+        # meaning underneath the people who read it. (VR-DST-8, `mix_shift_exposure`, is
+        # the exposure-weighted PSI.) Nulls excluded to match `_level_counts` below and
+        # `_psi` in `profile.py` (Ruling 2b) — otherwise this side would carry a null
+        # under the reference's dropped key and invent drift on every column with one.
+        reference_weights = {
+            lc.level: float(lc.count) for lc in profiled.top_levels if lc.level is not None
+        }
     else:
         reference = ctx.reference_frames.get(rule.target["table"])
         if reference is None or column not in reference.columns:
@@ -1466,7 +1483,11 @@ def _new_level(
 
     profiled = _reference_column(ctx, rule, column)
     if profiled is not None and profiled.top_levels:
-        known = {level for level, _ in profiled.top_levels}
+        # A null level is a real category, not a level that could be "new" or "gone" in
+        # the sense this rule reports (the same exclusion `compare_profiles` gives
+        # `new_levels`/`vanished_levels` in `profile.py`) — excluded so it can never be
+        # reported as a phantom new level.
+        known = {lc.level for lc in profiled.top_levels if lc.level is not None}
     else:
         reference = ctx.reference_frames.get(rule.target["table"])
         if reference is None or column not in reference.columns:
@@ -1511,7 +1532,22 @@ def _vanished_level(
     if not reference_weights:
         profiled = _reference_column(ctx, rule, column)
         if profiled is not None and profiled.top_levels:
-            reference_weights = {level: float(count) for level, count in profiled.top_levels}
+            # FR-DATA-49: per-level exposure now exists on `top_levels`, so this fallback
+            # no longer has to stand a count in for it. A null level is excluded — the
+            # same treatment `new_level` and `compare_profiles` give it — so it can never
+            # be reported as a vanished level.
+            reference_weights = {
+                lc.level: (
+                    # The version's profile carries real exposure for this level: use it.
+                    float(lc.exposure_years)
+                    if lc.exposure_years is not None
+                    # No exposure column on that version — count is all `top_levels` has,
+                    # same as before FR-DATA-49.
+                    else float(lc.count)
+                )
+                for lc in profiled.top_levels
+                if lc.level is not None
+            }
     if not reference_weights:
         reference = ctx.reference_frames.get(rule.target["table"])
         if reference is None or column not in reference.columns:
