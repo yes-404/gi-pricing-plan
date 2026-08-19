@@ -114,6 +114,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-43** | *(appended 2026-08-15, found by driving the exit demo)* A `validating` version whose report contains `fail`s transitions to **`failed`**, not left in `validating`. `validating` is a transient state — a version resting in it reads as "still running" on every screen that shows a status, and `FAILED → VALIDATING` exists precisely so a failed version can be re-validated once the data or the rule set is corrected. A version already `validated` and re-validated to a failing report goes to **`draft`** instead, which is FR-DATA-23 — it *was* good, and the report reference is cleared with the status. **Delivered 2026-08-15** (OQ-DATA-7, decided). |
 | **FR-DATA-23** | Validation is re-runnable on a `validated` version (e.g. after a rule set update). If the new report contains `fail`s, the version transitions **back** to `draft` and every Model fitted on it is flagged `dataset_invalidated` — models are not deleted, but the flag is surfaced on the model, on any Rating Version referencing it, and to the Approver. |
 | **FR-DATA-24** | Validation is incremental where sound: structural and actuarial rules stream over parquet row groups; distributional rules use pre-computed profile aggregates rather than re-scanning. |
+| **FR-DATA-50** | *(appended 2026-08-19, OQ-DATA-9 decided)* The dataset list's **status badge and last-validated date are projections of Dataset Versions, not fields on `Dataset`.** The container gains neither: `DatasetVersion.status` together with `is_fittable` is the single answer to "can I fit on this?" (§1.3), and a second status on `Dataset` would be a second answer free to disagree with it. `GET /api/v1/datasets` therefore returns two derived, read-only fields alongside `latest_version`: **`latest_version_status`**, the status of the version `latest_version` names, and **`last_validated_at`**, the transition timestamp of the most recently `validated` version of the Dataset — which **need not be the latest one**. The two are scoped differently on purpose: the badge answers *what state is the newest version in*, the date answers *when was this Dataset last usable*, and a Dataset whose v12 is a fresh `draft` above a `validated` v11 would otherwise render as never validated. Where the two refer to different versions the list states which, so the pair cannot be read as one fact. Both are computed per request from `dataset_versions`; neither is stored on `datasets`, and neither is writable. **Not delivered. Phase 1b, owner W6b** — the list endpoint already batches the latest version per dataset (`_latest_versions`), so this is one further aggregate plus the two columns in the view. Trigger: the slice that completes §5.3's Dataset list row. |
 
 > **Two enforcement gaps, recorded 2026-08-15 after an independent audit — and closed the
 > same day.** Both were cases where the requirement was right and the code did not meet it,
@@ -203,6 +204,7 @@ used here unchanged. Additional terms owned by this module:
 | **FR-DATA-37** | Dataset access is role- and dataset-scoped (`06-governance.md`). A user without read access to a Dataset cannot see it in lineage, in a model's provenance, or in search results — only an opaque "restricted" placeholder. |
 | **FR-DATA-38** | `archived` Dataset Versions remain readable to Auditors and remain referenceable by existing Models; they cannot be the target of a new fit. |
 | **FR-DATA-39** | GDPR erasure is supported as an Admin-only, audited **purge** of specific pseudonymous subject tokens across all versions of a Dataset, producing a new "redacted" version and a tombstone record explaining the gap. Historic Validation Reports and Models are annotated, never silently altered. |
+| **FR-DATA-51** | *(appended 2026-08-19, OQ-DATA-9 decided)* `Dataset` carries an explicit **`owner_id`** — a non-null user id, set to the creating user at ingestion, changeable only by an Admin or the current owner, and audited as a metadata change (FR-OVR-4). It is **not** derived from `workspace_id`: that would make every Dataset in a workspace equally owned, and `06`'s RBAC and approval trails need a named subject — "who owns this data" is a question a workspace cannot answer. Ownership confers no privilege by itself; it names the accountable party a review, a retention decision (FR-DATA-38) or an erasure request (FR-DATA-39) is addressed to, and it is what §5.3's owner column displays. **Not delivered. Phase 1b, owner W6b**, with FR-DATA-50 — a migration adding the column, backfilled from each Dataset's creating audit event, plus the field on `Dataset` in `model-schema`. Trigger: the same slice. |
 
 ---
 
@@ -217,6 +219,7 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
 {
   "slug": "motor-gb-quote-bind",
   "name": "Motor GB — quote & bind",
+  "owner_id": "uuid",
   "line_of_business": "motor",
   "territory": "GB",
   "currency": "GBP",
@@ -235,6 +238,12 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
 `pii_class` ∈ `none | pseudonymous_key | quasi_identifier | direct_identifier | special_category`.
 `direct_identifier` and `special_category` columns are rejected for modelling use (FR-OVR-9,
 FR-DATA-13).
+
+`owner_id` is FR-DATA-51's accountable party, and it is the **only** one of §5.3's three dataset-list
+columns that is a field on `Dataset`. The other two — `latest_version_status` and `last_validated_at` —
+are derived per request from the Dataset's versions and returned by `GET /api/v1/datasets`; they are
+deliberately absent here, because `Dataset` is a container and FR-DATA-50 keeps `DatasetVersion.status`
+the single answer to whether the data is fittable *(OQ-DATA-9, decided 2026-08-19)*.
 
 ### 4.2 `DatasetVersion`
 
@@ -750,7 +759,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 | `GET` | `/api/v1/sources` | List sources (credentials redacted) |
 | `POST` | `/api/v1/sources/{id}/preview` | Read first N rows + inferred schema without creating a version |
 | `POST` | `/api/v1/datasets` | Create a Dataset (metadata + data dictionary) |
-| `GET` | `/api/v1/datasets` | List / filter datasets |
+| `GET` | `/api/v1/datasets` | List / filter datasets, each with `latest_version`, `latest_version_status` and `last_validated_at` (FR-DATA-50) |
 | `GET` | `/api/v1/datasets/{slug}` | Dataset detail incl. `latest_version` |
 | `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) |
 | `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated |
@@ -931,9 +940,14 @@ fold: overall banner → failing rules → warnings needing acknowledgement → 
 > route, and `docs/roadmap.md`'s W6a record already names it as the trigger for the
 > frontend's first Pinia store.
 >
-> Unchanged and still open on the Dataset list row above: **status badge, last validated,
-> owner**. `Dataset` carries none of the three, and which entity should — recorded as
-> **OQ-DATA-9** rather than picked — is the maintainer's decision.
+> **Resolved 2026-08-19 on the Dataset list row above: status badge, last validated, owner.**
+> The question of which entity carries them was recorded as OQ-DATA-9 rather than picked, and the
+> maintainer decided it — **two of the three are projections, one is a field**. `Dataset` gains an
+> explicit `owner_id` (FR-DATA-51) because no version carries ownership and `06`'s RBAC needs a
+> subject; the badge and the date are read off the Dataset's versions by the list endpoint
+> (FR-DATA-50), so the container never holds a second status that could disagree with
+> `DatasetVersion.status`. **Still undelivered, and still W6b's** — the decision moved the row from
+> *unanswerable* to *unbuilt*, which is a different and smaller thing.
 
 ---
 
@@ -1058,4 +1072,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-DATA-7**~~ ✔ | ~~Nothing in the platform ever sets a Dataset Version to `failed`. `DatasetStatus.FAILED` exists in the enum and in `VALID_DATASET_TRANSITIONS`, and no code path transitions to it — so a version whose first validation fails rests in **`validating`**, which every screen reads as "still running". FR-DATA-2 uses `failed` for a broken ingestion run and FR-DATA-23 sends a *re-validated* version back to `draft`; the first-failure case was specified nowhere. Found by exercising Phase 1a's exit demo, 2026-08-15.~~ **Decided and delivered 2026-08-15: `failed`** (FR-DATA-43). |
 | ~~**OQ-DATA-8**~~ ✔ | ~~`sample`, `filter`, `join` and `aggregate` derived versions inherit their parent's rows rather than being produced from them — a 1 % sample holds 100 % of them.~~ **DECIDED 2026-08-17: materialise all four, each in the slice that first needs it, and refuse them until then rather than leaving the silent version.** Specified as FR-DATA-45 and the refusal delivered the same day; `split` remains the one materialised operation (FR-DATA-44). Owner: W7 for `sample`; `filter`, `join` and `aggregate` unowned. Raised 2026-08-16 (W5). |
 | ~~**OQ-DATA-6**~~ ✔ | ~~Is `warn` acknowledgement per-rule-per-report the right granularity, or should an actuary be able to pre-approve a recurring known warning for a defined period (with expiry) to avoid acknowledgement fatigue? |~~ **Decided 2026-08-14: per report as FR-DATA-18 specifies, plus a pre-fill affordance that still requires an explicit, separately audited act.**
-| **OQ-DATA-9** | §5.3 asks the dataset list to display a status badge, a last-validated date and an owner. `Dataset` carries none of the three: status and `validation_report_id` live on `DatasetVersion`, and ownership is only implied by `workspace_id`. Does `Dataset` gain the three fields, or does §5.3 mean the **latest version's** status and validated-at, plus a workspace-level owner? |
+| ~~**OQ-DATA-9**~~ ✔ | ~~§5.3 asks the dataset list to display a status badge, a last-validated date and an owner. `Dataset` carries none of the three: status and `validation_report_id` live on `DatasetVersion`, and ownership is only implied by `workspace_id`. Does `Dataset` gain the three fields, or does §5.3 mean the latest version's status and validated-at, plus a workspace-level owner?~~ **DECIDED 2026-08-19: two of the three are projections of the latest versions, one is a new field.** Specified as FR-DATA-50 (`latest_version_status` and `last_validated_at`, derived by the list endpoint, never stored) and FR-DATA-51 (`Dataset.owner_id`, explicit, not derived from `workspace_id`). Neither is delivered; both are W6b's, with the trigger named in the requirements. Raised 2026-08-18 (W5). |
