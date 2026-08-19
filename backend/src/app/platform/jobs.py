@@ -68,6 +68,7 @@ DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
     # the same work a comparison does once per candidate.
     JobKind.PERIL_STRUCTURE_RECONCILE: JobQueue.COMPUTE,
     JobKind.OBJECTIVE_CERTIFY: JobQueue.COMPUTE,
+    JobKind.METRIC_CERTIFY: JobQueue.COMPUTE,
     JobKind.RATING_COMPILE: JobQueue.DEFAULT,
     JobKind.RATING_REGRESSION: JobQueue.COMPUTE,
     JobKind.SCORE_BATCH: JobQueue.SCORING,

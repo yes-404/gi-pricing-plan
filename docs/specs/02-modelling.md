@@ -1606,6 +1606,20 @@ module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 >   Stated here rather than left silent: an endpoint declared and not built reads as
 >   delivered to anyone auditing the table.
 
+> **Amended 2026-08-19 (W5, the custom-metrics slice).** Three `METRIC_*` codes arrive
+> with the Custom Metric endpoints (FR-MODEL-108). `METRIC_REF_UNRESOLVED` is
+> `resolve_ref`'s refusal — a `custom_metric:<slug>@<version>` reference that names no
+> row in the workspace — kept distinct from the generic `NOT_FOUND` the objectives'
+> `resolve_ref` still raises, because a caller resolving a reference embedded in a
+> `GbmSpec.eval_metrics` entry needs to tell "this reference is malformed or stale"
+> from "this id does not exist", and the two paths that call `resolve_ref` are not the
+> same failure mode. `METRIC_NOT_APPLICABLE` and `METRIC_NOT_FITTABLE` are declared here
+> ahead of the code that raises them: they belong to FR-MODEL-106's refusals from the
+> GBM fit path once `eval_metrics` is wired in, and registering them with this slice
+> — the one that owns the artifact — means that slice finds them already known rather
+> than repeating the `MODEL_TERM_UNRESOLVED` history two sections above, where four
+> codes were live and unregistered because nothing declared them when they were added.
+
 ### 5.2 `pricing-core` interfaces
 
 ```python

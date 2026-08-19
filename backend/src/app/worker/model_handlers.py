@@ -28,6 +28,7 @@ from app.platform import backtests as backtest_service
 from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import diagnostics as diagnostics_service
+from app.platform import metrics as metric_service
 from app.platform import modelling as model_service
 from app.platform import objectives as objective_service
 from app.platform import perils as peril_service
@@ -40,6 +41,7 @@ from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     Banding,
+    CustomMetric,
     CustomObjective,
     Diagnostics,
     Factor,
@@ -1000,6 +1002,8 @@ def register_model_handlers() -> None:
         register_handler(JobKind.PERIL_STRUCTURE_RECONCILE, _reconcile)
     if JobKind.OBJECTIVE_CERTIFY not in handler_registry.HANDLERS:
         register_handler(JobKind.OBJECTIVE_CERTIFY, _certify)
+    if JobKind.METRIC_CERTIFY not in handler_registry.HANDLERS:
+        register_handler(JobKind.METRIC_CERTIFY, _certify_metric)
 
 
 def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
@@ -1222,3 +1226,51 @@ def _certify(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
     certificate_id = progress.run_on_loop(store())
     progress.update(1.0, "done")
     return JobResult(kind="artifact", ref=f"objective_certificate:{certificate_id}")
+
+
+def _certify_metric(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`metric.certify` — §4.13's checks over a Custom Metric (FR-MODEL-105).
+
+    A **failing** certificate is a successful Job, `_certify`'s reason unchanged: the
+    finding that a metric is non-finite or scale-sensitive over the sampled grid *is* the
+    answer the run was asked for. What a `failed` certificate blocks is `submit`, and that
+    is `metric_service.submit`'s answer.
+
+    Unlike `_certify`, there is no `SamplingSpec` in `parameters`: `certify_metric` samples
+    a fixed internal grid (`pricing_core.modelling.metrics._grid`) rather than one a caller
+    supplies, so there is nothing here to re-derive or trust from the request — only the
+    seed, held fixed by `metric_service.DEFAULT_SEED` for the same reproducibility reason
+    `objective_service.DEFAULT_SEED` is.
+    """
+    from pricing_core.modelling.metrics import certify_metric
+
+    progress = _bridge(callback)
+    actor, workspace_id = _actor(parameters), _workspace(parameters)
+    metric_id = UUID(parameters["metric_id"])
+    progress.update(0.05, "loading the metric")
+
+    async def load() -> CustomMetric:
+        async with progress.database.session() as session:
+            return await metric_service.load_metric(
+                session, workspace_id=workspace_id, metric_id=metric_id
+            )
+
+    metric = progress.run_on_loop(load())
+    progress.update(0.2, "sampling and evaluating")
+    result = certify_metric(metric, seed=metric_service.DEFAULT_SEED)
+
+    async def store() -> UUID:
+        async with progress.database.unit_of_work() as session:
+            _, certificate = await metric_service.record_certificate(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                metric_id=metric_id,
+                result=result,
+                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+            )
+            return certificate.id
+
+    certificate_id = progress.run_on_loop(store())
+    progress.update(1.0, "done")
+    return JobResult(kind="artifact", ref=f"metric_certificate:{certificate_id}")

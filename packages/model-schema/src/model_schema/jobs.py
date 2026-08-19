@@ -49,6 +49,7 @@ class JobKind(enum.StrEnum):
     MODEL_COMPARE = "model.compare"
     PERIL_STRUCTURE_RECONCILE = "peril_structure.reconcile"
     OBJECTIVE_CERTIFY = "objective.certify"
+    METRIC_CERTIFY = "metric.certify"
     RATING_COMPILE = "rating.compile"
     RATING_REGRESSION = "rating.regression"
     SCORE_BATCH = "score.batch"

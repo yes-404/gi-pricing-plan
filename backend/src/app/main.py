@@ -18,6 +18,7 @@ from app.api import (
     approvals,
     audit,
     blobs,
+    custom_metrics,
     custom_objectives,
     dataset_versions,
     datasets,
@@ -100,6 +101,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(models.router, prefix=API_PREFIX)
     app.include_router(peril_structures.router, prefix=API_PREFIX)
     app.include_router(custom_objectives.router, prefix=API_PREFIX)
+    app.include_router(custom_metrics.router, prefix=API_PREFIX)
     app.include_router(datasets.router, prefix=API_PREFIX)
     app.include_router(dataset_versions.router, prefix=API_PREFIX)
     app.include_router(validation.router, prefix=API_PREFIX)
