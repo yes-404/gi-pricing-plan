@@ -35,6 +35,7 @@ from model_schema.refs import BlobRef
 __all__ = [
     "FIT_RESULT_ADAPTER",
     "MODEL_SPEC_ADAPTER",
+    "SURROGATE_RESPONSE_COLUMN",
     "TERMINAL_MODEL_STATUSES",
     "VALID_MODEL_TRANSITIONS",
     "AboveRangePolicy",
@@ -834,6 +835,9 @@ class GlmSpec(ModelSpecCommon):
     l1_ratio: float = Field(default=0.0, ge=0.0, le=1.0)
     max_iter: int = Field(default=200, ge=1)
     tolerance: float = Field(default=1e-8, gt=0.0)
+    #: FR-MODEL-96 — the Model whose predictions this GLM approximates. `None` for every
+    #: model fitted on an observed response, which is every model but a surrogate.
+    approximates_model_id: UUID | None = None
 
     @property
     def uncertainty_basis(self) -> UncertaintyBasis:
@@ -887,6 +891,34 @@ class GlmSpec(ModelSpecCommon):
                 "a Poisson model must declare an offset (FR-MODEL-19: frequency → Poisson, "
                 "log link, offset = log(exposure)). Fitting counts without exposure "
                 "silently models 'claims per policy-record' instead of 'claims per year'."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _a_surrogate_says_so_in_both_places(self) -> GlmSpec:
+        """FR-MODEL-102: `approximates_model_id` is set iff the response is the surrogate
+        column.
+
+        Both directions, because each half alone is a different defect. A spec naming a
+        source model over an observed response column is a model fitted on claims that
+        every reader takes for a surrogate; one fitted on the surrogate column with no
+        source named is a model of a prediction nobody can identify — and its diagnostics
+        are then an A/E against an unnamed target, which is what FR-MODEL-96(iii) exists to
+        prevent.
+        """
+        surrogate_column = self.response_column == SURROGATE_RESPONSE_COLUMN
+        if surrogate_column and self.approximates_model_id is None:
+            raise ValueError(
+                f"response_column is {SURROGATE_RESPONSE_COLUMN!r} and no "
+                "approximates_model_id names the model it approximates (FR-MODEL-102). "
+                "A model of a prediction must say whose prediction it is."
+            )
+        if self.approximates_model_id is not None and not surrogate_column:
+            raise ValueError(
+                f"approximates_model_id is set and response_column is "
+                f"{self.response_column!r}, not {SURROGATE_RESPONSE_COLUMN!r} "
+                "(FR-MODEL-102). A surrogate is fitted to another model's predictions; a "
+                "spec fitted to an observed column is a model in its own right."
             )
         return self
 
@@ -1276,6 +1308,14 @@ class GbmFitResult(BaseModel):
             )
         return self
 
+
+#: The response column of a GLM fitted to another model's predictions (FR-MODEL-34).
+#:
+#: A reserved name rather than a caller's choice: FR-MODEL-102 keys the surrogate invariant
+#: on it, and a dataset column that happened to be called this would make a model fitted on
+#: observed data indistinguishable from a surrogate. The dunder spelling is what keeps that
+#: collision implausible rather than merely unlikely.
+SURROGATE_RESPONSE_COLUMN: Final = "__gbm_prediction__"
 
 #: `02` §4.4's tagged union, as a union rather than as a promise. Until this existed the
 #: tag was present and `GlmSpec.model_validate` was the only reader, so a GBM payload

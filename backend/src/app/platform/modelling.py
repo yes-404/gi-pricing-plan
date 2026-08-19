@@ -102,7 +102,12 @@ __all__ = [
 #: `LIKE 'v2:%'` finds them.
 #: `interval_for` moved it `v3` to `v4` (2026-08-19, FR-MODEL-100): a bound's link to
 #: the model it bounds is part of that model's identity, so it joins the payload.
-SPEC_HASH_VERSION: Final = 4
+#: `approximates_model_id` moved it `v4` to `v5` (2026-08-19, FR-MODEL-96): the model a
+#: surrogate approximates is part of what that surrogate is, and two approximations of two
+#: different GBMs over one population would otherwise share a digest — which FR-MODEL-66
+#: answers by handing the second caller the first caller's model. Every `v4:` digest is
+#: findable with `LIKE 'v4:%'` and reported stale by `spec_hash_is_current`.
+SPEC_HASH_VERSION: Final = 5
 
 
 def spec_hash(spec: ModelSpec) -> str:
