@@ -1653,7 +1653,14 @@
           },
           "params": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
             },
             "title": "Params",
             "type": "object"
