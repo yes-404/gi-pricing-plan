@@ -13,6 +13,7 @@ from uuid import UUID
 
 import pytest
 import sqlalchemy as sa
+from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
 from app.db.models import CustomMetricRow
@@ -116,3 +117,74 @@ async def test_a_slug_and_version_pair_is_unique(database: Database, workspace_i
     with pytest.raises(DBAPIError):
         async with database.unit_of_work() as session:
             session.add(_row(workspace_id, slug="duplicate"))
+
+
+@pytest.mark.req("FR-MODEL-108")
+async def test_a_metric_cannot_be_deleted_or_truncated(
+    database: Database, workspace_id: UUID
+) -> None:
+    """FR-MODEL-108 asks which models early-stopped under a metric. A deleted row answers
+    nothing — and every GbmSpec.eval_metrics ref citing it by slug would keep citing a name
+    that resolves to nobody."""
+    row = _row(workspace_id, slug="deletable-check", template="gamma", params={})
+    async with database.unit_of_work() as session:
+        session.add(row)
+        await session.flush()
+        row_id = row.id
+
+    with pytest.raises(DBAPIError) as refused:
+        async with database.unit_of_work() as session:
+            await session.execute(
+                text("DELETE FROM custom_metrics WHERE id = :id"), {"id": row_id}
+            )
+    assert "cannot be deleted" in str(refused.value)
+
+    with pytest.raises(DBAPIError):
+        async with database.unit_of_work() as session:
+            await session.execute(text("TRUNCATE custom_metrics"))
+
+    async with database.session() as session:
+        still_there = await session.get(CustomMetricRow, row_id)
+    assert still_there is not None
+
+
+@pytest.mark.req("FR-MODEL-103")
+async def test_an_expression_metric_is_refused_in_phase_1(
+    database: Database, workspace_id: UUID
+) -> None:
+    """FR-MODEL-103/FR-MODEL-75: Phase 1 admits no `expression` metric — a row with
+    `kind = 'expression'` would carry no loss at all."""
+    with pytest.raises(DBAPIError) as refused:
+        async with database.unit_of_work() as session:
+            session.add(_row(workspace_id, slug="not-a-template", kind="expression"))
+    assert "custom_metric_is_a_template_in_phase_1" in str(refused.value)
+
+
+@pytest.mark.req("FR-MODEL-105")
+async def test_a_status_past_draft_needs_a_certificate(
+    database: Database, workspace_id: UUID
+) -> None:
+    """FR-MODEL-105, mirroring `CustomMetric._a_status_past_draft_rests_on_a_certificate`
+    as corrected in `30b6388`: `certified` needs a certificate, but `deprecated` — reachable
+    directly from `draft` — does not, because a metric abandoned before certification was
+    withdrawn, not certified."""
+    with pytest.raises(DBAPIError) as refused:
+        async with database.unit_of_work() as session:
+            session.add(
+                _row(workspace_id, slug="no-certificate", status="certified", template="gamma")
+            )
+    assert "certified_metric_has_a_certificate" in str(refused.value)
+
+    # `deprecated` is the exemption `30b6388` added: no certificate required to withdraw a
+    # metric straight out of `draft`.
+    row = _row(workspace_id, slug="withdrawn-early", status="deprecated", template="gamma")
+    async with database.unit_of_work() as session:
+        session.add(row)
+        await session.flush()
+        row_id = row.id
+
+    async with database.session() as session:
+        fetched = await session.get(CustomMetricRow, row_id)
+    assert fetched is not None
+    assert fetched.status == "deprecated"
+    assert fetched.certificate_id is None

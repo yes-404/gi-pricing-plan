@@ -18,6 +18,22 @@ four: `CustomMetric._direction_is_usable_for_stopping` (FR-MODEL-104) refuses
 values and needs a monotone "better". `custom_metric_direction_is_usable_for_stopping`
 mirrors that validator at the layer a direct `UPDATE` cannot walk past.
 
+**Row is undeletable, mirroring `custom_objectives_undeletable`.** A Model Spec resolves
+`custom_metric:<slug>@<version>`; if the row can be deleted, a model that early-stopped
+under it can no longer say what it was evaluated against — the same argument FR-MODEL-47
+makes for objectives, extended to metrics by FR-MODEL-45/108.
+
+**`kind = 'template' AND template IS NOT NULL`**, mirroring
+`CustomMetric._only_templates_are_built` (FR-MODEL-103/FR-MODEL-75): Phase 1 admits no
+`expression` metric, and a row with `kind = 'expression'` would carry no loss at all.
+
+**A status past `draft` rests on a certificate, except `deprecated`**, mirroring
+`CustomMetric._a_status_past_draft_rests_on_a_certificate` as corrected 2026-08-19
+(`30b6388`): `deprecated` is reachable directly from `draft`
+(`VALID_METRIC_TRANSITIONS[MetricStatus.DRAFT]`), so a metric abandoned before it was ever
+certified is withdrawn, not certified, and withdrawing it must not require inventing a
+certificate for a metric nobody ran.
+
 `metric_certificates` is insert-only, both at the privilege layer and by the row/statement
 trigger pair `e1f2a3b4c5d6` established as the corrected pattern (FR-DATA-47) — `06` §4.2
 makes it the required evidence for the approval, and evidence that can change after the
@@ -66,6 +82,19 @@ END;
 $fn$ LANGUAGE plpgsql;
 """
 
+UNDELETABLE = """
+CREATE OR REPLACE FUNCTION custom_metrics_undeletable() RETURNS trigger AS $fn$
+BEGIN
+  RAISE EXCEPTION 'a Custom Metric cannot be deleted (02 FR-MODEL-45/108)'
+    USING ERRCODE = 'insufficient_privilege',
+          HINT = 'Deprecate it. FR-MODEL-108''s usage query is the blast-radius answer, '
+                 'and it can only answer "which models used this metric?" while the row '
+                 'is still there.';
+  RETURN OLD;
+END;
+$fn$ LANGUAGE plpgsql;
+"""
+
 
 def upgrade() -> None:
     op.create_table(
@@ -103,6 +132,18 @@ def upgrade() -> None:
             "direction IN ('lower_is_better', 'higher_is_better')",
             name="custom_metric_direction_is_usable_for_stopping",
         ),
+        # FR-MODEL-103/FR-MODEL-75, mirroring `CustomMetric._only_templates_are_built`.
+        sa.CheckConstraint(
+            "kind = 'template' AND template IS NOT NULL",
+            name="custom_metric_is_a_template_in_phase_1",
+        ),
+        # FR-MODEL-105, mirroring `CustomMetric._a_status_past_draft_rests_on_a_certificate`
+        # as corrected in `30b6388`: `deprecated` joins `draft` because it is reachable
+        # directly from `draft` in `VALID_METRIC_TRANSITIONS`.
+        sa.CheckConstraint(
+            "status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL",
+            name="certified_metric_has_a_certificate",
+        ),
     )
     op.create_index(
         "ix_custom_metrics_slug_status", "custom_metrics", ["workspace_id", "slug", "status"]
@@ -131,10 +172,24 @@ def upgrade() -> None:
     )
 
     op.execute(DEFINITION_IMMUTABLE)
+    op.execute(UNDELETABLE)
     op.execute("""
         CREATE TRIGGER custom_metrics_definition_immutable
           BEFORE UPDATE ON custom_metrics
           FOR EACH ROW EXECUTE FUNCTION custom_metrics_definition_immutable();
+    """)
+    op.execute("""
+        CREATE TRIGGER custom_metrics_undeletable
+          BEFORE DELETE ON custom_metrics
+          FOR EACH ROW EXECUTE FUNCTION custom_metrics_undeletable();
+    """)
+    # TRUNCATE bypasses a row-level `BEFORE DELETE` trigger entirely, mirroring
+    # `custom_objectives_no_truncate` — without this, `TRUNCATE custom_metrics` would
+    # silently succeed despite `custom_metrics_undeletable` existing.
+    op.execute("""
+        CREATE TRIGGER custom_metrics_no_truncate
+          BEFORE TRUNCATE ON custom_metrics
+          FOR EACH STATEMENT EXECUTE FUNCTION artifact_append_only();
     """)
     # `artifact_append_only()` already exists (`a1b2c3d4e5f6`); this only attaches it, on
     # the row-plus-statement pattern `e1f2a3b4c5d6` corrected `objective_certificates` to.
@@ -160,7 +215,10 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS metric_certificates_no_truncate ON metric_certificates")
     op.execute("DROP TRIGGER IF EXISTS metric_certificates_no_modify ON metric_certificates")
+    op.execute("DROP TRIGGER IF EXISTS custom_metrics_no_truncate ON custom_metrics")
+    op.execute("DROP TRIGGER IF EXISTS custom_metrics_undeletable ON custom_metrics")
     op.execute("DROP TRIGGER IF EXISTS custom_metrics_definition_immutable ON custom_metrics")
+    op.execute("DROP FUNCTION IF EXISTS custom_metrics_undeletable()")
     op.execute("DROP FUNCTION IF EXISTS custom_metrics_definition_immutable()")
     op.drop_index("ix_metric_certificates_metric", table_name="metric_certificates")
     op.drop_table("metric_certificates")

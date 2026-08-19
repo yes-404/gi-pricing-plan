@@ -1722,6 +1722,23 @@ class CustomMetricRow(Base):
             "direction IN ('lower_is_better', 'higher_is_better')",
             name="custom_metric_direction_is_usable_for_stopping",
         ),
+        # FR-MODEL-103/FR-MODEL-75 for the whole of Phase 1, mirroring
+        # `CustomMetric._only_templates_are_built`: a `kind = 'expression'` row would carry
+        # no loss at all, since nothing an expression metric needs is built yet.
+        CheckConstraint(
+            "kind = 'template' AND template IS NOT NULL",
+            name="custom_metric_is_a_template_in_phase_1",
+        ),
+        # FR-MODEL-105, at the layer a direct `UPDATE` cannot walk past. Mirrors
+        # `CustomMetric._a_status_past_draft_rests_on_a_certificate` (corrected 2026-08-19,
+        # `30b6388`): `deprecated` joins `draft` because `VALID_METRIC_TRANSITIONS` reaches
+        # it directly from `draft` — a metric abandoned before it was ever certified is
+        # withdrawn, not certified, and withdrawing it must not require inventing a
+        # certificate for a metric nobody ever ran.
+        CheckConstraint(
+            "status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL",
+            name="certified_metric_has_a_certificate",
+        ),
         Index("ix_custom_metrics_slug_status", "workspace_id", "slug", "status"),
     )
 
