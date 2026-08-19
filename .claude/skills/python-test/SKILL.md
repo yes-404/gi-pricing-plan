@@ -424,7 +424,55 @@ sequence, and it found a deadlock that had made *every* dataset version with one
 unpromotable since the spec was amended three days earlier. Fixtures produced all-pass or a
 hard fail; nothing in between.
 
+## Never open a `unit_of_work` inside another one — it hangs, it does not fail
+
+Each `database.unit_of_work()` takes its **own connection** from the pool. Opening a second
+one while the first is still held does not raise, does not time out, and prints nothing: the
+inner one waits for a connection the outer one is holding, and **pytest hangs with no output
+at all**. There is no traceback to read, because nothing has failed yet.
+
+The shape that causes it is innocent — a fixture that builds one thing inside the transaction
+that builds another:
+
+```python
+# WRONG — the helper opens its own unit_of_work while this one is still open
+async with database.unit_of_work() as session:
+    row, _ = await model_service.reserve_model(session, ...)
+    central = _Central(..., objective_ref=await _approved_objective(database, ...))
+```
+
+```python
+# RIGHT — sequence the transactions, and carry only plain data across the boundary
+objective_ref = await _approved_objective(database, ...)
+
+async with database.unit_of_work() as session:
+    row, _ = await model_service.reserve_model(session, ...)
+    identity = (row.id, row.model_family_slug, row.version)   # not the ORM row
+
+return _Central(id=identity[0], ..., objective_ref=objective_ref)
+```
+
+Two habits that keep it away:
+
+* **A helper taking `database` opens a transaction; a helper taking `session` joins one.**
+  Never call the first from inside the second.
+* **Do not carry an ORM row out of its `async with`.** Read the fields you need into a tuple
+  or a frozen dataclass inside the block — the row is detached afterwards, and touching a
+  lazy attribute re-enters the session machinery.
+
+**Diagnosing it:** a run with zero output for minutes is this until proven otherwise. Do not
+wait it out — `pgrep -af "bin/pytest"` confirms the process is alive, then kill it and read
+the fixture for a nested `unit_of_work`.
+
 ## Verified
+
+2026-08-19 — W5, paired quantile models. The nesting rule above cost six minutes and a killed
+run: a fixture called an objective-building helper from inside the transaction that reserved
+a model, and the suite hung with no output. Three further fixture defects were the platform
+catching the test rather than the reverse — a `custom_objectives` CHECK refusing a status
+stamped past `draft` with no certificate, a factor naming a column the dataset lacks, and
+FR-MODEL-44 requiring a spec with a custom objective to declare its `response`. Suite at 1339,
+zero skipped.
 
 2026-08-18 — W5, custom objectives. The tolerance rule above came from raising a certification grid's floor from 600 to 1 000 points: three of twelve templates then warned on derivatives that were exactly correct, the fix loosened the agreement check, and nothing in the suite would have noticed that it had stopped catching a wrong one. Suite at 1213.
 
