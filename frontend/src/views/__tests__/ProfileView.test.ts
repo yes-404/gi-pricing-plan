@@ -1,10 +1,21 @@
-import { render, screen, within } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OneWaySummary, Profile } from "@/api/profiles";
+import type { OneWaySummary, Profile, ProfileComparison } from "@/api/profiles";
 
 import ProfileView from "../ProfileView.vue";
+
+// The view reads `?against` and writes it back with `router.replace` (OQ-DATA-11). A real
+// router would make every test in this file wait on navigation readiness; the mock keeps
+// the query controllable and lets one test assert what the view wrote.
+const routerReplace = vi.fn();
+const routeQuery: { against?: string } = {};
+vi.mock("vue-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("vue-router")>()),
+  useRoute: () => ({ query: routeQuery }),
+  useRouter: () => ({ replace: routerReplace }),
+}));
 
 vi.mock("@/components/OneWayChart.vue", () => ({
   // ECharts needs a real canvas. The chart's own behaviour is tested separately; here it
@@ -85,27 +96,79 @@ const ONE_WAY: OneWaySummary = {
 
 const VERSION = { id: PROFILE.dataset_version_id, version: 2 };
 
-function stub(oneWayStatus = 200, oneWayBody: unknown = ONE_WAY): void {
+const VERSIONS = {
+  items: [
+    { id: PROFILE.dataset_version_id, version: 2, profile_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+    { id: "33333333-3333-4333-8333-333333333333", version: 1, profile_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+    // A version that was ingested but never profiled: the endpoint would 404 for it, so
+    // the picker must not offer it as a choice.
+    { id: "44444444-4444-4444-8444-444444444444", version: 3, profile_id: null },
+  ],
+  next_cursor: null,
+  total_estimate: 3,
+};
+
+const COMPARISON: ProfileComparison = {
+  current_version_id: PROFILE.dataset_version_id,
+  reference_version_id: "33333333-3333-4333-8333-333333333333",
+  row_count_ratio: 1.0203,
+  columns: [
+    {
+      column: "veh_brand",
+      psi: 0.31,
+      mean_shift: null,
+      null_rate_shift: 0.012,
+      new_levels: ["B14"],
+      vanished_levels: [],
+    },
+    // Continuous: `compare_profiles` measures PSI from non-null `top_levels`, and this
+    // column has none — so `psi` is null and there is no band to draw.
+    {
+      column: "driv_age",
+      psi: null,
+      mean_shift: 1.35,
+      null_rate_shift: 0,
+      new_levels: [],
+      vanished_levels: [],
+    },
+  ],
+};
+
+function stub(
+  oneWayStatus = 200,
+  oneWayBody: unknown = ONE_WAY,
+  compare: { status?: number; body?: unknown } = {},
+  versions: { status?: number; body?: unknown } = {},
+): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL) => {
       const url = String(input);
-      if (url.includes("/one-ways")) {
-        return new Response(JSON.stringify(oneWayBody), {
-          status: oneWayStatus,
+      const json = (body: unknown, status = 200): Response =>
+        new Response(JSON.stringify(body), {
+          status,
           headers: { "Content-Type": "application/json" },
         });
-      }
-      const body = url.includes("/profile") ? PROFILE : VERSION;
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+
+      if (url.includes("/one-ways")) return json(oneWayBody, oneWayStatus);
+      if (url.includes("/compare")) return json(compare.body ?? COMPARISON, compare.status ?? 200);
+      // The versions *list* is `/datasets/{slug}/versions[?query]` — nothing after
+      // "versions" but a query string or the end. The single-version lookup
+      // `/datasets/{slug}/versions/{number}` also contains "/versions" as a substring, so
+      // a plain `.includes("/versions")` would swallow it too; it must stay the
+      // fall-through below.
+      if (/\/versions(\?|$)/.test(url)) return json(versions.body ?? VERSIONS, versions.status ?? 200);
+      if (url.includes("/profile")) return json(PROFILE);
+      return json(VERSION);
     }),
   );
 }
 
-beforeEach(() => stub());
+beforeEach(() => {
+  routerReplace.mockClear();
+  delete routeQuery.against;
+  stub();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 const props = { slug: "fremtpl2", version: "2", currency: "EUR" };
@@ -168,16 +231,54 @@ describe("the profile view", () => {
     expect(histograms[0]?.closest("article")).toHaveTextContent("driv_age");
   });
 
-  it("does not colour the dtype label as though it were a PSI band", async () => {
-    // A regression guard rather than a failing test: `psiBand(null)` already resolved to
-    // the neutral tone, so the pixels never differed. What was wrong was the claim — the
-    // view has no comparison to band, and the selector that will is a later slice.
+  it("shows no PSI band until a comparison is loaded", async () => {
+    // The original defect: the dtype label borrowed `psiBand`'s colour when there was no
+    // comparison at all, so the badge showed the colour of a band without the band. The
+    // selector now exists, so the guard is that no band appears *before* one is chosen.
     const { container } = render(ProfileView, { props, ...mounted });
     await screen.findByText(/29,970 rows/);
 
     expect(container.innerHTML).not.toContain("text-amber-700");
     expect(container.innerHTML).not.toContain("text-red-700");
+    // Carried over from the original guard: never true here, but still a real claim —
+    // no rendered class is named after a PSI band before or after this change.
     expect(container.innerHTML).not.toContain("psi-");
+    expect(screen.queryByText(/^PSI /)).not.toBeInTheDocument();
+    // `ColumnDrift`'s `undefined` branch (nothing) is tested at the component level; this
+    // pins the wiring that delivers `undefined` to it. `driftFor(column.name) ?? null`
+    // would satisfy the component's own tests while making every card claim "new in this
+    // version" before any reference is chosen — this is the assertion that catches that.
+    expect(screen.queryByText(/new in this version/)).not.toBeInTheDocument();
+  });
+
+  it("bands each column once a reference is chosen", async () => {
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+
+    // veh_brand moved 0.31 — above VR-DST-1's 0.25 fail threshold.
+    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-red-700");
+    // driv_age is continuous: no non-null top_levels, so no PSI and no band.
+    expect(screen.getByText(/PSI not measured/)).toBeInTheDocument();
+    // driv_age's mean_shift (1.35) is otherwise asserted nowhere: its unit, sign and
+    // `.toFixed(3)` rendering could all change silently.
+    expect(screen.getByText(/\+1\.350 mean/)).toBeInTheDocument();
+
+    // Pin the comparison's direction. Every field above still renders for the swapped
+    // call — an inverted comparison is a plausible-looking drift screen (every PSI, mean
+    // shift and null-rate shift reads backwards, row_count_ratio is the reciprocal), not a
+    // failure, so nothing else in this file would catch `compareProfiles(id, versionId)`.
+    // `request()` calls `fetch` with a `URL`, not a string, so this reads pathname and
+    // search rather than comparing against a literal — the origin is happy-dom's default.
+    const fetchMock = fetch as unknown as { mock: { calls: unknown[][] } };
+    const compareCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).includes("/compare"),
+    );
+    const compareUrl = new URL(String(compareCall?.[0]));
+    expect(compareUrl.pathname).toBe(
+      `/api/v1/dataset-versions/${PROFILE.dataset_version_id}/compare`,
+    );
+    expect(compareUrl.searchParams.get("against")).toBe(VERSIONS.items[1]?.id);
   });
 
   it("shows a top-level chip's level and count", async () => {
@@ -223,5 +324,103 @@ describe("the profile view", () => {
     render(ProfileView, { props, ...mounted });
     expect(await screen.findByText(/29,970 rows/)).toBeInTheDocument();
     expect(screen.getByText(/2 candidate rating factors/)).toBeInTheDocument();
+  });
+
+  it("offers the other versions of the dataset, and never the one being viewed", async () => {
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    const options = within(select).getAllByRole("option").map((o) => o.textContent?.trim());
+    // v2 is the version on screen — comparing it with itself is PSI 0 everywhere.
+    expect(options).not.toContain("v2");
+    expect(options).toContain("v1");
+  });
+
+  it("disables a version that has no stored profile rather than offering a 404", async () => {
+    // `compare` answers 404 NOT_FOUND for a reference with no profile. `profile_id` already
+    // says so, so the refusal happens in the picker instead of after the request.
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    const unprofiled = within(select).getByRole("option", { name: /v3 \(no profile\)/ });
+    expect(unprofiled).toBeDisabled();
+    // The opposite claim, proven separately: a profiled sibling stays selectable — only
+    // the unprofiled one is refused.
+    const profiled = within(select).getByRole("option", { name: "v1" });
+    expect(profiled).not.toBeDisabled();
+  });
+
+  it("seeds the comparison from the URL and writes the choice back to it", async () => {
+    routeQuery.against = "1";
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    // Seeded from `?against=1` — the comparison is shareable as a link.
+    await waitFor(() =>
+      expect((select as HTMLSelectElement).value).toBe(VERSIONS.items[1]?.id),
+    );
+
+    await userEvent.selectOptions(select, "");
+    expect(routerReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ against: undefined }) }),
+    );
+
+    // The other direction of the same watcher: choosing a version writes its *number*,
+    // not its id, back into the query.
+    await userEvent.selectOptions(select, VERSIONS.items[1]!.id);
+    expect(routerReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ against: "1" }) }),
+    );
+  });
+
+  it("ignores an ?against pointing at a version with no profile", async () => {
+    // A stale or hand-edited link must not put the view into a state the endpoint refuses.
+    routeQuery.against = "3";
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await waitFor(() => expect((select as HTMLSelectElement).value).toBe(""));
+    // Rejecting the selection does not, on its own, change `referenceId` (it was already
+    // `null`), so the write-back watcher never fires — the view must clear the query key
+    // itself, or the address bar keeps advertising a comparison it just refused.
+    expect(routerReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ against: undefined }) }),
+    );
+  });
+
+  it("keeps the profile on screen when the versions list fails to load", async () => {
+    // The picker is auxiliary (FR-DATA-27's refusal pattern, applied to the picker
+    // itself): a 500 or 403 fetching the sibling versions must not blank an
+    // already-loaded profile behind a full-page error.
+    stub(200, ONE_WAY, {}, {
+      status: 500,
+      body: { title: "boom", status: 500, code: "INTERNAL", errors: [] },
+    });
+    render(ProfileView, { props, ...mounted });
+    expect(await screen.findByText(/29,970 rows/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Compare against")).not.toBeInTheDocument();
+  });
+
+  it("states how the row count moved once a reference is chosen", async () => {
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/×1\.020 rows vs v1/)).toBeInTheDocument();
+  });
+
+  it("treats a reference version with no profile as an answer, not a failure", async () => {
+    // The endpoint 404s when the *reference* has no stored profile. The picker disables
+    // those, so this is the stale-link case: it must read as an explanation, not an alert.
+    stub(200, ONE_WAY, {
+      status: 404,
+      body: {
+        title: "This dataset version has no profile",
+        status: 404,
+        code: "NOT_FOUND",
+        errors: [],
+      },
+    });
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/has no profile to compare against/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

@@ -938,21 +938,23 @@ moved.
 "why can I not fit a model on this?" answerable in one screen without scrolling past the
 fold: overall banner → failing rules → warnings needing acknowledgement → everything else.
 
-> *(2026-08-19)* **The Profile row's four Contents items are now three built and one not.**
-> Histograms landed with FR-DATA-48; per-column cards and the one-way charts with their CI
-> bands were built in W6a. The **PSI comparison selector has not been built**:
-> `compareProfiles()` is implemented, typed and exported from `frontend/src/api/profiles.ts`
-> with **zero callers**, and the dtype label that borrowed `psiBand`'s colour has been
-> uncoloured rather than left reading as support the view lacks — `psiBand(null)` returned
-> `"stable"` before any threshold, so the badge was never showing a PSI band, only the
-> colour of one. FR-DATA-28's endpoint exists and is served; the view that reads it is
-> unowned.
+> *(2026-08-19)* **The Profile row's four Contents items are now all four built.** Histograms
+> landed with FR-DATA-48; per-column cards and the one-way charts with their CI bands were
+> built in W6a; the **PSI comparison selector** was built in the slice that closed this note.
+> It reads FR-DATA-28's endpoint through `compareProfiles()` — implemented, typed and exported
+> with zero callers until then — and bands each column against `VR-DST-1`'s thresholds, so a
+> rule's verdict and the screen an actuary is reading cannot disagree about one number.
 >
-> The row keeps the claim rather than losing it (`CLAUDE.md` §14: resolve, never soften).
-> **Owner: the next slice to open `ProfileView.vue`, or W6b** — the selector needs a
-> reference-version picker, which is the first piece of Profile state that must outlive a
-> route, and `docs/roadmap.md`'s W6a record already names it as the trigger for the
-> frontend's first Pinia store.
+> **Three things the build settled that this note had left open.** The reference lives in the
+> **route query** and not in a Pinia store (**OQ-DATA-11**): nothing required the selection to
+> outlive a route, and a URL is shareable where a store is not — `frontend/src/stores/` is
+> still empty, and the first store waits for state that is genuinely global. A version with no
+> stored `profile_id` is **disabled in the picker** rather than offered and then explained,
+> because the endpoint answers 404 for it and `DatasetVersion` already carries the answer. And
+> `psiBand` now **refuses an absent PSI** at the type level: it answered `"stable"` for `null`,
+> which is how an unmeasured continuous column would have rendered as a calm band the moment
+> the function gained a caller — the defect this note recorded, fixed at the source rather
+> than at the one call site that had it.
 >
 > **Resolved 2026-08-19 on the Dataset list row above: status badge, last validated, owner.**
 > The question of which entity carries them was recorded as OQ-DATA-9 rather than picked, and the
@@ -1088,3 +1090,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-DATA-6**~~ ✔ | ~~Is `warn` acknowledgement per-rule-per-report the right granularity, or should an actuary be able to pre-approve a recurring known warning for a defined period (with expiry) to avoid acknowledgement fatigue? |~~ **Decided 2026-08-14: per report as FR-DATA-18 specifies, plus a pre-fill affordance that still requires an explicit, separately audited act.**
 | ~~**OQ-DATA-9**~~ ✔ | ~~§5.3 asks the dataset list to display a status badge, a last-validated date and an owner. `Dataset` carries none of the three: status and `validation_report_id` live on `DatasetVersion`, and ownership is only implied by `workspace_id`. Does `Dataset` gain the three fields, or does §5.3 mean the latest version's status and validated-at, plus a workspace-level owner?~~ **DECIDED 2026-08-19: two of the three are projections of the latest versions, one is a new field.** Specified as FR-DATA-50 (`latest_version_status` and `last_validated_at`, derived by the list endpoint, never stored) and FR-DATA-51 (`Dataset.owner_id`, explicit, not derived from `workspace_id`). Neither is delivered; both are W6b's, with the trigger named in the requirements. Raised 2026-08-18 (W5). |
 | ~~**OQ-DATA-10**~~ ✔ | ~~FR-DATA-25 asks for "top-20 levels by exposure and by count", and the platform produces one list selected by count with `exposure_years` carried per level (FR-DATA-49). Should there be a second, exposure-ordered selection, and should `VR-DST-1`'s PSI weight by exposure rather than count? The two are one question — an exposure-weighted PSI over a count-selected level set is meaningless.~~ **DECIDED 2026-08-19: defer both, together, until a consumer needs an exposure-ordered view.** FR-DATA-25 amended to say the platform produces one count-selected list; the deferral, its trigger and its unowned status are FR-DATA-52. Raised 2026-08-19 (W5). |
+| ~~**OQ-DATA-11**~~ ✔ | ~~§5.3's PSI comparison selector needs somewhere to keep the chosen reference version. §5.3's own note and `docs/roadmap.md`'s Pinia row both predict the frontend's first Pinia store, on the premise that this is "the first piece of Profile state that must outlive a route". Is that premise right, or does the reference belong in the route query?~~ **DECIDED 2026-08-19: the route query (`?against=<version>`), not a Pinia store.** Nothing requires the reference to survive navigation — the premise behind the store prediction does not hold once checked — and the route query costs the first `useRoute`/`useRouter` in the frontend rather than the first Pinia store; `frontend/src/stores/` stays empty. Raised 2026-08-19 (W5, the comparison-selector slice). |
