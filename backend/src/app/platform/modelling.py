@@ -43,12 +43,14 @@ from model_schema import (
     Factor,
     FactorType,
     FitResult,
+    GbmSpec,
     GlmFitResult,
     JobSource,
     Model,
     ModelFlag,
     ModelSpec,
     ModelStatus,
+    ObjectiveTemplate,
     Permission,
     Principal,
 )
@@ -61,6 +63,7 @@ __all__ = [
     "flags_for",
     "list_factors",
     "load_factors",
+    "load_interval_models",
     "load_model",
     "load_model_by_id",
     "record_fit",
@@ -319,6 +322,14 @@ async def reserve_model(
     dataset_version = await datasets.fittable_or_refuse(
         session, workspace_id=workspace_id, version_id=spec.dataset_version_id
     )
+    # Before the factor check, deliberately. A bound naming the wrong dataset version also
+    # fails factor resolution — the factors belong to the central model's dataset and not to
+    # the one the bound named — so the factor error is a *symptom* of the pairing mistake.
+    # Reported in the other order, the caller goes and re-checks factors that were never
+    # wrong (FR-MODEL-78).
+    await _refuse_mismatched_interval_model(
+        session, workspace_id=workspace_id, spec=spec
+    )
     await _refuse_unusable_factors(
         session, workspace_id=workspace_id, spec=spec, dataset_id=dataset_version.dataset_id
     )
@@ -434,6 +445,179 @@ async def _refuse_unusable_factors(
             409,
             f"{detail} against dataset {dataset_id}. FR-MODEL-2 defines a Factor against a "
             "Dataset; matching column names elsewhere do not make it the same variable.",
+        )
+
+
+async def load_interval_models(
+    session: AsyncSession, *, workspace_id: UUID, central_model_id: UUID
+) -> list[ModelRow]:
+    """Every quantile bound fitted for `central_model_id`, lower first (FR-MODEL-78).
+
+    **Ordered here rather than by the caller.** Two callers sorting the same list two ways
+    is how a lower bound reaches the upper side of a response, and `PredictedRow`'s
+    ordering validator would then raise three layers away from the cause.
+
+    The predicate reads a field inside a JSON document, so `workspace_id` is filtered
+    explicitly: unlike a foreign key, a JSONB path carries no tenancy of its own.
+
+    `[]` is the ordinary answer — almost no model is bounded — and the prediction path
+    reads it as FR-MODEL-77's `no_interval_models_fitted` rather than as a failure.
+    """
+    rows = (
+        (
+            await session.execute(
+                select(ModelRow).where(
+                    ModelRow.workspace_id == workspace_id,
+                    ModelRow.spec["interval_for"]["model_id"].astext
+                    == str(central_model_id),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return sorted(rows, key=_bound_alpha)
+
+
+def _bound_alpha(row: ModelRow) -> float:
+    """The alpha a stored bound declares, for ordering. Raises if the row is not a bound."""
+    spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+    if not isinstance(spec, GbmSpec) or spec.interval_for is None:
+        raise PlatformError(
+            "MODEL_INTERVAL_PAIR_INVALID",
+            "A stored bound carries no interval_for",
+            409,
+            f"{row.model_family_slug}@{row.version} was found by the interval_for lookup "
+            "and does not carry one. The JSONB predicate and the parsed spec disagree, "
+            "which means the stored document is not the shape this code reads.",
+        )
+    return spec.interval_for.alpha
+
+
+async def _refuse_mismatched_interval_model(
+    session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec
+) -> None:
+    """FR-MODEL-78's rules for what a bound must be, enforced before a Job exists.
+
+    A bound that disagrees with its central model is an interval drawn around a different
+    model. It fits without complaint, returns two ordered numbers, and nothing downstream
+    can tell it from a correct one — which is why the refusal is here rather than left to a
+    reviewer's judgement.
+
+    **Set comparison on `factors`, not tuple comparison.** Two specs listing the same
+    factors in a different order describe the same design matrix, and refusing that would
+    reject a legitimate bound over a difference the fit cannot see.
+
+    **The objective is checked too, and it is the rule most easily left out.** A bound whose
+    objective is `count:poisson` passes every structural rule and estimates the *mean*; the
+    pair would then be two mean estimates reported as an interval. FR-MODEL-78 says a bound
+    is fitted with the `quantile` template at a declared alpha, and this is where that
+    sentence becomes a refusal.
+    """
+    if not isinstance(spec, GbmSpec) or spec.interval_for is None:
+        return
+
+    from app.platform import objectives as objective_service
+
+    central = await session.get(ModelRow, spec.interval_for.model_id)
+    if central is None or central.workspace_id != workspace_id:
+        raise PlatformError(
+            "NOT_FOUND",
+            "The model this bound is for does not exist",
+            404,
+            f"interval_for names model {spec.interval_for.model_id}, which is not a model "
+            "in this workspace.",
+        )
+
+    central_spec = MODEL_SPEC_ADAPTER.validate_python(central.spec)
+    mismatches = [
+        field
+        for field, mine, theirs in (
+            ("model_family_slug", spec.model_family_slug, central_spec.model_family_slug),
+            ("dataset_version_id", spec.dataset_version_id, central_spec.dataset_version_id),
+            ("split_ref", spec.split_ref, central_spec.split_ref),
+            ("factors", set(spec.factors), set(central_spec.factors)),
+        )
+        if mine != theirs
+    ]
+    if mismatches:
+        raise PlatformError(
+            "MODEL_INTERVAL_PAIR_INVALID",
+            "This bound does not match the model it bounds",
+            409,
+            f"interval_for names {central.model_family_slug}@{central.version}, but the "
+            f"two specifications disagree on {', '.join(mismatches)} (FR-MODEL-78). An "
+            "interval fitted on a different design is an interval around a different "
+            "model, and renders identically to a correct one.",
+        )
+
+    await _refuse_a_bound_that_is_not_a_quantile_fit(
+        session, workspace_id=workspace_id, spec=spec, service=objective_service
+    )
+
+    side = "lower" if spec.interval_for.alpha < 0.5 else "upper"
+    for existing in await load_interval_models(
+        session, workspace_id=workspace_id, central_model_id=central.id
+    ):
+        existing_alpha = _bound_alpha(existing)
+        if (existing_alpha < 0.5) == (spec.interval_for.alpha < 0.5):
+            raise PlatformError(
+                "MODEL_INTERVAL_PAIR_INVALID",
+                f"This model already has a {side} bound",
+                409,
+                f"{central.model_family_slug}@{central.version} already has a {side} bound "
+                f"at alpha={existing_alpha} ({existing.model_family_slug}@"
+                f"{existing.version}). FR-MODEL-100 allows one per side: the response "
+                "carries a single `level`, and two bounds on one side leave nothing to say "
+                "which pair produced it.",
+            )
+
+
+async def _refuse_a_bound_that_is_not_a_quantile_fit(
+    session: AsyncSession, *, workspace_id: UUID, spec: GbmSpec, service: Any
+) -> None:
+    """The bound's loss must be the pinball loss, at the alpha the bound claims.
+
+    Two alphas are declared because they mean two things — the loss the booster minimises,
+    and the quantile the artifact says it estimates — and a bound whose loss seeks the 5th
+    percentile while `interval_for` says the 25th is mislabelled at exactly the point a
+    reader would check it.
+    """
+    assert spec.interval_for is not None
+    declared = spec.interval_for.alpha
+    if spec.objective.kind != "custom" or not spec.objective.ref:
+        raise PlatformError(
+            "MODEL_INTERVAL_PAIR_INVALID",
+            "A bound must be fitted with the quantile template",
+            409,
+            f"objective {spec.objective.name!r} is a builtin, and FR-MODEL-78 fits each "
+            "bound with the `quantile` template (§4.5) at a declared alpha. A builtin "
+            "objective estimates the mean, so the pair would be two mean estimates "
+            "reported as an interval.",
+        )
+
+    objective = await service.resolve_ref(
+        session, workspace_id=workspace_id, ref=spec.objective.ref
+    )
+    if objective.template != ObjectiveTemplate.QUANTILE:
+        raise PlatformError(
+            "MODEL_INTERVAL_PAIR_INVALID",
+            "A bound must be fitted with the quantile template",
+            409,
+            f"{spec.objective.ref} is the {objective.template.value!r} template, not "
+            "`quantile` (FR-MODEL-78). Only the pinball loss estimates a quantile; every "
+            "other template in §4.5 estimates a mean of some kind.",
+        )
+    objective_alpha = objective.params.get("alpha")
+    if objective_alpha != declared:
+        raise PlatformError(
+            "MODEL_INTERVAL_PAIR_INVALID",
+            "The bound and its objective disagree about which quantile this is",
+            409,
+            f"interval_for declares alpha={declared} and {spec.objective.ref} minimises "
+            f"the pinball loss at alpha={objective_alpha}. The loss decides what the "
+            "booster learns and the artifact decides what the pair claims; a bound where "
+            "they differ is mislabelled where a reader would check it.",
         )
 
 
