@@ -8,6 +8,7 @@ export type Histogram = components["schemas"]["Histogram"];
 export type OneWaySummary = components["schemas"]["OneWaySummary"];
 export type OneWayRow = components["schemas"]["OneWayRow"];
 export type ProfileComparison = components["schemas"]["ProfileComparison"];
+export type ColumnComparison = components["schemas"]["ColumnComparison"];
 
 /** FR-DATA-25. Read, never recomputed — FR-DATA-27 forbids the UI computing one. */
 export function getProfile(versionId: string): Promise<Profile> {
@@ -42,9 +43,13 @@ export function compareProfiles(
  *
  * The same thresholds the validation rule uses, so a stable-looking column here and a
  * warning in the report cannot disagree about the same number.
+ *
+ * **Takes a `number`, not a nullable one.** `compare_profiles` returns `psi: null` for a
+ * column it could not measure — every column with no non-null `top_levels`. An earlier
+ * version answered `"stable"` for that, so an unmeasured column rendered as a calm band
+ * rather than as no band at all; the caller now has to decide, and the type makes it.
  */
-export function psiBand(psi: number | null | undefined): "stable" | "shifted" | "broken" {
-  if (psi == null) return "stable";
+export function psiBand(psi: number): "stable" | "shifted" | "broken" {
   if (psi > 0.25) return "broken";
   if (psi > 0.1) return "shifted";
   return "stable";
