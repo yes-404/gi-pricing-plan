@@ -1,10 +1,21 @@
-import { render, screen, within } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OneWaySummary, Profile } from "@/api/profiles";
 
 import ProfileView from "../ProfileView.vue";
+
+// The view reads `?against` and writes it back with `router.replace` (OQ-DATA-11). A real
+// router would make every test in this file wait on navigation readiness; the mock keeps
+// the query controllable and lets one test assert what the view wrote.
+const routerReplace = vi.fn();
+const routeQuery: { against?: string } = {};
+vi.mock("vue-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("vue-router")>()),
+  useRoute: () => ({ query: routeQuery }),
+  useRouter: () => ({ replace: routerReplace }),
+}));
 
 vi.mock("@/components/OneWayChart.vue", () => ({
   // ECharts needs a real canvas. The chart's own behaviour is tested separately; here it
@@ -85,27 +96,55 @@ const ONE_WAY: OneWaySummary = {
 
 const VERSION = { id: PROFILE.dataset_version_id, version: 2 };
 
-function stub(oneWayStatus = 200, oneWayBody: unknown = ONE_WAY): void {
+const VERSIONS = {
+  items: [
+    { id: PROFILE.dataset_version_id, version: 2, profile_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" },
+    { id: "33333333-3333-4333-8333-333333333333", version: 1, profile_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" },
+    // A version that was ingested but never profiled: the endpoint would 404 for it, so
+    // the picker must not offer it as a choice.
+    { id: "44444444-4444-4444-8444-444444444444", version: 3, profile_id: null },
+  ],
+  next_cursor: null,
+  total_estimate: 3,
+};
+
+// Replaced by a real fixture in Task 4. Declared here so the stub below compiles.
+const COMPARISON: unknown = null;
+
+function stub(
+  oneWayStatus = 200,
+  oneWayBody: unknown = ONE_WAY,
+  compare: { status?: number; body?: unknown } = {},
+): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL) => {
       const url = String(input);
-      if (url.includes("/one-ways")) {
-        return new Response(JSON.stringify(oneWayBody), {
-          status: oneWayStatus,
+      const json = (body: unknown, status = 200): Response =>
+        new Response(JSON.stringify(body), {
+          status,
           headers: { "Content-Type": "application/json" },
         });
-      }
-      const body = url.includes("/profile") ? PROFILE : VERSION;
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+
+      if (url.includes("/one-ways")) return json(oneWayBody, oneWayStatus);
+      if (url.includes("/compare")) return json(compare.body ?? COMPARISON, compare.status ?? 200);
+      // The versions *list* is `/datasets/{slug}/versions[?query]` — nothing after
+      // "versions" but a query string or the end. The single-version lookup
+      // `/datasets/{slug}/versions/{number}` also contains "/versions" as a substring, so
+      // a plain `.includes("/versions")` would swallow it too; it must stay the
+      // fall-through below.
+      if (/\/versions(\?|$)/.test(url)) return json(VERSIONS);
+      if (url.includes("/profile")) return json(PROFILE);
+      return json(VERSION);
     }),
   );
 }
 
-beforeEach(() => stub());
+beforeEach(() => {
+  routerReplace.mockClear();
+  delete routeQuery.against;
+  stub();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 const props = { slug: "fremtpl2", version: "2", currency: "EUR" };
@@ -223,5 +262,46 @@ describe("the profile view", () => {
     render(ProfileView, { props, ...mounted });
     expect(await screen.findByText(/29,970 rows/)).toBeInTheDocument();
     expect(screen.getByText(/2 candidate rating factors/)).toBeInTheDocument();
+  });
+
+  it("offers the other versions of the dataset, and never the one being viewed", async () => {
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    const options = within(select).getAllByRole("option").map((o) => o.textContent?.trim());
+    // v2 is the version on screen — comparing it with itself is PSI 0 everywhere.
+    expect(options).not.toContain("v2");
+    expect(options).toContain("v1");
+  });
+
+  it("disables a version that has no stored profile rather than offering a 404", async () => {
+    // `compare` answers 404 NOT_FOUND for a reference with no profile. `profile_id` already
+    // says so, so the refusal happens in the picker instead of after the request.
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    const unprofiled = within(select).getByRole("option", { name: /v3 \(no profile\)/ });
+    expect(unprofiled).toBeDisabled();
+  });
+
+  it("seeds the comparison from the URL and writes the choice back to it", async () => {
+    routeQuery.against = "1";
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    // Seeded from `?against=1` — the comparison is shareable as a link.
+    await waitFor(() =>
+      expect((select as HTMLSelectElement).value).toBe(VERSIONS.items[1]?.id),
+    );
+
+    await userEvent.selectOptions(select, "");
+    expect(routerReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ against: undefined }) }),
+    );
+  });
+
+  it("ignores an ?against pointing at a version with no profile", async () => {
+    // A stale or hand-edited link must not put the view into a state the endpoint refuses.
+    routeQuery.against = "3";
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await waitFor(() => expect((select as HTMLSelectElement).value).toBe(""));
   });
 });

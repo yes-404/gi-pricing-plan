@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { RouterLink } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 
+import { listVersions } from "@/api/datasets";
 import { ProblemError, isProblem } from "@/api/problem";
 import {
   getOneWay,
@@ -10,7 +11,7 @@ import {
   type OneWaySummary,
   type Profile,
 } from "@/api/profiles";
-import { formatDecimalString, formatMinor, getVersion } from "@/api/versions";
+import { formatDecimalString, formatMinor, getVersion, type DatasetVersion } from "@/api/versions";
 import HistogramChart from "@/components/HistogramChart.vue";
 import OneWayChart from "@/components/OneWayChart.vue";
 
@@ -23,9 +24,30 @@ const oneWayMissing = ref(false);
 const loading = ref(true);
 const problem = ref<ProblemError | null>(null);
 const versionId = ref<string | null>(null);
+const siblings = ref<DatasetVersion[]>([]);
+const truncated = ref(false);
+const referenceId = ref<string | null>(null);
+
+const route = useRoute();
+const router = useRouter();
 
 const currency = computed(() => props.currency ?? "GBP");
 const rateable = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
+
+/**
+ * The `<select>`'s own value can only ever be a plain string — a native `<option>` with
+ * no `value` attribute falls back to its text content ("No comparison"), not `""`, so
+ * binding `referenceId` (which is `null` for "no comparison") to the `<select>` directly
+ * would leave that option's element value reading as its label rather than empty. This
+ * computed is the one place that translates between the DOM's `""` and the model's `null`
+ * — `referenceId` itself stays `Ref<string | null>` for Task 4's comparison fetch.
+ */
+const referenceSelection = computed<string>({
+  get: () => referenceId.value ?? "",
+  set: (value) => {
+    referenceId.value = value === "" ? null : value;
+  },
+});
 
 /**
  * A chip's label. `level` is nullable (FR-DATA-49): a genuine missing level renders as
@@ -49,6 +71,20 @@ async function load(): Promise<void> {
     versionId.value = version.id;
     profile.value = await getProfile(version.id);
     selected.value = rateable.value[0] ?? null;
+
+    // `MAX_LIMIT` is 200 and versions come back newest-first, so one page is the selector's
+    // universe. If there is a cursor left, say so rather than silently offering a subset.
+    const page = await listVersions(props.slug, { limit: 200 });
+    siblings.value = page.items.filter((v) => v.id !== version.id);
+    truncated.value = page.next_cursor != null;
+
+    // `?against=<version number>`, not an id: the URL is something an actuary reads and
+    // sends, and a version number is what the rest of the app routes on. A version with no
+    // profile is ignored rather than honoured — a stale link must not put the view into a
+    // state the endpoint refuses.
+    const wanted = typeof route.query.against === "string" ? route.query.against : null;
+    const seeded = siblings.value.find((v) => String(v.version) === wanted);
+    referenceId.value = seeded?.profile_id != null ? seeded.id : null;
   } catch (error) {
     if (error instanceof ProblemError) problem.value = error;
     else throw error;
@@ -69,6 +105,16 @@ watch(selected, async (column) => {
     if (isProblem(error, "NOT_FOUND")) oneWayMissing.value = true;
     else throw error;
   }
+});
+
+watch(referenceId, (id) => {
+  const chosen = siblings.value.find((v) => v.id === id);
+  void router.replace({
+    query: {
+      ...route.query,
+      ...(chosen ? { against: String(chosen.version) } : { against: undefined }),
+    },
+  });
 });
 
 onMounted(() => void load());
@@ -132,6 +178,47 @@ onMounted(() => void load());
         {{ (profile.columns ?? []).length }} columns ·
         {{ rateable.length }} candidate rating factors
       </p>
+
+      <section class="mt-6">
+        <div class="flex items-center gap-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Drift
+          </h2>
+          <select
+            v-if="siblings.length"
+            v-model="referenceSelection"
+            aria-label="Compare against"
+            class="rounded-md border border-slate-300 px-2 py-1 text-sm"
+          >
+            <option value="">
+              No comparison
+            </option>
+            <!-- A version with no stored profile cannot be compared against: the endpoint
+                 answers 404 and `profile_id` already says so, so it is shown as unavailable
+                 rather than offered and then explained. -->
+            <option
+              v-for="sibling in siblings"
+              :key="sibling.id"
+              :value="sibling.id"
+              :disabled="sibling.profile_id == null"
+            >
+              v{{ sibling.version }}{{ sibling.profile_id == null ? " (no profile)" : "" }}
+            </option>
+          </select>
+          <p
+            v-else
+            class="text-sm text-slate-500"
+          >
+            No other version of this dataset to compare against.
+          </p>
+        </div>
+        <p
+          v-if="truncated"
+          class="mt-2 text-xs text-slate-500"
+        >
+          Showing the 200 most recent versions.
+        </p>
+      </section>
 
       <section
         v-if="rateable.length"
