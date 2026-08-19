@@ -610,6 +610,19 @@
           "title": "Alpha",
           "type": "number"
         },
+        "approximates_model_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approximates Model Id"
+        },
         "dataset_version_id": {
           "format": "uuid",
           "title": "Dataset Version Id",

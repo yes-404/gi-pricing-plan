@@ -172,6 +172,10 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "MODEL_OFFSET_MISSING",
         "MODEL_INTERVAL_UNAVAILABLE",
         "MODEL_INTERVAL_PAIR_INVALID",
+        # FR-MODEL-96, 2026-08-19. The surrogate the transparency Job reserves is an
+        # ordinary Model, so `POST /api/v1/models` can be handed a spec claiming to
+        # approximate anything at all.
+        "MODEL_APPROXIMATION_INVALID",
         # The peril-structure slice, 2026-08-18. `02` §5.1 has declared this code since
         # Phase 0 and nothing raised it; `LOSS_TREATMENT_UNIMPLEMENTED` above was
         # registered by the GBM slice for the same reason and is raised for the first time

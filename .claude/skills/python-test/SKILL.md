@@ -466,6 +466,15 @@ the fixture for a nested `unit_of_work`.
 
 ## Verified
 
+2026-08-19 — W5, the GLM approximation as a Model. The `git checkout --` rule above cost a
+whole task's rewrite: reverting a deliberately-broken file with `git checkout -- <file>` to
+prove an enforcement path fails on bad input restored **HEAD**, discarding every uncommitted
+edit written earlier in the same task rather than only the injected defect. The implementer
+re-spliced the rewrite from scratch; every later task in the plan was told to `cp file
+/tmp/file.bak` first instead. The rule was already written here (added in #72) — this is a
+second, costlier confirmation that it is not optional even when the file being restored is
+not the one the rule's own example names.
+
 2026-08-19 — W5, paired quantile models. The nesting rule above cost six minutes and a killed
 run: a fixture called an objective-building helper from inside the transaction that reserved
 a model, and the suite hung with no output. Three further fixture defects were the platform

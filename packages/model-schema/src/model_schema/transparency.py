@@ -9,11 +9,12 @@ date:
 
 * the artifact has an `id`, a `model_id` and a `created_at`. As printed it was a payload,
   not a stored artifact — the same gap `#81` found in the comparison artifact;
-* `approximating_model_id` is **not** populated. §4.9 implies the GLM approximation is a
-  first-class Model, which would need a spec whose response column is another model's
-  prediction, a `spec_hash`, a version and diagnostics of its own. The approximation's
-  coefficients and relativities are carried here instead, and whether it should also be a
-  Model is **OQ-MODEL-10** rather than a decision taken quietly;
+* `approximating_model_id` is populated from 2026-08-19 (FR-MODEL-96, resolving
+  OQ-MODEL-10): the GLM approximation is a first-class Model, with its own spec
+  (`GlmSpec.approximates_model_id`, FR-MODEL-102), `spec_hash`, version and diagnostics.
+  Artifacts written before that date carry the coefficients and relativities inline
+  instead, because the approximation had nowhere else to live — the two eras are
+  mutually exclusive, enforced below;
 * `kinds` is derived from which blocks are present rather than declared beside them. Two
   statements of one fact disagree, and §4.9's own invariant note ("`glm_approximation` in
   kinds implies the block is present") is that disagreement written down as a rule.
@@ -82,7 +83,9 @@ class GlmApproximation(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     target: str = "gbm_prediction"
-    #: `None`, always, in this slice — see the module docstring and OQ-MODEL-10.
+    #: FR-MODEL-96 — the Model that holds the approximation's table. Set on every artifact
+    #: written from 2026-08-19; `None` on artifacts written before, which carry the table
+    #: inline instead.
     approximating_model_id: UUID | None = None
     family: str = "gamma"
     link: str = "log"
@@ -90,10 +93,30 @@ class GlmApproximation(BaseModel):
     #: clamping a negative R² to zero would report a useless approximation as a mediocre one.
     r_squared: float = Field(le=1.0)
     deviance_explained: float = Field(le=1.0)
+    #: **Legacy era.** Populated only on artifacts written before FR-MODEL-96 was built
+    #: (2026-08-19), where the table had nowhere else to live. New artifacts name a Model
+    #: and leave these empty; the validator below refuses the mixture.
     coefficients: tuple[Coefficient, ...] = ()
     relativities: dict[str, tuple[RelativityLevel, ...]] = Field(default_factory=dict)
     worst_regions: tuple[WorstRegion, ...] = ()
     relativity_table_blob: BlobRef | None = None
+
+    @model_validator(mode="after")
+    def _the_table_is_in_exactly_one_place(self) -> Self:
+        """FR-MODEL-96: a model reference, or an inline table, never both and never neither.
+
+        Both is two answers to "where are the coefficients?", and the reader who takes the
+        wrong one is reading a table that was not approved. Neither is a fidelity score with
+        no table behind it — the approximation reported as good without saying what it was.
+        """
+        inline = bool(self.coefficients) or bool(self.relativities)
+        if inline == (self.approximating_model_id is not None):
+            raise ValueError(
+                "a GLM approximation carries exactly one table: `approximating_model_id` "
+                "naming the Model that holds it (FR-MODEL-96), or the inline "
+                "`coefficients`/`relativities` of an artifact written before 2026-08-19."
+            )
+        return self
 
 
 class ShapContribution(BaseModel):

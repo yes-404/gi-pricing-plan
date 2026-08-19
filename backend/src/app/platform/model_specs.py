@@ -34,6 +34,7 @@ from model_schema import (
     DatasetStatus,
     Factor,
     GbmSpec,
+    GlmSpec,
     JobSource,
     ModelSpec,
     Principal,
@@ -225,7 +226,11 @@ async def validate_spec(
                 )
             )
 
-    if columns and spec.response_column not in columns:
+    # A surrogate's response is another model's prediction, not a column the version has
+    # (FR-MODEL-96, FR-MODEL-102). Reporting it missing would tell an analyst their
+    # approximation was broken because it is an approximation.
+    surrogate = isinstance(spec, GlmSpec) and spec.approximates_model_id is not None
+    if columns and not surrogate and spec.response_column not in columns:
         problems.append(
             SpecProblem(
                 kind=SpecProblemKind.RESPONSE_MISSING,

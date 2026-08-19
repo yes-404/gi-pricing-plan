@@ -14,6 +14,7 @@ import pytest
 from test_gbm import BACKENDS, FACTORS, _factor, _frequency_data, _spec
 
 from model_schema import (
+    SURROGATE_RESPONSE_COLUMN,
     MonotonicDirection,
     TransparencyArtifact,
     TransparencyKind,
@@ -48,14 +49,15 @@ def test_the_approximation_is_fitted_to_the_boosters_predictions(backend: str) -
     """
     data, spec, factors, fit = _fit(backend)
     approximation = build_glm_approximation(
-        fit.result, fit.booster_bytes, spec, factors, data
+        fit.result, fit.booster_bytes, spec, factors, data,
+        holdout=data, source_model_id=new_uuid7(),
     )
-    assert approximation.target == "gbm_prediction"
     assert approximation.r_squared > 0.8
     assert approximation.deviance_explained > 0.5
-    # It is a rateable table or it is not an approximation (FR-MODEL-34).
-    assert approximation.relativities
-    assert any(c.term == "intercept" for c in approximation.coefficients)
+    # It is a rateable table or it is not an approximation (FR-MODEL-34) — and from
+    # FR-MODEL-96 the table is the surrogate Model's fit result.
+    assert approximation.result.relativities
+    assert any(c.term == "intercept" for c in approximation.result.coefficients)
 
 
 @pytest.mark.req("FR-MODEL-36")
@@ -69,7 +71,8 @@ def test_the_worst_regions_name_a_cell_and_its_share_of_the_book(backend: str) -
     """
     data, spec, factors, fit = _fit(backend)
     approximation = build_glm_approximation(
-        fit.result, fit.booster_bytes, spec, factors, data
+        fit.result, fit.booster_bytes, spec, factors, data,
+        holdout=data, source_model_id=new_uuid7(),
     )
     assert approximation.worst_regions
     worst = approximation.worst_regions[0]
@@ -168,12 +171,13 @@ def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str)
     """
     data, spec, factors, fit = _fit(backend)
     approximation = build_glm_approximation(
-        fit.result, fit.booster_bytes, spec, factors, data
+        fit.result, fit.booster_bytes, spec, factors, data,
+        holdout=data, source_model_id=new_uuid7(),
     )
     summary = build_shap_summary(
         fit.result, fit.booster_bytes, spec, factors, data, sample=1_000
     )
-    statement = fidelity_statement(approximation, summary)
+    statement = fidelity_statement(approximation.artifact_block(new_uuid7()), summary)
     assert "%" in statement
     assert "Divergence concentrates in area = " in statement
     if backend == "lightgbm":
@@ -208,12 +212,14 @@ def test_the_kinds_are_derived_from_what_is_present(backend: str) -> None:
     import datetime
 
     data, spec, factors, fit = _fit(backend)
+    approximation = build_glm_approximation(
+        fit.result, fit.booster_bytes, spec, factors, data,
+        holdout=data, source_model_id=new_uuid7(),
+    )
     artifact = TransparencyArtifact(
         id=new_uuid7(), model_id=new_uuid7(),
         created_at=datetime.datetime.now(datetime.UTC),
-        glm_approximation=build_glm_approximation(
-            fit.result, fit.booster_bytes, spec, factors, data
-        ),
+        glm_approximation=approximation.artifact_block(new_uuid7()),
         fidelity_statement="—",
     )
     assert artifact.kinds == (TransparencyKind.GLM_APPROXIMATION,)
@@ -235,9 +241,10 @@ def test_a_monotone_gbm_approximates_to_a_monotone_table(backend: str) -> None:
     ]
     data, spec, used, fit = _fit(backend, factors)
     approximation = build_glm_approximation(
-        fit.result, fit.booster_bytes, spec, used, data
+        fit.result, fit.booster_bytes, spec, used, data,
+        holdout=data, source_model_id=new_uuid7(),
     )
-    age = next(c for c in approximation.coefficients if c.term == "driv_age")
+    age = next(c for c in approximation.result.coefficients if c.term == "driv_age")
     assert age.estimate > 0
 
 
@@ -269,8 +276,52 @@ def test_an_approximation_reports_a_poor_fit_as_a_poor_fit(backend: str) -> None
                  hyperparameters={"max_depth": 6, "eta": 0.2, "num_boost_round": 120})
     fit = fit_gbm(data, spec, FACTORS)
     approximation = build_glm_approximation(
-        fit.result, fit.booster_bytes, spec, FACTORS, data
+        fit.result, fit.booster_bytes, spec, FACTORS, data,
+        holdout=data, source_model_id=new_uuid7(),
     )
     assert approximation.r_squared < 0.95
-    statement = fidelity_statement(approximation, None)
+    statement = fidelity_statement(approximation.artifact_block(new_uuid7()), None)
     assert "Divergence concentrates" in statement
+
+
+@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_the_approximation_returns_the_fit_that_produced_it(backend: str) -> None:
+    """FR-MODEL-96 persists the surrogate as a Model, so its fit result must survive.
+
+    Before this it was fitted and thrown away, and the artifact kept a summary of a model
+    nothing could reproduce.
+    """
+    data, spec, factors, fit = _fit(backend)
+    source = new_uuid7()
+    approximation = build_glm_approximation(
+        fit.result, fit.booster_bytes, spec, factors, data,
+        holdout=data, source_model_id=source,
+    )
+    assert approximation.result.model_type == "glm"
+    assert any(c.term == "intercept" for c in approximation.result.coefficients)
+    assert approximation.result.relativities
+    assert approximation.spec.approximates_model_id == source
+    assert approximation.spec.response_column == SURROGATE_RESPONSE_COLUMN
+    # The surrogate target travels with the frames, so the caller's diagnostics measure the
+    # surrogate against the booster rather than against the observed response.
+    assert SURROGATE_RESPONSE_COLUMN in approximation.train.columns
+    assert SURROGATE_RESPONSE_COLUMN in approximation.holdout.columns
+
+
+@pytest.mark.req("FR-MODEL-96")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_the_artifact_block_names_the_model_and_carries_no_table(backend: str) -> None:
+    """The table lives on the Model now; the block carries the measurements and the id."""
+    data, spec, factors, fit = _fit(backend)
+    approximation = build_glm_approximation(
+        fit.result, fit.booster_bytes, spec, factors, data,
+        holdout=data, source_model_id=new_uuid7(),
+    )
+    model_id = new_uuid7()
+    block = approximation.artifact_block(model_id)
+    assert block.approximating_model_id == model_id
+    assert block.coefficients == ()
+    assert not block.relativities
+    assert block.r_squared == approximation.r_squared
+    assert block.worst_regions == approximation.worst_regions
