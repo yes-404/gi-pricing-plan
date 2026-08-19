@@ -64,6 +64,8 @@ from pricing_core.modelling.predict import (
     predict_glm,
 )
 from pricing_core.modelling.transparency import (
+    GlmApproximationFit,
+    approximation_spec,
     build_glm_approximation,
     build_shap_summary,
     fidelity_statement,
@@ -79,6 +81,7 @@ __all__ = [
     "FactorResolutionError",
     "GbmFit",
     "GbmFitError",
+    "GlmApproximationFit",
     "GlmFit",
     "GlmFitError",
     "GroupingError",
@@ -90,6 +93,7 @@ __all__ = [
     "apply_banding",
     "apply_grouping",
     "apply_loss_treatment",
+    "approximation_spec",
     "backtest_model",
     "band_statistics",
     "build_glm_approximation",

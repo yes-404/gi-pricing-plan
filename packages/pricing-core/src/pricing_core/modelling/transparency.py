@@ -21,17 +21,20 @@ is a finding this backend cannot make.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from uuid import UUID
 
 import numpy as np
 import polars as pl
 
 from model_schema import (
+    SURROGATE_RESPONSE_COLUMN,
     Banding,
     Factor,
     GbmFitResult,
     GbmSpec,
     GlmApproximation,
+    GlmFitResult,
     GlmSpec,
     Grouping,
     ShapContribution,
@@ -44,12 +47,78 @@ from pricing_core.modelling.factors import resolve_factors
 from pricing_core.modelling.gbm import GbmFitError, predict_gbm
 from pricing_core.progress import NullProgress, ProgressCallback
 
-__all__ = ["build_glm_approximation", "build_shap_summary", "fidelity_statement"]
+__all__ = [
+    "GlmApproximationFit",
+    "approximation_spec",
+    "build_glm_approximation",
+    "build_shap_summary",
+    "fidelity_statement",
+]
 
 #: How many cells the worst-region search reports. Three, because FR-MODEL-36 asks *where*
 #: the approximation fails rather than for a ranking — a list of twenty cells is a table
 #: nobody reads, and the fidelity statement quotes the first of them.
 _WORST_REGIONS = 3
+
+
+def approximation_spec(spec: GbmSpec, *, source_model_id: UUID) -> GlmSpec:
+    """The specification of the GLM that approximates `spec`'s model (FR-MODEL-34, 96).
+
+    Pure, and separate from the fit, because the platform reserves the Model this describes
+    **before** it spends a fit on it: `spec_hash` is taken over this object, and a surrogate
+    that already exists must be recognised rather than fitted twice (FR-MODEL-66).
+
+    The approximating spec mirrors the GBM's structure — same factors, same offset, same
+    split — and differs only in what it is fitted *to*. Anything else would make the
+    comparison between them a comparison of two different questions.
+    """
+    return GlmSpec(
+        model_family_slug=f"{spec.model_family_slug}-approx",
+        dataset_version_id=spec.dataset_version_id,
+        split_ref=spec.split_ref,
+        response_column=SURROGATE_RESPONSE_COLUMN,
+        approximates_model_id=source_model_id,
+        offset=spec.offset,
+        weight=spec.weight,
+        factors=spec.factors,
+        family="gamma",
+        link="log",
+        seed=spec.seed,
+    )
+
+
+@dataclass(frozen=True)
+class GlmApproximationFit:
+    """What an approximation produces: the measurements, and the model behind them.
+
+    Two halves rather than one because FR-MODEL-96 made the surrogate a Model. The
+    `GlmApproximation` block is a summary and the platform gives it an identity, so it is
+    built by `artifact_block` once the Model is reserved — this class cannot construct it,
+    because a block with neither a model reference nor an inline table is refused at the
+    type, and rightly.
+
+    `train` and `holdout` carry the booster's predictions in
+    `SURROGATE_RESPONSE_COLUMN`. They are returned rather than recomputed by the caller for
+    the reason `GbmFit` returns its bytes: the scoring pass has already happened, and a
+    second one is a second answer.
+    """
+
+    spec: GlmSpec
+    result: GlmFitResult
+    r_squared: float
+    deviance_explained: float
+    worst_regions: tuple[WorstRegion, ...]
+    train: pl.DataFrame
+    holdout: pl.DataFrame
+
+    def artifact_block(self, approximating_model_id: UUID) -> GlmApproximation:
+        """`02` §4.9's block, once the platform has reserved the Model that holds the table."""
+        return GlmApproximation(
+            approximating_model_id=approximating_model_id,
+            r_squared=self.r_squared,
+            deviance_explained=self.deviance_explained,
+            worst_regions=self.worst_regions,
+        )
 
 
 def build_glm_approximation(
@@ -59,10 +128,12 @@ def build_glm_approximation(
     factors: Sequence[Factor],
     data: pl.DataFrame,
     *,
+    holdout: pl.DataFrame,
+    source_model_id: UUID,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
-) -> GlmApproximation:
+) -> GlmApproximationFit:
     """FR-MODEL-34 — a GLM fitted to the GBM's **own predictions**, not to the response.
 
     That distinction is the whole method. Fitting a GLM to the data would produce a second
@@ -78,38 +149,35 @@ def build_glm_approximation(
 
     report = progress or NullProgress()
     report.update(0.05, "scoring the booster")
-    target = predict_gbm(
-        result, booster, data, factors, bandings=bandings, groupings=groupings
-    ).to_numpy()
-    if np.any(target <= 0):
-        raise GbmFitError(
-            "APPROXIMATION_TARGET_NOT_POSITIVE",
-            "the booster predicts a non-positive value, which a Gamma approximation "
-            "cannot take as a response (FR-MODEL-34).",
-        )
 
-    # The approximating spec mirrors the GBM's structure — same factors, same offset — and
-    # differs only in what it is fitted *to*. Anything else would make the comparison
-    # between them a comparison of two different questions.
-    surrogate_column = "__gbm_prediction__"
-    approximation_spec = GlmSpec(
-        model_family_slug=f"{spec.model_family_slug}-approx",
-        dataset_version_id=spec.dataset_version_id,
-        response_column=surrogate_column,
-        offset=spec.offset,
-        weight=spec.weight,
-        factors=spec.factors,
-        family="gamma",
-        link="log",
-        seed=spec.seed,
-    )
+    spec_ = approximation_spec(spec, source_model_id=source_model_id)
+
+    frames: dict[str, pl.DataFrame] = {}
+    for name, frame in (("train", data), ("holdout", holdout)):
+        scored = predict_gbm(
+            result, booster, frame, factors, bandings=bandings, groupings=groupings
+        ).to_numpy()
+        if np.any(scored <= 0):
+            raise GbmFitError(
+                "APPROXIMATION_TARGET_NOT_POSITIVE",
+                f"the booster predicts a non-positive value on the {name} partition, "
+                "which a Gamma approximation cannot take as a response (FR-MODEL-34).",
+            )
+        frames[name] = frame.with_columns(pl.Series(SURROGATE_RESPONSE_COLUMN, scored))
+
+    train_frame = frames["train"]
+    holdout_frame = frames["holdout"]
+    target = train_frame[SURROGATE_RESPONSE_COLUMN].to_numpy()
+
     report.update(0.35, "fitting the approximation")
     # `.result` and not the covariance bytes beside it: the surrogate is a *description* of
     # the booster, and FR-MODEL-63's interval belongs to the model that priced the row, not
-    # to an approximation of it. Storing this one would give a GBM a GLM's interval.
+    # to an approximation of it. The platform strips `covariance_blob` from the result
+    # before persisting it (FR-MODEL-102), so the reference cannot resolve to bytes nobody
+    # stored.
     fitted = fit_glm(
-        data.with_columns(pl.Series(surrogate_column, target)),
-        approximation_spec,
+        train_frame,
+        spec_,
         factors,
         seed=spec.seed,
         bandings=bandings,
@@ -120,9 +188,11 @@ def build_glm_approximation(
     from pricing_core.modelling.diagnostics import deviance
     from pricing_core.modelling.predict import predict_glm
 
+    # `02` §3.6 approximates the population the model was fitted on: the fit, the R², the
+    # deviance and the worst regions all use the **train** frame. Approximating the holdout
+    # would report how well a surrogate generalises, which is a different question.
     approximated = predict_glm(
-        fitted, data.with_columns(pl.Series(surrogate_column, target)),
-        factors, approximation_spec, bandings=bandings, groupings=groupings,
+        fitted, train_frame, factors, spec_, bandings=bandings, groupings=groupings,
     )
     mean = float(np.mean(target))
     residual_ss = float(np.sum((target - approximated) ** 2))
@@ -134,15 +204,17 @@ def build_glm_approximation(
 
     report.update(0.90, "locating the worst regions")
     regions = _worst_regions(
-        data, factors, target, approximated, bandings=bandings, groupings=groupings
+        train_frame, factors, target, approximated, bandings=bandings, groupings=groupings
     )
     report.update(1.0, "approximation complete")
-    return GlmApproximation(
+    return GlmApproximationFit(
+        spec=spec_,
+        result=fitted,
         r_squared=r_squared,
         deviance_explained=explained,
-        coefficients=fitted.coefficients,
-        relativities=fitted.relativities,
         worst_regions=regions,
+        train=train_frame,
+        holdout=holdout_frame,
     )
 
 
