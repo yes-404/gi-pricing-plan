@@ -3300,6 +3300,16 @@
             "title": "Permutation Importances",
             "type": "array"
           },
+          "quantile_crossing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuantileCrossing"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "tree_count": {
             "minimum": 0.0,
             "title": "Tree Count",
@@ -6843,6 +6853,40 @@
           }
         },
         "title": "Progress",
+        "type": "object"
+      },
+      "QuantileCrossing": {
+        "additionalProperties": false,
+        "description": "Whether this bound contradicts its counterpart, over the fit population (FR-MODEL-78).\n\nOn the **second** bound's diagnostics. The first has no counterpart to cross when it is\nfitted, and FR-MODEL-49 computes diagnostics once at fit time and reads them thereafter\n— so the moment both boosters exist is the moment the second one is fitted, and there is\nno later pass in which to fill this in.\n\n`counterpart_model_id` names the model it was compared against, so a reader is not left\ninferring it from the alpha.\n\n**Crossing is reported, never repaired.** A pair whose lower bound exceeds its upper at\nsome rows does not describe one distribution, and reordering the two would produce an\ninterval that looks well formed and means nothing (OQ-MODEL-2).\n\n`None` on every model that is not the second bound of a pair.",
+        "properties": {
+          "counterpart_model_id": {
+            "format": "uuid",
+            "title": "Counterpart Model Id",
+            "type": "string"
+          },
+          "rows_checked": {
+            "minimum": 0.0,
+            "title": "Rows Checked",
+            "type": "integer"
+          },
+          "rows_crossing": {
+            "minimum": 0.0,
+            "title": "Rows Crossing",
+            "type": "integer"
+          },
+          "worst_gap": {
+            "minimum": 0.0,
+            "title": "Worst Gap",
+            "type": "number"
+          }
+        },
+        "required": [
+          "counterpart_model_id",
+          "rows_checked",
+          "rows_crossing",
+          "worst_gap"
+        ],
+        "title": "QuantileCrossing",
         "type": "object"
       },
       "ReadinessReport": {

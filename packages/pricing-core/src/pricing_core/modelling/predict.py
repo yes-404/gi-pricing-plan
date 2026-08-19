@@ -37,6 +37,7 @@ from pricing_core.modelling.factors import resolve_factors
 
 __all__ = [
     "PredictionError",
+    "detect_quantile_crossing",
     "linear_predictor",
     "predict_glm",
     "predict_glm_interval",
@@ -332,3 +333,33 @@ def score_fitted(
     assert isinstance(fit, GlmFitResult)
     assert isinstance(spec, GlmSpec)
     return predict_glm(fit, data, factors, spec, bandings=bandings, groupings=groupings)
+
+
+def detect_quantile_crossing(
+    lower: npt.NDArray[np.float64], upper: npt.NDArray[np.float64]
+) -> tuple[int, float]:
+    """How often, and how badly, a quantile pair contradicts itself (FR-MODEL-78).
+
+    Returns `(rows_crossing, worst_gap)`. **It reorders nothing** — that is the
+    requirement's own word, and the reason this returns numbers rather than a corrected
+    pair: a reordered pair still does not describe one distribution, and hiding that is the
+    failure mode OQ-MODEL-2 was decided to avoid.
+
+    Both figures, because either alone misleads. One crossing row in a million is a
+    curiosity; one crossing row by a factor of ten is a bound nobody should quote, and a
+    count describes them identically.
+
+    `lower == upper` is **not** crossing: the two fits agreeing exactly at a row is
+    degenerate, not inverted, and counting it would report a defect on every row where a
+    bound is constant — which is what a booster returns for a leaf with one level.
+    """
+    if lower.shape != upper.shape:
+        raise PredictionError(
+            "MODEL_INTERVAL_UNAVAILABLE",
+            f"the bounds have different lengths ({lower.shape} and {upper.shape}); they "
+            "were scored over different row sets, and NumPy would broadcast them into a "
+            "confident answer about a comparison nobody made.",
+        )
+    gaps = lower - upper
+    crossing = gaps > 0.0
+    return int(crossing.sum()), float(gaps.max()) if bool(crossing.any()) else 0.0

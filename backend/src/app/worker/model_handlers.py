@@ -54,6 +54,7 @@ from model_schema import (
     JobResult,
     ModelSpec,
     PerilStructure,
+    QuantileCrossing,
     ReconciledPeril,
     Reconciliation,
     SamplingSpec,
@@ -332,6 +333,35 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             f"{spec.model_type!r} has a spec arm and no fit path. `ebm` is declared by "
             "`CLAUDE.md` §7 and built by no slice.",
         )
+    # FR-MODEL-78. Only the **second** bound of a pair has a counterpart to cross: the
+    # first is fitted against nothing, and FR-MODEL-49 computes diagnostics once at fit
+    # time, so there is no later pass in which to fill this in. Scoring the counterpart
+    # costs one extra pass over the fit frame, which is cheap beside the fit that just
+    # produced it — and this is the only moment both boosters and the population are
+    # in hand together.
+    gbm_diagnostics = computed.gbm
+    if isinstance(spec, GbmSpec) and spec.interval_for is not None and booster is not None:
+        assert isinstance(result, GbmFitResult)
+        assert gbm_diagnostics is not None
+        crossing = progress.run_on_loop(
+            _quantile_crossing(
+                progress,
+                blob_store,
+                workspace_id=workspace_id,
+                model_id=model_id,
+                spec=spec,
+                result=result,
+                booster=booster,
+                factors=factors,
+                transformations=transformations,
+                frame=frame,
+            )
+        )
+        if crossing is not None:
+            gbm_diagnostics = gbm_diagnostics.model_copy(
+                update={"quantile_crossing": crossing}
+            )
+
     diagnostics = Diagnostics(
         id=new_uuid7(),
         model_id=model_id,
@@ -340,7 +370,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         universal=computed.universal,
         complexity=computed.complexity,
         glm=computed.glm,
-        gbm=computed.gbm,
+        gbm=gbm_diagnostics,
     )
     progress.update(0.97, "storing the fit and its diagnostics")
 
@@ -375,6 +405,99 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     progress.run_on_loop(store())
     progress.update(1.0, "done")
     return JobResult(kind="artifact", ref=f"model:{model_id}")
+
+
+async def _quantile_crossing(
+    progress: Any,
+    blob_store: Any,
+    *,
+    workspace_id: UUID,
+    model_id: UUID,
+    spec: GbmSpec,
+    result: GbmFitResult,
+    booster: bytes,
+    factors: list[Factor],
+    transformations: _Transformations,
+    frame: pl.DataFrame,
+) -> QuantileCrossing | None:
+    """Score this bound and its counterpart over the fit frame and compare them.
+
+    Returns `None` when there is no counterpart yet — this is the first bound of the pair,
+    and there is nothing to cross. That is the ordinary case for the lower bound, and it is
+    why `QuantileCrossing` lives on the second bound rather than on the central model.
+
+    The counterpart's spec, factors, bandings, groupings and booster are resolved here for
+    the reason `_resolve_candidate` resolves them here: `pricing-core` is handed dataframes
+    and artifacts, never ids, because resolving an id needs a database it may not import
+    (ADR-0001).
+    """
+    from pricing_core.modelling.predict import detect_quantile_crossing, score_fitted
+
+    assert spec.interval_for is not None
+
+    async with progress.database.session() as session:
+        siblings = [
+            row
+            for row in await model_service.load_interval_models(
+                session,
+                workspace_id=workspace_id,
+                central_model_id=spec.interval_for.model_id,
+            )
+            if row.id != model_id and row.fit_result is not None
+        ]
+        if not siblings:
+            return None
+        # At most one: FR-MODEL-100(iv) allows one bound per side, and this model holds the
+        # other side. A second would have been refused at `reserve_model`.
+        counterpart = siblings[0]
+        other_spec = MODEL_SPEC_ADAPTER.validate_python(counterpart.spec)
+        other_fit = FIT_RESULT_ADAPTER.validate_python(counterpart.fit_result)
+        if not isinstance(other_spec, GbmSpec) or not isinstance(other_fit, GbmFitResult):
+            return None
+        other_factors = await model_service.load_factors(
+            session, workspace_id=workspace_id, factor_ids=list(other_spec.factors)
+        )
+        other_bandings = await transform_service.load_bandings(
+            session,
+            workspace_id=workspace_id,
+            ids=[f.banding_id for f in other_factors if f.banding_id],
+        )
+        other_groupings = await transform_service.load_groupings(
+            session,
+            workspace_id=workspace_id,
+            ids=[f.grouping_id for f in other_factors if f.grouping_id],
+        )
+        other_booster = await blob_store.read(other_fit.booster_blob)
+
+    mine = score_fitted(
+        result,
+        spec,
+        frame,
+        factors,
+        bandings=transformations.bandings,
+        groupings=transformations.groupings,
+        booster=booster,
+    )
+    theirs = score_fitted(
+        other_fit,
+        other_spec,
+        frame,
+        other_factors,
+        bandings=other_bandings,
+        groupings=other_groupings,
+        booster=other_booster,
+    )
+    # Which array is the lower bound is decided by the declared alpha, never by which
+    # number happens to be smaller — sorting them here would be the silent reordering
+    # FR-MODEL-78 forbids, dressed as a convenience.
+    lower, upper = (mine, theirs) if spec.interval_for.alpha < 0.5 else (theirs, mine)
+    rows_crossing, worst_gap = detect_quantile_crossing(lower, upper)
+    return QuantileCrossing(
+        counterpart_model_id=counterpart.id,
+        rows_checked=frame.height,
+        rows_crossing=rows_crossing,
+        worst_gap=worst_gap,
+    )
 
 
 async def _resolve_candidate(

@@ -26,23 +26,34 @@ from backend.tests.test_model_jobs import (
     _split,
     _validated_version,
 )
-from backend.tests.test_model_jobs_gbm import _gbm_spec
+from backend.tests.test_model_jobs_gbm import _fitted_gbm, _gbm_spec
 
-from app.db.models import CustomObjectiveRow, ModelRow
+from app.db.models import CustomObjectiveRow, DiagnosticsRow, JobRow, ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import diagnostics as diagnostics_service
+from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform.blobs import BlobStore
+from app.worker.data_handlers import register_data_handlers
+from app.worker.model_handlers import register_model_handlers
+from app.worker.tasks import execute_job
 from model_schema import (
     MODEL_SPEC_ADAPTER,
     GbmFunctionRef,
     GbmSpec,
     IntervalFor,
+    JobKind,
+    JobStatus,
     ObjectiveStatus,
     ObjectiveTemplate,
     Principal,
+    ResponseKind,
     SplitRef,
 )
+
+register_data_handlers()
+register_model_handlers()
 
 
 @dataclass(frozen=True)
@@ -100,7 +111,12 @@ async def _central_model(
         database, blob_store, workspace_id, actor, dataset_id
     )
     area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
-    other = await _factor(database, workspace_id, actor, dataset_id, "area", "area2")
+    # A genuine second column, so the factor-set tests below compare two real designs.
+    # `_factor` takes (slug, column) in that order; a slug and a column that do not
+    # both exist in `BOOK` fails at fit time rather than at creation.
+    other = await _factor(
+        database, workspace_id, actor, dataset_id, "amount", "claim_amount_minor"
+    )
     split = await _split(database, blob_store, workspace_id, actor, version_id)
 
     # Each `unit_of_work` takes its own connection, so opening a second one inside the
@@ -135,6 +151,10 @@ def _bound_spec(central: _Central, *, alpha: float, ref: str | None = None, **ov
         "model_family_slug": central.slug,
         "split_ref": central.split,
         "objective": GbmFunctionRef(kind="custom", ref=ref or central.quantile_ref),
+        # FR-MODEL-44: a custom objective declares the responses it applies to, and a
+        # column name cannot be checked against that list — so a spec naming one must say
+        # what it is modelling. A builtin objective names its own family and needs none.
+        "response": ResponseKind.CLAIM_COUNT,
         "interval_for": IntervalFor(
             model_id=central.id, model_version=central.version, alpha=alpha
         ),
@@ -436,3 +456,108 @@ def _alpha_of(row: ModelRow) -> float:
     assert isinstance(spec, GbmSpec)
     assert spec.interval_for is not None
     return spec.interval_for.alpha
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-78 — crossing, detected when the second bound is fitted
+# --------------------------------------------------------------------------------------
+
+
+async def _fit_bound(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    central: _Central,
+    *,
+    alpha: float,
+    ref: str | None = None,
+) -> tuple[UUID, JobStatus]:
+    """Reserve and fit one bound through the real `model.fit` Job."""
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=central.actor,
+            spec=_bound_spec(central, alpha=alpha, ref=ref),
+        )
+        assert should_fit is True
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": central.actor.model_dump(mode="json"),
+                "model_id": str(model_id),
+            },
+            central.actor,
+            workspace_id=workspace_id,
+        )
+    status = await execute_job(database, job.id, blob_store)
+    if status is not JobStatus.SUCCEEDED:
+        async with database.session() as session:
+            failed = await session.get(JobRow, job.id)
+        raise AssertionError(f"the bound at alpha={alpha} did not fit: {failed.error}")
+    return model_id, status
+
+
+async def _gbm_diagnostics_of(database: Database, model_id: UUID):
+    async with database.session() as session:
+        row = await session.get(ModelRow, model_id)
+        assert row is not None
+        assert row.diagnostics_id is not None
+        stored = await session.get(DiagnosticsRow, row.diagnostics_id)
+    assert stored is not None
+    return diagnostics_service.to_diagnostics(stored).gbm
+
+
+@pytest.mark.req("FR-MODEL-78")
+async def test_only_the_second_bound_of_a_pair_records_crossing(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The first bound has no counterpart to cross; the second compares itself with it.
+
+    Asserted on **both** models rather than only the second. A detector that attached the
+    block to whichever model it happened to be looking at would pass a test that checked
+    one of them, and `QuantileCrossing` would then appear on a model whose counterpart did
+    not exist when it was written.
+    """
+    central = await _central_model(database, blob_store, workspace_id)
+    upper_ref = await _approved_quantile(
+        database, blob_store, workspace_id, central.actor, 0.95
+    )
+
+    lower_id, lower_status = await _fit_bound(
+        database, blob_store, workspace_id, central, alpha=0.05
+    )
+    upper_id, upper_status = await _fit_bound(
+        database, blob_store, workspace_id, central, alpha=0.95, ref=upper_ref
+    )
+    assert (lower_status, upper_status) == (JobStatus.SUCCEEDED, JobStatus.SUCCEEDED)
+
+    assert (await _gbm_diagnostics_of(database, lower_id)).quantile_crossing is None
+
+    crossing = (await _gbm_diagnostics_of(database, upper_id)).quantile_crossing
+    assert crossing is not None
+    assert crossing.counterpart_model_id == lower_id
+    assert crossing.rows_checked > 0
+    # Whether these two particular fits cross is a property of the data, not of the code,
+    # so the assertion is on the invariant rather than on a number: the two figures agree
+    # about whether there was any crossing at all.
+    assert (crossing.rows_crossing == 0) == (crossing.worst_gap == 0.0)
+    assert crossing.rows_crossing <= crossing.rows_checked
+
+
+@pytest.mark.req("FR-MODEL-78")
+async def test_an_ordinary_gbm_records_no_crossing_block(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """A model that is not a bound carries `None`, not a zeroed block.
+
+    A zeroed block would read as "checked, and they did not cross", which is a measurement
+    this model never made — the same defect FR-MODEL-50's `double_lift` and
+    `Diagnostics.backtest` were removed for.
+    """
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    assert (await _gbm_diagnostics_of(database, model_id)).quantile_crossing is None
