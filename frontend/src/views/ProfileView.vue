@@ -71,11 +71,22 @@ async function load(): Promise<void> {
     versionId.value = version.id;
     profile.value = await getProfile(version.id);
     selected.value = rateable.value[0] ?? null;
+  } catch (error) {
+    if (error instanceof ProblemError) problem.value = error;
+    else throw error;
+  } finally {
+    loading.value = false;
+  }
 
+  // The profile itself failed to load — there is nothing to compare, and the error page
+  // above already covers it.
+  if (!versionId.value) return;
+
+  try {
     // `MAX_LIMIT` is 200 and versions come back newest-first, so one page is the selector's
     // universe. If there is a cursor left, say so rather than silently offering a subset.
     const page = await listVersions(props.slug, { limit: 200 });
-    siblings.value = page.items.filter((v) => v.id !== version.id);
+    siblings.value = page.items.filter((v) => v.id !== versionId.value);
     truncated.value = page.next_cursor != null;
 
     // `?against=<version number>`, not an id: the URL is something an actuary reads and
@@ -84,12 +95,22 @@ async function load(): Promise<void> {
     // state the endpoint refuses.
     const wanted = typeof route.query.against === "string" ? route.query.against : null;
     const seeded = siblings.value.find((v) => String(v.version) === wanted);
-    referenceId.value = seeded?.profile_id != null ? seeded.id : null;
+    if (seeded?.profile_id != null) {
+      referenceId.value = seeded.id;
+    } else {
+      referenceId.value = null;
+      if (seeded) {
+        // `seeded` names a real sibling with no stored profile — the endpoint would 404
+        // for it, so the address bar must not keep advertising a comparison the view is
+        // refusing. (Setting `referenceId` above did not change it from its initial
+        // `null`, so the write-back watcher never fires on its own.)
+        void router.replace({ query: { ...route.query, against: undefined } });
+      }
+    }
   } catch (error) {
-    if (error instanceof ProblemError) problem.value = error;
-    else throw error;
-  } finally {
-    loading.value = false;
+    // The picker is auxiliary: a failing versions list must degrade to "no comparison
+    // available" rather than blank an already-loaded profile.
+    if (!(error instanceof ProblemError)) throw error;
   }
 }
 

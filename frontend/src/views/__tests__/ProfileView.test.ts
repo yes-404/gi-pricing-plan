@@ -115,6 +115,7 @@ function stub(
   oneWayStatus = 200,
   oneWayBody: unknown = ONE_WAY,
   compare: { status?: number; body?: unknown } = {},
+  versions: { status?: number; body?: unknown } = {},
 ): void {
   vi.stubGlobal(
     "fetch",
@@ -133,7 +134,7 @@ function stub(
       // `/datasets/{slug}/versions/{number}` also contains "/versions" as a substring, so
       // a plain `.includes("/versions")` would swallow it too; it must stay the
       // fall-through below.
-      if (/\/versions(\?|$)/.test(url)) return json(VERSIONS);
+      if (/\/versions(\?|$)/.test(url)) return json(versions.body ?? VERSIONS, versions.status ?? 200);
       if (url.includes("/profile")) return json(PROFILE);
       return json(VERSION);
     }),
@@ -280,6 +281,10 @@ describe("the profile view", () => {
     const select = await screen.findByLabelText("Compare against");
     const unprofiled = within(select).getByRole("option", { name: /v3 \(no profile\)/ });
     expect(unprofiled).toBeDisabled();
+    // The opposite claim, proven separately: a profiled sibling stays selectable — only
+    // the unprofiled one is refused.
+    const profiled = within(select).getByRole("option", { name: "v1" });
+    expect(profiled).not.toBeDisabled();
   });
 
   it("seeds the comparison from the URL and writes the choice back to it", async () => {
@@ -295,6 +300,13 @@ describe("the profile view", () => {
     expect(routerReplace).toHaveBeenCalledWith(
       expect.objectContaining({ query: expect.objectContaining({ against: undefined }) }),
     );
+
+    // The other direction of the same watcher: choosing a version writes its *number*,
+    // not its id, back into the query.
+    await userEvent.selectOptions(select, VERSIONS.items[1]!.id);
+    expect(routerReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ against: "1" }) }),
+    );
   });
 
   it("ignores an ?against pointing at a version with no profile", async () => {
@@ -303,5 +315,25 @@ describe("the profile view", () => {
     render(ProfileView, { props, ...mounted });
     const select = await screen.findByLabelText("Compare against");
     await waitFor(() => expect((select as HTMLSelectElement).value).toBe(""));
+    // Rejecting the selection does not, on its own, change `referenceId` (it was already
+    // `null`), so the write-back watcher never fires — the view must clear the query key
+    // itself, or the address bar keeps advertising a comparison it just refused.
+    expect(routerReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ query: expect.objectContaining({ against: undefined }) }),
+    );
+  });
+
+  it("keeps the profile on screen when the versions list fails to load", async () => {
+    // The picker is auxiliary (FR-DATA-27's refusal pattern, applied to the picker
+    // itself): a 500 or 403 fetching the sibling versions must not blank an
+    // already-loaded profile behind a full-page error.
+    stub(200, ONE_WAY, {}, {
+      status: 500,
+      body: { title: "boom", status: 500, code: "INTERNAL", errors: [] },
+    });
+    render(ProfileView, { props, ...mounted });
+    expect(await screen.findByText(/29,970 rows/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Compare against")).not.toBeInTheDocument();
   });
 });
