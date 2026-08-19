@@ -343,6 +343,32 @@ planned:
 - All PRs: Conventional Commits, short-lived branches from `main`, squash-merge, branch
   auto-delete. `.claude/skills/git-hygiene` covers the traps.
 
+### Context discipline — a turn costs what the context weighs
+
+Every turn re-reads the whole accumulated context, so anything that enters it is paid for
+again on each turn after. A session that ends at 900k tokens costs several times one that
+stays under 200k, and on a subscription that is rate-limit headroom rather than money.
+Measured over 2026-08-14 → 08-19 (11 722 assistant messages): **73% of spend came from
+calls carrying more than 200k tokens of context**, and two marathon sessions were 38% of
+it. The two rules below are the half of that which is Claude's to follow.
+
+- **Delegate noisy investigation to a subagent.** Grep sweeps, log trawls, broad
+  multi-file searches — spawn one with the Agent tool and keep the conclusion, not the
+  file dumps. A subagent's context is discarded when it returns; the main thread's is not.
+  That week's 5 493 tool calls included **21** Agent calls, which is why the tail ran as
+  long as it did.
+- **Read bounded ranges, not whole files.** `sed -n '100,160p'`, `grep -n -C3`, `head`,
+  and a `wc -l` before anything large. `cat`-ing a whole file to find one function puts
+  the whole file in context permanently, and re-reads it every turn thereafter. 4 884 of
+  those 5 493 tool calls were Bash against 52 Read calls — whole-file dumps are where the
+  context went.
+
+The session-level levers belong to the maintainer and are set at launch, not here:
+`claude --autocompact <100k–1M>` compacts earlier than the 1M default, `/clear` at task
+boundaries resets the base every later turn pays for, and `--model sonnet` suits
+mechanical work. Cache TTL is **not** a lever — writes were 17% of that week's cost, and
+a shorter TTL trades that for lost cache hits.
+
 ## 11. Commands Reference
 
 ```bash
