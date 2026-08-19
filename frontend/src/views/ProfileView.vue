@@ -5,11 +5,14 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { listVersions } from "@/api/datasets";
 import { ProblemError, isProblem } from "@/api/problem";
 import {
+  compareProfiles,
   getOneWay,
   getProfile,
+  type ColumnComparison,
   type LevelCount,
   type OneWaySummary,
   type Profile,
+  type ProfileComparison,
 } from "@/api/profiles";
 import { formatDecimalString, formatMinor, getVersion, type DatasetVersion } from "@/api/versions";
 import HistogramChart from "@/components/HistogramChart.vue";
@@ -27,12 +30,19 @@ const versionId = ref<string | null>(null);
 const siblings = ref<DatasetVersion[]>([]);
 const truncated = ref(false);
 const referenceId = ref<string | null>(null);
+const comparison = ref<ProfileComparison | null>(null);
+const referenceMissingProfile = ref(false);
 
 const route = useRoute();
 const router = useRouter();
 
 const currency = computed(() => props.currency ?? "GBP");
 const rateable = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
+
+const referenceLabel = computed(() => {
+  const chosen = siblings.value.find((v) => v.id === referenceId.value);
+  return chosen ? `v${chosen.version}` : "";
+});
 
 /**
  * The `<select>`'s own value can only ever be a plain string — a native `<option>` with
@@ -138,7 +148,40 @@ watch(referenceId, (id) => {
   });
 });
 
+watch(referenceId, async (id) => {
+  comparison.value = null;
+  referenceMissingProfile.value = false;
+  if (!id || !versionId.value) return;
+  try {
+    comparison.value = await compareProfiles(versionId.value, id);
+  } catch (error) {
+    // A reference with no stored profile is an answer, the same as FR-DATA-27's missing
+    // one-way: the picker disables those versions, so reaching here means a stale or
+    // hand-edited link. It explains itself and leaves the rest of the view intact.
+    if (isProblem(error, "NOT_FOUND")) referenceMissingProfile.value = true;
+    else throw error;
+  }
+});
+
+/**
+ * The comparison entry for a column, if there is one.
+ *
+ * Three answers, not two. `compare_profiles` **skips** a column the reference profile does
+ * not have, so a missing entry means "this column is new in this version" — which is a
+ * finding, not an absence. `undefined` means no comparison has been loaded at all.
+ */
+function driftFor(name: string): ColumnComparison | null | undefined {
+  if (!comparison.value) return undefined;
+  return comparison.value.columns.find((c) => c.column === name) ?? null;
+}
+
 onMounted(() => void load());
+
+// `driftFor` has no caller yet in this file — Task 5's per-column drift rendering is the
+// one that calls it, from a `v-for` over `profile.columns`. Exposing it keeps the function
+// (and its three-way contract) reachable and lint-clean in the meantime, the same device
+// `FactorWorkbenchView.vue` uses for `isProblem`.
+defineExpose({ driftFor });
 </script>
 
 <template>
@@ -238,6 +281,21 @@ onMounted(() => void load());
           class="mt-2 text-xs text-slate-500"
         >
           Showing the 200 most recent versions.
+        </p>
+        <p
+          v-if="referenceMissingProfile"
+          class="mt-2 text-sm text-slate-500"
+        >
+          {{ referenceLabel }} has no profile to compare against. Profiling runs after a
+          successful ingestion (FR-DATA-25).
+        </p>
+        <p
+          v-else-if="comparison"
+          class="mt-2 text-sm text-slate-600 tabular-nums"
+        >
+          <!-- A float ratio, not an exact decimal: it is `current.row_count / reference.row_count`
+               computed in float64 by `compare_profiles`, so it is shown as the statistic it is. -->
+          ×{{ comparison.row_count_ratio?.toFixed(3) ?? "—" }} rows vs {{ referenceLabel }}
         </p>
       </section>
 

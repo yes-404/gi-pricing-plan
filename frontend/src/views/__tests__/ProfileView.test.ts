@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OneWaySummary, Profile } from "@/api/profiles";
+import type { OneWaySummary, Profile, ProfileComparison } from "@/api/profiles";
 
 import ProfileView from "../ProfileView.vue";
 
@@ -108,8 +108,31 @@ const VERSIONS = {
   total_estimate: 3,
 };
 
-// Replaced by a real fixture in Task 4. Declared here so the stub below compiles.
-const COMPARISON: unknown = null;
+const COMPARISON: ProfileComparison = {
+  current_version_id: PROFILE.dataset_version_id,
+  reference_version_id: "33333333-3333-4333-8333-333333333333",
+  row_count_ratio: 1.0203,
+  columns: [
+    {
+      column: "veh_brand",
+      psi: 0.31,
+      mean_shift: null,
+      null_rate_shift: 0.012,
+      new_levels: ["B14"],
+      vanished_levels: [],
+    },
+    // Continuous: `compare_profiles` measures PSI from non-null `top_levels`, and this
+    // column has none — so `psi` is null and there is no band to draw.
+    {
+      column: "driv_age",
+      psi: null,
+      mean_shift: 1.35,
+      null_rate_shift: 0,
+      new_levels: [],
+      vanished_levels: [],
+    },
+  ],
+};
 
 function stub(
   oneWayStatus = 200,
@@ -335,5 +358,31 @@ describe("the profile view", () => {
     expect(await screen.findByText(/29,970 rows/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Compare against")).not.toBeInTheDocument();
+  });
+
+  it("states how the row count moved once a reference is chosen", async () => {
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/×1\.020 rows vs v1/)).toBeInTheDocument();
+  });
+
+  it("treats a reference version with no profile as an answer, not a failure", async () => {
+    // The endpoint 404s when the *reference* has no stored profile. The picker disables
+    // those, so this is the stale-link case: it must read as an explanation, not an alert.
+    stub(200, ONE_WAY, {
+      status: 404,
+      body: {
+        title: "This dataset version has no profile",
+        status: 404,
+        code: "NOT_FOUND",
+        errors: [],
+      },
+    });
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/has no profile to compare against/)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
