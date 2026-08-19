@@ -25,7 +25,7 @@ wins** — fix the schema.
   citing its requirement ID. `invariants` is a non-standard annotation: validators ignore
   it, reviewers must not.
 
-## Three traps
+## Four traps
 
 **Duplicate keys.** `json.load` silently keeps the last one, so a second `allOf` block
 silently discards the first — including a composed envelope. The audit catches this; do
@@ -49,6 +49,22 @@ Related, when comparing a generated schema against a hand-authored one: the gene
 marks every `X | None` nullable via `anyOf` and the authored side almost never does. Compare
 the admitted types with `null` removed, or the comparison reports a divergence on nearly
 every optional field and gets ignored.
+
+**A new authored schema is not compared until its slug is registered.**
+`test_generated_and_authored_agree_on_scalar_types` in `backend/tests/test_contracts.py`
+runs over `COMPARED_SLUGS`, a written-out list — not a glob, deliberately, so that adding a
+schema to it is a visible act. Add the slug in the same change as the file. Forgetting is
+not silent any more: `test_every_eligible_schema_is_compared` fails when a schema has both
+an authored and a generated side and is neither compared nor pinned. It exists because
+`peril-structure` sat outside the list from Phase 0 declaring `restoration_loading`, `ratio`
+and `tolerance` as `{"type": "number"}` while all three are `DecimalStr` — the check that
+would have caught it on the day it was written never looked at that file.
+
+A schema may be excused only by a **pinned** divergence: a test asserting the disagreement is
+exactly the known path and nothing else, so a new divergence in the same schema still fails
+and the pin dies the day the question behind it is decided. `diagnostics` is the worked
+example (`OQ-MODEL-15`). An excused slug without that test is the exemption list this suite
+refuses to grow.
 
 ## After
 
@@ -99,6 +115,14 @@ the edit in reflow and destroying the layout a reader relies on. Patch the text,
 `json.loads` the result to prove it still parses.
 
 ## Verified
+
+2026-08-19 — W5's `OQ-OVR-8` slice, applying the decision that `DecimalStr` refuses a float.
+The fourth trap above was found by widening the comparison from 6 slugs to 11 while looking
+for something else. Two lessons beyond the trap itself: an *input*-strictness change is what
+makes a wrong `"type": "number"` reachable, since a string-serialising field's contract can
+be wrong for months while every round-trip still passes; and a count written into prose
+(`"26 DecimalStr fields across 7 modules"`) was a grep of mentions, not fields — there are
+11. Recompute a number before repeating it, which is `CLAUDE.md` §0's rule about counts.
 
 2026-08-19 — W5's profile-contract slice. The `prefixItems` trap above was paid for in
 full. Also confirmed that comparing generated and hand-authored schemas on **field names**

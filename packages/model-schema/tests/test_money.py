@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_EVEN, Decimal
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from model_schema.money import MoneyMinor, Relativity, apply_factor, to_minor
+from model_schema.money import DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
 
 
 class Premium(BaseModel):
@@ -65,3 +65,62 @@ def test_apply_factor_requires_an_explicit_rounding_mode():
     assert apply_factor(24150, Decimal("1.15"), rounding=ROUND_HALF_EVEN) == 27772
     with pytest.raises(TypeError):
         apply_factor(24150, Decimal("1.15"))  # type: ignore[call-arg]
+
+
+class Exact(BaseModel):
+    """A model over the two exact-decimal types, including a container of one."""
+
+    amount: DecimalStr
+    weights: tuple[DecimalStr, ...] = ()
+
+
+@pytest.mark.req("FR-OVR-7")
+@pytest.mark.parametrize("bad", [0.1 + 0.2, 12.5, 12.0, float("1e-7")])
+def test_decimal_str_refuses_a_float(bad):
+    """`OQ-OVR-8`, decided 2026-08-19: the input shape is policed, not only the wire shape.
+
+    `12.0` is refused as firmly as `0.1 + 0.2`, for `MoneyMinor`'s reason above: a whole-
+    valued float coerces cleanly, and accepting it is what teaches the next caller that a
+    float is fine here. The one that motivated the decision is the first — it used to yield
+    `Decimal('0.30000000000000004')` inside a field FR-OVR-7 calls exact.
+    """
+    with pytest.raises(ValidationError, match="float"):
+        Exact(amount=bad)
+
+
+@pytest.mark.req("FR-OVR-7")
+def test_decimal_str_refuses_a_float_inside_a_container():
+    """The rule is the type's, so it holds wherever the type appears.
+
+    `Histogram.exposure` and `Profile`'s level weights are tuples of `DecimalStr`; a check
+    written per-field would have left every one of them open.
+    """
+    with pytest.raises(ValidationError, match="float"):
+        Exact(amount=Decimal("1"), weights=(Decimal("1.5"), 2.5))
+
+
+@pytest.mark.req("FR-OVR-7")
+def test_decimal_str_refuses_a_json_number():
+    """A hand-written client posting `1.5` rather than `"1.5"` is the other half of the
+    exposure `OQ-OVR-8` names. The contract has always declared this field a string."""
+    with pytest.raises(ValidationError, match="float"):
+        Exact.model_validate_json('{"amount": 1.5}')
+
+
+@pytest.mark.req("FR-OVR-7")
+@pytest.mark.parametrize("good", ["1.5", 2, Decimal("1.500")])
+def test_decimal_str_still_accepts_every_exact_form(good):
+    """Refusing floats must not narrow the type to `Decimal` alone: `str` is what the wire
+    carries and `int` is exact, so both stay valid."""
+    assert Exact(amount=good).amount == Decimal(str(good))
+
+
+@pytest.mark.req("FR-OVR-7")
+def test_relativity_refuses_a_float_too():
+    """A rating factor is the exact-decimal field with the most leverage over a premium.
+
+    Leaving it lax while `DecimalStr` was strict would rebuild the inconsistency
+    `OQ-OVR-8` was decided to remove.
+    """
+    with pytest.raises(ValidationError, match="float"):
+        Premium(payable_minor=1, factor=1.04)

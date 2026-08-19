@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.money import DecimalStr, MoneyMinor
 
@@ -103,24 +103,11 @@ class LevelCount(BaseModel):
     #: Absent means the version carried no exposure column at all; zero means this level
     #: carries no exposure. A profile that cannot tell those two apart cannot be read for
     #: a pricing decision — so this is optional, never defaulted to zero.
+    #: Refusing a float is `DecimalStr`'s own behaviour since `OQ-OVR-8` was decided
+    #: (2026-08-19). This field carried a hand-written validator doing it alone until then;
+    #: the type now does it for all 11 of them, so the validator is gone rather than
+    #: duplicated.
     exposure_years: DecimalStr | None = None
-
-    @field_validator("exposure_years", mode="before")
-    @classmethod
-    def _exposure_years_is_not_a_float(cls, value: object) -> object:
-        """FR-OVR-7: exposure is exact, never a binary float.
-
-        A Python float has already lost whatever precision the source amount carried
-        before Pydantic ever sees it — `DecimalStr` on its own still coerces a float
-        (it exists to keep the *wire* shape a string, not to police the *input* shape).
-        This field is read straight into a pricing decision, so it is refused here
-        rather than silently accepted the way a diagnostic field would be.
-        """
-        if isinstance(value, float):
-            raise ValueError(
-                "exposure_years must be an exact decimal string or Decimal, not a float"
-            )
-        return value
 
 
 class ColumnProfile(BaseModel):
