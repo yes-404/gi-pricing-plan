@@ -2387,6 +2387,92 @@ the trap `.claude/skills/spec-change` already documents, paid for again by not r
 skill first.
 
 
+#### W5 slice — paired quantile models, and the name a quantile pair had no right to (2026-08-19)
+
+The twentieth slice, and the one that makes FR-MODEL-78 real: a GBM can now carry a
+prediction interval, from two Models fitted with the `quantile` template and linked to the
+model they bound. Two requirements appended, one open question raised and decided the same
+day, and all four of `UnavailableReason`'s values reachable for the first time.
+
+| Delivered | Evidence |
+|---|---|
+| `interval_for` on `GbmSpec`, joining `spec_hash` | `IntervalFor(model_id, model_version, alpha)`; `SPEC_HASH_VERSION` `v3 → v4` in the same commit as the field (FR-MODEL-86). Tests pin that two bounds against different central models, the two sides of one pair, and a bound versus an ordinary GBM all hash apart — the three collisions that would have let FR-MODEL-66 hand a caller somebody else's model |
+| A bound must match the model it bounds | `_refuse_mismatched_interval_model` in `reserve_model`, before a Job exists: family, dataset version, split and **factor set** — the last compared as a *set*, since two specs listing the same factors in a different order describe the same design matrix |
+| A bound must actually be a quantile fit | The rule the plan did not have and FR-MODEL-78's text does: the objective must resolve to the `quantile` template, at the same alpha `interval_for` declares. A bound fitted with `count:poisson` passes every structural rule and estimates the **mean** |
+| One bound per side | FR-MODEL-100(iv). A second lower bound satisfies every other rule, and the response carries a single `level` with nothing to say which pair produced it |
+| Bounds are findable | `load_interval_models`, ordered lower-first so no second caller sorts them another way, plus a **partial** functional index on `(spec -> 'interval_for' ->> 'model_id')` — partial because almost no model is a bound, and the common answer (none) is the one that must stay cheap |
+| Crossing detected at fit time | `detect_quantile_crossing` in `pricing-core`, and `QuantileCrossing` on the **second** bound's `GbmDiagnostics`. The first has no counterpart when it is fitted and FR-MODEL-49 computes diagnostics once, so there is no later pass in which to fill it in |
+| Crossing refused at predict time | 409 `MODEL_INTERVAL_UNAVAILABLE` naming the rows and the worst gap. Without it the honest finding reached `PredictedRow`'s ordering validator and became a 500 with the reason in a traceback |
+| All four `UnavailableReason` values reachable | `_score_gbm`'s four arms, most-specific-first, and a test that pins the order |
+
+**The requirement named a thing the contract had no word for, and that is the finding.**
+FR-MODEL-98 (decided the day before, OQ-MODEL-13) fixed the platform at **exactly one**
+interval kind, `confidence_interval_mean`, and reserved `prediction_interval` for a `φ·V(μ)`
+computation over aggregates. FR-MODEL-78's deliverable is neither: a quantile pair covers
+`Y`, not `E[Y|x]`, and it is produced per row by a different estimator entirely. Raised as
+**OQ-MODEL-16** rather than picked (`CLAUDE.md` §0) and **decided by the maintainer the same
+day** at the recommendation — a third member, `quantile_pair_interval`, specified as
+**FR-MODEL-101**. Neither existing value is widened and the reserved name is left waiting for
+the consumer that triggers it, so **FR-MODEL-98 is amended by addendum rather than edited**
+(`CLAUDE.md` §14). The argument that admits it is FR-MODEL-98's own: it refused a second kind
+shipped *before a consumer existed*, and FR-MODEL-78's pair is opt-in at 2–3× the fit cost,
+so nobody receives one without having asked.
+
+**FR-MODEL-77 named two reasons and did not say what they meant.** `interval_models_not_approved`
+and `interval_models_stale` had been declared and unreachable since the prediction slice, and
+each had two defensible readings. Making them reachable forced the choice, so it is recorded
+as a requirement rather than made in code: **FR-MODEL-100(ii)** reads "not approved" as *less
+reviewed than the model it bounds* — the strict reading would make the feature unusable at
+exactly the point an actuary is deciding whether the bounds are any good — and **(iii)** reads
+"stale" as *the central Model is `superseded`*, the literal reading of FR-MODEL-77's own
+parenthetical, reachable because `SCOREABLE_MODEL_STATUSES` admits `superseded`. Both
+alternatives are named in the requirement, so a later reader can see they were decided.
+
+**Two orderings are load-bearing, and both are pinned by tests.** The pairing check runs
+**before** the factor check: a bound naming the wrong dataset version also fails factor
+resolution, and reported the other way round the caller re-checks factors that were never
+wrong. And `_score_gbm`'s staleness arm runs before its approval arm, so a superseded model
+with unapproved bounds is told the family has moved on rather than told to go and get bounds
+approved for a version nobody should quote.
+
+**Three fixtures were corrected by the platform rather than the other way round**, which is
+the shape worth recording: a `custom_objectives` CHECK refused an objective stamped
+`approved` without a certificate, so the fixture now certifies through the real Job; a factor
+must name a column the dataset actually has; and FR-MODEL-44 requires a spec naming a custom
+objective to declare its `response`. A fourth was mine alone — a `unit_of_work` opened inside
+another takes a second connection and **deadlocks against the pool rather than failing**, so
+the run hung with no output at all.
+
+**Enforcement proven against broken input**, each neutralised in turn and restored:
+the structural mismatch check reddens 3 tests; the quantile-template check 2; the
+one-bound-per-side check 1; the fit-time crossing attachment reddens the pair test with
+`assert None is not None`. The `Uncertainty` validator additionally refuses a `level` that
+disagrees with the alphas it came from — a 0.05/0.95 pair covers 0.90, and a response
+claiming 0.95 overstates its coverage by exactly the amount a reader cannot check.
+
+**Not delivered, with owners.** **No frontend**: nothing renders a GBM interval or a
+crossing figure, so both are reachable only over the API — `02` §5.3's model-detail view is
+**W6b**'s and building it here would be building ahead of the row that owns it. The
+`alpha != 0.5` refusal is a validator and **has no JSON Schema form**, so the published
+contract carries the range and not the median rule; the type is its only enforcement.
+FR-MODEL-100(ii) is implemented as the single case that matters — an `approved` central model
+with a not-`approved` bound — rather than as a general lifecycle ordering, because `02`
+declares no such ordering and inventing one would be specifying a comparison nothing needs.
+
+**Bookkeeping corrected while here:** W5's row said "eighteen slices in" and the
+exact-decimal slice (PR #116, 2026-08-19) had already landed without being added to it. The
+row now reads twenty and names both.
+
+**Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (125 source files) ·
+import-linter 3 kept / 0 broken · **1339 python tests, zero skipped** in 315 s (was 1300) ·
+audit-docs 0 — **482 requirements** across 8 specs (was 480), **65 open questions** all
+mirrored (was 64) · req-coverage **227 of 482 marked, 47.1 %** (was 224 of 480) ·
+`generate-contracts.py --check` 0, **21 generated contracts match** ·
+`pnpm install --frozen-lockfile` · `generate:api` · eslint · `vue-tsc --build` no errors ·
+**113 frontend tests** · `pnpm build`. `scope-audit.py MODEL --endpoints`: **FR-MODEL-78
+leaves the unevidenced list**, which falls 21 → 20, and FR-MODEL-100/101 land evidenced —
+113 in scope, 93 with evidence (82 %).
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2397,7 +2483,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: eighteen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, and `top_levels`' exposure per level; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: twenty slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, and **paired quantile models**; see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
