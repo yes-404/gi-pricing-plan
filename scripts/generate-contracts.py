@@ -96,6 +96,12 @@ GENERATED_SHAPES: dict[str, str] = {
     # early stopping reads (FR-MODEL-103/104), so a field the contract promises and the
     # model does not carry is a training-time defect, not a documentation one.
     "custom-metric": "CustomMetric",
+    # Added 2026-08-19 (W5, custom metrics, Task 2 of the custom-metrics slice, fix
+    # round 2). `ObjectiveCertificate` is published (line 87); leaving its sibling
+    # unpublished would have FR-MODEL-108's `GET .../certificate` cross the API
+    # boundary as a hand-written frontend type instead of a generated one — the
+    # divergence ADR-0002/FR-PLAT-48 exist to prevent.
+    "metric-certificate": "MetricCertificate",
     # Added 2026-08-18 (W5, the profile contract). `profile.schema.json` is a hand-authored
     # Phase-0 contract that nothing has ever compared against code — the position `banding`
     # and `grouping` were in when four divergences had accumulated unseen. It is also the
