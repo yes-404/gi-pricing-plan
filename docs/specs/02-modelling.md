@@ -1247,7 +1247,7 @@ the measurement and the invariant that now checks it.
 {
   "id": "uuid", "slug": "capped-gamma-nll", "version": 2,
   "kind": "template", "template": "capped_gamma",
-  "params": {"cap": 250000.0},
+  "params": {"cap": 250000},
   "applicability": {"responses": ["claim_severity"], "backends": ["xgboost", "lightgbm"],
                     "offset_required": false, "y_domain": {"min": 0.0}},
   "direction": "lower_is_better",

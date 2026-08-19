@@ -3,6 +3,13 @@
 Parallel to `CustomObjective` and deliberately not the same class: the two share a
 catalogue and a lifecycle, but a metric is never differentiated, so `hessian_strategy` and
 `hessian_min` would be fields meaningful for only one of two uses.
+
+`direction` reuses `model_schema.comparison.MetricDirection` rather than a second enum with
+the same two members: that enum's own docstring already declares the concept FR-MODEL-104
+needs — "which way is better, declared with the metric rather than assumed by the reader" —
+and duplicating it under a second name would only reintroduce the ambiguity `CLAUDE.md` §2
+warns a shape defined twice creates. `CustomMetric` refuses the two members comparison
+needs that an early-stopping loop cannot use: see `_direction_is_usable_for_stopping`.
 """
 
 from __future__ import annotations
@@ -13,6 +20,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.comparison import MetricDirection
 from model_schema.objectives import (
     TEMPLATE_PARAMETERS,
     Applicability,
@@ -31,19 +39,6 @@ __all__ = [
     "MetricDirection",
     "MetricStatus",
 ]
-
-
-class MetricDirection(enum.StrEnum):
-    """FR-MODEL-104. Declared, never inferred.
-
-    Early stopping compares successive values and halts when they stop improving; which
-    comparison "improving" is cannot be read off the arithmetic. A metric whose direction
-    is guessed stops at the wrong round in half of cases, and returns a fitted model rather
-    than an error — the failure that leaves no trace.
-    """
-
-    LOWER_IS_BETTER = "lower_is_better"
-    HIGHER_IS_BETTER = "higher_is_better"
 
 
 class MetricStatus(enum.StrEnum):
@@ -90,7 +85,9 @@ class CustomMetric(BaseModel):
     template: ObjectiveTemplate | None = None
     params: dict[str, int | float] = Field(default_factory=dict)
     applicability: Applicability
-    #: FR-MODEL-104: required, because there is no safe default.
+    #: FR-MODEL-104: required, because there is no safe default. `comparison.MetricDirection`
+    #: is reused rather than restated; `_direction_is_usable_for_stopping` refuses the two
+    #: members (`closer_to_one_is_better`, `not_ordered`) an early-stopping loop cannot use.
     direction: MetricDirection
     status: MetricStatus = MetricStatus.DRAFT
     description: str | None = None
@@ -126,6 +123,26 @@ class CustomMetric(BaseModel):
         for name, parameter in declared.items():
             if name in self.params:
                 parameter.check(self.params[name])
+        return self
+
+    @model_validator(mode="after")
+    def _direction_is_usable_for_stopping(self) -> Self:
+        """FR-MODEL-104 — only the two members an early-stopping loop can compare.
+
+        Early stopping compares successive values and halts when they stop improving.
+        `not_ordered` has no "better" to compare at all — it exists for context values like
+        a holdout row count, not a score. `closer_to_one_is_better` is not the monotone
+        comparison a backend's early-stopping loop can consume either: neither "lower" nor
+        "higher" is always the improving direction for it, and a loop that only knows how
+        to compare two floats one way cannot be handed a target to converge toward.
+        """
+        refused = {MetricDirection.CLOSER_TO_ONE_IS_BETTER, MetricDirection.NOT_ORDERED}
+        if self.direction in refused:
+            raise ValueError(
+                f"metric direction {self.direction.value!r} is not usable for early "
+                "stopping (FR-MODEL-104); only lower_is_better and higher_is_better compare "
+                "successive values monotonically."
+            )
         return self
 
     @model_validator(mode="after")

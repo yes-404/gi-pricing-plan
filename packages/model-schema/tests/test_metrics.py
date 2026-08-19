@@ -76,6 +76,20 @@ def test_direction_has_no_default() -> None:
     assert CustomMetric.model_fields["direction"].is_required()
 
 
+@pytest.mark.req("FR-MODEL-104")
+def test_not_ordered_direction_is_refused() -> None:
+    """`not_ordered` has no "better" for an early-stopping loop to compare toward."""
+    with pytest.raises(ValidationError, match="FR-MODEL-104"):
+        _metric(direction=MetricDirection.NOT_ORDERED)
+
+
+@pytest.mark.req("FR-MODEL-104")
+def test_closer_to_one_direction_is_refused() -> None:
+    """Not the monotone lower/higher comparison a backend's stopping loop can consume."""
+    with pytest.raises(ValidationError, match="FR-MODEL-104"):
+        _metric(direction=MetricDirection.CLOSER_TO_ONE_IS_BETTER)
+
+
 @pytest.mark.req("FR-MODEL-105")
 def test_a_status_past_draft_needs_a_certificate() -> None:
     with pytest.raises(ValidationError, match="certificate"):

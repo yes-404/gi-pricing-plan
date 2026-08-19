@@ -43,10 +43,12 @@
       "type": "object"
     },
     "MetricDirection": {
-      "description": "FR-MODEL-104. Declared, never inferred.\n\nEarly stopping compares successive values and halts when they stop improving; which\ncomparison \"improving\" is cannot be read off the arithmetic. A metric whose direction\nis guessed stops at the wrong round in half of cases, and returns a fitted model rather\nthan an error — the failure that leaves no trace.",
+      "description": "Which way is better, declared with the metric rather than assumed by the reader.\n\n`CLOSER_TO_ONE_IS_BETTER` exists for A/E, and it is the reason this enum is not a\nboolean: an A/E of 1.4 and one of 0.6 are equally wrong, and every \"higher is better\"\ntable this repository could have written would have ranked 1.4 above 1.0.\n\n`NOT_ORDERED` is for the metrics that are context rather than score — the holdout row\ncount is the same number for every model on a shared split, and a winner on it would be\nan artefact of tie-breaking.",
       "enum": [
+        "higher_is_better",
         "lower_is_better",
-        "higher_is_better"
+        "closer_to_one_is_better",
+        "not_ordered"
       ],
       "title": "MetricDirection",
       "type": "string"
