@@ -1260,18 +1260,9 @@
           "top_levels": {
             "default": [],
             "items": {
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ],
-              "type": "array"
+              "$ref": "#/components/schemas/LevelCount"
             },
+            "maxItems": 20,
             "title": "Top Levels",
             "type": "array"
           }
@@ -4987,6 +4978,47 @@
           "kind"
         ],
         "title": "LargeLossTreatment",
+        "type": "object"
+      },
+      "LevelCount": {
+        "additionalProperties": false,
+        "description": "One level of `ColumnProfile.top_levels` (FR-DATA-25, FR-DATA-49).\n\nThe authored contract (`docs/contracts/schemas/profile.schema.json`) has declared this\nshape since Phase 0 — `{level, count, exposure_years}`, only `level` and `count`\nrequired — while the model carried an unnamed `(str, int)` pair with no exposure\nweight. FR-DATA-49 closes that gap on the model-schema side.",
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "exposure_years": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Years"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          }
+        },
+        "required": [
+          "level",
+          "count"
+        ],
+        "title": "LevelCount",
         "type": "object"
       },
       "LiftBin": {

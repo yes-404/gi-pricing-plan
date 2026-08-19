@@ -297,14 +297,23 @@ def test_the_column_profile_shape_matches_its_contract() -> None:
     properties. `ColumnProfile` is nested inside `columns.items`, which is where the
     histogram was missing for three days and where `min`/`minimum` still disagreed — so a
     flat comparison would have reported this contract as conforming throughout.
+
+    `top_levels` is nested a level deeper still, and until FR-DATA-49 that second hop was
+    where a *structural* disagreement hid: the model carried an unnamed `(str, int)` pair
+    and the contract declared `{level, count, exposure_years}`, but `top_levels` itself
+    existed on both sides, so comparing only this function's first-level property-name set
+    reported the contract as conforming. Descending into the item and comparing *its*
+    property names is what makes that class of defect visible instead of merely matching
+    the container's name.
     """
     generated = _load(GENERATED / "profile.schema.json")
     authored = _load(AUTHORED / "profile.schema.json")
 
-    produced = set(
-        _resolve(generated, generated["properties"]["columns"]["items"])["properties"]
-    )
-    declared = set(authored["properties"]["columns"]["items"]["properties"])
+    produced_column = _resolve(generated, generated["properties"]["columns"]["items"])
+    declared_column = authored["properties"]["columns"]["items"]["properties"]
+
+    produced = set(produced_column["properties"])
+    declared = set(declared_column)
 
     assert not declared - produced, (
         f"the contract declares column fields the model lacks: {sorted(declared - produced)}"
@@ -312,6 +321,21 @@ def test_the_column_profile_shape_matches_its_contract() -> None:
     assert not produced - declared, (
         "the model produces column fields the contract does not declare: "
         f"{sorted(produced - declared)}"
+    )
+
+    produced_top_level = _resolve(generated, produced_column["properties"]["top_levels"]["items"])
+    declared_top_level = _resolve(authored, declared_column["top_levels"]["items"])
+
+    produced_top_level_fields = set(produced_top_level["properties"])
+    declared_top_level_fields = set(declared_top_level["properties"])
+
+    assert not declared_top_level_fields - produced_top_level_fields, (
+        "the contract declares top_levels fields the model lacks: "
+        f"{sorted(declared_top_level_fields - produced_top_level_fields)}"
+    )
+    assert not produced_top_level_fields - declared_top_level_fields, (
+        "the model produces top_levels fields the contract does not declare: "
+        f"{sorted(produced_top_level_fields - declared_top_level_fields)}"
     )
 
 
@@ -460,13 +484,18 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     precision the confidence interval beside it is expressing.
 
     Only paths present on **both** sides are compared, so a difference of *structure* is
-    skipped rather than reported. `ColumnProfile.top_levels` is the live example: the model
-    produces an array of `[level, count]` pairs and the contract declares an array of
-    objects, so the two sides have no path in common and this test says nothing about it.
-    That divergence is real, and it is FR-DATA-49's — recorded, with a chosen shape and an
-    owner, rather than suppressed by an exemption here. The scope line is deliberate: a
-    conformance test that grows an exemption list is one nobody reads, and this one is
-    precise about types exactly because it does not try to arbitrate structure.
+    skipped rather than reported. `ColumnProfile.top_levels` used to be the live example:
+    the model produced an array of `[level, count]` pairs against a contract declaring an
+    array of objects, the two sides shared no path, and this test said nothing about it.
+    **Corrected 2026-08-19 (FR-DATA-49):** the model now carries `LevelCount` —
+    `{level, count, exposure_years}` — matching the contract's shape, so
+    `columns.[].top_levels.[].level/.count/.exposure_years` are paths on both sides and
+    this test does compare them; it currently finds no disagreement, `exposure_years`
+    included, which is `DecimalStr` versus the contract's `Decimal` `$ref` — both strings.
+    The scope line is still deliberate: a conformance test that grows an exemption list is
+    one nobody reads, and this one is precise about types exactly because it does not try
+    to arbitrate structure — `test_the_column_profile_shape_matches_its_contract` does
+    that, one level into `top_levels`' item.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
