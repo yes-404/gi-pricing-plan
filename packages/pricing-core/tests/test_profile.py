@@ -121,6 +121,31 @@ def test_the_one_way_means_are_named_as_means_not_as_minor_units() -> None:
 
 
 @pytest.mark.req("FR-DATA-26")
+def test_the_profile_records_which_column_weighted_its_one_ways() -> None:
+    """`weight_column` must record the *argument*, not restate its own default.
+
+    The field defaults to `"exposure_years"`, which is also the column almost every caller
+    passes — so an assertion made against a default-named column passes whether or not
+    anything wired it, and would still pass if `weight_column=exposure_column` were deleted
+    outright. This profiles a frame whose exposure column is deliberately named something
+    else, which is the only arrangement that can tell the two apart.
+
+    It matters because a reader of `one_ways` alone — the frontend, or an actuary reading a
+    stored artifact months later — has no other way to learn what "exposure" meant here.
+    """
+    renamed = FRAME.rename({"exposure_years": "earned_years"})
+
+    profile = profile_frame(
+        renamed,
+        dataset_version_id=uuid4(),
+        one_way_columns=("vehicle_group",),
+        exposure_column="earned_years",
+    )
+
+    assert profile.weight_column == "earned_years"
+
+
+@pytest.mark.req("FR-DATA-26")
 def test_the_poisson_interval_is_exact_not_a_normal_approximation() -> None:
     """The interval must stay positive at low counts.
 

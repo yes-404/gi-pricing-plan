@@ -17,7 +17,13 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from app.db.models import DatasetVersionRow, RoleAssignmentRow, RoleRow, ValidationRuleSetRow
+from app.db.models import (
+    DatasetVersionRow,
+    JobRow,
+    RoleAssignmentRow,
+    RoleRow,
+    ValidationRuleSetRow,
+)
 from app.db.session import Database
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
@@ -207,6 +213,8 @@ async def _validate(
 
 
 @pytest.mark.req("FR-DATA-25")
+@pytest.mark.req("FR-OVR-3")
+@pytest.mark.req("FR-DATA-26")
 async def test_ingestion_produces_a_version_and_its_profile(
     database: Database, blob_store: BlobStore, workspace_id, actuary: Principal
 ) -> None:
@@ -214,6 +222,13 @@ async def test_ingestion_produces_a_version_and_its_profile(
 
     In the same Job, not a second one — a separate profiling Job could be cancelled,
     leaving a version with no profile and nothing recording why.
+
+    Also the assertion that `01` §4.7's "wired from the real profiling path, not left
+    decorative" is true of `job_id` and `weight_column`. Both fields default — `None` and
+    `"exposure_years"` — so a profile built by a handler that never passes them validates
+    and stores exactly as one that does. Nothing but this test distinguishes the two, and
+    `produced_by_job_id` (FR-OVR-3) is what makes a displayed number traceable to the
+    computation behind it.
     """
     dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, actuary)
     version_id = await _ingest(
@@ -227,6 +242,25 @@ async def test_ingestion_produces_a_version_and_its_profile(
     assert profile.row_count == 300
     assert {summary.column for summary in profile.one_ways} == {"vehicle_group"}
     assert profile.one_ways[0].rows[0].frequency is not None
+
+    # FR-OVR-3 — and specifically *this* Job's id, not merely some id. `is not None` would
+    # pass on a handler that invented one; the profile has to carry the ingestion Job that
+    # produced it, because that is the provenance link a reader follows back.
+    async with database.session() as session:
+        ingest_job_id = (
+            await session.execute(
+                select(JobRow.id)
+                .where(JobRow.workspace_id == workspace_id)
+                .where(JobRow.kind == JobKind.DATASET_INGEST)
+            )
+        ).scalar_one()
+    assert profile.job_id == ingest_job_id
+    # FR-DATA-26. This one is a round-trip check, not a wiring check: `weight_column`
+    # defaults to "exposure_years" and this fixture's exposure column is named that too, so
+    # it would pass even if nothing recorded the argument. The wiring itself is proven in
+    # pricing-core, by a test that profiles a frame whose exposure column is named
+    # something else — the only arrangement that can tell the two apart.
+    assert profile.weight_column == "exposure_years"
 
 
 @pytest.mark.req("FR-DATA-15")
