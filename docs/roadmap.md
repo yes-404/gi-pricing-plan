@@ -698,7 +698,7 @@ and on what building the screens found in the API beneath them.
 | Dataset detail | `/data/:slug` | version timeline (newest first, tested), rule set link in both states, data dictionary editor for `description` and `pii_class` | **lineage graph** — `getLineage()` exists, is typed, and is called by nothing while `GET …/lineage` serves it. `semantic_type` is read-only; `unit` and `reference_table` are not rendered |
 | Version detail | `/data/:slug/v/:version` | all five: table inventory, row counts, totals, schema viewer, rejected-rows drawer | — (the drawer's populated branch is untested: both fixtures have zero rejects) |
 | **Validation report** | `…/validation` | all six, and the interaction requirement genuinely holds — DOM order asserted, not presence | the offending sample is a `<ul>`, not the table §5.3 names; `empty_layers` is surfaced on the rule-set screen and not on this one |
-| Profile | `…/profile` | per-column cards; one-way charts with exact Poisson CI whiskers (ECharts); **histograms** — delivered 2026-08-19 by the profile-contract slice, which added `ColumnProfile.histogram` as **FR-DATA-48** and wired `HistogramChart.vue` | **PSI comparison selector** — still absent. `compareProfiles()` is typed, exported and has **zero** callers; the dtype label that borrowed `psiBand`'s colour is uncoloured as of 2026-08-19, so the view no longer reads as offering support it lacks. Owner: the next slice to open `ProfileView.vue`, or **W6b** |
+| Profile | `…/profile` | per-column cards; one-way charts with exact Poisson CI whiskers (ECharts); **histograms** — delivered 2026-08-19 by the profile-contract slice, which added `ColumnProfile.histogram` as **FR-DATA-48** and wired `HistogramChart.vue`; the **top-levels chip list now shows exposure per level** — delivered 2026-08-19 by the `top_levels` slice (FR-DATA-49) | **PSI comparison selector — still absent.** `compareProfiles()` is typed, exported and has **zero** callers; the dtype label that borrowed `psiBand`'s colour is uncoloured as of 2026-08-19, so the view no longer reads as offering support it lacks. Owner: the next slice to open `ProfileView.vue`, or **W6b** |
 | Rule set editor | `/data/:slug/rules` | rules by layer, enable/disable (full-membership round-trip tested), severity override, custom-rule builder with dry-run | **threshold editing** — thresholds render read-only; changing one means retyping the whole rule into the builder |
 | Reference tables | `/reference` | all four: table list, version timeline, effective-date viewer, lookup debugger | — **nothing wrong found in this view** |
 
@@ -2305,6 +2305,54 @@ exists to catch. An exemption entry for `top_levels` was written and then delete
 adjacent reason: with the walker fixed, that divergence is a path mismatch rather than a
 type mismatch, so the entry suppressed nothing and only made the list look load-bearing.
 
+#### W5 slice — `top_levels` carries exposure per level, 2026-08-19
+
+**FR-DATA-49 delivered.** `ColumnProfile.top_levels` moves from an unnamed
+`tuple[tuple[str, int], ...]` to `tuple[LevelCount, ...]` — `{level: str | None, count: int,
+exposure_years: DecimalStr | None}` — computed by both profiling engines and read under
+those names everywhere `top_levels` is read. **The authored contract needed no edit**:
+`docs/contracts/schemas/profile.schema.json` had declared `{level, count, exposure_years}`
+since Phase 0, so this slice moved the model to the document rather than the other way
+round — the same direction the profile-contract slice moved a day earlier.
+
+| Delivered | Evidence |
+|---|---|
+| `LevelCount` in `model-schema` | `{level, count, exposure_years}`, `frozen`, `extra="forbid"`. `exposure_years` carries its own `field_validator` refusing a `float` outright — the one strict `DecimalStr` field in the repository (`OQ-OVR-8` below) |
+| Both profiling engines compute per-level exposure | `profile_frame` and `profile_parquet` share `_stored_exposure`, so the two cannot compute it two different ways |
+| Every reader moved off positional access | `compare_profiles` and `_psi` in `pricing_core.data.profile`; `validate.py`'s `_level_counts`, `_psi_column` (`VR-DST-1`), `_new_level` (`VR-DST-2`) and `_vanished_level` (`VR-DST-3`) |
+| `VR-DST-3`'s fallback corrected | Where no `one_ways` summary exists, the fallback now reads `exposure_years` and drops to `count` only when the version carried no exposure column — it previously used count *as if* it were exposure, contradicting the rule's own definition ("levels with material reference exposure") |
+| Nulls excluded from three checks | `str(level)` no longer coerces a null to the literal `"None"`. `VR-DST-1`'s PSI, `VR-DST-2` and `VR-DST-3` now exclude nulls from both sides — **this moves published PSI numbers on columns carrying nulls**, and a column that had nulls in the reference and none now no longer reports a phantom vanished level. `VR-DST-4` null-rate-shift retains the signal; both changed checks were previously double-counting it under an accidental level name |
+| The nested conformance test deepened | `test_the_column_profile_shape_matches_its_contract` now descends into `top_levels`' item and compares its property names, closing the exact blind spot that let the shape divergence hide behind a matching container name. **Proven against deliberately broken input**: an invented property added to the authored contract was confirmed named by the test, then reverted (`57a0cc0`) |
+| The Vue chip list shows exposure per level | `ProfileView.vue`'s `top_levels` chips render `exposure_years` beside `count`; no new §5.3 Contents item — this corrected one that already existed |
+
+**Deferred, raised rather than picked:**
+
+- **`OQ-DATA-10`** — FR-DATA-25 asks for "top-20 levels by exposure **and** by count"; the
+  platform still produces one list, selected by count. Should there be a second,
+  exposure-ordered selection, and should `VR-DST-1`'s PSI weight by exposure rather than
+  count? **The two halves are one question**: an exposure-weighted PSI over a
+  count-selected level set is meaningless, and switching the basis would silently rewrite
+  the meaning of every drift figure already published. Recommendation on file: defer both
+  until a consumer needs an exposure-ordered view, then decide them together — the
+  exposure number is now carried on every level, so the decision is cheap to revisit and
+  was not before.
+- **`OQ-OVR-8`** — `DecimalStr` silently accepts a `float`: `OneWayRow(exposure_years=0.1+0.2)`
+  returns `Decimal('0.30000000000000004')`, binary error preserved inside a field FR-OVR-7
+  calls exact. 26 fields across 7 modules are affected — too wide to fix for one new field
+  without a decision, which is why `LevelCount.exposure_years` alone carries a field-scoped
+  strict validator rather than a change to `DecimalStr` itself. Recommendation on file: make
+  `DecimalStr` reject `float` at validation and audit the callers in the same change,
+  because some legitimately compute in float and need an explicit quantisation rather than
+  outright rejection at the boundary.
+
+**Gate (local, 2026-08-19, both halves, each exit code read on its own):** ruff clean ·
+mypy --strict on 125 source files · import-linter 3 kept / 0 broken · **1281 python tests**,
+zero skipped · docs audit, 478 requirements across 8 specs, 63 open questions all mirrored ·
+req-coverage 224 of 478 marked (46.9 %) · **21 generated contracts match** ·
+`pnpm install --frozen-lockfile` · `generate:api` · eslint · `vue-tsc --build` ·
+**113 frontend tests** · `pnpm build`. `backend/tests/test_demo_guide.py` — 11 passed; the
+guide is derived (FR-PLAT-54) and needed no hand edit.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2315,7 +2363,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: seventeen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, and the profile contract; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: eighteen slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, and `top_levels`' exposure per level; see the slice records below. **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
