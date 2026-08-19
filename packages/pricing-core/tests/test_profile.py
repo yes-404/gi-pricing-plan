@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ import pytest
 
 from model_schema import SemanticType
 from pricing_core.data.profile import (
+    TOP_LEVELS,
     compare_profiles,
     gamma_severity_interval,
     infer_semantic_type,
@@ -83,6 +85,169 @@ def test_categorical_levels_are_capped_at_twenty() -> None:
     frame = pl.DataFrame({"code": [f"C{i % 50}" for i in range(500)]})
     profile = profile_frame(frame, dataset_version_id=uuid4())
     assert len(profile.column("code").top_levels) == 20
+
+
+# -- FR-DATA-49: per-level exposure on top_levels ---------------------------------------------
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_top_levels_carry_exposure_when_the_version_has_an_exposure_column() -> None:
+    """80 rows per `vehicle_group` level, 1.0 exposure year each — count and exposure
+    agree, and exposure is an exact Decimal rather than a raw float."""
+    profile = profile_frame(FRAME, dataset_version_id=uuid4())
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    assert len(group.top_levels) == 5
+    for level in group.top_levels:
+        assert level.exposure_years == Decimal("80.000000")
+        assert isinstance(level.exposure_years, Decimal)
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_top_levels_exposure_is_none_without_an_exposure_column() -> None:
+    """Negative: absent means "no exposure column" — a version with none must not report
+    a fabricated zero, which would be indistinguishable from every level genuinely having
+    no exposure."""
+    frame = FRAME.drop("exposure_years")
+    profile = profile_frame(frame, dataset_version_id=uuid4(), exposure_column="exposure_years")
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    assert len(group.top_levels) > 0
+    assert all(level.exposure_years is None for level in group.top_levels)
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_top_levels_exposure_is_none_without_an_exposure_column_duckdb(tmp_path: Path) -> None:
+    """The DuckDB sibling of the Polars-only test above. Both engines must agree that
+    "no exposure column" reports `None` on every level rather than a fabricated `0` — the
+    Polars path having it right says nothing about the SQL path, which computes the
+    aggregate independently (FR-DATA-27)."""
+    frame = FRAME.drop("exposure_years")
+    path = tmp_path / "no-exposure.parquet"
+    frame.write_parquet(path)
+
+    profile = profile_parquet(
+        [str(path)], dataset_version_id=uuid4(), exposure_column="exposure_years"
+    )
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    assert len(group.top_levels) > 0
+    assert all(level.exposure_years is None for level in group.top_levels)
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_a_zero_exposure_level_is_distinguishable_from_no_exposure_column() -> None:
+    """Negative: a level that genuinely carries no exposure must report `0`, not `None` —
+    the two are different facts and a profile that conflates them cannot be read for a
+    pricing decision."""
+    frame = pl.DataFrame(
+        {
+            "vehicle_group": ["G0"] * 10 + ["G1"] * 10,
+            "exposure_years": [0.0] * 10 + [1.0] * 10,
+        }
+    )
+    profile = profile_frame(frame, dataset_version_id=uuid4())
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    levels = {level.level: level.exposure_years for level in group.top_levels}
+    assert levels["G0"] == Decimal("0.000000")
+    assert levels["G1"] == Decimal("10.000000")
+    assert levels["G0"] is not None  # zero, not "no exposure column"
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_a_column_is_never_weighted_by_its_own_exposure() -> None:
+    """Negative: the histogram's self-weighting guard applies to `top_levels` too — a
+    column named as the exposure column must not carry an exposure weight on itself."""
+    frame = pl.DataFrame({"vehicle_group": [f"G{i % 5}" for i in range(50)]})
+    profile = profile_frame(frame, dataset_version_id=uuid4(), exposure_column="vehicle_group")
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    assert all(level.exposure_years is None for level in group.top_levels)
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_top_levels_stay_ordered_by_count_not_by_exposure() -> None:
+    """Selection stays by count, descending — exposure is carried, not ranked on. A level
+    with far more exposure but fewer rows must still rank below a level with more rows."""
+    frame = pl.DataFrame(
+        {
+            "vehicle_group": ["A"] * 5 + ["B"] * 3,
+            "exposure_years": [0.01] * 5 + [1000.0] * 3,
+        }
+    )
+    profile = profile_frame(frame, dataset_version_id=uuid4())
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    assert [level.level for level in group.top_levels] == ["A", "B"]
+    assert group.top_levels[0].count == 5
+    assert group.top_levels[1].exposure_years == Decimal("3000.000000")
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_the_twenty_cap_holds_with_exposure_carried() -> None:
+    frame = pl.DataFrame(
+        {
+            "code": [f"C{i % 50}" for i in range(500)],
+            "exposure_years": [1.0] * 500,
+        }
+    )
+    profile = profile_frame(frame, dataset_version_id=uuid4())
+    top = profile.column("code").top_levels
+    assert len(top) == TOP_LEVELS
+    assert all(level.exposure_years is not None for level in top)
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_a_null_level_survives_as_null_not_the_string_none() -> None:
+    """Negative: the old `str(level)` coercion turned a SQL/Polars null into the literal
+    text "None", indistinguishable from a real level someone recorded that way."""
+    frame = pl.DataFrame({"vehicle_group": ["G0"] * 5 + [None] * 3})
+    profile = profile_frame(frame, dataset_version_id=uuid4())
+    group = profile.column("vehicle_group")
+
+    assert group is not None
+    levels = [level.level for level in group.top_levels]
+    assert None in levels
+    assert "None" not in levels
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_both_engines_produce_identical_top_levels(tmp_path: Path) -> None:
+    """Polars and DuckDB must agree byte-for-byte on `top_levels`, exposure included and
+    a null level included — not just on the rest of the column statistics.
+
+    All four levels tie on count (40 rows each), including the null level, so this also
+    pins the null tie-break: Polars defaults nulls first on a sort, DuckDB defaults nulls
+    last, and both engines must land on the same order or the agreement test downstream
+    would have caught it as silently as it once caught a tie-break defect before.
+    """
+    frame = pl.DataFrame(
+        {
+            "vehicle_group": ["G0"] * 40 + ["G1"] * 40 + ["G2"] * 40 + [None] * 40,
+            "exposure_years": [0.5, 1.25] * 80,
+        }
+    )
+    path = tmp_path / "levels.parquet"
+    frame.write_parquet(path)
+
+    from_frame = profile_frame(frame, dataset_version_id=uuid4()).column("vehicle_group")
+    from_parquet = profile_parquet([str(path)], dataset_version_id=uuid4()).column(
+        "vehicle_group"
+    )
+
+    assert from_frame is not None
+    assert from_parquet is not None
+    assert [level.level for level in from_frame.top_levels] == ["G0", "G1", "G2", None]
+    assert [level.model_dump(mode="json") for level in from_frame.top_levels] == [
+        level.model_dump(mode="json") for level in from_parquet.top_levels
+    ]
 
 
 # -- FR-DATA-26: one-way summaries with exact intervals --------------------------------------

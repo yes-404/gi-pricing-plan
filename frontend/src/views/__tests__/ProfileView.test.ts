@@ -39,7 +39,17 @@ const PROFILE: Profile = {
     {
       name: "veh_brand", dtype: "String", semantic_type: "categorical", row_count: 29970,
       null_count: 0, null_rate: 0, distinct_count: 11, quantiles: {},
-      top_levels: [["B12", 8000], ["B1", 5000]],
+      // Mixing a weighted level (B12), an unweighted one (B1) and a null level within one
+      // column is not a shape either profiling engine can produce — both set
+      // `exposure_years` uniformly per column: present on every level or absent from all
+      // of them. This fixture is deliberately unproducible; it exists only to exercise
+      // the chip's three render branches (with exposure, without, null level) in one
+      // column instead of three, and must not be read as documenting a real profile.
+      top_levels: [
+        { level: "B12", count: 8000, exposure_years: "4123.5" },
+        { level: "B1", count: 5000, exposure_years: null },
+        { level: null, count: 200, exposure_years: "10.5" },
+      ],
     },
     {
       name: "driv_age", dtype: "Int64", semantic_type: "continuous", row_count: 29970,
@@ -168,6 +178,45 @@ describe("the profile view", () => {
     expect(container.innerHTML).not.toContain("text-amber-700");
     expect(container.innerHTML).not.toContain("text-red-700");
     expect(container.innerHTML).not.toContain("psi-");
+  });
+
+  it("shows a top-level chip's level and count", async () => {
+    // FR-DATA-49: top_levels is now a named object array, not an unnamed [level, count]
+    // pair — the chip reads `.level`/`.count`, not tuple positions.
+    render(ProfileView, { props, ...mounted });
+    await screen.findByText(/29,970 rows/);
+    expect(screen.getByText(/B12 · 8,000/)).toBeInTheDocument();
+  });
+
+  it("shows exposure on a chip when the level carries it, and omits it when not", async () => {
+    render(ProfileView, { props, ...mounted });
+    await screen.findByText(/29,970 rows/);
+    // B12 carries exposure_years "4123.5" — rendered from the string, never parsed.
+    expect(screen.getByText(/B12 · 8,000 · 4,123\.5/)).toBeInTheDocument();
+    // B1 has no exposure_years at all — its chip has no exposure segment.
+    const b1 = screen.getByText(/B1 · 5,000/);
+    expect(b1.textContent).not.toMatch(/·.*·/);
+  });
+
+  it("renders a null level as missing, not as an empty or literal 'null' chip", async () => {
+    const { container } = render(ProfileView, { props, ...mounted });
+    await screen.findByText(/29,970 rows/);
+    // A genuine null level (missing data) reads as the same "—" the rest of the view
+    // uses for an absent value — never the empty string, never the word "null".
+    const chips = container.querySelectorAll("article ul li");
+    const chipTexts = Array.from(chips).map((chip) => chip.textContent);
+    expect(chipTexts).toContain("— · 200 · 10.5");
+    expect(chipTexts.some((text) => /null/i.test(text ?? ""))).toBe(false);
+  });
+
+  it("does not collide keys across chips sharing a null level", async () => {
+    // Two rows could both carry `level: null`; keying on `level` alone would collide or
+    // produce an `undefined` key. The list is a static, ordered slice, so all six chips
+    // must still render distinctly.
+    const { container } = render(ProfileView, { props, ...mounted });
+    await screen.findByText(/29,970 rows/);
+    const chips = container.querySelectorAll("article ul li");
+    expect(chips).toHaveLength(3);
   });
 
   it("summarises what the profile covers", async () => {

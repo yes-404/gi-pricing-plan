@@ -658,6 +658,94 @@ def test_vr_dst_2_new_level_and_vr_dst_3_vanished_level() -> None:
     )
 
 
+@pytest.mark.req("FR-DATA-49")
+def test_vr_dst_1_psi_column_excludes_nulls_on_both_sides() -> None:
+    """The trap: the reference side (`top_levels`) excludes a null level, the same as
+    `_psi` in `profile.py`. If the current side (`_level_counts`) kept it under the key
+    `"None"` instead of excluding it too, the two weight maps would disagree about their
+    totals and shares for no reason but the null coercion — inventing drift on every
+    column that has one. 20 % of this column is null in both versions and nothing else
+    moves: PSI must land at (or near) zero, not spike."""
+    reference = pl.DataFrame({"vehicle_group": ["G1"] * 400 + ["G2"] * 400 + [None] * 200})
+    context = ValidationContext(
+        reference_tables={}, reference_frames={}, reference_profile=_profiled(reference)
+    )
+    outcome = run(
+        "psi_column",
+        {"t": reference},
+        context=context,
+        target={"table": "t", "column": "vehicle_group"},
+    )
+    assert outcome.violating_rows == 0
+    assert outcome.measured["psi"] == pytest.approx(0.0, abs=1e-9)
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_vr_dst_3_vanished_level_top_levels_fallback_is_judged_on_exposure() -> None:
+    """Ruling 2c: once a version's profile carries per-level `exposure_years`, the
+    `top_levels` fallback in `_vanished_level` must judge materiality on exposure, not on
+    the count it used to stand in for. G1 is 995 of 1000 rows but a sliver of exposure
+    (0.1986 %, immaterial); G2 is 5 rows but nearly all the exposure (99.8 %, material).
+    `one_ways=[]` keeps `ctx.reference_profile.one_ways` empty so `_vanished_level` falls
+    through past its (already-correct, out-of-scope) primary branch into the `top_levels`
+    fallback under test."""
+    reference = pl.DataFrame(
+        {
+            "vehicle_group": ["G1"] * 995 + ["G2"] * 5,
+            "exposure_years": [0.001] * 995 + [100.0] * 5,
+        }
+    )
+    context = ValidationContext(
+        reference_tables={},
+        reference_frames={},
+        reference_profile=_profiled(reference, []),
+    )
+    current = pl.DataFrame({"vehicle_group": ["G3"] * 10})  # both G1 and G2 vanish
+
+    outcome = run(
+        "vanished_level",
+        {"t": current},
+        context=context,
+        target={"table": "t", "column": "vehicle_group"},
+    )
+    assert outcome.offending_sample == ("G2",), (
+        "judged on count, G1 (99.5 % of rows) would be the material one and G2 (0.5 % of "
+        "rows) would be filtered out as noise — the reverse of the exposure-correct answer"
+    )
+
+
+@pytest.mark.req("FR-DATA-49")
+def test_vr_dst_3_vanished_level_primary_branch_does_not_report_a_phantom_null() -> None:
+    """The regression: `OneWayRow.level` still coerces a null level to the string "None"
+    (unchanged by FR-DATA-49), so the primary `one_ways`-derived branch of
+    `_vanished_level` used to carry a `"None"` key that the present side — built by
+    `_level_counts`, which now drops nulls — could never match. On a byte-identical
+    current frame with a material null share, that made `"None"` report as vanished on
+    every run. `one_ways=["vehicle_group"]` exercises the primary branch (not the
+    `top_levels` fallback the sibling test above covers)."""
+    reference = pl.DataFrame(
+        {
+            "vehicle_group": ["G1"] * 600 + [None] * 400,
+            "exposure_years": [1.0] * 1000,
+        }
+    )
+    current = reference.clone()
+    context = ValidationContext(
+        reference_tables={},
+        reference_frames={},
+        reference_profile=_profiled(reference, ["vehicle_group"]),
+    )
+
+    outcome = run(
+        "vanished_level",
+        {"t": current},
+        context=context,
+        target={"table": "t", "column": "vehicle_group"},
+    )
+    assert outcome.violating_rows == 0
+    assert outcome.offending_sample == ()
+
+
 @pytest.mark.req("FR-DATA-24")
 def test_vr_dst_6_mean_shift_is_measured_in_standard_errors() -> None:
     """VR-DST-6. The same 2 % move means different things on ten million observations and

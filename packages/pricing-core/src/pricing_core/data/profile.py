@@ -25,6 +25,7 @@ from model_schema import (
     ColumnComparison,
     ColumnProfile,
     Histogram,
+    LevelCount,
     OneWayRow,
     OneWaySummary,
     Profile,
@@ -199,6 +200,13 @@ def profile_frame(
         null_count = int(series.null_count())
 
         numeric = series.dtype.is_numeric() and semantic is not SemanticType.IDENTIFIER
+        # Never weight a column by itself, and tolerate the exposure column being absent —
+        # the same rule the histogram below applies, shared here so both consumers agree.
+        weighted_exposure_column = (
+            exposure_column
+            if exposure_column in frame.columns and exposure_column != name
+            else None
+        )
         quantiles: dict[str, float] = {}
         minimum = maximum = mean = std = None
         if numeric and height:
@@ -218,20 +226,36 @@ def profile_frame(
                     for q in DEFAULT_QUANTILES
                 }
 
-        top: tuple[tuple[str, int], ...] = ()
+        top: tuple[LevelCount, ...] = ()
         if semantic in {SemanticType.CATEGORICAL, SemanticType.ORDINAL, SemanticType.BOOLEAN}:
+            aggregates = [pl.len().alias("_n")]
+            if weighted_exposure_column:
+                aggregates.append(
+                    pl.col(weighted_exposure_column).cast(pl.Float64).sum().alias("_e")
+                )
             counts = (
                 frame.group_by(name)
-                .len()
-                # Level name breaks the tie. Without it, forty groups of exactly 125 come
-                # back in whatever order the engine grouped them, and the same dataset
-                # profiled twice shows a different top-20 — which is indistinguishable
-                # from the data having changed.
-                .sort(["len", name], descending=[True, False])
+                .agg(aggregates)
+                # Level name breaks the tie, and nulls sort last on both engines. Without
+                # the tie-break, forty groups of exactly 125 come back in whatever order
+                # the engine grouped them, and the same dataset profiled twice shows a
+                # different top-20 — which is indistinguishable from the data having
+                # changed. Without a pinned null order, a null level (a real category, not
+                # the string "None") sorts first here and last in DuckDB on a tied count.
+                .sort(["_n", name], descending=[True, False], nulls_last=True)
                 .head(TOP_LEVELS)
             )
             top = tuple(
-                (str(level), int(count)) for level, count in counts.iter_rows()
+                LevelCount(
+                    level=_as_level(row[name]),
+                    count=int(row["_n"]),
+                    exposure_years=(
+                        _stored_exposure(float(row["_e"] or 0.0))
+                        if weighted_exposure_column
+                        else None
+                    ),
+                )
+                for row in counts.iter_rows(named=True)
             )
 
         histogram = None
@@ -241,11 +265,7 @@ def profile_frame(
                 name,
                 minimum=minimum,
                 maximum=maximum,
-                exposure_column=(
-                    exposure_column
-                    if exposure_column in frame.columns and exposure_column != name
-                    else None
-                ),
+                exposure_column=weighted_exposure_column,
             )
 
         columns.append(
@@ -377,6 +397,18 @@ def _identifier(name: str) -> str:
     header is not exotic — it is a Tuesday."""
     escaped = name.replace('"', '""')
     return f'"{escaped}"'
+
+
+def _as_level(value: Any) -> str | None:
+    """A `top_levels` entry's level, without collapsing a null into the string `"None"`
+    (FR-DATA-49).
+
+    A SQL `NULL` / Polars null is a genuine category — a row where the column was not
+    recorded — and stays `None` so it cannot be confused with a level someone actually
+    wrote as the text "None". Anything else becomes its string form, exactly as every
+    non-null level always has.
+    """
+    return None if value is None else str(value)
 
 
 def _stored_exposure(value: float) -> Decimal:
@@ -629,14 +661,36 @@ def _profile_column(
             exposure=tuple(weights) if weighted else (),
         )
 
-    top: tuple[tuple[str, int], ...] = ()
+    top: tuple[LevelCount, ...] = ()
     if semantic in {SemanticType.CATEGORICAL, SemanticType.ORDINAL, SemanticType.BOOLEAN}:
+        # Same rule as the histogram's `weighted` above: never weight a column by itself,
+        # tolerate the exposure column being absent. Recomputed rather than shared because
+        # an ordinal column is numeric too and reaches the histogram branch above under its
+        # own `weighted`, scoped to that block.
+        weighted_levels = exposure_column is not None and exposure_column != name
+        exposure_select = (
+            f", sum(CAST({_identifier(exposure_column)} AS DOUBLE))"
+            if weighted_levels and exposure_column is not None
+            else ""
+        )
+        # `NULLS LAST` pinned explicitly: DuckDB already defaults to it, but Polars'
+        # `.sort()` defaults the other way, and a level tied on count must land in the same
+        # position on both engines (`test_the_two_profiling_paths_agree`).
         levels = connection.execute(
-            f"SELECT {quoted}, count(*) AS n FROM src GROUP BY 1 "
-            f"ORDER BY n DESC, {quoted} ASC LIMIT ?",
+            f"SELECT {quoted}, count(*) AS n{exposure_select} FROM src GROUP BY 1 "
+            f"ORDER BY n DESC, {quoted} ASC NULLS LAST LIMIT ?",
             [TOP_LEVELS],
         ).fetchall()
-        top = tuple((str(level), int(count)) for level, count in levels)
+        top = tuple(
+            LevelCount(
+                level=_as_level(row[0]),
+                count=int(row[1]),
+                exposure_years=(
+                    _stored_exposure(float(row[2] or 0.0)) if weighted_levels else None
+                ),
+            )
+            for row in levels
+        )
 
     return ColumnProfile(
         name=name,
@@ -743,8 +797,12 @@ def compare_profiles(
             if column.mean is not None and before.mean is not None
             else None
         )
-        current_levels = {level for level, _ in column.top_levels}
-        reference_levels = {level for level, _ in before.top_levels}
+        # `ColumnComparison.new_levels`/`vanished_levels` are non-null strings; a null
+        # level is a real category but is not something that "newly appeared" or
+        # "vanished" in the sense those two fields report, so it is excluded here rather
+        # than compared against the literal text "None" (the old `str(level)` coercion).
+        current_levels = {lc.level for lc in column.top_levels if lc.level is not None}
+        reference_levels = {lc.level for lc in before.top_levels if lc.level is not None}
 
         comparisons.append(
             ColumnComparison(
@@ -778,9 +836,14 @@ def _psi(current: ColumnProfile, reference: ColumnProfile) -> float | None:
     """Population Stability Index over the profiled level shares.
 
     Computed from the top-level counts both profiles already hold, which is what makes the
-    distributional layer cheap enough to run on every validation (FR-DATA-24's intent).
+    distributional layer cheap enough to run on every validation (FR-DATA-24's intent). A
+    null level is excluded, the same as `new_levels`/`vanished_levels` above — there is no
+    string key to weight it under now that it is not coerced to the literal text "None".
     """
-    return psi_from_weights(dict(current.top_levels), dict(reference.top_levels))
+    return psi_from_weights(
+        {lc.level: float(lc.count) for lc in current.top_levels if lc.level is not None},
+        {lc.level: float(lc.count) for lc in reference.top_levels if lc.level is not None},
+    )
 
 
 def psi_from_weights(
