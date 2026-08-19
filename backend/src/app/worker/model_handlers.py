@@ -632,7 +632,7 @@ def _compare(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
 
 
 def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`model.transparency` — explain a fitted non-GLM model (FR-MODEL-33..37, R3).
+    """`model.transparency` — explain a fitted non-GLM model (FR-MODEL-33..37, 96, R3).
 
     Both forms are built when both can be: FR-MODEL-33 allows either and this produces
     both, because they answer different questions. The GLM approximation says what the
@@ -644,16 +644,32 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     statement describes the population the model was fitted on. Approximating on the
     holdout would report how well a surrogate generalises, which is a different question
     and not the one R3 asks.
+
+    FR-MODEL-96 makes the approximation a Model rather than a table inside the artifact, so
+    this Job now *fits and persists* one: reserved on its own `spec_hash`, given diagnostics
+    against the booster's predictions on both partitions, and named by the artifact. The
+    holdout is loaded beside the train frame for that reason alone — the approximation is
+    still built on train (above), and the holdout only ever reaches `compute_diagnostics`,
+    which FR-MODEL-54 refuses to run one-sided.
     """
     progress = _bridge(callback)
     blob_store = progress.blob_store
     actor, workspace_id = _actor(parameters), _workspace(parameters)
     model_id = UUID(parameters["model_id"])
     sample = int(parameters.get("sample", 200_000))
+    job_id = UUID(parameters["job_id"]) if parameters.get("job_id") else None
     progress.update(0.05, "loading the model")
 
     async def load() -> tuple[
-        GbmSpec, GbmFitResult, bytes, list[Factor], _Transformations, pl.DataFrame
+        GbmSpec,
+        GbmFitResult,
+        bytes,
+        list[Factor],
+        _Transformations,
+        pl.DataFrame,
+        pl.DataFrame,
+        str,
+        int,
     ]:
         async with progress.database.session() as session:
             row = await transparency_service.fitted_gbm_or_refuse(
@@ -667,6 +683,15 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                     "This model type has no transparency builder",
                     409,
                     f"{spec.model_type!r} is not a gradient boosting model.",
+                )
+            if spec.split_ref is None:
+                raise PlatformError(
+                    "MODEL_SPLIT_REQUIRED",
+                    "This model spec declares no split",
+                    422,
+                    "The approximation is a Model in its own right (FR-MODEL-96), and "
+                    "FR-MODEL-54 makes a diagnostic reported without its holdout "
+                    "counterpart a defect. Without a split there is no holdout to report.",
                 )
             factors = await model_service.load_factors(
                 session, workspace_id=workspace_id, factor_ids=list(spec.factors)
@@ -685,37 +710,82 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                 session, workspace_id=workspace_id, version_id=spec.dataset_version_id
             )
             parent = await _frame_of(session, blob_store, version)
-            train, _ = await _split_frames(
+            train, holdout = await _split_frames(
                 session, blob_store, workspace_id=workspace_id, spec=spec, parent=parent
             )
             booster = await blob_store.read(result.booster_blob)
-            return spec, result, booster, factors, transformations, train
+            # The source's identity travels with the frames rather than being re-read in a
+            # second session later: `store()` needs it only for the change reason, and a
+            # second read is a second answer to a question already asked.
+            return (
+                spec, result, booster, factors, transformations, train, holdout,
+                row.model_family_slug, row.version,
+            )
 
-    spec, result, booster, factors, transformations, frame = progress.run_on_loop(load())
+    (
+        spec, result, booster, factors, transformations, frame, holdout,
+        source_slug, source_version,
+    ) = progress.run_on_loop(load())
 
     from pricing_core.modelling import (
+        approximation_spec,
         build_glm_approximation,
         build_shap_summary,
+        compute_diagnostics,
         fidelity_statement,
     )
+
+    # `models.model_family_slug` is a `String(64)` and this Job generates a slug seven
+    # characters longer than the one the analyst chose. Refused here, naming the cause,
+    # rather than as a driver `DataError` naming a column at the end of the compute.
+    surrogate_spec = approximation_spec(spec, source_model_id=model_id)
+    if len(surrogate_spec.model_family_slug) > 64:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The approximating model's slug is too long",
+            422,
+            f"{spec.model_family_slug!r} plus the '-approx' suffix is "
+            f"{len(surrogate_spec.model_family_slug)} characters, and a model family slug "
+            "is 64. Rename the model family, or the approximation FR-MODEL-96 requires "
+            "cannot be stored.",
+        )
 
     progress.update(0.20, "fitting the GLM approximation")
     approximation = build_glm_approximation(
         result, booster, spec, factors, frame,
+        holdout=holdout,
+        source_model_id=model_id,
         bandings=transformations.bandings,
         groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.20, end=0.60),
+        progress=ScaledProgress(progress, start=0.20, end=0.50),
     )
-    progress.update(0.60, "tree shap")
+    progress.update(0.50, "diagnostics of the approximation")
+    # FR-MODEL-96(iii): the surrogate reaches `fitted` on diagnostics of itself against the
+    # source model's predictions — FR-MODEL-36's quantity, on both partitions. The frames
+    # carry the booster's predictions in `SURROGATE_RESPONSE_COLUMN`, so this is the
+    # ordinary GLM diagnostics path measuring an extraordinary target, and FR-MODEL-102's
+    # spec invariant is what says so to every later reader.
+    surrogate_diagnostics = compute_diagnostics(
+        approximation.result, approximation.spec, factors,
+        train=approximation.train, holdout=approximation.holdout,
+        bandings=transformations.bandings,
+        groupings=transformations.groupings,
+        progress=ScaledProgress(progress, start=0.50, end=0.62),
+    )
+    progress.update(0.62, "tree shap")
     summary = build_shap_summary(
         result, booster, spec, factors, frame,
         sample=sample,
         bandings=transformations.bandings,
         groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.60, end=0.90),
+        progress=ScaledProgress(progress, start=0.62, end=0.90),
     )
 
     async def store() -> UUID:
+        # **One transaction, and never a second inside it.** A failed compute leaves
+        # nothing behind, and the artifact never commits without the Model it names. An
+        # inner `unit_of_work` would take a second connection from the pool and deadlock
+        # against it with no output and no traceback.
         async with progress.database.unit_of_work() as session:
             # FR-MODEL-52's monotonicity check, carried up to the artifact R3 reads. Taken
             # from the diagnostics rather than recomputed: the diagnostics swept the factors
@@ -725,14 +795,53 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                 session, workspace_id=workspace_id, model_id=model_id
             )
             checks = diagnostics.gbm.monotonicity if diagnostics.gbm else ()
+
+            # FR-MODEL-96. Reserved rather than created: `spec_hash` makes a rebuilt
+            # artifact find the surrogate it already fitted (FR-MODEL-66), and calling
+            # `record_fit` on it a second time would raise `MODEL_IMMUTABLE` and fail a Job
+            # that had done nothing wrong.
+            surrogate, should_fit = await model_service.reserve_model(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                spec=approximation.spec,
+                change_reason=(
+                    f"glm approximation of {source_slug}@{source_version} (FR-MODEL-34)"
+                ),
+            )
+            if should_fit:
+                await model_service.record_fit(
+                    session,
+                    workspace_id=workspace_id,
+                    actor=actor,
+                    model_id=surrogate.id,
+                    # The covariance reference is dropped, not stored: the bytes were never
+                    # kept, and FR-MODEL-63's interval belongs to the model that priced the
+                    # row rather than to a description of it (FR-MODEL-102).
+                    fit_result=approximation.result.model_copy(
+                        update={"covariance_blob": None}
+                    ),
+                    diagnostics=Diagnostics(
+                        id=new_uuid7(),
+                        model_id=surrogate.id,
+                        computed_at=datetime.now(UTC),
+                        job_id=job_id,
+                        universal=surrogate_diagnostics.universal,
+                        complexity=surrogate_diagnostics.complexity,
+                        glm=surrogate_diagnostics.glm,
+                    ),
+                    job_id=job_id,
+                )
+
+            block = approximation.artifact_block(surrogate.id)
             artifact = TransparencyArtifact(
                 id=new_uuid7(),
                 model_id=model_id,
                 created_at=datetime.now(UTC),
-                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
-                glm_approximation=approximation,
+                job_id=job_id,
+                glm_approximation=block,
                 shap_summary=summary,
-                fidelity_statement=fidelity_statement(approximation, summary),
+                fidelity_statement=fidelity_statement(block, summary),
                 monotonicity_verified=(
                     all(check.holds for check in checks) if checks else None
                 ),
@@ -743,13 +852,14 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                 actor=actor,
                 model_id=model_id,
                 artifact=artifact,
-                job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
+                job_id=job_id,
             )
             return row.id
 
     artifact_id = progress.run_on_loop(store())
     progress.update(1.0, "done")
     return JobResult(kind="artifact", ref=f"transparency:{artifact_id}")
+
 
 def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`model.backtest` — FR-MODEL-57, one model measured on data it never saw.
