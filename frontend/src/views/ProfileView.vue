@@ -6,6 +6,7 @@ import { ProblemError, isProblem } from "@/api/problem";
 import {
   getOneWay,
   getProfile,
+  type LevelCount,
   type OneWaySummary,
   type Profile,
 } from "@/api/profiles";
@@ -25,6 +26,20 @@ const versionId = ref<string | null>(null);
 
 const currency = computed(() => props.currency ?? "GBP");
 const rateable = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
+
+/**
+ * A chip's label. `level` is nullable (FR-DATA-49): a genuine missing level renders as
+ * "—", the same absent-value mark used everywhere else in this view — never the empty
+ * string, never the literal word "null". `exposure_years` is an exact decimal string and
+ * is rendered, never parsed; it is appended only when the level actually carries one —
+ * `null` means the dataset version carried no exposure column at all, which is different
+ * from a level having zero exposure.
+ */
+function chipLabel(item: LevelCount): string {
+  const parts = [`${item.level ?? "—"} · ${item.count.toLocaleString()}`];
+  if (item.exposure_years != null) parts.push(formatDecimalString(item.exposure_years));
+  return parts.join(" · ");
+}
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -291,11 +306,11 @@ onMounted(() => void load());
               class="mt-2 flex flex-wrap gap-1"
             >
               <li
-                v-for="[level, count] in (column.top_levels ?? []).slice(0, 6)"
-                :key="level"
+                v-for="(item, index) in (column.top_levels ?? []).slice(0, 6)"
+                :key="index"
                 class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700"
               >
-                {{ level }} · {{ count.toLocaleString() }}
+                {{ chipLabel(item) }}
               </li>
             </ul>
           </article>
