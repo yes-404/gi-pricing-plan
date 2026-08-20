@@ -82,7 +82,12 @@ class CreateCustomObjective(BaseModel):
     slug: Slug
     kind: ObjectiveKind = ObjectiveKind.TEMPLATE
     template: ObjectiveTemplate | None = None
-    params: dict[str, float] = Field(default_factory=dict)
+    #: `int | float`, `CustomObjective.params`'s own type — a money-kind template parameter
+    #: (`capped_gamma.cap`, `spliced_severity`'s threshold) must arrive as an integer
+    #: minor-unit amount (`CLAUDE.md` §7), and a narrower `dict[str, float]` here would
+    #: coerce it to a float before the contract's own `TemplateParameter.check` ever saw
+    #: it, turning a valid request into a 422 the caller cannot fix by re-reading §4.5.
+    params: dict[str, int | float] = Field(default_factory=dict)
     #: Omitted means the template's own (§4.5). An author may narrow it and never widen it.
     applicability: Applicability | None = None
     hessian_strategy: HessianStrategy = HessianStrategy.CLIP_TO_MIN

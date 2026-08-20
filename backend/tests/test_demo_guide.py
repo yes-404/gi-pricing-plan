@@ -253,8 +253,14 @@ def test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks() 
 
     The page reported "63 endpoints published" and nothing else — true, and silent about
     the declared routes that do not exist, which is the half the question asks about.
+
+    `modules` names the modules that still have at least one endpoint declared but not
+    published. That set is expected to shrink as modules close their endpoint axis — MODEL
+    dropped out on 2026-08-20 when the custom-metrics slice's Task 1 and Task 5 published
+    the last of its 40 declared endpoints — so a future failure here most likely means a
+    module finished, not that something broke.
     """
     guide = build_guide(repository_root())
     assert guide.unpublished_endpoints, "no module declares an unbuilt endpoint?"
     modules = {endpoint.module for endpoint in guide.unpublished_endpoints}
-    assert {"MODEL", "RATE"} <= modules, modules
+    assert {"RATE"} <= modules, modules

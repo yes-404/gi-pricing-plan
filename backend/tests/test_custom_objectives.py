@@ -617,3 +617,42 @@ def test_the_derive_route_refuses_rather_than_pretending_the_concept_is_unknown(
         headers=_headers(principal.id, workspace_id),
     )
     assert response.status_code in (403, 409)
+
+
+@pytest.mark.req("FR-MODEL-38")
+async def test_a_money_parameter_survives_the_route_as_an_integer(
+    api_client: TestClient, workspace_id, principal, grant
+) -> None:
+    """Pre-existing defect, found while building the parallel Custom Metric endpoint
+    (`custom_metrics.py`'s `CreateCustomMetric.params` needed the same fix).
+
+    `CreateCustomObjective.params` was `dict[str, float]`, so a caller's `{"cap": 250000}`
+    arrived at `TemplateParameter.check` as `250000.0` — and `check` **raises** for
+    `kind == "money_minor"` and a non-`int` value (`CLAUDE.md` §7: money is integer minor
+    units). `capped_gamma` and `spliced_severity` are the two of thirteen shipped templates
+    carrying a money parameter, and neither could be created through this endpoint at all.
+
+    This asserts the fixed route accepts `capped_gamma` with an integer `cap` and returns
+    it unchanged — `int`, not `250000.0` — proving the value reached `CustomObjective`
+    without being coerced first.
+    """
+    await grant("pricing_actuary")
+    response = api_client.post(
+        "/api/v1/custom-objectives",
+        json={
+            "slug": "capped-gamma-money-regression",
+            "template": "capped_gamma",
+            "params": {"cap": 250000},
+            "applicability": {
+                "responses": ["claim_severity"],
+                "backends": ["xgboost"],
+                "offset_required": False,
+                "y_domain": {"min_exclusive": 0.0},
+            },
+        },
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["params"]["cap"] == 250000
+    assert isinstance(body["params"]["cap"], int)

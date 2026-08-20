@@ -1543,6 +1543,75 @@
         "title": "ComponentStatus",
         "type": "string"
       },
+      "CreateCustomMetric": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-45's artifact. Every range and rule is `CustomMetric`'s, not this one's.\n\n`kind` is here for `CreateCustomObjective`'s reason: a caller asking for an\n`expression` metric is *answered* — refused by the contract's own\n`_only_templates_are_built` validator with a 422 that names FR-MODEL-103, rather than\nsilently forbidding the field and leaving them reading a 422 about an unexpected key.",
+        "properties": {
+          "applicability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Applicability"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/MetricDirection"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ObjectiveKind",
+            "default": "template"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectiveTemplate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slug",
+          "direction"
+        ],
+        "title": "CreateCustomMetric",
+        "type": "object"
+      },
       "CreateCustomObjective": {
         "additionalProperties": false,
         "description": "FR-MODEL-38's artifact. Every range and rule is `CustomObjective`'s, not this one's.\n\n`kind` is here rather than assumed so that a caller asking for an `expression`\nobjective is *answered* — FR-MODEL-75 makes that a named refusal, and a body that\nsilently forbade the field would leave them reading a 422 about an unexpected key.",
@@ -1584,7 +1653,14 @@
           },
           "params": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
             },
             "title": "Params",
             "type": "object"
@@ -1740,6 +1816,109 @@
         ],
         "title": "CredibilityModel",
         "type": "string"
+      },
+      "CustomMetric": {
+        "additionalProperties": false,
+        "description": "A named, versioned, reusable eval metric (FR-MODEL-45, §4.13).",
+        "properties": {
+          "applicability": {
+            "$ref": "#/components/schemas/Applicability"
+          },
+          "approval_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Request Id"
+          },
+          "certificate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certificate Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/MetricDirection"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ObjectiveKind",
+            "default": "template"
+          },
+          "params": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MetricStatus",
+            "default": "draft"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectiveTemplate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "version",
+          "applicability",
+          "direction"
+        ],
+        "title": "CustomMetric",
+        "type": "object"
       },
       "CustomObjective": {
         "additionalProperties": false,
@@ -4812,6 +4991,7 @@
           "model.compare",
           "peril_structure.reconcile",
           "objective.certify",
+          "metric.certify",
           "rating.compile",
           "rating.regression",
           "score.batch",
@@ -5268,6 +5448,56 @@
         "title": "Me",
         "type": "object"
       },
+      "MetricCertificate": {
+        "additionalProperties": false,
+        "description": "The identity around `CertificateResult` — the ADR-0001 split §4.7 already uses.",
+        "properties": {
+          "certified_at": {
+            "format": "date-time",
+            "title": "Certified At",
+            "type": "string"
+          },
+          "custom_metric_id": {
+            "format": "uuid",
+            "title": "Custom Metric Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "metric_version": {
+            "minimum": 1.0,
+            "title": "Metric Version",
+            "type": "integer"
+          },
+          "result": {
+            "$ref": "#/components/schemas/CertificateResult"
+          }
+        },
+        "required": [
+          "id",
+          "custom_metric_id",
+          "metric_version",
+          "certified_at",
+          "result"
+        ],
+        "title": "MetricCertificate",
+        "type": "object"
+      },
       "MetricDirection": {
         "description": "Which way is better, declared with the metric rather than assumed by the reader.\n\n`CLOSER_TO_ONE_IS_BETTER` exists for A/E, and it is the reason this enum is not a\nboolean: an A/E of 1.4 and one of 0.6 are equally wrong, and every \"higher is better\"\ntable this repository could have written would have ranked 1.4 above 1.0.\n\n`NOT_ORDERED` is for the metrics that are context rather than score — the holdout row\ncount is the same number for every model on a shared split, and a winner on it would be\nan artefact of tie-breaking.",
         "enum": [
@@ -5278,6 +5508,95 @@
         ],
         "title": "MetricDirection",
         "type": "string"
+      },
+      "MetricStatus": {
+        "description": "FR-MODEL-45's \"same lifecycle as objectives\".",
+        "enum": [
+          "draft",
+          "certified",
+          "review",
+          "approved",
+          "deprecated"
+        ],
+        "title": "MetricStatus",
+        "type": "string"
+      },
+      "MetricUsage": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-108's blast radius: everything fitted under this metric version.",
+        "properties": {
+          "custom_metric_id": {
+            "format": "uuid",
+            "title": "Custom Metric Id",
+            "type": "string"
+          },
+          "models": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MetricUsageModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MetricStatus"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "custom_metric_id",
+          "slug",
+          "version",
+          "status"
+        ],
+        "title": "MetricUsage",
+        "type": "object"
+      },
+      "MetricUsageModel": {
+        "additionalProperties": false,
+        "description": "One model fitted (or early-stopped) under a Custom Metric — `usage`'s row shape.\n\n`model_schema` has `ObjectiveUsage`/`ObjectiveUsageModel` for the objective's blast\nradius but no metric equivalent (a metric's usage is a Task 5 addition, arriving after\nthe objectives' shape was set) — defined here rather than in `model_schema`, since it\nis not a shape any other module or the frontend contract needs yet, only this service's\n`usage()` and its router.",
+        "properties": {
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "model_family_slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Model Family Slug",
+            "type": "string"
+          },
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_id",
+          "model_family_slug",
+          "version",
+          "status",
+          "dataset_version_id"
+        ],
+        "title": "MetricUsageModel",
+        "type": "object"
       },
       "Model": {
         "additionalProperties": false,
@@ -8682,6 +9001,19 @@
         "title": "SubmitApproval",
         "type": "object"
       },
+      "SubmitCustomMetric": {
+        "additionalProperties": false,
+        "description": "A change summary, or nothing.\n\nUnlike `custom_objectives.SubmitCustomObjective`, `change_summary` is **not**\n`min_length=1`-required here, and the parameter default is an empty instance: a `draft`\nmetric's submit is refused by the lifecycle-transition check (FR-MODEL-105) before\n`approvals.submit`'s own non-empty check is ever reached, so requiring a body at the\nFastAPI layer would turn that 409 into a 422 about a field the caller never gets to\nmatter for. A `certified` metric's submit still needs a real summary — `approvals.submit`\nenforces that once the transition passes.",
+        "properties": {
+          "change_summary": {
+            "default": "",
+            "title": "Change Summary",
+            "type": "string"
+          }
+        },
+        "title": "SubmitCustomMetric",
+        "type": "object"
+      },
       "SubmitCustomObjective": {
         "additionalProperties": false,
         "properties": {
@@ -11320,6 +11652,623 @@
         "summary": "Download a blob",
         "tags": [
           "blobs"
+        ]
+      }
+    },
+    "/api/v1/custom-metrics": {
+      "post": {
+        "description": "**201** with the metric, as a `draft` (FR-MODEL-45, 103).\n\n201 rather than 202, `custom_objectives.create_custom_objective`'s reason: authoring is\nnot work, and the parameters are checked against §4.5's ranges by the contract at write\ntime. The *certification* — §4.13's checks — is the work, and it is a separate call.",
+        "operationId": "create_custom_metric_api_v1_custom_metrics_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomMetric"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomMetric"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Create or version a Custom Metric",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-metrics/{metric_id}": {
+      "get": {
+        "operationId": "get_custom_metric_api_v1_custom_metrics__metric_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomMetric"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "A Custom Metric",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-metrics/{metric_id}/certificate": {
+      "get": {
+        "operationId": "get_metric_certificate_api_v1_custom_metrics__metric_id__certificate_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricCertificate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "The latest certificate for a Custom Metric",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-metrics/{metric_id}/certify": {
+      "post": {
+        "description": "**202** with a Job (FR-MODEL-105).\n\n202 because §4.13's checks end in a smoke evaluation over a sampled grid —\n`certify_custom_objective`'s reason, unchanged. Unlike the objective's route, there is\nno request body: `certify_metric` samples a fixed internal grid rather than one a\ncaller supplies, so there is nothing a body could name.",
+        "operationId": "certify_custom_metric_api_v1_custom_metrics__metric_id__certify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Run the certificate checks over a Custom Metric",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-metrics/{metric_id}/submit": {
+      "post": {
+        "description": "`certified → review` (FR-MODEL-45's lifecycle).\n\nGated on `model:submit`, `submit_custom_objective`'s reason: putting an artifact in\nfront of an approver starts a governed process, and the role that may author is not\nautomatically the role that may do that.",
+        "operationId": "submit_custom_metric_api_v1_custom_metrics__metric_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitCustomMetric",
+                "default": {
+                  "change_summary": ""
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomMetric"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Submit a Custom Metric for approval",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-metrics/{metric_id}/usage": {
+      "get": {
+        "description": "FR-MODEL-108's blast radius.",
+        "operationId": "get_metric_usage_api_v1_custom_metrics__metric_id__usage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "metric_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Metric Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricUsage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "What was fitted under this Custom Metric",
+        "tags": [
+          "modelling"
         ]
       }
     },

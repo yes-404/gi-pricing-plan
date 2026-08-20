@@ -181,6 +181,15 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # registered by the GBM slice for the same reason and is raised for the first time
         # here, by `separate_model`.
         "PERIL_STRUCTURE_RECONCILIATION_FAILED",
+        # The custom-metrics slice, 2026-08-19 (FR-MODEL-108). `METRIC_REF_UNRESOLVED` is
+        # raised by this slice's `resolve_ref`; `METRIC_NOT_APPLICABLE` and
+        # `METRIC_NOT_FITTABLE` are FR-MODEL-106's refusals from the GBM fit path (the
+        # slice that wires `GbmSpec.eval_metrics`) and are registered here, with the
+        # artifact they belong to, rather than left for that slice to discover unregistered
+        # the way `GLM_SEPARATION_DETECTED` was.
+        "METRIC_REF_UNRESOLVED",
+        "METRIC_NOT_APPLICABLE",
+        "METRIC_NOT_FITTABLE",
     }
 )
 

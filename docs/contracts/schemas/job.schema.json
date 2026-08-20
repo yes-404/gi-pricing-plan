@@ -35,6 +35,7 @@
         "model.compare",
         "peril_structure.reconcile",
         "objective.certify",
+        "metric.certify",
         "rating.compile",
         "rating.regression",
         "score.batch",

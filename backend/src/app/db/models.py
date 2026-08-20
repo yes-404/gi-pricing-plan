@@ -1648,3 +1648,137 @@ class ObjectiveCertificateRow(Base):
             "certified_at",
         ),
     )
+
+
+class CustomMetricRow(Base):
+    """A Custom Metric (`02` §4.13, FR-MODEL-45, FR-MODEL-103).
+
+    Shaped like `CustomObjectiveRow` on purpose — FR-MODEL-45 makes a metric follow "the
+    same lifecycle and grammar as objectives" — but a metric is never differentiated, so it
+    carries no `hessian_strategy` and no `hessian_min`.
+
+    Versioned and referenced by name for the same reason an objective is: a `GbmSpec`
+    resolves `custom_metric:<slug>@<version>`, and early stopping decided a fit's outcome
+    under that reference, so the reference must keep meaning what it meant.
+    `uq_custom_metrics_slug_version` and the `custom_metrics_definition_immutable` trigger
+    make the definition columns unwritable once the row exists; only the lifecycle columns
+    move.
+    """
+
+    __tablename__ = "custom_metrics"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+
+    #: `template` for the whole of Phase 1, mirroring `CustomObjectiveRow.kind` (FR-MODEL-103
+    #: reuses FR-MODEL-75's rule). Stored rather than assumed for the same reason: a Phase 2
+    #: `expression` row will live in this table beside these.
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="template")
+    #: §4.5's template name, reused whole (§4.13: "`Applicability`, `ObjectiveTemplate`... are
+    #: imported from §4.5 rather than restated").
+    template: Mapped[str | None] = mapped_column(String(32))
+    #: The author's chosen parameters — the named template's own, never its resolved
+    #: defaults (`CustomObjectiveRow.params`'s reasoning applies unchanged).
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    #: Must be no wider than §4.5's own applicability for the template (§4.13) — checked by
+    #: `CustomMetric._applicability_is_within_the_template`, not by this column.
+    applicability: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    #: FR-MODEL-104: which way is "better", declared with the metric. Only the two directions
+    #: an early-stopping loop can compare successive values with — see the CHECK below and
+    #: `CustomMetric._direction_is_usable_for_stopping`, which the CHECK's name mirrors.
+    direction: Mapped[str] = mapped_column(String(32), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    #: FR-MODEL-105's evidence. Not a foreign key to `metric_certificates`, for
+    #: `CustomObjectiveRow.certificate_id`'s reason: the certificate points back the other
+    #: way, and the CHECK below is what makes a status past `draft` mean something.
+    certificate_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: Not a foreign key: `MODEL` depends on `GOV` and never the reverse (DEP-1).
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_custom_metrics_slug_version"
+        ),
+        CheckConstraint("version >= 1", name="custom_metric_version_starts_at_one"),
+        # FR-MODEL-45's "same lifecycle as objectives" — the identical five states.
+        CheckConstraint(
+            "status IN ('draft', 'certified', 'review', 'approved', 'deprecated')",
+            name="custom_metric_status_is_in_the_lifecycle",
+        ),
+        # FR-MODEL-104, at the layer a direct `UPDATE` cannot walk past. `CustomMetric`
+        # refuses `closer_to_one_is_better` and `not_ordered` in
+        # `_direction_is_usable_for_stopping` because early stopping compares successive
+        # values and needs a monotone "better"; this CHECK mirrors that validator exactly,
+        # admitting only the two members it accepts, not `comparison.MetricDirection`'s
+        # other two.
+        CheckConstraint(
+            "direction IN ('lower_is_better', 'higher_is_better')",
+            name="custom_metric_direction_is_usable_for_stopping",
+        ),
+        # FR-MODEL-103/FR-MODEL-75 for the whole of Phase 1, mirroring
+        # `CustomMetric._only_templates_are_built`: a `kind = 'expression'` row would carry
+        # no loss at all, since nothing an expression metric needs is built yet.
+        CheckConstraint(
+            "kind = 'template' AND template IS NOT NULL",
+            name="custom_metric_is_a_template_in_phase_1",
+        ),
+        # FR-MODEL-105, at the layer a direct `UPDATE` cannot walk past. Mirrors
+        # `CustomMetric._a_status_past_draft_rests_on_a_certificate` (corrected 2026-08-19,
+        # `30b6388`): `deprecated` joins `draft` because `VALID_METRIC_TRANSITIONS` reaches
+        # it directly from `draft` — a metric abandoned before it was ever certified is
+        # withdrawn, not certified, and withdrawing it must not require inventing a
+        # certificate for a metric nobody ever ran.
+        CheckConstraint(
+            "status IN ('draft', 'deprecated') OR certificate_id IS NOT NULL",
+            name="certified_metric_has_a_certificate",
+        ),
+        Index("ix_custom_metrics_slug_status", "workspace_id", "slug", "status"),
+    )
+
+
+class MetricCertificateRow(Base):
+    """A Metric Certificate (`02` §4.13, FR-MODEL-105).
+
+    Insert-only at the privilege layer (FR-DATA-42), for `ObjectiveCertificateRow`'s reason:
+    a certificate is the required evidence behind a Custom Metric's approval, and evidence
+    that can change after the decision is not evidence.
+
+    Several rows per metric version are expected, not prevented — `ObjectiveCertificateRow`'s
+    re-certification reasoning applies unchanged.
+    """
+
+    __tablename__ = "metric_certificates"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    custom_metric_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    #: Denormalised from the metric row, for `ObjectiveCertificateRow.objective_version`'s
+    #: reason: the evidence must say which version it measured without a join to a row that
+    #: may since have moved on.
+    metric_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    #: A `datetime`, not text — `MetricCertificate.certified_at` is typed `datetime` in
+    #: `model_schema.metrics` (corrected during Task 2), and this column carries it as a
+    #: timestamptz for the same reason `ObjectiveCertificateRow.certified_at` does.
+    certified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: The `CertificateResult` — checks, sampling grid and library versions — whole.
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("metric_version >= 1", name="metric_certificate_version_starts_at_one"),
+        Index(
+            "ix_metric_certificates_metric",
+            "workspace_id",
+            "custom_metric_id",
+            "certified_at",
+        ),
+    )

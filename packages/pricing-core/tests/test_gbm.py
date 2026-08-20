@@ -25,8 +25,10 @@ import pytest
 
 from model_schema import (
     TEMPLATE_APPLICABILITY,
+    Applicability,
     Banding,
     BandingMethod,
+    CustomMetric,
     CustomObjective,
     EarlyStopping,
     Factor,
@@ -34,6 +36,8 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     LossTreatment,
+    MetricDirection,
+    MetricStatus,
     MonotonicDirection,
     ObjectiveBackend,
     ObjectiveStatus,
@@ -41,6 +45,7 @@ from model_schema import (
     OffsetSpec,
     ResponseKind,
     SplitRef,
+    YDomain,
 )
 from pricing_core.modelling.gbm import GbmFitError, fit_gbm, predict_gbm
 
@@ -982,3 +987,345 @@ def test_early_stopping_under_a_custom_objective_is_refused_by_name(backend: str
     with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
         fit_gbm(_frequency_data(), spec, FACTORS, objective=objective)
     assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-106 / FR-MODEL-107 — `eval_metrics` honoured, early stopping on a custom metric
+# --------------------------------------------------------------------------------------
+
+_METRIC_REF = "custom_metric:poisson-nll@1"
+
+
+def _metric(
+    template: ObjectiveTemplate = ObjectiveTemplate.POISSON,
+    *,
+    slug: str = "poisson-nll",
+    version: int = 1,
+    status: MetricStatus = MetricStatus.APPROVED,
+    **over: object,
+) -> CustomMetric:
+    """A fittable Custom Metric, defaulting to the template's own applicability.
+
+    Mirrors `_custom` above (the same defaulting-past-`draft` reasoning applies): a
+    `status` past `draft` needs a `certificate_id`, supplied unconditionally here since
+    `draft` tolerates one too.
+    """
+    fields: dict[str, object] = {
+        "id": uuid4(), "slug": slug, "version": version, "template": template,
+        "params": dict(_DEFAULTS.get(template, {})),
+        "applicability": TEMPLATE_APPLICABILITY[template],
+        "direction": MetricDirection.LOWER_IS_BETTER,
+        "status": status, "certificate_id": uuid4(),
+    }
+    fields.update(over)
+    return CustomMetric(**fields)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_early_stopping_on_a_custom_metric_is_allowed_under_a_custom_objective(
+    backend: str,
+) -> None:
+    """The refusal FR-MODEL-45 was deferred behind is retired for a metric the spec names.
+
+    `evaluate_metric` is written against the raw score by construction, so the reason the
+    unconditional refusal gave — a builtin metric silently sees the wrong quantity under a
+    callable objective — never applied to a custom one.
+    """
+    objective = _custom()
+    metric = _metric()
+    spec = _custom_spec(
+        backend, objective,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+        early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+    )
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=_frequency_data(n=3_000, seed=99),
+        objective=objective, metrics={_METRIC_REF: metric},
+    )
+    assert fit.result.best_iteration is not None
+    assert fit.eval_curve
+    assert {point.metric for point in fit.eval_curve} == {_METRIC_REF}
+    assert all(point.holdout is not None for point in fit.eval_curve)
+    assert all(point.train is not None for point in fit.eval_curve)
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_early_stopping_on_a_builtin_metric_is_still_refused_under_a_custom_objective(
+    backend: str,
+) -> None:
+    """The narrowing must not become a removal — the raw-score problem is unchanged for a
+    metric the spec did not name as one of its own `eval_metrics`.
+
+    A *different* Custom Metric is declared on the same spec, so this also proves the
+    refusal is keyed on the named metric matching a declared ref, not on whether any
+    Custom Metric is declared at all.
+    """
+    objective = _custom()
+    metric = _metric()
+    spec = _custom_spec(
+        backend, objective,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+        early_stopping=EarlyStopping(on="holdout", metric="poisson-nloglik", rounds=5),
+    )
+    with pytest.raises(GbmFitError, match="FR-MODEL-45") as raised:
+        fit_gbm(
+            _frequency_data(), spec, FACTORS, objective=objective, metrics={_METRIC_REF: metric}
+        )
+    assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"
+
+
+_OTHER_METRIC_REF = "custom_metric:poisson-nll-other@1"
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_second_custom_eval_metric_survives_early_stopping_on_the_first(
+    backend: str,
+) -> None:
+    """A declared custom eval metric the fit does not stop on must still reach the curve.
+
+    LightGBM's early-stopping callback can only target "the first metric" by *name*
+    (`first_metric_only`), never one by name — but `first_metric_only` decides which
+    metric *drives the stop*, not which metrics are *reported*. Nothing before this test
+    declared more than one custom eval metric on the same spec, so a version of this
+    module that mistook the first for a license to drop the second passed every other
+    test in this file. `gbm.py`'s own module docstring commits to FR-MODEL-25's "one
+    contract, two backends" — this pins that XGBoost and LightGBM agree here, and that
+    stopping still lands on the iteration a single-metric fit would choose, not on
+    whichever metric happens to be first in `metrics`' insertion order.
+    """
+    metric = _metric()
+    other = _metric(slug="poisson-nll-other")
+    holdout = _frequency_data(n=3_000, seed=99)
+    # Enough rounds, and an aggressive enough learning rate, that the holdout genuinely
+    # overfits before the round cap — otherwise "stopped at the cap" and "stopped because
+    # of the named metric" are indistinguishable.
+    hyperparameters = {"max_depth": 6, "eta": 0.3, "num_boost_round": 300}
+    spec = _spec(
+        backend, response=ResponseKind.CLAIM_COUNT, hyperparameters=hyperparameters,
+        eval_metrics=(
+            GbmFunctionRef(kind="custom", ref=_METRIC_REF),
+            GbmFunctionRef(kind="custom", ref=_OTHER_METRIC_REF),
+        ),
+        early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+    )
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=holdout,
+        metrics={_METRIC_REF: metric, _OTHER_METRIC_REF: other},
+    )
+    assert {point.metric for point in fit.eval_curve} == {_METRIC_REF, _OTHER_METRIC_REF}
+
+    solo_spec = spec.model_copy(
+        update={"eval_metrics": (GbmFunctionRef(kind="custom", ref=_METRIC_REF),)}
+    )
+    solo = fit_gbm(
+        _frequency_data(), solo_spec, FACTORS, holdout=holdout, metrics={_METRIC_REF: metric}
+    )
+    assert fit.result.best_iteration == solo.result.best_iteration
+
+
+@pytest.mark.req("FR-MODEL-106")
+def test_a_custom_eval_metric_that_was_not_supplied_refuses_the_fit() -> None:
+    """ADR-0001: `pricing-core` does not resolve refs, so an unsupplied one is the
+    caller's bug, not a lookup failure to retry."""
+    spec = _spec(
+        "xgboost", response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref="custom_metric:absent@1"),),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS)
+    assert raised.value.code == "METRIC_REF_UNRESOLVED"
+
+
+@pytest.mark.req("FR-MODEL-106")
+def test_a_metric_whose_applicability_excludes_the_backend_refuses_the_fit() -> None:
+    lightgbm_only = _metric(
+        applicability=Applicability(
+            responses=(ResponseKind.CLAIM_COUNT,),
+            backends=(ObjectiveBackend.LIGHTGBM,),
+            offset_required=True,
+            y_domain=YDomain(min_inclusive=0.0),
+        )
+    )
+    spec = _spec(
+        "xgboost", response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, metrics={_METRIC_REF: lightgbm_only})
+    assert raised.value.code == "METRIC_NOT_APPLICABLE"
+
+
+@pytest.mark.req("FR-MODEL-106")
+def test_a_draft_metric_cannot_be_fitted_with() -> None:
+    """FITTABLE_METRIC_STATUSES excludes draft: an uncertified metric is unproven."""
+    draft = _metric(status=MetricStatus.DRAFT)
+    spec = _spec(
+        "xgboost", response=ResponseKind.CLAIM_COUNT,
+        eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+    )
+    with pytest.raises(GbmFitError) as raised:
+        fit_gbm(_frequency_data(), spec, FACTORS, metrics={_METRIC_REF: draft})
+    assert raised.value.code == "METRIC_NOT_FITTABLE"
+
+
+@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_builtin_eval_metric_reaches_the_backend(backend: str) -> None:
+    """The half that needed no FR-MODEL-45 machinery and was ignored anyway."""
+    spec = _spec(backend, eval_metrics=(GbmFunctionRef(kind="builtin", name="poisson-nloglik"),))
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=_frequency_data(n=3_000, seed=99)
+    )
+    assert "poisson-nloglik" in {point.metric for point in fit.eval_curve}
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-106 / FR-MODEL-107 — early stopping binds to the metric the **spec** names
+#
+# Every test above stops on the only metric its spec declares, so "stopped on the named
+# metric" and "stopped on whatever the backend picked" were the same observation. These
+# construct the combinations where the two come apart, and each asserts *which* metric
+# drove the stop — by comparing against the fit whose spec declares that metric alone —
+# rather than that the fit succeeded. A fit that stops on the wrong metric always succeeds;
+# that is FR-MODEL-104's whole point.
+# --------------------------------------------------------------------------------------
+
+#: Aggressive enough that the holdout genuinely overfits inside the round cap. Without
+#: that, every variant "stops at the cap" and the comparisons below are vacuous.
+_STOPPING_HYPERPARAMETERS = {"max_depth": 6, "eta": 0.3, "num_boost_round": 300}
+
+
+@pytest.mark.req("FR-MODEL-106")
+@pytest.mark.parametrize("backend", BACKENDS)
+@pytest.mark.parametrize("stopping_declared_first", [True, False], ids=["first", "last"])
+def test_a_second_declared_builtin_does_not_also_drive_early_stopping(
+    backend: str, stopping_declared_first: bool
+) -> None:
+    """Neither backend bound the stop to the spec's metric once `eval_metrics` held two.
+
+    LightGBM: before FR-MODEL-106 `params["metric"]` held the stopping metric and nothing
+    else, so `first_metric_only=False` was harmless. Once a declared `eval_metrics` entry
+    joined it, the callback halted as soon as **any** registered metric stalled — a
+    stricter rule than the spec states, arrived at by omission.
+
+    XGBoost: `early_stopping_rounds=`'s shorthand takes the *last* metric in insertion
+    order, which is the spec's stopping metric only when the spec happens to declare it
+    last.
+
+    `mae` and `poisson-nloglik` are chosen because their holdout curves bottom out far
+    apart on this book (measured 2026-08-20: 95 against 22 on XGBoost, 66 against 25 on
+    LightGBM), and `mae` — the one the spec stops on — is the *later* of the two. A pair
+    that stalls together would let both the fixed and the broken binding agree, and the
+    test would assert nothing.
+
+    **Both declaration orders**, because each backend's shorthand fails on a different one:
+    XGBoost's takes the last metric declared and LightGBM's takes the first, so a single
+    order lets whichever backend it happens to suit pass by luck.
+    """
+    holdout = _frequency_data(n=3_000, seed=99)
+    base: dict[str, object] = {
+        "response": ResponseKind.CLAIM_COUNT,
+        "hyperparameters": dict(_STOPPING_HYPERPARAMETERS),
+        "early_stopping": EarlyStopping(on="holdout", metric="mae", rounds=5),
+    }
+    declared = [
+        GbmFunctionRef(kind="builtin", name="mae"),
+        GbmFunctionRef(kind="builtin", name="poisson-nloglik"),
+    ]
+    if not stopping_declared_first:
+        declared.reverse()
+    both = _spec(backend, eval_metrics=tuple(declared), **base)
+    alone = _spec(backend, eval_metrics=(GbmFunctionRef(kind="builtin", name="mae"),), **base)
+
+    reported = fit_gbm(_frequency_data(), both, FACTORS, holdout=holdout)
+    solo = fit_gbm(_frequency_data(), alone, FACTORS, holdout=holdout)
+
+    assert reported.result.best_iteration == solo.result.best_iteration
+    # …and the second metric is still *reported*: binding the stop is an ordering choice,
+    # not a licence to drop what the spec asked to see (FR-MODEL-106).
+    assert {point.metric for point in reported.eval_curve} == {"mae", "poisson-nloglik"}
+
+
+#: A Custom Metric on a template deliberately unlike the stopping builtin. `quantile` at
+#: `alpha=0.9` is a pinball loss on the raw score, whose best round is nowhere near
+#: `poisson-nloglik`'s — which is what makes "stopped on the wrong metric" observable at
+#: all. A near-copy of the builtin would agree by coincidence and prove nothing.
+_QUANTILE_METRIC_REF = "custom_metric:quantile-90@1"
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_declared_custom_metric_does_not_capture_stopping_from_a_named_builtin(
+    backend: str,
+) -> None:
+    """XGBoost bound the stop to the **custom** metric whenever one was also reported.
+
+    `EarlyStopping.after_iteration` takes `list(data_log.keys())[-1]` when no `metric_name`
+    is given, and XGBoost appends custom-metric results after the builtin ones — so the
+    `early_stopping_rounds=` shorthand, used here until 2026-08-20 whenever stopping named
+    a builtin, silently retargeted the stop at the last custom metric declared, with
+    `maximize` inferred from a name it had never seen. LightGBM meanwhile stopped on the
+    builtin: one spec, two backends, two answers, which FR-MODEL-25's "one contract, two
+    backends" forbids.
+    """
+    quantile = _metric(
+        ObjectiveTemplate.QUANTILE, slug="quantile-90", params={"alpha": 0.9},
+        applicability=TEMPLATE_APPLICABILITY[ObjectiveTemplate.QUANTILE],
+        direction=MetricDirection.HIGHER_IS_BETTER,
+    )
+    holdout = _frequency_data(n=3_000, seed=99)
+    base: dict[str, object] = {
+        "response": ResponseKind.CLAIM_COUNT,
+        "hyperparameters": dict(_STOPPING_HYPERPARAMETERS),
+        "early_stopping": EarlyStopping(on="holdout", metric="poisson-nloglik", rounds=5),
+    }
+    with_custom = _spec(
+        backend, eval_metrics=(GbmFunctionRef(kind="custom", ref=_QUANTILE_METRIC_REF),), **base
+    )
+    alone = _spec(backend, **base)
+
+    reported = fit_gbm(
+        _frequency_data(), with_custom, FACTORS, holdout=holdout,
+        metrics={_QUANTILE_METRIC_REF: quantile},
+    )
+    solo = fit_gbm(_frequency_data(), alone, FACTORS, holdout=holdout)
+
+    assert reported.result.best_iteration == solo.result.best_iteration
+    assert _QUANTILE_METRIC_REF in {point.metric for point in reported.eval_curve}
+
+
+@pytest.mark.req("FR-MODEL-107")
+def test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it() -> None:
+    """A pinned library limitation, stated rather than left to be discovered.
+
+    LightGBM's early-stopping callback can only target the **first** evaluation entry, and
+    builtin `params["metric"]` entries are always evaluated before `feval`'s. So a spec that
+    stops on a Custom Metric *and* declares a builtin for the curve cannot have both: the
+    builtin would take position 0 and drive the stop. `_fit_lightgbm` suppresses the builtin
+    (`metric: "None"`) rather than stop on the wrong metric, and XGBoost — which targets by
+    name — reports both. The divergence is in what is *reported*, never in what the fit
+    stops on, which is the half that changes the model.
+    """
+    metric = _metric()
+    holdout = _frequency_data(n=3_000, seed=99)
+    eval_metrics = (
+        GbmFunctionRef(kind="builtin", name="rmse"),
+        GbmFunctionRef(kind="custom", ref=_METRIC_REF),
+    )
+    curves = {}
+    for backend in BACKENDS:
+        spec = _spec(
+            backend, response=ResponseKind.CLAIM_COUNT,
+            hyperparameters=dict(_STOPPING_HYPERPARAMETERS), eval_metrics=eval_metrics,
+            early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+        )
+        fit = fit_gbm(
+            _frequency_data(), spec, FACTORS, holdout=holdout, metrics={_METRIC_REF: metric}
+        )
+        curves[backend] = {point.metric for point in fit.eval_curve}
+
+    assert curves["xgboost"] == {"rmse", _METRIC_REF}
+    assert curves["lightgbm"] == {_METRIC_REF}

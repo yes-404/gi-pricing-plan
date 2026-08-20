@@ -237,6 +237,8 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
     {"artifact_type": "custom_objective", "approvers_required": 1,
      "approver_roles": ["approver"], "evidence": ["objective_certificate"],
      "escalation": {"when": "certificate.convexity == 'violated'", "approvers_required": 2}},
+    {"artifact_type": "custom_metric", "approvers_required": 1,
+     "approver_roles": ["approver"], "evidence": ["metric_certificate"]},
     {"artifact_type": "model", "approvers_required": 1,
      "approver_roles": ["approver"],
      "evidence": ["diagnostics", "transparency_artifact_if_non_glm", "model_comparison_if_predecessor"]},
@@ -295,6 +297,21 @@ Notably absent from Pricing Actuary: every `*:approve` permission and
 > policy: `reconciled` is the only state with an edge into `review`, and a reconciliation
 > whose status is `fail` is refused at submission — the tolerance is the submitter's own
 > declaration, so missing it is failing a test they set themselves.
+>
+> This is an **addition** to §3.3's evidence floor and removes nothing, so it sits inside
+> OQ-GOV-7's recommendation rather than pre-empting it.
+
+> **`custom_metric` added 2026-08-20 (W5, the custom-metrics slice).** `02` FR-MODEL-45
+> gives a Custom Metric the same lifecycle and grammar as a Custom Objective, and
+> `platform.metrics._require_evidence` has expected this entry since the slice that added
+> `submit` — but with no entry here, `certified -> review` refused with 409 in every
+> workspace, on "no approval policy for this artifact type", before `_require_evidence` was
+> ever reached. The approval lifecycle was unreachable without it, the same defect class as
+> `peril_structure` above.
+>
+> Its evidence is the **metric certificate**, mirroring `custom_objective`'s
+> `objective_certificate`, because `02` FR-MODEL-105 makes certification the check an
+> approver is being asked to accept.
 >
 > This is an **addition** to §3.3's evidence floor and removes nothing, so it sits inside
 > OQ-GOV-7's recommendation rather than pre-empting it.

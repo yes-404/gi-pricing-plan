@@ -2536,19 +2536,33 @@ found.
 `scope-audit.py MODEL`, then `--endpoints`. `02` declares no `XX-YYY-N` catalogue, so unlike
 `01` there is no catalogue axis to check.
 
-| | |
-|---|---|
-| Requirements in scope | **114** |
-| With evidence | **95 (83 %)** |
-| Without evidence | **19** |
-| Endpoints declared in §5.1 | **35** |
-| Endpoints published | **34 (97 %)** |
+> **Superseded in part, 2026-08-20 — the custom-metrics slice landed.** The counts and the
+> slice list below were true on 2026-08-19 and are no longer. Re-derived on 2026-08-20 by
+> re-running the same two commands, with the current figures beside the originals; the
+> 2026-08-19 column is kept rather than overwritten, because what was believed on the day a
+> plan was made is the thing a governed record cannot lose. The requirement total rose by
+> six because the slice appended FR-MODEL-103…108, all six of them evidenced; the
+> unevidenced 19 are unchanged, and their verdicts below still stand.
 
-**Five buildable slices remain**, smallest first:
+| | Derived 2026-08-19 | Re-derived 2026-08-20 |
+|---|---|---|
+| Requirements in scope | **114** | **120** |
+| With evidence | **95 (83 %)** | **101 (84 %)** |
+| Without evidence | **19** | **19** |
+| Endpoints declared in §5.1 | **35** | **40** |
+| Endpoints published | **34 (97 %)** | **40 (100 %)** |
+
+*(`uv run python scripts/scope-audit.py MODEL --endpoints` prints "declared: 40 · published:
+40 (100%) · every declared endpoint is published in the contract";
+`uv run python scripts/req-coverage.py` prints "requirements specified : 489 · requirements
+marked : 235 (48.1%)" repository-wide.)*
+
+~~**Five buildable slices remain**~~ — **four**, corrected 2026-08-20: slice 1 below is
+delivered. Smallest first:
 
 | Slice | Requirements | State, and what is actually missing |
 |---|---|---|
-| **1. Custom metrics** | FR-MODEL-45's endpoint | `POST /api/v1/custom-metrics` is the one unpublished endpoint of the 35. Deferred to Phase 1b by a dated amendment in `02` §5.1, on the reasoning that a custom *metric* is `feval` — it changes what early stopping optimises and what the diagnostics report, not what the model fits. It shares the objective's lifecycle, certification and approval machinery, which is built. Nothing else gates it |
+| ~~**1. Custom metrics**~~ **— DELIVERED 2026-08-20** | ~~FR-MODEL-45's endpoint~~ FR-MODEL-45, 103–108 | ~~`POST /api/v1/custom-metrics` is the one unpublished endpoint of the 35. Deferred to Phase 1b by a dated amendment in `02` §5.1~~ **Built in the custom-metrics slice recorded below, not deferred to Phase 1b**: six routes rather than one, the artifact, table, certification Job and approval path, `eval_metrics` honoured (FR-MODEL-106) and early stopping on a Custom Metric (FR-MODEL-107). The deferral's reasoning — that a custom metric is `feval` and changes what early stopping optimises rather than what the model fits — turned out to be the argument *for* building it inside W5: FR-MODEL-107 made a Custom Metric the only way to early-stop under a callable objective at all |
 | **2. Regularisation and cross-validation** | FR-MODEL-20, FR-MODEL-53 | Already paired by a verdict on file — `select_by: cv` lives in the penalty path. The schema is ahead of the code: `GlmSpec` carries `alpha` and `l1_ratio`, and `cv_folds` exists. Missing are the documented penalty path, the CV selection option, declared fold construction (`random`, `temporal`, `grouped_by_key`) with a persisted seed, and per-fold metrics **and their dispersion** persisted as diagnostics rather than the mean alone |
 | **3. Tweedie power by profile likelihood** | FR-MODEL-22 | Today `GlmSpec` only *validates* that a supplied power lies between the two families it spans. Missing: the grid, the persisted profile curve, and recording an estimated `p` as an estimate with its own uncertainty rather than silently baking it in as a constant |
 | **4. Offset from another model** | FR-MODEL-24 | `offset_model_ref` appears nowhere in `packages/` or `backend/src`. This is residual modelling and "fit on top of the current rating structure", with the referenced model version pinned |
@@ -2579,6 +2593,132 @@ which is the one option `CLAUDE.md` §13 rule 1 does not allow. They are recorde
 started, owner W5, by W5's own scope definition ("every `MODEL` requirement") rather than by
 a new assignment.
 
+#### W5 slice — custom metrics, and a field that was read by nothing, 2026-08-20
+
+The twenty-second slice, spanning 2026-08-19 → 08-20. FR-MODEL-45 gives a Custom Metric
+the same lifecycle and grammar as a Custom Objective, declared separately so it can be
+reused across objectives — and the slice exists around a single finding: `GbmSpec.eval_metrics`
+had been declared since Phase 0 and read by nothing. A caller could name a metric, builtin
+or custom, and be told nothing was wrong while none were ever evaluated. FR-MODEL-106 now
+requires it honoured.
+
+| Delivered | Evidence |
+|---|---|
+| A Custom Metric artifact and table, declared separately from any objective | `custom_metrics` table keyed on `(workspace_id, slug, version)`, undeletable, definition frozen after creation (FR-MODEL-45/103) — nothing ties a metric to one objective, so the same metric ref resolves under any spec that names it |
+| Six HTTP routes, mirroring `custom_objectives` | `POST /custom-metrics` (create/version), `GET /{id}`, `POST /{id}/certify` (202 + Job), `GET /{id}/certificate`, `POST /{id}/submit`, `GET /{id}/usage` (FR-MODEL-108) |
+| `eval_metrics` honoured, not merely declared | `GbmSpec.eval_metrics` now drives `feval`/`custom_metric` wiring on both XGBoost and LightGBM, builtin and custom metrics alike (FR-MODEL-106) |
+| `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED` narrowed, not retired | Early stopping on a **builtin** metric under a callable objective is still refused — both backends hand it the raw score, not the transformed prediction. Only the availability of an alternative changed: declare a Custom Metric in `eval_metrics` and stop on that (FR-MODEL-107) |
+| Two lifecycle edges that were declared and unreachable, now reachable | `draft → deprecated` (the certificate validator exempted only `draft`, so an uncertified metric could not be withdrawn — fixed in `30b6388`, verified to fail against the pre-fix validator); `review → approved` (no `apply_approval_decision` for metrics and no `DEFAULT_POLICY` entry, so `submit` 409'd before the edge was ever reached — fixed in `deb49e7`) |
+| `06` §4.2's `custom_metric` approval-policy entry | Added in this slice's Step 0, resolving the spec-vs-code divergence `deb49e7` created — `certified → review` 409'd in every workspace without it. Dated note follows `peril_structure`'s precedent |
+| A pre-existing bug, fixed out of scope, in its own commit | `custom_objectives.py` declared `params: dict[str, float]`, coercing money to float, and `TemplateParameter.check` **raises** for a non-int money value — so `capped_gamma` and `spliced_severity` could not be created through their own endpoint at all. Fixed in `040e6e8`. **Pre-existing, not part of FR-MODEL-45** |
+
+**Two runtime defects found by running a fit, not by reading (`35ba563`).** XGBoost's
+eval-log parser (`xgb.callback.EarlyStopping.after_iteration`) re-parses a formatted string
+by splitting each `"name:value"` entry on a single `:`. A Custom Metric ref is
+`custom_metric:<slug>@<version>` — already `kind:slug@version` — so declaring one raised
+`too many values to unpack` the moment the name reached XGBoost's own log line; fixed by
+`_xgb_safe_metric_name`, sanitising only the string handed to XGBoost and translating it
+back in `_curve`. Separately, XGBoost was found to leak its own implicit default (`rmse`,
+picked for a callable objective it cannot introspect) into the curve when only custom
+`eval_metrics` were declared and `eval_metric` was therefore never set; fixed by setting
+`disable_default_eval_metric` in that case. LightGBM needed neither fix.
+
+**A backend asymmetry, found and fixed (`d8859a2`).** LightGBM's `_fit_lightgbm` reported
+only the stopping target when several custom metrics were declared — `first_metric_only`
+decides which metric drives early stopping, not which metrics get reported, and the
+`stopping_on_custom` branch had narrowed `feval` to the stopping target alone, silently
+dropping every other declared custom metric from the curve. XGBoost was unaffected. Fixed
+by ordering the stopping target first in `feval`'s return rather than narrowing it, verified
+against LightGBM's own `_EarlyStoppingCallback._init` — `first_metric` is
+`evaluation_result_list[0].metric_name`, and that list's ordering is builtin `params["metric"]`
+entries followed by `feval`'s in return order — so the fix is read against the mechanism it
+depends on, not asserted.
+
+**A milestone.** MODEL is now the first module in this repository with **every declared
+endpoint published** — 40 of 40, up from 34 of 35 before this slice. Task 1 declared five
+more endpoint rows in `02` §5.1 and Task 5 published all six of the Custom Metric routes,
+closing the axis.
+
+**Three failures, invisible to every per-task scoped test run, found only by the full gate.**
+Each of the seven tasks in this slice ran green against its own test files. Only
+`uv run pytest -q` across the whole suite surfaced these — the evidence for `CLAUDE.md`
+§11's insistence on running both halves of the gate rather than trusting accumulated
+per-task greens:
+
+1. **`backend/tests/test_contracts.py::test_job_status_and_kind_enums_agree_with_the_contract`.**
+   `JobKind` gained `metric.certify` in `49bc16d`, regenerating the *generated* schema, but
+   the hand-authored `docs/contracts/schemas/job.schema.json` — `CLAUDE.md` §2's "partly
+   generated, partly hand-written" seam — was never updated. Fixed by adding `metric.certify`
+   to the authored file in the same position the generated one carries it.
+2. **`tests/test_repository_invariants.py::test_every_error_code_pricing_core_raises_is_registered_and_declared`.**
+   `METRIC_REF_UNRESOLVED`, `METRIC_NOT_APPLICABLE` and `METRIC_NOT_FITTABLE` were registered
+   in `errors.py` and named in a prose "Amended 2026-08-19" note in `02` §5.1, but never added
+   to the backtick-delimited catalogue list the test actually parses — every prior addition
+   (e.g. `MODEL_APPROXIMATION_INVALID`) added the code to that list *and* a note; `49bc16d`
+   wrote only the note. The dispatch that caused it said "nothing cross-checks those two
+   lists (OQ-OVR-9)" — too broad: this repository checks the subset `pricing-core` raises
+   against both `errors.py` and the spec catalogue, and that check is what caught this.
+   Fixed by adding the three codes to the list; the existing note stands, now complete rather
+   than replaced.
+3. **`backend/tests/test_demo_guide.py::test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks`.**
+   Hardcoded `{"MODEL", "RATE"} <= modules` (modules with a declared-but-unpublished
+   endpoint). MODEL correctly dropped out of that set once this slice closed its endpoint
+   axis to 40 of 40 — the code was right, the test's assumption was stale. Narrowed to
+   `{"RATE"}`, with a docstring sentence added: the set is *expected* to shrink as modules
+   complete, so a future failure here most likely means a module finished, not that
+   something broke.
+
+All three were confirmed as genuine (not full-suite-only ordering or environment artefacts)
+by re-running each failing test in isolation with the DSN exported — each reproduced
+identically alone. After the three fixes, the full suite is green.
+
+**Enforcement proven against broken input (`CLAUDE.md` §13.4).** The `draft → deprecated`
+fix (`30b6388`) shipped with a positive test verified to fail against the pre-fix validator.
+The `review → approved` fix (`deb49e7`) shipped with the full `certified → review → approved`
+lifecycle test and a negative case mirroring `custom_objectives`' own — a decision about
+another artifact type leaves the metric untouched. `test_repository_invariants.py`'s
+error-code check is itself the proof for finding 2 above: it went red against `49bc16d`'s
+incomplete catalogue entry, which is exactly the broken input it exists to catch.
+
+**Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (129 source files) ·
+`lint-imports` 0 (3 contracts kept) · **1412 python tests, zero skipped**, in 273 s ·
+audit-docs 0 — **489 requirements** across 8 specs, **72 open questions** all mirrored,
+**131 error codes** ownership-exclusive (was 128) · req-coverage **235 of 489 marked,
+48.1 %** · `generate-contracts.py --check` 0, **23 generated contracts match** · frontend:
+`pnpm install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, **131 tests passed**,
+`build` — all green, confirming the two new generated contracts (`custom-metric`,
+`metric-certificate`) round-trip cleanly through the TypeScript client · `scope-audit.py
+MODEL --endpoints`: **40 declared, 40 published (100%)**.
+
+**Not delivered, with owners.** No frontend view renders a Custom Metric — `02` §5.3's
+model spec builder is **W6b**'s, unchanged by this slice. `expression`-kind metrics remain
+Phase 2 behind `expression_objectives_enabled`, per FR-MODEL-45's own template-only scope
+for Phase 1. The four other buildable slices this workstream's outstanding-work table named
+on 2026-08-19 (regularisation/CV, Tweedie power, offset-from-model, EBM) are untouched by
+this slice.
+
+**`custom_metric` has no evidence floor — deferred, then dropped from this record until the
+whole-branch review found it (2026-08-20).** `06` §3.3 has no evidence row for
+`custom_metric`, so `model_schema.approvals.EVIDENCE_FLOOR` has no entry for it and
+`ApprovalPolicy.below_floor()` returns nothing: a workspace that edits `metric_certificate`
+out of its own `06` §4.2 entry is accepted, and `metrics._require_evidence` then has nothing
+to require. `custom_objective` **is** in the floor and is protected; the parallel this slice
+claimed everywhere else does not hold here. What protects a metric today is the lifecycle,
+not the policy — submission requires `certified`, only `record_certificate` sets it, it sets
+it beside a `certificate_id`, and the `certified_metric_has_a_certificate` CHECK refuses the
+pair coming apart. The gap is that the *policy reader* is told a floor exists where none
+does. **Owner: W5**, as a `06` §3.3 spec change plus the matching `EVIDENCE_FLOOR` entry, in
+that order — adding the entry alone would put the code above its own specification. Not
+folded into the fix wave that found it, because a new §3.3 evidence row is a governance
+change rather than a defect fix. `metrics._require_evidence`'s docstring asserted the
+protection existed until 2026-08-20 and now names the gap.
+
+**LightGBM silently drops a declared builtin `eval_metric` when early stopping targets a
+Custom Metric — raised as `OQ-MODEL-21`, not resolved.** Found in the same final review,
+immediately before merge. Tested and named in FR-MODEL-107's 2026-08-20 amendment, but
+whether a documented drop satisfies FR-MODEL-106's "honoured" is undecided. **Owner: W5**,
+alongside the `06` §3.3 / `EVIDENCE_FLOOR` gap above.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
@@ -2589,7 +2729,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: twenty-one slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, and **the GLM approximation as a Model** (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: twenty-two slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, the GLM approximation as a Model (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer), and **custom metrics** (FR-MODEL-45/103/105/106/107/108 — a Custom Metric reaches `approved` on the same lifecycle and grammar as a Custom Objective, `GbmSpec.eval_metrics` is now honoured rather than merely declared, and MODEL's endpoint axis closed at **40 of 40**, the first module in this repository to publish every declared endpoint); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
