@@ -1076,6 +1076,56 @@ def test_early_stopping_on_a_builtin_metric_is_still_refused_under_a_custom_obje
     assert raised.value.code == "OBJECTIVE_EARLY_STOPPING_UNSUPPORTED"
 
 
+_OTHER_METRIC_REF = "custom_metric:poisson-nll-other@1"
+
+
+@pytest.mark.req("FR-MODEL-107")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_second_custom_eval_metric_survives_early_stopping_on_the_first(
+    backend: str,
+) -> None:
+    """A declared custom eval metric the fit does not stop on must still reach the curve.
+
+    LightGBM's early-stopping callback can only target "the first metric" by *name*
+    (`first_metric_only`), never one by name — but `first_metric_only` decides which
+    metric *drives the stop*, not which metrics are *reported*. Nothing before this test
+    declared more than one custom eval metric on the same spec, so a version of this
+    module that mistook the first for a license to drop the second passed every other
+    test in this file. `gbm.py`'s own module docstring commits to FR-MODEL-25's "one
+    contract, two backends" — this pins that XGBoost and LightGBM agree here, and that
+    stopping still lands on the iteration a single-metric fit would choose, not on
+    whichever metric happens to be first in `metrics`' insertion order.
+    """
+    metric = _metric()
+    other = _metric(slug="poisson-nll-other")
+    holdout = _frequency_data(n=3_000, seed=99)
+    # Enough rounds, and an aggressive enough learning rate, that the holdout genuinely
+    # overfits before the round cap — otherwise "stopped at the cap" and "stopped because
+    # of the named metric" are indistinguishable.
+    hyperparameters = {"max_depth": 6, "eta": 0.3, "num_boost_round": 300}
+    spec = _spec(
+        backend, response=ResponseKind.CLAIM_COUNT, hyperparameters=hyperparameters,
+        eval_metrics=(
+            GbmFunctionRef(kind="custom", ref=_METRIC_REF),
+            GbmFunctionRef(kind="custom", ref=_OTHER_METRIC_REF),
+        ),
+        early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+    )
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=holdout,
+        metrics={_METRIC_REF: metric, _OTHER_METRIC_REF: other},
+    )
+    assert {point.metric for point in fit.eval_curve} == {_METRIC_REF, _OTHER_METRIC_REF}
+
+    solo_spec = spec.model_copy(
+        update={"eval_metrics": (GbmFunctionRef(kind="custom", ref=_METRIC_REF),)}
+    )
+    solo = fit_gbm(
+        _frequency_data(), solo_spec, FACTORS, holdout=holdout, metrics={_METRIC_REF: metric}
+    )
+    assert fit.result.best_iteration == solo.result.best_iteration
+
+
 @pytest.mark.req("FR-MODEL-106")
 def test_a_custom_eval_metric_that_was_not_supplied_refuses_the_fit() -> None:
     """ADR-0001: `pricing-core` does not resolve refs, so an unsupplied one is the

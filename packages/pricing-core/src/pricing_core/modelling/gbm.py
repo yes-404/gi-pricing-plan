@@ -977,11 +977,19 @@ def _fit_lightgbm(
     if stopping_on_custom:
         assert stopping is not None  # narrowed by stopping_on_custom
         # LightGBM's early-stopping callback can only target "the first metric"
-        # (`first_metric_only`), never one by name, so a fit stopping on a custom metric
-        # is isolated to exactly that one metric (`metric: None` suppresses LightGBM's own
-        # implicit default) — no other declared eval metric is reported for this fit.
+        # (`first_metric_only`), never one by name — but "first" is decided purely by
+        # `feval`'s return order (confirmed by reading `_EarlyStoppingCallback._init`:
+        # `self.first_metric = env.evaluation_result_list[0].metric_name`, and that list's
+        # metric ordering, per dataset, is builtin `params["metric"]` entries followed by
+        # `feval`'s in the order it returns them). `metric: None` suppresses LightGBM's own
+        # implicit default so no unrequested metric can land at position 0; every other
+        # declared custom eval metric is still reported through `feval` — only the ordering
+        # is arranged, stopping's target first, so it is the one that drives the stop.
         params["metric"] = "None"
-        feval_entries = {stopping.metric: custom_metrics[stopping.metric]}
+        feval_entries = {
+            stopping.metric: custom_metrics[stopping.metric],
+            **{ref: metric for ref, metric in custom_metrics.items() if ref != stopping.metric},
+        }
     else:
         builtin_names = _builtin_eval_metric_names(spec.eval_metrics)
         if stopping is not None and str(stopping.metric) not in builtin_names:
