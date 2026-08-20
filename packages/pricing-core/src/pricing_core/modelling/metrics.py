@@ -20,7 +20,7 @@ from model_schema.objectives import (
     ObjectiveTemplate,
     SamplingSpec,
 )
-from pricing_core.modelling.objectives import template_loss
+from pricing_core.modelling.objectives import resolve_template_params, template_loss
 
 __all__ = ["certify_metric", "evaluate_metric"]
 
@@ -52,9 +52,17 @@ def evaluate_metric(metric: CustomMetric, y: _Arr, f: _Arr, w: _Arr) -> float:
     `f` is the **raw score**, not the transformed prediction — the same convention the
     objective path uses, and the reason FR-MODEL-107 exists: a backend's builtin metric
     receives the raw score under a callable objective and silently means something else.
+
+    §4.5's defaults are resolved through `resolve_template_params`, the same call
+    `compile_objective` makes, rather than by handing the template `metric.params` as it
+    stands. `CustomMetric.params` holds only what the **author** chose (see that helper for
+    why the artifact stores it that way), so `dict(metric.params)` is a complete parameter
+    set for `poisson` and `gamma` and for nothing else: it raised `KeyError` for the other
+    ten templates until 2026-08-20.
     """
     template = _template_of(metric)
-    per_row = template_loss(template)(y, f, dict(metric.params))
+    params = resolve_template_params(template, metric.params)
+    per_row = template_loss(template)(y, f, params)
     return float(np.average(per_row, weights=w))
 
 
@@ -80,9 +88,10 @@ def certify_metric(metric: CustomMetric, *, seed: int) -> CertificateResult:
     """
     template = _template_of(metric)
     y, f, w = _grid(seed)
+    params = resolve_template_params(template, metric.params)
     checks: list[CertificateCheck] = []
 
-    values = template_loss(template)(y, f, dict(metric.params))
+    values = template_loss(template)(y, f, params)
     finite = bool(np.all(np.isfinite(values)))
     checks.append(
         CertificateCheck(
@@ -132,7 +141,7 @@ def certify_metric(metric: CustomMetric, *, seed: int) -> CertificateResult:
     ones_y = np.ones(1_000)
     ones_f = np.zeros(1_000)
     ones_w = np.full(1_000, 3.0)
-    expected = float(template_loss(template)(ones_y, ones_f, dict(metric.params))[0])
+    expected = float(template_loss(template)(ones_y, ones_f, params)[0])
     observed = evaluate_metric(metric, ones_y, ones_f, ones_w)
     agrees = bool(np.isclose(observed, expected, rtol=1e-12))
     checks.append(

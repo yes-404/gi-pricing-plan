@@ -111,6 +111,27 @@ def test_a_metric_without_a_direction_is_refused(
 
 
 @pytest.mark.req("FR-MODEL-103")
+def test_a_metric_missing_a_parameter_with_no_default_is_refused(
+    client: TestClient, actuary: dict[str, str]
+) -> None:
+    """`capped_gamma` with no `cap` answered **201** until 2026-08-20.
+
+    `CustomMetric._the_parameters_are_the_templates_own` had copied only the unknown-key
+    half of `CustomObjective`'s validator, so the one input this endpoint cannot store —
+    a template that cannot be evaluated at all — was the one it accepted. Certification
+    then died on a bare `KeyError` inside the Job, naming no parameter. The 422 comes for
+    free once the contract refuses: `_validated` turns any `ValueError` from the artifact
+    into `VALIDATION_FAILED` with the contract's own message.
+    """
+    body = {**_BODY, "params": {}}
+    response = client.post("/api/v1/custom-metrics", json=body, headers=actuary)
+    assert response.status_code == 422
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    assert "'cap'" in problem["detail"]
+
+
+@pytest.mark.req("FR-MODEL-103")
 def test_creating_the_same_slug_twice_makes_a_second_version(
     client: TestClient, actuary: dict[str, str]
 ) -> None:

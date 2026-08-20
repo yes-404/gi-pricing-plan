@@ -108,10 +108,15 @@ class CustomMetric(BaseModel):
 
     @model_validator(mode="after")
     def _the_parameters_are_the_templates_own(self) -> Self:
-        """An unknown key is refused, never dropped.
+        """Exactly §4.5's parameters for this template, each inside its declared range.
 
-        A misspelled `cap` that is silently ignored produces an uncapped metric under a
-        name that says capped — and nothing downstream can tell.
+        Both halves matter, and this carried only the first until 2026-08-20. An unknown
+        key that is silently ignored produces an uncapped metric under a name that says
+        capped, and nothing downstream can tell. A missing key with no default is a
+        template that **cannot be evaluated at all** — `POST /api/v1/custom-metrics`
+        returned 201 for a `capped_gamma` metric with no `cap`, and certification then
+        died on a bare `KeyError` naming nothing, where `CustomObjective` had refused the
+        same input at construction (`objectives.py`'s sibling validator).
         """
         if self.template is None:  # pragma: no cover — the validator above ran first
             return self
@@ -123,8 +128,14 @@ class CustomMetric(BaseModel):
                 f"{self.template.value!r}; it declares {sorted(declared)} (FR-MODEL-103)."
             )
         for name, parameter in declared.items():
-            if name in self.params:
-                parameter.check(self.params[name])
+            if name not in self.params:
+                if parameter.default is None:
+                    raise ValueError(
+                        f"template {self.template.value!r} requires {name!r} and it is "
+                        "missing; §4.5 gives it no default (FR-MODEL-103)."
+                    )
+                continue
+            parameter.check(self.params[name])
         return self
 
     @model_validator(mode="after")

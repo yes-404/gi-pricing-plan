@@ -66,6 +66,7 @@ __all__ = [
     "compile_objective",
     "make_lgb_objective",
     "make_xgb_objective",
+    "resolve_template_params",
     "template_loss",
 ]
 
@@ -624,12 +625,37 @@ class ObjectiveFns:
         return np.maximum(raw, self.hessian_min)
 
 
+def resolve_template_params(
+    template: ObjectiveTemplate, params: Mapping[str, float]
+) -> dict[str, float]:
+    """§4.5's defaults filled in over the author's own choices — the one resolution point.
+
+    **Resolution is deliberately not storage.** A `CustomObjective` or `CustomMetric` keeps
+    only the parameters its author named, so that a later change to a §4.5 default cannot
+    retroactively rewrite the meaning of an approved artifact. The consequence is that
+    every path which *evaluates* a template has to fill the defaults in, and doing that
+    twice is how the fitting path and the metric path come to disagree about what
+    `tweedie` means. `compile_objective` and `evaluate_metric` both call this instead.
+
+    (Extracted 2026-08-20: `evaluate_metric` had inherited the storage half of this design
+    and not the resolution half, and raised `KeyError` for 10 of the 12 templates.)
+    """
+    resolved: dict[str, float] = {}
+    for parameter in TEMPLATE_PARAMETERS[template]:
+        value = params.get(parameter.name, parameter.default)
+        # `CustomObjective` and `CustomMetric` both refuse a missing required parameter at
+        # construction (`_the_parameters_are_the_templates_own`), so `value` is not None.
+        resolved[parameter.name] = float(value)  # type: ignore[arg-type]
+    return resolved
+
+
 def compile_objective(objective: CustomObjective) -> ObjectiveFns:
     """Bind a Custom Objective's parameters into vectorised `loss`/`grad`/`hess`.
 
-    Defaults are resolved here rather than at construction: `CustomObjective.params` holds
-    what the **author** chose, and a stored artifact that silently gained §4.5's defaults
-    would make a later change to a default rewrite the meaning of an approved objective.
+    Defaults are resolved at use rather than at construction (`resolve_template_params`
+    carries the reason): `CustomObjective.params` holds what the **author** chose, and a
+    stored artifact that silently gained §4.5's defaults would make a later change to a
+    default rewrite the meaning of an approved objective.
     """
     if objective.template is None:  # pragma: no cover - the contract refuses this
         raise ObjectiveError(
@@ -639,11 +665,7 @@ def compile_objective(objective: CustomObjective) -> ObjectiveFns:
             terms=[objective.slug],
         )
     template = _TEMPLATES[objective.template]
-    resolved: dict[str, float] = {}
-    for parameter in TEMPLATE_PARAMETERS[objective.template]:
-        value = objective.params.get(parameter.name, parameter.default)
-        # `CustomObjective` refuses a missing required parameter, so `value` is not None.
-        resolved[parameter.name] = float(value)  # type: ignore[arg-type]
+    resolved = resolve_template_params(objective.template, objective.params)
     fns = ObjectiveFns(
         ref=f"custom_objective:{objective.slug}@{objective.version}",
         template=objective.template,

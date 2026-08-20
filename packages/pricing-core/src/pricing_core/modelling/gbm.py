@@ -876,30 +876,48 @@ def _fit_xgboost(
     )
 
     # A named metric_name/data_name callback rather than the `early_stopping_rounds=`
-    # shorthand: the shorthand auto-picks the *last* eval set and the *last* eval_metric
-    # in insertion order, which is exactly ambiguous once a custom metric is also being
-    # reported (FR-MODEL-106/107) — explicit targeting has no such ambiguity to resolve.
+    # shorthand, **on both branches**: the shorthand auto-picks the *last* eval set and the
+    # *last* eval_metric in insertion order, which is exactly ambiguous once a custom metric
+    # is also being reported (FR-MODEL-106/107) — explicit targeting has no such ambiguity
+    # to resolve.
+    #
+    # The builtin branch used the shorthand until 2026-08-20, and the ambiguity was not
+    # theoretical: `EarlyStopping.after_iteration` takes `list(data_log.keys())[-1]`, and
+    # XGBoost appends custom-metric results *after* the builtin ones. A spec naming
+    # `poisson-nloglik` with any Custom Metric also declared therefore stopped on the
+    # custom metric, minimising it whatever direction it declared. FR-MODEL-104's stated
+    # failure verbatim: the fit stops at the wrong round and produces a model, not an error.
     callbacks: list[Any] = []
-    early_stopping_rounds: int | None = None
     if stopping is not None and evals:
         if stopping_on_custom:
-            target = custom_metrics[stopping.metric]
-            callbacks.append(
-                xgb.callback.EarlyStopping(
-                    rounds=stopping.rounds,
-                    metric_name=_xgb_safe_metric_name(stopping.metric),
-                    data_name="holdout",
-                    maximize=target.direction is MetricDirection.HIGHER_IS_BETTER,
-                    save_best=False,
-                )
+            target_name = _xgb_safe_metric_name(stopping.metric)
+            # `MetricDirection` is the artifact's own declaration and `certify_metric`'s
+            # `direction_holds` check is what stands behind it — XGBoost has never heard of
+            # this metric and cannot infer which way is better.
+            maximize: bool | None = (
+                custom_metrics[stopping.metric].direction is MetricDirection.HIGHER_IS_BETTER
             )
         else:
-            early_stopping_rounds = stopping.rounds
+            target_name = str(stopping.metric)
+            # `maximize=None` for a **backend** metric is delegation, not a guess: XGBoost
+            # keeps the higher-is-better set for its own vocabulary (`auc`, `aucpr`, `map`,
+            # `ndcg`, `pre`, …) and `_METRICS`'s docstring makes an unrecognised name
+            # backend-specific by design, so a direction table maintained in this file
+            # would go stale silently against metrics it has never heard of.
+            maximize = None
+        callbacks.append(
+            xgb.callback.EarlyStopping(
+                rounds=stopping.rounds,
+                metric_name=target_name,
+                data_name="holdout",
+                maximize=maximize,
+                save_best=False,
+            )
+        )
 
     history: dict[str, dict[str, list[float]]] = {}
     booster = xgb.train(
         params, dtrain, num_boost_round=rounds, evals=evals, evals_result=history,
-        early_stopping_rounds=early_stopping_rounds,
         obj=None if isinstance(objective, str) else objective,
         custom_metric=custom_metric_fn,
         callbacks=callbacks or None,
@@ -974,17 +992,25 @@ def _fit_lightgbm(
     )
     declared_map: dict[str, str] = {}
     feval_entries: dict[str, CustomMetric] = {}
+    # LightGBM's early-stopping callback can only target "the first metric"
+    # (`first_metric_only`), never one by name — but "first" is decided purely by the
+    # evaluation ordering (confirmed by reading `_EarlyStoppingCallback._init`:
+    # `self.first_metric = env.evaluation_result_list[0].metric_name`, and that list's
+    # metric ordering, per dataset, is builtin `params["metric"]` entries followed by
+    # `feval`'s in the order it returns them). So the target is bound by **arranging the
+    # ordering** — stopping's metric first, on whichever of the two lists it lives in —
+    # and then narrowing the callback to that first metric. Nothing is dropped from the
+    # curve; only the order is chosen.
     if stopping_on_custom:
         assert stopping is not None  # narrowed by stopping_on_custom
-        # LightGBM's early-stopping callback can only target "the first metric"
-        # (`first_metric_only`), never one by name — but "first" is decided purely by
-        # `feval`'s return order (confirmed by reading `_EarlyStoppingCallback._init`:
-        # `self.first_metric = env.evaluation_result_list[0].metric_name`, and that list's
-        # metric ordering, per dataset, is builtin `params["metric"]` entries followed by
-        # `feval`'s in the order it returns them). `metric: None` suppresses LightGBM's own
-        # implicit default so no unrequested metric can land at position 0; every other
-        # declared custom eval metric is still reported through `feval` — only the ordering
-        # is arranged, stopping's target first, so it is the one that drives the stop.
+        # `metric: None` suppresses LightGBM's own implicit default so no unrequested
+        # metric can land at position 0. It also means a **builtin** entry of
+        # `eval_metrics` is not reported alongside a custom stopping target: builtins are
+        # always evaluated before `feval`, so one would take position 0 and drive the stop
+        # instead. That is a library limitation rather than a choice, and the alternative —
+        # report the builtin and stop on the wrong metric — is the defect this whole
+        # section exists to prevent. Pinned by
+        # `test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it`.
         params["metric"] = "None"
         feval_entries = {
             stopping.metric: custom_metrics[stopping.metric],
@@ -994,6 +1020,15 @@ def _fit_lightgbm(
         builtin_names = _builtin_eval_metric_names(spec.eval_metrics)
         if stopping is not None and str(stopping.metric) not in builtin_names:
             builtin_names = [*builtin_names, str(stopping.metric)]
+        if stopping is not None:
+            # Stopping's target first. Before 2026-08-20 the spec's declaration order was
+            # kept and `first_metric_only` was left False whenever no custom metric was
+            # declared, on the premise that "with none declared there is exactly one metric
+            # and nothing to disambiguate" — which FR-MODEL-106 had already falsified by
+            # letting `eval_metrics` put builtins in `params["metric"]` beside the stopping
+            # one. LightGBM then halted as soon as *any* of them stalled.
+            target = str(stopping.metric)
+            builtin_names = [target, *(name for name in builtin_names if name != target)]
         if builtin_names:
             translated = [_METRICS.get(name, name) for name in builtin_names]
             params["metric"] = translated if len(translated) > 1 else translated[0]
@@ -1023,10 +1058,11 @@ def _fit_lightgbm(
             callbacks.append(
                 lgb.early_stopping(
                     stopping.rounds, verbose=False,
-                    # Only narrowed when a custom metric is also in play (default False
-                    # otherwise, unchanged from before FR-MODEL-106): with none declared
-                    # there is exactly one metric and nothing to disambiguate.
-                    first_metric_only=bool(feval_entries),
+                    # Always narrowed, because the ordering above has already put the
+                    # spec's stopping metric first. Left False, LightGBM halts as soon as
+                    # *any* registered metric stalls — which is a different rule from the
+                    # one the spec states, and silently a stricter one.
+                    first_metric_only=True,
                 )
             )
 
