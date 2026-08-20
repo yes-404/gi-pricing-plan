@@ -2536,19 +2536,33 @@ found.
 `scope-audit.py MODEL`, then `--endpoints`. `02` declares no `XX-YYY-N` catalogue, so unlike
 `01` there is no catalogue axis to check.
 
-| | |
-|---|---|
-| Requirements in scope | **114** |
-| With evidence | **95 (83 %)** |
-| Without evidence | **19** |
-| Endpoints declared in §5.1 | **35** |
-| Endpoints published | **34 (97 %)** |
+> **Superseded in part, 2026-08-20 — the custom-metrics slice landed.** The counts and the
+> slice list below were true on 2026-08-19 and are no longer. Re-derived on 2026-08-20 by
+> re-running the same two commands, with the current figures beside the originals; the
+> 2026-08-19 column is kept rather than overwritten, because what was believed on the day a
+> plan was made is the thing a governed record cannot lose. The requirement total rose by
+> six because the slice appended FR-MODEL-103…108, all six of them evidenced; the
+> unevidenced 19 are unchanged, and their verdicts below still stand.
 
-**Five buildable slices remain**, smallest first:
+| | Derived 2026-08-19 | Re-derived 2026-08-20 |
+|---|---|---|
+| Requirements in scope | **114** | **120** |
+| With evidence | **95 (83 %)** | **101 (84 %)** |
+| Without evidence | **19** | **19** |
+| Endpoints declared in §5.1 | **35** | **40** |
+| Endpoints published | **34 (97 %)** | **40 (100 %)** |
+
+*(`uv run python scripts/scope-audit.py MODEL --endpoints` prints "declared: 40 · published:
+40 (100%) · every declared endpoint is published in the contract";
+`uv run python scripts/req-coverage.py` prints "requirements specified : 489 · requirements
+marked : 235 (48.1%)" repository-wide.)*
+
+~~**Five buildable slices remain**~~ — **four**, corrected 2026-08-20: slice 1 below is
+delivered. Smallest first:
 
 | Slice | Requirements | State, and what is actually missing |
 |---|---|---|
-| **1. Custom metrics** | FR-MODEL-45's endpoint | `POST /api/v1/custom-metrics` is the one unpublished endpoint of the 35. Deferred to Phase 1b by a dated amendment in `02` §5.1, on the reasoning that a custom *metric* is `feval` — it changes what early stopping optimises and what the diagnostics report, not what the model fits. It shares the objective's lifecycle, certification and approval machinery, which is built. Nothing else gates it |
+| ~~**1. Custom metrics**~~ **— DELIVERED 2026-08-20** | ~~FR-MODEL-45's endpoint~~ FR-MODEL-45, 103–108 | ~~`POST /api/v1/custom-metrics` is the one unpublished endpoint of the 35. Deferred to Phase 1b by a dated amendment in `02` §5.1~~ **Built in the custom-metrics slice recorded below, not deferred to Phase 1b**: six routes rather than one, the artifact, table, certification Job and approval path, `eval_metrics` honoured (FR-MODEL-106) and early stopping on a Custom Metric (FR-MODEL-107). The deferral's reasoning — that a custom metric is `feval` and changes what early stopping optimises rather than what the model fits — turned out to be the argument *for* building it inside W5: FR-MODEL-107 made a Custom Metric the only way to early-stop under a callable objective at all |
 | **2. Regularisation and cross-validation** | FR-MODEL-20, FR-MODEL-53 | Already paired by a verdict on file — `select_by: cv` lives in the penalty path. The schema is ahead of the code: `GlmSpec` carries `alpha` and `l1_ratio`, and `cv_folds` exists. Missing are the documented penalty path, the CV selection option, declared fold construction (`random`, `temporal`, `grouped_by_key`) with a persisted seed, and per-fold metrics **and their dispersion** persisted as diagnostics rather than the mean alone |
 | **3. Tweedie power by profile likelihood** | FR-MODEL-22 | Today `GlmSpec` only *validates* that a supplied power lies between the two families it spans. Missing: the grid, the persisted profile curve, and recording an estimated `p` as an estimate with its own uncertainty rather than silently baking it in as a constant |
 | **4. Offset from another model** | FR-MODEL-24 | `offset_model_ref` appears nowhere in `packages/` or `backend/src`. This is residual modelling and "fit on top of the current rating structure", with the referenced model version pinned |
@@ -2679,9 +2693,25 @@ MODEL --endpoints`: **40 declared, 40 published (100%)**.
 **Not delivered, with owners.** No frontend view renders a Custom Metric — `02` §5.3's
 model spec builder is **W6b**'s, unchanged by this slice. `expression`-kind metrics remain
 Phase 2 behind `expression_objectives_enabled`, per FR-MODEL-45's own template-only scope
-for Phase 1. The five other buildable slices this workstream's outstanding-work table named
+for Phase 1. The four other buildable slices this workstream's outstanding-work table named
 on 2026-08-19 (regularisation/CV, Tweedie power, offset-from-model, EBM) are untouched by
 this slice.
+
+**`custom_metric` has no evidence floor — deferred, then dropped from this record until the
+whole-branch review found it (2026-08-20).** `06` §3.3 has no evidence row for
+`custom_metric`, so `model_schema.approvals.EVIDENCE_FLOOR` has no entry for it and
+`ApprovalPolicy.below_floor()` returns nothing: a workspace that edits `metric_certificate`
+out of its own `06` §4.2 entry is accepted, and `metrics._require_evidence` then has nothing
+to require. `custom_objective` **is** in the floor and is protected; the parallel this slice
+claimed everywhere else does not hold here. What protects a metric today is the lifecycle,
+not the policy — submission requires `certified`, only `record_certificate` sets it, it sets
+it beside a `certificate_id`, and the `certified_metric_has_a_certificate` CHECK refuses the
+pair coming apart. The gap is that the *policy reader* is told a floor exists where none
+does. **Owner: W5**, as a `06` §3.3 spec change plus the matching `EVIDENCE_FLOOR` entry, in
+that order — adding the entry alone would put the code above its own specification. Not
+folded into the fix wave that found it, because a new §3.3 evidence row is a governance
+change rather than a defect fix. `metrics._require_evidence`'s docstring asserted the
+protection existed until 2026-08-20 and now names the gap.
 
 ### Phase 1b — Modelling Workbench
 

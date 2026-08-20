@@ -641,9 +641,29 @@ async def _require_evidence(
     `objectives._require_evidence` carries the reasoning; the shape is the same and the
     difference is only which kinds are verifiable here. The workspace policy names
     `metric_certificate` for `custom_metric`, the way it names `objective_certificate` for
-    `custom_objective` (`model_schema.approvals.DEFAULT_POLICY`) — a workspace that edits
-    that away will 422 here with `EVIDENCE_INCOMPLETE` rather than silently accepting a
-    submission with nothing verified.
+    `custom_objective` (`model_schema.approvals.DEFAULT_POLICY`).
+
+    **A known gap, stated rather than asserted away.** `custom_metric` has no
+    `EVIDENCE_FLOOR` entry, because `06` §3.3 has no row for it — so `below_floor()`
+    returns nothing for this artifact type and a workspace that edits `metric_certificate`
+    out of its policy is *accepted*, leaving this function with nothing to require.
+    `custom_objective` is in the floor and is protected; this is not. Until 2026-08-20 this
+    docstring claimed the opposite — that such an edit "will 422 here with
+    `EVIDENCE_INCOMPLETE`" — which was never true of any build.
+
+    What actually protects a metric today is the **lifecycle**, not the policy: submission
+    requires status `certified`, only `record_certificate` sets that status, it sets it
+    alongside a `certificate_id`, and the `certified_metric_has_a_certificate` CHECK
+    refuses the pair coming apart at a layer a direct `UPDATE` cannot walk past. So an
+    uncertified metric cannot be
+    submitted even under an emptied policy — but the policy reader is being told a floor
+    exists where none does, which is the failure mode `POLICY_BELOW_EVIDENCE_FLOOR` was
+    added to prevent.
+
+    Owed: a `06` §3.3 evidence row for `custom_metric` and the matching `EVIDENCE_FLOOR`
+    entry. Adding the entry alone would put the code above its own specification, so it is
+    a governance change rather than part of this fix wave. Recorded in `docs/roadmap.md`'s
+    custom-metrics slice record under "Not delivered", with an owner.
     """
     policy = await approvals.policy_for(session, workspace_id)
 
