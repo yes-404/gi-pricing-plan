@@ -2713,6 +2713,12 @@ folded into the fix wave that found it, because a new §3.3 evidence row is a go
 change rather than a defect fix. `metrics._require_evidence`'s docstring asserted the
 protection existed until 2026-08-20 and now names the gap.
 
+**LightGBM silently drops a declared builtin `eval_metric` when early stopping targets a
+Custom Metric — raised as `OQ-MODEL-21`, not resolved.** Found in the same final review,
+immediately before merge. Tested and named in FR-MODEL-107's 2026-08-20 amendment, but
+whether a documented drop satisfies FR-MODEL-106's "honoured" is undecided. **Owner: W5**,
+alongside the `06` §3.3 / `EVIDENCE_FLOOR` gap above.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
