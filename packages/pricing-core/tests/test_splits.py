@@ -10,7 +10,7 @@ from __future__ import annotations
 import polars as pl
 import pytest
 
-from pricing_core.data.splits import SplitError, assign_parts, partition
+from pricing_core.data.splits import SplitError, assign_folds, assign_parts, partition
 
 
 def _book(n: int = 1000) -> pl.DataFrame:
@@ -103,3 +103,88 @@ def test_a_temporal_split_without_a_cutoff_is_refused() -> None:
 def test_an_unknown_method_is_refused() -> None:
     with pytest.raises(SplitError, match="unknown split method"):
         partition(_book(), method="stratified_by_vibes", seed=1)
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_two_independent_calls_produce_the_same_fold_assignment() -> None:
+    """The property `assign_parts` exists for, carried to folds: two Jobs computing CV for
+    the same spec must agree on which rows are held out for fold `i`, and the only thing
+    they share is `method`, `seed` and `folds`."""
+    frame = _book()
+    first = assign_folds(frame, method="random", seed=11, folds=4)
+    second = assign_folds(frame, method="random", seed=11, folds=4)
+    assert first.tolist() == second.tolist()
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_a_different_seed_produces_a_different_fold_assignment() -> None:
+    frame = _book()
+    a = assign_folds(frame, method="random", seed=1, folds=4)
+    b = assign_folds(frame, method="random", seed=2, folds=4)
+    assert a.tolist() != b.tolist()
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_every_row_gets_one_of_the_declared_folds() -> None:
+    """Coverage, the fold equivalent of `test_the_parts_are_disjoint_and_cover_every_row`:
+    a row with no fold is a row `_fit_cv_path` would silently never score or never train
+    on, in whichever fold it should have belonged to."""
+    frame = _book()
+    folds = assign_folds(frame, method="random", seed=5, folds=4)
+    assert folds.shape == (frame.height,)
+    assert set(folds.tolist()) == {0, 1, 2, 3}
+    assert folds.min() >= 0
+    assert folds.max() < 4
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_a_grouped_fold_assignment_keeps_a_policy_whole() -> None:
+    """The same leakage bug `assign_parts`'s grouped method exists to prevent, at K folds:
+    a policy's twelve monthly rows split across two folds lets a model trained on fold A
+    see rows from the very policy fold B holds out."""
+    frame = _book()
+    folds = assign_folds(frame, method="grouped_by_key", seed=3, folds=4, key_column="policy")
+    tagged = frame.with_columns(pl.Series("fold", folds.tolist()))
+    per_policy_fold_count = (
+        tagged.group_by("policy").agg(pl.col("fold").n_unique().alias("n")).select("n")
+    )
+    assert per_policy_fold_count["n"].max() == 1
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_a_temporal_fold_assignment_orders_folds_by_time() -> None:
+    """The gap this plan documents and resolves: FR-DATA-33/FR-MODEL-53 define no K-fold
+    temporal semantics, so this fixes it as contiguous time-ordered blocks — the earliest
+    rows land in fold 0, the latest in the last fold, and a block never straddles a fold
+    boundary out of time order."""
+    n = 400
+    frame = pl.DataFrame({"row": list(range(n)), "day": list(range(n))})
+    folds = assign_folds(frame, method="temporal", seed=0, folds=4, time_column="day")
+    tagged = frame.with_columns(pl.Series("fold", folds.tolist())).sort("day")
+    # Each fold's rows are a contiguous run once sorted by time: 3 boundaries between the
+    # 4 folds. The leading "no previous" row compares against null, which is null in Polars
+    # and so does not add to the count.
+    changes = (tagged["fold"] != tagged["fold"].shift(1)).sum()
+    assert changes == 3
+    assert tagged["fold"][0] == 0
+    assert tagged["fold"][-1] == 3
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_a_temporal_fold_assignment_without_a_time_column_is_refused() -> None:
+    with pytest.raises(SplitError, match="time_column"):
+        assign_folds(_book(), method="temporal", seed=1, folds=4)
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_fewer_than_two_folds_is_refused() -> None:
+    """Negative: one fold has no held-out rows for itself to be scored against, and
+    `_fit_cv_path` would divide the book into a training set with nothing to validate on."""
+    with pytest.raises(SplitError, match="at least 2"):
+        assign_folds(_book(), method="random", seed=1, folds=1)
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_an_unknown_fold_method_is_refused() -> None:
+    with pytest.raises(SplitError, match="unknown split method"):
+        assign_folds(_book(), method="stratified_by_vibes", seed=1, folds=3)
