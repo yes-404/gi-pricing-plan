@@ -870,6 +870,46 @@ class GlmCvSpec(BaseModel):
         return self
 
 
+class TweediePowerSpec(BaseModel):
+    """FR-MODEL-22: the grid over which the Tweedie power `p` is estimated by profile
+    likelihood, and the boundary of that estimate. `GlmSpec.tweedie` being set is the
+    spec's request for estimation; the estimated value and its uncertainty are fit-time
+    facts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.
+
+    A scan, not a choice: one point would be a fixed fit, and a minimum at the edge of
+    the scan is refused at fit time (`GLM_TWEEDIE_POWER_GRID_EDGE`) because it reports
+    the scan's boundary as the answer.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    p_grid: tuple[float, ...] = (
+        1.05, 1.15, 1.25, 1.35, 1.45, 1.55, 1.65, 1.75, 1.85, 1.95,
+    )
+
+    @model_validator(mode="after")
+    def _the_grid_has_at_least_two_points_strictly_inside_the_family(self) -> TweediePowerSpec:
+        if len(self.p_grid) < 2:
+            raise ValueError(
+                f"p_grid has {len(self.p_grid)} point(s); at least 2 are needed for a "
+                "profile to have a minimum — one point is a fixed fit, not an estimate."
+            )
+        if not all(math.isfinite(p) for p in self.p_grid):
+            raise ValueError("p_grid contains a non-finite value")
+        if not all(1.0 < p < 2.0 for p in self.p_grid):
+            raise ValueError(
+                f"p_grid must lie inside (1, 2), got {self.p_grid} — at 1 the family is "
+                "Poisson and at 2 it is Gamma; the scan stays inside the family "
+                "FR-MODEL-22 estimates."
+            )
+        if any(b <= a for a, b in zip(self.p_grid, self.p_grid[1:], strict=False)):
+            raise ValueError(
+                "p_grid must be strictly increasing — a scanned path is an ordered set, "
+                "and the profile interval is read between consecutive points."
+            )
+        return self
+
+
 class GlmSpec(ModelSpecCommon):
     """`02` §4.4's common block plus the `glm` arm.
 
@@ -893,6 +933,8 @@ class GlmSpec(ModelSpecCommon):
     select_by: Literal["fixed", "cv"] = "fixed"
     #: Set iff `select_by == "cv"` (checked below); `None` under `"fixed"` selection.
     cv: GlmCvSpec | None = None
+    # FR-MODEL-22: set to estimate the Tweedie power by profile likelihood over this grid.
+    tweedie: TweediePowerSpec | None = None
     max_iter: int = Field(default=200, ge=1)
     tolerance: float = Field(default=1e-8, gt=0.0)
     #: FR-MODEL-96 — the Model whose predictions this GLM approximates. `None` for every
@@ -1017,6 +1059,40 @@ class GlmSpec(ModelSpecCommon):
             raise ValueError(
                 "cv is set but select_by='fixed'. A scanned path with nothing selecting "
                 "from it describes a fit that was never asked to run it."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _tweedie_estimation_declares_a_tweedie_family_and_no_fixed_power(self) -> GlmSpec:
+        """FR-MODEL-22: the estimation block, the family and the fixed power must agree.
+
+        Each direction is a different defect. Estimation on a non-Tweedie family is a
+        grid nobody will scan; a fixed power in `family_params` beside the grid is a
+        second, unread answer to what p is; and estimation under `select_by == "cv"`
+        would need the profile recomputed at every scanned alpha, since the profile is
+        penalty-dependent — the pair is refused by name rather than silently estimated
+        against one of them (FR-MODEL-87 staging).
+        """
+        if self.tweedie is None:
+            return self
+        if self.family != "tweedie":
+            raise ValueError(
+                f"tweedie estimation is set but family is {self.family!r}, not 'tweedie' "
+                "(FR-MODEL-22): the grid estimates the Tweedie power, and a non-Tweedie "
+                "family has no power to estimate."
+            )
+        if "power" in self.family_params:
+            raise ValueError(
+                "family_params carries a fixed power beside a profile-likelihood grid "
+                "(FR-MODEL-22): a fixed p beside an estimated p is two answers to what "
+                "p is — remove the fixed power or drop the estimation block."
+            )
+        if self.select_by == "cv":
+            raise ValueError(
+                "select_by='cv' and tweedie estimation are refused together (FR-MODEL-22): "
+                "the profile likelihood is penalty-dependent, so a p estimated at one "
+                "alpha describes a fit at that alpha only — supporting both would mean "
+                "rescanning the grid at every scanned alpha."
             )
         return self
 
