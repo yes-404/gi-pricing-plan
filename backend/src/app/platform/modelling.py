@@ -108,7 +108,12 @@ __all__ = [
 #: different GBMs over one population would otherwise share a digest — which FR-MODEL-66
 #: answers by handing the second caller the first caller's model. Every `v4:` digest is
 #: findable with `LIKE 'v4:%'` and reported stale by `spec_hash_is_current`.
-SPEC_HASH_VERSION: Final = 5
+#: `select_by`/`cv` moved it `v5` to `v6` (2026-08-21, FR-MODEL-20/53): how the fit is
+#: selected — one alpha, or a CV scan of `cv.alphas` — is part of the fitted question,
+#: and two specs differing there must not share a digest or FR-MODEL-66 answers the
+#: second caller with the first caller's model. Every `v5:` digest is now stale and
+#: findable with `LIKE 'v5:%'`.
+SPEC_HASH_VERSION: Final = 6
 
 
 def spec_hash(spec: ModelSpec) -> str:

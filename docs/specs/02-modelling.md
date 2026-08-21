@@ -217,6 +217,12 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-56** | Model comparison is a first-class operation: two or more Models fitted on the same holdout can be compared on aligned metrics, double-lift, and factor-by-factor relativity differences, producing a persisted comparison artifact citable in an approval request. |
 | **FR-MODEL-57** | A **backtest** on a later Dataset Version is supported and produces the same diagnostic shapes, marked with the version it ran against. Backtests are the evidence bridge into `05-monitoring.md`. *(Amended 2026-08-18, W5, the backtest slice, with what building it settled.* **A backtest is its own artifact — §4.12 — and `Diagnostics.backtest` is removed.** That field was declared from Phase 0 and typed `null`, and nothing could ever have filled it: FR-MODEL-49 computes diagnostics once at fit time, while a backtest runs later and again for every period after that. It is the same defect FR-MODEL-50's `double_lift` had, found the same way. **"The same diagnostic shapes" means one `PartitionDiagnostics`, not a `UniversalDiagnostics`:** the backtested population was never split, so FR-MODEL-54's both-partitions rule does not apply and calling the single partition a holdout would claim a split nobody made. **"Other than the one it was fitted on" reaches the split parts**, which are Dataset Versions in their own right (`01` FR-DATA-36) — the refusal the type cannot see and the platform must, and it runs *before* the validated gate for the reason §4.12 gives. Both model types are backtested through one path; FR-MODEL-57 says nothing about model type, and a backtest that worked only for GLMs would leave the GBM an actuary trusts least as the one nothing re-measures.)* |
 
+> **Amendment, 2026-08-21 (the regularisation-and-CV slice).** Neither this requirement
+> nor `01` FR-DATA-33 defined K-fold `temporal` semantics — FR-DATA-33 only defines a
+> two-part cutoff split. Resolved as **contiguous time-ordered blocks**: sort ascending by
+> `time_column`, cut the sorted row order into `folds` equal-count blocks. Implemented in
+> `pricing_core.data.splits.assign_folds`.
+
 ### 3.9 Peril structure and risk premium
 
 | ID | Requirement |
@@ -236,6 +242,16 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-93** | **A GLM fitted before the covariance matrix was stored reports `uncertainty: unavailable` with reason `covariance_not_stored`, and still returns the expectation.** Added 2026-08-18 (W5, the prediction slice). FR-MODEL-63's interval needs `V`, which is `p x p`; the Model artifact holds `p` coefficients and cannot have it reconstructed from them, so for a model fitted before `covariance_blob` existed the only honest answers are a typed absence and a refit. It is a fourth reason beside FR-MODEL-77's three and it is **not** one of them: nothing about a GLM makes an interval impossible, the inputs to one were simply not kept. **A blob that should exist and does not is a platform fault and surfaces as one** — this reason is reachable only when the artifact itself records no blob, never when the store fails to resolve one, because a missing-blob incident reported as a modelling limitation is an incident nobody investigates. |
 | **FR-MODEL-98** | **The platform offers exactly one interval kind on a prediction — `UncertaintyKind.confidence_interval_mean` — and adds a process-variance prediction interval only when a named consumer asks for one.** (OQ-MODEL-13, decided 2026-08-18. FR-MODEL-63 stands as amended by the note below this table; this requirement states the boundary that note left implicit.) `UncertaintyKind` is an enum a client matches on, so a second member is a contract change, and shipping one before anything consumes it puts two numbers on a screen that differ by an order of magnitude with nothing on the page saying which to trust. **The trigger is named so the decision cannot decay into a habit:** the first consumer of an aggregate predictive interval — `05-monitoring.md`'s portfolio work, or a capital or reserving reader — unblocks it. At that point the second kind is `prediction_interval`, computed as `φ·V(μ)` from `GlmFitResult.dispersion`, which is already stored, and it is offered **for aggregate predictions first**, because that is where the process variance averages away and the interval means something. `confidence_interval_mean` is never silently widened to become it. The case against the per-policy version is not cost: for a frequency model on one policy the honest interval is very nearly "0 or 1 claims", which is true, prices nothing, and reads as a malfunction to whoever asked for uncertainty. |
 | **FR-MODEL-99** | **A penalised GLM (`alpha > 0`) reports its standard errors and its interval as now, and every response carrying them states the basis they were computed on: `UncertaintyBasis.unpenalised_information_matrix` rather than `information_matrix`.** (OQ-MODEL-14, decided 2026-08-18.) `glum` warns on every penalised fit that the covariance matrix *"will be incorrect"*, and it is right: what it returns is the information matrix of the **unpenalised** problem, which knows nothing about the shrinkage that produced the coefficients beside it. The error has a known direction — the interval is the one an unpenalised fit of the same design would earn, so it is **wider** than the shrunk estimate warrants — and conservative is not the same as right, which is why the qualification is carried rather than the number quietly kept. **FR-MODEL-21 and FR-MODEL-63 are answered together and could not be answered apart**: both are read off the same `V`, so refusing the interval would have had to take the coefficient standard errors with it, leaving a penalised fit with no uncertainty at all, and qualifying one without the other would describe a matrix that does not exist. **The basis is derived from `GlmSpec.alpha` in one place and never stored on the fit result** (`CLAUDE.md` §2): the spec is pinned to the fit by `spec_hash` and both are immutable, so a stored copy could only ever agree or be wrong. It is derived from `alpha` rather than from the library's warning text, which the fit swallows inside `catch_warnings` and which a patch release may reword. `l1_ratio` alone does not make a fit penalised — at `alpha = 0` there is no penalty to mix — though where the penalty is L1 the matrix additionally ignores that it *selected* the terms; the basis value is the same because the remedy is. **The exact answer is named with a trigger rather than deferred to nowhere:** a bootstrap (or a penalty-aware sandwich) over ~200 refits, which is a different cost class from a fit and therefore a Job rather than a fit-time step, is built when the first consumer needs valid penalised inference — a surface that renders coefficient intervals on a penalised fit, or an approval that cites them. Neither exists today: regularisation has no UI and nothing in §4.11's comparison reads the intervals. Owner: the slice that builds the first of them. |
+
+> **Amendment, 2026-08-21 (the regularisation-and-CV slice).** This requirement predates
+> `select_by == "cv"` and says nothing about it. Under CV selection, `GlmSpec.alpha` is
+> pinned to `0.0` (the effective penalty comes from `cv.alphas` instead), so
+> `uncertainty_basis` cannot read the selected alpha from the spec alone. Resolved as:
+> every `select_by == "cv"` fit is treated as using the naive (penalised-fit) information
+> matrix unconditionally, regardless of which alpha the scan selects. Conservative rather
+> than exact — the elastic-net grid FR-MODEL-20 scans starts at zero and moves away from
+> it, so a fit landing back on exactly zero is the rare point on the path, and the
+> cautious label costs a display caveat rather than a wrong number on the common one.
 
 > **FR-MODEL-98 addendum, 2026-08-19 (W5, the paired-quantile slice) — the boundary
 > holds and gains a second door.** FR-MODEL-98 says the platform offers exactly one
@@ -287,7 +303,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-66** | The `spec_hash` (§2, Model Spec) is computed over the canonicalised spec including pinned versions and seed. Submitting an identical spec returns the existing Model instead of refitting, unless `force_refit` is set — which then requires the two fits to be compared for reproducibility (FR-OVR-8). |
 | **FR-MODEL-67** | A Model whose Dataset Version was invalidated (`01` FR-DATA-23) is flagged `dataset_invalidated` and cannot advance to `approved`; if already `approved`, the flag propagates to every Rating Version referencing it and to the Approvals inbox. |
 | **FR-MODEL-86** | **`spec_hash` carries the version of the algorithm that produced it, inside the hashed payload.** The digest is `v<n>:sha256:<64 hex>` where `n` is `SPEC_HASH_VERSION`, and the same `n` is one of the hashed fields — a prefix alone would let a reader strip it and compare across versions, which is exactly the comparison that is not meaningful. **Any change to the set of fields entering the payload increments `n` in the same commit as the field**, and `spec_hash_is_current` reports every older digest as stale so the affected rows are findable (`LIKE 'v1:%'`). Without this, one added field silently changes every stored digest and FR-MODEL-66's dedup ends with no error to see. The rule has been exercised twice: `split_ref` moved the digest `v1 → v2` (2026-08-16) and `loss_treatment` moved it `v2 → v3` (2026-08-17). (OQ-MODEL-8, decided 2026-08-17.) |
-| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec`, `custom_objective_ref` and the regularisation-selection fields `select_by`/`cv_folds` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`); **`interval_for` is the seventh, live 2026-08-19** on `GbmSpec` rather than on `Model` (FR-MODEL-100), and it leaves the absent-entirely list above with this change rather than being quietly dropped from it. |
+| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec` and `custom_objective_ref` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`); **`interval_for` is the seventh, live 2026-08-19** on `GbmSpec` rather than on `Model` (FR-MODEL-100), and it leaves the absent-entirely list above with this change rather than being quietly dropped from it. **`select_by` and `cv` are the eighth, live 2026-08-21** (the regularisation-and-CV slice), on `GlmSpec` — `select_by: "fixed" \| "cv"` and the nested `cv: GlmCvSpec` block, the shape the FR-MODEL-20/FR-MODEL-53 CV path built rather than the flat `select_by`/`cv_folds` fields the decision date named — and they leave the absent-entirely list above with this change rather than being quietly dropped from it. |
 | **FR-MODEL-88** | **The unimplemented arms of FR-MODEL-1's closed set are refused by name at resolution, never approximated.** Four of the eight — `spline`, `polynomial`, `offset` and `expression` — do not resolve, and `resolve_factors` raises naming the type rather than returning the raw column, because a fit built on the raw column is one nobody could tell from a correct one. **`expression` is the sharper case and its verdict is stated rather than implied:** `FactorType.EXPRESSION` is selectable while `Factor` carries no field to hold the expression, so a factor of that type can be *created* and can never be *resolved*. That is contained rather than corrected — the refusal is at the boundary where it would matter — and the field plus its validator arm are owned by Phase 1b with the rest of §4.7's expression work. (OQ-MODEL-8, decided 2026-08-17.) |
 | **FR-MODEL-89** | **§4.8 R3 is enforced artifact→model, because that is the direction the link runs.** The `TransparencyArtifact` carries `model_id` and the `Model` carries no back-reference that anything writes, so "`model_type ≠ glm` and `status = approved` ⟹ a transparency artifact exists" is checked by querying for an artifact naming the model at the approval transition, not by reading a column on the model. Stating it as a field-set invariant made it unenforceable — the same shape as §4.8's `status ≥ fitted ⟹ diagnostics_id`, which OQ-MODEL-8 was written around. (OQ-MODEL-8, decided 2026-08-17.) |
 
@@ -483,6 +499,7 @@ cap are different models, and must not collide on `spec_hash`.
   "family_params": {},
   "link": "log",
   "alpha": 0.001, "l1_ratio": 0.0,
+  "select_by": "fixed", "cv": null,
   "max_iter": 200, "tolerance": 1e-8,
   "approximates_model_id": null
 }
@@ -496,7 +513,45 @@ cap are different models, and must not collide on `spec_hash`.
 > written in Phase 0 and nothing was ever built to it, so a caller copying this page would
 > have sent a body the contract rejects — a divergence rather than a field awaiting a slice.
 > `select_by` / `cv_folds` (penalty selection by cross-validation) and `custom_objective_ref`
-> on the GLM arm are **absent entirely** and owned by Phase 1b (FR-MODEL-87).
+> on the GLM arm are **absent entirely** and owned by Phase 1b (FR-MODEL-87). *(Amended
+> 2026-08-21, the regularisation-and-CV slice.* **The selection fields landed this date
+> and are no longer absent** — under a nested `cv: GlmCvSpec` block rather than the flat
+> fields this note names: `GlmSpec.select_by: "fixed" | "cv"` (default `"fixed"`), and
+> `cv: GlmCvSpec | null` carrying the scan, `null` under `"fixed"` selection. The shape
+> is the one the FR-MODEL-20/FR-MODEL-53 CV path built, mirroring `GbmSpec`'s nested
+> `early_stopping`. **The seed is not duplicated on the block**: the seed that makes fold
+> assignment reproducible is `ModelSpecCommon.seed` — the one seed the spec already
+> carries and already versions into `spec_hash` — and a second seed field would let the
+> two disagree. `custom_objective_ref` on the GLM arm remains absent entirely.)*
+
+`GlmCvSpec` is the block `cv` carries when `select_by` is `"cv"`:
+
+```json
+{
+  "method": "random | temporal | grouped_by_key",
+  "folds": 5,
+  "alphas": [0.0, 0.001, 0.01, 0.1, 1.0],
+  "key_column": null,
+  "time_column": null
+}
+```
+
+> **Added 2026-08-21 (the regularisation-and-CV slice).** `cv` carries the cross-validated
+> penalty path when `select_by` is `"cv"` and is `null` under `"fixed"` selection. The
+> selection fields the correction note above listed as absent entirely landed this date
+> under this **nested shape** rather than as the flat `select_by`/`cv_folds` fields the
+> note named — the shape the FR-MODEL-20/FR-MODEL-53 CV path built, mirroring `GbmSpec`'s
+> nested `early_stopping`. **`method` is `01` FR-DATA-33's three fold-construction
+> methods**, generalised from its two-part cutoff split to K folds by
+> `pricing_core.data.splits.assign_folds`: `random` reuses the same seeded draw as `01`'s
+> split; `temporal` sorts ascending by `time_column` and cuts the sorted order into
+> contiguous equal-count blocks; `grouped_by_key` keeps `key_column`'s groups whole
+> across folds. The last two name their column, required when that method is chosen.
+> `alphas` is the elastic-net penalty path scanned (two or more distinct non-negative
+> points, `l1_ratio` fixed by `GlmSpec.l1_ratio` for every point). **The seed is not
+> duplicated on this block**: the seed that makes fold assignment reproducible is
+> `ModelSpecCommon.seed`, the one the spec already carries and already versions into
+> `spec_hash`, and a second seed field would let the two disagree.
 
 `GbmSpec` adds (`model_type` is `xgboost` or `lightgbm` — see the amendment below):
 
@@ -1501,8 +1556,9 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
-`GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_DID_NOT_CONVERGE`,
-`GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED`, `OFFSET_REQUIRED_FOR_FREQUENCY`,
+`GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
+`GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED`,
+`OFFSET_REQUIRED_FOR_FREQUENCY`,
 `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
 `OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`, `OBJECTIVE_NOT_CERTIFIED`,
 `OBJECTIVE_KIND_NOT_ENABLED`, `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT`,
@@ -1621,6 +1677,18 @@ module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 > than repeating the `MODEL_TERM_UNRESOLVED` history two sections above, where four
 > codes were live and unregistered because nothing declared them when they were added.
 
+> **`GLM_CV_FOLD_EMPTY` added 2026-08-21 (the regularisation-and-CV slice).** Raised by
+> the CV path when a fold has no held-out rows (or no training rows) at some alpha on
+> the scanned path (FR-MODEL-20, FR-MODEL-53) — the `key_column`/`time_column` skew
+> that a fold count chosen against the whole book does not guarantee against, per fold.
+> A fold cannot be scored, or trained, on nothing.
+
+> **Corrected 2026-08-21 (the regularisation-and-CV slice).** `fit_glm`'s return comment
+> below now reads `.result, .covariance_bytes, .cv` — the slice added the `cv` field to
+> `GlmFit` (glm.py's dataclass, FR-MODEL-20/FR-MODEL-53) and the interface comment lagged
+> it, so a caller copying the signature would have missed the cross-validation
+> diagnostics the fit carries when `spec.select_by == "cv"`.
+
 ### 5.2 `pricing-core` interfaces
 
 ```python
@@ -1648,7 +1716,7 @@ def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
             seed: int = 0,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
-            progress: ProgressCallback | None = None) -> GlmFit   # .result, .covariance_bytes
+            progress: ProgressCallback | None = None) -> GlmFit   # .result, .covariance_bytes, .cv
 
 # pricing_core/modelling/predict.py
 def linear_predictor(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],

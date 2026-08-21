@@ -326,6 +326,68 @@
       "title": "GbmSpec",
       "type": "object"
     },
+    "GlmCvSpec": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-20/FR-MODEL-53: the cross-validated penalty path `GlmSpec.cv` carries when\n`select_by == \"cv\"`.\n\n`seed` is **not** duplicated here: the seed that makes fold assignment reproducible is\n`ModelSpecCommon.seed` — the one seed the spec already carries and already versions\ninto `spec_hash`. A second seed field on this nested block would let the two disagree,\nwhich is the shape-defined-twice trap `CLAUDE.md` §2 names.",
+      "properties": {
+        "alphas": {
+          "default": [
+            0.0,
+            0.001,
+            0.01,
+            0.1,
+            1.0
+          ],
+          "items": {
+            "type": "number"
+          },
+          "title": "Alphas",
+          "type": "array"
+        },
+        "folds": {
+          "default": 5,
+          "minimum": 2,
+          "title": "Folds",
+          "type": "integer"
+        },
+        "key_column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Column"
+        },
+        "method": {
+          "default": "random",
+          "enum": [
+            "random",
+            "temporal",
+            "grouped_by_key"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "time_column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Column"
+        }
+      },
+      "title": "GlmCvSpec",
+      "type": "object"
+    },
     "GlmSpec": {
       "additionalProperties": false,
       "description": "`02` §4.4's common block plus the `glm` arm.\n\nThe spec is what `spec_hash` is taken over, so every field here changes the identity of\nthe model. That is why `loss_treatment` belongs in the spec rather than beside it, and\nwhy two models differing only in a cap must not collide (FR-MODEL-66).",
@@ -348,6 +410,17 @@
           ],
           "default": null,
           "title": "Approximates Model Id"
+        },
+        "cv": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GlmCvSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "dataset_version_id": {
           "format": "uuid",
@@ -466,6 +539,15 @@
           "default": 0,
           "title": "Seed",
           "type": "integer"
+        },
+        "select_by": {
+          "default": "fixed",
+          "enum": [
+            "fixed",
+            "cv"
+          ],
+          "title": "Select By",
+          "type": "string"
         },
         "split_ref": {
           "anyOf": [

@@ -21,6 +21,7 @@ re-scorable without `glum`, by a process that never ran it.
 from __future__ import annotations
 
 import enum
+import math
 from decimal import Decimal
 from typing import Annotated, Any, Final, Literal
 from uuid import UUID
@@ -55,6 +56,7 @@ __all__ = [
     "GbmFitResult",
     "GbmFunctionRef",
     "GbmSpec",
+    "GlmCvSpec",
     "GlmFitResult",
     "GlmSpec",
     "Grouping",
@@ -815,6 +817,59 @@ class ModelSpecCommon(BaseModel):
     seed: int = 0
 
 
+class GlmCvSpec(BaseModel):
+    """FR-MODEL-20/FR-MODEL-53: the cross-validated penalty path `GlmSpec.cv` carries when
+    `select_by == "cv"`.
+
+    `seed` is **not** duplicated here: the seed that makes fold assignment reproducible is
+    `ModelSpecCommon.seed` — the one seed the spec already carries and already versions
+    into `spec_hash`. A second seed field on this nested block would let the two disagree,
+    which is the shape-defined-twice trap `CLAUDE.md` §2 names.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: `01` FR-DATA-33's three fold-construction methods, generalised to K folds by
+    #: `pricing_core.data.splits.assign_folds` (FR-MODEL-53).
+    method: Literal["random", "temporal", "grouped_by_key"] = "random"
+    folds: int = Field(default=5, ge=2)
+    #: The elastic-net penalty strengths scanned (FR-MODEL-20). `l1_ratio` is fixed by
+    #: `GlmSpec.l1_ratio` for every point on the path — only the overall strength is
+    #: scanned, mirroring `glum`'s own `GeneralizedLinearRegressorCV` convention.
+    alphas: tuple[float, ...] = (0.0, 0.001, 0.01, 0.1, 1.0)
+    key_column: str | None = None
+    time_column: str | None = None
+
+    @model_validator(mode="after")
+    def _the_path_has_at_least_two_distinct_points(self) -> GlmCvSpec:
+        if len(self.alphas) < 2:
+            raise ValueError(
+                f"cv.alphas has {len(self.alphas)} point(s); at least 2 are needed for a "
+                "path to select from — one alpha is a fixed fit, not a cross-validation."
+            )
+        if any(a < 0.0 for a in self.alphas):
+            raise ValueError("cv.alphas contains a negative penalty strength")
+        if not all(math.isfinite(a) for a in self.alphas):
+            raise ValueError("cv.alphas contains a non-finite value")
+        if len(set(self.alphas)) != len(self.alphas):
+            raise ValueError(f"cv.alphas repeats a value: {self.alphas}")
+        return self
+
+    @model_validator(mode="after")
+    def _the_method_names_what_it_needs(self) -> GlmCvSpec:
+        if self.method == "grouped_by_key" and not self.key_column:
+            raise ValueError(
+                "cv.method is 'grouped_by_key' but cv.key_column is not set — without it "
+                "there is no key to keep whole across folds."
+            )
+        if self.method == "temporal" and not self.time_column:
+            raise ValueError(
+                "cv.method is 'temporal' but cv.time_column is not set — without it there "
+                "is no time to order folds by."
+            )
+        return self
+
+
 class GlmSpec(ModelSpecCommon):
     """`02` §4.4's common block plus the `glm` arm.
 
@@ -833,6 +888,11 @@ class GlmSpec(ModelSpecCommon):
     link: Literal["log", "logit", "identity", "inverse"] = "log"
     alpha: float = Field(default=0.0, ge=0.0)
     l1_ratio: float = Field(default=0.0, ge=0.0, le=1.0)
+    #: FR-MODEL-20/FR-MODEL-53. `"fixed"` fits once at `alpha`; `"cv"` scans `cv.alphas`
+    #: and selects the alpha with the lowest mean cross-validated deviance instead.
+    select_by: Literal["fixed", "cv"] = "fixed"
+    #: Set iff `select_by == "cv"` (checked below); `None` under `"fixed"` selection.
+    cv: GlmCvSpec | None = None
     max_iter: int = Field(default=200, ge=1)
     tolerance: float = Field(default=1e-8, gt=0.0)
     #: FR-MODEL-96 — the Model whose predictions this GLM approximates. `None` for every
@@ -853,9 +913,18 @@ class GlmSpec(ModelSpecCommon):
         warning inside `catch_warnings`, and a library's prose is not a mechanism — it can
         be reworded in a patch release without anything failing.
         """
+        # FR-MODEL-20/FR-MODEL-53 interaction, noted rather than silently resolved (this
+        # plan's header carries the reasoning): under `select_by == "cv"`, `alpha` is
+        # pinned to 0.0 by `_cv_selection_declares_its_cv_spec_and_nothing_else_does`
+        # because the effective penalty comes from `cv.alphas` instead — so `alpha` alone
+        # cannot answer this question for a CV fit. Treated as penalised unconditionally:
+        # the elastic-net grid FR-MODEL-20 scans is a path that starts at zero and moves
+        # away from it, so a fit that lands back on exactly zero is the rare point on the
+        # path rather than the typical one, and the cost of the cautious label there is a
+        # display caveat, not a wrong number.
         return (
             UncertaintyBasis.UNPENALISED_INFORMATION_MATRIX
-            if self.alpha > 0.0
+            if self.alpha > 0.0 or self.select_by == "cv"
             else UncertaintyBasis.INFORMATION_MATRIX
         )
 
@@ -919,6 +988,35 @@ class GlmSpec(ModelSpecCommon):
                 f"{self.response_column!r}, not {SURROGATE_RESPONSE_COLUMN!r} "
                 "(FR-MODEL-102). A surrogate is fitted to another model's predictions; a "
                 "spec fitted to an observed column is a model in its own right."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _cv_selection_declares_its_cv_spec_and_nothing_else_does(self) -> GlmSpec:
+        """FR-MODEL-20/FR-MODEL-53: `select_by`, `cv` and `alpha` must agree.
+
+        `alpha` is refused non-zero under `select_by="cv"` on purpose: the effective
+        penalty comes from `cv.alphas` instead, and a spec carrying both a fixed `alpha`
+        and a scanned path has two answers to "how penalised is this fit" — one from a
+        field nobody reads under CV selection, which is worse than an empty one.
+        """
+        if self.select_by == "cv":
+            if self.cv is None:
+                raise ValueError(
+                    "select_by='cv' but cv is not set (FR-MODEL-20/FR-MODEL-53). "
+                    "Cross-validation needs a path to scan and a fold strategy to scan "
+                    "it with."
+                )
+            if self.alpha != 0.0:
+                raise ValueError(
+                    "select_by='cv' but alpha is non-zero. The effective penalty comes "
+                    "from cv.alphas under CV selection; a fixed alpha here would be a "
+                    "second, unread answer to how penalised this fit is."
+                )
+        elif self.cv is not None:
+            raise ValueError(
+                "cv is set but select_by='fixed'. A scanned path with nothing selecting "
+                "from it describes a fit that was never asked to run it."
             )
         return self
 

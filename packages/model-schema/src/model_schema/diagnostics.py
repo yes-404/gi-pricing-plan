@@ -33,6 +33,9 @@ __all__ = [
     "AeCell",
     "CalibrationBin",
     "ComplexityDiagnostic",
+    "CrossValidationDiagnostics",
+    "CvFoldMetric",
+    "CvPathPoint",
     "Diagnostics",
     "FeatureImportance",
     "GbmDiagnostics",
@@ -435,6 +438,92 @@ class QuantileCrossing(BaseModel):
         return self
 
 
+class CvPathPoint(BaseModel):
+    """One scanned alpha's aggregate cross-validated score (FR-MODEL-20).
+
+    `std_score` is this alpha's dispersion across every fold — the curve FR-MODEL-20's
+    "full path, not only the alpha selected" is. `CrossValidationDiagnostics.fold_metrics`
+    carries the *unaggregated* per-fold scores FR-MODEL-53 also asks for, but only at the
+    selected alpha: recording every fold at every alpha would multiply storage by
+    `len(alphas)` for a curve this point's `std_score` already summarises.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    alpha: float = Field(ge=0.0)
+    mean_score: float
+    std_score: float = Field(ge=0.0)
+
+
+class CvFoldMetric(BaseModel):
+    """One fold's held-out score at the selected alpha (FR-MODEL-53).
+
+    "Per-fold metrics and their dispersion... not the mean alone" is the requirement's own
+    phrase — this is the *and*: `CrossValidationDiagnostics.path`'s `std_score` at the
+    selected alpha is the dispersion computed from exactly these numbers, so the two report
+    one fact two ways rather than two facts that could drift apart.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    fold: int = Field(ge=0)
+    rows: int = Field(ge=0)
+    score: float
+
+
+class CrossValidationDiagnostics(BaseModel):
+    """The penalty path and the selected alpha's fold dispersion (FR-MODEL-20, FR-MODEL-53).
+
+    Populated only when the fit's `GlmSpec.select_by == "cv"`; `Diagnostics.cross_validation`
+    is `None` for every fixed-alpha GLM and every GBM — the honest reading of "this fit was
+    not cross-validated" rather than an empty path standing in for one (FR-MODEL-49: a
+    diagnostic is computed once, at fit time, from what the fit actually did).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: `01` FR-DATA-33's fold-construction method, generalised from two parts to `folds` by
+    #: `pricing_core.data.splits.assign_folds`.
+    method: str
+    #: The seed `assign_folds` was called with — `GlmSpec.seed`, copied here so the fold
+    #: assignment is reproducible from this artifact alone, with no join back to the spec.
+    seed: int
+    folds: int = Field(ge=2)
+    #: The scoring metric's name. Always `"deviance"` today — the fitted family's own
+    #: deviance — recorded rather than assumed, so a reader is not left inferring which
+    #: metric a number on the path was computed from.
+    metric: str
+    selected_alpha: float = Field(ge=0.0)
+    path: tuple[CvPathPoint, ...]
+    fold_metrics: tuple[CvFoldMetric, ...]
+
+    @model_validator(mode="after")
+    def _the_selected_alpha_is_a_point_on_the_path(self) -> CrossValidationDiagnostics:
+        alphas = {p.alpha for p in self.path}
+        if self.selected_alpha not in alphas:
+            raise ValueError(
+                f"selected_alpha={self.selected_alpha} is not one of the path's alphas "
+                f"{sorted(alphas)}. The selection must be a point the path actually scored."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _every_fold_is_represented_at_the_selected_alpha(self) -> CrossValidationDiagnostics:
+        seen = {m.fold for m in self.fold_metrics}
+        expected = set(range(self.folds))
+        if seen != expected:
+            raise ValueError(
+                f"fold_metrics covers folds {sorted(seen)}, expected {sorted(expected)}. A "
+                "fold's dispersion cannot include a fold that was never scored."
+            )
+        if len(seen) != len(self.fold_metrics):
+            raise ValueError(
+                f"fold_metrics lists {len(self.fold_metrics)} entries for {len(seen)} "
+                "distinct folds; a fold's dispersion cannot double-count a fold."
+            )
+        return self
+
+
 class Diagnostics(BaseModel):
     """The persisted artifact (`02` §4, `diagnostics.schema.json`).
 
@@ -443,8 +532,10 @@ class Diagnostics(BaseModel):
     `gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which
     is the honest reading of "GBM-specific".
 
-    `cross_validation` is still declared and always `None`: FR-MODEL-53 computes it **at fit
-    time**, so this artifact is where it will land, and its producer is a later slice.
+    `cross_validation` is populated iff the fit's `GlmSpec.select_by == "cv"`
+    (FR-MODEL-20, FR-MODEL-53, the regularisation-and-CV slice, 2026-08-21) and `None`
+    otherwise — a fixed-alpha GLM or a GBM was never cross-validated, and `None` is the
+    honest reading of that.
 
     **`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed
     `None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics
@@ -465,4 +556,4 @@ class Diagnostics(BaseModel):
     complexity: ComplexityDiagnostic
     glm: GlmDiagnostics | None = None
     gbm: GbmDiagnostics | None = None
-    cross_validation: None = None
+    cross_validation: CrossValidationDiagnostics | None = None

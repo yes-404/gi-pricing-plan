@@ -18,6 +18,12 @@ The three methods `01` FR-DATA-33 names:
 * `grouped_by_key` — every row sharing a key lands in the same part, so a policy with
   twelve monthly rows cannot appear in both. Assigning those rows independently is the
   standard leakage bug, and it flatters the holdout.
+* `assign_folds` generalises all three from two named parts to `folds` numbered ones, for
+  cross-validation (`02` FR-MODEL-53). K-fold `temporal` has no cutoff to inherit, so it is
+  defined here as contiguous time-ordered blocks: sort ascending by `time_column`, cut the
+  sorted row order into `folds` equal-count blocks. Neither `01` FR-DATA-33 nor `02`
+  FR-MODEL-53 states this — it is this function's own design decision, not an inherited
+  fact, and is recorded here for that reason.
 """
 
 from __future__ import annotations
@@ -28,7 +34,7 @@ from collections.abc import Mapping
 import numpy as np
 import polars as pl
 
-__all__ = ["SplitError", "assign_parts", "partition"]
+__all__ = ["SplitError", "assign_folds", "assign_parts", "partition"]
 
 #: `01` FR-DATA-33's declared split methods.
 METHODS = ("random", "temporal", "grouped_by_key")
@@ -147,6 +153,67 @@ def assign_parts(
     # to none — a row in no part is a row silently dropped.
     names[names == None] = edges[-1][0]  # noqa: E711
     return pl.Series("part", names.tolist(), dtype=pl.String)
+
+
+def assign_folds(
+    frame: pl.DataFrame,
+    *,
+    method: str,
+    seed: int,
+    folds: int,
+    key_column: str | None = None,
+    time_column: str | None = None,
+) -> np.ndarray:
+    """The fold index (`0` to `folds - 1`) for every row, aligned to `frame`.
+
+    Generalises `assign_parts` from two named parts to `folds` numbered ones, reusing the
+    same seeded draw (`random`), keyed hash (`grouped_by_key`) or time order (`temporal`) —
+    so a caller already trusting `assign_parts`'s determinism gets the same guarantee here:
+    two independent calls with the same `frame`, `method`, `seed` and `folds` produce the
+    same assignment, which is what lets two Jobs, run minutes apart, agree on which rows
+    were held out for fold `i` (FR-MODEL-53).
+    """
+    if method not in METHODS:
+        raise SplitError(f"unknown split method {method!r}; expected one of {METHODS}")
+    if folds < 2:
+        raise SplitError(
+            f"folds must be at least 2, got {folds}. One fold has no held-out rows for "
+            "itself to be validated against."
+        )
+
+    if method == "temporal":
+        if not time_column:
+            raise SplitError(
+                "a temporal fold assignment needs `time_column`. Without it there is no "
+                "time to order folds by, and falling back to a random assignment would "
+                "record a method the data was not folded by."
+            )
+        if time_column not in frame.columns:
+            raise SplitError(
+                f"temporal fold assignment names {time_column!r}, which is not a column"
+            )
+        order = frame[time_column].arg_sort().to_numpy()
+        # Polars `arg_sort` is nulls-first, so a row with a null `time_column` sorts as
+        # earliest and lands in fold 0 — a deliberate, deterministic choice.
+        rank = np.empty(frame.height, dtype=np.int64)
+        rank[order] = np.arange(frame.height, dtype=np.int64)
+        return np.minimum((rank * folds) // frame.height, folds - 1).astype(np.int64)
+
+    if method == "grouped_by_key":
+        if not key_column:
+            raise SplitError("a grouped_by_key fold assignment needs `key_column`")
+        if key_column not in frame.columns:
+            raise SplitError(
+                f"grouped fold assignment names {key_column!r}, which is not a column"
+            )
+        u = _hash_unit(frame[key_column].to_list(), seed)
+    else:
+        u = _uniform_from_seed(frame.height, seed)
+
+    # A draw of exactly 1.0 is impossible from `random()`, but the guard costs nothing and
+    # matches `assign_parts`'s own edge case: a row must land in the last fold rather than
+    # in none.
+    return np.minimum((u * folds).astype(np.int64), folds - 1)
 
 
 def partition(

@@ -173,6 +173,113 @@
       "title": "ComplexityDiagnostic",
       "type": "object"
     },
+    "CrossValidationDiagnostics": {
+      "additionalProperties": false,
+      "description": "The penalty path and the selected alpha's fold dispersion (FR-MODEL-20, FR-MODEL-53).\n\nPopulated only when the fit's `GlmSpec.select_by == \"cv\"`; `Diagnostics.cross_validation`\nis `None` for every fixed-alpha GLM and every GBM — the honest reading of \"this fit was\nnot cross-validated\" rather than an empty path standing in for one (FR-MODEL-49: a\ndiagnostic is computed once, at fit time, from what the fit actually did).",
+      "properties": {
+        "fold_metrics": {
+          "items": {
+            "$ref": "#/$defs/CvFoldMetric"
+          },
+          "title": "Fold Metrics",
+          "type": "array"
+        },
+        "folds": {
+          "minimum": 2,
+          "title": "Folds",
+          "type": "integer"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "path": {
+          "items": {
+            "$ref": "#/$defs/CvPathPoint"
+          },
+          "title": "Path",
+          "type": "array"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "selected_alpha": {
+          "minimum": 0.0,
+          "title": "Selected Alpha",
+          "type": "number"
+        }
+      },
+      "required": [
+        "method",
+        "seed",
+        "folds",
+        "metric",
+        "selected_alpha",
+        "path",
+        "fold_metrics"
+      ],
+      "title": "CrossValidationDiagnostics",
+      "type": "object"
+    },
+    "CvFoldMetric": {
+      "additionalProperties": false,
+      "description": "One fold's held-out score at the selected alpha (FR-MODEL-53).\n\n\"Per-fold metrics and their dispersion... not the mean alone\" is the requirement's own\nphrase — this is the *and*: `CrossValidationDiagnostics.path`'s `std_score` at the\nselected alpha is the dispersion computed from exactly these numbers, so the two report\none fact two ways rather than two facts that could drift apart.",
+      "properties": {
+        "fold": {
+          "minimum": 0,
+          "title": "Fold",
+          "type": "integer"
+        },
+        "rows": {
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "fold",
+        "rows",
+        "score"
+      ],
+      "title": "CvFoldMetric",
+      "type": "object"
+    },
+    "CvPathPoint": {
+      "additionalProperties": false,
+      "description": "One scanned alpha's aggregate cross-validated score (FR-MODEL-20).\n\n`std_score` is this alpha's dispersion across every fold — the curve FR-MODEL-20's\n\"full path, not only the alpha selected\" is. `CrossValidationDiagnostics.fold_metrics`\ncarries the *unaggregated* per-fold scores FR-MODEL-53 also asks for, but only at the\nselected alpha: recording every fold at every alpha would multiply storage by\n`len(alphas)` for a curve this point's `std_score` already summarises.",
+      "properties": {
+        "alpha": {
+          "minimum": 0.0,
+          "title": "Alpha",
+          "type": "number"
+        },
+        "mean_score": {
+          "title": "Mean Score",
+          "type": "number"
+        },
+        "std_score": {
+          "minimum": 0.0,
+          "title": "Std Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "alpha",
+        "mean_score",
+        "std_score"
+      ],
+      "title": "CvPathPoint",
+      "type": "object"
+    },
     "FeatureImportance": {
       "additionalProperties": false,
       "description": "One feature's importance under the three measures a booster already knows.\n\nAll three, because they disagree and the disagreement is the information: `gain` says\nhow much a split improved the objective, `cover` how much data it improved it over, and\n`frequency` merely how often the feature was chosen. A feature that is frequent and\nlow-gain is one the model reaches for and learns little from — invisible if only one\nmeasure is stored.",
@@ -814,7 +921,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is still declared and always `None`: FR-MODEL-53 computes it **at fit\ntime**, so this artifact is where it will land, and its producer is a later slice.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
+  "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-MODEL-49).\n\n`gbm` is populated from the GBM slice on (FR-MODEL-52) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is populated iff the fit's `GlmSpec.select_by == \"cv\"`\n(FR-MODEL-20, FR-MODEL-53, the regularisation-and-CV slice, 2026-08-21) and `None`\notherwise — a fixed-alpha GLM or a GBM was never cross-validated, and `None` is the\nhonest reading of that.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-MODEL-49 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-MODEL-57's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-MODEL-57 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
   "properties": {
     "complexity": {
       "$ref": "#/$defs/ComplexityDiagnostic"
@@ -825,9 +932,15 @@
       "type": "string"
     },
     "cross_validation": {
-      "default": null,
-      "title": "Cross Validation",
-      "type": "null"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CrossValidationDiagnostics"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "gbm": {
       "anyOf": [
