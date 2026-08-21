@@ -35,6 +35,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "audit-event",
     "banding",
     "custom-objective",
+    "diagnostics",
     "grouping",
     "job",
     "model",
@@ -44,10 +45,6 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "profile",
     "transparency-artifact",
 )
-
-#: Eligible schemas excused from the comparison, each for a divergence pinned by its own
-#: test. An entry here without that test is the exemption list this suite refuses to grow.
-PINNED_SLUGS: Final[frozenset[str]] = frozenset({"diagnostics"})
 
 
 def _load(path: pathlib.Path) -> dict:
@@ -530,8 +527,10 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     how the *other* direction of this failure starts; `test_every_eligible_schema_is_compared`
     below is what keeps the written list honest.
 
-    `diagnostics` is the one eligible slug absent, and deliberately: it carries a known,
-    unresolved divergence pinned by `test_the_diagnostics_divergence_is_exactly_the_known_one`.
+    Every eligible slug is now compared. The last excused one, `diagnostics`, was corrected
+    on 2026-08-21 (`OQ-MODEL-15` decided — FR-MODEL-109): `aliasing` is an array of the
+    strings the model always produced, and the pin that excused it is deleted rather than
+    relaxed.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
@@ -557,8 +556,9 @@ def test_every_eligible_schema_is_compared() -> None:
 
     The parametrize list above is written out rather than globbed, so that adding a schema
     is a visible act. This is the other half of that bargain: every slug with both an
-    authored and a generated side must be either compared or explicitly excused, and the
-    only excuse admitted is a pinned divergence. Widening the list on 2026-08-19 found a
+    authored and a generated side must be compared. The one excused slug, `diagnostics`,
+    was corrected on 2026-08-21 (FR-MODEL-109) and the pin that excused it retired with it,
+    which is why no exemption mechanism remains. Widening the list on 2026-08-19 found a
     contract that had been wrong since Phase 0 precisely because nothing enforced this.
     """
     eligible = {
@@ -566,41 +566,10 @@ def test_every_eligible_schema_is_compared() -> None:
         for path in GENERATED.glob("*.schema.json")
         if (AUTHORED / path.name).exists()
     }
-    unaccounted = eligible - set(COMPARED_SLUGS) - PINNED_SLUGS
+    unaccounted = eligible - set(COMPARED_SLUGS)
     assert not unaccounted, (
-        "these schemas have both an authored and a generated side and are neither compared "
-        f"nor pinned: {sorted(unaccounted)}"
-    )
-
-
-@pytest.mark.req("FR-OVR-6")
-def test_the_diagnostics_divergence_is_exactly_the_known_one() -> None:
-    """`diagnostics` is excused from the comparison for one divergence, and one only.
-
-    `GlmDiagnostic.aliasing` is `tuple[str, ...]` — collinear terms **named**, because "2
-    terms aliased" tells a reader something is wrong and not which factor to fix — while the
-    authored contract declares an array of untyped `object`. Neither side is obviously the
-    error: an object entry could carry `{term, aliased_with, reason}`, which is strictly more
-    than a name. That is a design choice the specification leaves open, so it is recorded as
-    `OQ-MODEL-15` rather than resolved by whichever side was edited last (`CLAUDE.md` §0).
-
-    This test pins the divergence at exactly that one path. Any *new* type disagreement in
-    `diagnostics` fails here, so excusing the slug costs no coverage — and the day
-    `OQ-MODEL-15` is decided, this test fails and is deleted rather than quietly relaxed.
-    """
-    generated = _load(GENERATED / "diagnostics.schema.json")
-    authored = _load(AUTHORED / "diagnostics.schema.json")
-
-    produced = _type_map(generated, generated, GENERATED)
-    declared = _type_map(authored, authored, AUTHORED)
-    disagreed = {
-        path
-        for path in set(produced) & set(declared)
-        if produced[path] != declared[path]
-    }
-    assert disagreed == {"glm.aliasing.[]"}, (
-        "diagnostics is excused from the type comparison for OQ-MODEL-15's aliasing "
-        f"divergence alone; this run disagrees on {sorted(disagreed)}"
+        "these schemas have both an authored and a generated side and are not compared: "
+        f"{sorted(unaccounted)}"
     )
 
 
