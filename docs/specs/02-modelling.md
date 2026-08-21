@@ -1683,6 +1683,12 @@ module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 > that a fold count chosen against the whole book does not guarantee against, per fold.
 > A fold cannot be scored, or trained, on nothing.
 
+> **Corrected 2026-08-21 (the regularisation-and-CV slice).** `fit_glm`'s return comment
+> below now reads `.result, .covariance_bytes, .cv` — the slice added the `cv` field to
+> `GlmFit` (glm.py's dataclass, FR-MODEL-20/FR-MODEL-53) and the interface comment lagged
+> it, so a caller copying the signature would have missed the cross-validation
+> diagnostics the fit carries when `spec.select_by == "cv"`.
+
 ### 5.2 `pricing-core` interfaces
 
 ```python
@@ -1710,7 +1716,7 @@ def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
             seed: int = 0,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
-            progress: ProgressCallback | None = None) -> GlmFit   # .result, .covariance_bytes
+            progress: ProgressCallback | None = None) -> GlmFit   # .result, .covariance_bytes, .cv
 
 # pricing_core/modelling/predict.py
 def linear_predictor(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
