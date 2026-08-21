@@ -3,6 +3,7 @@ refused. Negative tests first: a staged contract admits only what a slice has bu
 
 import pydantic
 import pytest
+
 from model_schema import GlmSpec, OffsetSpec, new_uuid7
 
 
@@ -25,7 +26,7 @@ def test_a_model_offset_names_its_model() -> None:
 
 @pytest.mark.req("FR-MODEL-24")
 def test_a_model_ref_declares_the_model_kind() -> None:
-    with pytest.raises(pydantic.ValidationError, match="kind.*model"):
+    with pytest.raises(pydantic.ValidationError, match=r"kind.*model"):
         _spec(offset=OffsetSpec(offset_model_ref="model:base@1"))
 
 
