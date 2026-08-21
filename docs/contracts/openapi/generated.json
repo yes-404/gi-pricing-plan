@@ -4327,6 +4327,16 @@
             "minimum": 0.0,
             "title": "Rows",
             "type": "integer"
+          },
+          "tweedie": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TweediePowerFit"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -4504,6 +4514,16 @@
             "exclusiveMinimum": 0.0,
             "title": "Tolerance",
             "type": "number"
+          },
+          "tweedie": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TweediePowerSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "weight": {
             "$ref": "#/components/schemas/WeightSpec",
@@ -9405,6 +9425,90 @@
           "fidelity_statement"
         ],
         "title": "TransparencyArtifact",
+        "type": "object"
+      },
+      "TweediePowerFit": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-22: the estimated Tweedie power, persisted as an estimate with its own\nuncertainty — the 95% profile-likelihood interval {p : 2(L_max - L(p)) ≤ χ²₀.95(1)\n= 3.841} read from the profile log-likelihood curve, linearly interpolated between\nscanned points — and the curve itself, so the estimate can be re-examined after the\nfit.\n\nCarried on `GlmFitResult`, not on Diagnostics: unlike alpha, the estimated power\nenters every deviance recomputation (diagnostics, type-III refits, backtests), all\nof which receive the fit result as their first argument.",
+        "properties": {
+          "ci_lower": {
+            "title": "Ci Lower",
+            "type": "number"
+          },
+          "ci_upper": {
+            "title": "Ci Upper",
+            "type": "number"
+          },
+          "curve": {
+            "items": {
+              "$ref": "#/components/schemas/TweedieProfilePoint"
+            },
+            "title": "Curve",
+            "type": "array"
+          },
+          "estimated_power": {
+            "title": "Estimated Power",
+            "type": "number"
+          },
+          "level": {
+            "default": 0.95,
+            "title": "Level",
+            "type": "number"
+          }
+        },
+        "required": [
+          "estimated_power",
+          "ci_lower",
+          "ci_upper",
+          "curve"
+        ],
+        "title": "TweediePowerFit",
+        "type": "object"
+      },
+      "TweediePowerSpec": {
+        "additionalProperties": false,
+        "description": "FR-MODEL-22: the grid over which the Tweedie power `p` is estimated by profile\nlikelihood, and the boundary of that estimate. `GlmSpec.tweedie` being set is the\nspec's request for estimation; the estimated value and its uncertainty are fit-time\nfacts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.\n\nA scan, not a choice: one point would be a fixed fit, and a maximum at the edge of\nthe scan is refused at fit time (`GLM_TWEEDIE_POWER_GRID_EDGE`) because it reports\nthe scan's boundary as the answer.",
+        "properties": {
+          "p_grid": {
+            "default": [
+              1.05,
+              1.15,
+              1.25,
+              1.35,
+              1.45,
+              1.55,
+              1.65,
+              1.75,
+              1.85,
+              1.95
+            ],
+            "items": {
+              "type": "number"
+            },
+            "title": "P Grid",
+            "type": "array"
+          }
+        },
+        "title": "TweediePowerSpec",
+        "type": "object"
+      },
+      "TweedieProfilePoint": {
+        "description": "FR-MODEL-22: one scanned power and the profile log-likelihood of the model\nrefitted at it — one point of the profile curve persisted with the estimate.",
+        "properties": {
+          "log_likelihood": {
+            "title": "Log Likelihood",
+            "type": "number"
+          },
+          "power": {
+            "title": "Power",
+            "type": "number"
+          }
+        },
+        "required": [
+          "power",
+          "log_likelihood"
+        ],
+        "title": "TweedieProfilePoint",
         "type": "object"
       },
       "TypeIIITest": {
