@@ -23,6 +23,7 @@ ties. The test asserts both, which is only possible because a tie yields no lead
 
 from __future__ import annotations
 
+import asyncio
 from uuid import UUID
 
 import pytest
@@ -39,14 +40,24 @@ from backend.tests.test_model_jobs import (
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
-from app.db.models import ModelComparisonRow
+from app.db.models import ModelComparisonRow, ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import comparison as service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
+from app.worker.handlers import handler_for
+from app.worker.progress import JobProgress
 from app.worker.tasks import execute_job
-from model_schema import JobKind, JobStatus, ModelStatus, Principal, SplitRef
+from model_schema import (
+    EbmSpec,
+    JobKind,
+    JobStatus,
+    ModelStatus,
+    Principal,
+    SplitRef,
+    new_uuid7,
+)
 
 
 async def _two_models(
@@ -85,6 +96,20 @@ async def _two_models(
         assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
         ids.append(model_id)
     return actor, ids, split
+
+
+def _ebm_spec(
+    version_id: UUID, factor_ids: tuple[UUID, ...], **over: object
+) -> EbmSpec:
+    """The EBM arm of the union, on the same version and factors `_spec` uses."""
+    base: dict[str, object] = {
+        "model_family_slug": f"freq-{new_uuid7().hex[-6:]}",
+        "dataset_version_id": version_id,
+        "response_column": "claim_count",
+        "factors": factor_ids,
+    }
+    base.update(over)
+    return EbmSpec(**base)  # type: ignore[arg-type]
 
 
 # -- The refusals, before a Job exists ----------------------------------------------------
@@ -192,6 +217,81 @@ async def test_the_same_model_twice_is_refused(
                 session, workspace_id=workspace_id, actor=actor,
                 model_ids=[ids[0], ids[0]],
             )
+    assert refused.value.code == "MODELS_NOT_COMPARABLE"
+
+
+@pytest.mark.req("FR-MODEL-37")
+async def test_an_ebm_row_is_refused_by_name_at_the_comparison_boundary(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-37's model is transparent by construction, so `wf-01` E1 — surrogate
+    validation of a GLM against a GBM — has nothing to compare.
+
+    The refusal lives in the handler, not in `request_comparison`, because the Job can
+    outlive the world that queued it — the same re-check the no-fit-result refusal makes.
+    The EBM row is a reservation whose spec is an `EbmSpec`, fitted by writing a real GLM
+    fit onto it while it is still unfitted (`02` R2 freezes `spec` and `fit_result`
+    together once either exists). No EBM was ever fitted: the refusal fires on the spec,
+    before any scoring of the holdout.
+    """
+    actor, ids, _ = await _two_models(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        fitted = await session.get(ModelRow, ids[0])
+        assert fitted is not None
+        version_id = fitted.dataset_version_id
+        factors = tuple(fitted.spec["factors"])
+        split_ref = (fitted.spec or {}).get("split_ref")
+
+    async with database.unit_of_work() as session:
+        ebm_row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_ebm_spec(version_id, factors, split_ref=split_ref),
+        )
+        ebm_id = ebm_row.id
+        fitted = await session.get(ModelRow, ids[0])
+        assert fitted is not None
+        await session.execute(
+            ModelRow.__table__.update()
+            .where(ModelRow.id == ebm_id)
+            .values(
+                fit_result=fitted.fit_result,
+                status=ModelStatus.FITTED.value,
+                diagnostics_id=fitted.diagnostics_id,
+            )
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_COMPARE,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_ids": [str(ids[0]), str(ebm_id)],
+                "baseline_id": str(ids[0]),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    # Through the handler directly rather than `execute_job`, which maps every handler
+    # exception to `JOB_HANDLER_FAILED`: the code under test is what `PlatformError.code`
+    # carries out of `_resolve_candidate`, not what the runner does with it once it has it.
+    handler = handler_for(JobKind.MODEL_COMPARE)
+    assert handler is not None
+    progress = JobProgress(
+        job.id, database, asyncio.get_running_loop(), blob_store=blob_store
+    )
+    with pytest.raises(PlatformError) as refused:
+        await asyncio.to_thread(
+            handler,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_ids": [str(ids[0]), str(ebm_id)],
+                "baseline_id": str(ids[0]),
+            },
+            progress,
+        )
     assert refused.value.code == "MODELS_NOT_COMPARABLE"
 
 

@@ -46,6 +46,7 @@ from model_schema import (
     CustomMetric,
     CustomObjective,
     Diagnostics,
+    EbmSpec,
     Factor,
     FitResult,
     GbmEvalPoint,
@@ -599,6 +600,15 @@ async def _resolve_candidate(
             f"{row.model_family_slug}@{row.version} has no fit result.",
         )
     fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+    if isinstance(spec, EbmSpec):
+        raise PlatformError(
+            "MODELS_NOT_COMPARABLE",
+            "An EBM has no surrogate to compare",
+            409,
+            f"{row.model_family_slug}@{row.version} is an EBM: comparison (wf-01 E1) is "
+            "GLM-vs-GBM surrogate validation, and an EBM is transparent by construction "
+            "(FR-MODEL-37) with no approximation to compare (2026-08-21, the W5 EBM slice).",
+        )
     # `wf-01` E1 compares the GLM against the GBM. A GLM's fit result *is* its model; a
     # GBM's is a reference to the booster, so the bytes are fetched here — the resolution
     # ADR-0001 keeps out of `pricing-core`, exactly like the factors and the frames.

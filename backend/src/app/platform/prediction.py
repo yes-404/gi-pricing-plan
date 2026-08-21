@@ -39,6 +39,7 @@ from model_schema import (
     MODEL_SPEC_ADAPTER,
     SCOREABLE_MODEL_STATUSES,
     Banding,
+    EbmSpec,
     Factor,
     GbmFitResult,
     GbmSpec,
@@ -149,10 +150,18 @@ async def predict_rows(
             f"{exc} Every row must carry the same columns with compatible types.",
         ) from exc
 
-    if isinstance(fit, GbmFitResult):
+    if isinstance(spec, GbmSpec) and isinstance(fit, GbmFitResult):
         expected, lower, upper, uncertainty = await _score_gbm(
             session, fit, spec, frame, factors, workspace_id=workspace_id, model=model,
             bandings=bandings, groupings=groupings, blob_store=blob_store,
+        )
+    elif isinstance(spec, EbmSpec):
+        raise PlatformError(
+            "MODEL_TYPE_UNSUPPORTED",
+            "This model type cannot be predicted",
+            409,
+            "an EBM prediction arm is not built (2026-08-21, the W5 EBM slice fitted and "
+            "exported EBM models; W6b owns the endpoint).",
         )
     else:
         assert isinstance(fit, GlmFitResult)
