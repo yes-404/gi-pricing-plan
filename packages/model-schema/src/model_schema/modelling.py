@@ -31,7 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 from model_schema.money import DecimalStr
 from model_schema.prediction import UncertaintyBasis
 from model_schema.profiles import OneWayRow
-from model_schema.refs import BlobRef
+from model_schema.refs import BlobRef, ModelRef
 
 __all__ = [
     "FIT_RESULT_ADAPTER",
@@ -657,18 +657,33 @@ class GroupingEvaluation(BaseModel):
 
 
 class OffsetSpec(BaseModel):
-    """`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`."""
+    """`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.
+
+    `model` is the offset from another model (FR-MODEL-24): the referenced fitted GLM's
+    linear predictor, resolved by the backend and supplied as the fit's `model_offset`.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["none", "log_column", "column", "model"] = "none"
     column: str | None = None
-    model_ref: str | None = None
+    #: The pinned reference whose linear predictor is the offset: `model:slug@version`.
+    #: Renamed from the Phase-0 scaffold's `model_ref` (read by nothing) to the name the
+    #: spec and the hand-authored contract have always carried (FR-MODEL-24, 2026-08-21).
+    offset_model_ref: ModelRef | None = None
 
     @model_validator(mode="after")
     def _a_column_offset_names_its_column(self) -> OffsetSpec:
         if self.kind in {"log_column", "column"} and not self.column:
             raise ValueError(f"offset kind {self.kind!r} requires a column")
+        return self
+
+    @model_validator(mode="after")
+    def _a_model_offset_names_its_model(self) -> OffsetSpec:
+        if self.kind == "model" and self.offset_model_ref is None:
+            raise ValueError("offset kind 'model' requires offset_model_ref (FR-MODEL-24)")
+        if self.kind != "model" and self.offset_model_ref is not None:
+            raise ValueError("offset_model_ref is set but offset kind is not 'model'")
         return self
 
 
@@ -1346,6 +1361,18 @@ class GbmSpec(ModelSpecCommon):
         return self
 
     @model_validator(mode="after")
+    def _a_gbm_offset_from_another_model_is_refused(self) -> GbmSpec:
+        #: Declared-and-refused rather than omitted (FR-MODEL-87): the enum arm stays so
+        #: the refusal is by name, and the 2026-08-21 FR-MODEL-24 amendment records that
+        #: the first slice builds offsets-from-model for GLM specs only.
+        if self.offset.kind == "model":
+            raise ValueError(
+                "offset kind 'model' is built for GLM specs only (FR-MODEL-24, "
+                "2026-08-21); a GBM spec must name a column offset instead"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _an_interaction_group_names_at_least_two_features(self) -> GbmSpec:
         """A group of one permits nothing and forbids nothing (FR-MODEL-29).
 
@@ -1458,6 +1485,9 @@ class GlmFitResult(BaseModel):
     # estimated power, its 95% profile-likelihood interval, and the persisted profile
     # log-likelihood curve. None under a fixed-power spec: estimation is opt-in.
     tweedie: TweediePowerFit | None = None
+    #: What an offset-from-another-model fit was constructed against — the resolved,
+    #: pinned ref (FR-MODEL-24). `None` for every other offset kind.
+    offset_model_ref: ModelRef | None = None
 
     @property
     def intercept(self) -> Coefficient | None:
@@ -1764,6 +1794,9 @@ class SpecProblemKind(enum.StrEnum):
     SPLIT_INVALID = "split_invalid"
     RESPONSE_MISSING = "response_missing"
     OFFSET_MISSING = "offset_missing"
+    #: FR-MODEL-24's ref-resolution half: the offset's model ref names no model, an
+    #: unfitted one, a non-GLM, or one whose link is not the new spec's.
+    MODEL_OFFSET_UNRESOLVABLE = "model_offset_unresolvable"
     COMPLEXITY_LIMIT = "complexity_limit"
     #: FR-MODEL-44's *objective applicability* half, live from the GBM slice. A GBM spec
     #: naming an objective outside FR-MODEL-26's set, or a Custom Objective while none can

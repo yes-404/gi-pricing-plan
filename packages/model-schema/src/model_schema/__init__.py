@@ -234,7 +234,7 @@ from model_schema.reference import (
     ReferenceTable,
     ReferenceTableVersion,
 )
-from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, Slug
+from model_schema.refs import ARTIFACT_TYPES, ArtifactRef, BlobRef, ModelRef, Slug
 from model_schema.settings import (
     SettingCandidate,
     SettingResolution,
@@ -398,6 +398,7 @@ __all__ = [
     "Model",
     "ModelComparison",
     "ModelFlag",
+    "ModelRef",
     "ModelSpec",
     "ModelSpecCommon",
     "ModelStatus",

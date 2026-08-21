@@ -424,7 +424,7 @@
           "default": {
             "column": null,
             "kind": "none",
-            "model_ref": null
+            "offset_model_ref": null
           }
         },
         "offset_acknowledgement": {
@@ -637,6 +637,19 @@
           "title": "Model Type",
           "type": "string"
         },
+        "offset_model_ref": {
+          "anyOf": [
+            {
+              "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offset Model Ref"
+        },
         "relativities": {
           "additionalProperties": {
             "items": {
@@ -790,7 +803,7 @@
           "default": {
             "column": null,
             "kind": "none",
-            "model_ref": null
+            "offset_model_ref": null
           }
         },
         "peril": {
@@ -985,7 +998,7 @@
     },
     "OffsetSpec": {
       "additionalProperties": false,
-      "description": "`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.",
+      "description": "`02` §4.4. `log_column` is the frequency default: `offset = log(exposure)`.\n\n`model` is the offset from another model (FR-MODEL-24): the referenced fitted GLM's\nlinear predictor, resolved by the backend and supplied as the fit's `model_offset`.",
       "properties": {
         "column": {
           "anyOf": [
@@ -1010,9 +1023,10 @@
           "title": "Kind",
           "type": "string"
         },
-        "model_ref": {
+        "offset_model_ref": {
           "anyOf": [
             {
+              "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
               "type": "string"
             },
             {
@@ -1020,7 +1034,7 @@
             }
           ],
           "default": null,
-          "title": "Model Ref"
+          "title": "Offset Model Ref"
         }
       },
       "title": "OffsetSpec",

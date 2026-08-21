@@ -53,6 +53,12 @@ def _spec(**over: object) -> GbmSpec:
     return GbmSpec(**base)  # type: ignore[arg-type]
 
 
+@pytest.mark.req("FR-MODEL-24")
+def test_a_gbm_offset_from_another_model_is_refused() -> None:
+    with pytest.raises(pydantic.ValidationError, match="GLM specs only"):
+        _spec(offset=OffsetSpec(kind="model", offset_model_ref="model:base@1"))
+
+
 def _fit(**over: object) -> GbmFitResult:
     base: dict[str, object] = {
         "model_type": "xgboost",

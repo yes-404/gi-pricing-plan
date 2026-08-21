@@ -118,7 +118,11 @@ __all__ = [
 #: power — the grid is part of the question, and two specs differing there must not
 #: share a digest or FR-MODEL-66 answers the second caller with the first caller's
 #: model. Every `v6:` digest is now stale and findable with `LIKE 'v6:%'`.
-SPEC_HASH_VERSION: Final = 7
+#: `offset_model_ref` (renamed from the scaffold's `model_ref`, FR-MODEL-24) moved it
+#: `v7` to `v8` (2026-08-21, the offset-from-another-model slice): the field joins the
+#: canonicalised spec — the offset it names is part of what a fit means, and FR-MODEL-66's
+#: dedup must not match a fit against another model's structure to one that has no offset.
+SPEC_HASH_VERSION: Final = 8
 
 
 def spec_hash(spec: ModelSpec) -> str:

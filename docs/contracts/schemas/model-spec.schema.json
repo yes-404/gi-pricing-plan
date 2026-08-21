@@ -26,7 +26,12 @@
       "properties": {
         "kind": {"enum": ["none", "log_column", "column", "model"]},
         "column": {"type": ["string", "null"]},
-        "offset_model_ref": {"$ref": "common/artifact-ref.schema.json"}
+        "offset_model_ref": {
+          "anyOf": [
+            {"type": "string", "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$"},
+            {"type": "null"}
+          ]
+        }
       }
     },
     "weight": {

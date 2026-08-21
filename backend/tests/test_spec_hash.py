@@ -170,16 +170,17 @@ def test_the_algorithm_version_moved_with_the_new_field() -> None:
     mistake the requirement exists to catch, because its symptom is silent: every stored
     digest stops matching its own spec and FR-MODEL-66's dedup ends with no error to see.
     """
-    # v6 -> v7 (2026-08-21, FR-MODEL-22): tweedie estimation carries its own grid, and
-    # two specs differing there must not share a digest or FR-MODEL-66 hands the second
-    # caller the first caller's model.
-    assert SPEC_HASH_VERSION == 7, (
-        "GlmSpec.tweedie's estimation grid joined the payload (FR-MODEL-22); the tag "
+    # v7 -> v8 (2026-08-21, FR-MODEL-24): the offset-from-another-model slice renamed the
+    # scaffold's `model_ref` to `offset_model_ref` — the offset a fit means is now part
+    # of the payload, and two specs differing there must not share a digest or FR-MODEL-66
+    # hands the second caller the first caller's model.
+    assert SPEC_HASH_VERSION == 8, (
+        "OffsetSpec.offset_model_ref joined the payload (FR-MODEL-24); the tag "
         "moves with it"
     )
-    assert spec_hash(_bound()).startswith("v7:sha256:")
-    assert spec_hash_is_current("v6:sha256:" + "0" * 64) is False, (
-        "every v6 digest is now stale and must be findable with LIKE 'v6:%'"
+    assert spec_hash(_bound()).startswith("v8:sha256:")
+    assert spec_hash_is_current("v7:sha256:" + "0" * 64) is False, (
+        "every v7 digest is now stale and must be findable with LIKE 'v7:%'"
     )
 
 

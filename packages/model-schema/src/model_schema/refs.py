@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, GetJsonSchemaHandler, model_serializer, m
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
-__all__ = ["ARTIFACT_TYPES", "ArtifactRef", "BlobRef", "Slug"]
+__all__ = ["ARTIFACT_TYPES", "ArtifactRef", "BlobRef", "ModelRef", "Slug"]
 
 #: Every artifact type that may appear in a reference. Extending this is a spec change:
 #: `docs/contracts/schemas/common/artifact-ref.schema.json` carries the same list.
@@ -36,6 +36,11 @@ _REF_RE: Final[re.Pattern[str]] = re.compile(
 )
 
 Slug = Annotated[str, Field(pattern=rf"^{_SLUG}$")]
+
+#: A canonical reference to a Model specifically: `model:slug@version` (ID-3).
+#: FR-MODEL-24's offset ref is one of these — the prefix is part of the pattern, so
+#: the published contract admits `model:` refs and nothing else.
+ModelRef = Annotated[str, Field(pattern=rf"^model:{_SLUG}@[1-9][0-9]*$")]
 
 #: The wire form of a reference, as a JSON Schema pattern. Built from the same pieces the
 #: parser uses, so the schema and the parser cannot disagree — the contract previously
