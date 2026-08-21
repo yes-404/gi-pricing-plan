@@ -15,7 +15,14 @@ import polars as pl
 import pytest
 
 from model_schema import Factor, FactorType, GlmSpec, OffsetSpec, TweediePowerSpec
+from pricing_core.modelling.diagnostics import (
+    backtest_model,
+    compute_diagnostics,
+    deviance,
+    unit_deviance,
+)
 from pricing_core.modelling.glm import GlmFitError, fit_glm
+from pricing_core.modelling.predict import predict_glm
 
 
 def _factor(slug: str, column: str) -> Factor:
@@ -45,10 +52,12 @@ def _tweedie_data(n: int = 60_000, power: float = 1.5, seed: int = 20260821) -> 
     scale = (power - 1.0) * phi * mu ** (power - 1.0)
     counts = rng.poisson(lam)
     y = rng.gamma(shape=counts * claim_shape, scale=scale)  # shape=0 yields 0.0
+    region = rng.integers(0, 2, n)
     return pl.DataFrame(
         {
             "exposure_years": np.ones(n),
             "area": ["urban" if u else "rural" for u in urban],
+            "region": ["north" if r else "south" for r in region],
             "burning_cost": y,
         }
     )
@@ -127,3 +136,51 @@ def test_the_profile_recovers_the_power_the_data_was_drawn_from() -> None:
     best = max(tweedie.curve, key=lambda p: p.log_likelihood)
     assert best.power == tweedie.estimated_power
     assert fit.result.converged is True
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_diagnostics_are_computed_under_the_estimated_power() -> None:
+    """FR-MODEL-22's 'not silently baked in as a constant': the diagnostics' deviance is
+    the deviance under the fitted estimate, not under the spec's 1.5 default — and the
+    type-III sweep refits with p held at the estimate."""
+    data = _tweedie_data(power=1.7)
+    factors = [_factor("area", "area"), _factor("region", "region")]
+    spec = _spec(tweedie=TweediePowerSpec(p_grid=(1.5, 1.7, 1.9)))
+    fit = fit_glm(data, spec, factors)
+    assert fit.result.tweedie is not None
+    computed = compute_diagnostics(fit.result, spec, factors, train=data, holdout=data)
+    assert computed.glm is not None
+    y = data["burning_cost"].cast(pl.Float64).to_numpy()
+    mu = predict_glm(fit.result, data, factors, spec)
+    expected = deviance(y, mu, family="tweedie", power=fit.result.tweedie.estimated_power)
+    assert computed.glm.deviance == pytest.approx(expected)
+    assert computed.glm.deviance != pytest.approx(deviance(y, mu, family="tweedie", power=1.5))
+    assert computed.glm.type_iii_tests
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_a_backtest_of_an_estimated_power_model_uses_the_estimate() -> None:
+    """The backtest's residuals are the deviance residuals under the fitted estimate —
+    the value the fit used, read from the fit result rather than the spec's constant."""
+    data = _tweedie_data(power=1.7)
+    factors = [_factor("area", "area")]
+    spec = _spec(tweedie=TweediePowerSpec(p_grid=(1.5, 1.7, 1.9)))
+    fit = fit_glm(data, spec, factors)
+    assert fit.result.tweedie is not None
+    summary = backtest_model(
+        fit.result, spec, factors, data,
+        model_ref="model:burning@1",
+        dataset_version_ref="dataset_version:book@2",
+        fitted_on_ref="dataset_version:book@1",
+    )
+    residuals = summary.partition.residual_summary
+    assert residuals is not None
+    y = data["burning_cost"].cast(pl.Float64).to_numpy()
+    mu = predict_glm(fit.result, data, factors, spec)
+    unit = np.sign(y - mu) * np.sqrt(
+        np.maximum(
+            unit_deviance(y, mu, family="tweedie", power=fit.result.tweedie.estimated_power),
+            0.0,
+        )
+    )
+    assert residuals.mean == pytest.approx(float(np.mean(unit)))

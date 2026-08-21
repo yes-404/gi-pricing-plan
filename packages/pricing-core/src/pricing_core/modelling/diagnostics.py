@@ -449,6 +449,7 @@ def _type_iii(
     factors: Sequence[Factor],
     full_deviance: float,
     *,
+    power: float,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> tuple[TypeIIITest, ...]:
@@ -471,7 +472,6 @@ def _type_iii(
         return ()
 
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
-    power = float(spec.family_params.get("power", 1.5))
 
     # A factor that exists only to be crossed contributes no design column (FR-MODEL-91),
     # so there is no term to test: dropping it would leave the interaction unresolvable,
@@ -489,6 +489,10 @@ def _type_iii(
             continue
         remaining = [f for f in factors if f.id != factor.id]
         reduced_spec = spec.model_copy(update={"factors": tuple(f.id for f in remaining)})
+        if reduced_spec.family == "tweedie":
+            reduced_spec = reduced_spec.model_copy(
+                update={"family_params": {"power": power}, "tweedie": None}
+            )
         try:
             reduced = fit_glm(
                 data, reduced_spec, remaining, seed=spec.seed,
@@ -539,6 +543,17 @@ def _term_count(
     return max(1, matrix.frame[column].cast(pl.String).n_unique() - 1)
 
 
+def _power_of(fit: GlmFitResult, spec: ModelSpec) -> float:
+    """The Tweedie power a fit is described by: the profile-likelihood estimate when the
+    spec asked for one (FR-MODEL-22 — an estimate with its own uncertainty, not a
+    constant), else the spec's declared power. Every downstream deviance consumer must
+    read p here; the spec's 1.5 default is a fallback for legacy specs, not an answer."""
+    if fit.tweedie is not None:
+        return fit.tweedie.estimated_power
+    assert isinstance(spec, GlmSpec)
+    return float(spec.family_params.get("power", 1.5))
+
+
 def compute_diagnostics(
     fit: GlmFitResult,
     spec: GlmSpec,
@@ -562,10 +577,11 @@ def compute_diagnostics(
     report = progress or NullProgress()
     report.check_cancelled()
     report.update(0.05, "diagnostics: train")
+    power = _power_of(fit, spec)
     train_part = _partition(
         train, spec, factors,
         mu=predict_glm(fit, train, factors, spec, bandings=bandings, groupings=groupings),
-        family=spec.family, power=float(spec.family_params.get("power", 1.5)),
+        family=spec.family, power=power,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -573,14 +589,13 @@ def compute_diagnostics(
     holdout_part = _partition(
         holdout, spec, factors,
         mu=predict_glm(fit, holdout, factors, spec, bandings=bandings, groupings=groupings),
-        family=spec.family, power=float(spec.family_params.get("power", 1.5)),
+        family=spec.family, power=power,
         bandings=bandings, groupings=groupings,
     )
 
     report.update(0.55, "diagnostics: deviance and information criteria")
     y = train[spec.response_column].cast(pl.Float64).to_numpy()
     mu = predict_glm(fit, train, factors, spec, bandings=bandings, groupings=groupings)
-    power = float(spec.family_params.get("power", 1.5))
     full_deviance = deviance(y, mu, family=spec.family, power=power)
     null_deviance = deviance(
         y, np.full_like(y, float(np.mean(y))), family=spec.family, power=power
@@ -603,7 +618,8 @@ def compute_diagnostics(
         report.check_cancelled()
         report.update(0.70, "diagnostics: type-III tests")
         tests = _type_iii(
-            train, spec, factors, full_deviance, bandings=bandings, groupings=groupings
+            train, spec, factors, full_deviance,
+            power=power, bandings=bandings, groupings=groupings,
         )
 
     report.update(0.95, "diagnostics: complexity")
@@ -634,7 +650,7 @@ def compute_diagnostics(
     )
 
 
-def _family_of(spec: ModelSpec) -> tuple[str, float]:
+def _family_of(fit: FitResult, spec: ModelSpec) -> tuple[str, float]:
     """The family and Tweedie power the deviance-based metrics need, for either arm.
 
     A GLM declares its family; a GBM's is implied by its objective, and `objective_family`
@@ -647,7 +663,8 @@ def _family_of(spec: ModelSpec) -> tuple[str, float]:
 
         return objective_family(spec)
     assert isinstance(spec, GlmSpec)
-    return spec.family, float(spec.family_params.get("power", 1.5))
+    assert isinstance(fit, GlmFitResult)
+    return spec.family, _power_of(fit, spec)
 
 
 def backtest_model(
@@ -694,7 +711,7 @@ def backtest_model(
 
     report.check_cancelled()
     report.update(0.5, "backtest: diagnostics")
-    family, power = _family_of(spec)
+    family, power = _family_of(fit, spec)
     partition = _partition(
         data, spec, factors,
         mu=mu, family=family, power=power,
