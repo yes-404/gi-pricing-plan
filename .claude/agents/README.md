@@ -40,7 +40,7 @@ none carries `Edit` or `Write`.
 |---|---|---|
 | [`gate-runner`](gate-runner.md) | §11's full gate, **both halves** — ruff, mypy, lint-imports, pytest, audit-docs, req-coverage, contract drift; then pnpm install/generate/lint/type-check/test/build | Per-command exit-code table + the failing excerpt only, ~60 lines |
 | [`evidence-collector`](evidence-collector.md) | `scope-audit.py` across **all three axes** (requirements, `--endpoints`, `--catalogue`) plus `req-coverage.py`, then one bounded grep per unevidenced id | Axis totals, the unevidenced list with what each grep found, and any disagreement with the roadmap's claimed count |
-| [`ci-watcher`](ci-watcher.md) | Bounded foreground polling of `gh pr view --json mergeStateStatus` to a terminal state | The terminal state, which workflows the diff *should* have fired, and a pointer to `gate-runner` for the cause — **this token cannot read check details** |
+| [`ci-watcher`](ci-watcher.md) | Bounded foreground polling of `gh pr view --json mergeStateStatus` to a terminal state, disambiguated through `gh run list --json status,conclusion` (the token reads the run list; it cannot read check details, and `UNSTABLE` while runs are in-flight is not a failure) | The terminal state once every expected run is `completed`, which workflows the diff *should* have fired, and a pointer to `gate-runner` for the cause |
 
 ### Material but bounded — `sonnet`
 
@@ -102,6 +102,9 @@ Nothing here overrides `CLAUDE.md` §0, §5 or §13.
 block from `.github/workflows/python.yml`, the three scope-audit axes, the `gh` token's
 inability to read `statusCheckRollup` **and the fact that the failing commands still exit
 `0`**, §14's both-directions rule. Each was verified against this checkout, not recalled.
+Amended the same day from PR #126's merge: `mergeStateStatus` reports in-flight runs as
+`UNSTABLE`, and `gh run list --json status,conclusion` is the disambiguator the token
+does grant — a fourth trap recorded on `ci-watcher`.
 
 **Vendored (2026-08-21):** `postgres-pro`, `performance-engineer`, `accessibility-tester`,
 from [`VoltAgent/awesome-claude-code-subagents`](https://github.com/VoltAgent/awesome-claude-code-subagents)
