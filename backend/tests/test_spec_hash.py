@@ -170,12 +170,13 @@ def test_the_algorithm_version_moved_with_the_new_field() -> None:
     mistake the requirement exists to catch, because its symptom is silent: every stored
     digest stops matching its own spec and FR-MODEL-66's dedup ends with no error to see.
     """
-    assert SPEC_HASH_VERSION == 5, (
-        "approximates_model_id joined the payload; the tag moves with it"
+    assert SPEC_HASH_VERSION == 6, (
+        "GlmSpec.select_by/cv joined the payload (FR-MODEL-20, FR-MODEL-53); the tag "
+        "moves with it"
     )
-    assert spec_hash(_bound()).startswith("v5:sha256:")
-    assert spec_hash_is_current("v4:sha256:" + "0" * 64) is False, (
-        "every v4 digest is now stale and must be findable with LIKE 'v4:%'"
+    assert spec_hash(_bound()).startswith("v6:sha256:")
+    assert spec_hash_is_current("v5:sha256:" + "0" * 64) is False, (
+        "every v5 digest is now stale and must be findable with LIKE 'v5:%'"
     )
 
 
