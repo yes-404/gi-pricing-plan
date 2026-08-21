@@ -41,6 +41,7 @@ from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     Banding,
+    CrossValidationDiagnostics,
     CustomMetric,
     CustomObjective,
     Diagnostics,
@@ -285,6 +286,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     fitting = ScaledProgress(progress, start=0.10, end=0.85)
     booster: bytes | None = None
     covariance: bytes | None = None
+    glm_cv: CrossValidationDiagnostics | None = None
     eval_curve: tuple[GbmEvalPoint, ...] = ()
     result: FitResult
     try:
@@ -314,6 +316,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             # cannot store a blob (ADR-0001). FR-MODEL-63's interval is computed from these
             # bytes at predict time.
             result, covariance = glm_fit.result, glm_fit.covariance_bytes
+            glm_cv = glm_fit.cv
     except (GbmFitError, GlmFitError) as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
@@ -395,6 +398,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         complexity=computed.complexity,
         glm=computed.glm,
         gbm=gbm_diagnostics,
+        cross_validation=glm_cv,
     )
     progress.update(0.97, "storing the fit and its diagnostics")
 
