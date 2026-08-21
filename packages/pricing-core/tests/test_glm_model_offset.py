@@ -188,3 +188,32 @@ def test_backtest_requires_and_honours_the_array() -> None:
         model_offset=eta_base,
     )
     assert summary.partition.rows == data.height
+
+
+@pytest.mark.req("FR-MODEL-24")
+def test_type_iii_reduced_fits_keep_the_offset() -> None:
+    """A type-III reduced fit is the same fit with one term dropped — the offset must
+    stay in the reduced design. Without it every reduced fit refuses (its spec still
+    declares `kind="model"`), the refusal is swallowed by the reduced-fit guard, and the
+    type-III table comes back silently empty — exactly the silent-defect class
+    FR-MODEL-24 exists to replace with named failures."""
+    data, eta_base = _residual_data()
+    spec = _model_offset_spec()
+    factors = [
+        _factor("area", "area"),
+        _factor("resid_flag", "resid_flag"),
+    ]
+    fit = fit_glm(data, spec, factors, model_offset=eta_base).result
+    result = compute_diagnostics(
+        fit, spec, factors, train=data, holdout=data.head(0),
+        model_offset_train=eta_base, model_offset_holdout=eta_base[:0],
+    )
+    tests = {t.factor: t for t in result.glm.type_iii_tests}
+    assert tests.keys() == {"area", "resid_flag"}
+    # `area`'s effect is inside the offset, so on top of it `area` must be
+    # insignificant — a reduced fit that had dropped the offset would report it as a
+    # large effect (the discriminating assertion), while the residual signal stays
+    # significant. The reduced fit's intercept absorbs part of the 0.2 effect, so the
+    # delta is ~13 deviance units, not the full signal.
+    assert tests["area"].p_value > 0.01
+    assert tests["resid_flag"].p_value < 1e-3

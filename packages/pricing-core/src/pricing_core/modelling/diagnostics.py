@@ -497,7 +497,7 @@ def _type_iii(
         try:
             reduced = fit_glm(
                 data, reduced_spec, remaining, seed=spec.seed,
-                bandings=bandings, groupings=groupings,
+                model_offset=model_offset, bandings=bandings, groupings=groupings,
             ).result
         except GlmFitError:
             # A reduced model that will not fit says nothing about the factor's
