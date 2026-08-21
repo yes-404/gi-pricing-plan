@@ -964,7 +964,7 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
 
     async def load() -> tuple[
         ModelSpec, FitResult, bytes | None, list[Factor], _Transformations,
-        pl.DataFrame, str, str, str, Any, Any,
+        pl.DataFrame, str, str, str, Any, Any, OffsetModelSource | None,
     ]:
         async with progress.database.session() as session:
             row = await session.get(ModelRow, model_id)
@@ -1009,6 +1009,18 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                 if isinstance(fit, GbmFitResult)
                 else None
             )
+            # FR-MODEL-24: the offset-from-another-model ref, resolved here for the
+            # reason `_fit` resolves it — `pricing-core` computes and does not resolve a
+            # reference (ADR-0001). The η array itself is computed on the worker thread
+            # below, the booster-bytes pattern.
+            offset_source = None
+            if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
+                offset_source = await resolve_offset_model(
+                    session,
+                    workspace_id=workspace_id,
+                    ref=str(spec.offset.offset_model_ref),
+                    caller_link=spec.link,
+                )
             return (
                 spec, fit, booster, factors, transformations, frame,
                 f"model:{row.model_family_slug}@{row.version}",
@@ -1018,15 +1030,25 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                 await backtest_service.version_ref(
                     session, workspace_id=workspace_id, version=fitted_on
                 ),
-                version.period_from, version.period_to,
+                version.period_from, version.period_to, offset_source,
             )
 
     (
         spec, fit, booster, factors, transformations, frame,
-        model_ref, target_ref, fitted_on_ref, period_from, period_to,
+        model_ref, target_ref, fitted_on_ref, period_from, period_to, offset_source,
     ) = progress.run_on_loop(load())
 
-    from pricing_core.modelling import backtest_model
+    from pricing_core.modelling import backtest_model, linear_predictor
+
+    # The offset-from-another-model array (FR-MODEL-24): the referenced fit's linear
+    # predictor on the backtest frame. Resolved on the loop, computed here on the worker
+    # thread, because the maths is pricing-core's (ADR-0001).
+    model_offset = None
+    if offset_source is not None:
+        model_offset = linear_predictor(
+            offset_source.fit, frame, offset_source.factors, offset_source.spec,
+            bandings=offset_source.bandings, groupings=offset_source.groupings,
+        )
 
     progress.update(0.2, "scoring the period")
     summary = backtest_model(
@@ -1037,6 +1059,7 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
         period_from=period_from,
         period_to=period_to,
         booster=booster,
+        model_offset=model_offset,
         bandings=transformations.bandings,
         groupings=transformations.groupings,
         progress=ScaledProgress(progress, start=0.2, end=0.9),

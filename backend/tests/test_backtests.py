@@ -37,6 +37,11 @@ from backend.tests.test_model_jobs import (
     _split,
     _validated_version,
 )
+from backend.tests.test_model_offset_jobs import (
+    _RESIDUAL_CAST_RECIPE,
+    _residual_book,
+)
+from backend.tests.test_prediction import _fitted_residual_pair
 from sqlalchemy import select, text
 
 from app.db.models import BacktestRow, DatasetVersionRow, ModelRow
@@ -366,6 +371,100 @@ async def _run_backtest(database: Database, blob_store, workspace_id: UUID) -> U
         ).scalar_one()
 
 
+async def _later_residual_period(
+    database: Database, blob_store, workspace_id: UUID, actor: Principal, dataset_id: UUID
+) -> UUID:
+    """A second validated version of the residual book — fresh draws under the same truth.
+
+    `_later_period`'s convention, with the residual cast recipe: without the casts
+    `resid_flag` arrives as a String column and the frame the backtest scores is not the
+    one the fit's factors expect (`_RESIDUAL_CAST_RECIPE`, Task 5).
+    """
+    async with database.unit_of_work() as session:
+        ref = await blob_store.put(session, _residual_book(seed=20260822), "text/csv")
+        job = await job_service.submit(
+            session,
+            JobKind.DATASET_INGEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "dataset_id": str(dataset_id),
+                "blob": ref.sha256,
+                "filename": "exposure.csv",
+                "recipe": _RESIDUAL_CAST_RECIPE,
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        version_id = (
+            await session.execute(
+                select(DatasetVersionRow.id)
+                .where(DatasetVersionRow.dataset_id == dataset_id)
+                .order_by(DatasetVersionRow.version.desc())
+                .limit(1)
+            )
+        ).scalar_one()
+    report_id = await _validate(database, blob_store, workspace_id, actor, version_id)
+    from app.platform import validation as validation_service
+
+    async with database.unit_of_work() as session:
+        await validation_service.promote_using_report(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            version_id=version_id,
+            report_id=report_id,
+        )
+    return version_id
+
+
+async def _run_residual_backtest(
+    database: Database, blob_store, workspace_id: UUID
+) -> UUID:
+    """Fit the base+residual pair, ingest a later residual period, backtest the residual
+    model against it — through the real Jobs, returning the backtest id."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        v2 = await session.get(DatasetVersionRow, pair.v2_id)
+    assert v2 is not None
+    later = await _later_residual_period(
+        database, blob_store, workspace_id, pair.actor, v2.dataset_id
+    )
+
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session,
+            workspace_id=workspace_id,
+            actor=pair.actor,
+            model_id=pair.residual_id,
+            dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": pair.actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            pair.actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+    assert await execute_job(database, job_id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        return (
+            await session.execute(
+                select(BacktestRow.id).where(BacktestRow.job_id == job_id)
+            )
+        ).scalar_one()
+
+
 # -- The whole path -------------------------------------------------------------------------
 
 
@@ -405,6 +504,33 @@ async def test_the_backtest_job_produces_a_readable_artifact(
         "the deterioration is entirely in the rural cell, and an A/E by level that could "
         "not localise it would be a table nobody could act on"
     )
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_model_offset_backtest_honours_the_offset(
+    database, blob_store, workspace_id
+) -> None:
+    """Request, run, read — the residual model's offset honoured on a period it never saw.
+
+    The residual model's prediction is `exp(η_base + β̂·resid_flag)`: the referenced
+    base model's linear predictor plus the residual fit's own terms (FR-MODEL-24). A
+    backtest that drops the offset scores `exp(β̂·resid_flag)` alone, and a book whose
+    claims sit at `exp(η_base + …)` then reads at A/E ≈ e² — which is what makes the
+    ≈1.0 assertion discriminate the offset actually being honoured, not merely the job
+    running. And without the wiring the job does not even run: `backtest_model` refuses
+    a `kind="model"` spec that arrives without its array (`MODEL_OFFSET_MISSING`).
+    """
+    backtest_id = await _run_residual_backtest(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        stored = await service.load_backtest(
+            session, workspace_id=workspace_id, backtest_id=backtest_id
+        )
+
+    assert stored.summary.model_ref.startswith("model:")
+    assert stored.summary.dataset_version_ref != stored.summary.fitted_on_ref
+    assert stored.summary.partition.rows == 4000
+    assert stored.summary.partition.ae_overall == pytest.approx(1.0, abs=0.15)
 
 
 @pytest.mark.req("FR-MODEL-57")
