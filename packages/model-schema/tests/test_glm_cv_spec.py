@@ -91,7 +91,7 @@ def test_cv_selection_uses_the_naive_uncertainty_basis() -> None:
     without this, a CV-selected (near-certainly penalised) fit would report the plain
     information-matrix basis a genuinely unpenalised fit gets. Recorded in this plan's
     header as an interaction FR-MODEL-99 does not itself cover."""
-    from model_schema.diagnostics import UncertaintyBasis
+    from model_schema import UncertaintyBasis
 
     spec = _spec(select_by="cv", cv=GlmCvSpec())
     assert spec.uncertainty_basis is UncertaintyBasis.UNPENALISED_INFORMATION_MATRIX
