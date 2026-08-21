@@ -8,7 +8,15 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from model_schema import GlmCvSpec, GlmSpec, OffsetSpec, TweediePowerSpec
+from model_schema import (
+    GlmCvSpec,
+    GlmFitResult,
+    GlmSpec,
+    OffsetSpec,
+    TweediePowerFit,
+    TweediePowerSpec,
+    TweedieProfilePoint,
+)
 
 
 def _spec(**over: object) -> GlmSpec:
@@ -93,3 +101,86 @@ def test_an_explicit_scan_is_kept_verbatim() -> None:
     spec = _spec(family="tweedie", tweedie=TweediePowerSpec(p_grid=(1.25, 1.5, 1.75)))
     assert spec.tweedie is not None
     assert spec.tweedie.p_grid == (1.25, 1.5, 1.75)
+
+
+def _fit_block(**over: object) -> TweediePowerFit:
+    base: dict[str, object] = {
+        "estimated_power": 1.5,
+        "ci_lower": 1.42,
+        "ci_upper": 1.58,
+        "curve": (
+            TweedieProfilePoint(power=1.4, deviance=14.0),
+            TweedieProfilePoint(power=1.5, deviance=10.0),
+            TweedieProfilePoint(power=1.6, deviance=14.0),
+        ),
+    }
+    base.update(over)
+    return TweediePowerFit(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_the_estimate_must_be_a_point_on_the_curve() -> None:
+    """Negative: the estimate is the curve's argmin, so it must appear on the curve — a
+    value between grid points was never scanned, and no deviance supports it."""
+    with pytest.raises(ValidationError, match="one of the scanned grid points"):
+        _fit_block(estimated_power=1.55)
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_the_interval_must_bracket_the_estimate() -> None:
+    """Negative: an uncertainty interval that excludes the estimate describes a different
+    estimate than the one fitted."""
+    with pytest.raises(ValidationError, match="bracket"):
+        _fit_block(ci_lower=1.56, ci_upper=1.58)
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_the_interval_must_be_ordered() -> None:
+    with pytest.raises(ValidationError, match="ci_lower must be below"):
+        _fit_block(ci_lower=1.6, ci_upper=1.4)
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_the_interval_cannot_extend_beyond_the_scanned_grid() -> None:
+    """Negative: an interval wider than the scan describes a minimum the scan did not
+    locate — the interpolation is only defined between scanned points."""
+    with pytest.raises(ValidationError, match="scanned grid"):
+        _fit_block(ci_lower=0.9, ci_upper=1.1)
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_a_curve_with_one_point_is_refused() -> None:
+    with pytest.raises(ValidationError, match="at least two"):
+        _fit_block(
+            curve=(TweedieProfilePoint(power=1.5, deviance=10.0),),
+        )
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_a_negative_profile_deviance_is_refused() -> None:
+    """Negative: deviance is a non-negative divergence from the fit — a negative value is
+    not a deviance, and persisting one would poison every downstream display."""
+    with pytest.raises(ValidationError, match="greater than or equal to 0"):
+        TweedieProfilePoint(power=1.5, deviance=-1.0)
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_a_fit_result_round_trips_the_estimated_power_block() -> None:
+    """Happy path, the persisted shape: JSON round-trip through the exact carrier the
+    backend stores (GlmFitResult on ModelRow.fit_result)."""
+    fit = GlmFitResult(converged=True, iterations=11, fit_seconds=2.5, tweedie=_fit_block())
+    restored = GlmFitResult.model_validate(fit.model_dump(mode="json"))
+    assert restored.tweedie is not None
+    assert restored.tweedie.estimated_power == 1.5
+    assert restored.tweedie.ci_lower == pytest.approx(1.42)
+    assert restored.tweedie.ci_upper == pytest.approx(1.58)
+    assert restored.tweedie.level == 0.95
+    assert [(p.power, p.deviance) for p in restored.tweedie.curve] == [
+        (1.4, 14.0), (1.5, 10.0), (1.6, 14.0),
+    ]
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_a_fixed_power_fit_has_no_estimate_block() -> None:
+    fit = GlmFitResult(converged=True, iterations=11, fit_seconds=2.5)
+    assert fit.tweedie is None

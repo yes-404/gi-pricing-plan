@@ -910,6 +910,70 @@ class TweediePowerSpec(BaseModel):
         return self
 
 
+class TweedieProfilePoint(BaseModel):
+    """FR-MODEL-22: one scanned power and the deviance of the model refitted at it —
+    one point of the profile curve that is persisted with the estimate."""
+
+    model_config = ConfigDict(frozen=True)
+
+    power: float
+    deviance: float = Field(ge=0.0)
+
+
+class TweediePowerFit(BaseModel):
+    """FR-MODEL-22: the estimated Tweedie power, persisted as an estimate with its own
+    uncertainty — the 95% profile-likelihood interval read from the deviance curve
+    (dev(p) - min <= chi2_0.95(1)), interpolated linearly between scanned points — and
+    the curve itself, so the estimate can be re-examined after the fit.
+
+    Carried on `GlmFitResult`, not on Diagnostics: unlike alpha, the estimated power
+    enters every deviance recomputation (diagnostics, type-III refits, backtests), all
+    of which receive the fit result as their first argument.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    estimated_power: float
+    ci_lower: float
+    ci_upper: float
+    level: float = 0.95
+    curve: tuple[TweedieProfilePoint, ...]
+
+    @model_validator(mode="after")
+    def _the_estimate_is_the_curves_argmin_and_the_interval_brackets_it(self) -> TweediePowerFit:
+        powers = [p.power for p in self.curve]
+        if len(powers) < 2:
+            raise ValueError(
+                "the profile curve needs at least two scanned powers — one point has no "
+                "interval to read."
+            )
+        if not all(1.0 < p < 2.0 for p in powers):
+            raise ValueError("the scanned powers must lie inside (1, 2)")
+        if self.estimated_power not in powers:
+            raise ValueError(
+                f"the estimated power {self.estimated_power} is not one of the scanned "
+                f"grid points {tuple(powers)} — the estimate is the curve's argmin, so "
+                "it must appear on the curve."
+            )
+        if not self.ci_lower < self.ci_upper:
+            raise ValueError(
+                f"ci_lower must be below ci_upper (ci_lower={self.ci_lower}, "
+                f"ci_upper={self.ci_upper})"
+            )
+        if self.ci_lower < powers[0] or self.ci_upper > powers[-1]:
+            raise ValueError(
+                "the interval cannot extend beyond the scanned grid: an interval wider "
+                "than the scan describes a minimum the scan did not locate."
+            )
+        if not self.ci_lower <= self.estimated_power <= self.ci_upper:
+            raise ValueError(
+                f"the interval must bracket the estimated power: "
+                f"[{self.ci_lower}, {self.ci_upper}] does not contain "
+                f"{self.estimated_power}."
+            )
+        return self
+
+
 class GlmSpec(ModelSpecCommon):
     """`02` §4.4's common block plus the `glm` arm.
 
@@ -1382,6 +1446,10 @@ class GlmFitResult(BaseModel):
     #: prediction rather than an interval quietly omitted.
     covariance_blob: BlobRef | None = None
     library_versions: dict[str, str] = Field(default_factory=dict)
+    # FR-MODEL-22: set when the spec requested profile-likelihood estimation — the
+    # estimated power, its 95% profile-likelihood interval, and the persisted curve.
+    # None under a fixed-power spec: estimation is opt-in.
+    tweedie: TweediePowerFit | None = None
 
     @property
     def intercept(self) -> Coefficient | None:
