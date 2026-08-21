@@ -483,12 +483,44 @@ def _profile_ci(
     return lower, upper
 
 
+def _model_offset(
+    data: pl.DataFrame, spec: GlmSpec, model_offset: np.ndarray | None
+) -> np.ndarray:
+    """The `kind="model"` offset: the referenced model's linear predictor, which
+    pricing-core cannot resolve itself — the caller supplies it (FR-MODEL-24). Missing
+    it would fit as though no offset were declared: named, never silent."""
+    if model_offset is None:
+        raise GlmFitError(
+            "MODEL_OFFSET_MISSING",
+            "offset kind 'model' requires the resolved offset array (model_offset), and "
+            "none was supplied. The fit job resolves offset_model_ref before fitting "
+            "(FR-MODEL-24).",
+            terms=[str(spec.offset.offset_model_ref)],
+        )
+    if model_offset.shape != (data.height,):
+        raise GlmFitError(
+            "MODEL_OFFSET_MISSING",
+            f"model_offset has {model_offset.shape[0]} rows for {data.height} data rows "
+            "(FR-MODEL-24).",
+            terms=[str(spec.offset.offset_model_ref)],
+        )
+    if not np.all(np.isfinite(model_offset)):
+        raise GlmFitError(
+            "MODEL_OFFSET_MISSING",
+            "model_offset carries non-finite values; the referenced model's linear "
+            "predictor must be finite (FR-MODEL-24).",
+            terms=[str(spec.offset.offset_model_ref)],
+        )
+    return np.asarray(model_offset, dtype=np.float64)
+
+
 def fit_glm(
     data: pl.DataFrame,
     spec: GlmSpec,
     factors: Sequence[Factor],
     *,
     seed: int = 0,
+    model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
@@ -544,6 +576,8 @@ def fit_glm(
         offset = np.log(exposure)
     elif spec.offset.kind == "column":
         offset = data[str(spec.offset.column)].cast(pl.Float64).to_numpy()
+    elif spec.offset.kind == "model":
+        offset = _model_offset(data, spec, model_offset)
 
     weights = None
     if spec.weight.kind == "column":

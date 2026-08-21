@@ -14,8 +14,10 @@ Three of them, each stated by `02` §1.3 and none of which a caller can route ar
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
+from collections.abc import Mapping
 from typing import Any, Final
 from uuid import UUID
 
@@ -31,13 +33,14 @@ from app.db.models import (
     TransparencyArtifactRow,
 )
 from app.errors import PlatformError
-from app.platform import approvals, audit, datasets, rbac
+from app.platform import approvals, audit, datasets, rbac, transformations
 from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     VALID_MODEL_TRANSITIONS,
     ApprovalStatus,
     ArtifactRef,
+    Banding,
     DatasetStatus,
     Diagnostics,
     Factor,
@@ -46,6 +49,7 @@ from model_schema import (
     GbmSpec,
     GlmFitResult,
     GlmSpec,
+    Grouping,
     JobSource,
     Model,
     ModelFlag,
@@ -55,9 +59,11 @@ from model_schema import (
     Permission,
     Principal,
 )
+from pricing_core.modelling.factors import FactorResolutionError
 
 __all__ = [
     "SPEC_HASH_VERSION",
+    "OffsetModelSource",
     "apply_approval_decision",
     "archive",
     "create_factor",
@@ -69,6 +75,7 @@ __all__ = [
     "load_model_by_id",
     "record_fit",
     "reserve_model",
+    "resolve_offset_model",
     "spec_hash",
     "spec_hash_is_current",
     "submit_for_review",
@@ -118,7 +125,11 @@ __all__ = [
 #: power — the grid is part of the question, and two specs differing there must not
 #: share a digest or FR-MODEL-66 answers the second caller with the first caller's
 #: model. Every `v6:` digest is now stale and findable with `LIKE 'v6:%'`.
-SPEC_HASH_VERSION: Final = 7
+#: `offset_model_ref` (renamed from the scaffold's `model_ref`, FR-MODEL-24) moved it
+#: `v7` to `v8` (2026-08-21, the offset-from-another-model slice): the field joins the
+#: canonicalised spec — the offset it names is part of what a fit means, and FR-MODEL-66's
+#: dedup must not match a fit against another model's structure to one that has no offset.
+SPEC_HASH_VERSION: Final = 8
 
 
 def spec_hash(spec: ModelSpec) -> str:
@@ -821,6 +832,101 @@ async def load_model(
             f"No model {slug!r}" + (f" version {version}." if version else "."),
         )
     return row
+
+
+@dataclasses.dataclass(frozen=True)
+class OffsetModelSource:
+    """What an offset-from-another-model ref resolves to (FR-MODEL-24).
+
+    The η array is deliberately not computed here: the linear predictor is pricing-core
+    maths and belongs on the worker thread, not the event loop.
+    """
+
+    spec: GlmSpec
+    fit: GlmFitResult
+    factors: list[Factor]
+    bandings: Mapping[UUID, Banding]
+    groupings: Mapping[UUID, Grouping]
+
+
+async def resolve_offset_model(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    ref: str,
+    caller_link: str,
+) -> OffsetModelSource:
+    """Resolve `offset_model_ref` to the artifacts whose η is the offset (FR-MODEL-24).
+
+    Every refusal is named: the ref must name a fitted GLM in this workspace whose link
+    equals the new spec's — otherwise the fit would be offset by a number from another
+    scale, the defect class FR-MODEL-71 refuses for `base_margin`.
+    """
+    parsed = ArtifactRef.model_validate(ref)
+    if parsed.type != "model":
+        raise PlatformError(
+            "MODEL_OFFSET_REF_INVALID",
+            "The model the offset names is not a model",
+            409,
+            f"{ref} names a {parsed.type}, and an offset must be another model (FR-MODEL-24).",
+        )
+    row = await load_model(
+        session, workspace_id=workspace_id, slug=parsed.slug, version=parsed.version
+    )
+    if row is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "The model the offset names does not exist",
+            404,
+            f"{ref} resolves to no model in this workspace.",
+        )
+    if row.fit_result is None:
+        raise PlatformError(
+            "MODEL_OFFSET_REF_INVALID",
+            "The model the offset names has no fit to offset against",
+            409,
+            f"{ref} is not fitted, and the offset is its linear predictor (FR-MODEL-24).",
+        )
+    ref_spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+    ref_fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+    if not isinstance(ref_spec, GlmSpec) or not isinstance(ref_fit, GlmFitResult):
+        raise PlatformError(
+            "MODEL_OFFSET_REF_INVALID",
+            "The model the offset names is not a GLM",
+            409,
+            f"{ref} is not a GLM, and the first offset-from-model slice is GLM-to-GLM "
+            "(FR-MODEL-24, amended 2026-08-21).",
+        )
+    if ref_spec.link != caller_link:
+        raise PlatformError(
+            "MODEL_OFFSET_REF_INVALID",
+            "The offset model's link is not the new spec's",
+            409,
+            f"{ref} was fitted with a {ref_spec.link} link and the new spec declares "
+            f"{caller_link}; the offset would be a number from another scale (FR-MODEL-24).",
+        )
+    try:
+        factors = await load_factors(
+            session, workspace_id=workspace_id, factor_ids=list(ref_spec.factors)
+        )
+    except FactorResolutionError as exc:
+        raise PlatformError(
+            "FACTOR_RESOLUTION_FAILED",
+            "The offset model's factors do not resolve",
+            409,
+            str(exc),
+        ) from exc
+    bandings = await transformations.load_bandings(
+        session, workspace_id=workspace_id,
+        ids=[f.banding_id for f in factors if f.banding_id],
+    )
+    groupings = await transformations.load_groupings(
+        session, workspace_id=workspace_id,
+        ids=[f.grouping_id for f in factors if f.grouping_id],
+    )
+    return OffsetModelSource(
+        spec=ref_spec, fit=ref_fit, factors=factors, bandings=bandings, groupings=groupings
+    )
 
 
 def fit_payload(row: ModelRow) -> dict[str, Any]:

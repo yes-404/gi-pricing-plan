@@ -20,6 +20,12 @@ from backend.tests.test_model_jobs import (
     _split,
     _validated_version,
 )
+from backend.tests.test_model_offset_jobs import (
+    _base_spec,
+    _residual_spec,
+    _residual_version,
+)
+from backend.tests.test_prediction import _fitted_residual_pair
 
 from app.config import Settings
 from app.errors import PlatformError
@@ -279,3 +285,107 @@ async def test_the_gate_costs_nothing_when_no_limit_is_set(
             session, Settings(), workspace_id=workspace_id, actor=actor,
             spec=_spec(version_id, (area,), split_ref=split),
         )
+
+
+# -- FR-MODEL-24: a `kind="model"` offset's ref resolves before a job is queued ------------
+
+
+async def _residual_ready(database, blob_store, workspace_id):
+    """`_ready` for a model-offset spec: the residual book's validated version, its
+    `resid_flag` factor and its split (FR-MODEL-24)."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _residual_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    resid_flag = await _factor(
+        database, workspace_id, actor, dataset_id, "resid_flag", "resid_flag"
+    )
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    return actor, dataset_id, version_id, resid_flag, split
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_ref_naming_no_model_is_reported_before_the_job(
+    database, blob_store, workspace_id
+) -> None:
+    """`model:ghost@1` resolves to nothing. The problem is reported here, before a Job is
+    queued — the fit handler's refusal would arrive after a 202 (`wf-01` D2, FR-MODEL-44)."""
+    actor, _, version_id, resid_flag, split = await _residual_ready(
+        database, blob_store, workspace_id
+    )
+    result = await _validate(
+        database, workspace_id, actor,
+        _residual_spec(version_id, resid_flag, split, ref="model:ghost@1"),
+    )
+    assert result.ok is False
+    problem = next(
+        p for p in result.problems
+        if p.kind is SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE
+    )
+    assert problem.subject == "model:ghost@1"
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_ref_naming_an_unfitted_model_is_reported_before_the_job(
+    database, blob_store, workspace_id
+) -> None:
+    """A reservation with no fit has no linear predictor to offset against: the ref's
+    problem, reported here rather than as a failed job."""
+    actor, _, version_id, resid_flag, split = await _residual_ready(
+        database, blob_store, workspace_id
+    )
+    async with database.unit_of_work() as session:
+        unfitted, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_base_spec(version_id, resid_flag, split),
+        )
+        unfitted_ref = f"model:{unfitted.model_family_slug}@{unfitted.version}"
+
+    result = await _validate(
+        database, workspace_id, actor,
+        _residual_spec(version_id, resid_flag, split, ref=unfitted_ref),
+    )
+    assert result.ok is False
+    problem = next(
+        p for p in result.problems
+        if p.kind is SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE
+    )
+    assert problem.subject == unfitted_ref
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_link_mismatch_is_reported_before_the_job(
+    database, blob_store, workspace_id
+) -> None:
+    """The offset would be a number from another scale: the referenced model's link must
+    equal the new spec's, and the validator says so before the job is queued."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    result = await _validate(
+        database, workspace_id, pair.actor,
+        _residual_spec(
+            pair.v2_id, pair.resid_flag_id, pair.split2, ref=pair.ref, link="identity"
+        ),
+    )
+    assert result.ok is False
+    problem = next(
+        p for p in result.problems
+        if p.kind is SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE
+    )
+    assert problem.subject == pair.ref
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_valid_offset_ref_is_not_reported_as_unresolvable(
+    database, blob_store, workspace_id
+) -> None:
+    """The clean case: the ref names a fitted GLM whose link is the new spec's, so the
+    validator resolves it and reports nothing about the offset."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    result = await _validate(
+        database, workspace_id, pair.actor,
+        _residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=pair.ref),
+    )
+    assert result.ok is True
+    assert [p for p in result.problems
+            if p.kind is SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE] == []

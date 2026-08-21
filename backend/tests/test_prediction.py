@@ -26,8 +26,11 @@ dropped the factor is visible rather than merely plausible.
 
 from __future__ import annotations
 
+from typing import NamedTuple
 from uuid import UUID, uuid4
 
+import numpy as np
+import polars as pl
 import pytest
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
@@ -40,6 +43,11 @@ from backend.tests.test_model_jobs import (
     _validated_version,
 )
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
+from backend.tests.test_model_offset_jobs import (
+    _residual_row,
+    _residual_spec,
+    _residual_version,
+)
 from fastapi.testclient import TestClient
 
 from app.db.models import ModelRow
@@ -50,20 +58,34 @@ from app.platform import modelling as model_service
 from app.platform import prediction as service
 from app.worker.tasks import execute_job
 from model_schema import (
+    GlmSpec,
     JobKind,
     JobStatus,
     ModelStatus,
     Principal,
+    SplitRef,
     UnavailableReason,
     UncertaintyBasis,
     UncertaintyKind,
     new_uuid7,
 )
+from pricing_core.modelling import linear_predictor
 
 #: Two rows the fitted model must price differently: same exposure, opposite area.
 ROWS = [
     {"exposure_years": 1.0, "area": "urban"},
     {"exposure_years": 1.0, "area": "rural"},
+]
+
+#: Rows a model-offset spec can score. A prediction against `kind="model"` carries the
+#: offset model's factors too: the endpoint computes the referenced linear predictor on
+#: these very rows, so `exposure_years` and `area` (the base model's) must travel with
+#: the residual model's own `resid_flag`.
+RESIDUAL_ROWS = [
+    {"exposure_years": 1.0, "area": "urban", "resid_flag": 0.0},
+    {"exposure_years": 1.0, "area": "urban", "resid_flag": 1.0},
+    {"exposure_years": 1.0, "area": "rural", "resid_flag": 0.0},
+    {"exposure_years": 1.0, "area": "rural", "resid_flag": 1.0},
 ]
 
 
@@ -111,6 +133,69 @@ async def _fitted_glm(
             spec=_spec(version_id, (area,), split_ref=split),
         )
         return actor, model_id, spare_row.id
+
+
+class _ResidualPair(NamedTuple):
+    """The Task 5 pair fitted through the real Jobs: the base GLM on v1 and the residual
+    GLM on v2, offset against the base's linear predictor — plus the v2 artifacts a
+    further residual reservation needs (`test_model_offset_jobs._residual_spec`)."""
+
+    actor: Principal
+    base_id: UUID
+    residual_id: UUID
+    v2_id: UUID
+    resid_flag_id: UUID
+    split2: SplitRef
+    ref: str
+
+
+async def _fitted_residual_pair(database, blob_store, workspace_id) -> _ResidualPair:
+    """The base GLM, then the residual GLM offset against it, through the real Jobs —
+    the seeding `test_model_offset_jobs.py`'s happy path makes, with the ref read off
+    the base row's own family and version."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        base, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split),
+        )
+        assert should_fit is True
+        base_id = base.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(base_id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    dataset2_id = await _dataset(database, blob_store, workspace_id, actor)
+    v2_id = await _residual_version(database, blob_store, workspace_id, actor, dataset2_id)
+    resid_flag = await _factor(
+        database, workspace_id, actor, dataset2_id, "resid_flag", "resid_flag"
+    )
+    split2 = await _split(database, blob_store, workspace_id, actor, v2_id)
+
+    async with database.session() as session:
+        base_row = await session.get(ModelRow, base_id)
+    assert base_row is not None
+    ref = f"model:{base_row.model_family_slug}@{base_row.version}"
+
+    residual_id, job = await _residual_row(
+        database, blob_store, workspace_id, actor,
+        _residual_spec(v2_id, resid_flag, split2, ref=ref),
+    )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    return _ResidualPair(actor, base_id, residual_id, v2_id, resid_flag, split2, ref)
 
 
 # -- The interval, end to end -------------------------------------------------------------
@@ -228,6 +313,99 @@ async def test_a_gbm_names_the_reason_it_has_no_interval_rather_than_approximati
     assert prediction.uncertainty.kind is UncertaintyKind.UNAVAILABLE
     assert prediction.uncertainty.reason is UnavailableReason.NO_INTERVAL_MODELS_FITTED
     assert all(row.lower is None for row in prediction.rows)
+
+
+# -- The model offset, end to end (FR-MODEL-24) --------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_model_offset_prediction_is_the_referenced_linear_predictor_plus_the_fit(
+    database, blob_store, workspace_id
+) -> None:
+    """The endpoint resolves `offset_model_ref` per request and scores on top of the
+    referenced model's linear predictor: μ = exp(η_base + Xβ̂).
+
+    A scorer that dropped the offset would return exp(Xβ̂) — about a factor of 7 smaller
+    at exposure 1 — which is a perfectly plausible-looking answer. The book's residual
+    signal lives entirely inside the offset's eta, so only a prediction that honours it
+    lands on the fitted value."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        prediction = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=pair.actor,
+            model_id=pair.residual_id, rows=RESIDUAL_ROWS, blob_store=blob_store,
+        )
+        residual = model_service.to_model(await session.get(ModelRow, pair.residual_id))
+        base = model_service.to_model(await session.get(ModelRow, pair.base_id))
+        assert residual.fit_result is not None
+        assert base.fit_result is not None
+        assert isinstance(residual.spec, GlmSpec)
+        assert isinstance(base.spec, GlmSpec)
+        base_factors = await model_service.load_factors(
+            session, workspace_id=workspace_id, factor_ids=list(base.spec.factors)
+        )
+        eta_base = linear_predictor(
+            base.fit_result, pl.DataFrame(RESIDUAL_ROWS), base_factors, base.spec
+        )
+
+    beta = {c.term: c.estimate for c in residual.fit_result.coefficients}
+    z = np.array([row["resid_flag"] for row in RESIDUAL_ROWS], dtype=np.float64)
+    expected = np.exp(eta_base + beta["intercept"] + beta["resid_flag"] * z)
+
+    assert len(prediction.rows) == len(RESIDUAL_ROWS)
+    for i, row in enumerate(prediction.rows):
+        assert row.expected == pytest.approx(expected[i], rel=1e-9)
+        # The interval is the same centre — the offset contributes to it and not to the
+        # width (FR-MODEL-63) — so it brackets the expectation as it does for any GLM.
+        assert row.lower is not None
+        assert row.upper is not None
+        assert row.lower <= row.expected <= row.upper
+
+
+@pytest.mark.req("FR-MODEL-24")
+async def test_a_model_offset_ref_that_names_no_model_is_not_found_not_a_500(
+    database, blob_store, workspace_id
+) -> None:
+    """The offset ref names a model that does not exist in this workspace: `NOT_FOUND`
+    (404), the code a caller can act on, never a 500 from an unguarded lookup.
+
+    The real fit path cannot produce this state — fit-time resolution refuses the ref
+    before a Job is queued, and a fitted model cannot be deleted (`02` R2) — so it is
+    simulated the way the pre-covariance-blob fit is: the residual model's real fit
+    result is copied onto a reservation whose ref names no model, exactly as the worker
+    would have written it. The failure under test is the resolution itself, not the
+    state that produced it."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+
+    async with database.unit_of_work() as session:
+        ghost, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=pair.actor,
+            spec=_residual_spec(
+                pair.v2_id, pair.resid_flag_id, pair.split2, ref="model:ghost@1"
+            ),
+        )
+        fitted = await session.get(ModelRow, pair.residual_id)
+        assert fitted is not None
+        await session.execute(
+            ModelRow.__table__.update()
+            .where(ModelRow.id == ghost.id)
+            .values(
+                fit_result=fitted.fit_result,
+                status=ModelStatus.FITTED.value,
+                diagnostics_id=fitted.diagnostics_id,
+            )
+        )
+        ghost_id = ghost.id
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=pair.actor,
+                model_id=ghost_id, rows=RESIDUAL_ROWS, blob_store=blob_store,
+            )
+    assert refused.value.code == "NOT_FOUND"
+    assert refused.value.status_code == 404
 
 
 # -- The refusals --------------------------------------------------------------------------

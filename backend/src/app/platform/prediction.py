@@ -158,8 +158,8 @@ async def predict_rows(
         assert isinstance(fit, GlmFitResult)
         assert isinstance(spec, GlmSpec)
         expected, lower, upper, uncertainty = await _score_glm(
-            fit, spec, frame, factors, bandings=bandings, groupings=groupings,
-            blob_store=blob_store,
+            session, fit, spec, frame, factors, workspace_id=workspace_id,
+            bandings=bandings, groupings=groupings, blob_store=blob_store,
         )
 
     return Prediction(
@@ -180,11 +180,13 @@ async def predict_rows(
 
 
 async def _score_glm(
+    session: Any,
     fit: GlmFitResult,
     spec: GlmSpec,
     frame: pl.DataFrame,
     factors: Sequence[Factor],
     *,
+    workspace_id: UUID,
     bandings: Mapping[UUID, Banding],
     groupings: Mapping[UUID, Grouping],
     blob_store: BlobStore,
@@ -202,19 +204,40 @@ async def _score_glm(
     numbers. Saying so is the whole of FR-MODEL-93 — the alternative is an interval quietly
     omitted, which `02` R5 exists to forbid, or a refetch of the fit, which would mean
     re-fitting the model to answer a prediction.
+
+    **A model-offset spec is resolved per request** (FR-MODEL-24): the referenced model is
+    looked up and its linear predictor computed on these rows, because the offset is a
+    property of the model the request names, not of a stored array. The resolution is on
+    the loop and the η arithmetic is pricing-core's — the split every fit makes, kept
+    here so the two failure shapes stay distinct: a ref that names nothing is a `404`, and
+    rows the maths cannot score are the `409` `_unscoreable` gives them.
     """
     from pricing_core.modelling import ModellingError
     from pricing_core.modelling.predict import (
         PredictionError,
+        linear_predictor,
         predict_glm,
         predict_glm_interval,
     )
 
     try:
+        model_offset = None
+        if spec.offset.kind == "model":
+            source = await model_service.resolve_offset_model(
+                session,
+                workspace_id=workspace_id,
+                ref=str(spec.offset.offset_model_ref),
+                caller_link=spec.link,
+            )
+            model_offset = linear_predictor(
+                source.fit, frame, source.factors, source.spec,
+                bandings=source.bandings, groupings=source.groupings,
+            )
         if fit.covariance_blob is None:
             return (
                 predict_glm(
-                    fit, frame, factors, spec, bandings=bandings, groupings=groupings
+                    fit, frame, factors, spec, model_offset=model_offset,
+                    bandings=bandings, groupings=groupings,
                 ),
                 None,
                 None,
@@ -230,6 +253,7 @@ async def _score_glm(
             spec,
             covariance_bytes=await blob_store.read(fit.covariance_blob),
             level=CONFIDENCE_LEVEL,
+            model_offset=model_offset,
             bandings=bandings,
             groupings=groupings,
         )

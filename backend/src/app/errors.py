@@ -170,6 +170,12 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "MODEL_TERM_UNRESOLVED",
         "MODEL_LINK_UNSUPPORTED",
         "MODEL_OFFSET_MISSING",
+        # FR-MODEL-24, 2026-08-21, the offset-from-another-model slice. The fit job's
+        # resolver raises it when `offset_model_ref` names a model that cannot serve as
+        # the offset — not fitted, not a GLM, or fitted with a link that is not the new
+        # spec's. A ref that names no model at all is `NOT_FOUND`: this code is for the
+        # refs that resolve to something, just something unusable.
+        "MODEL_OFFSET_REF_INVALID",
         "MODEL_INTERVAL_UNAVAILABLE",
         "MODEL_INTERVAL_PAIR_INVALID",
         # FR-MODEL-96, 2026-08-19. The surrogate the transparency Job reserves is an

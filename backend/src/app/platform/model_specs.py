@@ -29,7 +29,7 @@ from app.db.models import DatasetSplitRow, DatasetVersionRow, FactorRow, Profile
 from app.errors import PlatformError
 from app.platform import audit
 from app.platform import settings as settings_service
-from app.platform.modelling import to_factor
+from app.platform.modelling import resolve_offset_model, to_factor
 from model_schema import (
     DatasetStatus,
     Factor,
@@ -253,6 +253,27 @@ async def validate_spec(
                 ),
             )
         )
+
+    # A `kind="model"` offset is another model's linear predictor (FR-MODEL-24): the ref
+    # must resolve to a fitted GLM in this workspace whose link is the new spec's. Every
+    # refusal the resolver names is reported as the ref's problem here, before a Job
+    # exists — `wf-01` D2's rule applied to offsets-from-model.
+    if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
+        try:
+            await resolve_offset_model(
+                session,
+                workspace_id=workspace_id,
+                ref=str(spec.offset.offset_model_ref),
+                caller_link=spec.link,
+            )
+        except PlatformError as exc:
+            problems.append(
+                SpecProblem(
+                    kind=SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE,
+                    subject=str(spec.offset.offset_model_ref),
+                    message=f"the offset model cannot be used: {exc.detail}",
+                )
+            )
 
     problems.extend(_objective_problems(spec))
     problems.extend(await _split_problems(session, workspace_id, spec))
