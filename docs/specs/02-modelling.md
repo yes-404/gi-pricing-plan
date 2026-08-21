@@ -1642,6 +1642,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `OBJECTIVE_RESPONSE_UNDECLARED`, `OBJECTIVE_REQUIRES_OFFSET`,
 `OBJECTIVE_EARLY_STOPPING_UNSUPPORTED`, `OBJECTIVE_HESSIAN_STRATEGY_UNSUPPORTED`,
 `MODEL_TERM_UNRESOLVED`, `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING`,
+`MODEL_OFFSET_REF_INVALID`,
 `MODEL_INTERVAL_UNAVAILABLE`, `MODEL_INTERVAL_PAIR_INVALID`, `MODEL_APPROXIMATION_INVALID`,
 `METRIC_REF_UNRESOLVED`, `METRIC_NOT_APPLICABLE`, `METRIC_NOT_FITTABLE`.
 
@@ -1665,6 +1666,12 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 > copies from the source: `offset`, `weight` and `seed` are copied by the platform's own
 > builder but never compared, so a hand-written surrogate spec differing from its source
 > only in one of those three is accepted today.
+
+> **`MODEL_OFFSET_REF_INVALID` added 2026-08-21 (W5, the offset-from-another-model slice).**
+> It refuses a spec whose `offset_model_ref` names a model that cannot serve as the
+> offset — not a model at all, not fitted, not a GLM, or fitted with a link that is not
+> the new spec's (FR-MODEL-24). Its own code rather than `NOT_FOUND` because the request
+> is well formed: what fails is what the ref names.
 
 > **Added 2026-08-17 (W5, the GBM and transparency slices).** The ten codes above are new;
 > five *existing* ones are now raised for the first time by the GBM path rather than being
@@ -1698,6 +1705,9 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 > set of exception names**, and neither `PredictionError` nor `ObjectiveError` was on it. The
 > list is now derived from the classes `pricing_core.modelling` actually defines, which is
 > the only version of that check that stays true as the module grows.
+>
+> **Added 2026-08-21 (W5):** FR-MODEL-24 also raises it when a `kind="model"` spec reaches
+> fit or scoring without the resolved offset array.
 
 An **invalid lifecycle transition** (FR-MODEL-64) is `VALIDATION_FAILED` at `409`, not a code
 of its own — the same answer `01` gives for a Dataset Version's transitions, and for the same

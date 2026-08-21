@@ -35,6 +35,7 @@ from app.platform import perils as peril_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import to_ref
+from app.platform.modelling import OffsetModelSource, resolve_offset_model
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import register_handler
 from model_schema import (
@@ -180,6 +181,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         pl.DataFrame,
         CustomObjective | None,
         dict[str, CustomMetric],
+        OffsetModelSource | None,
     ]:
         async with progress.database.session() as session:
             row = await session.get(ModelRow, model_id)
@@ -271,14 +273,49 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                     metrics[ref] = await metric_service.resolve_ref(
                         session, workspace_id=workspace_id, ref=ref
                     )
-            return spec, factors, transformations, train, holdout, objective, metrics
+            # FR-MODEL-24: the offset-from-another-model ref, resolved here for the
+            # reason the objective and metrics are — `pricing-core` computes and does not
+            # resolve a reference (ADR-0001). This is the artifacts whose η becomes the
+            # offset; the η array itself is computed on the worker thread below.
+            offset_source = None
+            if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
+                offset_source = await resolve_offset_model(
+                    session,
+                    workspace_id=workspace_id,
+                    ref=str(spec.offset.offset_model_ref),
+                    caller_link=spec.link,
+                )
+            return (
+                spec, factors, transformations, train, holdout, objective, metrics,
+                offset_source,
+            )
 
-    spec, factors, transformations, frame, holdout, objective, metrics = progress.run_on_loop(
-        load()
+    (spec, factors, transformations, frame, holdout, objective, metrics,
+     offset_source) = progress.run_on_loop(load())
+
+    from pricing_core.modelling import (
+        GbmFitError,
+        GlmFitError,
+        fit_gbm,
+        fit_glm,
+        linear_predictor,
     )
-
-    from pricing_core.modelling import GbmFitError, GlmFitError, fit_gbm, fit_glm
     from pricing_core.modelling.factors import FactorResolutionError
+
+    # The offset-from-another-model arrays (FR-MODEL-24): the referenced fit's linear
+    # predictor on this frame and its holdout. Resolved on the loop, computed here on the
+    # worker thread, because the maths is pricing-core's (ADR-0001).
+    model_offset = None
+    model_offset_holdout = None
+    if offset_source is not None:
+        model_offset = linear_predictor(
+            offset_source.fit, frame, offset_source.factors, offset_source.spec,
+            bandings=offset_source.bandings, groupings=offset_source.groupings,
+        )
+        model_offset_holdout = linear_predictor(
+            offset_source.fit, holdout, offset_source.factors, offset_source.spec,
+            bandings=offset_source.bandings, groupings=offset_source.groupings,
+        )
 
     # The fit owns the middle of the bar and reports its own `0..1` inside it. Before this
     # it reported nothing, and a long fit sat at 0.35 for its whole duration — which
@@ -310,6 +347,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 progress=fitting,
+                model_offset=model_offset,
             )
             # The same split the GBM arm makes above, and for the same reason: the artifact
             # carries a `BlobRef` and the bytes travel beside it, because `pricing-core`
@@ -317,6 +355,14 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             # bytes at predict time.
             result, covariance = glm_fit.result, glm_fit.covariance_bytes
             glm_cv = glm_fit.cv
+            if offset_source is not None:
+                # FR-MODEL-24: the fit records what it was actually constructed against —
+                # the resolved, pinned ref (FR-MODEL-71's rule, applied to GLM). It is the
+                # spec's own string here: the resolver refused any ref that was not this
+                # one.
+                result = result.model_copy(
+                    update={"offset_model_ref": str(spec.offset.offset_model_ref)}
+                )
     except (GbmFitError, GlmFitError) as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
@@ -348,6 +394,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         computed = compute_diagnostics(
             result, spec, factors,
             train=frame, holdout=holdout,
+            model_offset_train=model_offset,
+            model_offset_holdout=model_offset_holdout,
             bandings=transformations.bandings,
             groupings=transformations.groupings,
             progress=diagnostic_progress,
