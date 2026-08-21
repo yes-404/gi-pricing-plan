@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+import numpy as np
 import pytest
 from backend.tests.test_data_jobs import (
     _ingest,
@@ -68,6 +69,23 @@ register_model_handlers()
 #: the expected term name unknowable — which is a bad fixture rather than a bad rule.
 BOOK = b"policy_id,exposure_years,area,claim_count,claim_amount_minor\n" + b"".join(
     f"P{i},1.0,{'urban' if i % 4 == 0 else 'rural'},{2 if i % 4 == 0 else 1},"
+    f"{200000 if i % 4 == 0 else 100000}\n".encode()
+    for i in range(1, 401)
+)
+
+
+#: The CV test's fold-dispersion assertion cannot be satisfied on `BOOK`: its claim counts
+#: are deterministic per level, so the identity-factor Poisson MLE reproduces every row's
+#: response exactly and deviance is identically zero in every fold (at the winning alpha —
+#: the unregularised fit wins CV by having nothing left to fit). The CV machinery itself
+#: is not at fault: the same path reports real, distinct per-fold deviances the moment the
+#: data carries irreducible noise. Drawn from the same Poisson rates, seeded so the test is
+#: reproducible; the exposure and the level mix are `BOOK`'s, so the fit still has the same
+#: shape (a near-2 urban relativity, rural base) — only the dispersion is now measurable.
+CV_RNG = np.random.default_rng(20260816)
+CV_BOOK = b"policy_id,exposure_years,area,claim_count,claim_amount_minor\n" + b"".join(
+    f"P{i},1.0,{'urban' if i % 4 == 0 else 'rural'},"
+    f"{int(CV_RNG.poisson(2.0 if i % 4 == 0 else 1.0))},"
     f"{200000 if i % 4 == 0 else 100000}\n".encode()
     for i in range(1, 401)
 )
@@ -183,9 +201,11 @@ async def _split(
         return SplitRef(split_artifact_id=row.id, train_part="train", holdout_part="test")
 
 
-async def _validated_version(database, blob_store, workspace_id, actor, dataset_id) -> UUID:
+async def _validated_version(
+    database, blob_store, workspace_id, actor, dataset_id, book: bytes = BOOK
+) -> UUID:
     """Ingest and validate, then promote — the only route to `validated` (`01` §1.3)."""
-    version_id = await _ingest(database, blob_store, workspace_id, actor, dataset_id, BOOK)
+    version_id = await _ingest(database, blob_store, workspace_id, actor, dataset_id, book)
     report_id = await _validate(database, blob_store, workspace_id, actor, version_id)
     from app.platform import validation as validation_service
 
@@ -594,3 +614,104 @@ async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
         await session.execute(
             text("UPDATE models SET status = 'review' WHERE id = :id"), {"id": model_id}
         )
+
+
+@pytest.mark.req("FR-MODEL-20")
+@pytest.mark.req("FR-MODEL-53")
+async def test_a_cv_selected_model_fits_and_records_its_fold_dispersion(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-20/FR-MODEL-53 end to end: `select_by="cv"` reaches `glum` through the
+    handler a worker actually runs, and the selected alpha's per-fold deviance — not only
+    its mean — lands on the persisted `Diagnostics`.
+    """
+    from model_schema import GlmCvSpec
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, book=CV_BOOK
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(
+                version_id, (area,), split_ref=split,
+                select_by="cv",
+                cv=GlmCvSpec(method="random", folds=3, alphas=(0.0, 0.01, 0.1)),
+            ),
+        )
+        assert should_fit is True
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        model = model_service.to_model(await session.get(ModelRow, model_id))
+    assert model.status is ModelStatus.FITTED
+
+    async with database.session() as session:
+        diagnostics = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+    assert diagnostics.cross_validation is not None
+    cv = diagnostics.cross_validation
+    assert cv.method == "random"
+    assert cv.folds == 3
+    assert {p.alpha for p in cv.path} == {0.0, 0.01, 0.1}
+    assert cv.selected_alpha in {0.0, 0.01, 0.1}
+    assert {m.fold for m in cv.fold_metrics} == {0, 1, 2}
+    # FR-MODEL-53: dispersion, not only the mean — every fold at the selected alpha
+    # carries its own score, and they are not all forced equal.
+    assert len({round(m.score, 12) for m in cv.fold_metrics}) > 1
+
+
+@pytest.mark.req("FR-MODEL-20")
+async def test_a_fixed_alpha_model_still_records_no_cross_validation(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """Negative, the other direction: the default `select_by="fixed"` path must not gain a
+    `cross_validation` block it never computed — proven end to end, not only at the type
+    level Task 5's unit test already covers, because the handler is a second place the two
+    could be wired together wrong.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        diagnostics = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+    assert diagnostics.cross_validation is None
