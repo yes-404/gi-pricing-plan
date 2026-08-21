@@ -73,6 +73,23 @@ def test_a_path_with_a_repeated_alpha_is_refused() -> None:
         GlmCvSpec(alphas=(0.1, 0.1, 0.5))
 
 
+@pytest.mark.req("FR-MODEL-20")
+def test_a_path_with_a_negative_alpha_is_refused() -> None:
+    """Negative: a negative penalty strength is not a point on an elastic-net path —
+    stored, it would make the fit fail with glum's error rather than the spec's."""
+    with pytest.raises(ValidationError, match="negative"):
+        GlmCvSpec(alphas=(0.0, -0.1, 1.0))
+
+
+@pytest.mark.req("FR-MODEL-20")
+def test_a_path_with_a_non_finite_alpha_is_refused() -> None:
+    """Negative: `nan < 0` is False and `nan != nan` defeats the distinctness check, so a
+    NaN slips past both existing guards into a path glum could never fit — a spec that
+    cannot be fitted should not be storable."""
+    with pytest.raises(ValidationError, match="non-finite"):
+        GlmCvSpec(alphas=(0.0, float("nan"), 1.0))
+
+
 @pytest.mark.req("FR-MODEL-53")
 def test_a_grouped_cv_needs_its_key_column() -> None:
     with pytest.raises(ValidationError, match="key_column"):

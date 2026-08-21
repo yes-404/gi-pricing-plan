@@ -516,6 +516,11 @@ class CrossValidationDiagnostics(BaseModel):
                 f"fold_metrics covers folds {sorted(seen)}, expected {sorted(expected)}. A "
                 "fold's dispersion cannot include a fold that was never scored."
             )
+        if len(seen) != len(self.fold_metrics):
+            raise ValueError(
+                f"fold_metrics lists {len(self.fold_metrics)} entries for {len(seen)} "
+                "distinct folds; a fold's dispersion cannot double-count a fold."
+            )
         return self
 
 

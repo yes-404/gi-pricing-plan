@@ -193,6 +193,8 @@ def assign_folds(
                 f"temporal fold assignment names {time_column!r}, which is not a column"
             )
         order = frame[time_column].arg_sort().to_numpy()
+        # Polars `arg_sort` is nulls-first, so a row with a null `time_column` sorts as
+        # earliest and lands in fold 0 — a deliberate, deterministic choice.
         rank = np.empty(frame.height, dtype=np.int64)
         rank[order] = np.arange(frame.height, dtype=np.int64)
         return np.minimum((rank * folds) // frame.height, folds - 1).astype(np.int64)

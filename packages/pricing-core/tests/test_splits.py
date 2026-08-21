@@ -152,6 +152,22 @@ def test_a_grouped_fold_assignment_keeps_a_policy_whole() -> None:
 
 
 @pytest.mark.req("FR-MODEL-53")
+def test_a_grouped_fold_assignment_without_a_key_column_is_refused() -> None:
+    """Negative: `grouped_by_key` with no key to group by would hash row indices — a
+    random fold by another name, recorded as a method the data was not folded by."""
+    with pytest.raises(SplitError, match="key_column"):
+        assign_folds(_book(), method="grouped_by_key", seed=1, folds=4)
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_a_grouped_fold_assignment_naming_a_missing_column_is_refused() -> None:
+    """Negative: a key column the frame does not carry is a typo, not a grouping — every
+    row would hash to its own singleton key, again a random fold in disguise."""
+    with pytest.raises(SplitError, match="which is not a column"):
+        assign_folds(_book(), method="grouped_by_key", seed=1, folds=4, key_column="policy_no")
+
+
+@pytest.mark.req("FR-MODEL-53")
 def test_a_temporal_fold_assignment_orders_folds_by_time() -> None:
     """The gap this plan documents and resolves: FR-DATA-33/FR-MODEL-53 define no K-fold
     temporal semantics, so this fixes it as contiguous time-ordered blocks — the earliest
@@ -174,6 +190,13 @@ def test_a_temporal_fold_assignment_orders_folds_by_time() -> None:
 def test_a_temporal_fold_assignment_without_a_time_column_is_refused() -> None:
     with pytest.raises(SplitError, match="time_column"):
         assign_folds(_book(), method="temporal", seed=1, folds=4)
+
+
+@pytest.mark.req("FR-MODEL-53")
+def test_a_temporal_fold_assignment_naming_a_missing_column_is_refused() -> None:
+    """Negative: a time column the frame does not carry is a typo, not a fold order."""
+    with pytest.raises(SplitError, match="which is not a column"):
+        assign_folds(_book(), method="temporal", seed=1, folds=4, time_column="inception_date")
 
 
 @pytest.mark.req("FR-MODEL-53")

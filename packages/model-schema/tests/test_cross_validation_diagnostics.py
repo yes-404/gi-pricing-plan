@@ -83,6 +83,20 @@ def test_fold_metrics_missing_a_declared_fold_is_refused() -> None:
 
 
 @pytest.mark.req("FR-MODEL-53")
+def test_fold_metrics_double_counting_a_fold_is_refused() -> None:
+    """Negative: metrics for folds 0, 0, 1, 2 cover every one of `folds=3`'s folds, so the
+    missing-fold check alone passes — but fold 0's score enters the dispersion twice, and a
+    spread that double-counts one fold is not the per-fold dispersion FR-MODEL-53 asks
+    for."""
+    duplicated = _fold_metrics(3)[:1] + _fold_metrics(3)
+    with pytest.raises(ValidationError, match="double-count"):
+        CrossValidationDiagnostics(
+            method="random", seed=1, folds=3, metric="deviance",
+            selected_alpha=0.1, path=_path(0.0, 0.1), fold_metrics=duplicated,
+        )
+
+
+@pytest.mark.req("FR-MODEL-53")
 def test_diagnostics_carries_cross_validation_when_the_fit_selected_by_cv() -> None:
     """`Diagnostics.cross_validation` was declared and always `None` (2026-08-18's note on
     the class); this is the slice that populates it, so the field must round-trip inside

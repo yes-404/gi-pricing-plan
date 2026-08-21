@@ -21,6 +21,7 @@ re-scorable without `glum`, by a process that never ran it.
 from __future__ import annotations
 
 import enum
+import math
 from decimal import Decimal
 from typing import Annotated, Any, Final, Literal
 from uuid import UUID
@@ -848,6 +849,8 @@ class GlmCvSpec(BaseModel):
             )
         if any(a < 0.0 for a in self.alphas):
             raise ValueError("cv.alphas contains a negative penalty strength")
+        if not all(math.isfinite(a) for a in self.alphas):
+            raise ValueError("cv.alphas contains a non-finite value")
         if len(set(self.alphas)) != len(self.alphas):
             raise ValueError(f"cv.alphas repeats a value: {self.alphas}")
         return self
