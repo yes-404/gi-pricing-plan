@@ -139,6 +139,25 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-20** | Regularisation (L1, L2, elastic net) is supported with a documented path and a cross-validated selection option. The selected penalty and the full CV path are persisted as diagnostics. |
 | **FR-MODEL-21** | Fitting returns, for every coefficient: estimate, standard error, z/t statistic, p-value, and confidence interval; and for every categorical Factor: the relativity table with the base level marked. These are persisted in the Model artifact (ADR-0003) and are re-scorable without `glum`. |
 | **FR-MODEL-22** | The Tweedie power `p` may be estimated by profile likelihood over a grid, with the profile curve persisted. Estimated `p` is recorded as an estimate with its own uncertainty, not silently baked in as a constant. |
+
+> **Amendment 2026-08-21 (FR-MODEL-22 slice):** "Profile likelihood" means the profile
+> log-likelihood `L(p) = Σᵢ log f(yᵢ; μ̂ᵢ(p), φ̂(p), p)`, and the estimate is the argmax of
+> `L` over `tweedie.p_grid`. `μ̂(p)` is the GLM fit at power `p`; `φ̂(p) = D(p)/n` is the
+> mean-deviance dispersion estimate (Dunn & Smyth's saddlepoint route); `f` is the
+> Tweedie series density (Dunn & Smyth 2005): `f(0) = exp(−μ^(2−p)/((2−p)φ))` and, for
+> `y > 0`, `f = (1/y)·exp(−y/τ − λ)·Σⱼ exp(r·j)/(Γ(1+j)·Γ(−αj))` with `α = (2−p)/(1−p)`,
+> `r = −α·log y + α·log(p−1) − (1−α)·log φ − log(2−p)`, `τ = φ(p−1)μ^(p−1)`,
+> `λ = μ^(2−p)/((2−p)φ)`. "Its own uncertainty" is the 95% profile-likelihood interval
+> `{p : 2(L_max − L(p)) ≤ χ²₀.95(1) = 3.841}`, linearly interpolated between scanned
+> points and persisted as `ci_lower`/`ci_upper`; the profile curve (power,
+> log-likelihood) is persisted on `fit_result.tweedie`. A maximum at a scan edge is
+> refused with `GLM_TWEEDIE_POWER_GRID_EDGE`; estimation and `select_by="cv"` are refused
+> together (the profile is penalty-dependent); `family_params.power` beside the grid is
+> refused. *(2026-08-21 correction: the planning-time deviance-argmin design is replaced.
+> The deviance profile `D(p) = 2φ(ℓ_sat(p) − ℓ(p, μ̂))` is not a likelihood profile for
+> Tweedie — `ℓ_sat(p)` and the p-dependent normaliser do not cancel out of the argmin —
+> and the deviance-argmin estimator was measured biased (argmin ≈ truth + 0.25, grid-edge
+> at every pinned seed) during the slice.)*
 | **FR-MODEL-23** | Non-convergence, separation, rank deficiency, and aliased columns are surfaced as explicit, named fit errors with the offending factors identified — never as a silently returned degenerate fit. |
 | **FR-MODEL-24** | An **offset from another model** is supported (`offset_model_ref`), enabling residual modelling and "fit on top of the current rating structure" workflows. The referenced model version is pinned. |
 
