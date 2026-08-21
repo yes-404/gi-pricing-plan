@@ -33,6 +33,7 @@ from model_schema.modelling import Coefficient, RelativityLevel
 from model_schema.refs import BlobRef
 
 __all__ = [
+    "EbmShapeFunctions",
     "GlmApproximation",
     "ShapContribution",
     "ShapInteraction",
@@ -46,10 +47,11 @@ __all__ = [
 class TransparencyKind(enum.StrEnum):
     """FR-MODEL-33's two forms, plus FR-MODEL-37's EBM export.
 
-    `ebm_shape_functions` is declared and produced by nothing: an EBM is transparent by
-    construction and no slice fits one. Declared rather than omitted because the kind is
-    what a reader of an artifact would look for, and adding it later would change the
-    meaning of an artifact that listed only two.
+    `ebm_shape_functions` is produced by `build_ebm_shape_functions` (2026-08-21, W5,
+    the EBM slice): an EBM needs no approximation — its shape functions ARE the rateable
+    model, so this kind alone satisfies FR-MODEL-33. Declared before any slice produced
+    one because the kind is what a reader of an artifact would look for, and adding it
+    later would change the meaning of an artifact that listed only two.
     """
 
     GLM_APPROXIMATION = "glm_approximation"
@@ -161,6 +163,18 @@ class ShapSummary(BaseModel):
     interactions_available: bool = True
 
 
+class EbmShapeFunctions(BaseModel):
+    """FR-MODEL-37's export: the model itself, as tables.
+
+    A JSON document, deliberately: the artifact row stores a JSONB payload and the
+    tables ARE the model — this block is a pointer to the document rather than a
+    nested copy that could drift from it. Built by `build_ebm_shape_functions`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    terms_blob: str = Field(min_length=1)
+
+
 class TransparencyArtifact(BaseModel):
     """The persisted artifact (`02` §4.9, FR-MODEL-33..37).
 
@@ -177,6 +191,7 @@ class TransparencyArtifact(BaseModel):
     job_id: UUID | None = None
     glm_approximation: GlmApproximation | None = None
     shap_summary: ShapSummary | None = None
+    ebm_shape_functions: EbmShapeFunctions | None = None
     #: FR-MODEL-36. Prose, deliberately: how well the approximation reproduces the model,
     #: **where it does not**, and the exposure share of that region. A number cannot say
     #: the second thing, and the second thing is what an approver needs.
@@ -194,15 +209,18 @@ class TransparencyArtifact(BaseModel):
             present.append(TransparencyKind.GLM_APPROXIMATION)
         if self.shap_summary is not None:
             present.append(TransparencyKind.SHAP_SUMMARY)
+        if self.ebm_shape_functions is not None:
+            present.append(TransparencyKind.EBM_SHAPE_FUNCTIONS)
         return tuple(present)
 
     @model_validator(mode="after")
     def _an_artifact_explains_something(self) -> Self:
-        """FR-MODEL-33: *at least one* form. An artifact with neither block is a
+        """FR-MODEL-33: *at least one* form. An artifact with no block is a
         fidelity statement about nothing — and it would satisfy R3."""
         if not self.kinds:
             raise ValueError(
-                "a transparency artifact carries neither a GLM approximation nor a SHAP "
-                "summary (FR-MODEL-33). It would satisfy R3 while explaining nothing."
+                "a transparency artifact carries neither a GLM approximation, a SHAP "
+                "summary nor an EBM shape-functions export (FR-MODEL-33). It would "
+                "satisfy R3 while explaining nothing."
             )
         return self
