@@ -19,6 +19,7 @@ from pricing_core.modelling.diagnostics import (
     deviance,
     unit_deviance,
 )
+from pricing_core.modelling.ebm import EbmFitError, fit_ebm
 from pricing_core.modelling.errors import (
     BandingError,
     FactorResolutionError,
@@ -77,6 +78,7 @@ __all__ = [
     "BandingError",
     "ComparisonCandidate",
     "DiagnosticsResult",
+    "EbmFitError",
     "FactorMatrix",
     "FactorResolutionError",
     "GbmFit",
@@ -108,6 +110,7 @@ __all__ = [
     "deviance",
     "encode_covariance",
     "fidelity_statement",
+    "fit_ebm",
     "fit_gbm",
     "fit_glm",
     "grouping_evidence",

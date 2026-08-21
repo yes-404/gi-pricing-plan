@@ -205,6 +205,11 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # tweedie.p_grid is maximised at a scan edge, so the estimate would report the
         # scan's boundary as the answer.
         "GLM_TWEEDIE_POWER_GRID_EDGE",
+        # The EBM fit slice, 2026-08-21 (FR-MODEL-37). Raised by `fit_ebm`'s pre-check:
+        # a monotone constraint naming an unknown slug, or declaring a direction on a
+        # categorical (non-ordinal) feature, is refused as a named code — `interpret`
+        # 0.7.8 would silently zero the term instead (dated note in `02` §5.1).
+        "EBM_MONOTONE_CONSTRAINT_INCOMPLETE",
     }
 )
 

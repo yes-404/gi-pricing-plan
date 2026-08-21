@@ -44,6 +44,12 @@ dependencies = [
     # not the CART cut points the method is named for, and shipping them as `tree` is the
     # same mislabelling the quantile substitution was refused for.
     "scikit-learn>=1.5,<2",
+    # FR-MODEL-37: EBMs are fitted with `interpret-core`, pinned exact — one requirement,
+    # one model type (the metapackage `interpret` pulls notebooks/visualisation extras and
+    # is deliberately not used). Pinning the exact version pins the slot layout and index
+    # rule the fit exports verbatim (spike-verified against 0.7.8; ~115 MB incremental;
+    # the workspace's sklearn 1.9.0 satisfies its requirement).
+    "interpret-core==0.7.8",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and

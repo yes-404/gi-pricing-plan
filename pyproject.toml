@@ -78,6 +78,13 @@ disallow_any_explicit = false
 module = ["sklearn.*"]
 ignore_missing_imports = true
 
+# interpret-core 0.7.8 ships no `py.typed` marker either, and `fit_ebm` imports it at
+# call-site scope (FR-MODEL-37) — the same shape as the sklearn pair, for the same
+# reason: the fit reads `term_scores_`/`bins_`/`best_iteration_` off an untyped object.
+[[tool.mypy.overrides]]
+module = ["interpret.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = [
     "packages/model-schema/tests",

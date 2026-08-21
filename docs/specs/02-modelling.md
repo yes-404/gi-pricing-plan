@@ -1727,9 +1727,11 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 > **Added 2026-08-21 (W5, the EBM slice).** `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` refuses an
 > EBM fit whose `monotone_constraints` name a slug that is not among the fitted factors, or
-> declare a direction on a categorical (non-ordinal) feature — `interpret` itself raises a
-> bare `ValueError` for the second and would abort the process; named here so the refusal
-> arrives as a code, not a stack trace.
+> declare a direction on a categorical (non-ordinal) feature — `interpret` 0.7.8 accepts
+> the second and silently zeroes the constrained term — a silent model change; named here
+> so the refusal arrives as a code, not a wrong model. (Amended 2026-08-21, the W5 EBM
+> fit task: the original note claimed `interpret` raises a bare `ValueError`; the pinned
+> library does not.)
 
 > **`MODEL_INTERVAL_PAIR_INVALID` added 2026-08-19 (W5, the paired-quantile slice).**
 > It refuses a quantile bound whose spec disagrees with the Model its `interval_for`
