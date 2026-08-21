@@ -184,14 +184,14 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 
 | ID | Requirement |
 |---|---|
-| **FR-MODEL-33** | Every non-GLM Model must carry at least one **Transparency Artifact** before it can be referenced by a Rating Version (R3). Two forms are supported and both may be present. |
+| **FR-MODEL-33** | Every non-GLM Model must carry at least one **Transparency Artifact** before it can be referenced by a Rating Version (R3). Three forms are supported and may be present in any combination. Amended 2026-08-21 (W5, the EBM slice): the third form joined the artifact. |
 | **FR-MODEL-34** | **GLM approximation** — a GLM fitted to the GBM's own predictions over the modelling population, with the same factor set (optionally banded), reporting R² / deviance explained against the GBM, and the residual pattern where the approximation is worst. This is the artifact that turns a GBM into something rateable as a table. |
 | **FR-MODEL-35** | **SHAP factor summary** — TreeSHAP mean absolute contribution per factor, per-factor dependence summaries (contribution vs factor value, exposure-weighted), and the top interaction pairs. Computed on a reproducible sample with a persisted seed and sample size. |
 | **FR-MODEL-79** | **Interaction candidates found in TreeSHAP interaction values are suggestions, never additions** (OQ-MODEL-4, decided 2026-08-15). The transparency artifact ranks the top pairs (FR-MODEL-35) and the factor workbench surfaces each with its exposure share and its holdout lift, so an actuary sees what a suggestion is worth and over how much of the book. The platform never writes a Factor into a Model Spec: an interaction becomes rateable only as an explicit `interaction` Factor (FR-MODEL-1) carrying an intent and a written rationale (FR-MODEL-3), and the generated model document names it as an authored decision. Auto-detected structure entering a rating basis unreviewed is precisely the overfitting route this refuses. |
 | **FR-MODEL-36** | The transparency artifact records an explicit **fidelity statement**: how well the approximation reproduces the model, where it does not, and the exposure share of the region where it does not. A Rating Version referencing the model surfaces this at approval time. |
 | **FR-MODEL-96** | **The GLM approximation of a GBM is persisted as a Model in its own right; the transparency artifact references it by `approximating_model_id` and stops carrying its coefficients inline.** (OQ-MODEL-10, decided 2026-08-18; **owner Phase 1b, and before anything references a transparency artifact by identifier**.) The argument is `03` FR-RATE-60's: an `approximation`-mode Rating Version pins what it rates on, FR-OVR-14 requires every pin to resolve to an artifact whose status is `approved` or better, and a `TransparencyArtifact` carries `model_id` and **no status at all** — so the thing that is rated on must be an artifact that has one, and only a Model does. Three obligations follow, and they are the work the answer creates rather than reasons against it: (i) the approximating Model's spec records `approximates_model_id`, and its `dataset_version_id` is the population the approximation was fitted over, so a reader can tell a surrogate from a model fitted on observed claims; (ii) that field joins the `spec_hash` payload and increments `n` with it (FR-MODEL-86); (iii) §4.8's `status ≥ fitted ⟹ diagnostics_id` is met by diagnostics **of the surrogate against the source model's predictions** — the quantity FR-MODEL-36 already measures — recorded as such, never presented as diagnostics against observed claims. Until it is built, `approximating_model_id` stays `None` and the artifact carries the coefficients: declared-and-unbuilt in FR-MODEL-87's sense, with this requirement as the trigger. *(Amended 2026-08-19, W5, building FR-MODEL-96.* **Built.** The trailing sentence above and the **owner Phase 1b** parenthetical describe the state before this date and no longer describe the platform. The three obligations are discharged: (i) `approximates_model_id` lives on `GlmSpec`, and FR-MODEL-102 makes a surrogate identifiable from its spec alone; (ii) the field joins the `spec_hash` payload, which moves `v4` to `v5` with it (FR-MODEL-86); (iii) §4.8's `status ≥ fitted ⟹ diagnostics_id` is met by the surrogate's diagnostics against the source model's predictions. The artifact's inline `coefficients` and `relativities` survive as a legacy era for artifacts written before this date, exclusive at the type with `approximating_model_id`, rather than as the current state.)* |
 | **FR-MODEL-110** | **On a rebuild, the transparency Job reuses the surrogate's stored numbers instead of recomputing them** (OQ-MODEL-17, decided 2026-08-21). `model.transparency` branches on `reserve_model`'s `should_fit` before `build_glm_approximation` and `compute_diagnostics`; on `False` it loads the existing surrogate's `Diagnostics` and the latest `TransparencyArtifact`'s `glm_approximation` block (`r_squared`, `deviance_explained`, `worst_regions`) rather than paying a full GLM fit plus one type-III refit per factor for numbers it then discards. No new invariant is needed: the source Model and the surrogate's own spec are both immutable once fitted, so `spec_hash` (FR-MODEL-66) already guarantees the numbers a rebuild would recompute are identical to the ones stored at the first build — and FR-MODEL-36's fidelity argument for recomputing only bites if the source model could change between builds, which it cannot. **Owner: Phase 1b, and the trigger is its measurement of the transparency Job's cost against `07`'s job-latency NFRs**, before which this is the kind of cost a measurement would attribute to the wrong cause. |
-| **FR-MODEL-84** | **A transparency artifact is readable.** `GET /api/v1/models/{id}/transparency` returns the model's most recent artifact, or a 404 naming the model. Added 2026-08-17 (W5, the transparency slice): §5.1 declared the `POST` and no read, which is a 202 whose artifact nothing can fetch — complete to the endpoint audit, since that compares the spec against the contract and an endpoint missing from both is invisible to it, and unusable to every caller. The same omission `01`'s reference publish lifecycle made, and the one the comparison artifact carried until FR-MODEL-56 was built. A model may hold several artifacts (FR-MODEL-33 allows both forms, and a re-sampled SHAP summary is a second artifact rather than a correction); the route returns the latest, and an approval citing a specific one resolves it by id. |
+| **FR-MODEL-84** | **A transparency artifact is readable.** `GET /api/v1/models/{id}/transparency` returns the model's most recent artifact, or a 404 naming the model. Added 2026-08-17 (W5, the transparency slice): §5.1 declared the `POST` and no read, which is a 202 whose artifact nothing can fetch — complete to the endpoint audit, since that compares the spec against the contract and an endpoint missing from both is invisible to it, and unusable to every caller. The same omission `01`'s reference publish lifecycle made, and the one the comparison artifact carried until FR-MODEL-56 was built. A model may hold several artifacts (FR-MODEL-33 allows several forms, and a re-sampled SHAP summary is a second artifact rather than a correction); the route returns the latest, and an approval citing a specific one resolves it by id. |
 | **FR-MODEL-37** | EBM (`interpret`) models are treated as transparent by construction: their term shape functions are exported directly as tables and require no approximation, but they still carry the fidelity/diagnostic sections in the same contract shape. |
 | **FR-MODEL-102** | **A surrogate is identifiable from its spec alone.** Added 2026-08-19 (W5, building FR-MODEL-96). `GlmSpec.approximates_model_id` is set **if and only if** `response_column` is the reserved surrogate column `__gbm_prediction__`, refused at the type in both directions. A spec that named a source model while pointing at an observed response column would describe a model fitted on claims and read as a surrogate; one that fitted the reserved column while naming no source would be a model of a prediction nobody can identify. This is also what makes FR-MODEL-96(iii) enforceable without a second field: the A/E in the surrogate's `Diagnostics` is against the source model's predictions because the spec the diagnostics were computed under says so, and `CLAUDE.md` §2's rule against a fact stated twice keeps it there rather than copied onto the diagnostics document. Two consequences are stated rather than left to be discovered: a surrogate Model **carries no `covariance_blob`**, so FR-MODEL-93's typed absence is what a prediction against it reports — an interval computed from a surrogate's coefficients describes the surrogate and would be read as the GBM's uncertainty; and a surrogate **appears in `GET /api/v1/models`** like any other Model, which is the point of FR-MODEL-96 rather than a side effect. **The name it appears under is fixed too, added 2026-08-19 (fix round, W5):** the surrogate's `model_family_slug` is the source model's own family slug with `-approx` appended, and `models.model_family_slug` is a `String(64)` column — a source slug that leaves no room for that suffix within the 64-character limit is refused by name, naming the slug and the length it would have produced, before the transparency Job spends any compute fitting it. |
 
@@ -716,6 +716,31 @@ cap are different models, and must not collide on `spec_hash`.
 > GBMs over one population would otherwise share a digest — which FR-MODEL-66 would answer
 > by handing the second caller the first caller's model.
 
+`EbmSpec` adds (`model_type` is `"ebm"`):
+
+```json
+{
+  "objective": "rmse",
+  "interactions": 0,
+  "max_bins": 64,
+  "max_rounds": 50000,
+  "monotone_constraints": {"driver_age_banded": -1, "vehicle_group_rated": 1}
+}
+```
+
+> **Added 2026-08-21 (W5, the EBM slice, FR-MODEL-37).** The common block is inherited
+> unchanged (factors, split, response, weight, seed, loss treatment). `objective` is
+> `"rmse" | "mae"`, default `"rmse"`; `interactions` is `0 | 1`, default `0` — `2`
+> (triples) is **declared-and-unbuilt** (FR-MODEL-87); `max_bins` defaults to 64 and must
+> be a power of two in `[16, 32768]`; `max_rounds` defaults to 50000;
+> `monotone_constraints` maps factor slugs to `{-1, 0, 1}`, default `null` — coverage of
+> every factor is checked at fit time, not here, because factor slugs resolve at fit time.
+>
+> **Refused by name, 2026-08-21 (FR-MODEL-87):** §7's families and binomial `log_loss` are
+> **declared-and-refused by name** as `objective` values; custom objectives do not apply
+> to EBM; `offset` kinds other than `none` are refused by name (offsets stay GLM-only).
+> **FR-MODEL-86:** the EBM fields join the `spec_hash` payload and the tag moves `8 → 9`.
+
 ### 4.5 Custom objective — `template` catalogue
 
 Shipped templates, each with analytic gradient/hessian in `pricing-core` (FR-MODEL-39):
@@ -1090,12 +1115,50 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > approval transition. `transparency_artifact_id` itself stays declared and unbuilt
 > (FR-MODEL-87).
 
+`fit_result` for an EBM carries the shape functions themselves:
+
+```json
+{
+  "model_type": "ebm",
+  "objective": "rmse",
+  "link": "identity",
+  "intercept": -2.4181,
+  "feature_order": ["driver_age_banded", "vehicle_group_rated", "annual_mileage"],
+  "bins": {
+    "driver_age_banded": {"levels": ["0-1", "2-4", "5-9", "10-49", "50-99"]},
+    "annual_mileage": {"cuts": [0, 5000, 10000, 20000]}
+  },
+  "terms": [
+    {"term_name": "driver_age_banded", "term_features": ["driver_age_banded"],
+     "scores": [0.0, 0.112, 0.054, -0.021, 0.083, 0.041, 0.0],
+     "standard_deviations": [0.0, 0.008, 0.006, 0.005, 0.007, 0.005, 0.0],
+     "bin_weights": [0.0, 38214.4, 52110.8, 60452.1, 33489.0, 42117.6, 0.0]}
+  ],
+  "best_iteration": 412,
+  "rows": 480000,
+  "fit_seconds": 92.4,
+  "library_versions": {"interpret-core": "0.7.8", "polars": "1.x"}
+}
+```
+
+> **The fit result IS the model (2026-08-21, W5, the EBM slice, FR-MODEL-37).** An EBM is
+> its additive shape functions: scoring reproduces `intercept + Σ term scores` exactly,
+> each term a lookup — the value's bin index against the feature's `cuts` (numeric, by
+> `searchsorted(cuts, v, side="right") + 1`) or `levels` (categorical: `levels[i]` →
+> index `i + 1`), then the term's `scores` at that index. Index 0 is the unused base slot,
+> and a categorical term carries `len(levels) + 2` slots — the base slot, one per level,
+> and a trailing slot for missing values. There is **no booster blob and no serialised
+> estimator**: the declarative artifact alone is enough to rescore the model (ADR-0003).
+>
+> `feature_order` is the order the features were handed to `interpret`; a term with two
+> `term_features` is an interaction and carries a two-dimensional `scores` table.
+
 ### 4.9 `TransparencyArtifact`
 
 ```json
 {
   "model_id": "uuid",
-  "kinds": ["glm_approximation", "shap_summary"],
+  "kinds": ["glm_approximation", "shap_summary", "ebm_shape_functions"],
   "glm_approximation": {
     "approximating_model_id": "uuid",
     "target": "gbm_prediction",
@@ -1112,6 +1175,9 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
                               {"factor": "driver_age_banded", "value": 0.144}],
     "dependence_blob": "blob:sha256:…",
     "top_interactions": [{"pair": ["driver_age_banded", "ncd"], "strength": 0.041}]
+  },
+  "ebm_shape_functions": {
+    "terms_blob": "blob:sha256:…"
   },
   "fidelity_statement": "The GLM approximation reproduces 97.3% of GBM prediction variance. Divergence concentrates in young high-mileage risks (0.8% of exposure, mean |error| 11.4%), where the GBM is materially higher. Rating on the approximation would under-price that cell.",
   "monotonicity_verified": true
@@ -1131,6 +1197,14 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > evidence a Rating Version's approval was granted against (FR-MODEL-36). This is the shape
 > `covariance_blob` already has: an absence with a stated meaning rather than a contract
 > that pretends the earlier era did not happen.
+
+> **`ebm_shape_functions` is the third kind, added 2026-08-21 (W5, the EBM slice).** An
+> EBM's term shape functions export directly as rateable tables — no approximation — while
+> the artifact still carries the fidelity and diagnostic sections in the same contract
+> shape (FR-MODEL-37's requirement text stays as the contract). The block is `terms_blob`
+> (`blob:sha256:…`), the bytes of §4.8's `EbmFitResult` shape functions. **The contract
+> schema declared this block before the type did; the EBM slice aligns them — the type
+> becomes the source.**
 
 ### 4.10 `PerilStructure`
 
@@ -1648,7 +1722,14 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `MODEL_TERM_UNRESOLVED`, `MODEL_LINK_UNSUPPORTED`, `MODEL_OFFSET_MISSING`,
 `MODEL_OFFSET_REF_INVALID`,
 `MODEL_INTERVAL_UNAVAILABLE`, `MODEL_INTERVAL_PAIR_INVALID`, `MODEL_APPROXIMATION_INVALID`,
-`METRIC_REF_UNRESOLVED`, `METRIC_NOT_APPLICABLE`, `METRIC_NOT_FITTABLE`.
+`METRIC_REF_UNRESOLVED`, `METRIC_NOT_APPLICABLE`, `METRIC_NOT_FITTABLE`,
+`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`.
+
+> **Added 2026-08-21 (W5, the EBM slice).** `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` refuses an
+> EBM fit whose `monotone_constraints` name a slug that is not among the fitted factors, or
+> declare a direction on a categorical (non-ordinal) feature — `interpret` itself raises a
+> bare `ValueError` for the second and would abort the process; named here so the refusal
+> arrives as a code, not a stack trace.
 
 > **`MODEL_INTERVAL_PAIR_INVALID` added 2026-08-19 (W5, the paired-quantile slice).**
 > It refuses a quantile bound whose spec disagrees with the Model its `interval_for`
@@ -1821,6 +1902,9 @@ def predict_glm_interval(fit: GlmFitResult, data: pl.DataFrame, factors: Sequenc
                          bandings: Mapping[UUID, Banding] | None = None,
                          groupings: Mapping[UUID, Grouping] | None = None
                          ) -> tuple[NDArray[float64], NDArray[float64], NDArray[float64]]
+def predict_ebm(fit: EbmFitResult, data: pl.DataFrame, factors: Sequence[Factor], *,
+                bandings: Mapping[UUID, Banding] | None = None,
+                groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
 
 # pricing_core/modelling/glm.py — the covariance blob's own codec
 def encode_covariance(terms: Sequence[str], matrix: NDArray[float64]) -> bytes
@@ -1839,6 +1923,13 @@ def predict_gbm(result: GbmFitResult, booster: bytes, data: pl.DataFrame,
                 groupings: Mapping[UUID, Grouping] | None = None) -> pl.Series
 def apply_loss_treatment(response: NDArray[float64], treatment: LossTreatment
                          ) -> NDArray[float64]
+
+# pricing_core/modelling/ebm.py
+def fit_ebm(data: pl.DataFrame, spec: EbmSpec, factors: Sequence[Factor], *,
+            seed: int = 0,
+            bandings: Mapping[UUID, Banding] | None = None,
+            groupings: Mapping[UUID, Grouping] | None = None,
+            progress: ProgressCallback | None = None) -> EbmFitResult
 
 # pricing_core/modelling/objectives.py
 def parse_expression(text: str, bound: Sequence[str], params: Sequence[Parameter]) -> ExprTree
@@ -1861,6 +1952,12 @@ def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Fact
                         min_exposure_per_parameter: float | None = None,
                         type_iii: bool = True,
                         progress: ProgressCallback | None = None) -> DiagnosticsResult
+def compute_ebm_diagnostics(result: EbmFitResult, spec: EbmSpec, factors: Sequence[Factor], *,
+                            train: pl.DataFrame, holdout: pl.DataFrame,
+                            bandings=None, groupings=None,
+                            max_factor_count: int | None = None,
+                            min_exposure_per_parameter: float | None = None,
+                            progress: ProgressCallback | None = None) -> DiagnosticsResult
 def unit_deviance(y, mu, *, family: str, power: float = 1.5) -> NDArray[float64]
 def deviance(y, mu, *, family: str, power: float = 1.5, weights=None) -> float
 def compare_models(candidates: Sequence[ComparisonCandidate], holdout: pl.DataFrame, *,
@@ -1885,6 +1982,9 @@ def build_shap_summary(result: GbmFitResult, booster: bytes, spec: GbmSpec,
                        factors: Sequence[Factor], data: pl.DataFrame, *, sample: int,
                        bandings=None, groupings=None,
                        progress: ProgressCallback | None = None) -> ShapSummary
+def build_ebm_shape_functions(result: EbmFitResult) -> EbmShapeFunctions
+def ebm_fidelity_statement() -> str
+def ebm_monotonicity_verified(result: EbmFitResult, spec: EbmSpec) -> bool | None
 
 # pricing_core/modelling/perils.py
 def assemble_risk_premium(predictions: Sequence[PerilPrediction]) -> pl.DataFrame
@@ -2174,7 +2274,7 @@ Custom objective path: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-0
 | **statsmodels** | Fallback/cross-check diagnostics (FR-MODEL-51) | Type-III deviance tests, residual diagnostics, coefficient cross-validation against glum |
 | **XGBoost** | Primary GBM (FR-MODEL-25..32) | Custom objective `(grad, hess)` signature, `base_margin`, `monotone_constraints`, `interaction_constraints`, JSON model IO, `QuantileDMatrix` for memory |
 | **LightGBM** | Secondary GBM | `fobj`/`feval`, `init_score` as the offset, monotone constraint methods (`basic`/`intermediate`/`advanced`), native categoricals |
-| **interpret (EBM)** | Transparent ML (FR-MODEL-37) | Exporting term shape functions as tables; treating an EBM as a set of additive lookups |
+| **interpret (EBM)** | Transparent ML (FR-MODEL-37) | Exporting term shape functions as tables; treating an EBM as a set of additive lookups — resolved 2026-08-21 (W5, the EBM slice): pin `interpret-core==0.7.8`, installed with the slice |
 | ~~**SHAP**~~ **The backends' own TreeSHAP** | Transparency artifacts (FR-MODEL-35) | **Amended 2026-08-17 (W5, transparency): the `shap` package is not a dependency.** XGBoost's `pred_contribs` and LightGBM's `pred_contrib` are the same TreeSHAP algorithm on the same trees, already linked against the booster `pricing-core` holds — and `shap` would have added a dependency of its own — for plotting the frontend does (§5.3) and aggregation that is fifteen lines — to the package ADR-0001 keeps importable standalone. *(Corrected 2026-08-17, same day: this row first gave the cost as "would have pulled scikit-learn and its transitive weight in". The scikit-learn half was wrong when written — `glum` 3.4.1 requires it, so it was already installed in every environment this package has ever had, as OQ-MODEL-9 found the next hour. The row's conclusion is unaffected: `shap` itself is still a dependency added for work already done elsewhere.)* What is genuinely lost is **interaction values on LightGBM**: XGBoost computes them (`pred_interactions`, feeding FR-MODEL-79's suggestions and never a Factor), LightGBM does not compute them at all, and `ShapSummary.interactions_available` reports that as a capability rather than as an empty list. Revisit if a third backend or kernel SHAP for a non-tree model is ever needed |
 | **SymPy** | Symbolic gradient/hessian derivation (FR-MODEL-40) — **Phase 2**, with `expression` objectives (FR-MODEL-75) | Differentiation of `Piecewise` (from `where`), simplification, lambdify-free code generation into our own expression tree |
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
