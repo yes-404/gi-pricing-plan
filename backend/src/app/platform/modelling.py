@@ -113,7 +113,12 @@ __all__ = [
 #: and two specs differing there must not share a digest or FR-MODEL-66 answers the
 #: second caller with the first caller's model. Every `v5:` digest is now stale and
 #: findable with `LIKE 'v5:%'`.
-SPEC_HASH_VERSION: Final = 6
+#: `tweedie` moved it `v6` to `v7` (2026-08-21, FR-MODEL-22): a model whose power is
+#: estimated over `tweedie.p_grid` is a different fitted question than one with a fixed
+#: power — the grid is part of the question, and two specs differing there must not
+#: share a digest or FR-MODEL-66 answers the second caller with the first caller's
+#: model. Every `v6:` digest is now stale and findable with `LIKE 'v6:%'`.
+SPEC_HASH_VERSION: Final = 7
 
 
 def spec_hash(spec: ModelSpec) -> str:
