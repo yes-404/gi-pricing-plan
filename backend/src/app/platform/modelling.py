@@ -43,9 +43,11 @@ from model_schema import (
     Banding,
     DatasetStatus,
     Diagnostics,
+    EbmFitResult,
     Factor,
     FactorType,
     FitResult,
+    GbmFitResult,
     GbmSpec,
     GlmFitResult,
     GlmSpec,
@@ -793,11 +795,21 @@ async def record_fit(
             "terms": len(fit_result.coefficients),
             "intercept": intercept.estimate if intercept else None,
         }
-    else:
+    elif isinstance(fit_result, GbmFitResult):
         after |= {
             "booster": fit_result.booster_blob.sha256,
             "best_iteration": fit_result.best_iteration,
             "features": len(fit_result.feature_order),
+        }
+    else:
+        # The EBM arm (2026-08-21, the W5 EBM slice): the fit IS the exported tables —
+        # no blob to hash. The payload names what identifies the fit.
+        assert isinstance(fit_result, EbmFitResult)
+        after |= {
+            "best_iteration": fit_result.best_iteration,
+            "features": len(fit_result.feature_order),
+            "terms": len(fit_result.terms),
+            "intercept": fit_result.intercept,
         }
     await audit.record(
         session,

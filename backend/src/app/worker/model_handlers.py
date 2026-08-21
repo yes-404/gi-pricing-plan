@@ -46,6 +46,7 @@ from model_schema import (
     CustomMetric,
     CustomObjective,
     Diagnostics,
+    EbmFitResult,
     EbmSpec,
     Factor,
     FitResult,
@@ -600,7 +601,7 @@ async def _resolve_candidate(
             f"{row.model_family_slug}@{row.version} has no fit result.",
         )
     fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
-    if isinstance(spec, EbmSpec):
+    if isinstance(spec, EbmSpec) or isinstance(fit, EbmFitResult):
         raise PlatformError(
             "MODELS_NOT_COMPARABLE",
             "An EBM has no surrogate to compare",
