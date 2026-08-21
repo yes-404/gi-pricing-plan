@@ -566,6 +566,17 @@
           "title": "Tolerance",
           "type": "number"
         },
+        "tweedie": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TweediePowerSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "weight": {
           "$ref": "#/$defs/WeightSpec",
           "default": {
@@ -746,6 +757,33 @@
         "split_artifact_id"
       ],
       "title": "SplitRef",
+      "type": "object"
+    },
+    "TweediePowerSpec": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-22: the grid over which the Tweedie power `p` is estimated by profile\nlikelihood, and the boundary of that estimate. `GlmSpec.tweedie` being set is the\nspec's request for estimation; the estimated value and its uncertainty are fit-time\nfacts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.\n\nA scan, not a choice: one point would be a fixed fit, and a maximum at the edge of\nthe scan is refused at fit time (`GLM_TWEEDIE_POWER_GRID_EDGE`) because it reports\nthe scan's boundary as the answer.",
+      "properties": {
+        "p_grid": {
+          "default": [
+            1.05,
+            1.15,
+            1.25,
+            1.35,
+            1.45,
+            1.55,
+            1.65,
+            1.75,
+            1.85,
+            1.95
+          ],
+          "items": {
+            "type": "number"
+          },
+          "title": "P Grid",
+          "type": "array"
+        }
+      },
+      "title": "TweediePowerSpec",
       "type": "object"
     },
     "WeightSpec": {

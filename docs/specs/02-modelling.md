@@ -139,6 +139,25 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-20** | Regularisation (L1, L2, elastic net) is supported with a documented path and a cross-validated selection option. The selected penalty and the full CV path are persisted as diagnostics. |
 | **FR-MODEL-21** | Fitting returns, for every coefficient: estimate, standard error, z/t statistic, p-value, and confidence interval; and for every categorical Factor: the relativity table with the base level marked. These are persisted in the Model artifact (ADR-0003) and are re-scorable without `glum`. |
 | **FR-MODEL-22** | The Tweedie power `p` may be estimated by profile likelihood over a grid, with the profile curve persisted. Estimated `p` is recorded as an estimate with its own uncertainty, not silently baked in as a constant. |
+
+> **Amendment 2026-08-21 (FR-MODEL-22 slice):** "Profile likelihood" means the profile
+> log-likelihood `L(p) = Σᵢ log f(yᵢ; μ̂ᵢ(p), φ̂(p), p)`, and the estimate is the argmax of
+> `L` over `tweedie.p_grid`. `μ̂(p)` is the GLM fit at power `p`; `φ̂(p) = D(p)/n` is the
+> mean-deviance dispersion estimate (Dunn & Smyth's saddlepoint route); `f` is the
+> Tweedie series density (Dunn & Smyth 2005): `f(0) = exp(−μ^(2−p)/((2−p)φ))` and, for
+> `y > 0`, `f = (1/y)·exp(−y/τ − λ)·Σⱼ exp(r·j)/(Γ(1+j)·Γ(−αj))` with `α = (2−p)/(1−p)`,
+> `r = −α·log y + α·log(p−1) − (1−α)·log φ − log(2−p)`, `τ = φ(p−1)μ^(p−1)`,
+> `λ = μ^(2−p)/((2−p)φ)`. "Its own uncertainty" is the 95% profile-likelihood interval
+> `{p : 2(L_max − L(p)) ≤ χ²₀.95(1) = 3.841}`, linearly interpolated between scanned
+> points and persisted as `ci_lower`/`ci_upper`; the profile curve (power,
+> log-likelihood) is persisted on `fit_result.tweedie`. A maximum at a scan edge is
+> refused with `GLM_TWEEDIE_POWER_GRID_EDGE`; estimation and `select_by="cv"` are refused
+> together (the profile is penalty-dependent); `family_params.power` beside the grid is
+> refused. *(2026-08-21 correction: the planning-time deviance-argmin design is replaced.
+> The deviance profile `D(p) = 2φ(ℓ_sat(p) − ℓ(p, μ̂))` is not a likelihood profile for
+> Tweedie — `ℓ_sat(p)` and the p-dependent normaliser do not cancel out of the argmin —
+> and the deviance-argmin estimator was measured biased (argmin ≈ truth + 0.25, grid-edge
+> at every pinned seed) during the slice.)*
 | **FR-MODEL-23** | Non-convergence, separation, rank deficiency, and aliased columns are surfaced as explicit, named fit errors with the offending factors identified — never as a silently returned degenerate fit. |
 | **FR-MODEL-24** | An **offset from another model** is supported (`offset_model_ref`), enabling residual modelling and "fit on top of the current rating structure" workflows. The referenced model version is pinned. |
 
@@ -303,7 +322,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-66** | The `spec_hash` (§2, Model Spec) is computed over the canonicalised spec including pinned versions and seed. Submitting an identical spec returns the existing Model instead of refitting, unless `force_refit` is set — which then requires the two fits to be compared for reproducibility (FR-OVR-8). |
 | **FR-MODEL-67** | A Model whose Dataset Version was invalidated (`01` FR-DATA-23) is flagged `dataset_invalidated` and cannot advance to `approved`; if already `approved`, the flag propagates to every Rating Version referencing it and to the Approvals inbox. |
 | **FR-MODEL-86** | **`spec_hash` carries the version of the algorithm that produced it, inside the hashed payload.** The digest is `v<n>:sha256:<64 hex>` where `n` is `SPEC_HASH_VERSION`, and the same `n` is one of the hashed fields — a prefix alone would let a reader strip it and compare across versions, which is exactly the comparison that is not meaningful. **Any change to the set of fields entering the payload increments `n` in the same commit as the field**, and `spec_hash_is_current` reports every older digest as stale so the affected rows are findable (`LIKE 'v1:%'`). Without this, one added field silently changes every stored digest and FR-MODEL-66's dedup ends with no error to see. The rule has been exercised twice: `split_ref` moved the digest `v1 → v2` (2026-08-16) and `loss_treatment` moved it `v2 → v3` (2026-08-17). (OQ-MODEL-8, decided 2026-08-17.) |
-| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec` and `custom_objective_ref` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`); **`interval_for` is the seventh, live 2026-08-19** on `GbmSpec` rather than on `Model` (FR-MODEL-100), and it leaves the absent-entirely list above with this change rather than being quietly dropped from it. **`select_by` and `cv` are the eighth, live 2026-08-21** (the regularisation-and-CV slice), on `GlmSpec` — `select_by: "fixed" \| "cv"` and the nested `cv: GlmCvSpec` block, the shape the FR-MODEL-20/FR-MODEL-53 CV path built rather than the flat `select_by`/`cv_folds` fields the decision date named — and they leave the absent-entirely list above with this change rather than being quietly dropped from it. |
+| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec` and `custom_objective_ref` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`); **`interval_for` is the seventh, live 2026-08-19** on `GbmSpec` rather than on `Model` (FR-MODEL-100), and it leaves the absent-entirely list above with this change rather than being quietly dropped from it. **`select_by` and `cv` are the eighth, live 2026-08-21** (the regularisation-and-CV slice), on `GlmSpec` — `select_by: "fixed" \| "cv"` and the nested `cv: GlmCvSpec` block, the shape the FR-MODEL-20/FR-MODEL-53 CV path built rather than the flat `select_by`/`cv_folds` fields the decision date named — and they leave the absent-entirely list above with this change rather than being quietly dropped from it. **Tweedie power estimation — live 2026-08-21 (FR-MODEL-22)**; the estimation × CV-selection pair is refused by name, not built. |
 | **FR-MODEL-88** | **The unimplemented arms of FR-MODEL-1's closed set are refused by name at resolution, never approximated.** Four of the eight — `spline`, `polynomial`, `offset` and `expression` — do not resolve, and `resolve_factors` raises naming the type rather than returning the raw column, because a fit built on the raw column is one nobody could tell from a correct one. **`expression` is the sharper case and its verdict is stated rather than implied:** `FactorType.EXPRESSION` is selectable while `Factor` carries no field to hold the expression, so a factor of that type can be *created* and can never be *resolved*. That is contained rather than corrected — the refusal is at the boundary where it would matter — and the field plus its validator arm are owned by Phase 1b with the rest of §4.7's expression work. (OQ-MODEL-8, decided 2026-08-17.) |
 | **FR-MODEL-89** | **§4.8 R3 is enforced artifact→model, because that is the direction the link runs.** The `TransparencyArtifact` carries `model_id` and the `Model` carries no back-reference that anything writes, so "`model_type ≠ glm` and `status = approved` ⟹ a transparency artifact exists" is checked by querying for an artifact naming the model at the approval transition, not by reading a column on the model. Stating it as a field-set invariant made it unenforceable — the same shape as §4.8's `status ≥ fitted ⟹ diagnostics_id`, which OQ-MODEL-8 was written around. (OQ-MODEL-8, decided 2026-08-17.) |
 
@@ -500,6 +519,7 @@ cap are different models, and must not collide on `spec_hash`.
   "link": "log",
   "alpha": 0.001, "l1_ratio": 0.0,
   "select_by": "fixed", "cv": null,
+  "tweedie": null,
   "max_iter": 200, "tolerance": 1e-8,
   "approximates_model_id": null
 }
@@ -552,6 +572,26 @@ cap are different models, and must not collide on `spec_hash`.
 > duplicated on this block**: the seed that makes fold assignment reproducible is
 > `ModelSpecCommon.seed`, the one the spec already carries and already versions into
 > `spec_hash`, and a second seed field would let the two disagree.
+
+`TweediePowerSpec` is the block `tweedie` carries when estimation is requested:
+
+```json
+{
+  "p_grid": [1.05, 1.15, 1.25, 1.35, 1.45, 1.55, 1.65, 1.75, 1.85, 1.95]
+}
+```
+
+> **Added 2026-08-21 (FR-MODEL-22).** `tweedie` carries the profile-likelihood grid when
+> `p` is to be estimated, and is `null` under a fixed-power spec — estimation is opt-in,
+> and a fixed-power spec is today's spec, unchanged. **The estimate is fit-time and
+> never a spec constant**: the estimated power and its uncertainty are facts of the fit
+> and ride on `fit_result.tweedie` (§4.8), which is why this block declares only the
+> scan. The grid is the scan's boundary — a scan, not a choice: one point would be a
+> fixed fit, and a maximum at either edge of the scan is refused at fit time with
+> `GLM_TWEEDIE_POWER_GRID_EDGE`, because it would report the scan's boundary as the
+> answer. The default is a ten-point scan strictly inside the family `(1, 2)`; the grid
+> must have at least two points, strictly increasing, each finite and strictly inside
+> the family.
 
 `GbmSpec` adds (`model_type` is `xgboost` or `lightgbm` — see the amendment below):
 
@@ -923,6 +963,15 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
        "exposure_years": "38214.4"}
     ],
     "dispersion": 1.042,
+    "tweedie": {
+      "estimated_power": 1.47,
+      "ci_lower": 1.36, "ci_upper": 1.58, "level": 0.95,
+      "curve": [
+        {"power": 1.05, "log_likelihood": -33142.7},
+        {"power": 1.35, "log_likelihood": -33051.2},
+        {"power": 1.65, "log_likelihood": -33180.4}
+      ]
+    },
     "covariance_blob": "blob:sha256:…",
     "booster_blob": null,
     "library_versions": {"glum": "3.x", "polars": "1.x"}
@@ -936,6 +985,19 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
   "approval_request_id": "uuid|null"
 }
 ```
+
+> **`tweedie` is live from 2026-08-21 (FR-MODEL-22)** — the estimated Tweedie power,
+> persisted as an estimate with its own uncertainty, never a constant. `null` under a
+> fixed-power spec: estimation is opt-in (§4.4). When `spec.tweedie` requested
+> estimation, `estimated_power` is the argmax of the **profile log-likelihood** over
+> the scanned grid, and `curve` carries the profile log-likelihood at each scanned
+> power — each point scored with the Tweedie series density (Dunn & Smyth 2005) at the
+> mean-deviance dispersion estimate, the dispersion profiled rather than jointly
+> maximised. The 95% interval (`ci_lower`/`ci_upper`, `level: 0.95`) is read from the
+> likelihood ratio at the χ²₀.95(1) cutoff, linearly interpolated between scanned
+> points. **Diagnostics, type-III refits and backtest deviance reads use the estimate**
+> (via `_power_of`), so a refit reproduces the same deviance figures — the estimated
+> power is a property of the fit, not of the spec.
 
 > **`split_ref` and `diagnostics_id` are live from 2026-08-16 (W5, diagnostics).** Both
 > were among the fields OQ-MODEL-8 named as declared-and-dead, and `diagnostics_id` was its
@@ -1557,7 +1619,8 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
 `GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
-`GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED`,
+`GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,
+`GLM_SEPARATION_DETECTED`,
 `OFFSET_REQUIRED_FOR_FREQUENCY`,
 `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
 `OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`, `OBJECTIVE_NOT_CERTIFIED`,
@@ -1682,6 +1745,11 @@ module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 > the scanned path (FR-MODEL-20, FR-MODEL-53) — the `key_column`/`time_column` skew
 > that a fold count chosen against the whole book does not guarantee against, per fold.
 > A fold cannot be scored, or trained, on nothing.
+
+> **`GLM_TWEEDIE_POWER_GRID_EDGE` added 2026-08-21 (FR-MODEL-22).** Raised by the
+> profile-likelihood path when the profile over `tweedie.p_grid` is maximised at a scan
+> edge: the scan found no interior maximum, so the estimate would report the scan's
+> boundary as the answer. Widen the grid towards the maximum, or reconsider the model.
 
 > **Corrected 2026-08-21 (the regularisation-and-CV slice).** `fit_glm`'s return comment
 > below now reads `.result, .covariance_bytes, .cv` — the slice added the `cv` field to

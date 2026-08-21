@@ -14,6 +14,7 @@ would run and not a service call underneath it.
 
 from __future__ import annotations
 
+import math
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -89,6 +90,55 @@ CV_BOOK = b"policy_id,exposure_years,area,claim_count,claim_amount_minor\n" + b"
     f"{200000 if i % 4 == 0 else 100000}\n".encode()
     for i in range(1, 401)
 )
+
+
+#: The estimated-p test's burning-cost book. The plan's parameters (mu = 200_000/100_000
+#: minor units, phi = 1) carry no zero-cost mass — P(N == 0) = exp(-2*sqrt(mu)) < 10^-100
+#: at these lambdas — and the true profile log-likelihood then cannot discriminate p at
+#: 400 rows: probed at the pinned seed and three others, the profile's argmax lands at a
+#: grid edge and the fit is refused (GLM_TWEEDIE_POWER_GRID_EDGE). The zero mass is the
+#: strongest p-signal the profile has, so phi is raised to 2000 (mu unchanged): at
+#: p = 1.5, P(N == 0) = exp(-2*sqrt(mu)/2000) is 0.64 urban / 0.73 rural, and the argmax
+#: sits interior at 1.5 at every seed tried (20260821, 20260816, 20260822, 20260823).
+#: `claim_count` and `claim_amount_minor` are carried because the shared ingest helper's
+#: cast recipe (`CAST_RECIPE` in `test_data_jobs.py`) casts them — a book without them is
+#: not a book this platform ingests; the model still fits on `burning_cost_minor`.
+TWEEDIE_RNG = np.random.default_rng(20260821)
+
+
+def _tweedie_csv() -> bytes:
+    """A burning-cost book drawn from a Tweedie(1.5) compound Poisson-Gamma, in integer
+    minor units (the money convention): N ~ Pois(mu^(2-p) / ((2-p)*phi)) with p = 1.5,
+    Y = Gamma(N, (p-1)*phi*mu^(p-1)) (0 when N == 0), mu = 200_000 urban / 100_000 rural,
+    phi = 2000. Columns `policy_id,exposure_years,area,claim_count,claim_amount_minor,
+    burning_cost_minor`, where `claim_count` is the drawn N and `claim_amount_minor` is
+    the total claims cost (the same rounded value as `burning_cost_minor`). 400 rows and
+    a 3-point grid keep the profile cheap; the assertions are structural (the estimate
+    exists, the curve is persisted, the fit succeeded) — the estimation's accuracy is
+    pricing-core's test.
+
+    Drawn from the distribution itself, not noiselessly: costs constant per level give
+    deviance exactly 0 at every scanned power, a flat profile where every grid point
+    ties — the same trap #124's slice hit with noiseless CV data.
+    """
+    n = 400
+    urban = TWEEDIE_RNG.integers(0, 2, n)
+    mu = np.where(urban == 1, 200_000.0, 100_000.0)
+    lam = 2.0 * np.sqrt(mu) / 2000.0     # p = 1.5, phi = 2000
+    scale = 0.5 * 2000.0 * np.sqrt(mu)
+    counts = TWEEDIE_RNG.poisson(lam)
+    cost = TWEEDIE_RNG.gamma(shape=counts, scale=scale)
+    header = (b"policy_id,exposure_years,area,claim_count,claim_amount_minor,"
+              b"burning_cost_minor\n")
+    return header + b"".join(
+        # `round` already yields a Python int at the pinned numpy, so the money is in
+        # integer minor units without a further cast (RUF046).
+        f"P{i},1.0,{'urban' if u else 'rural'},{n},{round(c)},{round(c)}\n".encode()
+        for i, (u, n, c) in enumerate(zip(urban, counts, cost, strict=True), start=1)
+    )
+
+
+TWEEDIE_BOOK = _tweedie_csv()
 
 
 async def _actuary(database: Database, workspace_id) -> Principal:
@@ -675,6 +725,73 @@ async def test_a_cv_selected_model_fits_and_records_its_fold_dispersion(
     # FR-MODEL-53: dispersion, not only the mean — every fold at the selected alpha
     # carries its own score, and they are not all forced equal.
     assert len({round(m.score, 12) for m in cv.fold_metrics}) > 1
+
+
+@pytest.mark.req("FR-MODEL-22")
+async def test_an_estimated_power_model_fits_and_persists_the_profile(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-22 end to end: a spec with a `tweedie` block fits through the handler a
+    worker actually runs — no new endpoint, no handler change — and the persisted fit
+    result carries the estimate, its 95% profile-likelihood interval and the curve
+    itself, readable through the same `to_model` path `GET /api/v1/models/{id}`
+    serialises. The curve is scored by the profile log-likelihood of the Tweedie series
+    density at the mean-deviance dispersion (pricing-core's estimator, unchanged), and
+    the estimate is its argmax. If the argmax ever lands at a grid edge for this seed,
+    raise the row count rather than weakening the assertions.
+    """
+    from model_schema import GlmFitResult, TweediePowerSpec
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, book=TWEEDIE_BOOK
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(
+                version_id, (area,), split_ref=split,
+                model_family_slug=f"burn-{new_uuid7().hex[-6:]}",
+                response_column="burning_cost_minor",
+                family="tweedie",
+                link="log",
+                tweedie=TweediePowerSpec(p_grid=(1.2, 1.5, 1.8)),
+            ),
+        )
+        assert should_fit is True
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        model = model_service.to_model(await session.get(ModelRow, model_id))
+    assert model.status is ModelStatus.FITTED
+    assert isinstance(model.fit_result, GlmFitResult)
+    tweedie = model.fit_result.tweedie
+    assert tweedie is not None
+    assert tweedie.level == 0.95
+    assert tweedie.estimated_power in (1.2, 1.5, 1.8)  # the profile's argmax, on the grid
+    assert [p.power for p in tweedie.curve] == [1.2, 1.5, 1.8]
+    assert all(math.isfinite(p.log_likelihood) for p in tweedie.curve)
+    assert 1.0 < tweedie.ci_lower < tweedie.estimated_power < tweedie.ci_upper < 2.0
+
+    async with database.session() as session:
+        diagnostics = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+    assert diagnostics.glm is not None
 
 
 @pytest.mark.req("FR-MODEL-20")

@@ -45,10 +45,13 @@ from model_schema import (
     GlmSpec,
     Grouping,
     RelativityLevel,
+    TweediePowerFit,
+    TweedieProfilePoint,
 )
 from pricing_core.data.splits import assign_folds
 from pricing_core.modelling.diagnostics import deviance
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.modelling.tweedie_density import tweedie_log_density
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
@@ -71,6 +74,11 @@ _SEPARATION_ETA = 20.0
 #: The covariance blob is JSON, for the reason the booster is `xgboost_json` and never a
 #: pickle (ADR-0003): a stored artifact must be readable by something that did not fit it.
 COVARIANCE_MEDIA_TYPE = "application/json"
+
+PROFILE_CI_CUTOFF: float = float(stats.chi2.ppf(0.95, 1))
+# FR-MODEL-22: the 95% profile-likelihood interval keeps the powers whose log-likelihood
+# is within chi2_0.95(1)/2 of the maximum — the likelihood-ratio cutoff with one degree
+# of freedom, the power itself.
 
 
 class GlmFitError(RuntimeError):
@@ -346,6 +354,135 @@ def _fit_cv_path(
     )
 
 
+def _profile_log_likelihood(
+    y: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.float64],
+    weights: npt.NDArray[np.float64] | None,
+    phi: float,
+    power: float,
+) -> float:
+    """FR-MODEL-22: the profile log-likelihood at one scanned power.
+
+    L = sum_i w_i log f(y_i; mu_i, phi, power), weights 1.0 when none are declared — the
+    log-likelihood of the data under the Tweedie series density at the fitted mean and
+    the profiled dispersion. The density carries the p-dependent normaliser, which is
+    why this profile is informative where the deviance profile was not (02 §3.4
+    amendment 2026-08-21).
+    """
+    log_f = tweedie_log_density(y, mu, phi, power)
+    if weights is not None:
+        log_f = weights * log_f
+    return float(np.sum(log_f))
+
+
+def _estimate_tweedie_power(
+    data: pl.DataFrame,
+    x: np.ndarray,
+    response: np.ndarray,
+    *,
+    spec: GlmSpec,
+    link: Any,
+    offset: np.ndarray | None,
+    weights: np.ndarray | None,
+    report: ProgressCallback,
+) -> TweediePowerFit:
+    """FR-MODEL-22: the Tweedie power by profile likelihood over `spec.tweedie.p_grid`.
+
+    Refits the GLM once per scanned power with the power fixed, and scores each refit by
+    the profile log-likelihood L(p) = sum_i w_i log f(y_i; mu_i(p), phi_hat(p), p) of
+    the Tweedie series density (Dunn & Smyth 2005, `tweedie_density`) at the
+    mean-deviance dispersion estimate phi_hat = D(p)/n — the dispersion is profiled,
+    not jointly maximised (the saddlepoint route). The argmax is the estimate; the 95%
+    profile-likelihood interval is read from the curve at the `chi2_0.95(1)`
+    likelihood-ratio cutoff (log-likelihood within `PROFILE_CI_CUTOFF/2` of the
+    maximum), interpolating linearly between scanned points. A maximum at either edge of
+    the scan is refused — the scan found no interior maximum, and the edge is not an
+    estimate.
+    """
+    assert spec.tweedie is not None
+    grid = spec.tweedie.p_grid
+    y = response
+
+    from glum import GeneralizedLinearRegressor
+
+    profile: list[TweedieProfilePoint] = []
+    for step, p in enumerate(grid):
+        family = f"tweedie({float(p)})"
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            fit_ = GeneralizedLinearRegressor(
+                family=family, link=link, alpha=spec.alpha, l1_ratio=spec.l1_ratio,
+                max_iter=spec.max_iter, gradient_tol=spec.tolerance, fit_intercept=True,
+            ).fit(x, y, offset=offset, sample_weight=weights)
+        mu = np.asarray(fit_.predict(x, offset=offset))
+        d = deviance(y, mu, family="tweedie", power=p, weights=weights)
+        n_eff = float(weights.sum()) if weights is not None else float(len(y))
+        phi_hat = d / n_eff  # the mean-deviance (saddlepoint) dispersion estimate
+        profile.append(
+            TweedieProfilePoint(
+                power=p,
+                log_likelihood=_profile_log_likelihood(y, mu, weights, phi_hat, p),
+            )
+        )
+        report.check_cancelled()
+        report.update(
+            0.16 + 0.13 * (step + 1) / len(grid),
+            f"profiling tweedie power {step + 1}/{len(grid)}",
+        )
+    curve = tuple(profile)
+    best = max(curve, key=lambda point: point.log_likelihood)
+    if best is curve[0] or best is curve[-1]:
+        raise GlmFitError(
+            "GLM_TWEEDIE_POWER_GRID_EDGE",
+            f"the profile over tweedie.p_grid={tuple(grid)} is maximised at its "
+            f"{'first' if best is curve[0] else 'last'} point ({best.power}), so the "
+            "maximum lies at or beyond the scan's edge — not an estimate. Widen the grid "
+            "towards the maximum or reconsider the model (FR-MODEL-22).",
+        )
+    lo, hi = _profile_ci(curve, best.log_likelihood - PROFILE_CI_CUTOFF / 2.0, best.power)
+    return TweediePowerFit(
+        estimated_power=best.power, ci_lower=lo, ci_upper=hi, level=0.95, curve=curve,
+    )
+
+
+def _profile_ci(
+    curve: tuple[TweedieProfilePoint, ...],
+    threshold: float,
+    estimate: float,
+) -> tuple[float, float]:
+    """FR-MODEL-22: the powers where the profile log-likelihood crosses the threshold,
+    linearly interpolated between scanned points. The profile is a hill around its
+    maximum on a fine enough grid, so exactly two crossings exist: ascending on the left
+    arm (the lower bound), descending on the right arm (the upper bound)."""
+    powers = [point.power for point in curve]
+    logliks = [point.log_likelihood for point in curve]
+
+    def crossing(lo: int, hi: int) -> float:
+        a, b = logliks[lo], logliks[hi]
+        frac = (threshold - a) / (b - a) if b != a else 0.5
+        return float(powers[lo] + frac * (powers[hi] - powers[lo]))
+
+    lower, upper = powers[0], powers[-1]
+    for i in range(len(curve) - 1):
+        a, b = logliks[i], logliks[i + 1]
+        if a <= threshold <= b:
+            # ascending through the threshold, left arm: the lower bound
+            lower = crossing(i, i + 1)
+        if b <= threshold <= a:
+            # descending through the threshold, right arm: the upper bound
+            upper = crossing(i, i + 1)
+    if lower > estimate or upper < estimate:
+        # The curve never re-crossed below/above the threshold within the scan: the
+        # interval is one-sided and the scan must widen — refuse rather than persist a
+        # CI the validator would reject anyway.
+        raise GlmFitError(
+            "GLM_TWEEDIE_POWER_GRID_EDGE",
+            f"the profile interval is not bracketed within tweedie.p_grid={tuple(powers)} "
+            "at the chi2_0.95(1) cutoff — the scan is too narrow around the maximum.",
+        )
+    return lower, upper
+
+
 def fit_glm(
     data: pl.DataFrame,
     spec: GlmSpec,
@@ -361,6 +498,10 @@ def fit_glm(
     `factors`, `bandings` and `groupings` are passed explicitly rather than read from the
     spec's ids: `pricing-core` resolves shapes, not references — looking one up would need
     a database, which ADR-0001 forbids this package.
+
+    When the spec carries `tweedie`, the Tweedie power is estimated by profile likelihood
+    over `tweedie.p_grid` and recorded with its 95% profile-likelihood interval on
+    `.result.tweedie` (FR-MODEL-22).
 
     `progress` is `00` §5.5's injected callback. It was dropped from this signature during
     the spine and a long fit then sat at one fraction for its whole duration, which is the
@@ -408,14 +549,6 @@ def fit_glm(
     if spec.weight.kind == "column":
         weights = data[str(spec.weight.column)].cast(pl.Float64).to_numpy()
 
-    # `glum` takes the power **positionally**: `tweedie(1.5)`. Written `tweedie(p=1.5)` it
-    # parses the power by calling `float("p=1.5")`, so every burning cost fit raised a bare
-    # `ValueError` from inside the library — not even a named `GlmFitError`, and the whole
-    # family was dead. The range is `GlmSpec`'s to check: it is a fact about the spec.
-    family: str = spec.family
-    if family == "tweedie":
-        family = f"tweedie({float(spec.family_params.get('power', 1.5))})"
-
     # `glum` has no `"inverse"` spelling. Its link vocabulary is identity/log/logit/cloglog/
     # tweedie, and the string reaches `fit` unrecognised and raises a bare `ValueError` from
     # inside the library. The link is not missing, only unnamed: `TweedieLink(p)` is
@@ -424,6 +557,25 @@ def fit_glm(
     # implemented it — the gap was here, in the translation, and it killed every Gamma fit
     # on the canonical link at `estimator.fit`.
     link: Any = TweedieLink(2) if spec.link == "inverse" else spec.link
+
+    # `glum` takes the power **positionally**: `tweedie(1.5)`. Written `tweedie(p=1.5)` it
+    # parses the power by calling `float("p=1.5")`, so every burning cost fit raised a bare
+    # `ValueError` from inside the library — not even a named `GlmFitError`, and the whole
+    # family was dead. The range is `GlmSpec`'s to check: it is a fact about the spec.
+    family: str = spec.family
+    tweedie_fit: TweediePowerFit | None = None
+    if family == "tweedie":
+        if spec.tweedie is not None:
+            tweedie_fit = _estimate_tweedie_power(
+                data, x, response, spec=spec, link=link, offset=offset,
+                weights=weights, report=report,
+            )
+        power = (
+            tweedie_fit.estimated_power
+            if tweedie_fit is not None
+            else float(spec.family_params.get("power", 1.5))
+        )
+        family = f"tweedie({power})"
 
     cv_diagnostics: CrossValidationDiagnostics | None = None
     fit_alpha = spec.alpha
@@ -498,6 +650,7 @@ def fit_glm(
             rows=data.height,
             library_versions=_versions(),
             covariance_blob=_covariance_ref(covariance_bytes),
+            tweedie=tweedie_fit,
         ),
         covariance_bytes=covariance_bytes,
         cv=cv_diagnostics,

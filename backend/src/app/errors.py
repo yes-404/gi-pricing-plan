@@ -195,6 +195,10 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # alpha on the scanned path — `key_column`/`time_column` skew that a fold count
         # chosen against the whole book does not guarantee against, per fold.
         "GLM_CV_FOLD_EMPTY",
+        # GLM_TWEEDIE_POWER_GRID_EDGE (2026-08-21, FR-MODEL-22): the profile over
+        # tweedie.p_grid is maximised at a scan edge, so the estimate would report the
+        # scan's boundary as the answer.
+        "GLM_TWEEDIE_POWER_GRID_EDGE",
     }
 )
 
