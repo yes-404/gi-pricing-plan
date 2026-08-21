@@ -1404,6 +1404,78 @@ class GbmSpec(ModelSpecCommon):
         return self
 
 
+class EbmSpec(ModelSpecCommon):
+    """`02` §4.4's EBM arm (FR-MODEL-37): additive lookups, transparent by construction."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_type: Literal["ebm"] = "ebm"
+    #: The only objectives `interpret`'s regressor exposes, both with an identity link.
+    #: §7's families (poisson, gamma, tweedie, ...) and binomial `log_loss` are refused
+    #: by name here, under FR-MODEL-87's staging rule (dated note in `02` §4.4).
+    objective: Literal["rmse", "mae"] = "rmse"
+    #: 0 = univariate terms only; 1 = all pairs. 2 (triples) is declared-and-unbuilt:
+    #: a triple grid grows cubically and the JSONB envelope below cannot bound it
+    #: (dated note in `02` §4.4, FR-MODEL-87).
+    interactions: int = Field(default=0, ge=0, le=1)
+    #: `interpret` requires a power of two; the bounds are the library's own. Kept
+    #: small by default: the fit result is JSONB, and 1024² cells per pair would be
+    #: ~8 MB — see `_the_interaction_grid_stays_in_the_jsonb_envelope`.
+    max_bins: int = Field(default=64, ge=16, le=32768)
+    #: `interpret`'s own default; early stopping runs inside the library.
+    max_rounds: int = Field(default=50000, ge=1)
+    #: Direction per factor slug: -1 decreasing, 0 none, 1 increasing. Partial dicts are
+    #: allowed here — factors resolve at fit time — and coverage is checked there
+    #: (`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`).
+    monotone_constraints: dict[str, int] | None = None
+
+    @field_validator("max_bins")
+    @classmethod
+    def _max_bins_is_a_power_of_two(cls, value: int) -> int:
+        if value.bit_count() != 1:
+            raise ValueError(
+                f"max_bins must be a power of two (got {value}): `interpret` binning "
+                "works on a dyadic grid, and anything else is the library's own refusal "
+                "translated to a spec problem (FR-MODEL-37)."
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _the_interaction_grid_stays_in_the_jsonb_envelope(self) -> EbmSpec:
+        if self.interactions > 0 and self.max_bins > 256:
+            raise ValueError(
+                f"interactions={self.interactions} with max_bins={self.max_bins}: a "
+                "grid of that size is ~8 MB per pair inside the fit result's JSONB "
+                "envelope. Cap max_bins at 256 with interactions, or use 0 (FR-MODEL-37)."
+            )
+        return self
+
+    @field_validator("monotone_constraints")
+    @classmethod
+    def _monotone_constraints_are_directions(
+        cls, value: dict[str, int] | None
+    ) -> dict[str, int] | None:
+        if value is None:
+            return None
+        for slug, direction in value.items():
+            if direction not in (-1, 0, 1):
+                raise ValueError(
+                    f"monotone constraint on {slug!r} has direction {direction}; only "
+                    "-1 (decreasing), 0 (none) and 1 (increasing) exist (FR-MODEL-28)."
+                )
+        return value
+
+    @model_validator(mode="after")
+    def _an_ebm_has_no_offset(self) -> EbmSpec:
+        if self.offset.kind != "none":
+            raise ValueError(
+                f"offset kind {self.offset.kind!r} is GLM-only (FR-MODEL-37): an EBM's "
+                "lookups are additive on the identity link and `interpret` has no offset "
+                "path — declaring one and ignoring it would be a silent model change."
+            )
+        return self
+
+
 class RelativityLevel(BaseModel):
     """One level of a categorical factor, as an actuary reads it (FR-MODEL-21)."""
 
@@ -1600,7 +1672,7 @@ SURROGATE_RESPONSE_COLUMN: Final = "__gbm_prediction__"
 #: `02` §4.4's tagged union, as a union rather than as a promise. Until this existed the
 #: tag was present and `GlmSpec.model_validate` was the only reader, so a GBM payload
 #: failed on a literal mismatch rather than on anything a caller could act on.
-ModelSpec = Annotated[GlmSpec | GbmSpec, Field(discriminator="model_type")]
+ModelSpec = Annotated[GlmSpec | GbmSpec | EbmSpec, Field(discriminator="model_type")]
 MODEL_SPEC_ADAPTER: Final[TypeAdapter[ModelSpec]] = TypeAdapter(ModelSpec)
 
 #: The same union over what a fit returns. Both are discriminated on `model_type`, and
