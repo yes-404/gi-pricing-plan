@@ -26,7 +26,7 @@ from decimal import Decimal
 from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
 from model_schema.money import DecimalStr
 from model_schema.prediction import UncertaintyBasis
@@ -876,7 +876,7 @@ class TweediePowerSpec(BaseModel):
     spec's request for estimation; the estimated value and its uncertainty are fit-time
     facts and ride on `GlmFitResult.tweedie` — never a constant baked into the spec.
 
-    A scan, not a choice: one point would be a fixed fit, and a minimum at the edge of
+    A scan, not a choice: one point would be a fixed fit, and a maximum at the edge of
     the scan is refused at fit time (`GLM_TWEEDIE_POWER_GRID_EDGE`) because it reports
     the scan's boundary as the answer.
     """
@@ -892,7 +892,7 @@ class TweediePowerSpec(BaseModel):
         if len(self.p_grid) < 2:
             raise ValueError(
                 f"p_grid has {len(self.p_grid)} point(s); at least 2 are needed for a "
-                "profile to have a minimum — one point is a fixed fit, not an estimate."
+                "profile to have a maximum — one point is a fixed fit, not an estimate."
             )
         if not all(math.isfinite(p) for p in self.p_grid):
             raise ValueError("p_grid contains a non-finite value")
@@ -911,20 +911,28 @@ class TweediePowerSpec(BaseModel):
 
 
 class TweedieProfilePoint(BaseModel):
-    """FR-MODEL-22: one scanned power and the deviance of the model refitted at it —
-    one point of the profile curve that is persisted with the estimate."""
+    """FR-MODEL-22: one scanned power and the profile log-likelihood of the model
+    refitted at it — one point of the profile curve persisted with the estimate."""
 
     model_config = ConfigDict(frozen=True)
 
     power: float
-    deviance: float = Field(ge=0.0)
+    log_likelihood: float
+
+    @field_validator("log_likelihood")
+    @classmethod
+    def _the_profile_log_likelihood_is_finite(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("log_likelihood must be finite")
+        return v
 
 
 class TweediePowerFit(BaseModel):
     """FR-MODEL-22: the estimated Tweedie power, persisted as an estimate with its own
-    uncertainty — the 95% profile-likelihood interval read from the deviance curve
-    (dev(p) - min <= chi2_0.95(1)), interpolated linearly between scanned points — and
-    the curve itself, so the estimate can be re-examined after the fit.
+    uncertainty — the 95% profile-likelihood interval {p : 2(L_max - L(p)) ≤ χ²₀.95(1)
+    = 3.841} read from the profile log-likelihood curve, linearly interpolated between
+    scanned points — and the curve itself, so the estimate can be re-examined after the
+    fit.
 
     Carried on `GlmFitResult`, not on Diagnostics: unlike alpha, the estimated power
     enters every deviance recomputation (diagnostics, type-III refits, backtests), all
@@ -940,7 +948,7 @@ class TweediePowerFit(BaseModel):
     curve: tuple[TweedieProfilePoint, ...]
 
     @model_validator(mode="after")
-    def _the_estimate_is_the_curves_argmin_and_the_interval_brackets_it(self) -> TweediePowerFit:
+    def _the_estimate_is_the_curves_argmax_and_the_interval_brackets_it(self) -> TweediePowerFit:
         powers = [p.power for p in self.curve]
         if len(powers) < 2:
             raise ValueError(
@@ -952,7 +960,7 @@ class TweediePowerFit(BaseModel):
         if self.estimated_power not in powers:
             raise ValueError(
                 f"the estimated power {self.estimated_power} is not one of the scanned "
-                f"grid points {tuple(powers)} — the estimate is the curve's argmin, so "
+                f"grid points {tuple(powers)} — the estimate is the curve's argmax, so "
                 "it must appear on the curve."
             )
         if not self.ci_lower < self.ci_upper:
@@ -963,7 +971,7 @@ class TweediePowerFit(BaseModel):
         if self.ci_lower < powers[0] or self.ci_upper > powers[-1]:
             raise ValueError(
                 "the interval cannot extend beyond the scanned grid: an interval wider "
-                "than the scan describes a minimum the scan did not locate."
+                "than the scan describes a maximum the scan did not locate."
             )
         if not self.ci_lower <= self.estimated_power <= self.ci_upper:
             raise ValueError(
@@ -1447,8 +1455,8 @@ class GlmFitResult(BaseModel):
     covariance_blob: BlobRef | None = None
     library_versions: dict[str, str] = Field(default_factory=dict)
     # FR-MODEL-22: set when the spec requested profile-likelihood estimation — the
-    # estimated power, its 95% profile-likelihood interval, and the persisted curve.
-    # None under a fixed-power spec: estimation is opt-in.
+    # estimated power, its 95% profile-likelihood interval, and the persisted profile
+    # log-likelihood curve. None under a fixed-power spec: estimation is opt-in.
     tweedie: TweediePowerFit | None = None
 
     @property

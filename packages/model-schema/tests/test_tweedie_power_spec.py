@@ -109,9 +109,9 @@ def _fit_block(**over: object) -> TweediePowerFit:
         "ci_lower": 1.42,
         "ci_upper": 1.58,
         "curve": (
-            TweedieProfilePoint(power=1.4, deviance=14.0),
-            TweedieProfilePoint(power=1.5, deviance=10.0),
-            TweedieProfilePoint(power=1.6, deviance=14.0),
+            TweedieProfilePoint(power=1.4, log_likelihood=-14.0),
+            TweedieProfilePoint(power=1.5, log_likelihood=-10.0),
+            TweedieProfilePoint(power=1.6, log_likelihood=-14.0),
         ),
     }
     base.update(over)
@@ -120,8 +120,8 @@ def _fit_block(**over: object) -> TweediePowerFit:
 
 @pytest.mark.req("FR-MODEL-22")
 def test_the_estimate_must_be_a_point_on_the_curve() -> None:
-    """Negative: the estimate is the curve's argmin, so it must appear on the curve — a
-    value between grid points was never scanned, and no deviance supports it."""
+    """Negative: the estimate is the curve's argmax, so it must appear on the curve — a
+    value between grid points was never scanned, and no log-likelihood supports it."""
     with pytest.raises(ValidationError, match="one of the scanned grid points"):
         _fit_block(estimated_power=1.55)
 
@@ -142,7 +142,7 @@ def test_the_interval_must_be_ordered() -> None:
 
 @pytest.mark.req("FR-MODEL-22")
 def test_the_interval_cannot_extend_beyond_the_scanned_grid() -> None:
-    """Negative: an interval wider than the scan describes a minimum the scan did not
+    """Negative: an interval wider than the scan describes a maximum the scan did not
     locate — the interpolation is only defined between scanned points."""
     with pytest.raises(ValidationError, match="scanned grid"):
         _fit_block(ci_lower=0.9, ci_upper=1.1)
@@ -152,16 +152,24 @@ def test_the_interval_cannot_extend_beyond_the_scanned_grid() -> None:
 def test_a_curve_with_one_point_is_refused() -> None:
     with pytest.raises(ValidationError, match="at least two"):
         _fit_block(
-            curve=(TweedieProfilePoint(power=1.5, deviance=10.0),),
+            curve=(TweedieProfilePoint(power=1.5, log_likelihood=-10.0),),
         )
 
 
 @pytest.mark.req("FR-MODEL-22")
-def test_a_negative_profile_deviance_is_refused() -> None:
-    """Negative: deviance is a non-negative divergence from the fit — a negative value is
-    not a deviance, and persisting one would poison every downstream display."""
-    with pytest.raises(ValidationError, match="greater than or equal to 0"):
-        TweedieProfilePoint(power=1.5, deviance=-1.0)
+def test_a_non_finite_profile_log_likelihood_is_refused() -> None:
+    """Negative: a profile log-likelihood is a real number — NaN or infinity cannot be
+    compared, and persisting one would poison every downstream interval read."""
+    with pytest.raises(ValidationError, match="finite"):
+        TweedieProfilePoint(power=1.5, log_likelihood=float("nan"))
+
+
+@pytest.mark.req("FR-MODEL-22")
+def test_a_negative_log_likelihood_is_accepted() -> None:
+    """Happy path: profile log-likelihoods are normally negative — the curve descends
+    from the maximum at the estimate, so a negative value is not an error."""
+    point = TweedieProfilePoint(power=1.5, log_likelihood=-10.0)
+    assert point.log_likelihood == -10.0
 
 
 @pytest.mark.req("FR-MODEL-22")
@@ -175,8 +183,8 @@ def test_a_fit_result_round_trips_the_estimated_power_block() -> None:
     assert restored.tweedie.ci_lower == pytest.approx(1.42)
     assert restored.tweedie.ci_upper == pytest.approx(1.58)
     assert restored.tweedie.level == 0.95
-    assert [(p.power, p.deviance) for p in restored.tweedie.curve] == [
-        (1.4, 14.0), (1.5, 10.0), (1.6, 14.0),
+    assert [(p.power, p.log_likelihood) for p in restored.tweedie.curve] == [
+        (1.4, -14.0), (1.5, -10.0), (1.6, -14.0),
     ]
 
 
