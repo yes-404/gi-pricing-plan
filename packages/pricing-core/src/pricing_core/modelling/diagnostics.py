@@ -450,6 +450,7 @@ def _type_iii(
     full_deviance: float,
     *,
     power: float,
+    model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> tuple[TypeIIITest, ...]:
@@ -508,7 +509,8 @@ def _type_iii(
         # `GlmFitResult.deviance` — which the spine declared and never populates, so a
         # test that trusted it would silently produce no tests at all.
         reduced_mu = predict_glm(
-            reduced, data, remaining, reduced_spec, bandings=bandings, groupings=groupings
+            reduced, data, remaining, reduced_spec,
+            model_offset=model_offset, bandings=bandings, groupings=groupings,
         )
         delta = deviance(y, reduced_mu, family=spec.family, power=power) - full_deviance
         df = _term_count(factor, factors, data, bandings, groupings)
@@ -561,6 +563,8 @@ def compute_diagnostics(
     *,
     train: pl.DataFrame,
     holdout: pl.DataFrame,
+    model_offset_train: np.ndarray | None = None,
+    model_offset_holdout: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     max_factor_count: int | None = None,
@@ -573,6 +577,10 @@ def compute_diagnostics(
     `train` and `holdout` are both required and neither defaults. A caller with only one
     frame is a caller about to report a one-sided diagnostic, and FR-MODEL-54 calls that a
     defect — so the signature refuses it rather than the reviewer having to notice.
+
+    `model_offset_train`/`model_offset_holdout` are the offset-from-another-model arrays
+    (FR-MODEL-24), required when `spec.offset.kind == "model"` — each frame is scored with
+    its own, because the referenced model's linear predictor is a per-frame quantity.
     """
     report = progress or NullProgress()
     report.check_cancelled()
@@ -580,7 +588,10 @@ def compute_diagnostics(
     power = _power_of(fit, spec)
     train_part = _partition(
         train, spec, factors,
-        mu=predict_glm(fit, train, factors, spec, bandings=bandings, groupings=groupings),
+        mu=predict_glm(
+            fit, train, factors, spec,
+            model_offset=model_offset_train, bandings=bandings, groupings=groupings,
+        ),
         family=spec.family, power=power,
         bandings=bandings, groupings=groupings,
     )
@@ -588,14 +599,20 @@ def compute_diagnostics(
     report.update(0.35, "diagnostics: holdout")
     holdout_part = _partition(
         holdout, spec, factors,
-        mu=predict_glm(fit, holdout, factors, spec, bandings=bandings, groupings=groupings),
+        mu=predict_glm(
+            fit, holdout, factors, spec,
+            model_offset=model_offset_holdout, bandings=bandings, groupings=groupings,
+        ),
         family=spec.family, power=power,
         bandings=bandings, groupings=groupings,
     )
 
     report.update(0.55, "diagnostics: deviance and information criteria")
     y = train[spec.response_column].cast(pl.Float64).to_numpy()
-    mu = predict_glm(fit, train, factors, spec, bandings=bandings, groupings=groupings)
+    mu = predict_glm(
+        fit, train, factors, spec,
+        model_offset=model_offset_train, bandings=bandings, groupings=groupings,
+    )
     full_deviance = deviance(y, mu, family=spec.family, power=power)
     null_deviance = deviance(
         y, np.full_like(y, float(np.mean(y))), family=spec.family, power=power
@@ -619,7 +636,8 @@ def compute_diagnostics(
         report.update(0.70, "diagnostics: type-III tests")
         tests = _type_iii(
             train, spec, factors, full_deviance,
-            power=power, bandings=bandings, groupings=groupings,
+            power=power, model_offset=model_offset_train,
+            bandings=bandings, groupings=groupings,
         )
 
     report.update(0.95, "diagnostics: complexity")
@@ -678,6 +696,7 @@ def backtest_model(
     fitted_on_ref: str,
     period_from: date | None = None,
     period_to: date | None = None,
+    model_offset: np.ndarray | None = None,
     booster: bytes | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
@@ -701,12 +720,17 @@ def backtest_model(
     The refs are parameters rather than derived: `pricing-core` is handed artifacts and
     never resolves an id (ADR-0001), and `BacktestSummary` is where the "other than the
     version it was fitted on" invariant is enforced — on the two refs this caller supplies.
+
+    `model_offset` is the offset-from-another-model array (FR-MODEL-24), required when
+    `spec.offset.kind == "model"` — a backtest of a model-offset fit must score with the
+    referenced model's linear predictor or it re-measures a different model.
     """
     report = progress or NullProgress()
     report.check_cancelled()
     report.update(0.1, "backtest: scoring")
     mu = score_fitted(
-        fit, spec, data, factors, bandings=bandings, groupings=groupings, booster=booster
+        fit, spec, data, factors,
+        model_offset=model_offset, bandings=bandings, groupings=groupings, booster=booster,
     )
 
     report.check_cancelled()

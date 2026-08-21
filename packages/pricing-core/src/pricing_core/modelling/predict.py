@@ -137,12 +137,37 @@ def _term_vectors(
         yield coefficient, matrix.frame[column].cast(pl.Float64).to_numpy()
 
 
-def _offset(data: pl.DataFrame, spec: GlmSpec) -> npt.NDArray[np.float64] | None:
+def _offset(
+    data: pl.DataFrame, spec: GlmSpec, model_offset: np.ndarray | None = None
+) -> npt.NDArray[np.float64] | None:
     """The offset column on the linear-predictor scale, or `None` when the spec has none.
 
     A known constant per row: it shifts `η̂` and contributes nothing to its variance, which
     is why `predict_glm_interval` adds it to the centre and not to the width.
+
+    `kind="model"` takes the array the backend resolved — pricing-core cannot resolve
+    the ref itself, and returning `None` here would score as though no offset were
+    declared (FR-MODEL-24): named, never silent.
     """
+    if spec.offset.kind == "model":
+        if model_offset is None:
+            raise PredictionError(
+                "MODEL_OFFSET_MISSING",
+                "offset kind 'model' requires the resolved offset array (model_offset), "
+                "and none was supplied (FR-MODEL-24).",
+            )
+        if model_offset.shape != (data.height,):
+            raise PredictionError(
+                "MODEL_OFFSET_MISSING",
+                f"model_offset has {model_offset.shape[0]} rows for {data.height} "
+                "data rows (FR-MODEL-24).",
+            )
+        if not np.all(np.isfinite(model_offset)):
+            raise PredictionError(
+                "MODEL_OFFSET_MISSING",
+                "model_offset carries non-finite values (FR-MODEL-24).",
+            )
+        return np.asarray(model_offset, dtype=np.float64)
     if spec.offset.kind not in {"log_column", "column"}:
         return None
     column = str(spec.offset.column)
@@ -172,6 +197,7 @@ def linear_predictor(
     factors: Sequence[Factor],
     spec: GlmSpec,
     *,
+    model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
 ) -> npt.NDArray[np.float64]:
@@ -180,6 +206,10 @@ def linear_predictor(
     Exposed separately because the diagnostics need `η` for residuals and `μ` for
     everything else, and computing the design twice to get both would double the cost of
     the expensive half.
+
+    `model_offset` is the offset-from-another-model array (FR-MODEL-24): the referenced
+    fitted GLM's linear predictor, resolved by the backend and required when
+    `spec.offset.kind == "model"`.
     """
     eta = np.zeros(data.height, dtype=np.float64)
     for coefficient, vector in _term_vectors(
@@ -187,7 +217,7 @@ def linear_predictor(
     ):
         eta += coefficient.estimate * vector
 
-    offset = _offset(data, spec)
+    offset = _offset(data, spec, model_offset)
     if offset is not None:
         eta += offset
     return eta
@@ -199,6 +229,7 @@ def predict_glm(
     factors: Sequence[Factor],
     spec: GlmSpec,
     *,
+    model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
 ) -> npt.NDArray[np.float64]:
@@ -209,9 +240,15 @@ def predict_glm(
     does not take — `predict_glm_interval` is the entry point that does. Every caller that
     only wants `μ` (the diagnostics, the backtest, the comparison, the peril structure)
     keeps a signature that costs one column of the design at a time.
+
+    `model_offset` is the offset-from-another-model array (FR-MODEL-24), required when
+    `spec.offset.kind == "model"`.
     """
     return _inverse_link(
-        linear_predictor(fit, data, factors, spec, bandings=bandings, groupings=groupings),
+        linear_predictor(
+            fit, data, factors, spec,
+            model_offset=model_offset, bandings=bandings, groupings=groupings,
+        ),
         spec.link,
     )
 
@@ -224,6 +261,7 @@ def predict_glm_interval(
     *,
     covariance_bytes: bytes,
     level: float = 0.95,
+    model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
 ) -> tuple[
@@ -273,7 +311,7 @@ def predict_glm_interval(
 
     design = np.column_stack(columns) if columns else np.zeros((data.height, 0))
     eta = design @ np.asarray(beta, dtype=np.float64)
-    offset = _offset(data, spec)
+    offset = _offset(data, spec, model_offset)
     if offset is not None:
         eta = eta + offset
 
@@ -299,6 +337,7 @@ def score_fitted(
     data: pl.DataFrame,
     factors: Sequence[Factor],
     *,
+    model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     booster: bytes | None = None,
@@ -314,6 +353,9 @@ def score_fitted(
 
     A GBM's `booster` is required: a GLM's fit result *is* its model, a GBM's is a reference
     to bytes the caller must fetch (ADR-0001 keeps that fetch out of this package).
+
+    `model_offset` is forwarded on the GLM arm only (FR-MODEL-24): a `GbmSpec` declaring
+    `kind="model"` is schema-refused, so there is no GBM arm that could use it.
     """
     if isinstance(fit, GbmFitResult):
         from pricing_core.modelling.gbm import predict_gbm
@@ -332,7 +374,10 @@ def score_fitted(
         )
     assert isinstance(fit, GlmFitResult)
     assert isinstance(spec, GlmSpec)
-    return predict_glm(fit, data, factors, spec, bandings=bandings, groupings=groupings)
+    return predict_glm(
+        fit, data, factors, spec,
+        model_offset=model_offset, bandings=bandings, groupings=groupings,
+    )
 
 
 def detect_quantile_crossing(

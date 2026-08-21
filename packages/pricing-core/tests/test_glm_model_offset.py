@@ -11,8 +11,10 @@ import polars as pl
 import pytest
 
 from model_schema import Factor, FactorType, GlmSpec, OffsetSpec
-from pricing_core.modelling import GlmFitError
+from pricing_core.modelling import GlmFitError, PredictionError
+from pricing_core.modelling.diagnostics import backtest_model, compute_diagnostics
 from pricing_core.modelling.glm import fit_glm
+from pricing_core.modelling.predict import linear_predictor, predict_glm
 
 
 def _factor(slug: str, column: str, **over: object) -> Factor:
@@ -123,3 +125,66 @@ def test_the_residual_fit_recovers_the_signal_on_top_of_the_offset() -> None:
     by_term = {c.term: c for c in result.coefficients}
     assert by_term["intercept"].estimate == pytest.approx(0.0, abs=0.06)
     assert by_term["resid_flag"].estimate == pytest.approx(0.2, abs=0.05)
+
+
+@pytest.mark.req("FR-MODEL-24")
+def test_prediction_without_the_array_is_refused_and_with_it_reproduces_the_fit() -> None:
+    data, eta_base = _residual_data()
+    spec = _model_offset_spec()
+    factors = [_factor("resid_flag", "resid_flag")]
+    fit = fit_glm(data, spec, factors, model_offset=eta_base).result
+
+    with pytest.raises(PredictionError) as refused:
+        predict_glm(fit, data, factors, spec)
+    assert refused.value.code == "MODEL_OFFSET_MISSING"
+
+    by_term = {c.term: c for c in fit.coefficients}
+    manual_mu = np.exp(eta_base + by_term["intercept"].estimate
+                       + by_term["resid_flag"].estimate * data["resid_flag"].to_numpy())
+    assert predict_glm(fit, data, factors, spec, model_offset=eta_base) == pytest.approx(
+        manual_mu, rel=1e-9
+    )
+    eta = linear_predictor(fit, data, factors, spec, model_offset=eta_base)
+    assert np.exp(eta) == pytest.approx(manual_mu, rel=1e-9)
+
+
+@pytest.mark.req("FR-MODEL-24")
+def test_diagnostics_require_the_arrays_for_a_model_offset_fit() -> None:
+    data, eta_base = _residual_data()
+    spec = _model_offset_spec()
+    factors = [_factor("resid_flag", "resid_flag")]
+    fit = fit_glm(data, spec, factors, model_offset=eta_base).result
+
+    with pytest.raises(PredictionError) as refused:
+        compute_diagnostics(fit, spec, factors, train=data, holdout=data.head(0))
+    assert refused.value.code == "MODEL_OFFSET_MISSING"
+    result = compute_diagnostics(
+        fit, spec, factors, train=data, holdout=data.head(0),
+        model_offset_train=eta_base, model_offset_holdout=eta_base[:0],
+    )
+    assert result.glm.deviance > 0
+
+
+@pytest.mark.req("FR-MODEL-24")
+def test_backtest_requires_and_honours_the_array() -> None:
+    data, eta_base = _residual_data()
+    spec = _model_offset_spec()
+    factors = [_factor("resid_flag", "resid_flag")]
+    fit = fit_glm(data, spec, factors, model_offset=eta_base).result
+
+    with pytest.raises(PredictionError) as refused:
+        backtest_model(
+            fit, spec, factors, data,
+            model_ref="model:residual@2",
+            dataset_version_ref="dataset_version:book@2",
+            fitted_on_ref="dataset_version:book@1",
+        )
+    assert refused.value.code == "MODEL_OFFSET_MISSING"
+    summary = backtest_model(
+        fit, spec, factors, data,
+        model_ref="model:residual@2",
+        dataset_version_ref="dataset_version:book@2",
+        fitted_on_ref="dataset_version:book@1",
+        model_offset=eta_base,
+    )
+    assert summary.partition.rows == data.height
