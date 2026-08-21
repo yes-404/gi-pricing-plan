@@ -101,7 +101,8 @@ the maths.
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
 │                               contracts · bench-data · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit-docs checks them)
-└── .claude/skills/           ✔ project procedures, written and vendored (§12)
+├── .claude/skills/           ✔ project procedures, written and vendored (§12)
+└── .claude/agents/           ✔ delegable specialists — own context, not the turn's (§12)
 ```
 
 ### Component map — who owns what, and what CI runs
@@ -466,7 +467,9 @@ the suite; it is the authority on what is installed, not this section.
   committed, and re-running it reintroduces both — the README has the detail.
 
 Skills that teach an approach §3 has decided against were **not** taken (Options API, JSX,
-React/shadcn), because a skill teaching a rejected approach is worse than a missing one.
+React/shadcn), because a skill teaching a rejected approach is worse than a missing one. The
+same test governs `.claude/agents/` — only **three** of upstream's 158 survived it, and
+`.claude/agents/README.md` records what each is for and why the rest were refused.
 Vendored skills are kept as upstream wrote them and excluded from `ruff`, with two recorded
 exceptions — both a path variable that does not resolve for a project-level checkout, both
 evidenced in the README.
@@ -475,6 +478,29 @@ evidenced in the README.
 Code extraction is local tree-sitter and always safe; the semantic pass must never be
 pointed at real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is
 the exception.
+
+### Subagents — evidence is delegated, verdicts are not
+
+`.claude/agents/` holds **delegable specialists**. A skill loads into the current turn; a
+subagent runs in its own context and returns a conclusion, which is what §10's context
+discipline asks for. **Skills still outrank them on procedure** — each installed agent is
+written to *read* the relevant skill, not restate it. `.claude/agents/README.md` is the
+index, and §12's maintenance rules apply to it unchanged.
+
+**The line every one of them respects:** an agent gathers or verifies, and the **verdict
+stays in the main thread** — §13's four verdicts for an unevidenced requirement, §14's
+proposals, and §0's decision about which of spec and code was wrong. None of the four
+self-written agents holds `Write` or `Edit`, so the line is enforced by their tool lists and
+not only by their prose.
+
+Three tiers, assigned by how much judgment the *output* requires, not by how long the task
+takes:
+
+| Tier | Agents | What they do |
+|---|---|---|
+| `haiku` | `gate-runner`, `evidence-collector`, `ci-watcher` | Fixed commands, exit codes, tabulation — §11's gate both halves, `scope-audit`'s three axes, PR checks. High-output, zero judgment: exactly what should not sit in the main thread's context |
+| `sonnet` | `spec-reconciler`, `postgres-pro`, `performance-engineer`, `accessibility-tester` | Real judgment inside a narrow frame — §14's question 4, the PostgreSQL layer, an NFR measurement, a WCAG pass |
+| main thread | *(none — deliberately)* | §13 closure verdicts, §14 proposals, §0 resolution, slice design, and every edit to `docs/` |
 
 ### Precedence — superpowers first
 
