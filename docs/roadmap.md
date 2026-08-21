@@ -140,7 +140,7 @@ Everything still open before Phase 1a can start, in one place. Tracks A–C abov
 |---|---|---|
 | ~~**1 Phase-2 decision (OQ-GOV-8)**~~ ✔ **none left** | decisions | Before Phase 2. Was five: OQ-RATE-2 decided by spike, OQ-MODEL-3 on 2026-08-17, and OQ-MODEL-11, OQ-MODEL-12, OQ-RATE-3, OQ-RATE-4, OQ-RATE-6 and OQ-PLAT-3 all on 2026-08-18. **OQ-GOV-8 is correctly the last one standing** rather than the one nobody got to: it asks whether an `expression` Custom Objective needs an authoring permission distinct from `model:fit`, and `expression` objectives are themselves Phase 2 — deciding it against the template catalogue would be deciding it against the wrong artifact. **Deferred 2026-08-18 with a trigger rather than left open**: `06` FR-GOV-38 makes answering it a precondition of lifting `expression_objectives_enabled`, so W30 cannot ship the capability without closing it |
 | Sustained-load test at 200 rps (S2 measured per-request only) | test | Phase 2 W11 |
-| ~~6 Phase-3~~ ✔ *all decided 2026-08-18* · 11 Phase-4 · 4 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
+| ~~6 Phase-3~~ ✔ *all decided 2026-08-18* · 11 Phase-4 · 5 any-time decisions still open | decisions | Per gate (§10) — OQ-MODEL-2, 4, 6, 7 and OQ-OVR-1 and 6 all came off this list on 2026-08-15 |
 | Vue Flow depth · Polars benchmark · AST parser | re-homed from Track A | Within their phases |
 
 **Nothing in the document suite is outstanding.** Specs, workflows, ADRs, contracts and the
@@ -2361,7 +2361,7 @@ record is mostly about**, because it changed three things the decision had assum
 | **The affected-field count was wrong** | The question said "26 `DecimalStr` fields across 7 modules". There are **11, across 6** — the 26 was a count of every *line mentioning* `DecimalStr`, imports and `money.py`'s own definition included. Corrected in `docs/open-questions.md`, `00` §7 and here. A figure nobody had recomputed since it was written down, which is why `CLAUDE.md` §0 keeps counts out of prose |
 | **A published contract was declaring three exact decimals as JSON numbers** | `docs/contracts/schemas/peril-structure.schema.json` typed `restoration_loading`, `ratio` and `tolerance` as `{"type": "number"}` while all three are `DecimalStr` the model has always serialised as strings — verified by dumping a real `Reconciliation` (`"1.010000"`, `"0.02"`). Wrong since Phase 0; strict input is what made it *reachable*, since a client following the contract now gets a 422 instead of a silent coercion. All three moved to the `Decimal` `$ref` every other schema in the suite already used, and the undeclared `loading_factor` added |
 | The check that should have caught it, widened | `test_generated_and_authored_agree_on_scalar_types` compared **6** slugs while **12** schemas have both sides — and the six were never chosen, merely never added. Now 11, with `COMPARED_SLUGS` a named constant and `test_every_eligible_schema_is_compared` failing the day an eligible schema is neither compared nor pinned. **The check would have caught this contract on the day it was written** |
-| The one divergence it surfaced is pinned, not fixed | Widening found `diagnostics`: `GlmDiagnostic.aliasing` is `tuple[str, ...]` against a contract declaring an array of untyped `object`. Neither side is obviously wrong — an object entry could carry `{term, aliased_with, reason}` — so it is **`OQ-MODEL-15`**, and `test_the_diagnostics_divergence_is_exactly_the_known_one` pins it at exactly that path. A *new* divergence in `diagnostics` still fails; the day `OQ-MODEL-15` is decided the pin fails and is deleted |
+| The one divergence it surfaced is pinned, not fixed | Widening found `diagnostics`: `GlmDiagnostic.aliasing` is `tuple[str, ...]` against a contract declaring an array of untyped `object`. Neither side is obviously wrong — an object entry could carry `{term, aliased_with, reason}` — so it is **`OQ-MODEL-15`**, and `test_the_diagnostics_divergence_is_exactly_the_known_one` pins it at exactly that path. A *new* divergence in `diagnostics` still fails; the day `OQ-MODEL-15` is decided the pin fails and is deleted *(it was, 2026-08-21 — FR-MODEL-109: the names kept, the authored contract corrected to strings, the pin deleted)* |
 
 **Enforcement proven against deliberately broken input**, all three, each reverted after:
 the widened comparison fails on the pre-fix `peril-structure` contract; the coverage guard
@@ -2498,7 +2498,8 @@ then discards, because `store()` only persists them when `should_fit` is `True`.
 `errors.py`; verified twice on this branch, and structural, applying to every module rather
 than to `02` alone. **OQ-PLAT-7** — a `PlatformError` raised inside a Job handler loses its
 `.code` to `JOB_HANDLER_FAILED`, which is why this slice's two refusal tests had to call the
-handler directly instead of going through `execute_job`.
+handler directly instead of going through `execute_job`. *(OQ-MODEL-17 and OQ-OVR-9 decided
+2026-08-21 — see §10; OQ-PLAT-7 remains open, placed on the any-time row.)*
 
 **A check went red on purpose, from the first commit to the fifth.**
 `test_errors.py::test_spec_error_codes_are_all_constructible` reads the spec's code list, so
@@ -2720,7 +2721,8 @@ protection existed until 2026-08-20 and now names the gap.
 Custom Metric — raised as `OQ-MODEL-21`, not resolved.** Found in the same final review,
 immediately before merge. Tested and named in FR-MODEL-107's 2026-08-20 amendment, but
 whether a documented drop satisfies FR-MODEL-106's "honoured" is undecided. **Owner: W5**,
-alongside the `06` §3.3 / `EVIDENCE_FLOOR` gap above.
+alongside the `06` §3.3 / `EVIDENCE_FLOOR` gap above. *(Decided 2026-08-21: the drop is
+recorded on the fit — FR-MODEL-111; owner W5 stands.)*
 
 #### W5 slice — offset from another model, and a scaffold field that was read by nothing, 2026-08-21
 
@@ -2744,7 +2746,7 @@ offset.
 | Fit, prediction and backtest wired | `_fit` and `_backtest` in `model_handlers.py` resolve in `load()`, compute η on the worker thread and pass it to `fit_glm`/`compute_diagnostics`/`backtest_model`; `_score_glm` resolves per request and honours the offset in both `predict_glm` and `predict_glm_interval` |
 | Spec validation resolves the ref before a Job is queued | `SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE`, raised by `validate_spec` for a ref that names nothing, an unfitted model, a non-GLM or a link mismatch (wf-01 D2's rule applied to offsets-from-model) |
 | The code registered and catalogued in one commit | `MODEL_OFFSET_REF_INVALID` added to `errors.py`'s `MODELLING_ERROR_CODES` and `02` §5.1's backtick catalogue in the same commit as its first raise, with the dated blockquote note; `MODEL_OFFSET_MISSING`'s note gained a dated addendum for its fit-side uses |
-| The spec amendment and the open question | FR-MODEL-24 amended 2026-08-21 (the ref is `model:slug@version`, GLM-to-GLM v1, what is refused by name); §4.4's `offset_model_ref` block declared; OQ-MODEL-22 recorded in `open-questions.md` and mirrored in `02` §10; this closure moves the field live on FR-MODEL-87's staged contract as the ninth live entry |
+| The spec amendment and the question it raised | FR-MODEL-24 amended 2026-08-21 (the ref is `model:slug@version`, GLM-to-GLM v1, what is refused by name); §4.4's `offset_model_ref` block declared; OQ-MODEL-22 recorded in `open-questions.md` and mirrored in `02` §10; this closure moves the field live on FR-MODEL-87's staged contract as the ninth live entry |
 
 **The §0 divergence, resolved.** The code scaffold's `model_ref` was the outlier — the
 spec's FR-MODEL-24 text and the hand-authored `docs/contracts/schemas/model-spec.schema.json`
@@ -2765,7 +2767,8 @@ and the type-III fix), `cd805e2` (the fit job), `6f9c740` (prediction), `c136440
 
 **Not delivered, with owners.** GBM/EBM referenced models and `GbmSpec`-declared offsets
 stay refused by name — OQ-MODEL-22 records the widening options, recommendation (a) then
-(c); the peril-reconciliation scoring path is declared-and-refused (`MODEL_OFFSET_MISSING`)
+(c) *(decided 2026-08-21: (a) then (c) — FR-MODEL-112)*; the peril-reconciliation scoring
+path is declared-and-refused (`MODEL_OFFSET_MISSING`)
 until W5 wires the resolver there; EBM as a model type is FR-MODEL-37's separate slice;
 FR-MODEL-23's fit-error surfacing remains unbuilt, owner W5; `02` §5.3's model spec builder
 is **W6b**'s, unchanged by this slice.
@@ -2940,12 +2943,12 @@ you never block on a decision you have not reached.
 
 | Gate | Questions | Count |
 |---|---|---|
-| ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo* | 5 (0 open) |
-| ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18*, ~~OQ-DATA-9~~ ✔ *2026-08-19 — raised in W5 and never placed on this table until it was decided, so the gate it belonged to had already closed; it gates W6b's dataset list, which is Phase 1b work* | 13 (0 open) |
+| ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo*, ~~OQ-OVR-8~~ ✔, ~~OQ-MODEL-16~~ ✔, ~~OQ-MODEL-18~~ ✔, ~~OQ-MODEL-19~~ ✔, ~~OQ-MODEL-20~~ ✔, ~~OQ-DATA-11~~ ✔ *all 2026-08-19, raised and decided inside the phase*, ~~OQ-OVR-9~~ ✔, ~~OQ-MODEL-21~~ ✔ *2026-08-21, raised and decided inside the phase — FR-OVR-19's delivery precedes the exit demo, FR-MODEL-111 is a W5 obligation* | 13 (0 open) |
+| ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18*, ~~OQ-DATA-9~~ ✔ *2026-08-19 — raised in W5 and never placed on this table until it was decided, so the gate it belonged to had already closed; it gates W6b's dataset list, which is Phase 1b work*, ~~OQ-MODEL-15~~ ✔, ~~OQ-MODEL-17~~ ✔, ~~OQ-MODEL-22~~ ✔ *all 2026-08-21, raised in W5 and never placed on this table until decided — FR-MODEL-109 delivered with the decision, FR-MODEL-110's trigger is Phase 1b's job-latency measurement, FR-MODEL-112's first slice is Phase 1b's* | 16 (0 open) |
 | ~~**Before Phase 2**~~ ✔ **all decided** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18* | 10 (0 open) |
 | ~~**Before Phase 3**~~ ✔ **all decided** | ~~OQ-GOV-1..6~~ ✔ *2026-08-18*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (0 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
-| **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5 | 13 (4 open) |
+| **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, ~~OQ-DATA-10~~ ✔ *2026-08-19 — a deferral with a trigger (FR-DATA-52), raised in W5 and never placed here until decided*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5, OQ-PLAT-7 *raised 2026-08-19 in the FR-MODEL-96 slice and placed 2026-08-21* | 15 (5 open) |
 
 **2026-08-18 — the six `GOV` questions decided, and Phase 3's gate closes.** OQ-GOV-1 (the
 audit chain stays per workspace and self-held, claimed as tamper-*evident* against modification
@@ -3114,6 +3117,21 @@ journey citation audit now and one end-to-end test per journey as its last modul
 (FR-OVR-17). Note what the first one moved: a question the table gated at Phase 3 turned out
 to change what W14 builds in Phase 2, which is the argument for answering gates early rather
 than at the boundary they are filed under.
+
+**2026-08-21 — six questions decided, and the table gained the rows it was missing.**
+OQ-OVR-9 (the audit cross-checks every §5.1 error-code table against `errors.py` — FR-OVR-19,
+owner the maintainer, before Phase 1a's exit demo), OQ-DATA-10 (decided 2026-08-19 —
+FR-DATA-52; the register row was stale and is brought into line), OQ-MODEL-15 (aliasing
+entries are bare names — FR-MODEL-109, **delivered**: the authored contract corrected and the
+pin deleted), OQ-MODEL-17 (a rebuild reuses the surrogate's stored numbers — FR-MODEL-110,
+Phase 1b before its job-latency measurement), OQ-MODEL-21 (the LightGBM drop is recorded on
+the fit — FR-MODEL-111, W5), OQ-MODEL-22 (GBM-referenced offsets next, then the scoring path
+— FR-MODEL-112). **All thirteen rows the gate-table invariant reported missing are now
+placed** — the six above, the six decided 2026-08-19 that had never reached the table
+(OQ-OVR-8, OQ-DATA-11, OQ-MODEL-16, OQ-MODEL-18, OQ-MODEL-19, OQ-MODEL-20), and OQ-PLAT-7,
+still open, on the any-time row. A question invisible to the plan gets answered by whoever
+trips over it; this is the fourth time the `missing` half of the check has caught a batch,
+and the first where the batch included questions still open.
 
 ---
 
