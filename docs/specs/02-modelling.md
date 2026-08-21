@@ -159,7 +159,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > and the deviance-argmin estimator was measured biased (argmin ≈ truth + 0.25, grid-edge
 > at every pinned seed) during the slice.)*
 | **FR-MODEL-23** | Non-convergence, separation, rank deficiency, and aliased columns are surfaced as explicit, named fit errors with the offending factors identified — never as a silently returned degenerate fit. |
-| **FR-MODEL-24** | An **offset from another model** is supported (`offset_model_ref`), enabling residual modelling and "fit on top of the current rating structure" workflows. The referenced model version is pinned. |
+| **FR-MODEL-24** | An **offset from another model** is supported (`offset_model_ref`), enabling residual modelling and "fit on top of the current rating structure" workflows. The referenced model version is pinned. **Amended 2026-08-21 (W5 slice 4).** The ref is the canonical `model:slug@version` string (ID-3). v1 builds the offset for GLM specs only: the referenced model must be a fitted GLM, and the offset is its linear predictor (η, including its own offset) on the training data — the two links must be equal, refused by name otherwise (`MODEL_OFFSET_REF_INVALID`). Refused by name, not built: a `GbmSpec` whose offset is `kind: "model"`; a ref naming a GBM or EBM model; the peril-reconciliation scoring path (it fails named, `MODEL_OFFSET_MISSING`, until W5 wires the resolver there). The fit records what was constructed: `GlmFitResult.offset_model_ref` carries the resolved pinned ref. Diagnostic weighting for a model-offset fit follows `spec.weight` (COUNT default) — the exposure-weighting convention is never inferred from the offset. The Phase-0 scaffold's `model_ref: str` is renamed `offset_model_ref` with the artifact-ref pattern: the spec and the hand-authored contract have always named and typed it that way, and the scaffold field was read by nothing. |
 
 ### 3.5 Gradient boosting (XGBoost / LightGBM)
 
@@ -505,6 +505,13 @@ Common block:
   "model_type": "glm | xgboost | lightgbm | ebm"
 }
 ```
+
+> **`offset_model_ref` — declared 2026-08-21 (W5 slice 4, FR-MODEL-24).** The common
+> block's `offset` gains the field: a canonical `model:slug@version` string, valid only
+> with `kind: "model"`, naming the fitted GLM whose linear predictor is the offset
+> (FR-MODEL-24 as amended). Live once the slice populates it (FR-MODEL-87). A `GbmSpec`
+> naming it is refused by name, and a ref naming a non-fitted, non-GLM, or
+> link-mismatched model is refused at fit time (`MODEL_OFFSET_REF_INVALID`).
 
 `loss_treatment` is part of the spec — and therefore of `spec_hash` — because capping is
 applied to the **response at fit time** (FR-MODEL-73). Two models differing only in their
@@ -2240,3 +2247,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-MODEL-19** | ~~Does a Custom Metric define its own value computation — a metric-specific template catalogue or `expression` grammar — or does it name an existing `ObjectiveTemplate` (§4.5) and reuse that template's loss?~~ **DECIDED 2026-08-19: a metric names an `ObjectiveTemplate` and reuses its loss, evaluated as an exposure-weighted mean — FR-MODEL-103**, on OQ-MODEL-1's Phase-1-templates-only rule. |
 | **OQ-MODEL-20** | ~~§5.1 declared one `POST /custom-metrics` row, not built and deferred to Phase 1b (FR-MODEL-45). Now that a metric gates early stopping (FR-MODEL-107), should this slice ship create only, or the full six-endpoint set FR-MODEL-95 built for `custom-objectives`?~~ **DECIDED 2026-08-19: all six — FR-MODEL-108**, the same argument FR-MODEL-95 made for objectives: an approver who cannot fetch a certificate is being asked to approve a verdict they cannot see. |
 | **OQ-MODEL-21** | LightGBM evaluates builtin metrics before `feval`, so a spec that declares a builtin in `eval_metrics` and early-stops on a Custom Metric never gets the builtin reported (FR-MODEL-107's 2026-08-20 amendment), even though `GbmFit` says nothing about the drop. Does a documented silent drop satisfy FR-MODEL-106's "honoured"? Found 2026-08-20 in the final branch review, before merge. Recommendation on file: record the drop on `GbmFit` rather than refuse the fit or leave the caller uninformed. |
+| **OQ-MODEL-22** | Which offsets-from-model come after the GLM-to-GLM slice? Open, gated on W5: FR-MODEL-24's 2026-08-21 amendment builds offset-from-another-model for GLM specs referencing fitted GLMs only — GBM-referenced offsets, `GbmSpec`-declared offsets and the peril-reconciliation scoring path each wait for a workflow that needs them. |
