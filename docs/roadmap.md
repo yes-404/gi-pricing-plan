@@ -1442,7 +1442,7 @@ requirements; §3.8 is 6 of 10. The verdicts:
 | Requirement | Verdict |
 |---|---|
 | FR-MODEL-52 — GBM diagnostics | **Not started.** Nothing fits a GBM yet; the roadmap's own risk row makes FR-MODEL-50 the gate and 51/52 incremental. Owned by the GBM slice |
-| FR-MODEL-53 — cross-validation | **Not started.** Interacts with FR-MODEL-20's unimplemented regularisation path, which is where `select_by: cv` lives. Owned with it |
+| FR-MODEL-53 — cross-validation | ~~**Not started.**~~ **Delivered 2026-08-21** — the regularisation-and-CV slice. Interacts with FR-MODEL-20's unimplemented regularisation path, which is where `select_by: cv` lives. Owned with it |
 | FR-MODEL-56 — model comparison | **Not started.** Its own endpoint and artifact; `wf-01` E1 needs it |
 | FR-MODEL-57 — backtest | ~~**Not started.**~~ **Delivered 2026-08-18** — its own artifact (`02` §4.12), two endpoints and a migration. The record is this file's backtest slice |
 | FR-MODEL-63, 77, 78 — prediction intervals | **Not started.** 63 needs the covariance blob the fit stores but this signature does not receive; 77/78 need a GBM and the `quantile` template |
