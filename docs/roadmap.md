@@ -2558,7 +2558,8 @@ found.
 marked : 235 (48.1%)" repository-wide.)*
 
 ~~**Five buildable slices remain**~~ — ~~**four**, corrected 2026-08-20: slice 1 below
-is delivered~~ **three**, corrected 2026-08-21: slices 1 and 2 below are delivered.
+is delivered~~ ~~**three**, corrected 2026-08-21: slices 1 and 2 below are delivered~~
+**one**, corrected 2026-08-21: slices 3 and 4 below are delivered.
 Smallest first:
 
 | Slice | Requirements | State, and what is actually missing |
@@ -2566,7 +2567,7 @@ Smallest first:
 | ~~**1. Custom metrics**~~ **— DELIVERED 2026-08-20** | ~~FR-MODEL-45's endpoint~~ FR-MODEL-45, 103–108 | ~~`POST /api/v1/custom-metrics` is the one unpublished endpoint of the 35. Deferred to Phase 1b by a dated amendment in `02` §5.1~~ **Built in the custom-metrics slice recorded below, not deferred to Phase 1b**: six routes rather than one, the artifact, table, certification Job and approval path, `eval_metrics` honoured (FR-MODEL-106) and early stopping on a Custom Metric (FR-MODEL-107). The deferral's reasoning — that a custom metric is `feval` and changes what early stopping optimises rather than what the model fits — turned out to be the argument *for* building it inside W5: FR-MODEL-107 made a Custom Metric the only way to early-stop under a callable objective at all |
 | ~~**2. Regularisation and cross-validation**~~ **— DELIVERED 2026-08-21** | FR-MODEL-20, FR-MODEL-53 | ~~Already paired by a verdict on file — `select_by: cv` lives in the penalty path. The schema is ahead of the code: `GlmSpec` carries `alpha` and `l1_ratio`, and `cv_folds` exists. Missing are the documented penalty path, the CV selection option, declared fold construction (`random`, `temporal`, `grouped_by_key`) with a persisted seed, and per-fold metrics **and their dispersion** persisted as diagnostics rather than the mean alone~~ **DELIVERED 2026-08-21**: `GlmSpec.select_by`/`GlmSpec.cv` (FR-MODEL-20), `GlmCvSpec`'s three fold-construction methods via `pricing_core.data.splits.assign_folds` (FR-MODEL-53), `_fit_cv_path` in `pricing_core.modelling.glm`, and `Diagnostics.cross_validation` (`CrossValidationDiagnostics`/`CvPathPoint`/`CvFoldMetric`) persisting the full path and the selected alpha's per-fold dispersion. No new HTTP endpoint (the existing `GET /api/v1/models/{id}/diagnostics` surfaces it) and no frontend work (the Diagnostics view's CV screen remains W6b's). Two spec interactions found and resolved by dated amendment in `02-modelling.md`: K-fold `temporal` semantics (undefined by FR-DATA-33/FR-MODEL-53; resolved as contiguous time-ordered blocks) and FR-MODEL-99's `uncertainty_basis` under CV selection (resolved as unconditionally naive/penalised) |
 | ~~**3. Tweedie power by profile likelihood**~~ **— DELIVERED 2026-08-21** | ~~FR-MODEL-22~~ | ~~Today `GlmSpec` only *validates* that a supplied power lies between the two families it spans. Missing: the grid, the persisted profile curve, and recording an estimated `p` as an estimate with its own uncertainty rather than silently baking it in as a constant~~ **DELIVERED 2026-08-21**: `GlmSpec.tweedie` carries the grid; `fit_glm` estimates p by profile likelihood (refit at each point, profile log-likelihood argmax scored with the Tweedie series density at the mean-deviance dispersion estimate), persists the curve on `GlmFitResult.tweedie`, and records the estimate with its 95% profile-likelihood CI — never a constant; a maximum at a scan edge is refused (`GLM_TWEEDIE_POWER_GRID_EDGE`); estimation × CV selection refused by name (FR-MODEL-87). |
-| **4. Offset from another model** | FR-MODEL-24 | `offset_model_ref` appears nowhere in `packages/` or `backend/src`. This is residual modelling and "fit on top of the current rating structure", with the referenced model version pinned |
+| ~~**4. Offset from another model**~~ **— DELIVERED 2026-08-21** | FR-MODEL-24 | ~~`offset_model_ref` appears nowhere…~~ **— DELIVERED 2026-08-21:** `OffsetSpec.offset_model_ref` (renamed from the dead `model_ref` scaffold), GLM-to-GLM, resolved at fit/predict/backtest time, refused by name elsewhere. |
 | **5. EBM** | FR-MODEL-37 | Verdict on file: not started, owner is "the slice that first fits an `ebm` model" — and `ebm` is one of the four Model types in `CLAUDE.md` §7's vocabulary, so W5 owns it unless reassigned. The stated cost is `interpret` as a third heavy dependency serving one requirement |
 
 **The NFR gap — 11 of 12 unevidenced**, and it is not one problem:
@@ -2592,8 +2593,8 @@ Smallest first:
 **FR-MODEL-22** and **FR-MODEL-24** were unevidenced and unspoken for in every slice record,
 which is the one option `CLAUDE.md` §13 rule 1 does not allow. They are recorded above as not
 started, owner W5, by W5's own scope definition ("every `MODEL` requirement") rather than by
-a new assignment. FR-MODEL-22's verdict is delivered by the 2026-08-21 slice; FR-MODEL-23 and
-FR-MODEL-24 remain unbuilt.
+a new assignment. FR-MODEL-22's verdict is delivered by the 2026-08-21 Tweedie slice and
+FR-MODEL-24's by the offset-from-another-model slice; FR-MODEL-23 remains unbuilt.
 
 #### W5 slice — custom metrics, and a field that was read by nothing, 2026-08-20
 
@@ -2720,6 +2721,62 @@ Custom Metric — raised as `OQ-MODEL-21`, not resolved.** Found in the same fin
 immediately before merge. Tested and named in FR-MODEL-107's 2026-08-20 amendment, but
 whether a documented drop satisfies FR-MODEL-106's "honoured" is undecided. **Owner: W5**,
 alongside the `06` §3.3 / `EVIDENCE_FLOOR` gap above.
+
+#### W5 slice — offset from another model, and a scaffold field that was read by nothing, 2026-08-21
+
+The twenty-fifth slice, spanning 2026-08-21. FR-MODEL-24 gives a GLM spec an
+offset from another model — the referenced fitted GLM's linear predictor on the training
+data, enabling residual modelling and "fit on top of the current rating structure" — and
+the slice exists around a finding with the custom-metrics shape: `OffsetSpec`'s Phase-0
+scaffold `model_ref: str` had been declared and read by nothing, while `fit_glm` passed
+`kind="model"` silently with no offset at all. A caller could declare an offset from
+another model and be told nothing was wrong while none was ever applied. FR-MODEL-24 as
+amended 2026-08-21 now requires it honoured — the field live, the ref resolved, the fit
+offset.
+
+| Delivered | Evidence |
+|---|---|
+| `offset_model_ref` on `OffsetSpec`, and the named refusals | `OffsetSpec.offset_model_ref: ModelRef \| None` — the canonical `model:slug@version` string (ID-3), the pattern admitting `model:` refs and nothing else; validators require `kind == "model"` ⟺ ref set; `GbmSpec` refuses `kind="model"` by name (GLM specs only, FR-MODEL-24 as amended); `GlmFitResult.offset_model_ref` records the resolved pinned ref — what was actually constructed is recorded on the fit result (FR-MODEL-71's rule, applied to GLM) |
+| `SPEC_HASH_VERSION` 7 → 8 in the same commit | `backend/src/app/platform/modelling.py` — the ref joins the canonicalised spec payload, so FR-MODEL-66's dedup must not match a fit offset against another model's structure to one with no offset (FR-MODEL-86) |
+| pricing-core takes the resolved array — required, never silent | `model_offset` threaded through `fit_glm`, `linear_predictor`, `predict_glm`, `predict_glm_interval`, `score_fitted`, `compute_diagnostics` and `backtest_model`; every entry point that reaches a `kind="model"` spec without the array raises `MODEL_OFFSET_MISSING`, with length and finiteness validated — pricing-core never resolves the ref (ADR-0001), so the backend supplies η and pricing-core refuses to fit without it |
+| The type-III reduced fit keeps the offset | The drop-one-term refits inside `_type_iii` pass the same `train` array; before the fix the pre-existing `except GlmFitError: continue` swallowed `MODEL_OFFSET_MISSING` and a model-offset fit with ≥ 2 factors got a **silently empty** type-III table — `test_type_iii_reduced_fits_keep_the_offset` pins presence for both terms and the insignificance of the factor whose effect lives inside the offset |
+| The backend resolves the ref | `OffsetModelSource` + `resolve_offset_model` in `platform/modelling.py` (modelled on `_quantile_crossing` and `_refuse_mismatched_approximation`): the pinned row's spec, fit result, factors, bandings and groupings; refusals by name — not a model, not fitted, not a GLM, or link-mismatched (`MODEL_OFFSET_REF_INVALID`), missing row (`NOT_FOUND`) |
+| Fit, prediction and backtest wired | `_fit` and `_backtest` in `model_handlers.py` resolve in `load()`, compute η on the worker thread and pass it to `fit_glm`/`compute_diagnostics`/`backtest_model`; `_score_glm` resolves per request and honours the offset in both `predict_glm` and `predict_glm_interval` |
+| Spec validation resolves the ref before a Job is queued | `SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE`, raised by `validate_spec` for a ref that names nothing, an unfitted model, a non-GLM or a link mismatch (wf-01 D2's rule applied to offsets-from-model) |
+| The code registered and catalogued in one commit | `MODEL_OFFSET_REF_INVALID` added to `errors.py`'s `MODELLING_ERROR_CODES` and `02` §5.1's backtick catalogue in the same commit as its first raise, with the dated blockquote note; `MODEL_OFFSET_MISSING`'s note gained a dated addendum for its fit-side uses |
+| The spec amendment and the open question | FR-MODEL-24 amended 2026-08-21 (the ref is `model:slug@version`, GLM-to-GLM v1, what is refused by name); §4.4's `offset_model_ref` block declared; OQ-MODEL-22 recorded in `open-questions.md` and mirrored in `02` §10; this closure moves the field live on FR-MODEL-87's staged contract as the ninth live entry |
+
+**The §0 divergence, resolved.** The code scaffold's `model_ref` was the outlier — the
+spec's FR-MODEL-24 text and the hand-authored `docs/contracts/schemas/model-spec.schema.json`
+have always named and typed the field `offset_model_ref` as an artifact-ref string, and the
+scaffold field was read by nothing. Spec and contract agreed, and the code followed them: a
+rename with the artifact-ref pattern, not a new field. And today's behaviour was a defect,
+not an absence: `fit_glm` passed `kind="model"` silently with `offset = None`, fitting as
+though no offset were declared — the silent-ignore defect is replaced by the implemented
+path plus named refusals, `MODEL_OFFSET_MISSING` at every unwired pricing-core entry point,
+`MODEL_OFFSET_REF_INVALID` at resolution, `MODEL_OFFSET_UNRESOLVABLE` at validation, and
+GBM's accidental column-refusal replaced by the schema's deliberate one.
+
+**Delivered on `worktree-offset-model` in nine commits** — `e3f6610` (the FR-MODEL-24
+amendment and OQ-MODEL-22), `c37c717` (the schema field, refusals and `SPEC_HASH_VERSION`
+8), `ab17018`, `af8f5c8` and `e781d8b` (pricing-core fit, scoring, diagnostics, backtest
+and the type-III fix), `cd805e2` (the fit job), `6f9c740` (prediction), `c136440`
+(backtest), `5b6ef87` (spec validation) — each tagged FR-MODEL-24.
+
+**Not delivered, with owners.** GBM/EBM referenced models and `GbmSpec`-declared offsets
+stay refused by name — OQ-MODEL-22 records the widening options, recommendation (a) then
+(c); the peril-reconciliation scoring path is declared-and-refused (`MODEL_OFFSET_MISSING`)
+until W5 wires the resolver there; EBM as a model type is FR-MODEL-37's separate slice;
+FR-MODEL-23's fit-error surfacing remains unbuilt, owner W5; `02` §5.3's model spec builder
+is **W6b**'s, unchanged by this slice.
+
+**Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (130 source files) ·
+`lint-imports` 0 (3 contracts kept) · **1547 python tests** · audit-docs 0 —
+**489 requirements** across 8 specs, **74 open questions** all mirrored, **134 error
+codes** ownership-exclusive (was 133) · req-coverage **239 of 489 marked, 48.9 %** ·
+`generate-contracts.py --check` 0, **23 generated contracts match** · frontend:
+`install --frozen-lockfile` 0, `generate:api` 0, lint 0, type-check 0,
+**131 vitest tests**, build 0.
 
 ### Phase 1b — Modelling Workbench
 
