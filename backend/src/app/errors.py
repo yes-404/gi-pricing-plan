@@ -190,6 +190,11 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "METRIC_REF_UNRESOLVED",
         "METRIC_NOT_APPLICABLE",
         "METRIC_NOT_FITTABLE",
+        # The regularisation-and-CV slice, 2026-08-21 (FR-MODEL-20, FR-MODEL-53). Raised
+        # by `_fit_cv_path` when a fold has no held-out rows (or no training rows) at some
+        # alpha on the scanned path — `key_column`/`time_column` skew that a fold count
+        # chosen against the whole book does not guarantee against, per fold.
+        "GLM_CV_FOLD_EMPTY",
     }
 )
 

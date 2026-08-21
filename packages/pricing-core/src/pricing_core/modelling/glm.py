@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import time
 import warnings
 from collections.abc import Mapping, Sequence
@@ -36,12 +37,17 @@ from model_schema import (
     Banding,
     BlobRef,
     Coefficient,
+    CrossValidationDiagnostics,
+    CvFoldMetric,
+    CvPathPoint,
     Factor,
     GlmFitResult,
     GlmSpec,
     Grouping,
     RelativityLevel,
 )
+from pricing_core.data.splits import assign_folds
+from pricing_core.modelling.diagnostics import deviance
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 from pricing_core.progress import NullProgress, ProgressCallback
 
@@ -82,7 +88,8 @@ class GlmFitError(RuntimeError):
 
 @dataclass(frozen=True)
 class GlmFit:
-    """What a GLM fit returns: the artifact, and the covariance bytes it addresses.
+    """What a GLM fit returns: the artifact, the covariance bytes it addresses, and — when
+    `spec.select_by == "cv"` — the cross-validation diagnostics (FR-MODEL-20, FR-MODEL-53).
 
     Two values rather than one for the reason `GbmFit` is two — `pricing-core` cannot store
     a blob (ADR-0001) and the artifact cannot hold a `p x p` matrix (`02` §4.8, and the
@@ -97,6 +104,7 @@ class GlmFit:
 
     result: GlmFitResult
     covariance_bytes: bytes
+    cv: CrossValidationDiagnostics | None = None
 
 
 def encode_covariance(terms: Sequence[str], matrix: npt.NDArray[np.float64]) -> bytes:
@@ -236,6 +244,108 @@ def _design(
     return pl.DataFrame(columns), levels
 
 
+def _fit_cv_path(
+    data: pl.DataFrame,
+    x: np.ndarray,
+    response: np.ndarray,
+    *,
+    spec: GlmSpec,
+    family: str,
+    link: Any,
+    offset: np.ndarray | None,
+    weights: np.ndarray | None,
+    report: ProgressCallback,
+) -> tuple[float, CrossValidationDiagnostics]:
+    """Score every alpha in `spec.cv.alphas` over `spec.cv.folds` held-out folds, and
+    return the alpha with the lowest mean held-out deviance alongside the full scanned
+    path (FR-MODEL-20, FR-MODEL-53).
+
+    Refits `len(cv.alphas) * cv.folds` times against the same design `fit_glm` already
+    built for the final fit — CV selects the penalty a single fit at that alpha would use,
+    so the folds are drawn from `x`/`response`/`offset`/`weights` directly. `data` is
+    passed only so `assign_folds` can read `key_column`/`time_column` by name; the fold
+    index it returns is what actually slices the arrays.
+    """
+    from glum import GeneralizedLinearRegressor  # type: ignore[import-untyped]
+
+    cv = spec.cv
+    assert cv is not None  # GlmSpec's validator guarantees this whenever select_by == "cv"
+
+    fold_of_row = assign_folds(
+        data,
+        method=cv.method,
+        seed=spec.seed,
+        folds=cv.folds,
+        key_column=cv.key_column,
+        time_column=cv.time_column,
+    )
+
+    power = float(spec.family_params.get("power", 1.5)) if spec.family == "tweedie" else 1.5
+
+    path: list[CvPathPoint] = []
+    fold_metrics_at_selected: tuple[CvFoldMetric, ...] = ()
+    best_alpha = cv.alphas[0]
+    best_mean = math.inf
+
+    for step, alpha in enumerate(cv.alphas):
+        report.check_cancelled()
+        report.update(
+            0.16 + 0.13 * (step / len(cv.alphas)),
+            f"cross-validating alpha={alpha:g} ({step + 1}/{len(cv.alphas)})",
+        )
+        scores: list[float] = []
+        metrics_this_alpha: list[CvFoldMetric] = []
+        for fold in range(cv.folds):
+            test_mask = fold_of_row == fold
+            train_mask = ~test_mask
+            if not test_mask.any() or not train_mask.any():
+                raise GlmFitError(
+                    "GLM_CV_FOLD_EMPTY",
+                    f"fold {fold} of {cv.folds} has no held-out rows (or no training rows) "
+                    f"at alpha={alpha:g}. A fold cannot be scored, or trained, on nothing "
+                    "— widen the fold count or check `key_column`/`time_column` for skew.",
+                )
+            fold_estimator = GeneralizedLinearRegressor(
+                family=family, link=link, alpha=alpha, l1_ratio=spec.l1_ratio,
+                max_iter=spec.max_iter, gradient_tol=spec.tolerance, fit_intercept=True,
+            )
+            fold_offset = offset[train_mask] if offset is not None else None
+            fold_weights = weights[train_mask] if weights is not None else None
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                fold_estimator.fit(
+                    x[train_mask], response[train_mask],
+                    sample_weight=fold_weights, offset=fold_offset,
+                )
+            held_offset = offset[test_mask] if offset is not None else None
+            mu = fold_estimator.predict(x[test_mask], offset=held_offset)
+            held_weights = weights[test_mask] if weights is not None else None
+            denom = (
+                float(held_weights.sum())
+                if held_weights is not None
+                else float(test_mask.sum())
+            )
+            score = deviance(
+                response[test_mask], mu, family=spec.family, power=power, weights=held_weights,
+            ) / denom
+            scores.append(score)
+            metrics_this_alpha.append(
+                CvFoldMetric(fold=fold, rows=int(test_mask.sum()), score=score)
+            )
+        mean_score = float(np.mean(scores))
+        std_score = float(np.std(scores, ddof=0))
+        path.append(CvPathPoint(alpha=alpha, mean_score=mean_score, std_score=std_score))
+        if mean_score < best_mean:
+            best_mean = mean_score
+            best_alpha = alpha
+            fold_metrics_at_selected = tuple(metrics_this_alpha)
+
+    return best_alpha, CrossValidationDiagnostics(
+        method=cv.method, seed=spec.seed, folds=cv.folds, metric="deviance",
+        selected_alpha=best_alpha, path=tuple(path), fold_metrics=fold_metrics_at_selected,
+    )
+
+
 def fit_glm(
     data: pl.DataFrame,
     spec: GlmSpec,
@@ -257,7 +367,7 @@ def fit_glm(
     failure FR-PLAT-8 exists to prevent. The stages are the four that actually take time,
     reported before each rather than after, so the label names what is happening now.
     """
-    from glum import GeneralizedLinearRegressor, TweedieLink  # type: ignore[import-untyped]
+    from glum import GeneralizedLinearRegressor, TweedieLink
 
     report = progress or NullProgress()
     report.check_cancelled()
@@ -315,10 +425,20 @@ def fit_glm(
     # on the canonical link at `estimator.fit`.
     link: Any = TweedieLink(2) if spec.link == "inverse" else spec.link
 
+    cv_diagnostics: CrossValidationDiagnostics | None = None
+    fit_alpha = spec.alpha
+    if spec.select_by == "cv":
+        report.check_cancelled()
+        report.update(0.16, f"cross-validating over {len(spec.cv.alphas)} alpha(s)")  # type: ignore[union-attr]
+        fit_alpha, cv_diagnostics = _fit_cv_path(
+            data, x, response, spec=spec, family=family, link=link,
+            offset=offset, weights=weights, report=report,
+        )
+
     estimator = GeneralizedLinearRegressor(
         family=family,
         link=link,
-        alpha=spec.alpha,
+        alpha=fit_alpha,
         l1_ratio=spec.l1_ratio,
         max_iter=spec.max_iter,
         gradient_tol=spec.tolerance,
@@ -380,6 +500,7 @@ def fit_glm(
             covariance_blob=_covariance_ref(covariance_bytes),
         ),
         covariance_bytes=covariance_bytes,
+        cv=cv_diagnostics,
     )
 
 
