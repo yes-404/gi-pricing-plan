@@ -52,6 +52,25 @@ Two settings whose absence fails `uv sync` before any check runs:
   This is what `.github/workflows/python.yml` runs, which is why CI stayed green while the
   local gate reported ten mypy errors and four collection failures on the same commit.
 
+- **Never path-scope `mypy` to narrow it.** `[tool.mypy] files` is
+  `packages/model-schema/src`, `packages/pricing-core/src`, `backend/src`, and a bare
+  `uv run mypy` uses exactly that. Passing a path *overrides* the list, and two things go
+  wrong at once: the `src` restriction is lost, so `tests/` is pulled in — which is not in
+  the gate and does not type-check clean — and the sibling workspace package resolves from
+  site-packages rather than from source, so its `py.typed` is missed and every symbol
+  crossing the boundary reads as untyped. `uv run mypy packages/pricing-core` reports ~113
+  errors on a tree where the gate is clean, and `uv run mypy packages/model-schema` reports
+  ~42. Both are artefacts of the invocation, not findings.
+
+  Two agents hit this independently on 2026-08-22 while deliberately scoping mypy to avoid
+  reading a concurrent edit. If you must narrow it — parallel work on another package —
+  name the `src` directories and keep the whole set, so the boundary still resolves from
+  source:
+  ```bash
+  uv run mypy packages/model-schema/src packages/pricing-core/src backend/src
+  ```
+  Otherwise just run `uv run mypy`. It is the gate, and it is not slow.
+
 ## Getting `uv` itself
 
 `uv` is not preinstalled and is not a Debian package here. If a session unpacked it into a
