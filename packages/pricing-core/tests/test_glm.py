@@ -205,7 +205,10 @@ def test_a_factor_type_that_is_not_implemented_says_so() -> None:
 
     The example used to be `banding`, which now resolves. Changed rather than deleted: the
     claim being tested is about the *unimplemented* arms of FR-MODEL-1's closed set, and
-    five of the eight are still unimplemented.
+    **three** of the eight are still unimplemented — `spline`, `polynomial` and
+    `expression`. (Was "five of the eight"; `interaction` began resolving with FR-MODEL-91
+    on 2026-08-18, and `offset` stopped being unimplemented and became *superseded* with
+    FR-MODEL-114 on 2026-08-22. The distinction is the point of the next test.)
     """
     splined = Factor(
         id=uuid4(), slug="age_spline", dataset_id=uuid4(), version=1,
@@ -213,6 +216,52 @@ def test_a_factor_type_that_is_not_implemented_says_so() -> None:
     )
     with pytest.raises(FactorResolutionError, match="does not resolve yet"):
         resolve_factors(_frequency_data(100), [splined])
+
+
+@pytest.mark.req("FR-MODEL-114")
+@pytest.mark.req("FR-MODEL-88")
+def test_an_offset_factor_is_refused_as_superseded_and_never_as_pending() -> None:
+    """A superseded arm never resolves, so its refusal must not promise that it will.
+
+    The generic refusal says the build "does not resolve yet", which is the right message
+    for `spline` and the wrong one for `offset`: OQ-MODEL-23 superseded the type on
+    2026-08-22 because an offset is declared on the fit spec through `OffsetSpec`, and a
+    Factor type meaning the same thing was a second mechanism for a solved problem. A
+    caller told "yet" would reasonably wait for a release that is never coming.
+    """
+    factor = Factor(
+        id=uuid4(), slug="exposure_offset", dataset_id=uuid4(), version=1,
+        type=FactorType.OFFSET, source_columns=("driv_age",),
+    )
+    with pytest.raises(FactorResolutionError, match="superseded") as raised:
+        resolve_factors(_frequency_data(100), [factor])
+    assert "does not resolve yet" not in str(raised.value), (
+        "a superseded arm was refused with the pending-slice message, which promises a "
+        "release that FR-MODEL-114 says will never come"
+    )
+
+
+@pytest.mark.req("FR-MODEL-114")
+@pytest.mark.req("FR-MODEL-1")
+def test_the_superseded_offset_arm_stays_in_the_closed_set() -> None:
+    """FR-MODEL-114 supersedes `offset` by refusing it permanently, **not** by removing it.
+
+    Artifacts are immutable, so a Factor persisted with `type: "offset"` can never be
+    rewritten; dropping the arm would turn `Factor.model_validate` on read into a
+    `ValidationError` that fails a whole workspace's factor list rather than the one row.
+    The enum is also the source the published OpenAPI is generated from (ADR-0002), and
+    external consumers have read it since Phase 0 — FR-MODEL-87's 2026-08-22 ruling.
+
+    This test exists because "superseded" reads like an invitation to delete the member,
+    and the deletion would pass every other test in the suite.
+    """
+    assert FactorType.OFFSET in set(FactorType), (
+        "FR-MODEL-114 supersedes the `offset` Factor type by making its refusal permanent, "
+        "not by removing the arm - removing it breaks reads of already-persisted factors"
+    )
+    assert len(set(FactorType)) == 8, (
+        "FR-MODEL-1 declares a closed set of eight; superseding an arm does not shrink it"
+    )
 
 
 @pytest.mark.req("FR-MODEL-88")
