@@ -45,6 +45,7 @@ from model_schema import (
     BlobRef,
     CustomMetric,
     CustomObjective,
+    DroppedEvalMetric,
     Factor,
     FactorType,
     GbmEvalPoint,
@@ -677,12 +678,12 @@ def fit_gbm(
     report.update(0.30, f"boosting {rounds} rounds on {spec.model_type}")
     started = time.perf_counter()
     if spec.model_type == "xgboost":
-        payload, best, curve, versions = _fit_xgboost(
+        payload, best, curve, versions, dropped = _fit_xgboost(
             spec, x, response, base_margin, weights, valid, order, constraints,
             unordered, xgb_objective, rounds, resolved_metrics, metric_link,
         )
     else:
-        payload, best, curve, versions = _fit_lightgbm(
+        payload, best, curve, versions, dropped = _fit_lightgbm(
             spec, x, response, base_margin, weights, valid, order, constraints,
             unordered, lgb_objective, rounds, resolved_metrics, metric_link,
         )
@@ -708,6 +709,7 @@ def fit_gbm(
             rows=data.height,
             fit_seconds=elapsed,
             library_versions=versions,
+            dropped_eval_metrics=dropped,
         ),
         booster_bytes=payload,
         eval_curve=curve,
@@ -839,7 +841,7 @@ def _fit_xgboost(
     rounds: int,
     custom_metrics: Mapping[str, CustomMetric],
     metric_link: Literal["exp", "logistic"] | None,
-) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
+) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str], tuple[DroppedEvalMetric, ...]]:
     import xgboost as xgb
 
     feature_types = ["c" if slug in categorical else "q" for slug in order]
@@ -961,7 +963,9 @@ def _fit_xgboost(
     custom_declared = {_xgb_safe_metric_name(ref): ref for ref in custom_metrics}
     curve = _curve(history, declared=custom_declared or None)
     payload = bytes(booster.save_raw(raw_format="json"))
-    return payload, best + 1, curve, {"xgboost": xgb.__version__}
+    # Nothing is ever dropped here: `eval_metric` takes the whole builtin list and
+    # `custom_metric` runs beside it, so XGBoost evaluates both (FR-MODEL-111).
+    return payload, best + 1, curve, {"xgboost": xgb.__version__}, ()
 
 
 def _lgb_custom_feval(
@@ -997,7 +1001,7 @@ def _fit_lightgbm(
     rounds: int,
     custom_metrics: Mapping[str, CustomMetric],
     metric_link: Literal["exp", "logistic"] | None,
-) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
+) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str], tuple[DroppedEvalMetric, ...]]:
     import lightgbm as lgb
 
     params: dict[str, Any] = {
@@ -1025,6 +1029,7 @@ def _fit_lightgbm(
     )
     declared_map: dict[str, str] = {}
     feval_entries: dict[str, CustomMetric] = {}
+    dropped: tuple[DroppedEvalMetric, ...] = ()
     # LightGBM's early-stopping callback can only target "the first metric"
     # (`first_metric_only`), never one by name — but "first" is decided purely by the
     # evaluation ordering (confirmed by reading `_EarlyStoppingCallback._init`:
@@ -1045,6 +1050,15 @@ def _fit_lightgbm(
         # section exists to prevent. Pinned by
         # `test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it`.
         params["metric"] = "None"
+        # FR-MODEL-111: the builtins suppressed by the line above were *declared*, and a
+        # caller who cannot see them in the curve is owed the reason rather than left to
+        # infer one. The same list the `else` arm passes to `params["metric"]`.
+        dropped = tuple(
+            DroppedEvalMetric(
+                name=name, reason="builtin_evaluated_before_custom_stopping_metric"
+            )
+            for name in _builtin_eval_metric_names(spec.eval_metrics)
+        )
         feval_entries = {
             stopping.metric: custom_metrics[stopping.metric],
             **{ref: metric for ref, metric in custom_metrics.items() if ref != stopping.metric},
@@ -1106,7 +1120,7 @@ def _fit_lightgbm(
     best = int(booster.best_iteration or rounds)
     curve = _curve(history, declared=declared_map)
     payload = booster.model_to_string(num_iteration=best).encode()
-    return payload, best, curve, {"lightgbm": lgb.__version__}
+    return payload, best, curve, {"lightgbm": lgb.__version__}, dropped
 
 
 def _native_categoricals(result: GbmFitResult) -> frozenset[str]:

@@ -31,6 +31,7 @@ from model_schema import (
     BandingMethod,
     CustomMetric,
     CustomObjective,
+    DroppedEvalMetric,
     EarlyStopping,
     Factor,
     FactorType,
@@ -1374,6 +1375,45 @@ def test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it() -> None:
 
     assert curves["xgboost"] == {"rmse", _METRIC_REF}
     assert curves["lightgbm"] == {_METRIC_REF}
+
+
+@pytest.mark.req("FR-MODEL-111")
+def test_lightgbm_records_the_builtin_eval_metric_it_dropped() -> None:
+    """The drop was correct and silent; FR-MODEL-111 makes it correct and legible.
+
+    LightGBM evaluates builtin metrics before `feval`'s, so a builtin declared alongside
+    a custom stopping target would take position 0 and drive the stop — the defect the
+    `metric: None` line exists to prevent. Until 2026-08-22 the caller's declared metric
+    simply never appeared in the curve, with nothing on the artifact to say why.
+    """
+    metric = _metric()
+    holdout = _frequency_data(n=3_000, seed=99)
+    eval_metrics = (
+        GbmFunctionRef(kind="builtin", name="rmse"),
+        GbmFunctionRef(kind="custom", ref=_METRIC_REF),
+    )
+    spec = _spec(
+        "lightgbm", response=ResponseKind.CLAIM_COUNT,
+        hyperparameters=dict(_STOPPING_HYPERPARAMETERS), eval_metrics=eval_metrics,
+        early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+    )
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=holdout, metrics={_METRIC_REF: metric}
+    )
+    assert fit.result.dropped_eval_metrics == (
+        DroppedEvalMetric(
+            name="rmse", reason="builtin_evaluated_before_custom_stopping_metric"
+        ),
+    )
+
+
+@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_fit_that_evaluated_everything_drops_nothing(backend: str) -> None:
+    """The control. A non-empty tuple on an ordinary fit would make the field noise, and
+    a reader who has seen it fire spuriously once will not trust it when it matters."""
+    fit = fit_gbm(_frequency_data(), _spec(backend), FACTORS)
+    assert fit.result.dropped_eval_metrics == ()
 
 
 # --------------------------------------------------------------------------------------
