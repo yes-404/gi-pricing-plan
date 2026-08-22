@@ -39,7 +39,7 @@ from backend.tests.test_model_jobs import (
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from app.db.models import PerilStructureRow
+from app.db.models import JobRow, PerilStructureRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
@@ -52,6 +52,7 @@ from model_schema import (
     JobStatus,
     LargeLossKind,
     LargeLossTreatment,
+    OffsetSpec,
     PerilComponent,
     PerilMethod,
     PerilStructureStatus,
@@ -679,3 +680,93 @@ def test_the_published_tolerance_admits_no_json_number() -> None:
     tolerance = schema["properties"]["tolerance"]
     assert tolerance.get("type") == "string", tolerance
     assert "anyOf" not in tolerance, tolerance
+
+
+# -- FR-MODEL-112(c): the arm that is not built, and the refusal that stands in for it -----
+
+
+@pytest.mark.req("FR-MODEL-24")
+@pytest.mark.req("FR-MODEL-112")
+async def test_reconciling_a_structure_whose_model_carries_a_model_offset_is_refused_by_name(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-112(c) is not built, and the refusal is the deliverable until it is.
+
+    `_reconcile`'s `_score` calls `score_fitted` with no `model_offset=`, so a GLM whose
+    `offset.kind == "model"` reaches `predict._offset` without its resolved array. That is
+    refused by name — never scored on a silently-absent offset, which would misprice the
+    whole reconciliation. This test is what stops the refusal being removed by accident
+    before the resolver is wired in.
+
+    The peril's model is offset by another model fitted on the **same** book with the
+    **same** link, because `resolve_offset_model` refuses any other pairing — the fit has
+    to succeed for the reconciliation to be the thing under test.
+    """
+    actor, version_id, area, split = await _book(database, blob_store, workspace_id)
+
+    _, base_slug, base_version = await _fitted_model(
+        database, blob_store, workspace_id, actor, version_id, area, split
+    )
+    _, slug, version = await _fitted_model(
+        database,
+        blob_store,
+        workspace_id,
+        actor,
+        version_id,
+        area,
+        split,
+        response_column="claim_amount_minor",
+        family="tweedie",
+        family_params={"power": 1.5},
+        offset=OffsetSpec(
+            kind="model", offset_model_ref=f"model:{base_slug}@{base_version}"
+        ),
+    )
+    row = await _structure(
+        database,
+        workspace_id,
+        actor,
+        [
+            PerilComponent(
+                peril="WINDSCREEN",
+                method=PerilMethod.BURNING_COST,
+                burning_cost_model=f"model:{slug}@{version}",
+                large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+            )
+        ],
+    )
+    structure_id = row.id
+
+    async with database.unit_of_work() as session:
+        reserved = await service.request_reconciliation(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            structure_id=structure_id,
+            tolerance=Decimal("0.9"),
+        )
+        submitted = await job_service.submit(
+            session,
+            JobKind.PERIL_STRUCTURE_RECONCILE,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                **service.reconcile_payload(
+                    reserved,
+                    tolerance=Decimal("0.9"),
+                    observed_column="claim_amount_minor",
+                    exposure_column="exposure_years",
+                ),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, submitted.id, blob_store) is JobStatus.FAILED
+
+    async with database.session() as session:
+        stored = await session.get(JobRow, submitted.id)
+    assert stored is not None
+    job = job_service.to_schema(stored)
+    assert job.status is JobStatus.FAILED
+    assert job.error is not None
+    assert job.error.code == "MODEL_OFFSET_MISSING"

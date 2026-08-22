@@ -1429,21 +1429,40 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
             booster=candidate.booster,
         )
 
-    predictions = [
-        PerilPrediction(
-            peril=peril.peril,
-            method=peril.method,
-            frequency=_score(peril.frequency_model) if peril.frequency_model else None,
-            severity=_score(peril.severity_model) if peril.severity_model else None,
-            burning_cost=(
-                _score(peril.burning_cost_model) if peril.burning_cost_model else None
-            ),
-            large_loss=peril.large_loss,
-        )
-        for peril in structure.perils
-    ]
+    from pricing_core.modelling import ModellingError, PredictionError
 
-    from pricing_core.modelling import ModellingError
+    try:
+        predictions = [
+            PerilPrediction(
+                peril=peril.peril,
+                method=peril.method,
+                frequency=_score(peril.frequency_model) if peril.frequency_model else None,
+                severity=_score(peril.severity_model) if peril.severity_model else None,
+                burning_cost=(
+                    _score(peril.burning_cost_model) if peril.burning_cost_model else None
+                ),
+                large_loss=peril.large_loss,
+            )
+            for peril in structure.perils
+        ]
+    except (ModellingError, PredictionError) as exc:
+        # Without this the refusal loses its name. `PredictionError` is a sibling of
+        # `ModellingError` — both bare `RuntimeError`s from `pricing-core` — and neither is
+        # a `PlatformError`, so `execute_job`'s OQ-PLAT-7 clause does not catch it. The Job
+        # would store `JOB_HANDLER_FAILED` with the code absent even from the message,
+        # leaving a named refusal indistinguishable from a handler crash, which is the exact
+        # failure OQ-PLAT-7 exists to remove. `platform/prediction.py` catches the pair
+        # together for the synchronous path; this is the worker path saying the same thing.
+        #
+        # It bites hardest on FR-MODEL-24's model-referenced offset: `_score` calls
+        # `score_fitted` with no `model_offset=`, so a GLM whose `offset.kind == "model"`
+        # reaches `predict._offset` without its resolved array and is refused
+        # `MODEL_OFFSET_MISSING` — never scored on a silently-absent offset, which would
+        # misprice the whole reconciliation. FR-MODEL-112(c) wires the resolver in; until it
+        # does, the named refusal *is* the deliverable, and a caller must be able to see it.
+        raise PlatformError(
+            exc.code, "A peril component could not be scored", 409, str(exc)
+        ) from exc
 
     try:
         assembled = assemble_risk_premium(predictions)
