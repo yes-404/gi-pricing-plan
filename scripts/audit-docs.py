@@ -3,7 +3,8 @@
 
 Checks (all non-destructive, exit 1 on any failure):
   1. No broken relative markdown links.
-  2. Every referenced FR-/NFR- id is defined exactly once in a spec.
+  2. Every referenced FR-/NFR- id is defined exactly once in a spec, except an id a
+     plan lists after "Next free:" — an allocation note, not a citation.
   3. No gaps in requirement numbering within a module.
   4. Every spec open question is mirrored in open-questions.md, and vice versa.
   5. Every referenced ADR file exists.
@@ -43,6 +44,8 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 ROOT = REPO / "docs"
 NOTES = REPO / ".claude" / "notes"
 _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
+# docs/plans/ only: ids listed after this marker are being allocated, not cited. See check 2.
+UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
 REQUIRED_SECTIONS = [
     "Purpose & scope", "Concepts & glossary", "Functional requirements",
     "Data contracts", "Interfaces", "Workflows", "Cross-module dependencies",
@@ -336,10 +339,25 @@ def main() -> int:
         if len(where) > 1:
             fail(f"{rid} defined in multiple specs: {where}")
 
+    # A filed plan is written *before* the spec change it argues for, so it names the id it
+    # intends to take — "Next free: `FR-DATA-53`" — which by definition is not yet defined.
+    # That is an allocation note, not a citation, and docs/plans/ is the only place in the
+    # suite where an undefined id is the correct thing to write.
+    #
+    # The exemption is deliberately narrow on both axes. It applies only under docs/plans/,
+    # so a spec can never dodge this check by borrowing the phrase; and only to the ids
+    # *after* the marker, so the real citations sharing that line are still checked. The
+    # plans cite 116 distinct requirements between them — exempting the directory wholesale
+    # would blind check 2 to all of them to accommodate one line.
+    plans_dir = ROOT / "plans"
     referenced: dict[str, set[str]] = collections.defaultdict(set)
     for f in md:
-        for m in re.finditer(r"\b((?:FR|NFR)-[A-Z]+-\d+)\b", f.read_text(encoding="utf-8")):
-            referenced[m.group(1)].add(str(f.relative_to(ROOT)))
+        is_plan = f.is_relative_to(plans_dir)
+        for line in f.read_text(encoding="utf-8").splitlines():
+            marker = UNALLOCATED.search(line) if is_plan else None
+            cited = line[: marker.start()] if marker else line
+            for m in re.finditer(r"\b((?:FR|NFR)-[A-Z]+-\d+)\b", cited):
+                referenced[m.group(1)].add(str(f.relative_to(ROOT)))
     for rid in sorted(set(referenced) - set(defined)):
         fail(f"{rid} referenced but never defined (in {sorted(referenced[rid])})")
 

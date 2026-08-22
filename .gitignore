@@ -89,9 +89,11 @@ Thumbs.db
 .claude/worktrees/
 
 # planning-with-files working memory. The skill writes an agent's live plan state into the
-# working directory; it is per-session scratch, not a record. The durable record of a
-# decision belongs in docs/ or .claude/notes/ (NT-NNNN), which the audit can see — a plan
-# file committed here would be a second, unaudited account of what the project is doing.
+# working directory; it is per-session scratch, rewritten every few turns, not a record.
+# The durable record belongs where the audit can see it: a finished plan or ledger in
+# docs/plans/, a decision in docs/ or .claude/notes/ (NT-NNNN). What must never be
+# committed is an *unaudited* account of what the project is doing, which is exactly what
+# these live files are — superseded several times an hour and never reconciled with anything.
 # Anchored with a leading slash on purpose: the skill writes these to the project root, and
 # unanchored patterns would match at any depth — silently ignoring a future
 # docs/research/findings.md, which is exactly the kind of file this repo does commit.
