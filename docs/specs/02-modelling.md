@@ -2869,11 +2869,31 @@ for grouping.
 >   path compiles and evaluates correctly with `builtins.eval` and `builtins.exec` **removed**,
 >   and eight syntactically-valid routes to `eval` raise `ExpressionError` **specifically,
 >   never `SyntaxError`** — a distinction `test_prepare.py` conflates by catching both
->   interchangeably. **The position-accurate clause is not met**: `ExpressionError` is a bare
->   `ValueError` with no `lineno`/`col_offset`, so no caller can underline the offending token.
+>   interchangeably. **~~The position-accurate clause is not met~~ — met 2026-08-22 (W5, the
+>   closure slice).** It was true as written: `ExpressionError` was a bare `ValueError` with no
+>   `lineno`/`col_offset`, so no caller could underline the offending token, and the suite
+>   pinned that absence deliberately rather than leaving it unstated. `ExpressionError` now
+>   carries `lineno`, `col_offset` and `end_col_offset` exactly as `ast` reports them — 1-based
+>   line, 0-based columns — taken from the refused node where it has a position and from the
+>   **nearest enclosing positioned ancestor** where it does not. `None` therefore remains
+>   correct, and means "the parser could not know" rather than "nobody threaded it"; under
+>   `mode="eval"` the only node it can happen for is the bare `ast.Expression` root.
+>
+>   **The ancestor is load-bearing, and threading the refused child alone does not work.**
+>   `ast` gives `lineno`/`col_offset` to `expr` and `stmt` subclasses only — `operator`,
+>   `cmpop`, `boolop`, `unaryop`, `comprehension` and `arguments` carry none. The grammar check
+>   walks the tree and refuses a disallowed node *before* translation is reached, so an
+>   out-of-grammar **operator** such as `FloorDiv` is refused at a node that has no position of
+>   its own; reporting the enclosing expression's start instead would be position-*shaped*
+>   without being position-*accurate*. The walk therefore pairs each node with its nearest
+>   positioned ancestor, preserving `ast.walk`'s order so no refusal changes which message it
+>   emits. Proven rather than assumed (§13 rule 4): with the ancestor pairing removed and the
+>   child threaded directly, the operator case fails while the subscript case still passes —
+>   which is the whole distinction.
+>
 >   **The per-round objective time budget is not implemented anywhere**; FR-MODEL-48's NaN/inf
->   abort is, with four markers. **Owner: W5** for the error position; the per-round budget
->   travels with FR-MODEL-48.
+>   abort is, with four markers. ~~**Owner: W5** for the error position~~ — **delivered**; the
+>   per-round budget travels with FR-MODEL-48 and is unchanged by this.
 > * **NFR-MODEL-7 — not testable, because there is nothing to test.** The repository has **no
 >   Model export path and no import path**: not a route (22 model-family routes, none an
 >   export — the only `export` in the HTTP surface is the audit log's), not a CLI
