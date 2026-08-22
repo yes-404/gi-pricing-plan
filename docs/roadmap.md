@@ -2692,7 +2692,7 @@ Smallest first:
 |---|---|
 | NFR-MODEL-3, NFR-MODEL-12 | **Measured 2026-08-15 and recorded in `02` §9**, met for three of the four proposal methods. Unevidenced only because a measurement is not a marker — `CLAUDE.md` §13 rule 1's "evidence is not only markers" case. They need the measurement recognised as the evidence, not a test invented to stand in for it |
 | NFR-MODEL-7, NFR-MODEL-8, NFR-MODEL-9 | **Testable today, no fixture needed.** Export/import round-trip with identical predictions; that user expressions never reach `eval`/`exec` and out-of-grammar input fails with a position-accurate error; that every named creation, fit and status transition emits an Audit Event with before/after state  ~~**Testable today**~~ **— two of the three were not, corrected 2026-08-22 by the audit-remediation slice, and each now has its own verdict in `02` §9.** **NFR-MODEL-9 was**, and is now evidenced (`backend/tests/test_model_nfrs.py`) for every act that has a before; five create events carry none, left as they are and pinned by a test, because a versioned artifact's create has no prior state. **NFR-MODEL-8 is half testable** — the `eval`/`exec` clause is now evidenced by removing both builtins and watching a legitimate expression still evaluate; the position-accurate error is **not met** (`ExpressionError` carries no `lineno`/`col_offset`) and the per-round time budget is implemented nowhere. **NFR-MODEL-7 has nothing to test**: a six-way search found **zero** Model export paths and zero import paths — no route, no CLI (`[project.scripts]` is empty), no bundle schema — and its parent FR-OVR-2 carries **zero markers**. Owner: **unassigned**, because it is a capability nobody has been asked to build |
-| NFR-MODEL-4, NFR-MODEL-5, NFR-MODEL-11 | **Measurable today** against existing fixtures, because none of the three names a data scale: diagnostics adding no more than 30 % to fit wall-clock is a *ratio*, certification completes under 3 minutes, and a diagnostics artifact stays under 50 MB  **Measured 2026-08-22 and recorded in `02` §9.** NFR-MODEL-5 (0.42–3.56 s of 180 s) and NFR-MODEL-11 (0.13 MB of 50 MB, GBM path included) are **met with two orders of magnitude of headroom**. **NFR-MODEL-4 is not met**, and the cause is a sibling requirement rather than a slow function: FR-MODEL-51's type-III tests drop each factor and refit, so diagnostics cost one extra fit *per factor* — **510 %** of fit wall-clock at 12 factors, **1 388 %** at 24, **3 002 %** on the GBM path. Everything else `compute_diagnostics` does fits the budget at 9.0–9.5 %. The two requirements cannot both hold as written, so it is raised as **OQ-MODEL-24** with three options rather than tuned quietly |
+| NFR-MODEL-4, NFR-MODEL-5, NFR-MODEL-11 | **Measurable today** against existing fixtures, because none of the three names a data scale: diagnostics adding no more than 30 % to fit wall-clock is a *ratio*, certification completes under 3 minutes, and a diagnostics artifact stays under 50 MB  **Measured 2026-08-22 and recorded in `02` §9.** NFR-MODEL-5 (0.42–3.56 s of 180 s) and NFR-MODEL-11 (0.13 MB of 50 MB, GBM path included) are **met with two orders of magnitude of headroom**. **NFR-MODEL-4 was not met as written** *(re-read 2026-08-22, OQ-MODEL-24 decided: re-scoped to exclude the per-factor block and re-set to 50 % at a named scale, it is now **met** at every measured arm; the type-III block moved to NFR-MODEL-13, which is **breached at 678 013 × 60**, and the GBM path to NFR-MODEL-14, which is met)*, and the cause is a sibling requirement rather than a slow function: FR-MODEL-51's type-III tests drop each factor and refit, so diagnostics cost one extra fit *per factor* — **510 %** of fit wall-clock at 12 factors, **1 388 %** at 24, **3 002 %** on the GBM path. Everything else `compute_diagnostics` does fits the budget at 9.0–9.5 %. The two requirements cannot both hold as written, so it is raised as **OQ-MODEL-24** with three options rather than tuned quietly |
 | NFR-MODEL-1, NFR-MODEL-2, NFR-MODEL-10 | **Blocked on a fixture that does not exist.** All three name 5 M rows × 60 factors; freMTPL2 is 678 013 rows. Either a synthetic fixture is built, or they are measured at a stated smaller scale with the extrapolation written down. NFR-MODEL-2's second clause — a custom `expression` objective adding no more than 25 % — is **Phase 2** regardless, since expression objectives do not exist |
 | NFR-MODEL-6 | **Evidenced.** The only one of the twelve carrying a marker today  ~~**Evidenced.**~~ **Half evidenced, corrected 2026-08-22.** The requirement asks for identical GLM coefficients to 1e-10 **and** an identical booster hash; the one marker it carries is the **booster** half, and nothing anywhere refits a GLM on the same `spec_hash` and seed to compare coefficients. Counted as evidenced because a marker existed — the same defect FR-MODEL-81 was caught by on 2026-08-16, applied to an NFR this time. **Owner: the GLM slice**, a two-fit determinism test beside the code it is about |
 
@@ -3194,7 +3194,7 @@ FR-MODEL-37; this record and the FR-MODEL-109 marker backfill close the slice.
 The twenty-eighth slice, and the one that answers a closure audit rather than building a
 capability. Six slices, four of them clearing defects the audit found and two clearing the
 record itself. **It is not a closure record** — `CLAUDE.md` §13's verdicts are below, but W5
-closes only when the maintainer accepts them and OQ-MODEL-24 is decided.
+closes only when the maintainer accepts them and OQ-MODEL-24 is decided. **OQ-MODEL-24 was decided 2026-08-22** — option (a), denominator settled as fit wall-clock — so that half of the condition is discharged; the maintainer's acceptance of the verdicts below is the half that remains.
 
 **The audit's own numbers moved while it was being answered, twice**, which is the first
 finding: the requirement count was re-derived at 124 by the verification pass and was **125**
@@ -3290,7 +3290,9 @@ FR-MODEL-81 (2026-08-16) and never applied it to the headline. Stated properly:
 | NFR-MODEL-1, -10 | **Measured by extrapolation** — 173 s of 600 s, 16.0 GB of 32 GB | The slice with a 16-core worker |
 | NFR-MODEL-2 | **Measured once, growth unmeasured** — 963 s of 1 200 s on an *assumed* linearity | Same |
 | NFR-MODEL-3 | **Measured and breached by all three grouping methods**; the cause is the one-way summary, not Ward | The factor-workbench slice |
-| NFR-MODEL-4 | **Measured and breached**; contradicts FR-MODEL-51 | **OQ-MODEL-24**, maintainer |
+| NFR-MODEL-4 | **Measured and met** since OQ-MODEL-24 was decided 2026-08-22 — re-scoped off FR-MODEL-51's block and re-set to 50 % at a named scale; 32.1 % at the worst measured arm | None required |
+| NFR-MODEL-13 — the type-III block | **Measured and breached** at 678 013 × 60: more than 1.61× per tested factor against a 1.0× bound, and the observation is *censored* | **Phase 1b**, with the warm-denominator run the corrected multiples rest on |
+| NFR-MODEL-14 — the GBM block | **Measured and met** — 0.0480 fits per scoring pass against 0.06, 1.25× headroom | None required, though the sweep it prices is uncapped (OQ-MODEL-26) |
 | NFR-MODEL-5, -11 | **Measured and met**, 50× and 380× headroom | None required |
 | NFR-MODEL-7 | **Nothing to test** — zero export and import paths exist | **Unassigned**, needs a verdict before it can have a test |
 | NFR-MODEL-12 | **Measured and held** — 0.22 s against 5.22 s | None required |
@@ -3300,12 +3302,24 @@ admits as evidence where a test is the wrong instrument — and says so with the
 
 ##### Not delivered, and honestly so
 
-- **OQ-MODEL-24 is open.** NFR-MODEL-4 and FR-MODEL-51 cannot both hold; three options and a
-  recommendation are on file. **W5 cannot close until it is decided**, because the answer
-  changes whether a delivered requirement is in breach.
-- **OQ-MODEL-23 is open** — `spline`, `polynomial` and `offset` had *no owner at all*, and
-  scheduling them narrows a set FR-MODEL-1 declared closed in Phase 0, which is the
-  maintainer's call.
+- **OQ-MODEL-24 is decided** (2026-08-22, option (a)). NFR-MODEL-4 is re-scoped off
+  FR-MODEL-51's block, given the wall-clock denominator in its own text, and re-set to 50 %
+  at a named scale; the type-III block is NFR-MODEL-13 and the GBM block NFR-MODEL-14.
+  **What the decision did not fix is stated rather than closed over**: NFR-MODEL-13 is
+  breached at 678 013 × 60 on a *censored* observation, owned by Phase 1b, and the
+  partial-dependence sweep NFR-MODEL-14 prices is uncapped — OQ-MODEL-26.
+- **OQ-MODEL-23 is decided** (2026-08-22). `offset` is superseded as a Factor type
+  (FR-MODEL-114), the arm kept in the published contract because artifacts are immutable and
+  a stored row must stay loadable. `spline` and `polynomial` are **not scheduled and not
+  deferred into silence**: both stay declared and refused, gated on FR-MODEL-115, owned by
+  W30. The blocker turned out to be neither of them — **no continuous Factor can be rated or
+  reviewed today**, including the `identity`-over-numeric one that already resolves, because
+  FR-MODEL-21's relativity table is categorical-only and FR-RATE-16 seeds from it. That gap
+  appeared in none of the question's four options.
+- **`FactorIntent.OFFSET` is a live silent mis-fit** — declarable through the API, read by
+  neither fit path, so the factor is fitted with a free coefficient. Found while deciding
+  OQ-MODEL-23 and raised as **OQ-MODEL-25** rather than decided inside it: a different enum
+  with a different remedy.
 - **`02` §4.6 diverges from the parser in three ways**, the third being that the implemented
   grammar is *wider* in operators and *narrower* in functions, and `where` — the one construct
   §4.6 singles out by name — **does not exist**. Recorded, not resolved: W30 owns that grammar.
@@ -3513,9 +3527,9 @@ you never block on a decision you have not reached.
 
 | Gate | Questions | Count |
 |---|---|---|
-| ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo*, ~~OQ-OVR-8~~ ✔, ~~OQ-MODEL-16~~ ✔, ~~OQ-MODEL-18~~ ✔, ~~OQ-MODEL-19~~ ✔, ~~OQ-MODEL-20~~ ✔, ~~OQ-DATA-11~~ ✔ *all 2026-08-19, raised and decided inside the phase*, ~~OQ-OVR-9~~ ✔, ~~OQ-MODEL-21~~ ✔ *2026-08-21, raised and decided inside the phase — FR-OVR-19's delivery precedes the exit demo, FR-MODEL-111 is a W5 obligation* | 13 (0 open) |
-| ~~**Before Phase 1b**~~ ✔ **all decided** | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18*, ~~OQ-DATA-9~~ ✔ *2026-08-19 — raised in W5 and never placed on this table until it was decided, so the gate it belonged to had already closed; it gates W6b's dataset list, which is Phase 1b work*, ~~OQ-MODEL-15~~ ✔, ~~OQ-MODEL-17~~ ✔, ~~OQ-MODEL-22~~ ✔ *all 2026-08-21, raised in W5 and never placed on this table until decided — FR-MODEL-109 delivered with the decision, FR-MODEL-110's trigger is Phase 1b's job-latency measurement, FR-MODEL-112's first slice is Phase 1b's* | 16 (0 open) |
-| ~~**Before Phase 2**~~ ✔ **all decided** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18* | 10 (0 open) |
+| ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo*, ~~OQ-OVR-8~~ ✔, ~~OQ-MODEL-16~~ ✔, ~~OQ-MODEL-18~~ ✔, ~~OQ-MODEL-19~~ ✔, ~~OQ-MODEL-20~~ ✔, ~~OQ-DATA-11~~ ✔ *all 2026-08-19, raised and decided inside the phase*, ~~OQ-OVR-9~~ ✔, ~~OQ-MODEL-21~~ ✔ *2026-08-21, raised and decided inside the phase — FR-OVR-19's delivery precedes the exit demo, FR-MODEL-111 is a W5 obligation*, ~~OQ-MODEL-24~~ ✔ *2026-08-22, raised and decided inside the phase from the first measurement of NFR-MODEL-4 — it gated W5's closure, because the answer changes whether a delivered requirement is in breach* | 14 (0 open) |
+| **Before Phase 1b** — *re-opened 2026-08-22* | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18*, ~~OQ-DATA-9~~ ✔ *2026-08-19 — raised in W5 and never placed on this table until it was decided, so the gate it belonged to had already closed; it gates W6b's dataset list, which is Phase 1b work*, ~~OQ-MODEL-15~~ ✔, ~~OQ-MODEL-17~~ ✔, ~~OQ-MODEL-22~~ ✔ *all 2026-08-21, raised in W5 and never placed on this table until decided — FR-MODEL-109 delivered with the decision, FR-MODEL-110's trigger is Phase 1b's job-latency measurement, FR-MODEL-112's first slice is Phase 1b's*, **OQ-MODEL-25**, **OQ-MODEL-26** *both raised 2026-08-22 out of the two modelling decisions taken that day — the first is a live silent mis-fit, the second an unbounded diagnostics sweep. This gate had been closed since 2026-08-21; it re-opens rather than pretending they arrived earlier* | 18 (2 open) |
+| ~~**Before Phase 2**~~ ✔ **all decided** | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18*, ~~OQ-MODEL-23~~ ✔ *2026-08-22 — decided into FR-MODEL-114 and FR-MODEL-115; the continuous-effect gate it turns on is W30's, which is Phase 2 work* | 11 (0 open) |
 | ~~**Before Phase 3**~~ ✔ **all decided** | ~~OQ-GOV-1..6~~ ✔ *2026-08-18*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (0 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, ~~OQ-DATA-10~~ ✔ *2026-08-19 — a deferral with a trigger (FR-DATA-52), raised in W5 and never placed here until decided*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5, OQ-PLAT-7 *raised 2026-08-19 in the FR-MODEL-96 slice and placed 2026-08-21* | 15 (5 open) |
@@ -3542,7 +3556,7 @@ quote**, and there is **no pricing-specific provisions section**, so §1's P1.1�
 together with TAS 100. Verified against the FRC's published PDF rather than a summary — the
 row's warning that public summaries do not state the scope was accurate.
 
-**Every decision gate on this table is now closed except Phase 4's and the any-time rows.**
+**Every decision gate on this table is now closed except Phase 1b's, Phase 4's and the any-time rows.** Phase 1b's re-opened on 2026-08-22: deciding OQ-MODEL-23 and OQ-MODEL-24 surfaced two defects neither question had asked about, and a gate that closes over a question raised after it is a gate recording the wrong thing.
 Phases 1a, 1b, 2 and 3 all read 0 open, while Phase 1a is still being built — which is the
 order §10 exists to produce, and the first time the table has been in it.
 
@@ -3550,7 +3564,9 @@ order §10 exists to produce, and the first time the table has been in it.
 on this table is now closed.** An `expression` Custom Objective needs `custom_objective:author`,
 distinct from `model:fit` and held by no built-in role by default (`06` FR-GOV-39). **Before
 Phase 2 reads 10 (0 open)**, so Phases 1a, 1b and 2 are all decided while Phase 1a is still
-being built.
+being built. *(Corrected 2026-08-22: Before Phase 2 now reads 11 (0 open) with
+OQ-MODEL-23 placed, and Before Phase 1b has re-opened at 18 (2 open). The sentence stands as
+what was true on 2026-08-18.)*
 
 **Worth recording why the deferral did not survive a second look**, because the failure is
 instructive rather than embarrassing: it rested on "the answer depends on how much of the

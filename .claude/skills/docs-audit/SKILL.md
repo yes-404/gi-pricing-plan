@@ -151,6 +151,15 @@ PY
 Every `actual` must equal its `stated`. A range written `OQ-GOV-1..5` counts as five, and a range
 struck as a whole counts five decided — which is how the rows are actually written.
 
+**Never name an `OQ-` id in a gate cell's explanatory italics.** Both snippets above scan the
+*whole* cell, so a note reading *"raised out of the OQ-MODEL-23 and OQ-MODEL-24 decisions"* places
+those two ids in that row a second time. The coverage check then reports them under
+`duplicated`, and the recount counts them as **unstruck**, i.e. open — so a row genuinely holding
+two open questions reports four. Both failures point at the row you added, not at the prose,
+which is why this costs a while to find. Say *"the two modelling decisions taken that day"*, or
+cite the requirement the decision became (`FR-MODEL-114`) — requirement ids are not scanned.
+*(Found 2026-08-22, placing OQ-MODEL-23 and OQ-MODEL-24 while deciding them.)*
+
 **`duplicated` fires on prose inside a table row, not only on a real second placement.** The
 Phase 3 row carried a parenthetical — *(OQ-GOV-7 is gated at 1b, not here — see below)* — and
 the snippet counts ids per row, so an id was placed twice by a note whose whole purpose was
@@ -176,6 +185,13 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-22 — Re-confirmed while deciding OQ-MODEL-23 and OQ-MODEL-24. `audit-docs.py` passed
+throughout (495 → 499 requirements, 76 → 78 open questions), and the gate-table snippet again
+reported both ids under `missing` **before** the edit — the fourth time, and the same cause as
+2026-08-19: questions raised inside W5 and mirrored correctly, but never placed on the plan. The
+duplicate-id-in-prose trap above was found here, and it is the first failure mode where the two
+snippets disagree with each other rather than with the roadmap.
 
 2026-08-19 — Confirmed while recording OQ-DATA-9 (→ FR-DATA-50, FR-DATA-51). The script passed
 before and after; the gate-table snippet reported `missing: ['OQ-DATA-9']` **before** the edit — a

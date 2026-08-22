@@ -5,9 +5,23 @@ where "the column moved or changed type" is discovered. `02` FR-MODEL-2 says res
 fails loudly, and the reason is that the alternative is a model fitted on a column that is
 no longer the column the factor meant.
 
-Three of FR-MODEL-1's eight types resolve today: `identity`, `banding` and `grouping`. The
-other five arrive with the slices that implement them; a resolver that silently returned
-the raw column for a `spline` would produce a fit nobody could tell from a correct one.
+**Four** of FR-MODEL-1's eight types resolve today: `identity`, `banding`, `grouping` and
+`interaction` — the last since FR-MODEL-91 on 2026-08-18, which this docstring did not
+record until 2026-08-22. A resolver that silently returned the raw column for a `spline`
+would produce a fit nobody could tell from a correct one, so the other four are refused by
+name (FR-MODEL-88).
+
+The four refused do not share a reason, and the message says which applies (OQ-MODEL-23,
+decided 2026-08-22):
+
+- `spline` and `polynomial` are **not built**. Both stay in FR-MODEL-1's declared set and
+  are gated on FR-MODEL-115, because no continuous Factor can be rated or reviewed yet —
+  FR-MODEL-21's relativity table is categorical-only and `03` FR-RATE-16 seeds from it.
+- `expression` is **not built**, owned by W30 with the rest of §4.6's grammar.
+- `offset` is **superseded** (FR-MODEL-114). Its refusal is permanent, not pending: an
+  offset is declared on the spec through `OffsetSpec`, and a Factor type meaning the same
+  thing was a second mechanism for a solved problem. The arm stays in the enum and in the
+  published contract because artifacts are immutable and a stored row must stay loadable.
 """
 
 from __future__ import annotations
@@ -22,6 +36,12 @@ from model_schema import Banding, Factor, FactorIntent, FactorType, Grouping
 from pricing_core.modelling.bandings import apply_banding
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.groupings import apply_grouping
+
+#: FR-MODEL-1 arms refused **permanently** rather than pending a slice, so the refusal must
+#: not say "yet" (FR-MODEL-114, OQ-MODEL-23 decided 2026-08-22). A set rather than a single
+#: comparison because superseding an arm is a spec decision that may recur, and this is
+#: where such a decision becomes behaviour.
+SUPERSEDED_FACTOR_TYPES = frozenset({FactorType.OFFSET})
 
 __all__ = ["FactorMatrix", "FactorResolutionError", "rateable", "resolve_factors"]
 
@@ -121,6 +141,14 @@ def resolve_factors(
             grouping = _grouping(groupings, factor)
             _column_matches(grouping.column, source, factor, kind="grouping")
             series = apply_grouping(frame[source], grouping)
+        elif factor.type in SUPERSEDED_FACTOR_TYPES:
+            raise FactorResolutionError(
+                f"factor {factor.slug!r} is of type {factor.type.value!r}, which is "
+                "**superseded** and will never resolve (`02` FR-MODEL-114). An offset is "
+                "declared on the fit spec through `OffsetSpec`, not as a Factor. Returning "
+                "the raw column instead would produce a fit nobody could tell from a "
+                "correct one."
+            )
         else:
             raise FactorResolutionError(
                 f"factor {factor.slug!r} is of type {factor.type.value!r}, which this "

@@ -334,6 +334,13 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     glm_cv: CrossValidationDiagnostics | None = None
     eval_curve: tuple[GbmEvalPoint, ...] = ()
     result: FitResult
+    # NFR-MODEL-4's denominator, settled by OQ-MODEL-24 on 2026-08-22 as **fit wall-clock**:
+    # the elapsed fit call including factor resolution and design-matrix construction, which
+    # `FitResult.fit_seconds` excludes because it starts after the design matrix is built.
+    # The two disagree by enough to change a verdict - 32.1 % against wall-clock is 55.2 %
+    # against the solve on the same arm - so the budgeted one is timed here rather than
+    # inferred from the artifact.
+    fit_wall_started = time.perf_counter()
     try:
         if isinstance(spec, GbmSpec):
             fit = fit_gbm(
@@ -396,6 +403,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             f"{exc} FR-MODEL-2: a Factor is defined against a Dataset and resolved against "
             "a version; this is that resolution failing.",
         ) from exc
+    fit_wall_seconds = time.perf_counter() - fit_wall_started
     progress.update(0.85, "diagnostics")
     # NFR-MODEL-4's other half. Every fit result already carries `fit_seconds`; nothing
     # timed the diagnostics, so the 30 % budget could only be asserted. This is a
@@ -447,13 +455,25 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "model_id": str(model_id),
             "model_type": spec.model_type,
             "fit_seconds": result.fit_seconds,
+            "fit_wall_seconds": round(fit_wall_seconds, 4),
             "diagnostics_seconds": round(diagnostics_seconds, 4),
             # NFR-MODEL-4's ratio, computed here rather than by whoever reads the two
             # numbers. `None` when the fit was too fast to time: a ratio over a zero
             # denominator is not "infinitely over budget", it is unmeasured.
+            #
+            # **Two fields, deliberately.** `diagnostics_over_fit` has been emitted against
+            # `fit_seconds` since the block was built, and OQ-MODEL-24 settled the budget's
+            # denominator on the *other* reading. Re-pointing the existing field would make
+            # every historical line silently uncomparable and unlabelled, so the budgeted
+            # ratio arrives under its own name and the old one keeps its meaning.
             "diagnostics_over_fit": (
                 round(diagnostics_seconds / result.fit_seconds, 4)
                 if result.fit_seconds > 0
+                else None
+            ),
+            "diagnostics_over_fit_wall": (
+                round(diagnostics_seconds / fit_wall_seconds, 4)
+                if fit_wall_seconds > 0
                 else None
             ),
         },

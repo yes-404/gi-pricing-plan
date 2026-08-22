@@ -384,28 +384,72 @@ def bench_gbm(rows: int, factors: int, rounds: int) -> float:
     spec = gbm_spec(uuid4(), factor_objects, rounds=rounds)
     with timed("NFR-MODEL-2 gbm fit, 500 trees") as slot:
         fit = fit_gbm(train, spec, factor_objects)
-    with timed("NFR-MODEL-11 gbm diagnostics"):
+    with timed("NFR-MODEL-14 gbm diagnostics") as diag_slot:
         computed = compute_gbm_diagnostics(
             fit.result, fit.booster_bytes or b"", spec, factor_objects,
             train=train, holdout=holdout, eval_curve=fit.eval_curve,
         )
+    _gbm_passes(computed, diag_slot[0], slot[0], fit)
     _artifact_size(computed, fit)
     return slot[0]
 
 
-def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
-    """NFR-MODEL-4: diagnostics must add no more than 30 % to fit wall-clock.
+def _gbm_passes(computed: object, diagnostics: float, wall: float, fit: object) -> None:
+    """NFR-MODEL-14: the GBM block is priced per scoring pass, not per factor.
 
-    A ratio needs no data scale, which is why this one is measurable today. Both halves are
-    timed here; the platform emits the same pair per fit as `diagnostics_seconds` /
-    `diagnostics_over_fit` on `app.worker.model`'s "diagnostics complete" line.
+    The driver is the **sum of grid points**, not the factor count: partial dependence runs
+    one full-population pass per grid point - ten quantiles for a numeric factor, but every
+    distinct level for a categorical, with no cap. So a single 10 000-level column costs
+    10 000 passes that a per-factor budget would record as one factor (OQ-MODEL-26). The
+    pass count is therefore read off the artifact rather than derived from `len(factors)`.
+
+    Counted: one pass per partition, one permutation baseline plus one per factor, and one
+    per partial-dependence grid point. That reproduces the ~625 passes behind `02` §9's
+    3 002 % reading, which was derived by hand because nothing here computed it.
+    """
+    gbm = getattr(computed, "gbm", None)
+    if gbm is None:
+        return
+    perm = len(getattr(gbm, "permutation_importances", ()) or ())
+    grid = sum(len(pd.points) for pd in (getattr(gbm, "partial_dependence", ()) or ()))
+    passes = 2 + 1 + perm + grid
+    print(
+        f"\n  NFR-MODEL-14 — {diagnostics:.2f} s over {passes} scoring passes "
+        f"({perm} permutation, {grid} partial-dependence grid points)"
+    )
+    ratio = (diagnostics / passes) / wall if wall and passes else float("nan")
+    print(
+        f"    / {'fit wall-clock, per scoring pass':<44} = {ratio:8.4f} fits   "
+        f"({'within' if ratio <= 0.06 else 'OVER'} 0.06)   [{wall:.2f} s]"
+    )
+
+
+def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
+    """NFR-MODEL-4 and NFR-MODEL-13 — two requirements, because the block has two halves.
+
+    Both are timed here; the platform emits the same pair per fit as `diagnostics_seconds` /
+    `diagnostics_over_fit_wall` on `app.worker.model`'s "diagnostics complete" line.
 
     **Measured with and without FR-MODEL-51's type-III tests**, because those drop each
-    factor and *refit*: the cost is one extra GLM fit per factor, so the ratio the budget is
-    stated against is a function of the factor count and not of the data. Separating the two
-    arms is what turns "diagnostics is slow" into a number that names its cause.
+    factor and *refit*. Until 2026-08-22 both arms were read against one 30 % budget, which
+    no diagnostic containing F refits can meet for any F above zero. OQ-MODEL-24 split them:
+    NFR-MODEL-4 keeps everything else, at 50 % of fit wall-clock and at a named scale, and
+    the refits become NFR-MODEL-13 at one fit wall-clock **per tested factor**.
+
+    The unit for NFR-MODEL-13 is `len(type_iii_tests)`, read off the artifact rather than
+    assumed: interaction operands carry no design column and are skipped, and a refit that
+    will not converge is skipped too, so `factors` overcounts the work actually done.
+
+    **One caveat this harness cannot fix on its own.** The denominator below is a *cold*
+    fit — one row-and-factor pair per process — and 41-56 % of it is one-time cost the
+    refits never pay. Against a warm fit of the same spec the measured multiples move from
+    0.417x/0.574x to roughly 0.95x/0.98x, which is what the mechanism predicts. `02` §9
+    records this; a warm-denominator run is owed before NFR-MODEL-13 is called met.
     """
-    print(f"\nNFR-MODEL-4 — {rows:,} rows x {factors} factors, budget 30 % of fit")
+    print(
+        f"\nNFR-MODEL-4 / NFR-MODEL-13 — {rows:,} rows x {factors} factors, "
+        "budgets 50 % of fit and 1.0x of fit per tested factor"
+    )
     frame = synthesise(rows, factors)
     split = int(rows * 0.75)
     train, holdout = frame.head(split), frame.tail(rows - split)
@@ -420,34 +464,66 @@ def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
         computed = compute_diagnostics(
             fit.result, spec, factor_objects, train=train, holdout=holdout, type_iii=False
         )
-    _ratios("without FR-MODEL-51's type-III refits", base_slot[0], fit_slot[0], fit)
+    _ratios(
+        "NFR-MODEL-4 — diagnostics without FR-MODEL-51's type-III refits",
+        base_slot[0], fit_slot[0], fit, budget=0.50,
+    )
 
     if type_iii:
-        with timed(f"NFR-MODEL-4 diagnostics, type-III ({factors} refits)") as full_slot:
+        with timed(f"NFR-MODEL-13 diagnostics, type-III ({factors} refits)") as full_slot:
             computed = compute_diagnostics(
                 fit.result, spec, factor_objects, train=train, holdout=holdout, type_iii=True
             )
-        _ratios("with type-III (what the platform runs)", full_slot[0], fit_slot[0], fit)
+        tested = len(getattr(computed.glm, "type_iii_tests", ()) or ())
+        _ratios(
+            "NFR-MODEL-13 — the type-III block alone",
+            full_slot[0] - base_slot[0], fit_slot[0], fit, budget=1.00,
+            units=tested, unit_label="tested factor",
+        )
 
     _artifact_size(computed, fit)
 
 
-def _ratios(name: str, diagnostics: float, wall: float, fit: object) -> None:
-    """Two denominators, because the requirement says "fit wall-clock" and the code offers
-    two readings of it. `fit_seconds` is the artifact's own number and excludes factor
-    resolution and design-matrix construction; the timed block is what a caller waits for.
-    Both are reported: which one NFR-MODEL-4 means is a question for `02` §9, and picking
-    one silently would answer it by arithmetic."""
-    print(f"\n  {name}: {diagnostics:.2f} s of diagnostics")
-    for label, denominator in (
-        ("fit wall-clock (resolve + design + solve)", wall),
-        ("fit_seconds, as the artifact records it", fit.result.fit_seconds),
-    ):
-        ratio = diagnostics / denominator if denominator else float("nan")
-        print(
-            f"    / {label:<44} = {ratio:8.1%}   "
-            f"({'within' if ratio <= 0.30 else 'OVER'})   [{denominator:.2f} s]"
-        )
+def _ratios(
+    name: str,
+    diagnostics: float,
+    wall: float,
+    fit: object,
+    *,
+    budget: float,
+    units: int = 1,
+    unit_label: str = "",
+) -> None:
+    """Report against fit wall-clock, and show `fit_seconds` as information only.
+
+    Both readings used to be printed as equals, because the requirement said "fit
+    wall-clock" and the code offered two meanings of it. OQ-MODEL-24 settled it on
+    2026-08-22: **wall-clock**, meaning the elapsed fit call including factor resolution and
+    design-matrix construction, because that is what a caller waits for and a budget met
+    against the solve alone can be met while the user's experience gets worse. The gap is
+    not cosmetic - the same arm reads 32.1 % against wall-clock and 55.2 % against
+    `fit_seconds` - so the second line stays, labelled as the number the budget is *not*.
+
+    `units` divides the ratio when the requirement is stated per unit of work rather than
+    per fit (NFR-MODEL-13 per tested factor, NFR-MODEL-14 per scoring pass).
+    """
+    suffix = f" per {unit_label}" if unit_label else ""
+    print(f"\n  {name}: {diagnostics:.2f} s of diagnostics", end="")
+    print(f" over {units} {unit_label}s" if unit_label else "")
+    if units < 1:
+        print("    no units of work were done - nothing to read against the budget")
+        return
+    ratio = (diagnostics / units) / wall if wall else float("nan")
+    print(
+        f"    / {'fit wall-clock (resolve + design + solve)':<44} = {ratio:8.1%}{suffix}   "
+        f"({'within' if ratio <= budget else 'OVER'} {budget:.0%})   [{wall:.2f} s]"
+    )
+    solve = fit.result.fit_seconds
+    informational = (diagnostics / units) / solve if solve else float("nan")
+    print(
+        f"    / {'fit_seconds (the solve alone) - NOT the budget':<44} = "
+        f"{informational:8.1%}{suffix}   [{solve:.2f} s]"
+    )
 
 
 def _artifact_size(computed: object, fit: object) -> None:
