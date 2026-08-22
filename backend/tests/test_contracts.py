@@ -550,6 +550,7 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     )
 
 
+@pytest.mark.req("FR-MODEL-109")
 @pytest.mark.req("FR-OVR-6")
 def test_every_eligible_schema_is_compared() -> None:
     """A curated list is only as good as the thing that notices it went stale.
