@@ -131,7 +131,10 @@ __all__ = [
 #: `v7` to `v8` (2026-08-21, the offset-from-another-model slice): the field joins the
 #: canonicalised spec — the offset it names is part of what a fit means, and FR-MODEL-66's
 #: dedup must not match a fit against another model's structure to one that has no offset.
-SPEC_HASH_VERSION: Final = 8
+#: **v9, 2026-08-21** — EbmSpec joined the union (FR-MODEL-37): model_type, objective,
+#: interactions, max_bins, max_rounds, monotone_constraints. Every `v8:` digest is now
+#: stale and must be findable with `LIKE 'v8:%'`.
+SPEC_HASH_VERSION: Final = 9
 
 
 def spec_hash(spec: ModelSpec) -> str:
@@ -785,8 +788,9 @@ async def record_fit(
     await session.flush()
 
     # The audit payload is per arm, because "what was fitted" is a different sentence for
-    # a coefficient vector and for a booster. A shared subset — rows and model type — would
-    # record the two events identically and leave a reader unable to tell them apart.
+    # a coefficient vector, a booster, and an EBM's exported tables. A shared subset — rows
+    # and model type — would record the three events identically and leave a reader unable
+    # to tell them apart.
     after: dict[str, object] = {"model_type": fit_result.model_type, "rows": fit_result.rows}
     if isinstance(fit_result, GlmFitResult):
         intercept = fit_result.intercept
