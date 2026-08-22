@@ -12,15 +12,23 @@ test_ebm.py` proves the fit. What is proven here is everything the platform adds
 * the monotone-constraint refusal arrives as the named
   `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` through the same handler mapping the GBM
   arm uses (FR-MODEL-23);
-* a pair interaction fits through the job and exports its 2-D grid term.
+* a pair interaction fits through the job and exports its 2-D grid term;
+* the transparency artifact is the fit exported, not a surrogate — `kinds` carries
+  only `ebm_shape_functions`, and monotonicity is read off the exported tables
+  (FR-MODEL-37, FR-MODEL-52).
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 from uuid import UUID
 
 import pytest
+from backend.tests.test_glm_approximation_model import (
+    _transparency_job,
+    _transparency_refusal,
+)
 from backend.tests.test_model_jobs import (
     _actuary,
     _dataset,
@@ -30,12 +38,13 @@ from backend.tests.test_model_jobs import (
 )
 from sqlalchemy import func, select
 
-from app.db.models import AuditEventRow, BlobRow, ModelRow
+from app.db.models import AuditEventRow, BlobRow, ModelRow, TransparencyArtifactRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
+from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
 from app.worker.handlers import handler_for
@@ -51,6 +60,7 @@ from model_schema import (
     JobStatus,
     ModelStatus,
     OffsetSpec,
+    TransparencyKind,
     new_uuid7,
 )
 
@@ -329,3 +339,148 @@ async def test_an_ebm_with_interactions_fits_through_the_job(
     assert isinstance(model.fit_result, EbmFitResult)
     pair_terms = [t for t in model.fit_result.terms if len(t.term_features) == 2]
     assert len(pair_terms) == 1
+
+
+@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-MODEL-84")
+async def test_an_ebm_transparency_artifact_is_built_and_read_back(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The EBM arm of `model.transparency`: the fit result exported, nothing approximated.
+
+    An EBM's shape functions ARE the rateable model (FR-MODEL-37), so the artifact
+    carries `ebm_shape_functions` alone — no GLM approximation, no SHAP summary — and
+    `kinds` reports exactly that one form. `monotonicity_verified is None` because the
+    spec declared no constraints: distinct from `False`, which would say a constraint
+    was checked and failed (FR-MODEL-52). The blob parses as the documented document,
+    whose `export_version` a reader that cannot parse it must refuse rather than guess.
+    """
+    model_id, status = await _fitted_ebm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    actor = await _actuary(database, workspace_id)
+
+    artifact = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
+
+    assert artifact.kinds == (TransparencyKind.EBM_SHAPE_FUNCTIONS,)
+    assert artifact.glm_approximation is None
+    assert artifact.shap_summary is None
+    assert artifact.monotonicity_verified is None
+    assert artifact.fidelity_statement != ""
+    assert artifact.ebm_shape_functions is not None
+    document = json.loads(artifact.ebm_shape_functions.terms_blob)
+    assert document["export_version"] == "ebm-shape-functions/1"
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-MODEL-37")
+async def test_an_ebm_with_constraints_verifies_monotonicity_from_the_tables(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-52's monotonicity check for the EBM arm, read off the exported tables.
+
+    `speed` is a numeric factor (over the book's numeric `claim_amount_minor` column), so
+    a +1 constraint has an order to hold against — the pre-check that refuses a
+    categorical by name would otherwise fire (`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`). The
+    artifact's `monotonicity_verified` reads the tables rather than recomputing: the same
+    evidence a Rating Version's approval reads (FR-MODEL-36).
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    speed = await _factor(
+        database, workspace_id, actor, dataset_id, "speed", "claim_amount_minor"
+    )
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_ebm_spec(
+                version_id, (speed,), split_ref=split,
+                monotone_constraints={"speed": 1},
+            ),
+        )
+        assert should_fit is True
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    artifact = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
+    assert artifact.monotonicity_verified is True
+
+
+@pytest.mark.req("FR-MODEL-33")
+async def test_an_unfitted_ebm_is_refused_a_transparency_artifact(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """A `draft` EBM has no tables to export, and the refusal is named.
+
+    `fitted_gbm_or_refuse` answers before a Job exists — the same gate every
+    transparency build passes. `execute_job` would map the handler exception to a
+    `JOB_HANDLER_FAILED` job error, so the code is read the way
+    `_transparency_refusal` guarantees: the handler run exactly as the runner runs it,
+    and `MODEL_NOT_FITTED` read off the `PlatformError` itself.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_ebm_spec(version_id, (area,), split_ref=split),
+        )
+        model_id = row.id
+
+    refusal = await _transparency_refusal(
+        database, blob_store, workspace_id, model_id, actor
+    )
+    assert refusal.code == "MODEL_NOT_FITTED"
+
+
+@pytest.mark.req("FR-MODEL-33")
+@pytest.mark.req("FR-MODEL-84")
+async def test_a_second_artifact_appends_rather_than_replacing(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-MODEL-33 allows several artifacts, and FR-MODEL-36 makes each one evidence.
+
+    A second build is a new artifact, not a correction of the first — an approval that
+    cited the earlier one must still resolve to what the approver read (the
+    `test_model_jobs_gbm.py:606` pattern). The read takes the latest, and both rows
+    remain in the insert-only table.
+    """
+    model_id, status = await _fitted_ebm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    actor = await _actuary(database, workspace_id)
+
+    first = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
+    second = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
+    assert first.id != second.id, "the second build replaced the first instead of appending"
+
+    async with database.session() as session:
+        latest = await transparency_service.load_transparency(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+        rows = (
+            await session.execute(
+                select(TransparencyArtifactRow).where(
+                    TransparencyArtifactRow.model_id == model_id,
+                    TransparencyArtifactRow.workspace_id == workspace_id,
+                )
+            )
+        ).scalars().all()
+    assert latest.id == second.id
+    assert len(rows) == 2
