@@ -501,7 +501,7 @@ def _type_iii(
             )
         try:
             reduced = fit_glm(
-                data, reduced_spec, remaining, seed=spec.seed,
+                data, reduced_spec, remaining,
                 model_offset=model_offset, bandings=bandings, groupings=groupings,
             ).result
         except GlmFitError:

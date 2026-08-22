@@ -749,3 +749,19 @@ def test_two_fits_of_one_spec_reproduce_identical_coefficients() -> None:
         first.result.coefficients, second.result.coefficients, strict=True
     ):
         assert abs(left.estimate - right.estimate) <= 1e-10, left.term
+
+
+@pytest.mark.req("FR-MODEL-123")
+def test_fit_glm_refuses_a_seed_argument() -> None:
+    """FR-MODEL-123: `spec.seed` is the only seed, and the dead kwarg is gone.
+
+    A deleted parameter and a silently-ignored one are indistinguishable to a caller until
+    one of them raises — which is how `fit_glm(..., seed=…)` reached twenty call sites, four
+    of them outside tests, without anyone noticing it did nothing. Asserting the raise is
+    what stops the removal regressing into a re-added kwarg that is ignored again.
+
+    No data is needed: Python binds arguments before the body runs, so the unexpected
+    keyword is refused before the frame is ever touched.
+    """
+    with pytest.raises(TypeError, match="seed"):
+        fit_glm(pl.DataFrame(), _spec(), [], seed=0)  # type: ignore[call-arg]

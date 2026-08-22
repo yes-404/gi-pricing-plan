@@ -65,7 +65,7 @@ def test_cv_selection_fits_and_persists_the_full_path() -> None:
         select_by="cv",
         cv=GlmCvSpec(method="random", folds=4, alphas=(0.0, 0.01, 0.1, 1.0)),
     )
-    fit = fit_glm(data, spec, factors, seed=spec.seed)
+    fit = fit_glm(data, spec, factors)
     assert fit.cv is not None
     assert [p.alpha for p in fit.cv.path] == [0.0, 0.01, 0.1, 1.0]
     assert fit.cv.selected_alpha in {0.0, 0.01, 0.1, 1.0}
@@ -85,7 +85,7 @@ def test_cv_selection_persists_per_fold_dispersion_at_the_selected_alpha() -> No
         select_by="cv",
         cv=GlmCvSpec(method="random", folds=4, alphas=(0.0, 0.1, 1.0)),
     )
-    fit = fit_glm(data, spec, factors, seed=spec.seed)
+    fit = fit_glm(data, spec, factors)
     assert fit.cv is not None
     assert {m.fold for m in fit.cv.fold_metrics} == {0, 1, 2, 3}
     assert sum(m.rows for m in fit.cv.fold_metrics) == data.height
@@ -102,7 +102,7 @@ def test_a_grouped_cv_keeps_a_policy_whole_across_folds() -> None:
         select_by="cv",
         cv=GlmCvSpec(method="grouped_by_key", folds=4, key_column="policy", alphas=(0.0, 0.1)),
     )
-    fit = fit_glm(data, spec, factors, seed=spec.seed)
+    fit = fit_glm(data, spec, factors)
     assert fit.cv is not None
     assert fit.cv.method == "grouped_by_key"
 
@@ -116,7 +116,7 @@ def test_a_temporal_cv_orders_folds_by_time() -> None:
         select_by="cv",
         cv=GlmCvSpec(method="temporal", folds=4, time_column="day", alphas=(0.0, 0.1)),
     )
-    fit = fit_glm(data, spec, factors, seed=spec.seed)
+    fit = fit_glm(data, spec, factors)
     assert fit.cv is not None
     assert fit.cv.method == "temporal"
 
@@ -134,8 +134,8 @@ def test_two_fits_with_the_same_seed_select_the_same_alpha() -> None:
         cv=GlmCvSpec(method="random", folds=4, alphas=(0.0, 0.01, 0.1, 1.0)),
         seed=42,
     )
-    first = fit_glm(data, spec, factors, seed=spec.seed)
-    second = fit_glm(data, spec, factors, seed=spec.seed)
+    first = fit_glm(data, spec, factors)
+    second = fit_glm(data, spec, factors)
     assert first.cv is not None
     assert second.cv is not None
     assert first.cv.selected_alpha == second.cv.selected_alpha
@@ -164,7 +164,7 @@ def test_more_folds_than_rows_in_a_group_is_refused() -> None:
         cv=GlmCvSpec(method="grouped_by_key", folds=5, key_column="policy", alphas=(0.0, 0.1)),
     )
     with pytest.raises(GlmFitError) as refused:
-        fit_glm(data, spec, factors, seed=spec.seed)
+        fit_glm(data, spec, factors)
     assert refused.value.code == "GLM_CV_FOLD_EMPTY"
 
 
@@ -175,5 +175,5 @@ def test_a_fixed_alpha_fit_still_carries_no_cv_diagnostics() -> None:
     data = _frequency_data()
     factors = (_factor("area", "area"),)
     spec = _spec(factors=(factors[0].id,), alpha=0.05, l1_ratio=0.5)
-    fit = fit_glm(data, spec, factors, seed=spec.seed)
+    fit = fit_glm(data, spec, factors)
     assert fit.cv is None

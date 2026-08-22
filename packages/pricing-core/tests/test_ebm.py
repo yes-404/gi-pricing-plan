@@ -446,3 +446,17 @@ def test_fit_seconds_and_library_versions_are_recorded() -> None:
     result = fit_ebm(_book(), _spec(), FACTORS, bandings=BANDINGS)
     assert result.fit_seconds >= 0.0
     assert result.library_versions
+
+
+@pytest.mark.req("FR-MODEL-123")
+def test_fit_ebm_refuses_a_seed_argument() -> None:
+    """FR-MODEL-123: `fit_ebm` carried the same dead kwarg as `fit_glm`, and it is gone too.
+
+    Its docstring said outright that the parameter mirrored `fit_glm`'s "vestigial kwarg for
+    call-site symmetry" and was "deliberately **not** the reproducibility source" — the fact
+    was documented in the one file where nobody reading `fit_glm` would find it. The seed
+    that works is `spec.seed`, which reaches `random_state`, and the test above already
+    proves two spec seeds give different term scores.
+    """
+    with pytest.raises(TypeError, match="seed"):
+        fit_ebm(pl.DataFrame(), _spec(), [], seed=0)  # type: ignore[call-arg]

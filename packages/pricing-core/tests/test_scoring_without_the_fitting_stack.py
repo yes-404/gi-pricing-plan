@@ -133,7 +133,7 @@ def test_a_glm_scores_in_a_process_where_the_fitting_stack_cannot_be_imported() 
         factors=tuple(f.id for f in factors),
         family="poisson",
     )
-    fit = fit_glm(frame, spec, factors, seed=1).result
+    fit = fit_glm(frame, spec, factors).result
 
     payload = json.dumps(
         {

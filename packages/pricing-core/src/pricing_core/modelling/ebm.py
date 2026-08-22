@@ -97,7 +97,6 @@ def fit_ebm(
     spec: EbmSpec,
     factors: Sequence[Factor],
     *,
-    seed: int = 0,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
@@ -108,10 +107,11 @@ def fit_ebm(
     spec's ids: `pricing-core` resolves shapes, not references — looking one up would need
     a database, which ADR-0001 forbids this package.
 
-    `seed` mirrors `fit_glm`'s vestigial kwarg for call-site symmetry; it is deliberately
-    **not** the reproducibility source. The estimator is seeded with `random_state=
-    spec.seed` — the spec's seed is what `spec_hash` pins, so the spec alone must
-    reproduce the fit (Task 0.5).
+    The estimator is seeded with `random_state=spec.seed` — the spec's seed is what
+    `spec_hash` pins, so the spec alone must reproduce the fit (Task 0.5, NFR-MODEL-6).
+    There is no `seed` argument: it mirrored `fit_glm`'s vestigial kwarg for call-site
+    symmetry, neither was read by anything, and both were removed 2026-08-22
+    (OQ-MODEL-29, FR-MODEL-123).
     """
     report = progress or NullProgress()
     report.check_cancelled()

@@ -196,7 +196,6 @@ def build_glm_approximation(
         train_frame,
         spec_,
         factors,
-        seed=spec.seed,
         bandings=bandings,
         groupings=groupings,
     ).result

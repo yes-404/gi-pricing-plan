@@ -362,14 +362,14 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             # `booster`/`covariance` keep their pre-initialised None values and
             # `store()` writes no blob.
             result = fit_ebm(
-                frame, spec, factors, seed=spec.seed,
+                frame, spec, factors,
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 progress=fitting,
             )
         else:
             glm_fit = fit_glm(
-                frame, spec, factors, seed=spec.seed,
+                frame, spec, factors,
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 progress=fitting,
