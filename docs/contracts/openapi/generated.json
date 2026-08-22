@@ -5182,7 +5182,7 @@
             "type": "integer"
           },
           "source_level_count": {
-            "minimum": 0.0,
+            "minimum": 1.0,
             "title": "Source Level Count",
             "type": "integer"
           },
@@ -5195,7 +5195,7 @@
             "type": "array"
           },
           "target_level_count": {
-            "minimum": 0.0,
+            "minimum": 1.0,
             "title": "Target Level Count",
             "type": "integer"
           },

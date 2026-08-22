@@ -1012,6 +1012,173 @@ def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> N
     )
 
 
+#: The constraint keywords compared. Written out rather than "every keyword that is not a
+#: structural one", because the structural set grows with the spec and a negative list would
+#: quietly start comparing things this guard has no opinion about.
+_COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
+    {
+        "minLength",
+        "maxLength",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "pattern",
+        "minItems",
+        "maxItems",
+    }
+)
+
+
+def _constraint_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+    *,
+    _depth: int = 0,
+) -> dict[str, dict[str, Any]]:
+    """Flatten a schema to `dotted.path -> the constraint keywords declared there`.
+
+    Only keywords in `_COMPARED_CONSTRAINTS`, and only where a side declares one: a path
+    constrained on neither side is not a disagreement, and a path constrained on one side
+    only is reported by the comparison rather than by this walker.
+    """
+    if _depth > _MAX_COMPOSITION_DEPTH:
+        raise AssertionError(
+            f"more than {_MAX_COMPOSITION_DEPTH} composition levels — the document nests "
+            "without bottoming out"
+        )
+    found: dict[str, dict[str, Any]] = {}
+    properties: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
+
+    for owner, variant in _variants(document, node, base):
+        declared = {k: v for k, v in variant.items() if k in _COMPARED_CONSTRAINTS}
+        if declared:
+            found.setdefault(path or _ROOT_PATH, {}).update(declared)
+        for name, child in variant.get("properties", {}).items():
+            properties.setdefault(name, []).append((owner, child))
+        if "items" in variant:
+            elements.append((owner, variant["items"]))
+        elements.extend((owner, entry) for entry in variant.get("prefixItems", ()))
+
+    for name in sorted(properties):
+        for owner, child in properties[name]:
+            for key, declared in _constraint_map(
+                owner, child, base, f"{path}.{name}".lstrip("."), _depth=_depth + 1
+            ).items():
+                found.setdefault(key, {}).update(declared)
+    for owner, child in elements:
+        for key, declared in _constraint_map(
+            owner, child, base, f"{path}.[]".lstrip("."), _depth=_depth + 1
+        ).items():
+            found.setdefault(key, {}).update(declared)
+    return found
+
+
+#: Constraint disagreements this slice found and deliberately did **not** resolve, keyed by
+#: slug and holding `(dotted path, keyword)` pairs. Scoped out in the open rather than
+#: exempted silently, and `test_the_escalated_constraint_disagreements_are_still_unresolved`
+#: is what notices when a decision lands and this entry should go.
+#:
+#: TODO — UNRESOLVED, raised 2026-08-22 (W32-1), owner: maintainer.
+#: `objective-certificate` / `result.checks` / `minItems`: model 1, contract 8. **Neither
+#: number is the specification's.** `02` §4.7's dated 2026-08-18 amendment says *"All nine
+#: checks are emitted for every template, always"* and names them; the authored contract's
+#: own `$comment` from that same amendment calls `branch_discontinuity` a *ninth* named
+#: check and adds it to the `name` enum while leaving `minItems` at 8 — so the 8 is the
+#: pre-amendment count of named checks and nothing has justified it since.
+#:
+#: The model's 1 is loose but **not simply raisable**: `CertificateResult` is shared, by
+#: `ObjectiveCertificate` and by `MetricCertificate` (`metrics.py`), and FR-MODEL-105 gives
+#: a metric certificate **four** checks — `finiteness`, `direction_holds`,
+#: `scale_behaviour`, `smoke_evaluation` — sharing §4.7's vocabulary unchanged. A `min_length`
+#: of 9 on the shared type would refuse every metric certificate the spec requires.
+#:
+#: So resolving it is a design decision, not a bound: an obligation carried per artifact
+#: (an `ObjectiveCertificate` validator asserting §4.7's nine named checks, with the
+#: contract's `minItems` moved 8 → 9 beside it) rather than on `CertificateResult`. That is
+#: `CLAUDE.md` §0 territory with a new requirement attached, which is the maintainer's call
+#: and not this guard's.
+UNRESOLVED_CONSTRAINT_DISAGREEMENTS: Final[dict[str, frozenset[tuple[str, str]]]] = {
+    "objective-certificate": frozenset({("result.checks", "minItems")}),
+}
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
+    """A bound is part of the published contract, and a wrong one is refused input.
+
+    The type comparison above answers "may this be a string?" and stops. It says nothing
+    about a `minLength: 1` the model enforces and the contract omits — under which a client
+    posts the empty string the contract permitted and meets a 422 naming a rule it was
+    never told. Only keywords declared on **both** sides are compared, for the same reason
+    the type comparison intersects paths: a constraint on one side alone is a difference of
+    intent, and `test_an_artifact_shape_carries_exactly_what_its_contract_declares` is
+    where intent is arbitrated.
+
+    One pair is scoped out — see `UNRESOLVED_CONSTRAINT_DISAGREEMENTS`, which says which and
+    why it is a question rather than a fix.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _constraint_map(generated, generated, GENERATED)
+    declared = _constraint_map(authored, authored, AUTHORED)
+    unresolved = UNRESOLVED_CONSTRAINT_DISAGREEMENTS.get(slug, frozenset())
+
+    disagreed: dict[str, dict[str, tuple[Any, Any]]] = {}
+    for path in sorted(set(produced) & set(declared)):
+        for keyword in sorted(set(produced[path]) & set(declared[path])):
+            if (path, keyword) in unresolved:
+                continue
+            if produced[path][keyword] != declared[path][keyword]:
+                disagreed.setdefault(path, {})[keyword] = (
+                    produced[path][keyword],
+                    declared[path][keyword],
+                )
+    assert not disagreed, (
+        "the model and the contract disagree on a bound at "
+        + "; ".join(
+            f"{p}: " + ", ".join(f"{k} model={g} contract={a}" for k, (g, a) in d.items())
+            for p, d in disagreed.items()
+        )
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS))
+def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) -> None:
+    """The carve-out above must not outlive the question it was taken for.
+
+    `CLAUDE.md` §12's rule for a curated list: whatever notices it went stale ships with it.
+    An exemption written for a live disagreement is a hole in the guard the moment the
+    disagreement is settled, and nothing else in this file would say so — the comparison
+    just keeps skipping a pair that now agrees. So this asserts the exemption is still
+    earning its place, and goes red with instructions when it stops.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _constraint_map(generated, generated, GENERATED)
+    declared = _constraint_map(authored, authored, AUTHORED)
+
+    settled = [
+        (path, keyword)
+        for path, keyword in sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS[slug])
+        if produced.get(path, {}).get(keyword) == declared.get(path, {}).get(keyword)
+    ]
+    assert not settled, (
+        f"{slug} no longer disagrees at "
+        + ", ".join(f"{p}.{k}" for p, k in settled)
+        + " — the question was answered, so delete the entry from "
+        "UNRESOLVED_CONSTRAINT_DISAGREEMENTS rather than leaving the guard blind there"
+    )
+
+
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
 #: noticed. Each must be a path the comparison reaches **on both sides**.
 #:
