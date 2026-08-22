@@ -303,6 +303,32 @@ def test_a_merge_that_destroys_real_signal_is_reported_as_one() -> None:
     assert evidence.chi2_p_value < 1e-6
 
 
+@pytest.mark.req("FR-MODEL-15")
+def test_the_evidence_carries_the_source_levels_it_collapsed() -> None:
+    """FR-MODEL-15 asks for source Level statistics, and the artifact carried none.
+
+    `source_level_count` said twenty and nothing said *which* twenty, so "what were the
+    cells we merged worth?" needed the one-way re-run against the dataset version the
+    grouping was derived on — which is the recomputation the artifact exists to avoid.
+    Declared in `grouping.schema.json` since Phase 0 and absent from the Python until
+    2026-08-22; nothing caught it because the field is nested under `evidence` and the
+    field-name comparison reads top-level names only.
+    """
+    grouping = propose_grouping(_book(), _proposal(), dataset_id=DATASET, slug="vg-4")
+    evidence = grouping.evidence
+    assert evidence is not None
+
+    assert len(evidence.source_level_stats) == evidence.source_level_count == 20
+    assert len(evidence.target_level_stats) == evidence.target_level_count == 4
+
+    # The rows are the *source* levels, not the targets — the distinction the field exists
+    # to make. Target names are generated (`_target_name`); source names come from the book.
+    assert {row.level for row in evidence.source_level_stats} == set(_TRUE_EFFECT)
+    assert {row.level for row in evidence.source_level_stats}.isdisjoint(
+        {row.level for row in evidence.target_level_stats}
+    )
+
+
 @pytest.mark.req("FR-MODEL-80")
 def test_credibility_weighted_merges_on_shrunk_rates() -> None:
     """Limited fluctuation, named on the artifact so a reviewer knows which theory ran.

@@ -476,6 +476,11 @@ class GroupingEvidence(BaseModel):
     #: FR-MODEL-80: EVPV, VHM and `k`, so a reviewer can re-derive `Z` rather than take it.
     #: `None` under limited fluctuation, which has no variance components to report.
     credibility_components: dict[str, float] | None = None
+    #: The source levels the grouping collapsed, carrying the statistics a target level
+    #: carries — so "which thin cells went into G1, and what were they worth?" is answered
+    #: from the artifact rather than by re-running the one-way against the dataset version
+    #: (FR-MODEL-15). Declared in the contract since Phase 0; added to the model 2026-08-22.
+    source_level_stats: tuple[OneWayRow, ...] = ()
     #: The resulting target levels, carrying the statistics a source level carries — so
     #: "what did merging these four into G1 do to the frequency?" is a comparison rather
     #: than a re-run.

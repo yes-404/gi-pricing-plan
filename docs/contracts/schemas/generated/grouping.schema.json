@@ -67,6 +67,14 @@
           "title": "Source Level Count",
           "type": "integer"
         },
+        "source_level_stats": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/OneWayRow"
+          },
+          "title": "Source Level Stats",
+          "type": "array"
+        },
         "target_level_count": {
           "minimum": 0,
           "title": "Target Level Count",
