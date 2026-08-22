@@ -1723,7 +1723,12 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `MODEL_OFFSET_REF_INVALID`,
 `MODEL_INTERVAL_UNAVAILABLE`, `MODEL_INTERVAL_PAIR_INVALID`, `MODEL_APPROXIMATION_INVALID`,
 `METRIC_REF_UNRESOLVED`, `METRIC_NOT_APPLICABLE`, `METRIC_NOT_FITTABLE`,
-`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`.
+`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`, `EBM_MONOTONE_CONSTRAINT_UNKNOWN`.
+
+> **Added 2026-08-22 (W5, the EBM slice).** `ebm_monotonicity_verified` refuses to
+> check a constraint naming a feature the fitted tables do not contain: reporting
+> `True` or `False` for a constraint nothing in the tables can evidence would be a
+> made-up monotonicity verdict.
 
 > **Added 2026-08-21 (W5, the EBM slice).** `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` refuses an
 > EBM fit whose `monotone_constraints` name a slug that is not among the fitted factors, or

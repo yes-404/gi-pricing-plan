@@ -8,23 +8,40 @@ and mislead the approver who relies on it.
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import polars as pl
 import pytest
+from test_ebm import BANDINGS, _book
+from test_ebm import FACTORS as EBM_FACTORS
+from test_ebm import _spec as _ebm_spec
 from test_gbm import BACKENDS, FACTORS, _factor, _frequency_data, _spec
 
 from model_schema import (
     SURROGATE_RESPONSE_COLUMN,
+    EbmCategoricalBins,
+    EbmFitResult,
+    EbmNumericBins,
+    EbmTerm,
     MonotonicDirection,
     TransparencyArtifact,
     TransparencyKind,
     new_uuid7,
 )
 from pricing_core.modelling import (
+    ModellingError,
     build_glm_approximation,
     build_shap_summary,
     fidelity_statement,
+    fit_ebm,
     fit_gbm,
+)
+from pricing_core.modelling.transparency import (
+    EBM_SHAPE_BLOB_VERSION,
+    build_ebm_shape_functions,
+    ebm_fidelity_statement,
+    ebm_monotonicity_verified,
 )
 
 
@@ -325,3 +342,298 @@ def test_the_artifact_block_names_the_model_and_carries_no_table(backend: str) -
     assert not block.relativities
     assert block.r_squared == approximation.r_squared
     assert block.worst_regions == approximation.worst_regions
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-37 / FR-MODEL-36 / FR-MODEL-52 — the EBM transparency arm
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-37")
+def test_an_ebm_exports_its_shape_functions_verbatim() -> None:
+    """The blob is the model: every table the fit produced, written through verbatim.
+
+    Verbatim means the document and the artifact cannot disagree — the exported
+    tables are what a Rating Version would rate on, and a second statement of the
+    same fact is where divergence starts.
+    """
+    result = fit_ebm(_book(), _ebm_spec(), EBM_FACTORS, bandings=BANDINGS)
+    document = json.loads(build_ebm_shape_functions(result).terms_blob)
+
+    assert document["export_version"] == EBM_SHAPE_BLOB_VERSION
+    assert document["link"] == "identity"
+    assert document["intercept"] == result.intercept
+    assert document["best_iteration"] == result.best_iteration
+
+    exported = {term["name"]: term for term in document["terms"]}
+    assert set(exported) == {term.term_name for term in result.terms}
+    for term in result.terms:
+        row = exported[term.term_name]
+        (feature,) = term.term_features
+        bins = result.bins[feature]
+        assert row["features"] == [result.feature_order[i] for i in term.term_features]
+        assert row["scores"] == list(term.scores)
+        assert row["standard_deviations"] == list(term.standard_deviations)
+        # Marks exactly the nonzero weights: the base slot, empty bins and the
+        # trailing missing-value slot all read False here.
+        assert row["real_bins"] == [w != 0.0 for w in term.bin_weights]
+        assert row["real_bins"][0] is False
+        if isinstance(bins, EbmNumericBins):
+            assert row["kind"] == "numeric"
+            assert row["cuts"] == list(bins.cuts)
+        else:
+            assert row["kind"] == "categorical"
+            assert row["levels"] == list(bins.levels)
+
+
+@pytest.mark.req("FR-MODEL-36")
+def test_the_ebm_fidelity_statement_is_exact_by_construction() -> None:
+    """The wording is the contract: exact, and quoting no number.
+
+    The GBM statement quotes measured fidelity; an EBM has none to quote, and a
+    percentage here would read as one — which is the number this sentence must not
+    become.
+    """
+    expected = (
+        "This EBM's term shape functions are exported directly as rateable tables. "
+        "There is no approximation step and no fidelity to measure: the exported "
+        "tables are the fitted model, so a Rating Version that rates on them rates "
+        "on the model itself (FR-MODEL-37)."
+    )
+    statement = ebm_fidelity_statement()
+    assert statement == expected
+    assert "no fidelity to measure" in statement
+    assert "%" not in statement
+
+
+@pytest.mark.req("FR-MODEL-52")
+def test_monotonicity_verified_reads_the_exported_tables() -> None:
+    """FR-MODEL-52's three states — None, True, False — read off the tables.
+
+    +1 means non-decreasing along the constrained feature's axis (the direction
+    lesson of `test_ebm.py`'s dated note): the univariate term's real-bin scores, or
+    each row/column of an interaction grid along that axis.
+    """
+    data = _book()
+    constrained = _ebm_spec(monotone_constraints={"speed": 1})
+
+    # No constraints declared: None, not False — "no constraint" and "a checked
+    # constraint that failed" are different statements.
+    assert (
+        ebm_monotonicity_verified(
+            fit_ebm(data, _ebm_spec(), EBM_FACTORS, bandings=BANDINGS), _ebm_spec()
+        )
+        is None
+    )
+
+    # A constrained fit, whose speed term 0.7.8 makes non-decreasing: True.
+    fit = fit_ebm(data, constrained, EBM_FACTORS, bandings=BANDINGS)
+    assert ebm_monotonicity_verified(fit, constrained) is True
+
+    # A hand-built result whose constrained term is decreasing: False. Slots are
+    # base (0), three real bins, one trailing missing-value slot.
+    decreasing = EbmFitResult(
+        model_type="ebm",
+        objective="rmse",
+        intercept=0.0,
+        feature_order=("speed",),
+        bins=(EbmNumericBins(cuts=(0.0, 10.0)),),
+        terms=(
+            EbmTerm(
+                term_features=(0,),
+                term_name="speed",
+                scores=(0.0, 5.0, 4.0, 3.0, 0.0),
+                standard_deviations=(0.0,) * 5,
+                bin_weights=(0.0, 1.0, 1.0, 1.0, 0.0),
+            ),
+        ),
+        best_iteration=10,
+        fit_seconds=0.0,
+    )
+    assert ebm_monotonicity_verified(decreasing, constrained) is False
+
+    # A grid whose second row decreases along the constrained second feature's axis:
+    # each row is a slice along that axis, so row 1 violates while rows 2-4 hold.
+    grid = EbmFitResult(
+        model_type="ebm",
+        objective="rmse",
+        intercept=0.0,
+        feature_order=("speed", "area"),
+        bins=(
+            EbmNumericBins(cuts=(0.0, 10.0, 20.0, 30.0)),
+            EbmCategoricalBins(levels=("A", "B")),
+        ),
+        terms=(
+            EbmTerm(
+                term_features=(0, 1),
+                term_name="speed x area",
+                scores=(
+                    (0.0, 0.0, 0.0, 0.0),
+                    (0.0, 3.0, 2.0, 0.0),
+                    (0.0, 1.0, 2.0, 0.0),
+                    (0.0, 1.0, 2.0, 0.0),
+                    (0.0, 1.0, 2.0, 0.0),
+                    (0.0, 1.0, 2.0, 0.0),
+                    (0.0, 0.0, 0.0, 0.0),
+                ),
+                standard_deviations=((0.0,) * 4,) * 7,
+                bin_weights=(
+                    (0.0, 0.0, 0.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 0.0, 0.0, 0.0),
+                ),
+            ),
+        ),
+        best_iteration=10,
+        fit_seconds=0.0,
+    )
+    assert (
+        ebm_monotonicity_verified(grid, _ebm_spec(monotone_constraints={"area": 1}))
+        is False
+    )
+
+
+def _pair_grid(scores: tuple[tuple[float, ...], ...]) -> EbmFitResult:
+    """A hand-built numeric x categorical interaction: 7 speed slots x 4 area slots.
+
+    The weights put the real bins at rows 1-5 and columns 1-2 — base slots and the
+    trailing missing-value slots are all zero, exactly as a fitted result's are.
+    """
+    return EbmFitResult(
+        model_type="ebm",
+        objective="rmse",
+        intercept=0.0,
+        feature_order=("speed", "area"),
+        bins=(
+            EbmNumericBins(cuts=(0.0, 10.0, 20.0, 30.0)),
+            EbmCategoricalBins(levels=("A", "B")),
+        ),
+        terms=(
+            EbmTerm(
+                term_features=(0, 1),
+                term_name="speed x area",
+                scores=scores,
+                standard_deviations=((0.0,) * 4,) * 7,
+                bin_weights=(
+                    (0.0, 0.0, 0.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 1.0, 1.0, 0.0),
+                    (0.0, 0.0, 0.0, 0.0),
+                ),
+            ),
+        ),
+        best_iteration=10,
+        fit_seconds=0.0,
+    )
+
+
+@pytest.mark.req("FR-MODEL-37")
+def test_an_interaction_term_exports_per_feature_bins_aligned_with_features() -> None:
+    """A pair term's blob pins the interaction shape: nested tables, and per-feature
+    cuts/levels each aligned with `features` — a mixed pair carries both keys.
+    """
+    grid = _pair_grid(
+        (
+            (0.0, 0.0, 0.0, 0.0),
+            (0.0, 1.0, 2.0, 0.0),
+            (0.0, 3.0, 4.0, 0.0),
+            (0.0, 5.0, 6.0, 0.0),
+            (0.0, 7.0, 8.0, 0.0),
+            (0.0, 9.0, 10.0, 0.0),
+            (0.0, 0.0, 0.0, 0.0),
+        )
+    )
+    (term,) = json.loads(build_ebm_shape_functions(grid).terms_blob)["terms"]
+
+    assert term["kind"] == "interaction"
+    assert term["features"] == ["speed", "area"]
+    # One entry per feature of that kind, in `features` order.
+    assert term["cuts"] == [[0.0, 10.0, 20.0, 30.0]]
+    assert term["levels"] == [["A", "B"]]
+    assert term["scores"] == [
+        [0.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 2.0, 0.0],
+        [0.0, 3.0, 4.0, 0.0],
+        [0.0, 5.0, 6.0, 0.0],
+        [0.0, 7.0, 8.0, 0.0],
+        [0.0, 9.0, 10.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0],
+    ]
+    assert term["real_bins"] == [
+        [False, False, False, False],
+        [False, True, True, False],
+        [False, True, True, False],
+        [False, True, True, False],
+        [False, True, True, False],
+        [False, True, True, False],
+        [False, False, False, False],
+    ]
+
+
+@pytest.mark.req("FR-MODEL-52")
+def test_a_grid_is_checked_along_the_constrained_features_own_axis() -> None:
+    """The per-column branch: a constraint on the **first** feature is read down the
+    grid's columns, real bins only — and a grid monotone along both axes verifies
+    True under either feature's constraint.
+    """
+    decreasing_columns = _pair_grid(
+        (
+            (0.0, 0.0, 0.0, 0.0),
+            (0.0, 3.0, 3.0, 0.0),
+            (0.0, 2.0, 2.0, 0.0),
+            (0.0, 1.0, 1.0, 0.0),
+            (0.0, 1.0, 1.0, 0.0),
+            (0.0, 1.0, 1.0, 0.0),
+            (0.0, 0.0, 0.0, 0.0),
+        )
+    )
+    assert (
+        ebm_monotonicity_verified(
+            decreasing_columns, _ebm_spec(monotone_constraints={"speed": 1})
+        )
+        is False
+    )
+
+    monotone = _pair_grid(
+        (
+            (0.0, 0.0, 0.0, 0.0),
+            (0.0, 1.0, 2.0, 0.0),
+            (0.0, 2.0, 3.0, 0.0),
+            (0.0, 3.0, 4.0, 0.0),
+            (0.0, 4.0, 5.0, 0.0),
+            (0.0, 5.0, 6.0, 0.0),
+            (0.0, 0.0, 0.0, 0.0),
+        )
+    )
+    assert (
+        ebm_monotonicity_verified(
+            monotone, _ebm_spec(monotone_constraints={"speed": 1})
+        )
+        is True
+    )
+    assert (
+        ebm_monotonicity_verified(monotone, _ebm_spec(monotone_constraints={"area": 1}))
+        is True
+    )
+
+
+@pytest.mark.req("FR-MODEL-52")
+def test_a_constraint_on_a_feature_the_tables_do_not_contain_is_refused() -> None:
+    """A verdict for an uncheckable constraint would be made up: refuse by name.
+
+    `fit_ebm` refuses the same spec before fitting (`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`);
+    this is the check-side half, for a result and spec that no longer agree.
+    """
+    grid = _pair_grid(((0.0, 0.0, 0.0, 0.0),) * 7)
+    with pytest.raises(ModellingError) as error:
+        ebm_monotonicity_verified(
+            grid, _ebm_spec(monotone_constraints={"no_such_feature": 1})
+        )
+    assert error.value.code == "EBM_MONOTONE_CONSTRAINT_UNKNOWN"

@@ -210,6 +210,11 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # categorical (non-ordinal) feature, is refused as a named code — `interpret`
         # 0.7.8 would silently zero the term instead (dated note in `02` §5.1).
         "EBM_MONOTONE_CONSTRAINT_INCOMPLETE",
+        # The EBM transparency slice, 2026-08-22 (FR-MODEL-52). Raised by
+        # `ebm_monotonicity_verified` when a constraint names a feature absent from the
+        # fitted tables' `feature_order`: reporting `True`/`False` for a constraint
+        # nothing in the tables can evidence would be a made-up monotonicity verdict.
+        "EBM_MONOTONE_CONSTRAINT_UNKNOWN",
     }
 )
 
