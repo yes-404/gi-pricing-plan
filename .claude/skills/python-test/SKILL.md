@@ -212,31 +212,53 @@ hardest in a **worktree**, where `uv sync --all-packages --dev` has to be run ag
 and it is easy to assume the shared Postgres came with it. Run `alembic upgrade head` after
 checking out any branch that adds a migration, before reading a single failure.
 
-### The test database is never cleaned, and `TRUNCATE` will not clean it
+### The suite empties its database at session end, and `TRUNCATE` alone cannot
 
-`conftest_db.py`'s `database` fixture creates an engine per test and disposes it. **Nothing
-rolls back and nothing truncates** — every row every test writes stays, and it is the same
-database `scripts/demo.py` seeds into. Measured 2026-08-22: six days of runs left **766 MB**,
-11 915 `models` rows across 737 throwaway workspaces and 448 k `audit_events`. Nothing breaks,
-but a hand-written query against it answers for the debris of every branch anyone has tested
-— which is how "find the stale `v9:` digests" returns 1045 rows that are all test fixtures.
+`conftest_db.py`'s `_empty_the_database_after_the_session` is an autouse **session**-scoped
+fixture: after the last test, it truncates every table but `alembic_version`. Nothing between
+tests is cleaned — isolation is still a fresh `workspace_id` per test, because `audit_events`
+is append-only and always will be. What the teardown bounds is *accumulation*: the fixture
+had no cleanup at all until 2026-08-22, and six days of runs had left **766 MB**, 11 915
+`models` rows across 737 workspaces and 448 k `audit_events`.
 
-**`TRUNCATE` is refused, by design.** `audit_events` carries two triggers,
-`audit_events_no_modify` and `audit_events_no_truncate`, enforcing the append-only audit
-chain in the database rather than only in the application:
+**It empties the whole database, including any `scripts/demo.py` seed** — tests and the demo
+share one. Re-seed with `uv run python scripts/demo.py`.
+
+**Why a plain `TRUNCATE` cannot do it.** Seventeen tables refuse it, not one. `audit_events`
+is the famous case (FR-GOV-22), but artifact immutability is enforced identically on
+`validation_reports` (`01` FR-DATA-15/42), `models`, `diagnostics`, `blobs`,
+`transparency_artifacts` and a dozen more:
 
 ```
-ERROR: ... CONTEXT: PL/pgSQL function audit_events_append_only() line 3 at RAISE
+ERROR: ... validation_reports is append-only: TRUNCATE rejected (01 FR-DATA-15, FR-DATA-42)
 ```
 
-One `DO` block truncating every table is a single transaction, so that refusal rolls the
-whole statement back and **nothing at all is cleaned** — including the 40 tables that would
-have truncated fine. **Do not disable the triggers to force it through.** A governance guard
-switched off during a cleanup and not switched back on is precisely the defect the guard
-exists to prevent, and it fails silently ever after.
+One `DO` block truncating every table is a single transaction, so **one** refusal rolls back
+**all** of it — including the 26 tables that would have truncated fine. Naming the guarded
+tables would mean editing the list every time the platform gains an immutable artifact, and
+discovering that from a failed teardown each time.
 
-Drop and recreate instead. It rebuilds the triggers from the migration that declares them,
-so the guard cannot be left off by forgetting a step:
+So the teardown suspends every user trigger at once, and the third argument to `set_config`
+makes it **transaction-local**:
+
+```sql
+PERFORM set_config('session_replication_role', 'replica', true);   -- reverts at COMMIT/ROLLBACK
+```
+
+That boolean is the entire safety argument: there is no ordering of failures that leaves a
+guard suspended, because the revert is the transaction ending rather than a statement that
+has to be reached. It needs superuser, which the compose and CI `gipricing` role has.
+`test_the_session_teardown_leaves_the_append_only_guard_in_force` pins it, and pins it **on
+one connection** — the setting is per-connection, so a test that called the teardown helper
+proves nothing: that helper builds its own engine and disposes it, taking any leak with it.
+The first version of that test did exactly that and passed with the boolean inverted.
+
+### Resetting it by hand
+
+The teardown covers the ordinary case. Reach for this when a run died before teardown, when
+the teardown *warned* (it warns rather than fails, so a developer with no database is not
+punished), or when you want a clean start mid-session. `DROP DATABASE` fires no triggers, so
+it sidesteps the guards entirely rather than suspending them:
 
 ```bash
 docker exec gi-pricing-postgres-1 psql -U gipricing -d postgres \
@@ -248,18 +270,16 @@ export GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432
 uv run alembic upgrade head
 ```
 
-Then confirm the guard came back, because a rebuild is exactly where it could silently not:
+Confirm the guards came back, because a rebuild is exactly where they could silently not:
 
 ```bash
 docker exec gi-pricing-postgres-1 psql -U gipricing -d gipricing -tAc \
-  "SELECT tgname FROM pg_trigger WHERE tgrelid='audit_events'::regclass AND NOT tgisinternal;"
-# expects both: audit_events_no_modify, audit_events_no_truncate
+  "SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal;"   # expects 37
 ```
 
-`pg_dump | gzip` first if you would regret it — the 766 MB above compressed to 93 MB in under
-a minute. Two traps on the way out: `psql ... 2>&1 | tail -3; echo $?` reports **tail's**
-status, so a refused statement reads as a clean exit — read psql's own code or the `ERROR:`
-line. And the demo seed goes with everything else; `uv run python scripts/demo.py` rebuilds it.
+`pg_dump | gzip` first if you would regret it — 766 MB compressed to 93 MB in under a minute.
+And note `psql ... 2>&1 | tail -3; echo $?` reports **tail's** status, so a refused statement
+reads as a clean exit; read psql's own code, or the `ERROR:` line.
 
 ## A gate run is only valid if the tree held still for all of it
 
@@ -515,11 +535,15 @@ the fixture for a nested `unit_of_work`.
 
 ## Verified
 
-2026-08-22 — W5, resetting the shared test database after the GBM weighting slice. `TRUNCATE`
-over every table was refused by `audit_events`' append-only triggers and rolled back whole;
-the drop-and-recreate path above was run end to end, `alembic upgrade head` returned to the
-same head, both triggers were confirmed restored, and 62 DB-backed tests passed against the
-rebuilt schema (766 MB to 9.9 MB).
+2026-08-22 — W5, giving the database fixture a session teardown. Supersedes the same day's
+earlier entry, which said `audit_events` was what refused `TRUNCATE`: **seventeen** tables do,
+and the first teardown written against that belief failed on `validation_reports`. Two further
+corrections the run produced, both from shipping the bug first: `db.session()` does no
+transaction management and never commits, so the truncate ran and rolled back silently; and a
+teardown that swallows its exception reports a clean run while emptying nothing — it now warns.
+The guard test was itself wrong at first, calling the helper (own engine, own connection) and
+passing with the safety boolean deliberately inverted; it now drives the same SQL through the
+test's connection and fails on that input.
 
 2026-08-19 — W5, the GLM approximation as a Model. The `git checkout --` rule above cost a
 whole task's rewrite: reverting a deliberately-broken file with `git checkout -- <file>` to
