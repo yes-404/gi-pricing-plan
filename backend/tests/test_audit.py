@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from backend.tests.conftest_db import _EMPTY_THE_DATABASE
 from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError, InternalError, ProgrammingError
 
@@ -219,6 +220,43 @@ async def test_update_and_delete_are_rejected_by_the_database(
                 text(f"{statement} WHERE workspace_id = :ws").bindparams(ws=workspace_id)
             )
     assert "append-only" in str(exc.value)
+
+
+@pytest.mark.req("FR-GOV-22")
+async def test_the_session_teardown_leaves_the_append_only_guard_in_force(
+    database: Database,
+) -> None:
+    """The suite's own teardown suspends every trigger; this proves it cannot leave one off.
+
+    `conftest_db`'s session teardown empties `audit_events` — which nothing else in the
+    platform may do — by suspending user triggers via `session_replication_role`. It is safe
+    only because `set_config`'s third argument makes that **transaction-local**, so it
+    reverts when the truncate's transaction ends. Change it to a session-wide `SET` and every
+    append-only guarantee is off for the rest of that connection, silently.
+
+    **Asserted on one connection, deliberately.** The setting is per-connection, so a test
+    that called the teardown helper would prove nothing: that helper builds its own engine
+    and disposes it, taking any leak with it. This drives the same SQL through the *test's*
+    connection and then asks that connection whether the guard came back — the first version
+    of this test did it the other way and passed with the boolean deliberately inverted.
+    """
+    async with database.engine.connect() as conn:
+        async with conn.begin():
+            await conn.execute(text(_EMPTY_THE_DATABASE))
+
+        # A *new* transaction, which is the whole point: a transaction-local setting is
+        # still in force inside the one that set it, so only the next one can see it revert.
+        async with conn.begin():
+            role = (await conn.execute(text("SHOW session_replication_role"))).scalar_one()
+        assert role == "origin", (
+            f"session_replication_role is still {role!r} after the teardown's transaction; "
+            "every append-only table is unguarded on this connection"
+        )
+
+        with pytest.raises((DBAPIError, InternalError, ProgrammingError)) as exc:
+            async with conn.begin():
+                await conn.execute(text("TRUNCATE audit_events"))
+        assert "append-only" in str(exc.value)
 
 
 @pytest.mark.req("FR-GOV-22")
