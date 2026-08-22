@@ -2809,9 +2809,15 @@ would pull notebooks and visualisation extras, so only `interpret-core` is insta
 | Spec-hash counter coherence (Task 1's deferred minor) | §4.4's blockquotes show `spec_hash` moving `v4 → v5` (the approximation) beside `8 → 9` (the EBM fields); the vN lineage between v5 and v8 — v6 with regularisation/CV (FR-MODEL-20/53) and v7 with Tweedie power (FR-MODEL-22) — went unrecorded in the spec. Recorded here as a coherence follow-up, owner W5 |
 
 **Recorded, not built, with owners.** `fit_gbm` ignores `spec.weight` — verified, no
-reference in `gbm.py`; dated note 2026-08-21, owner W5. **FR-MODEL-111** (a declared eval
+reference in `gbm.py`; dated note 2026-08-21, owner W5. *(Corrected 2026-08-22: the note
+was never written. `git log -S "dated note 2026-08-21"` shows the phrase entering the
+repository only in `c2c54a6`, and only in this file — so FR-MODEL-87's obligation was
+recorded as discharged while nothing in `02-modelling.md` said the field was unbuilt. The
+gap is closed by building it rather than by writing the note; FR-MODEL-19 carries the
+amendment.)* **FR-MODEL-111** (a declared eval
 metric a backend could not evaluate is recorded on the fit) — the verdict is recorded here:
-owned by W5, due before W5 closes; explicitly NOT this (EBM) slice. **NFR-MODEL-7**
+owned by W5, due before W5 closes; explicitly NOT this (EBM) slice. *(Delivered 2026-08-22
+by the slice below, as this record scheduled it.)* **NFR-MODEL-7**
 recorded as-is — the export/import round-trip NFR remains unevidenced for the suite; this
 slice's EBM round-trip tests are evidence for the EBM artifact only, and the record says
 exactly that rather than claiming closure. The `06` §3.3 custom-metric evidence-row gap and
@@ -2826,6 +2832,53 @@ codes** ownership-exclusive (was 134) · req-coverage **241 of 494 marked, 48.8 
 FR-MODEL-109 joins the marked set with the marker backfill that closes this record ·
 `generate-contracts.py --check` 0, **23 generated contracts match** · frontend untouched
 (W6b owns any view that renders an EBM — the slice is API-only).
+
+#### W5 slice — GBM declared weights and the dropped eval metric record, 2026-08-22
+
+The twenty-seventh slice, 2026-08-22. Two defects sharing one shape — FR-MODEL-106's own
+words for the class: *a spec accepted, silently ignored, and reported to the caller as
+configured*. `spec.weight` was declared on `ModelSpecCommon`, honoured by `fit_glm`,
+`fit_ebm` and `compute_diagnostics`, and read by neither GBM backend; and a builtin eval
+metric suppressed so it could not hijack a custom stopping target was dropped with nothing
+on the artifact to say so. Both are closed in the fit path; no backend handler changed.
+
+| Delivered | Evidence |
+|---|---|
+| `spec.weight` reaches both GBM backends | `_weights(data, weight)` mirrors `_offset`; `fit_gbm` resolves it once for the training frame and once for the holdout, and the `valid` tuple widens to carry it — a curve whose train half is weighted and whose holdout half is not would plot two quantities on one axis. `xgb.DMatrix(weight=)` via the `matrix()` closure, `lgb.Dataset(weight=)` on both sets. A missing column raises Polars' own `ColumnNotFoundError`, exactly as `fit_glm` has always done — no new error code, because one malformed spec must not be answered differently by model type (FR-MODEL-19/55) |
+| The actuarial measurement that names the defect | `test_a_gamma_severity_fit_weighted_by_claim_count_predicts_the_weighted_mean` — a closed-form severity book whose unweighted mean is **5.0** and whose claim-count-weighted mean is **1.8**. Both backends fitted **5.0000** before and predict **1.8004** after. `test_non_uniform_weights_change_the_fit` pins that a non-uniform column moves the booster at all; `test_a_weight_column_of_ones_fits_identically_to_no_weight` is the control proving the plumbing is inert when the spec asks for nothing |
+| The custom objective and custom metric receive the declared weights | `make_xgb_objective`/`make_lgb_objective` and both `_custom_feval` helpers already read `get_weight()` and fell back to `np.ones_like(y)`; nothing had ever set it, so **every custom objective and custom eval metric fitted before this date was uniform-weighted**. `test_a_custom_objective_receives_the_declared_weights` and `test_a_custom_eval_metric_receives_the_declared_weights` record the array the backend hands in and compare it to the column. `make_lgb_objective`'s docstring asserted "nothing is dropped", false from the day it was written; corrected with a dated note (FR-MODEL-19/42/103) |
+| `GbmFitResult.dropped_eval_metrics` (FR-MODEL-111) | `DroppedEvalMetric` — `name` as `eval_metrics` spelled it, `reason` a closed set whose one member is `builtin_evaluated_before_custom_stopping_metric`. `_fit_lightgbm` populates it from the same `_builtin_eval_metric_names` list the non-stopping arm passes to `params["metric"]`; `_fit_xgboost` returns empty because it evaluates both lists. Negative tests first: a free-text reason and a twice-named metric are both refused. `test_lightgbm_records_the_builtin_eval_metric_it_dropped` pins the record, `test_a_fit_that_evaluated_everything_drops_nothing` the control, and the pre-existing `test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it` is byte-unchanged — the drop behaviour did not move, only its visibility |
+| `spec_hash` `v9` to `v10`, and the lineage it completes | **The first bump for an interpretation change rather than a payload one.** `weight` was always in the digest; what changed is that `fit_gbm` began honouring it, so a `v9:` digest over a weighted GBM spec names a fit this build produces differently and FR-MODEL-66's dedup would hand the next caller the unweighted one. Every `v9:` digest is stale and findable with `LIKE 'v9:%'` — including an unweighted GLM's, which the change cannot have affected; that over-invalidation is accepted because a targeted one has no mechanism here. `02` §4.4's lineage also catches up on `v5 → v6`, `v6 → v7` and `v7 → v8`, which it had skipped while the backend comment block carried them (FR-MODEL-86) |
+| No new shape hand-written, no handler edit | `model_handlers.py` reads `fit.result` by attribute and `record_fit` persists the whole result, so the field rides along — 22 backend gbm/handler tests pass untouched. Contracts regenerated: `DroppedEvalMetric` with a single-member `const` reason, `dropped_eval_metrics` defaulting to `[]` so every artifact written before this date still validates (FR-PLAT-48) |
+
+**Recorded, not built, with owners.** The **eleven unevidenced `NFR-MODEL` requirements**
+(NFR-MODEL-1/2/3/4/5/7/8/9/10/11/12 — performance budgets, the export/import round-trip,
+and determinism at suite scale) are unowned by this slice and remain the largest single
+block of MODEL scope without evidence; NFR is 1 of 12 evidenced. **FR-MODEL-23's
+remainder** — a bare non-`LinAlgError` `ValueError` from glum still reaches the job
+unwrapped — owner W5, unchanged. The **`06` §3.3 custom-metric `EVIDENCE_FLOOR` gap** is
+a spec change first and then code, in that order, owner W5. **FR-GOV-36** unchanged.
+**FR-MODEL-112(c)** stays sequenced behind (a), per the 2026-08-21 decision. The EBM
+**`interactions=2` triples** remain declared-and-unbuilt and **no workstream has ever been
+named for them** — itself an FR-MODEL-87 defect rather than merely a deferral, and stated
+here as one. The **constraint-level contract-drift guard** (`minLength`/`required`/
+`additionalProperties`) still has no mechanical guard, owner W5. **New finding, recorded
+rather than fixed:** `02` §4.8 carries `fit_result` examples for GLM and EBM and **has
+never carried one for a GBM**, so there was no example for `dropped_eval_metrics` to join;
+FR-MODEL-111's amendment points readers at the generated contract instead. Writing one is
+a spec change larger than this slice and is owned by W5. No frontend view renders either
+field; no alembic revision — `ModelRow.fit_result` is JSONB and unchanged.
+
+**Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (131 source files) ·
+`lint-imports` 0 (3 contracts kept) · **1625 python tests** (was 1609) · audit-docs 0 —
+**494 requirements** across 8 specs, **74 open questions** all mirrored, **136 error
+codes** ownership-exclusive and unchanged, this slice adding none by design ·
+req-coverage **242 of 494 marked, 49.0 %** — FR-MODEL-111 joins the marked set ·
+`generate-contracts.py --check` 0, **23 generated contracts match** · frontend:
+`install --frozen-lockfile` 0, `generate:api` 0, lint 0, type-check 0,
+**131 vitest tests**, build 0. MODEL scope-audit: **108 of 124 evidenced (87 %)**, up from
+107 — the five unevidenced `FR`-MODEL requirements that remain are all gated
+(FR-MODEL-6, 40, 82, 110, 112).
 
 **Delivered on `worktree-ebm-slice` in fifteen commits** — `1bae625` (the `02`
 amendment declaring the EBM arm and its fit/transparency shapes), `328f102` (`EbmSpec`
@@ -2879,7 +2932,7 @@ XGBoost model, compares them, and gets one approved — i.e. **`wf-01` executed 
 | ~~**W2**~~ ✔ | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | **Closed 2026-08-14** — ~35 of 61 `PLAT` requirements |
 | ~~**W3**~~ ✔ | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | **Closed 2026-08-14** — §5 skeleton only, no governance UI |
 | ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 | All 78 `MODEL` requirements — the largest single workstream |
+| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 | All **124** `MODEL` requirements — the largest single workstream. *(Re-derived 2026-08-22 with `scope-audit.py MODEL`; the row said 78, the count when it was written. Requirement ids only ever accumulate — §5 — so a number written once goes stale by construction rather than by error.)* |
 | **W6** | Frontend: app shell, dataset views, **validation report view**, **factor workbench**, model detail, diagnostics | W4, W5 | The two bolded views are where `01` §5.3 and `02` §5.3 place their interaction requirements |
 | **W7** | freMTPL2 demo seed **and the demo entrance** | W4, W5, W6 | `07` FR-PLAT-37, plus FR-PLAT-53/54 (`NT-0002`). The data half closed early as **W7a** |
 
