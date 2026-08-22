@@ -45,6 +45,7 @@ from model_schema import (
     BlobRef,
     CustomMetric,
     CustomObjective,
+    DroppedEvalMetric,
     Factor,
     FactorType,
     GbmEvalPoint,
@@ -58,6 +59,7 @@ from model_schema import (
     ObjectiveBackend,
     OffsetSpec,
     ResponseKind,
+    WeightSpec,
 )
 from pricing_core.modelling.errors import ObjectiveError
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
@@ -227,6 +229,21 @@ def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray 
             terms=[column],
         )
     return np.asarray(np.log(values), dtype=np.float64)
+
+
+def _weights(data: pl.DataFrame, weight: WeightSpec) -> np.ndarray | None:
+    """The weight column as a float array, or `None` for `kind: "none"` (FR-MODEL-19).
+
+    Two lines, mirroring `fit_glm`'s (glm.py) deliberately: severity weights by claim
+    count and burning cost by exposure are properties of the *response*, not of the
+    estimator, so the same spec must mean the same thing for a GLM, a GBM and an EBM. A
+    missing column raises Polars' own `ColumnNotFoundError` here exactly as it does there
+    — a named `GbmFitError` would make the platform answer one malformed spec differently
+    depending on which model type happened to read it.
+    """
+    if weight.kind == "none":
+        return None
+    return data[str(weight.column)].cast(pl.Float64).to_numpy()
 
 
 class Encoded(NamedTuple):
@@ -603,6 +620,7 @@ def fit_gbm(
     x, order, dtypes, encodings, unordered = _encode(matrix, factors, bandings=bandings)
     constraints = _monotone(factors, order, unordered)
     base_margin = _offset(data, spec.offset, what="this fit")
+    weights = _weights(data, spec.weight)
 
     response = data[spec.response_column].cast(pl.Float64).to_numpy()
     response = apply_loss_treatment(response, spec.loss_treatment)
@@ -640,25 +658,33 @@ def fit_gbm(
             "is the training-set early stopping the requirement forbids.",
         )
 
-    valid: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None = None
+    valid: tuple[np.ndarray, np.ndarray, np.ndarray | None, np.ndarray | None] | None = None
     if holdout is not None:
         holdout_matrix = resolve_factors(holdout, factors, bandings=bandings, groupings=groupings)
         vx = _encode(holdout_matrix, factors, maps=encodings, bandings=bandings).x
         vy = apply_loss_treatment(
             holdout[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment
         )
-        valid = (vx, vy, _offset(holdout, spec.offset, what="the holdout"))
+        # The holdout is weighted too, and for the same reason FR-MODEL-54 gives for
+        # reporting both partitions: a curve whose train half is weighted and whose holdout
+        # half is not is two different quantities plotted on one axis, and the divergence
+        # early stopping exists to catch would be read off the difference between the
+        # weightings rather than off the model.
+        valid = (
+            vx, vy, _offset(holdout, spec.offset, what="the holdout"),
+            _weights(holdout, spec.weight),
+        )
 
     report.update(0.30, f"boosting {rounds} rounds on {spec.model_type}")
     started = time.perf_counter()
     if spec.model_type == "xgboost":
-        payload, best, curve, versions = _fit_xgboost(
-            spec, x, response, base_margin, valid, order, constraints,
+        payload, best, curve, versions, dropped = _fit_xgboost(
+            spec, x, response, base_margin, weights, valid, order, constraints,
             unordered, xgb_objective, rounds, resolved_metrics, metric_link,
         )
     else:
-        payload, best, curve, versions = _fit_lightgbm(
-            spec, x, response, base_margin, valid, order, constraints,
+        payload, best, curve, versions, dropped = _fit_lightgbm(
+            spec, x, response, base_margin, weights, valid, order, constraints,
             unordered, lgb_objective, rounds, resolved_metrics, metric_link,
         )
     elapsed = time.perf_counter() - started
@@ -683,6 +709,7 @@ def fit_gbm(
             rows=data.height,
             fit_seconds=elapsed,
             library_versions=versions,
+            dropped_eval_metrics=dropped,
         ),
         booster_bytes=payload,
         eval_curve=curve,
@@ -805,7 +832,8 @@ def _fit_xgboost(
     x: np.ndarray,
     y: np.ndarray,
     base_margin: np.ndarray | None,
-    valid: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None,
+    weights: np.ndarray | None,
+    valid: tuple[np.ndarray, np.ndarray, np.ndarray | None, np.ndarray | None] | None,
     order: Sequence[str],
     constraints: tuple[int, ...],
     categorical: frozenset[str],
@@ -813,7 +841,7 @@ def _fit_xgboost(
     rounds: int,
     custom_metrics: Mapping[str, CustomMetric],
     metric_link: Literal["exp", "logistic"] | None,
-) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
+) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str], tuple[DroppedEvalMetric, ...]]:
     import xgboost as xgb
 
     feature_types = ["c" if slug in categorical else "q" for slug in order]
@@ -841,20 +869,26 @@ def _fit_xgboost(
         # Names, not positions: see `_interaction_groups`.
         params["interaction_constraints"] = interactions
 
-    def matrix(features: np.ndarray, label: np.ndarray, margin: np.ndarray | None) -> Any:
+    def matrix(
+        features: np.ndarray, label: np.ndarray, margin: np.ndarray | None,
+        weight: np.ndarray | None,
+    ) -> Any:
         return xgb.DMatrix(
-            features, label=label, base_margin=margin, feature_names=list(order),
-            feature_types=feature_types, enable_categorical=True,
+            features, label=label, base_margin=margin, weight=weight,
+            feature_names=list(order), feature_types=feature_types, enable_categorical=True,
         )
 
-    dtrain = matrix(x, y, base_margin)
+    dtrain = matrix(x, y, base_margin, weights)
     evals: list[tuple[Any, str]] = []
     if valid is not None:
         # Train **and** holdout: FR-MODEL-52 asks for the curve on both, and FR-MODEL-54
         # calls a diagnostic reported without its holdout counterpart a defect — which
         # reads the same way round. A curve on one partition cannot show the divergence
         # that early stopping exists to catch.
-        evals = [(dtrain, "train"), (matrix(valid[0], valid[1], valid[2]), "holdout")]
+        evals = [
+            (dtrain, "train"),
+            (matrix(valid[0], valid[1], valid[2], valid[3]), "holdout"),
+        ]
     stopping = spec.early_stopping
     stopping_on_custom = stopping is not None and _is_custom_metric_ref(
         stopping.metric, spec.eval_metrics
@@ -929,7 +963,9 @@ def _fit_xgboost(
     custom_declared = {_xgb_safe_metric_name(ref): ref for ref in custom_metrics}
     curve = _curve(history, declared=custom_declared or None)
     payload = bytes(booster.save_raw(raw_format="json"))
-    return payload, best + 1, curve, {"xgboost": xgb.__version__}
+    # Nothing is ever dropped here: `eval_metric` takes the whole builtin list and
+    # `custom_metric` runs beside it, so XGBoost evaluates both (FR-MODEL-111).
+    return payload, best + 1, curve, {"xgboost": xgb.__version__}, ()
 
 
 def _lgb_custom_feval(
@@ -956,7 +992,8 @@ def _fit_lightgbm(
     x: np.ndarray,
     y: np.ndarray,
     base_margin: np.ndarray | None,
-    valid: tuple[np.ndarray, np.ndarray, np.ndarray | None] | None,
+    weights: np.ndarray | None,
+    valid: tuple[np.ndarray, np.ndarray, np.ndarray | None, np.ndarray | None] | None,
     order: Sequence[str],
     constraints: tuple[int, ...],
     categorical: frozenset[str],
@@ -964,7 +1001,7 @@ def _fit_lightgbm(
     rounds: int,
     custom_metrics: Mapping[str, CustomMetric],
     metric_link: Literal["exp", "logistic"] | None,
-) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str]]:
+) -> tuple[bytes, int, tuple[GbmEvalPoint, ...], dict[str, str], tuple[DroppedEvalMetric, ...]]:
     import lightgbm as lgb
 
     params: dict[str, Any] = {
@@ -992,6 +1029,7 @@ def _fit_lightgbm(
     )
     declared_map: dict[str, str] = {}
     feval_entries: dict[str, CustomMetric] = {}
+    dropped: tuple[DroppedEvalMetric, ...] = ()
     # LightGBM's early-stopping callback can only target "the first metric"
     # (`first_metric_only`), never one by name — but "first" is decided purely by the
     # evaluation ordering (confirmed by reading `_EarlyStoppingCallback._init`:
@@ -1012,6 +1050,15 @@ def _fit_lightgbm(
         # section exists to prevent. Pinned by
         # `test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it`.
         params["metric"] = "None"
+        # FR-MODEL-111: the builtins suppressed by the line above were *declared*, and a
+        # caller who cannot see them in the curve is owed the reason rather than left to
+        # infer one. The same list the `else` arm passes to `params["metric"]`.
+        dropped = tuple(
+            DroppedEvalMetric(
+                name=name, reason="builtin_evaluated_before_custom_stopping_metric"
+            )
+            for name in _builtin_eval_metric_names(spec.eval_metrics)
+        )
         feval_entries = {
             stopping.metric: custom_metrics[stopping.metric],
             **{ref: metric for ref, metric in custom_metrics.items() if ref != stopping.metric},
@@ -1038,7 +1085,7 @@ def _fit_lightgbm(
     custom_metric_fn = _lgb_custom_feval(feval_entries, link=metric_link) if feval_entries else None
 
     train_set = lgb.Dataset(
-        x, label=y, init_score=base_margin, feature_name=list(order),
+        x, label=y, init_score=base_margin, weight=weights, feature_name=list(order),
         categorical_feature=categorical_indices, free_raw_data=False,
     )
     callbacks: list[Any] = []
@@ -1048,9 +1095,9 @@ def _fit_lightgbm(
     if valid is not None:
         valid_sets = [
             train_set,
-            lgb.Dataset(valid[0], label=valid[1], init_score=valid[2], reference=train_set,
-                        feature_name=list(order), categorical_feature=categorical_indices,
-                        free_raw_data=False),
+            lgb.Dataset(valid[0], label=valid[1], init_score=valid[2], weight=valid[3],
+                        reference=train_set, feature_name=list(order),
+                        categorical_feature=categorical_indices, free_raw_data=False),
         ]
         valid_names = ["train", "holdout"]
         callbacks.append(lgb.record_evaluation(history))
@@ -1073,7 +1120,7 @@ def _fit_lightgbm(
     best = int(booster.best_iteration or rounds)
     curve = _curve(history, declared=declared_map)
     payload = booster.model_to_string(num_iteration=best).encode()
-    return payload, best, curve, {"lightgbm": lgb.__version__}
+    return payload, best, curve, {"lightgbm": lgb.__version__}, dropped
 
 
 def _native_categoricals(result: GbmFitResult) -> frozenset[str]:

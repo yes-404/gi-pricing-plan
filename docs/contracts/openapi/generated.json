@@ -3145,6 +3145,28 @@
         "title": "DoubleLiftBin",
         "type": "object"
       },
+      "DroppedEvalMetric": {
+        "additionalProperties": false,
+        "description": "A declared eval metric the backend could not evaluate (FR-MODEL-111, OQ-MODEL-21).\n\nFR-MODEL-106's objection is to a spec \"reported to the caller as configured\" when it\nwas not. The cheapest honest answer here is neither to refuse an otherwise-valid fit\nnor to punish a portable spec for one backend's evaluation ordering, but to say so on\nthe artifact — so a reader comparing two fits can see why one curve has a series the\nother lacks, instead of inferring a bug.\n\n`reason` is a closed set with one member because exactly one reason exists today. A\nfree-text field would let the second be invented at a call site rather than declared\nin the contract the frontend generates from.",
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "const": "builtin_evaluated_before_custom_stopping_metric",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "reason"
+        ],
+        "title": "DroppedEvalMetric",
+        "type": "object"
+      },
       "DryRunRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4081,6 +4103,14 @@
             },
             "title": "Categorical Maps",
             "type": "object"
+          },
+          "dropped_eval_metrics": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DroppedEvalMetric"
+            },
+            "title": "Dropped Eval Metrics",
+            "type": "array"
           },
           "feature_dtypes": {
             "additionalProperties": {

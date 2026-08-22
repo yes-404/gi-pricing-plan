@@ -134,7 +134,16 @@ __all__ = [
 #: **v9, 2026-08-21** — EbmSpec joined the union (FR-MODEL-37): model_type, objective,
 #: interactions, max_bins, max_rounds, monotone_constraints. Every `v8:` digest is now
 #: stale and must be findable with `LIKE 'v8:%'`.
-SPEC_HASH_VERSION: Final = 9
+#: **v10, 2026-08-22** — the first bump for an **interpretation** change rather than a
+#: payload one (FR-MODEL-19). `weight` was already in the payload; what changed is that
+#: `fit_gbm` began honouring it, having accepted and ignored it since the GBM slice. So a
+#: `v9:` digest over a weighted GBM spec names a fit this build produces differently, and
+#: FR-MODEL-66's dedup would answer the next caller with an unweighted fit for a weighted
+#: spec. Every `v9:` digest is now stale and findable with `LIKE 'v9:%'`. The cost is the
+#: documented one and is over-paid: an unweighted GLM's digest goes stale too, for a change
+#: that cannot have affected it. A targeted invalidation has no mechanism here, and
+#: inventing one is larger than the defect it would spare.
+SPEC_HASH_VERSION: Final = 10
 
 
 def spec_hash(spec: ModelSpec) -> str:

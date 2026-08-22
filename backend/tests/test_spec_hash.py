@@ -190,12 +190,19 @@ def test_the_algorithm_version_moved_with_the_new_field() -> None:
     # objective, interactions, max_bins, max_rounds and monotone_constraints join the
     # payload, and two EBM specs differing there must not share a digest or FR-MODEL-66
     # hands the second caller the first caller's model.
-    assert SPEC_HASH_VERSION == 9, (
-        "EbmSpec joined the payload (FR-MODEL-37); the tag moves with it"
+    # v9 -> v10 (2026-08-22, FR-MODEL-19/86): the **first bump for an interpretation
+    # change rather than a payload one**. `weight` has been inside `ModelSpec` and inside
+    # this digest since it was written, but `fit_gbm` ignored it until this date — so
+    # every `v9:` digest over a weighted GBM spec describes a fit this build produces
+    # differently. FR-MODEL-66 would otherwise hand the next caller the unweighted fit for
+    # a weighted spec, with nothing to see. A future reader should not conclude from the
+    # v1..v9 lineage that this tag tracks fields; it tracks what a digest promises.
+    assert SPEC_HASH_VERSION == 10, (
+        "fit_gbm began honouring spec.weight (FR-MODEL-19); the tag moves with the meaning"
     )
-    assert spec_hash(_bound()).startswith("v9:sha256:")
-    assert spec_hash_is_current("v8:sha256:" + "0" * 64) is False, (
-        "every v8 digest is now stale and must be findable with LIKE 'v8:%'"
+    assert spec_hash(_bound()).startswith("v10:sha256:")
+    assert spec_hash_is_current("v9:sha256:" + "0" * 64) is False, (
+        "every v9 digest is now stale and must be findable with LIKE 'v9:%'"
     )
 
 

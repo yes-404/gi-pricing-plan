@@ -17,6 +17,7 @@ LightGBM's `Booster.predict` has no offset parameter at all — the signature is
 from __future__ import annotations
 
 import hashlib
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
@@ -30,6 +31,7 @@ from model_schema import (
     BandingMethod,
     CustomMetric,
     CustomObjective,
+    DroppedEvalMetric,
     EarlyStopping,
     Factor,
     FactorType,
@@ -45,8 +47,10 @@ from model_schema import (
     OffsetSpec,
     ResponseKind,
     SplitRef,
+    WeightSpec,
     YDomain,
 )
+from pricing_core.modelling import gbm
 from pricing_core.modelling.gbm import GbmFitError, fit_gbm, predict_gbm
 
 BACKENDS = ["xgboost", "lightgbm"]
@@ -103,6 +107,48 @@ def _spec(backend: str, **over: object) -> GbmSpec:
     }
     base.update(over)
     return GbmSpec(**base)  # type: ignore[arg-type]
+
+
+SEVERITY_FACTORS = (_factor("region", "region"),)
+
+
+def _severity_data(n: int = 4_000, seed: int = 20260822) -> pl.DataFrame:
+    """A severity book whose claim-count weighting is knowable in closed form.
+
+    Within every region, the severities are 1.0 and 9.0 in equal numbers — an unweighted
+    mean of 5.0 — and the claim counts are 9 on the 1.0 rows and 1 on the 9.0 rows, so
+    the claim-count-weighted mean is 1.8. FR-MODEL-19 makes claim-count weighting the
+    severity default, and the two numbers are far enough apart that no fitting noise can
+    confuse them.
+    """
+    rng = np.random.default_rng(seed)
+    region = rng.integers(0, 3, size=n)
+    small = np.arange(n) % 2 == 0
+    return pl.DataFrame(
+        {
+            "region": [f"r{value}" for value in region],
+            "severity": np.where(small, 1.0, 9.0),
+            "claim_count": np.where(small, 9.0, 1.0),
+            "exposure_years": np.ones(n),
+        }
+    )
+
+
+def _severity_spec(backend: str, **over: object) -> GbmSpec:
+    """FR-MODEL-19's severity defaults on a GBM: Gamma objective, claim-count weights.
+
+    `reg:gamma` on **both** backends: `_OBJECTIVES` is keyed on FR-MODEL-26's XGBoost
+    spelling and translates to LightGBM's `gamma` itself, so naming the LightGBM spelling
+    here would be refused as outside the requirement's set.
+    """
+    return _spec(
+        backend,
+        response_column="severity",
+        objective=GbmFunctionRef(kind="builtin", name="reg:gamma"),
+        offset=OffsetSpec(kind="none"),
+        factors=tuple(f.id for f in SEVERITY_FACTORS),
+        **over,
+    )
 
 
 # --------------------------------------------------------------------------------------
@@ -1329,3 +1375,210 @@ def test_lightgbm_drops_a_builtin_eval_metric_rather_than_stop_on_it() -> None:
 
     assert curves["xgboost"] == {"rmse", _METRIC_REF}
     assert curves["lightgbm"] == {_METRIC_REF}
+
+
+@pytest.mark.req("FR-MODEL-111")
+def test_lightgbm_records_the_builtin_eval_metric_it_dropped() -> None:
+    """The drop was correct and silent; FR-MODEL-111 makes it correct and legible.
+
+    LightGBM evaluates builtin metrics before `feval`'s, so a builtin declared alongside
+    a custom stopping target would take position 0 and drive the stop — the defect the
+    `metric: None` line exists to prevent. Until 2026-08-22 the caller's declared metric
+    simply never appeared in the curve, with nothing on the artifact to say why.
+    """
+    metric = _metric()
+    holdout = _frequency_data(n=3_000, seed=99)
+    eval_metrics = (
+        GbmFunctionRef(kind="builtin", name="rmse"),
+        GbmFunctionRef(kind="custom", ref=_METRIC_REF),
+    )
+    spec = _spec(
+        "lightgbm", response=ResponseKind.CLAIM_COUNT,
+        hyperparameters=dict(_STOPPING_HYPERPARAMETERS), eval_metrics=eval_metrics,
+        early_stopping=EarlyStopping(on="holdout", metric=_METRIC_REF, rounds=5),
+    )
+    fit = fit_gbm(
+        _frequency_data(), spec, FACTORS, holdout=holdout, metrics={_METRIC_REF: metric}
+    )
+    assert fit.result.dropped_eval_metrics == (
+        DroppedEvalMetric(
+            name="rmse", reason="builtin_evaluated_before_custom_stopping_metric"
+        ),
+    )
+
+
+@pytest.mark.req("FR-MODEL-111")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_fit_that_evaluated_everything_drops_nothing(backend: str) -> None:
+    """The control. A non-empty tuple on an ordinary fit would make the field noise, and
+    a reader who has seen it fire spuriously once will not trust it when it matters."""
+    fit = fit_gbm(_frequency_data(), _spec(backend), FACTORS)
+    assert fit.result.dropped_eval_metrics == ()
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-19 — `spec.weight` reaches the backend
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_weight_column_of_ones_fits_identically_to_no_weight(backend: str) -> None:
+    """The control for the weighting plumbing.
+
+    A uniform weight is mathematically no weight at all. If these two fits differ, the
+    weights are reaching the backend as something other than a multiplier on each row's
+    contribution — and every assertion in the tests below about *non*-uniform weights
+    would then be measuring the wrong thing.
+    """
+    data = _frequency_data().with_columns(pl.lit(1.0).alias("ones"))
+    unweighted = fit_gbm(data, _spec(backend), FACTORS)
+    weighted = fit_gbm(
+        data, _spec(backend, weight=WeightSpec(kind="column", column="ones")), FACTORS
+    )
+    assert weighted.result.booster_blob.sha256 == unweighted.result.booster_blob.sha256, (
+        "a uniform weight changed the booster; the weights are not entering as row multipliers"
+    )
+
+
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_non_uniform_weights_change_the_fit(backend: str) -> None:
+    """`spec.weight` was accepted and ignored by both GBM backends until 2026-08-22.
+
+    `fit_glm` has honoured it since it was written and `fit_ebm` since the EBM slice, so
+    the same spec meant one thing for a GLM and another for a GBM. The symptom is silent:
+    the fit succeeds, and `compute_diagnostics` then labels its metrics claim-count-
+    weighted (FR-MODEL-55) on the strength of a `spec.weight` the fit never read.
+    """
+    data = _frequency_data().with_columns(
+        (pl.col("exposure_years") * 10.0 + 1.0).alias("claim_count")
+    )
+    unweighted = fit_gbm(data, _spec(backend), FACTORS)
+    weighted = fit_gbm(
+        data, _spec(backend, weight=WeightSpec(kind="column", column="claim_count")), FACTORS
+    )
+    assert weighted.result.booster_blob.sha256 != unweighted.result.booster_blob.sha256, (
+        "a non-uniform weight column left the booster byte-identical; spec.weight is being "
+        "ignored by the fit path"
+    )
+
+
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-MODEL-55")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_gamma_severity_fit_weighted_by_claim_count_predicts_the_weighted_mean(
+    backend: str,
+) -> None:
+    """FR-MODEL-19's severity default, end to end, on the number it changes.
+
+    Unweighted the book's mean severity is 5.0; weighted by claim count it is 1.8. Before
+    2026-08-22 a GBM declaring `weight = claim_count` produced the first number while
+    `compute_diagnostics` labelled its metrics claim-count-weighted (FR-MODEL-55) — the
+    label true of the metric and false of the model that produced it.
+    """
+    data = _severity_data()
+    fit = fit_gbm(
+        data,
+        _severity_spec(backend, weight=WeightSpec(kind="column", column="claim_count")),
+        SEVERITY_FACTORS,
+    )
+    predicted = predict_gbm(fit.result, fit.booster_bytes, data).to_numpy()
+    assert 1.5 < float(np.mean(predicted)) < 2.2, (
+        f"claim-count-weighted severity should sit near 1.8, not {float(np.mean(predicted)):.3f}; "
+        "5.0 means the weights never reached the objective"
+    )
+
+
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_objective_receives_the_declared_weights(
+    backend: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`make_*_objective` reads `get_weight()` off the dataset — nothing ever set it.
+
+    Both wrappers fall back to `np.ones_like(y)` when the array they read is the wrong
+    size, and an unset weight reads as size zero, so every custom objective fitted before
+    2026-08-22 computed its gradient and hessian against uniform weights while the spec
+    said otherwise. `make_lgb_objective`'s docstring asserted the opposite in as many
+    words; it is corrected in the same commit as this test.
+    """
+    data = _frequency_data().with_columns(
+        (pl.col("exposure_years") * 10.0 + 1.0).alias("claim_count")
+    )
+    expected = data["claim_count"].to_numpy()
+    objective = _custom()
+    seen: list[np.ndarray] = []
+
+    maker = "make_xgb_objective" if backend == "xgboost" else "make_lgb_objective"
+    real = getattr(gbm, maker)
+
+    def recording(fns: object) -> object:
+        inner = real(fns)
+
+        def recorded(predt: np.ndarray, dataset: Any) -> Any:
+            seen.append(np.asarray(dataset.get_weight(), dtype=np.float64).copy())
+            return inner(predt, dataset)
+
+        return recorded
+
+    monkeypatch.setattr(gbm, maker, recording)
+    fit_gbm(
+        data,
+        _custom_spec(backend, objective, weight=WeightSpec(kind="column", column="claim_count")),
+        FACTORS,
+        objective=objective,
+    )
+
+    assert seen, "the recording objective was never called; the monkeypatch missed"
+    np.testing.assert_allclose(seen[0], expected)
+
+
+@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_eval_metric_receives_the_declared_weights(
+    backend: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FR-MODEL-103 calls the metric an exposure-weighted mean; it was an unweighted one.
+
+    Both `_custom_feval` helpers read `get_weight()` and fall back to ones exactly as the
+    objective wrappers do, so a declared weight column left the reported metric weighted
+    by nothing at all — while `compute_diagnostics` reported its own metrics weighted.
+
+    A holdout is passed because neither backend evaluates anything without one: XGBoost's
+    `evals` and LightGBM's `valid_sets` are both empty until there is a second partition,
+    and `feval` is only ever called per evaluation set.
+    """
+    data = _frequency_data().with_columns(
+        (pl.col("exposure_years") * 10.0 + 1.0).alias("claim_count")
+    )
+    expected = data["claim_count"].to_numpy()
+    seen: list[np.ndarray] = []
+    real = gbm.evaluate_metric
+
+    def recording(metric: Any, y: np.ndarray, f: np.ndarray, w: np.ndarray) -> float:
+        seen.append(np.asarray(w, dtype=np.float64).copy())
+        return real(metric, y, f, w)
+
+    monkeypatch.setattr(gbm, "evaluate_metric", recording)
+    fit_gbm(
+        data,
+        _spec(
+            backend,
+            response=ResponseKind.CLAIM_COUNT,
+            eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+            weight=WeightSpec(kind="column", column="claim_count"),
+        ),
+        FACTORS,
+        holdout=_frequency_data(n=3_000, seed=99),
+        metrics={_METRIC_REF: _metric()},
+    )
+
+    assert seen, "the recording metric was never called; the monkeypatch missed"
+    train = [array for array in seen if array.size == expected.size]
+    assert train, (
+        f"every weight array reaching the metric was the wrong size: {[a.size for a in seen]}"
+    )
+    np.testing.assert_allclose(train[0], expected)
