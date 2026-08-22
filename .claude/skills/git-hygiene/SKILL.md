@@ -1,6 +1,6 @@
 ---
 name: git-hygiene
-description: Git and GitHub working discipline for this repo — what belongs in .gitignore and what must NOT be ignored, branch and PR flow, squash-merge and branch cleanup, and the merge-order trap that strands work. Use before committing, when creating a branch or PR, when deleting branches, when adding a new tool that generates files, or when a push is rejected.
+description: Git and GitHub working discipline for this repo — what belongs in .gitignore and what must NOT be ignored, branch and PR flow, squash-merge and branch cleanup, how a squash commit's title and body are composed (including the `(#N)` the merge API will not add for you), and the merge-order trap that strands work. Use before committing, when creating a branch or PR, when merging one, when deleting branches, when adding a new tool that generates files, or when a push is rejected.
 ---
 
 # Git hygiene
@@ -161,6 +161,31 @@ Conventional Commits (`CLAUDE.md` §10). Because PRs are squash-merged, **the sq
 the permanent record** — write it as the thing a reader finds in `git log` two years later,
 not as a note to the reviewer. State what changed, why, and what it cost.
 
+### Building the squash title: the `(#N)` is yours to add
+
+`PUT /repos/{owner}/{repo}/pulls/{n}/merge` uses an explicit `commit_title` **verbatim** and
+appends nothing to it. Pass the bare PR title and the squash lands with no PR reference in
+its subject — which is how `cbb8ffb` became the one commit on `main` that a reader cannot
+trace back to its discussion.
+
+```bash
+commit_title="${PR_TITLE} (#${N})"   # build the suffix yourself, exactly once
+commit_message="${PR_BODY}"          # the permanent record, not the default commit list
+```
+
+Then **read the subject back** and count the suffix:
+
+```bash
+git log origin/main -1 --format=%s
+```
+
+There is no second chance: amending a landed squash means force-pushing `main`.
+
+The count matters in both directions. `main` also carries `… partial-dependence cap (#135)
+(#135)` — doubled — though PR #135's own title holds no number at all, so some other merge
+path composes it differently. Read the landed subject rather than reasoning about which
+path appends what.
+
 ## When a push is rejected
 
 Read the message rather than retrying. Two seen in this repo:
@@ -191,6 +216,13 @@ grows one miss at a time; the standing plan (`CLAUDE.md` §2) is an always-runni
 aggregator job once branch protection arrives.
 
 ## Verified
+
+**2026-08-22 — PR #136, and the `(#136)` that never arrived.** Merged through the REST API
+rather than `gh pr merge`, passing `commit_title` as the bare PR title on the theory that
+GitHub would append the number. It does not, and `main` cannot be force-pushed to correct
+it. The two-dot content check above ran in the same session and did its job: an empty
+`git diff --stat origin/main HEAD` proved all nine commits were captured in `cbb8ffb`
+before the branch and its worktree were removed.
 
 **2026-08-18 — `.claude/worktrees/` added to `.gitignore`.** It had been untracked since
 the harness started creating worktrees there, and a peer session's `w5-backtest` was live
