@@ -256,17 +256,28 @@ def test_an_offset_intent_factor_is_refused_and_the_refusal_is_permanent() -> No
 
 
 @pytest.mark.req("FR-MODEL-117")
-def test_a_diagnostic_intent_factor_is_refused_and_the_refusal_is_pending() -> None:
-    """FR-MODEL-117: refused because it has no meaning, not because it will never have one."""
+@pytest.mark.req("FR-MODEL-120")
+def test_a_diagnostic_intent_factor_is_refused_and_the_refusal_is_permanent() -> None:
+    """FR-MODEL-120: superseded, so the refusal says "never" where FR-MODEL-117 said "yet".
+
+    This assertion is the inverse of the one it replaces, and deliberately so. FR-MODEL-117
+    refused the arm *pending* OQ-MODEL-27 and this test held it to saying so; OQ-MODEL-27
+    then superseded it, on the finding that the meaning FR-MODEL-3 never supplied did not
+    have to be supplied — both candidate meanings fail, one mis-sited and one redundant
+    with `control`. A refusal that still said "not yet" would now be the stale half of the
+    disagreement `CLAUDE.md` §0 forbids.
+    """
     factor = _factor("age_watch", "driver_age", intent=FactorIntent.DIAGNOSTIC)
     with pytest.raises(FactorResolutionError) as excinfo:
         resolve_factors(_book(200), [factor])
 
     message = str(excinfo.value)
-    assert "FR-MODEL-117" in message
-    assert "OQ-MODEL-27" in message
-    # The two arms do not share a reason, and a reader must be able to tell which applies.
-    assert "superseded" not in message
+    assert "FR-MODEL-120" in message
+    assert "superseded" in message
+    # The two arms are both permanent now, but not for interchangeable reasons: a reader
+    # must still get the one that applies, so neither message may collapse into the other.
+    assert "OffsetSpec" not in message
+    assert "yet" not in message
 
 
 @pytest.mark.req("FR-MODEL-3")

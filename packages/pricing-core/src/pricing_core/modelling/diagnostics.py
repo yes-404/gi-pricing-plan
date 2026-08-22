@@ -853,7 +853,18 @@ def _permutation_importances(
         # FR-MODEL-119. An `interaction` names no source columns of its own — its
         # columns are its operands' — so indexing here raised `IndexError` for any GBM
         # declaring one, which no test covered because none fitted a GBM whose factor
-        # *list* held a cross. Skipped until OQ-MODEL-28 settles what to permute.
+        # *list* held a cross.
+        #
+        # FR-MODEL-121 settles what to permute: every operand source column under **one
+        # shared order**, which permutes the operand *pairs* and so is exactly a
+        # permutation of the resolved cross column. Not built here — W30 owns the slice.
+        #
+        # FR-MODEL-122 is the reason skipping the cross was never enough. The operands
+        # stay in this loop and are permuted **alone**, which recombines them into cells
+        # the fit never saw, and `predict_gbm` then refuses the frame outright with
+        # `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`. On a dense cross every recombination happens
+        # to be a level the model knows, which is why the suite is green and why a sparse
+        # cross — the only kind FR-MODEL-91 expects — cannot produce diagnostics at all.
         if not factor.source_columns:
             continue
         column = factor.source_columns[0]

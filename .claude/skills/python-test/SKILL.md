@@ -64,6 +64,36 @@ string this repository chose and some library also has to understand, one test m
 the family. One such test per enumerated value, and the cheapest form is a parametrised fit
 over the whole literal.
 
+### A fixture that cannot express the failure is not coverage — the `interaction` case
+
+`_crossable_book()` draws `area` and `fuel` **independently**, so all six cells of the cross
+it feeds are populated. Every `interaction` test in the suite uses it, and the cross it
+builds is therefore dense — which is the one shape FR-MODEL-91 says a real cross never has:
+"only *observed* combinations become levels … on any real cross most cells are empty".
+
+That single fixture hid two defects in a row, four days apart. FR-MODEL-119 (no GBM could
+fit a cross at all) went unseen because no GBM test fitted one; FR-MODEL-122 went unseen
+*after* that was fixed, because permutation importance and the partial-dependence sweep
+shuffle an operand's raw column **alone**, and on a dense cross every recombination happens
+to be a level the model already knows. Make the cross sparse — 3 observed cells of 9, one
+line of fixture change — and `compute_gbm_diagnostics` raises
+`UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` before returning.
+
+**Where a type's own specification states a shape, the fixture must have that shape.** A
+cross whose cells are all full is not a cross; a book where every row carries the same
+exposure is not a book (that one is live too — `PartialDependencePoint.exposure_share`
+reports a row-count share and the suite cannot tell, for the same reason). Before trusting a
+green test over a derived structure, ask what the structure looks like in production and
+whether the fixture can represent it *failing*. If it cannot, the test is measuring the
+fixture.
+
+The paired habit: when a defect is found in a path like this, add the sparse fixture in the
+same commit as the finding, and hang the future behaviour off it with
+`@pytest.mark.xfail(strict=True)` rather than a `pytest.raises` around today's crash. Strict
+xfail turns the eventual fix into a *failing* run that forces the marker off; a
+characterisation test would instead have to be rewritten, and locks the defect in until
+someone chooses to.
+
 ### Parametrize over every backend that claims to do the same thing
 
 Two libraries behind one interface will agree at the point you looked and disagree
@@ -561,6 +591,12 @@ does not return freed arenas to the OS — a peak-RSS reading taken after an ear
 the same process is that earlier phase's high-water mark, not this one's.
 
 ## Verified
+
+2026-08-22 — deciding OQ-MODEL-28. The degenerate-fixture section above, added after the
+same dense `_crossable_book()` hid two `interaction` defects four days apart — the second
+of them (FR-MODEL-122) *after* the first was fixed and believed to have cleared the path.
+Reproduced both ways: the dense fixture returns diagnostics, and a 3-of-9 sparse one raises
+`UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` out of `compute_gbm_diagnostics`.
 
 2026-08-22 — W5 audit remediation. The shared-machine load caveat above, found
 while measuring `02` §9's twelve NFRs.

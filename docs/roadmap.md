@@ -3326,7 +3326,17 @@ admits as evidence where a test is the wrong instrument — and says so with the
   `factor.created` audit event, which **records** the declared intent without gating on it,
   so the platform attested to a property the fit never had — and **`diagnostic` carried the identical
   defect** — refused by FR-MODEL-117 pending OQ-MODEL-27 rather than left live beside a
-  fixed twin.
+  fixed twin, and **since superseded with it** (2026-08-22, OQ-MODEL-27, FR-MODEL-120).
+- ~~**`FactorIntent.DIAGNOSTIC` has no stated meaning**~~ — **decided 2026-08-22 as OQ-MODEL-27**,
+  superseded by FR-MODEL-120 **without the missing meaning ever being supplied**, because both
+  readings of it fail: the distinct one — resolved and reported, held out of the linear
+  predictor — is a property of *one fit* mis-sited on a Factor reused by every spec that names
+  it, and the redundant one is `control` already. The capability is real and is re-sited on the
+  Model Spec, where `ModelSpecCommon.factors` is a flat `tuple[UUID, ...]` with no per-factor
+  attribute to carry it; gated, owner W30. **FR-MODEL-117's ground for holding the question
+  open was wrong against the decision that wrote it** — it measured `diagnostic` against the
+  *duplication* argument, which OQ-MODEL-25 had refuted, rather than the *layer* argument it
+  actually decided on. Corrected in place rather than quietly dropped.
 
 - **No GBM could fit an `interaction` Factor at all**, from FR-MODEL-91 on 2026-08-18 until
   2026-08-22 — **found and fixed here** (FR-MODEL-119), not merely recorded. `resolve_factors`
@@ -3338,6 +3348,32 @@ admits as evidence where a test is the wrong instrument — and says so with the
   the GLM suite ever fitted a cross** — the GBM suite covers `interaction_constraints`, a
   backend parameter of a similar name and no relation. Found while deciding OQ-MODEL-26, by
   writing the test the requirement implied rather than by reading the code.
+- **A GBM declaring a *sparse* interaction still could not produce diagnostics** — found
+  2026-08-22 while deciding OQ-MODEL-28 (FR-MODEL-122), one day after FR-MODEL-119 was believed
+  to have cleared that path, and **recorded rather than fixed**: the remedy is W30's slice.
+  FR-MODEL-119 skipped the cross and left its **operands** in the list, and both per-factor
+  blocks permute and sweep an operand's raw column *alone* — which recombines the operands into
+  cells the fit never saw. Measured on a book carrying 3 of 9 cells, which FR-MODEL-91 says is
+  what a real cross looks like: the fit succeeds, the booster's whole feature order is
+  `('area_x_fuel',)`, and `compute_gbm_diagnostics` then raises
+  `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` naming all six absent cells. It reaches production —
+  `load_factors` returns `ordered + operands` — and dies **uncoded**, the raise landing outside
+  the block that maps a `GbmFitError` to a platform error code, which is the same reader-facing
+  failure FR-MODEL-119 recorded for the bare `KeyError` and believed it had removed. **A dense
+  fixture hid both defects**: the suite's only cross draws its two sides independently, so every
+  cell is populated and no shuffle there can produce an unseen pair. The lesson is a fixture
+  one — a cross whose cells are all full is not a cross, and FR-MODEL-91 said so in writing
+  before either defect was built.
+- **Two of OQ-MODEL-28's four options turned out to be one option**, on the half the question
+  believed separated them — recorded because the lesson is general to this codebase. "Permute
+  the cross's combined column" is not reachable at all: `predict_gbm` re-resolves the cross from
+  the operands' **raw** columns on every call, so **every per-factor GBM diagnostic is bounded by
+  what can be expressed as a raw-column edit**. A shuffle applied to both operands under one
+  shared order permutes the *pairs*, which is exactly a permutation of the resolved cross column
+  — measured, the observed cell set is identical before and after and 67.8 % of holdout
+  predictions move. The options differ only on the sweep grid, where the cross's observed cells
+  score and the Cartesian product of operand levels does not: FR-MODEL-32 again, the wall that
+  killed FR-MODEL-118's pooled `other` bar four requirements earlier.
 - **Two defects in `_sweep` found and deliberately *not* fixed**, recorded rather than
   tuned away because neither is what OQ-MODEL-26 asked and both change numbers already
   persisted on fitted artifacts. First, `PartialDependencePoint.exposure_share` reports a
@@ -3572,7 +3608,7 @@ you never block on a decision you have not reached.
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo*, ~~OQ-OVR-8~~ ✔, ~~OQ-MODEL-16~~ ✔, ~~OQ-MODEL-18~~ ✔, ~~OQ-MODEL-19~~ ✔, ~~OQ-MODEL-20~~ ✔, ~~OQ-DATA-11~~ ✔ *all 2026-08-19, raised and decided inside the phase*, ~~OQ-OVR-9~~ ✔, ~~OQ-MODEL-21~~ ✔ *2026-08-21, raised and decided inside the phase — FR-OVR-19's delivery precedes the exit demo, FR-MODEL-111 is a W5 obligation*, ~~OQ-MODEL-24~~ ✔ *2026-08-22, raised and decided inside the phase from the first measurement of NFR-MODEL-4 — it gated W5's closure, because the answer changes whether a delivered requirement is in breach* | 14 (0 open) |
 | **Before Phase 1b** — *re-opened 2026-08-22* | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18*, ~~OQ-DATA-9~~ ✔ *2026-08-19 — raised in W5 and never placed on this table until it was decided, so the gate it belonged to had already closed; it gates W6b's dataset list, which is Phase 1b work*, ~~OQ-MODEL-15~~ ✔, ~~OQ-MODEL-17~~ ✔, ~~OQ-MODEL-22~~ ✔ *all 2026-08-21, raised in W5 and never placed on this table until decided — FR-MODEL-109 delivered with the decision, FR-MODEL-110's trigger is Phase 1b's job-latency measurement, FR-MODEL-112's first slice is Phase 1b's*, ~~OQ-MODEL-25~~ ✔, ~~OQ-MODEL-26~~ ✔ *both raised **and decided** 2026-08-22, out of the two modelling decisions taken that day — the first a live silent mis-fit, the second an unbounded diagnostics sweep. This gate had been closed since 2026-08-21; it re-opened rather than pretending they arrived earlier, and closes again the same day. Neither landed where its question pointed: FR-MODEL-116 supersedes the offset **intent** on a layer argument, the duplication argument having failed checking, and half of OQ-MODEL-26 was withdrawn as a no-op. Each raised a successor owned by W30, which is Phase 2 — placed at that gate rather than held here* | 18 (0 open) |
-| **Before Phase 2** — *re-opened 2026-08-22* | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18*, ~~OQ-MODEL-23~~ ✔ *2026-08-22 — decided into FR-MODEL-114 and FR-MODEL-115; the continuous-effect gate it turns on is W30's, which is Phase 2 work*, **OQ-MODEL-27**, **OQ-MODEL-28** *both raised 2026-08-22 out of the OQ-MODEL-25 and OQ-MODEL-26 decisions. Placed **here** and not at Before Phase 1b, where their parents sat, because FR-MODEL-117 and FR-MODEL-119 both name W30 as owner and W30 is Phase 2 — a question filed against a gate its owner cannot reach is an appointment nobody keeps. Both have interim behaviour in place, so neither blocks: `diagnostic` is refused and an interaction factor is skipped-and-recorded* | 13 (2 open) |
+| **Before Phase 2** — *re-opened 2026-08-22* | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18*, ~~OQ-MODEL-23~~ ✔ *2026-08-22 — decided into FR-MODEL-114 and FR-MODEL-115; the continuous-effect gate it turns on is W30's, which is Phase 2 work*, ~~OQ-MODEL-27~~ ✔, ~~OQ-MODEL-28~~ ✔ *both raised 2026-08-22 out of the OQ-MODEL-25 and OQ-MODEL-26 decisions and **both decided the same day**, before the gate they were filed against — OQ-MODEL-27 into FR-MODEL-120, OQ-MODEL-28 into FR-MODEL-121 and FR-MODEL-122. Filing them here rested on a claim that held for one of them: "both have interim behaviour in place, so neither blocks" is true of `diagnostic`, which really is refused, and **false of the interaction**, whose skip-and-record leaves a sparse cross raising `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` out of `compute_gbm_diagnostics` (FR-MODEL-122). Deciding both early cost one day and turned an interim nobody had exercised into a measured defect with a remedy. W30 still owns the slices; what it no longer owns is the choice* | 13 (2 open) |
 | ~~**Before Phase 3**~~ ✔ **all decided** | ~~OQ-GOV-1..6~~ ✔ *2026-08-18*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (0 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, ~~OQ-DATA-10~~ ✔ *2026-08-19 — a deferral with a trigger (FR-DATA-52), raised in W5 and never placed here until decided*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5, OQ-PLAT-7 *raised 2026-08-19 in the FR-MODEL-96 slice and placed 2026-08-21* | 15 (5 open) |
