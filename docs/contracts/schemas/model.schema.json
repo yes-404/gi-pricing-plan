@@ -140,7 +140,8 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["term_name", "term_features", "scores"],
+                  "required": ["term_name", "term_features", "scores", "standard_deviations", "bin_weights"],
+                  "description": "Corrected 2026-08-22: EbmTerm requires bin_weights and standard_deviations and this contract marked them optional, so a client building a fit_result from the published contract omitted them and had the request refused naming a field the contract said was not needed.",
                   "properties": {
                     "term_name": {"type": "string"},
                     "term_features": {"type": "array", "items": {"type": "integer"},

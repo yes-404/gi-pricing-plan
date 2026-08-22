@@ -807,6 +807,138 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     )
 
 
+_ROOT_PATH: Final = "<root>"
+
+
+def _required_at(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    *,
+    _depth: int = 0,
+) -> frozenset[str]:
+    """The keys required **at this node**, respecting what each combinator means.
+
+    `_variants` deliberately flattens every combinator into one list, which is right for
+    asking "what fields exist anywhere in this shape?" and wrong for asking "what must be
+    present?". So this does not use it. `allOf` is conjunction — every branch's obligations
+    hold, so union them. `oneOf`/`anyOf` is disjunction — a key is required only if
+    **every** arm demands it, so intersect. `then`/`else` are conditional on an `if` this
+    suite does not evaluate, and contribute nothing unconditionally.
+
+    Getting this wrong **invents** requirements rather than missing them, which is the more
+    expensive failure. `model.fit_result.bins.[]` is
+    `oneOf: [EbmNumericBins, EbmCategoricalBins]` with a discriminator: the first requires
+    `cuts`, the second requires `levels`, and no single bin requires both. A union reports
+    both as model-required, and a contract "corrected" to match would then refuse every
+    valid categorical bin — a guard that manufactures the defect it reports.
+    """
+    if _depth > _MAX_COMPOSITION_DEPTH:
+        raise AssertionError(
+            f"more than {_MAX_COMPOSITION_DEPTH} composition levels — the document nests "
+            "without bottoming out"
+        )
+    node, document = _deref(document, node, base)
+    here = set(node.get("required", ()))
+    for branch in node.get("allOf", []):
+        here |= _required_at(document, branch, base, _depth=_depth + 1)
+    for keyword in ("oneOf", "anyOf"):
+        arms = [b for b in node.get(keyword, []) if b.get("type") != "null"]
+        if not arms:
+            continue
+        common = _required_at(document, arms[0], base, _depth=_depth + 1)
+        for arm in arms[1:]:
+            common &= _required_at(document, arm, base, _depth=_depth + 1)
+        here |= common
+    return frozenset(here)
+
+
+def _required_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+) -> dict[str, frozenset[str]]:
+    """Flatten a schema to `dotted.path -> the keys required at that path`.
+
+    Descends the way `_type_map` does — `_variants` to find children, the same `.[]`
+    collapse for arrays — so a path here is a path there and the two maps can be read
+    against each other. What is required *at* each node comes from `_required_at` instead,
+    because **finding children and deciding obligations are different questions** and only
+    the first one wants a flattened view.
+    """
+    found: dict[str, frozenset[str]] = {}
+    required = _required_at(document, node, base)
+    if required:
+        found[path or _ROOT_PATH] = required
+
+    for owner, variant in _variants(document, node, base):
+        for name, child in variant.get("properties", {}).items():
+            subtree = _required_map(owner, child, base, f"{path}.{name}".lstrip("."))
+            for key, keys in subtree.items():
+                found[key] = found.get(key, frozenset()) | keys
+        elements = list(variant.get("prefixItems", ()))
+        if "items" in variant:
+            elements.append(variant["items"])
+        for child in elements:
+            subtree = _required_map(owner, child, base, f"{path}.[]".lstrip("."))
+            for key, keys in subtree.items():
+                found[key] = found.get(key, frozenset()) | keys
+    return found
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-OVR-6")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_the_contract_never_marks_optional_what_the_model_requires(slug: str) -> None:
+    """One direction, deliberately, and the direction is the whole design.
+
+    The two sides answer different questions. Pydantic's `required` lists the fields with
+    no default — a fact about *construction*. A hand-authored contract's `required` lists
+    what a reader may rely on. A field carrying a default is still always serialised, so
+    "the contract requires more than the model" is safe, and on 2026-08-22 it accounted for
+    fourteen of the eighteen differences across the twelve compared slugs. Asserting
+    equality would land red on seven schemas for a reason that is mostly not a defect, and
+    a guard that lands like that is one somebody switches off.
+
+    The other direction is a live bug. A field the model demands and the contract calls
+    optional is a request a client will build from the published contract, send, and have
+    refused — and the refusal names a field the contract said was not needed.
+
+    The two this found on the day it was written are `model.fit_result.terms.[]`'s
+    `bin_weights` and `standard_deviations`, which `EbmTerm` requires and the contract
+    marks optional.
+
+    It found them only because `_required_at` respects combinators. The naive union also
+    reported `bins.[].cuts` and `bins.[].levels`, which are **not** defects: `bins.[]` is a
+    discriminated `oneOf` and no single arm requires both.
+
+    `dataset_id` on `banding` and `grouping` is not among them because it is already a
+    recorded divergence with a named owner (`MODEL_ONLY_UNRECONCILED`) — the same field,
+    the same finding, and re-reporting it here would be a second account of one fact.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _required_map(generated, generated, GENERATED)
+    declared = _required_map(authored, authored, AUTHORED)
+
+    exempt = MODEL_ONLY_UNRECONCILED.get(slug, frozenset())
+    if _composes_the_envelope(authored):
+        exempt |= ENVELOPE_FIELDS
+
+    optional_but_demanded = {
+        path: sorted(produced[path] - declared.get(path, frozenset()) - exempt)
+        for path in sorted(set(produced) & set(declared))
+        if produced[path] - declared.get(path, frozenset()) - exempt
+    }
+    assert not optional_but_demanded, (
+        "the model requires fields the contract marks optional, so a client following the "
+        "published contract builds a request the platform refuses: "
+        + ", ".join(f"{p} ({', '.join(n)})" for p, n in optional_but_demanded.items())
+    )
+
+
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
 #: noticed. Each must be a path the comparison reaches **on both sides**.
 #:
