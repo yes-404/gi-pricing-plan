@@ -533,7 +533,37 @@ Two habits that keep it away:
 wait it out — `pgrep -af "bin/pytest"` confirms the process is alive, then kill it and read
 the fixture for a nested `unit_of_work`.
 
+## A wall-clock benchmark on this machine must record the load average
+
+The development machine is shared between concurrent agent sessions. Measured 2026-08-22,
+the *same* `propose_grouping` call on the *same* fixture:
+
+| Load average (1 min) | Wall-clock |
+|---|---|
+| 1.6 | 8.58 s |
+| 8.4 | 20.01 s |
+
+A 2.3x contention factor, which reads exactly like a regression and will be reported as one.
+Two consequences for any NFR measurement (`CLAUDE.md` §13 rule 5):
+
+- **Report CPU seconds beside wall-clock, and quote `/proc/loadavg` with every figure.**
+  `scripts/bench-model.py` and `bench-data.py` both do; a bespoke timing script must too.
+- **Re-take a headline number in a quiet window** before it goes into a spec. A figure that
+  will be read as a budget verdict for months should not be the one taken while four other
+  sessions were fitting GBMs.
+
+The failure mode this prevents is subtle: contention inflates a number, the number breaches
+a budget, and a slice then "optimises" code that was never slow. It cost two discarded runs
+before the harness was instrumented for it.
+
+Related: benchmark phases run in **separate processes** (`--only <phase>`), because glibc
+does not return freed arenas to the OS — a peak-RSS reading taken after an earlier phase in
+the same process is that earlier phase's high-water mark, not this one's.
+
 ## Verified
+
+2026-08-22 — W5 audit remediation. The shared-machine load caveat above, found
+while measuring `02` §9's twelve NFRs.
 
 2026-08-22 — W5, giving the database fixture a session teardown. Supersedes the same day's
 earlier entry, which said `audit_events` was what refused `TRUNCATE`: **seventeen** tables do,

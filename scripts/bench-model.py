@@ -349,36 +349,6 @@ def bench_breakdown(rows: int, levels: int, groups: int) -> None:
             claim_count_column="claim_count", claim_amount_column="claim_amount_minor",
             source=source,
         )
-    with timed("  contiguous 1-D partition (option 1 prototype)"):
-        _contiguous_partition(source, groups)
-
-
-def _contiguous_partition(source: tuple[object, ...], groups: int) -> list[list[object]]:
-    """NFR-MODEL-3 option 1, costed rather than adopted — see `02` §9.
-
-    `_hierarchical` already sorts the levels by rate and cuts them into *contiguous* groups
-    (its own docstring says so). Ward linkage over a 100x-inflated observation vector is
-    therefore doing O(n²) work to produce an ordering the sort already has. This is the
-    same cut by exposure-weighted quantile of the rate: O(n log n), one pass.
-
-    **Not a drop-in.** It is a different method under the same name — Ward minimises
-    within-cluster variance and this equalises exposure — so the boundaries differ and every
-    grouping proposed under the old name would move. Adopting it is a spec change, which is
-    why it lives in a benchmark and not in `groupings.py`.
-    """
-    from pricing_core.modelling.groupings import _relativity
-
-    rated = [(r, row) for row in source if (r := _relativity(row)) is not None]
-    rated.sort(key=lambda pair: pair[0])
-    exposure = np.array([float(row.exposure_years) for _, row in rated])
-    cumulative = np.cumsum(exposure)
-    edges = np.searchsorted(
-        cumulative, np.linspace(0, cumulative[-1], groups + 1)[1:-1], side="left"
-    )
-    parts = np.split(np.arange(len(rated)), edges)
-    return [[rated[i][1] for i in part] for part in parts if len(part)]
-
-
 def _fit_glm_once(frame: pl.DataFrame, *, label: str) -> tuple[object, object, float]:
     dataset_id = uuid4()
     factors = factor_set(frame, dataset_id)

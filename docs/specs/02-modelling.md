@@ -878,6 +878,34 @@ Rules enforced by the parser (FR-MODEL-41):
 - Division by a sub-expression that can be zero over the declared domain of `y`/`f` is a
   certification failure, not a runtime surprise.
 
+> **§4.6 measured against the implementation 2026-08-22 (W5, the audit-remediation slice),
+> and it diverges in three ways — none previously recorded, and the third is the one that
+> matters.** The parser being described is `pricing_core.data.expressions`, built in **W4**
+> for `01` FR-DATA-10; §4.6 was written for the Phase 2 `expression` objective grammar and
+> has never been checked against it. All three are stated rather than resolved: this is a
+> §0 case, and which side is wrong is **OQ-MODEL-1's slice (W30)** to decide, since it owns
+> the grammar this section specifies.
+>
+> * **Neither AST limit is implemented.** No node-count and no depth check exists anywhere.
+>   Measured: an expression of **1 599 nodes** is accepted against a stated limit of 200
+>   (8× over), and one nested **60 deep** against a stated 20 (3× over). Whether the limits
+>   are wanted at all is open — nothing has needed them, and `01`'s expressions are
+>   author-written column derivations rather than user-submitted input.
+> * **The function sets share only six of ten names each.** §4.6 declares
+>   `abs clip exp expm1 log log1p max min sqrt where`; `_FUNCTIONS` provides
+>   `abs ceil coalesce exp floor log max min round sqrt`. Spec-only: `clip`, `expm1`,
+>   `log1p`, `where`. Code-only: `ceil`, `coalesce`, `floor`, `round`.
+> * **The implemented grammar is *wider* in operators and *narrower* in functions, and the
+>   one construct §4.6 singles out by name does not exist.** §4.6 states that comparison
+>   operators exist "only inside `where(cond, a, b)`", and its EBNF has no production for
+>   comparison, boolean, ternary or modulo. The implementation does the opposite:
+>   `where(premium > 100, 1, 0)` is **refused** (`'where' is not an allowed function`), while
+>   bare `premium > 100`, `premium if exposure > 0 else 0`, `a and b`, `not (…)` and
+>   `premium % 7` are all **accepted**. So the sentence §4.6 uses to bound where comparisons
+>   may appear is enforced by nothing, and the safety property it was written to express —
+>   comparisons confined to a single reviewed construct — is **not in force**.
+
+
 Example `expression` objective — under-pricing penalised twice as hard, on a log link:
 
 ```json
@@ -1598,7 +1626,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/api/v1/factors` | Create/version a Factor (FR-MODEL-1) |
-| `GET` | `/api/v1/factors?dataset={slug}` | List factors with intent, monotonic direction, prohibited flag |
+| `GET` | `/api/v1/factors?dataset_id=` | List factors with intent, monotonic direction, prohibited flag. Filters by Dataset **id**, as its two siblings below do; an unrecognised query parameter is a 422 naming it, never an unfiltered list |
 | `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-MODEL-9) |
 | `POST` | `/api/v1/bandings/evaluate` | Recompute band statistics for **edited** boundaries, persisting nothing (FR-MODEL-83) |
 | `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) |
@@ -1609,8 +1637,9 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
 | `POST` | `/api/v1/model-specs/validate` | **200** with `SpecValidation` — `ok` plus every problem, never only the first. A spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx; a spec naming a version that does not exist is a 404 (FR-MODEL-44, FR-MODEL-81) |
 | `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-MODEL-66) |
+| `GET` | `/api/v1/models` | List models, filtered by `family` and `status`, cursor-paginated newest first (`00` §5.2). Every listed model reports `flags: []` — FR-MODEL-67's flag is a per-model read, so a page of 50 would be 51 round trips to decorate rows the caller is about to narrow; `GET /models/{slug}` answers it, and is the only place it gates anything |
 | `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
-| `GET` | `/api/v1/models/{id}/diagnostics` | Diagnostics artifact |
+| `GET` | `/api/v1/models/{slug}/diagnostics?version=` | Diagnostics artifact — latest version, or a named one, exactly as `GET /models/{slug}` selects |
 | `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-MODEL-33) |
 | `GET` | `/api/v1/models/{id}/transparency` | The model's most recent artifact (FR-MODEL-84) |
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-MODEL-57) |
@@ -1637,6 +1666,66 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `GET` | `/api/v1/peril-structures/{id}` | The structure and its reconciliation (FR-MODEL-90) |
 | `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-MODEL-60) |
 | `POST` | `/api/v1/peril-structures/{id}/submit` | Submit for approval, `reconciled → review` (FR-MODEL-90) |
+
+> **Amended 2026-08-22 (W5, the audit-remediation slice): three interface rows, and §5.2
+> checked in both directions for the first time.** §5.1's *endpoint* table matched the code
+> on all 40 rows, which is how the parameters went unexamined — `scope-audit --endpoints`
+> compares method and path, and a wrong *parameter* is invisible to it.
+>
+> * **`GET /factors` took `?dataset={slug}` and the code takes `dataset_id: UUID`. The page
+>   was wrong, and the failure mode was the worst on the list**: FastAPI drops a query
+>   parameter no handler declares, so the slug form was not refused — it was *nothing*, and
+>   the caller got **200 with every factor in the workspace**. Measured before the fix, two
+>   factors on two datasets: `status=200 rows=2`. A 404 is visible and a 422 is visible; an
+>   unfiltered list is the one wrong answer indistinguishable from a right one. The code is
+>   right — `Factor.dataset_id` is a `uuid` in §4.1, and both sibling rows already read
+>   `dataset_id` — so the page is corrected to it. **The silent-ignore is closed at the
+>   class, not the instance**: all three transformation list routes now take an
+>   `extra="forbid"` query model, because the defect is FastAPI's default rather than one
+>   route's, and fixing only the audited route would make strictness a property of what
+>   somebody happened to look at.
+> * **`GET /models/{id}/diagnostics` is `{slug}` + `?version=`.** The sibling row got
+>   exactly this amendment on 2026-08-15 and this one did not. All 23 `{id}` rows in §5.1
+>   were then checked against the live routes: the other 22 really do take a `model_id`,
+>   `objective_id`, `metric_id`, `structure_id`, `backtest_id` or `comparison_id`, so `{id}`
+>   is honest for every one of them and **this was the only wrong row**.
+> * **`GET /api/v1/models` did not exist.** Factors, bandings and groupings each publish a
+>   list route and models published none — so "40 of 40 endpoints, 100 %" was true and
+>   measured the spec against itself, since a route absent from both the table and the
+>   contract is invisible to the audit that compares them. Sharper still: **`00` §5.2
+>   illustrates the platform's own pagination convention with**
+>   **`GET /api/v1/models?limit=50&cursor=<opaque>&status=approved`** — an example route
+>   nothing implemented. Two places had already routed around the gap rather than reporting
+>   it: `flags_for`'s docstring ("which is why it is not called on the list path") and a
+>   lifecycle test reading a family slug straight from the database.
+>
+> **§5.2's signatures had drifted further than the audit found**, and the page is now
+> checked function by function rather than row by row. `model_offset` was missing from
+> `fit_glm`, `linear_predictor`, `predict_glm`, `predict_glm_interval` and
+> `backtest_model`, leaving FR-MODEL-24 documented at length in §3.4 and unreachable from
+> the page a caller copies; `metrics` was missing from `fit_gbm`; and
+> **`compute_gbm_diagnostics` was never declared at all**, though it is exported, in
+> `__all__`, and called from the worker.
+>
+> Four the audit did not name: **`compare_models` was declared under the wrong module**
+> (`comparison.py`, not `diagnostics.py`); `build_shap_summary`'s `sample` has a default and
+> there is a `seed`; and `compile_objective`/`certify_objective` take `objective`, not `obj`.
+>
+> **And one correction the audit got wrong, which is the reason to check code rather than
+> transcribe a finding:** `compute_diagnostics` does **not** take `model_offset`. It takes
+> `model_offset_train` *and* `model_offset_holdout`, and must — it scores both partitions,
+> and an offset-from-another-model array is per row, so one array cannot serve two frames.
+> Writing the single parameter onto the page would have been a *new* defect, published as a
+> correction.
+>
+> **`check_banding`'s stated defaults did not merely mis-describe the fallback — they
+> inverted the outcome.** The page said `min_exposure: float = 0.0, min_claims: float = 0.0,
+> fail_on_thin: bool = False`; the code takes `None` sentinels that fall back to the
+> banding's own stored `minimums` (FR-MODEL-11). Measured on a banding declaring
+> `(5000, 100, "fail")`: the real call **raises** `BandingError`, while the page's explicit
+> `0.0/0.0/False` returns `()` — clean. The page is accidentally right for a banding with no
+> `minimums` block, which is why nobody noticed. `check_banding(df=...)` also raises
+> `TypeError`: the first argument is `frame` in every one of these functions, never `df`.
 
 > **Amended 2026-08-15 (W5, the GLM spine).** Two corrections, made by building it:
 >
@@ -2036,19 +2125,24 @@ module's submission and approval paths (FR-GOV-19 R4, FR-MODEL-67).
 
 ```python
 # pricing_core/modelling/factors.py
-def resolve_factors(df: pl.DataFrame, factors: Sequence[Factor], *,
+def resolve_factors(frame: pl.DataFrame, factors: Sequence[Factor], *,
                     bandings: Mapping[UUID, Banding] | None = None,
                     groupings: Mapping[UUID, Grouping] | None = None) -> FactorMatrix
 
 # pricing_core/modelling/bandings.py
-def propose_banding(df: pl.DataFrame, proposal: BandingProposal, *,
+def propose_banding(frame: pl.DataFrame, proposal: BandingProposal, *,
                     dataset_id: UUID, slug: str) -> Banding
 def apply_banding(series: pl.Series, banding: Banding) -> pl.Series
-def check_banding(df: pl.DataFrame, banding: Banding, *, min_exposure: float = 0.0,
-                  min_claims: float = 0.0, fail_on_thin: bool = False) -> tuple[str, ...]
+def check_banding(frame: pl.DataFrame, banding: Banding, *,
+                  min_exposure: float | None = None,
+                  min_claims: float | None = None,
+                  exposure_column: str = "exposure_years",
+                  claim_count_column: str = "claim_count",
+                  fail_on_thin: bool | None = None) -> tuple[str, ...]
+                  # None ⇒ fall back to banding.minimums (FR-MODEL-11)
 
 # pricing_core/modelling/groupings.py
-def propose_grouping(df: pl.DataFrame, proposal: GroupingProposal, *,
+def propose_grouping(frame: pl.DataFrame, proposal: GroupingProposal, *,
                      dataset_id: UUID, slug: str) -> Grouping
 def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series
 def grouping_evidence(frame: pl.DataFrame, mapping: dict[str, str], *,
@@ -2063,6 +2157,7 @@ def grouping_evidence(frame: pl.DataFrame, mapping: dict[str, str], *,
 # pricing_core/modelling/glm.py
 def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
             seed: int = 0,
+            model_offset: np.ndarray | None = None,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
             progress: ProgressCallback | None = None) -> GlmFit   # .result, .covariance_bytes, .cv
@@ -2070,14 +2165,17 @@ def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
 # pricing_core/modelling/predict.py
 def linear_predictor(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
                      spec: GlmSpec, *,
+                     model_offset: np.ndarray | None = None,
                      bandings: Mapping[UUID, Banding] | None = None,
                      groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
 def predict_glm(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
                 spec: GlmSpec, *,
+                model_offset: np.ndarray | None = None,
                 bandings: Mapping[UUID, Banding] | None = None,
                 groupings: Mapping[UUID, Grouping] | None = None) -> NDArray[float64]
 def predict_glm_interval(fit: GlmFitResult, data: pl.DataFrame, factors: Sequence[Factor],
                          spec: GlmSpec, *, covariance_bytes: bytes, level: float = 0.95,
+                         model_offset: np.ndarray | None = None,
                          bandings: Mapping[UUID, Banding] | None = None,
                          groupings: Mapping[UUID, Grouping] | None = None
                          ) -> tuple[NDArray[float64], NDArray[float64], NDArray[float64]]
@@ -2092,9 +2190,10 @@ def decode_covariance(payload: bytes, terms: Sequence[str]) -> NDArray[float64]
 # pricing_core/modelling/gbm.py
 def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
             holdout: pl.DataFrame | None = None,
-            objective: CustomObjective | None = None,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
+            objective: CustomObjective | None = None,
+            metrics: Mapping[str, CustomMetric] | None = None,
             progress: ProgressCallback | None = None) -> GbmFit   # .result, .booster_bytes
 def predict_gbm(result: GbmFitResult, booster: bytes, data: pl.DataFrame,
                 factors: Sequence[Factor] = (), *,
@@ -2113,9 +2212,9 @@ def fit_ebm(data: pl.DataFrame, spec: EbmSpec, factors: Sequence[Factor], *,
 # pricing_core/modelling/objectives.py
 def parse_expression(text: str, bound: Sequence[str], params: Sequence[Parameter]) -> ExprTree
 def derive_derivatives(loss: ExprTree, wrt: str = "f") -> tuple[ExprTree, ExprTree]
-def compile_objective(obj: CustomObjective) -> ObjectiveFns
+def compile_objective(objective: CustomObjective) -> ObjectiveFns
     # .loss/.grad/.hess(y,f,w), .stabilise(y,f,w), .inverse_link
-def certify_objective(obj: CustomObjective, *, sampling: SamplingSpec,
+def certify_objective(objective: CustomObjective, *, sampling: SamplingSpec,
                       progress: ProgressCallback | None = None) -> CertificateResult
 def make_xgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], xgb.DMatrix],
                                                       tuple[NDArray[float64], NDArray[float64]]]
@@ -2125,12 +2224,23 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], lgb.Dat
 # pricing_core/modelling/diagnostics.py
 def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Factor], *,
                         train: pl.DataFrame, holdout: pl.DataFrame,
+                        model_offset_train: np.ndarray | None = None,
+                        model_offset_holdout: np.ndarray | None = None,
                         bandings: Mapping[UUID, Banding] | None = None,
                         groupings: Mapping[UUID, Grouping] | None = None,
                         max_factor_count: int | None = None,
                         min_exposure_per_parameter: float | None = None,
                         type_iii: bool = True,
                         progress: ProgressCallback | None = None) -> DiagnosticsResult
+def compute_gbm_diagnostics(result: GbmFitResult, booster: bytes, spec: GbmSpec,
+                            factors: Sequence[Factor], *,
+                            train: pl.DataFrame, holdout: pl.DataFrame,
+                            eval_curve: Sequence[GbmEvalPoint] = (),
+                            bandings=None, groupings=None,
+                            max_factor_count: int | None = None,
+                            min_exposure_per_parameter: float | None = None,
+                            permutation_repeats: int = 1,
+                            progress: ProgressCallback | None = None) -> DiagnosticsResult
 def compute_ebm_diagnostics(result: EbmFitResult, spec: EbmSpec, factors: Sequence[Factor], *,
                             train: pl.DataFrame, holdout: pl.DataFrame,
                             bandings=None, groupings=None,
@@ -2139,13 +2249,19 @@ def compute_ebm_diagnostics(result: EbmFitResult, spec: EbmSpec, factors: Sequen
                             progress: ProgressCallback | None = None) -> DiagnosticsResult
 def unit_deviance(y, mu, *, family: str, power: float = 1.5) -> NDArray[float64]
 def deviance(y, mu, *, family: str, power: float = 1.5, weights=None) -> float
+
+# pricing_core/modelling/comparison.py
 def compare_models(candidates: Sequence[ComparisonCandidate], holdout: pl.DataFrame, *,
                    baseline: str | None = None) -> ComparisonSummary
+
+# pricing_core/modelling/diagnostics.py
 
 def backtest_model(fit: FitResult, spec: ModelSpec, factors: Sequence[Factor],
                    data: pl.DataFrame, *, model_ref: str, dataset_version_ref: str,
                    fitted_on_ref: str, period_from: date | None = None,
-                   period_to: date | None = None, booster: bytes | None = None,
+                   period_to: date | None = None,
+                   model_offset: np.ndarray | None = None,
+                   booster: bytes | None = None,
                    bandings=None, groupings=None,
                    progress: ProgressCallback | None = None) -> BacktestSummary
 
@@ -2158,7 +2274,8 @@ def build_glm_approximation(result: GbmFitResult, booster: bytes, spec: GbmSpec,
                             progress: ProgressCallback | None = None
                             ) -> GlmApproximationFit
 def build_shap_summary(result: GbmFitResult, booster: bytes, spec: GbmSpec,
-                       factors: Sequence[Factor], data: pl.DataFrame, *, sample: int,
+                       factors: Sequence[Factor], data: pl.DataFrame, *,
+                       sample: int = 200_000, seed: int | None = None,
                        bandings=None, groupings=None,
                        progress: ProgressCallback | None = None) -> ShapSummary
 def build_ebm_shape_functions(result: EbmFitResult) -> EbmShapeFunctions
@@ -2511,6 +2628,219 @@ for grouping.
 > workbench** (`00` §5.6's `/factors/:datasetVersionId`), which is the first caller that
 > will feel it.
 
+
+> **NFR-MODEL-3 re-measured 2026-08-22 (W5, the audit-remediation slice), and the record
+> above named the wrong cause.** It is now missed by **all three** grouping methods rather
+> than one. 678 013 rows with a 10 000-level categorical, on the development machine
+> (Intel Xeon @ 2.20 GHz, 4 cores, 16.4 GB, 1-minute load average **1.6** — the machine is
+> shared between concurrent sessions, and the same proposal measured **20.01 s at load
+> 8.4**, so every figure here is quoted with the load it was taken at), budget 5 s:
+>
+> | Proposal | Measured | Verdict |
+> |---|---|---|
+> | `propose_banding`, all five methods, 20 bands | 0.10 – 1.07 s | **met**, an order of magnitude of headroom |
+> | `propose_grouping`, `tree` | 5.15 s | **not met**, by 3 % |
+> | `propose_grouping`, `credibility_weighted` | 5.31 s | **not met**, by 6 % — 4.24 s on 2026-08-15 |
+> | `propose_grouping`, `hierarchical_clustering` | 8.58 s | **not met**, by 72 % — 6.52 s on 2026-08-15 |
+>
+> **The shortfall is not Ward.** Broken down: the source one-way summary costs **5.22 s**,
+> Ward linkage **2.38 s**, and `grouping_evidence` with the summary supplied **0.22 s**.
+> **The summary alone exceeds the 5 s budget before any clustering runs** — which is why all
+> three methods now breach, and why `tree` and `credibility_weighted` miss by so little:
+> they are the summary and almost nothing else.
+>
+> That makes the record above's two routes out a **dependency rather than a choice**.
+> Replacing Ward with a contiguous 1-D partition is **not sufficient**: measured at 0.03 s
+> against Ward's 2.38 s — an 87× speedup, with peak RSS falling from 1 017 MB to ~330 MB,
+> because Ward's condensed distance matrix is 400 MB at 10 000 levels — the proposal still
+> costs **5.47 s and is still over**. It also moves the answer: **8 461 of the 10 000 levels
+> land in a different group**, and cluster sizes go from Ward's uneven (19, 77, 103, 148, …)
+> to near-equal (495, 495, 495, 496, …), because Ward follows rate structure while an
+> exposure quantile equalises exposure. **Computing from the stored Profile is sufficient on
+> its own**: 2.60 s, 52 % of budget. It is a signature change rather than an algorithm
+> change — `Profile.one_ways` already holds `tuple[OneWayRow, …]`, the same type
+> `propose_grouping` computes internally, and `grouping_evidence` already accepts `source=`.
+> Two limits travel with it: `01` FR-DATA-26 stores one-ways only for the columns the
+> profiler selected, so the compute path must remain as a fallback, and a *derived* version
+> (a train part, a filtered version) has no Profile of its own. Doing both leaves 0.25 s.
+>
+> **Owner: the slice that builds the factor workbench** — unchanged from 2026-08-15, but the
+> requirement it must satisfy is now the Profile, not the clusterer.
+>
+> One fact for whoever takes it: **Ward's exposure weighting is not in force at this scale.**
+> `max(1, round(100 × exposure_share))` is 1 for every level holding under 0.5 % of exposure,
+> so at 10 000 near-equal levels every level weighs the same, and the property the method's
+> own docstring claims is silently absent at exactly the scale this requirement names.
+
+---
+
+> **NFR-MODEL-4 measured 2026-08-22 (W5), and it is not met — because of another requirement
+> inside it.** Synthetic motor books on the development machine (Intel Xeon @ 2.20 GHz,
+> 4 cores, 16.4 GB; CPU seconds reported beside wall-clock because the machine is shared),
+> budget 30 % of fit wall-clock:
+>
+> | Fit | Fit wall-clock | Diagnostics without type-III | Diagnostics as the platform runs them | Verdict |
+> |---|---|---|---|---|
+> | GLM, 50 000 × 12 factors | 2.82 s | 0.25 s — **9.0 %** | 14.37 s, 12 refits — **510 %** | **not met** |
+> | GLM, 50 000 × 24 factors | 3.05 s | 0.29 s — **9.5 %** | 42.33 s, 24 refits — **1 388 %** | **not met** |
+> | GLM, 678 013 × 60 factors | 24.90 s | 8.00 s — **32.1 %** | did not finish inside 40 minutes | **not met** |
+> | GBM, 75 000 × 60 × 500 trees | 14.45 s | — | 433.81 s — **3 002 %** | **not met** |
+>
+> Everything `compute_diagnostics` does *except* FR-MODEL-51 fits the budget: 9.0 % and
+> 9.5 % at the small scales, 32.1 % at 678 013 × 60 — 2.1 points over, which is tuning. The
+> rest is FR-MODEL-51's type-III tests, which **drop each factor and refit**. That is one
+> extra GLM fit per factor, so the ratio is a function of the **factor count**, not of the
+> data: doubling 12 factors to 24 took the cost from 5.1× the fit to 13.9×, because each
+> added refit is also over a wider design matrix. On the GBM path there is no type-III, and
+> the 3 002 % is permutation importance and partial dependence over 60 factors.
+>
+> **The budget and FR-MODEL-51 cannot both hold as written.** A diagnostic containing *F*
+> refits of the model cannot cost 30 % of one fit for any *F* above zero, and FR-MODEL-49
+> requires diagnostics computed once at fit time, so there is no later pass to move them to.
+> This is a contradiction **between two numbered requirements**, not a slow function, and it
+> is raised as **OQ-MODEL-24** with three options rather than settled here — §14 makes a
+> requirement's scope the maintainer's, and tuning either number quietly would destroy the
+> record of which was believed.
+>
+> The measurement is now repeatable rather than one-off: `app.worker.model` emits
+> `diagnostics_seconds` and `diagnostics_over_fit` beside `fit_seconds` on every fit. Note
+> the two denominators disagree — `fit_seconds` (14.48 s at 678 013 × 60) is the solve and
+> excludes the factor resolution and design-matrix construction the caller also waits for
+> (24.90 s). **Against `fit_seconds` the no-type-III figure is 55.2 % rather than 32.1 %**,
+> so OQ-MODEL-24 must also say which denominator the budget means.
+
+---
+
+> **NFR-MODEL-5 measured 2026-08-22 (W5), and it is met with fifty times the headroom.** All
+> twelve §4.5 templates certified at the **default 2 000-point grid the platform actually
+> uses** — not the suite's 300- and 1 000-point grids — including §4.7's synthetic smoke fit,
+> on the development machine (Intel Xeon @ 2.20 GHz, 4 cores, 16.4 GB), budget 180 s:
+>
+> | Certification | Measured | Verdict |
+> |---|---|---|
+> | Fastest — `asymmetric_poisson` | 0.42 s | **met** |
+> | Median across the twelve templates | ~1.2 s | **met** |
+> | Slowest — `focal_binomial` | 3.56 s | **met**, at 2.0 % of budget |
+>
+> There is no shortfall to explain. The number worth recording is the ratio: the budget is
+> 50× the slowest template, so **certification density could rise by an order of magnitude**
+> — §4.7's convexity and scale checks report a share of sampled points, and a denser grid is
+> the only thing that makes those shares mean more — before the budget became the
+> constraint. **Owner: none required.** If a Phase 2 `expression` objective (FR-MODEL-40)
+> brings symbolic differentiation into the certification path, this measurement is the
+> baseline to re-read it against: that is the one change that could plausibly consume the
+> margin.
+
+---
+
+> **NFR-MODEL-11 measured 2026-08-22 (W5), and it is met by nearly three orders of
+> magnitude.** The serialised `DiagnosticsRow.payload` — one JSONB document, so its encoded
+> length *is* its size — on the development machine, budget 50 MB per model:
+>
+> | Artifact | Measured | Verdict |
+> |---|---|---|
+> | GLM, 678 013 rows × 60 factors | 0.07 MB | **met**, at 0.1 % of budget |
+> | GBM, 75 000 rows × 60 factors × 500 trees | 0.13 MB | **met**, at 0.3 % of budget |
+> | Largest single block — `universal` | 0.068 MB | — |
+>
+> The GBM arm is measured deliberately rather than the GLM alone: this requirement names
+> SHAP dependence and residual scatter, and **a GLM has neither**, so a GLM-only measurement
+> would report the budget met on the path that was never the risk.
+>
+> One consequence worth stating: **the blob spill this requirement provides for is not yet
+> load-bearing.** `Diagnostics.residual_blob` and `leverage_blob` exist and nothing has
+> needed them, so the mechanism is untested against the case it was designed for.
+> **Owner: the slice that first stores a per-row residual series** — a full-population
+> residual scatter at 5 M rows is 40 MB of float64 before encoding, which is where this
+> measurement stops predicting the answer.
+
+---
+
+> **NFR-MODEL-1 and NFR-MODEL-10 measured 2026-08-22 (W5) at four scales below the one they
+> state, and both are met by extrapolation rather than by measurement.** The requirements
+> name 5 M rows × 60 factors on a **16-core** worker; the development machine is a **4-core**
+> Intel Xeon @ 2.20 GHz with 16.4 GB, and a 5 M × 60 dense design matrix is ~7 GB before
+> `glum` allocates anything — so the stated scale cannot be reached here, and building a
+> fixture for it would have bought hours of compute for a number this curve gives more
+> honestly. Measured at 100 000 / 200 000 / 400 000 / 678 013 rows × 60 factors (20
+> categorical × 8 levels + 40 numeric, ~180 design columns), budgets 600 s and 32 GB:
+>
+> | Quantity | Fitted curve | At 678 013, measured | Extrapolated to 5 M | Verdict |
+> |---|---|---|---|---|
+> | Wall-clock | `t = 4.31e-4 · n^0.837` (R² = 0.9933) | 31.14 s | **173 s** of 600 s | **met**, at 29 % |
+> | CPU seconds | `t = 1.30e-3 · n^0.779` (R² = 0.9864) | 45.38 s | 215 s | — |
+> | Peak RSS | `m = 0.101 · n^0.777` (R² = 0.9960) | 3 516 MB | **16.0 GB** of 32 GB | **met**, at 50 % |
+>
+> **The extrapolation is stated rather than hidden, and its weakest point is memory.** Both
+> time exponents are **sub-linear** (0.78–0.84), which is the fixed cost of factor resolution
+> and design-matrix setup being amortised as rows grow — an effect that stops helping, since
+> IRLS is at least O(n·p²) per iteration asymptotically. Projected **linearly** from the
+> largest measured point instead, the GLM takes **230 s** (38 % of budget) and peak RSS
+> reaches **25.9 GB — 81 % of NFR-MODEL-10's budget**, on a machine that cannot hold it to
+> check. **Memory is the clause that fails first, and the one nothing here can falsify.**
+> Two further caveats pointing in opposite directions: the 4-core machine measured only 1.5×
+> parallelism (45.38 s CPU against 31.14 s wall), so a 16-core worker helps *less* than
+> linearly; and none of this exercises the streaming construction NFR-MODEL-10 names — the
+> curve above is the dense GLM design matrix, precisely the path `QuantileDMatrix` does not
+> apply to.
+>
+> **NFR-MODEL-2 is measured once and its growth is not.** A GBM at 75 000 rows × 60 factors
+> × 500 trees took **14.45 s wall / 48.57 s CPU / 458 MB**; projected linearly in rows that
+> is **963 s at 5 M against a 1 200 s budget — 80 %**, on 4 cores, with memory following
+> `m = 0.417 · n^0.645` (R² = 0.9902) to 8.7 GB, sub-linear as histogram binning predicts.
+> **The linearity is assumed, not shown**: a three-scale run intended to measure it returned
+> a 400 000-row point *faster* than its 200 000-row point in both clocks (R² = 0.18) under a
+> load average of 12.9. That is contention, and the honest statement is that the GBM path's
+> row exponent is **unmeasured on this machine**. At 80 % of budget resting on an assumption,
+> this is the requirement most likely to be wrong. **Owner: the slice that first has a worker
+> resembling the 16-core machine these three requirements name** — a dedicated run there
+> settles all three, and nothing short of it does.
+>
+> NFR-MODEL-2's second clause — an `expression` objective adding no more than 25 % — is
+> **Phase 2 and confirmed unbuildable today**: `refuse_expression_kind` refuses the kind with
+> the feature flag on as well as off, so there is no expression objective to time against its
+> builtin equivalent.
+
+---
+
+> **NFR-MODEL-6, -7, -8 and -9 given verdicts 2026-08-22 (W5), two of them correcting what
+> the plan believed.**
+>
+> * **NFR-MODEL-9 — evidenced** for every act that has a before: `backend/tests/test_model_nfrs.py`
+>   asserts an Audit Event carrying `before` and `after` for model status transitions and for
+>   objective certification, submission and approval. **Five create events carry no `before`** —
+>   `factor.created`, `banding.created`, `grouping.created`, `model.reserved`, `model.fitted`
+>   pass `after=` alone. **That is left as it is, and pinned by a test, rather than filled with
+>   an empty dict to satisfy a grep.** These artifacts are versioned and never edited: an
+>   "edit" allocates the next version of a slug, and the predecessor stays readable at its own
+>   version — so a create has **no before by construction**, and `before={}` would assert the
+>   artifact previously existed in an empty state, which is false. The obligation is on this
+>   requirement's *wording*: it should read "…carrying after state, and before state wherever a
+>   prior state exists". Objective *derivation* is confirmed out of scope — `refuse_expression_kind`
+>   refuses `expression` with the flag on and off, and no `*.derived` audit action exists.
+> * **NFR-MODEL-8 — half met, and the half that is met is now tested.** The `eval`/`exec`
+>   clause is evidenced at `packages/pricing-core/tests/test_expression_nfrs.py`: the accept
+>   path compiles and evaluates correctly with `builtins.eval` and `builtins.exec` **removed**,
+>   and eight syntactically-valid routes to `eval` raise `ExpressionError` **specifically,
+>   never `SyntaxError`** — a distinction `test_prepare.py` conflates by catching both
+>   interchangeably. **The position-accurate clause is not met**: `ExpressionError` is a bare
+>   `ValueError` with no `lineno`/`col_offset`, so no caller can underline the offending token.
+>   **The per-round objective time budget is not implemented anywhere**; FR-MODEL-48's NaN/inf
+>   abort is, with four markers. **Owner: W5** for the error position; the per-round budget
+>   travels with FR-MODEL-48.
+> * **NFR-MODEL-7 — not testable, because there is nothing to test.** The repository has **no
+>   Model export path and no import path**: not a route (22 model-family routes, none an
+>   export — the only `export` in the HTTP surface is the audit log's), not a CLI
+>   (`[project.scripts]` is empty), not a bundle schema. Its parent **FR-OVR-2 carries zero
+>   markers**, and its serialisability half is evidenced only incidentally by `model-schema`
+>   round-trip tests naming other requirements. **Owner: unassigned** — this is a capability
+>   nobody has been asked to build, and it needs a verdict before it can have a test.
+> * **NFR-MODEL-6 — half evidenced, and the roadmap called it evidenced.** It asks for
+>   identical GLM coefficients to 1e-10 **and** an identical booster hash. The single marker it
+>   carries is the **booster half**; nothing anywhere refits a GLM on the same `spec_hash` and
+>   seed and compares coefficients. **Owner: the GLM slice** — a two-fit determinism test in
+>   `packages/pricing-core/tests/test_glm.py`, beside the code it is about.
+
 ---
 
 ## 10. Open questions
@@ -2542,3 +2872,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-MODEL-21**~~ ✔ | ~~LightGBM evaluates builtin metrics before `feval`, so a spec that declares a builtin in `eval_metrics` and early-stops on a Custom Metric never gets the builtin reported (FR-MODEL-107's 2026-08-20 amendment), even though `GbmFit` says nothing about the drop. Does a documented silent drop satisfy FR-MODEL-106's "honoured"?~~ **DECIDED 2026-08-21: record the drop on the fit — FR-MODEL-111**, owned by W5, before W5 closes; FR-MODEL-107 gains a dated addendum. Found 2026-08-20 in the final branch review, before merge. |
 | ~~**OQ-MODEL-22**~~ ✔ | ~~Which offsets-from-model come after the GLM-to-GLM slice? Open, gated on W5: FR-MODEL-24's 2026-08-21 amendment builds offset-from-another-model for GLM specs referencing fitted GLMs only — GBM-referenced offsets, `GbmSpec`-declared offsets and the peril-reconciliation scoring path each wait for a workflow that needs them.~~ **DECIDED 2026-08-21: (a) then (c), each as its own slice; (d) only if residual modelling stays GLM-shaped — FR-MODEL-112.** (a) GBM-referenced offsets are the next slice, in Phase 1b, when a workflow needs one; (c) the peril-reconciliation scoring path follows, already owned by W5; (b) `GbmSpec`-declared offsets are not scheduled. |
 | **OQ-MODEL-23** | **`spline`, `polynomial` and `offset` Factors are refused by name with no owner and no schedule. Which of the three, if any, does the platform commit to — and when?** FR-MODEL-88 contains them correctly (a refusal beats a raw column silently substituted) but containment is not a plan, and W5 closes with three arms of FR-MODEL-1's closed set counted among the evidenced because a test marks the refusal. Raised 2026-08-22 (W5, the audit-remediation slice). |
+| **OQ-MODEL-24** | **NFR-MODEL-4's "diagnostics ≤ 30 % of fit wall-clock" and FR-MODEL-51's type-III likelihood-ratio tests cannot both hold as written. Which moves?** Measured 2026-08-22: diagnostics cost **510 %** of fit wall-clock at 12 factors and **1 388 %** at 24, and **3 002 %** on the GBM path. Everything `compute_diagnostics` does *except* type-III fits the budget, at 9.0–9.5 %. The arithmetic is not a slow function: type-III **drops each factor and refits**, so a diagnostic containing *F* refits of the model cannot cost 30 % of one fit for any *F* above zero — and FR-MODEL-49 requires diagnostics computed once at fit time, so there is no later pass to move them to. A second question rides along: **which denominator the budget means**, since `fit_seconds` (the solve) excludes the factor resolution and design-matrix construction the caller also waits for, and the no-type-III figure is 32.1 % against wall-clock but 55.2 % against `fit_seconds`. Raised 2026-08-22 (W5, the audit-remediation slice), from the first measurement of §9's NFR-MODEL-4. |
