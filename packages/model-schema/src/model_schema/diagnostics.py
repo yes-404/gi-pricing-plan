@@ -44,6 +44,8 @@ __all__ = [
     "LiftBin",
     "MonotonicityCheck",
     "PartialDependence",
+    "PartialDependenceOmission",
+    "PartialDependenceOmissionReason",
     "PartialDependencePoint",
     "PartitionDiagnostics",
     "PermutationImportance",
@@ -328,6 +330,55 @@ class PartialDependencePoint(BaseModel):
     exposure_share: float = Field(ge=0.0, le=1.0)
 
 
+class PartialDependenceOmissionReason(enum.StrEnum):
+    """Why a partial-dependence curve does not cover its factor (FR-MODEL-118)."""
+
+    #: The categorical grid was truncated to the most-exposed levels. The rest are not
+    #: pooled into an "other" bar, because there is no such bar to compute: the held value
+    #: has to be *scored*, and a synthetic level the model never saw is refused at encoding
+    #: (FR-MODEL-32). So they are named as missing rather than summarised.
+    LEVEL_CAP = "level_cap"
+    #: The factor sources no column of its own, so there is nothing to hold at a value —
+    #: an `interaction`, whose columns are its operands' (FR-MODEL-119). Interim until
+    #: OQ-MODEL-27's sibling OQ-MODEL-28 settles what a cross should report.
+    NO_SOURCE_COLUMN = "no_source_column"
+
+
+class PartialDependenceOmission(BaseModel):
+    """What a curve leaves out, and why (FR-MODEL-118).
+
+    Present **only** when the curve is incomplete. A complete curve carries `None`, so
+    "omitted nothing" and "omitted something not worth recording" cannot be confused — the
+    second is the state this model exists to make impossible.
+
+    `levels` and `exposure_share` are optional because one arm cannot count them:
+    `no_source_column` omits the whole curve for a factor that has no column to sweep, so
+    there is no level count to report and `0` would be a false statement rather than a
+    missing one.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    reason: PartialDependenceOmissionReason
+    #: Levels present in the data that the sweep did not visit.
+    levels: int | None = Field(default=None, ge=1)
+    #: The exposure those levels carry, as a share of the book — the number that says
+    #: whether a truncated curve is nearly complete or badly so.
+    exposure_share: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def _a_level_cap_counts_what_it_dropped(self) -> PartialDependenceOmission:
+        if self.reason is PartialDependenceOmissionReason.LEVEL_CAP and (
+            self.levels is None or self.exposure_share is None
+        ):
+            raise ValueError(
+                "a level_cap omission must report the levels it dropped and the exposure "
+                "they hold (FR-MODEL-118) — an unquantified truncation is the silent one "
+                "the requirement forbids"
+            )
+        return self
+
+
 class PartialDependence(BaseModel):
     """The fitted response to one factor, averaged over the book (FR-MODEL-52).
 
@@ -340,6 +391,8 @@ class PartialDependence(BaseModel):
 
     factor: str
     points: tuple[PartialDependencePoint, ...] = ()
+    #: FR-MODEL-118. `None` means the curve covers every level of its factor.
+    omitted: PartialDependenceOmission | None = None
 
 
 class MonotonicityCheck(BaseModel):

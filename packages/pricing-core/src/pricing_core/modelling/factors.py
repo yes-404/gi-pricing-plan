@@ -22,12 +22,21 @@ decided 2026-08-22):
   offset is declared on the spec through `OffsetSpec`, and a Factor type meaning the same
   thing was a second mechanism for a solved problem. The arm stays in the enum and in the
   published contract because artifacts are immutable and a stored row must stay loadable.
+
+A factor is refused on a second axis too, since 2026-08-22. `Factor.intent` declares
+what a factor is *for* (FR-MODEL-3), and until OQ-MODEL-25 was decided **no fit path
+read it at all** — so `offset` and `diagnostic`, the two arms FR-MODEL-3 never
+glossed, were accepted through the API and fitted with a free coefficient. That is a
+silent mis-fit rather than a refusal, and it is the one outcome worse than either.
+`risk` and `control` are unaffected: being fitted freely is what both *mean*, and they
+differ only in rateability, which `rateable()` below decides for `03`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
 from uuid import UUID
 
 import polars as pl
@@ -42,6 +51,27 @@ from pricing_core.modelling.groupings import apply_grouping
 #: comparison because superseding an arm is a spec decision that may recur, and this is
 #: where such a decision becomes behaviour.
 SUPERSEDED_FACTOR_TYPES = frozenset({FactorType.OFFSET})
+
+#: FR-MODEL-116 and FR-MODEL-117: the `FactorIntent` arms no fit path honours, mapped
+#: to the reason the refusal gives. The two do **not** share a reason — one is
+#: permanent and one is pending — so the message says which applies, exactly as
+#: FR-MODEL-88's type refusals do (OQ-MODEL-25, decided 2026-08-22).
+REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
+    {
+        FactorIntent.OFFSET: (
+            "is **superseded** and will never be honoured (`02` FR-MODEL-116). Offsetness "
+            "is a property of one fit, while a Factor is reused by every Model Spec that "
+            "names it, so an offset is declared on the spec through `OffsetSpec` — not "
+            "on the Factor."
+        ),
+        FactorIntent.DIAGNOSTIC: (
+            "has no defined meaning at fit time yet (`02` FR-MODEL-117). `02` FR-MODEL-3 "
+            "lists the arm and never says what it does, so honouring it would mean "
+            "inventing the meaning; OQ-MODEL-28's sibling OQ-MODEL-27 owns that "
+            "decision and W30 owns the slice."
+        ),
+    }
+)
 
 __all__ = ["FactorMatrix", "FactorResolutionError", "rateable", "resolve_factors"]
 
@@ -115,6 +145,21 @@ def resolve_factors(
             raise FactorResolutionError(
                 f"factor {factor.slug!r} is prohibited ({factor.prohibited_reason}). "
                 "FR-MODEL-5: a prohibited factor cannot enter a Model Spec."
+            )
+        # Before the type dispatch, and before any check against the frame: a refused
+        # intent is wrong about the *declaration*, so it does not depend on which
+        # version is being resolved. Sited here rather than in `fit_glm`/`fit_gbm`
+        # because both reach this function — as do predict, diagnostics and
+        # transparency — and a refusal duplicated per fit path is one that eventually
+        # disagrees with itself. It also lands before the `interaction` continue
+        # below, so a cross declaring a refused intent is refused too.
+        intent_refusal = REFUSED_FACTOR_INTENTS.get(factor.intent)
+        if intent_refusal is not None:
+            raise FactorResolutionError(
+                f"factor {factor.slug!r} declares intent {factor.intent.value!r}, "
+                f"which {intent_refusal} Fitting it with a free coefficient — what "
+                "this build did until 2026-08-22 — is a mis-fit nobody could tell "
+                "from a correct one."
             )
         missing = [c for c in factor.source_columns if c not in frame.columns]
         if missing:

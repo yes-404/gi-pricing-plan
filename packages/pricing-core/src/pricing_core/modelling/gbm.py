@@ -299,7 +299,17 @@ def _encode(
 
     for factor in factors:
         slug = factor.slug
-        column = matrix.terms[slug]
+        column = matrix.terms.get(slug)
+        if column is None:
+            # FR-MODEL-119. An `interaction`'s **operands** are resolved because the cross
+            # needs their levels, and contribute no term of their own (FR-MODEL-91): the
+            # cross spans every cell, so designing on both it and its operands is a rank
+            # deficiency dressed up as a richer model. `fit_glm` gets this for free by
+            # iterating `matrix.terms`; this loop iterated the *factor list* and so raised
+            # `KeyError` on every operand — meaning no GBM could fit an interaction at all.
+            # Only the GLM suite ever fitted one, which is why it went unseen from
+            # 2026-08-18 to 2026-08-22.
+            continue
         series = matrix.frame[column]
         order.append(slug)
         if column in matrix.categorical:
