@@ -1566,6 +1566,30 @@ class GlmFitResult(BaseModel):
         return next((c for c in self.coefficients if c.term == "intercept"), None)
 
 
+class DroppedEvalMetric(BaseModel):
+    """A declared eval metric the backend could not evaluate (FR-MODEL-111, OQ-MODEL-21).
+
+    FR-MODEL-106's objection is to a spec "reported to the caller as configured" when it
+    was not. The cheapest honest answer here is neither to refuse an otherwise-valid fit
+    nor to punish a portable spec for one backend's evaluation ordering, but to say so on
+    the artifact — so a reader comparing two fits can see why one curve has a series the
+    other lacks, instead of inferring a bug.
+
+    `reason` is a closed set with one member because exactly one reason exists today. A
+    free-text field would let the second be invented at a call site rather than declared
+    in the contract the frontend generates from.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: The declared metric's name, exactly as `eval_metrics` spelled it.
+    name: str = Field(min_length=1)
+    #: FR-MODEL-107: LightGBM evaluates builtin metrics before `feval`'s, so a builtin
+    #: declared alongside a custom stopping target would take position 0 and drive the
+    #: stop. `params["metric"] = "None"` prevents that and drops the builtin with it.
+    reason: Literal["builtin_evaluated_before_custom_stopping_metric"]
+
+
 class GbmFitResult(BaseModel):
     """What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).
 
@@ -1627,6 +1651,10 @@ class GbmFitResult(BaseModel):
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)
+    #: FR-MODEL-111. Empty on every fit that evaluated everything it was asked for, which
+    #: is all of them but the LightGBM-stopping-on-a-custom-metric case, and on every
+    #: artifact written before 2026-08-22.
+    dropped_eval_metrics: tuple[DroppedEvalMetric, ...] = ()
 
     @model_validator(mode="after")
     def _the_constraint_vector_is_aligned_with_the_feature_order(self) -> GbmFitResult:
@@ -1657,6 +1685,16 @@ class GbmFitResult(BaseModel):
             raise ValueError(
                 f"feature_dtypes does not cover feature_order (missing {missing}, "
                 f"unexpected {extra})."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _a_dropped_metric_is_named_once(self) -> GbmFitResult:
+        """FR-MODEL-111: a repeated name is a producer bug, not two facts about the fit."""
+        names = [dropped.name for dropped in self.dropped_eval_metrics]
+        if len(names) != len(set(names)):
+            raise ValueError(
+                f"{sorted(names)} contains a duplicate; each dropped metric is named once"
             )
         return self
 
