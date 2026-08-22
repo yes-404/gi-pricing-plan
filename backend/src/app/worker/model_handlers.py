@@ -296,8 +296,10 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
      offset_source) = progress.run_on_loop(load())
 
     from pricing_core.modelling import (
+        EbmFitError,
         GbmFitError,
         GlmFitError,
+        fit_ebm,
         fit_gbm,
         fit_glm,
         linear_predictor,
@@ -343,6 +345,16 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 progress=fitting,
             )
             result, booster, eval_curve = fit.result, fit.booster_bytes, fit.eval_curve
+        elif isinstance(spec, EbmSpec):
+            # No wrapper, no bytes: an EBM's fit result IS the model (Task 0.6), so
+            # `booster`/`covariance` keep their pre-initialised None values and
+            # `store()` writes no blob.
+            result = fit_ebm(
+                frame, spec, factors, seed=spec.seed,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=fitting,
+            )
         else:
             glm_fit = fit_glm(
                 frame, spec, factors, seed=spec.seed,
@@ -365,7 +377,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 result = result.model_copy(
                     update={"offset_model_ref": str(spec.offset.offset_model_ref)}
                 )
-    except (GbmFitError, GlmFitError) as exc:
+    except (EbmFitError, GbmFitError, GlmFitError) as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
         # reader can look it up.
@@ -382,12 +394,21 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         ) from exc
     progress.update(0.85, "diagnostics")
     from pricing_core.modelling import compute_diagnostics, compute_gbm_diagnostics
+    from pricing_core.modelling.diagnostics import compute_ebm_diagnostics
 
     diagnostic_progress = ScaledProgress(progress, start=0.85, end=0.97)
     if isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult) and booster:
         computed = compute_gbm_diagnostics(
             result, booster, spec, factors,
             train=frame, holdout=holdout, eval_curve=eval_curve,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=diagnostic_progress,
+        )
+    elif isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
+        computed = compute_ebm_diagnostics(
+            result, spec, factors,
+            train=frame, holdout=holdout,
             bandings=transformations.bandings,
             groupings=transformations.groupings,
             progress=diagnostic_progress,
@@ -407,8 +428,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "MODEL_TYPE_UNSUPPORTED",
             "This model type cannot be fitted",
             409,
-            f"{spec.model_type!r} has a spec arm and no fit path. `ebm` is declared by "
-            "`CLAUDE.md` §7 and built by no slice.",
+            f"{spec.model_type!r} has a spec arm and no fit path.",
         )
     # FR-MODEL-78. Only the **second** bound of a pair has a counterpart to cross: the
     # first is fitted against nothing, and FR-MODEL-49 computes diagnostics once at fit

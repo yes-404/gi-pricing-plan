@@ -121,6 +121,10 @@ def test_a_separated_fit_can_be_reported_as_the_named_refusal() -> None:
         # started being honoured — the same gap this test caught for `glm.py`, now
         # covered on the GBM side too rather than trusted by construction.
         ("pricing_core.modelling.gbm", "GbmFitError"),
+        # The same rule, applied to the EBM arm: `ebm.py` raised
+        # `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` the day the W5 slice wired its fit.
+        # This test does not auto-discover modules — the row is mandatory.
+        ("pricing_core.modelling.ebm", "EbmFitError"),
     ],
 )
 def test_every_code_the_fit_path_can_raise_is_registered(
