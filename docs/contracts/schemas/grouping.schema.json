@@ -60,23 +60,38 @@
         "deviance_after": {"type": "number"},
         "df_saved": {"type": "integer"},
         "chi2_p_value": {"type": "number", "minimum": 0, "maximum": 1},
-        "source_level_stats": {"type": "array", "items": {"type": "object"}},
+        "source_level_stats": {
+          "$ref": "#/$defs/OneWayRows",
+          "description": "The source levels this grouping collapsed (FR-MODEL-15). Added to the model 2026-08-22 having been declared here since Phase 0 and absent from GroupingEvidence throughout - nothing caught it because the field is nested under evidence and the field-name comparison reads top-level names only."
+        },
         "target_level_stats": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["level", "exposure_years", "claim_count"],
-            "properties": {
-              "level": {"type": "string"},
-              "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
-              "claim_count": {"type": "integer", "minimum": 0},
-              "relativity": {"type": "number"}
-            }
-          }
+          "$ref": "#/$defs/OneWayRows",
+          "description": "The resulting target levels, carrying the statistics a source level carries."
         }
       }
     },
     "rationale": {"type": "string", "description": "Appears verbatim in the generated dossier (06 §4.4 §4)."}
+  },
+  "$defs": {
+    "OneWayRows": {
+      "type": "array",
+      "description": "OneWayRow as model_schema.profiles defines it (FR-DATA-26). Stated once here because both halves of the evidence are the same shape. Corrected 2026-08-22: this block hand-copied a four-field subset and declared a 'relativity' OneWayRow has never carried, while source_level_stats was an untyped array of objects. The model was right and the contract was wrong - OneWayRow is computed once and shared by 01's profile and 02's factor workbench so both see the same numbers, and a third hand-copy of it is the shape-defined-twice CLAUDE.md 2 forbids.",
+      "items": {
+        "type": "object",
+        "required": ["level", "exposure_years"],
+        "properties": {
+          "level": {"type": "string"},
+          "exposure_years": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+          "claim_count": {"type": "integer", "minimum": 0},
+          "claim_amount_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
+          "frequency": {"type": ["number", "null"]},
+          "frequency_ci": {"type": ["array", "null"], "items": {"type": "number"}},
+          "mean_severity": {"type": ["number", "null"]},
+          "severity_ci": {"type": ["array", "null"], "items": {"type": "number"}},
+          "mean_burning_cost": {"type": ["number", "null"]}
+        }
+      }
+    }
   },
   "invariants": [
     "unseen_level_behaviour == 'map_to_default' implies default_target_level is set",

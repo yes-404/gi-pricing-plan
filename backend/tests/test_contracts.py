@@ -1028,6 +1028,53 @@ def test_the_type_comparison_reaches_the_one_way_row(slug: str, row: str) -> Non
     )
 
 
+@pytest.mark.req("FR-MODEL-15")
+@pytest.mark.parametrize(
+    "block", ["evidence.source_level_stats.[]", "evidence.target_level_stats.[]"]
+)
+def test_the_grouping_evidence_rows_are_the_shared_one_way_row(block: str) -> None:
+    """Both halves of the evidence describe `OneWayRow`, and describe it the same way.
+
+    The authored contract hand-copied a four-field subset of `OneWayRow` into
+    `target_level_stats` and gave it a `relativity` the shared model has never had, while
+    `source_level_stats` was `{"items": {"type": "object"}}` — untyped, describing nothing.
+    Neither was visible: the type comparison reads only paths present on both sides, so a
+    field on one side alone is skipped rather than reported, and a wholly untyped item has
+    no leaves to compare at all.
+
+    **Compare whole paths, never a path rebuilt from its last segment.** The first version
+    of this test collected `path.rsplit(".", 1)[-1]` and reassembled `f"{block}.{name}"`,
+    which is only valid where every leaf is one level down. `OneWayRow` carries two
+    `tuple[float, float]` fields, and Pydantic emits a tuple as `prefixItems`, so
+    `frequency_ci` and `severity_ci` reach this walker as `…frequency_ci.[]`. Their last
+    segment is `[]`, and the reassembly then asserted `…source_level_stats.[].[]` — a path
+    neither side can ever produce, so the test failed unconditionally and said nothing
+    about the contract. `prefixItems` is the same blindness recorded against `_type_map`
+    itself; it is worth noticing that knowing the trap did not prevent writing it again.
+    """
+    generated = _load(GENERATED / "grouping.schema.json")
+    authored = _load(AUTHORED / "grouping.schema.json")
+
+    produced = {
+        path
+        for path in _type_map(generated, generated, GENERATED)
+        if path.startswith(f"{block}.")
+    }
+    declared = {
+        path
+        for path in _type_map(authored, authored, AUTHORED)
+        if path.startswith(f"{block}.")
+    }
+
+    assert produced, f"the model produces no leaves under {block}"
+    assert not produced - declared, (
+        f"the contract does not declare: {sorted(produced - declared)}"
+    )
+    assert not declared - produced, (
+        f"the contract declares fields the model lacks: {sorted(declared - produced)}"
+    )
+
+
 @pytest.mark.req("FR-OVR-6")
 def test_job_status_and_kind_enums_agree_with_the_contract() -> None:
     """An enum in the code but not the contract routes work nowhere; the reverse is a
