@@ -17,6 +17,7 @@ LightGBM's `Booster.predict` has no offset parameter at all — the signature is
 from __future__ import annotations
 
 import hashlib
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
@@ -48,6 +49,7 @@ from model_schema import (
     WeightSpec,
     YDomain,
 )
+from pricing_core.modelling import gbm
 from pricing_core.modelling.gbm import GbmFitError, fit_gbm, predict_gbm
 
 BACKENDS = ["xgboost", "lightgbm"]
@@ -1446,3 +1448,97 @@ def test_a_gamma_severity_fit_weighted_by_claim_count_predicts_the_weighted_mean
         f"claim-count-weighted severity should sit near 1.8, not {float(np.mean(predicted)):.3f}; "
         "5.0 means the weights never reached the objective"
     )
+
+
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.req("FR-MODEL-42")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_objective_receives_the_declared_weights(
+    backend: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`make_*_objective` reads `get_weight()` off the dataset — nothing ever set it.
+
+    Both wrappers fall back to `np.ones_like(y)` when the array they read is the wrong
+    size, and an unset weight reads as size zero, so every custom objective fitted before
+    2026-08-22 computed its gradient and hessian against uniform weights while the spec
+    said otherwise. `make_lgb_objective`'s docstring asserted the opposite in as many
+    words; it is corrected in the same commit as this test.
+    """
+    data = _frequency_data().with_columns(
+        (pl.col("exposure_years") * 10.0 + 1.0).alias("claim_count")
+    )
+    expected = data["claim_count"].to_numpy()
+    objective = _custom()
+    seen: list[np.ndarray] = []
+
+    maker = "make_xgb_objective" if backend == "xgboost" else "make_lgb_objective"
+    real = getattr(gbm, maker)
+
+    def recording(fns: object) -> object:
+        inner = real(fns)
+
+        def recorded(predt: np.ndarray, dataset: Any) -> Any:
+            seen.append(np.asarray(dataset.get_weight(), dtype=np.float64).copy())
+            return inner(predt, dataset)
+
+        return recorded
+
+    monkeypatch.setattr(gbm, maker, recording)
+    fit_gbm(
+        data,
+        _custom_spec(backend, objective, weight=WeightSpec(kind="column", column="claim_count")),
+        FACTORS,
+        objective=objective,
+    )
+
+    assert seen, "the recording objective was never called; the monkeypatch missed"
+    np.testing.assert_allclose(seen[0], expected)
+
+
+@pytest.mark.req("FR-MODEL-103")
+@pytest.mark.req("FR-MODEL-19")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_custom_eval_metric_receives_the_declared_weights(
+    backend: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FR-MODEL-103 calls the metric an exposure-weighted mean; it was an unweighted one.
+
+    Both `_custom_feval` helpers read `get_weight()` and fall back to ones exactly as the
+    objective wrappers do, so a declared weight column left the reported metric weighted
+    by nothing at all — while `compute_diagnostics` reported its own metrics weighted.
+
+    A holdout is passed because neither backend evaluates anything without one: XGBoost's
+    `evals` and LightGBM's `valid_sets` are both empty until there is a second partition,
+    and `feval` is only ever called per evaluation set.
+    """
+    data = _frequency_data().with_columns(
+        (pl.col("exposure_years") * 10.0 + 1.0).alias("claim_count")
+    )
+    expected = data["claim_count"].to_numpy()
+    seen: list[np.ndarray] = []
+    real = gbm.evaluate_metric
+
+    def recording(metric: Any, y: np.ndarray, f: np.ndarray, w: np.ndarray) -> float:
+        seen.append(np.asarray(w, dtype=np.float64).copy())
+        return real(metric, y, f, w)
+
+    monkeypatch.setattr(gbm, "evaluate_metric", recording)
+    fit_gbm(
+        data,
+        _spec(
+            backend,
+            response=ResponseKind.CLAIM_COUNT,
+            eval_metrics=(GbmFunctionRef(kind="custom", ref=_METRIC_REF),),
+            weight=WeightSpec(kind="column", column="claim_count"),
+        ),
+        FACTORS,
+        holdout=_frequency_data(n=3_000, seed=99),
+        metrics={_METRIC_REF: _metric()},
+    )
+
+    assert seen, "the recording metric was never called; the monkeypatch missed"
+    train = [array for array in seen if array.size == expected.size]
+    assert train, (
+        f"every weight array reaching the metric was the wrong size: {[a.size for a in seen]}"
+    )
+    np.testing.assert_allclose(train[0], expected)

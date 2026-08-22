@@ -743,9 +743,15 @@ def make_lgb_objective(fns: ObjectiveFns) -> Callable[[_Arr, Any], tuple[_Arr, _
     form is the scikit-learn wrapper's, and `lgb.train` calls
     `fobj(self.__inner_predict(data_idx=0), self.train_set)` (lightgbm 4.7.0,
     `basic.py:4276`). Passing the sklearn shape here raises `TypeError: missing 1 required
-    positional argument` on the first boosting round, which is how this was found. The
-    weights are read off the dataset instead, so nothing is dropped; §5.2 carries the
-    dated correction.
+    positional argument` on the first boosting round, which is how this was found.
+
+    LightGBM's objective signature carries no weight argument, so the weights are read off
+    the dataset (`get_weight()`) rather than handed in. *(Corrected 2026-08-22, W5: this
+    docstring previously said "so nothing is dropped", which was false from the day it was
+    written — `fit_gbm` never set the weights on either backend's dataset, so the fallback
+    to `np.ones_like(y)` below fired on every custom-objective fit the platform had ever
+    run. The construction was added in the same slice as this correction; the fallback now
+    means "the spec declared no weight" rather than "nobody supplied one".)*
 
     `preds` is the raw score with `init_score` already added, exactly as XGBoost's `preds`
     carries `base_margin` — so neither adapter adds the offset, and FR-MODEL-72's
