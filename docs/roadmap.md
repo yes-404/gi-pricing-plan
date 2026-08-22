@@ -2822,7 +2822,7 @@ OQ-GOV-7 remain as they were — unchanged by this slice. No frontend view rende
 **Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (131 source files) ·
 `lint-imports` 0 (3 contracts kept) · **1609 python tests** · audit-docs 0 —
 **494 requirements** across 8 specs, **74 open questions** all mirrored, **136 error
-codes** ownership-exclusive (was 134) · req-coverage **240 of 494 marked, 48.6 %** —
+codes** ownership-exclusive (was 134) · req-coverage **241 of 494 marked, 48.8 %** —
 FR-MODEL-109 joins the marked set with the marker backfill that closes this record ·
 `generate-contracts.py --check` 0, **23 generated contracts match** · frontend untouched
 (W6b owns any view that renders an EBM — the slice is API-only).
