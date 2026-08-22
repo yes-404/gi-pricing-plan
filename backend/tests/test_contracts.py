@@ -939,6 +939,79 @@ def test_the_contract_never_marks_optional_what_the_model_requires(slug: str) ->
     )
 
 
+def _closure_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+) -> dict[str, frozenset[str]]:
+    """Flatten a schema to `dotted.path -> what `additionalProperties` says there`.
+
+    Both spellings land in one vocabulary so they cannot be silently compared against each
+    other: the boolean form becomes `{"CLOSED"}` or `{"OPEN"}`, the schema form becomes the
+    JSON types its value schema admits. A path where one side says `CLOSED` and the other
+    says `number` is then a reported disagreement rather than an accidental match.
+
+    Only nodes that *state* `additionalProperties` are recorded. Absence is not `OPEN`:
+    JSON Schema's default is open, but a hand-authored contract that says nothing is silent
+    rather than deliberate, and reporting every silence would bury the real disagreements —
+    which measured **one** across the whole compared suite.
+    """
+    found: dict[str, frozenset[str]] = {}
+    for owner, variant in _variants(document, node, base):
+        extra = variant.get("additionalProperties")
+        if extra is not None:
+            key = path or _ROOT_PATH
+            if isinstance(extra, bool):
+                says = frozenset({"OPEN" if extra else "CLOSED"})
+            else:
+                says = frozenset(_scalar_types(owner, extra, base)) or frozenset({"ANY"})
+            found[key] = found.get(key, frozenset()) | says
+        for name, child in variant.get("properties", {}).items():
+            for key, says in _closure_map(
+                owner, child, base, f"{path}.{name}".lstrip(".")
+            ).items():
+                found[key] = found.get(key, frozenset()) | says
+        elements = list(variant.get("prefixItems", ()))
+        if "items" in variant:
+            elements.append(variant["items"])
+        for child in elements:
+            for key, says in _closure_map(
+                owner, child, base, f"{path}.[]".lstrip(".")
+            ).items():
+                found[key] = found.get(key, frozenset()) | says
+    return found
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> None:
+    """An open map's value type is published, and a client validates against it.
+
+    Seventeen paths declare `additionalProperties` on both sides and nothing has ever read
+    one. The measured disagreement is `custom-objective.params`: the model admits
+    `integer | number` and the contract admits `number` alone, so an objective parameterised
+    with a whole number — a period, a count, a cap in whole units — is a document the
+    published contract rejects and the platform accepts. That is the direction that wastes
+    an author's afternoon, because the thing refusing them is their own validator.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _closure_map(generated, generated, GENERATED)
+    declared = _closure_map(authored, authored, AUTHORED)
+
+    disagreed = {
+        path: (sorted(produced[path]), sorted(declared[path]))
+        for path in sorted(set(produced) & set(declared))
+        if produced[path] != declared[path]
+    }
+    assert not disagreed, (
+        "the model and the contract disagree on what extra properties are admitted at "
+        + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+    )
+
+
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
 #: noticed. Each must be a path the comparison reaches **on both sides**.
 #:
