@@ -255,6 +255,34 @@ directory. `CLAUDE.md` §11 is right; run it from the root.
 uv run alembic upgrade head            # from the repo root, always
 ```
 
+### …and it still fails against the compose stack, on credentials
+
+Even from the root, the bare command dies with:
+
+```
+asyncpg.exceptions.InvalidPasswordError: password authentication failed for user "gip"
+```
+
+`backend/src/app/config.py`'s `Settings.database_url` defaults to
+`postgresql+asyncpg://gip:gip@localhost:5432/gip`, while `deploy/docker-compose.yml`
+provisions **`gipricing:gipricing@…/gipricing`**. Alembic reads `Settings`, so it inherits
+the default and looks for a role the local stack does not have.
+
+```bash
+GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+    uv run alembic upgrade head
+```
+
+**Why nobody noticed for months, which is the part worth remembering:** the *tests* connect
+fine, because `backend/tests/conftest_db.py`'s `DEFAULT_TEST_DSN` hard-codes the compose
+credentials itself rather than reading the application default — and CI sets
+`GIP_DATABASE_URL` explicitly in `.github/workflows/python.yml`. So a green suite and a green
+pipeline both prove nothing about the command a developer actually types. `CLAUDE.md` §11
+asserted the bare form worked until 2026-08-22, when a migration slice tried it.
+
+A defaults mismatch that every automated path routes around is invisible to every automated
+path. When a documented command fails, check whether anything that passes is *using* it.
+
 ## Adding a `JobKind` needs an `ALTER TYPE`, because `job_kind` is a Postgres ENUM
 
 `jobs.kind` is a real enum type created by `df53696a2682`, not a `String` with a CHECK. Adding
@@ -541,6 +569,7 @@ database before the migration was written, and the migration round-trip was run 
 2026-08-14 — W2 sprint 1. 40 backend tests pass; the middleware-ordering trap was found by
 a failing test asserting `trace_id` on the 500 path, not by reading Starlette's source.
 
+2026-08-22 — W5 audit remediation. The alembic credential mismatch above, found while adding the `diagnostics_id` immutability migration.
 2026-08-14 — W4 validation persistence. The `alembic.ini` location, the `status_code`
 attribute, the error-registry refusal and the `String(16)` truncation were each found by a
 failing run rather than by reading; the memory-measurement trap was found by the same

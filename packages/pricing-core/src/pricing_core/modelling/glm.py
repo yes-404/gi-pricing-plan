@@ -11,7 +11,10 @@ What this module owes its caller, in the spec's own terms:
   marked. Not optional extras: `02` R5 makes uncertainty part of what an estimate *is*.
 * **FR-MODEL-23** — non-convergence, rank deficiency and separation are **named errors**
   with the offending terms identified. The failure mode this exists to prevent is a
-  degenerate fit returned as though it were a result.
+  degenerate fit returned as though it were a result. Those three are the conditions the
+  requirement names; every *other* refusal `glum` raises is named too, as
+  `GLM_FIT_FAILED`, because a library traceback reaching the caller is the same failure
+  wearing a different coat.
 * **ADR-0003** — what comes back is data. No estimator is returned, pickled or stored; a
   Model must be re-scorable by a process that never imported `glum`.
 """
@@ -85,7 +88,10 @@ class GlmFitError(RuntimeError):
     """A fit that cannot be returned as a result (FR-MODEL-23).
 
     `code` is the platform error code the API surfaces: `GLM_DID_NOT_CONVERGE`,
-    `GLM_RANK_DEFICIENT` or `GLM_SEPARATION_DETECTED`.
+    `GLM_RANK_DEFICIENT`, `GLM_SEPARATION_DETECTED` — the three conditions FR-MODEL-23
+    names — or `GLM_FIT_FAILED`, the residual code for a library refusal that is none of
+    them. Every one of these is a fit that *cannot be returned*; a code carried as data
+    because `pricing-core` cannot import the backend's registry (ADR-0001).
     """
 
     def __init__(self, code: str, message: str, *, terms: Sequence[str] = ()) -> None:
@@ -647,6 +653,41 @@ def fit_glm(
             "the design matrix is singular: two or more terms are collinear, so their "
             "coefficients are not separately identified. Drop one, or combine them into a "
             "single factor.",
+            terms=design.columns,
+        ) from exc
+    except ValueError as exc:
+        # **This clause must stay below the `LinAlgError` one**: `np.linalg.LinAlgError`
+        # subclasses `ValueError` (numpy 2.5.2, verified), so reordering these two would
+        # route every singular design here and `GLM_RANK_DEFICIENT` would never be raised
+        # again. First match wins, and the specific clause is the first one.
+        #
+        # The residual clause, and deliberately *not* `GLM_RANK_DEFICIENT`. `glum` refuses
+        # several classes of input before it solves anything, all of them as a bare
+        # `ValueError`, and none of them collinearity — measured against glum 3.4.1:
+        #
+        #   * `Some value(s) of y are out of the valid range for familyGammaDistribution.`
+        #     — a nil-settlement row in a Gamma severity response, a negative count under
+        #     Poisson, a negative burning cost under Tweedie.
+        #   * `Sample weights must be non-negative.` / `must not all be zero.` /
+        #     `must have the same length as y.`
+        #   * `No variation in `y`. Coefficients can't be estimated.` — an all-zero
+        #     response under Poisson or Tweedie.
+        #   * sklearn's `Input y contains NaN` / `contains infinity`.
+        #
+        # One code rather than one per class, for the reason `MODELS_NOT_COMPARABLE`
+        # covers four causes: the *name* must not assert a cause it cannot know, and the
+        # only way to tell these apart is to pattern-match `glum`'s prose — which would pin
+        # a permanent error code (`CLAUDE.md` §5) to a library's message text, so a reworded
+        # sentence upstream would silently reroute the failure and no test would see it.
+        # The cause is carried verbatim in the message instead, where being wrong about it
+        # is impossible.
+        raise GlmFitError(
+            "GLM_FIT_FAILED",
+            f"glum refused the fit: {exc} The response, the weights or the offset are "
+            "outside what this family and link can be fitted on — check the response "
+            "column against the family's domain (Gamma and Tweedie need strictly "
+            "positive values, Poisson non-negative ones), the weight column for "
+            "negative or all-zero values, and both for nulls. Nothing was estimated.",
             terms=design.columns,
         ) from exc
     elapsed = time.perf_counter() - started

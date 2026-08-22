@@ -580,3 +580,98 @@ def test_the_inverse_link_fits_rather_than_dying_inside_the_library() -> None:
     # FR-MODEL-21: no relativity under a non-multiplicative link — `exp(β)` means nothing
     # when the effect is additive on `1/mu`.
     assert slope.relativity is None
+
+
+@pytest.mark.req("FR-MODEL-23")
+def test_a_response_outside_the_family_domain_is_named_rather_than_a_stack_trace() -> None:
+    """FR-MODEL-23's remainder: a `glum` refusal that is not rank deficiency.
+
+    The fit site caught only `np.linalg.LinAlgError`, so the *only* library failure it
+    named was a singular design. A Gamma severity response containing a nil settlement —
+    an ordinary claims table, not a pathological one — reached the caller as a bare
+    `ValueError: Some value(s) of y are out of the valid range for
+    familyGammaDistribution.` raised from `glum/_glm.py:428`, and the job stored a stack
+    trace where FR-MODEL-23 promises a named error with something to act on.
+
+    Not `GLM_RANK_DEFICIENT`: that code's message names collinear terms, and nothing here
+    is collinear with anything. A wrong diagnosis sends the reader off to drop a factor
+    that was never the problem.
+    """
+    rng = np.random.default_rng(20260822)
+    n = 2_000
+    age = rng.integers(18, 80, n).astype(float)
+    cost = rng.gamma(4.0, 250.0, n)
+    cost[7] = 0.0  # the nil settlement — Gamma's support is strictly positive
+    data = pl.DataFrame({"driv_age": age, "cost": cost})
+    spec = GlmSpec(
+        model_family_slug="motor-severity",
+        dataset_version_id=uuid4(),
+        response_column="cost",
+        offset=OffsetSpec(kind="none"),
+        family="gamma",
+        link="log",
+    )
+
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(data, spec, [_factor("driv_age", "driv_age")])
+
+    assert refused.value.code == "GLM_FIT_FAILED"
+    # The library's own words, carried across. The code says a fit was refused; only
+    # `glum` knows *which* of its input checks refused it, and paraphrasing that is how a
+    # message ends up naming the wrong cause.
+    assert "out of the valid range" in str(refused.value)
+    assert "familyGammaDistribution" in str(refused.value)
+    # Actionable, not merely named (FR-MODEL-23): the reader is told which inputs to look
+    # at, and that nothing was estimated.
+    assert "Nothing was estimated" in str(refused.value)
+    assert refused.value.terms  # the design's terms, as every other GLM refusal carries
+    assert isinstance(refused.value.__cause__, ValueError)
+
+
+@pytest.mark.req("FR-MODEL-23")
+def test_a_malformed_weight_column_is_named_rather_than_a_stack_trace() -> None:
+    """The same clause, reached by a different `glum` check.
+
+    `glum` refuses a negative `sample_weight` in `_validation.py` before it solves
+    anything, so this never touches the linear algebra and could not have been a
+    `LinAlgError` on any input. A severity model weighted by claim count is the ordinary
+    way a weight column reaches a fit (FR-MODEL-19), which is what makes a bad one worth a
+    named refusal rather than a traceback.
+    """
+    data = _frequency_data(2_000).with_columns(
+        pl.when(pl.int_range(pl.len()) == 3)
+        .then(-1.0)
+        .otherwise(1.0)
+        .alias("claim_weight")
+    )
+    spec = _spec(weight=WeightSpec(kind="column", column="claim_weight"))
+
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(data, spec, [_factor("area", "area")])
+
+    assert refused.value.code == "GLM_FIT_FAILED"
+    assert "Sample weights must be non-negative" in str(refused.value)
+
+
+@pytest.mark.req("FR-MODEL-23")
+def test_a_singular_design_still_reaches_the_rank_deficient_code() -> None:
+    """The clause order is load-bearing, and the language hides why.
+
+    `np.linalg.LinAlgError` **subclasses `ValueError`** (numpy 2.5.2). The `except
+    ValueError` backstop added for the failures above therefore swallows every singular
+    design the moment it is written *above* the `LinAlgError` clause — first match wins —
+    and `GLM_RANK_DEFICIENT` would never be raised again: silently, with the collinear fit
+    still refused and only the diagnosis wrong.
+
+    `test_a_collinear_design_is_named_rather_than_returned` further up would catch the
+    regression; this one asserts the *reason*, so the next reader tidying the two clauses
+    together meets it before running anything.
+    """
+    assert issubclass(np.linalg.LinAlgError, ValueError)
+
+    data = _frequency_data(4_000).with_columns(pl.col("driv_age").alias("driv_age_copy"))
+    factors = [_factor("driv_age", "driv_age"), _factor("age_again", "driv_age_copy")]
+
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(data, _spec(), factors)
+    assert refused.value.code == "GLM_RANK_DEFICIENT"

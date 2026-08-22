@@ -9,6 +9,7 @@
     "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "bytes": {"type": "integer", "minimum": 0},
     "media_type": {"type": "string"},
-    "part_count": {"type": "integer", "minimum": 1}
+    "part_count": {"type": ["integer", "null"], "minimum": 1,
+      "description": "Null for a single-part blob; a part count only where the upload was multipart. Nullable since 2026-08-22 (W5), matching `BlobRef.part_count: int | None`."}
   }
 }

@@ -84,14 +84,60 @@ def test_submission_reads_the_union_of_floor_and_policy() -> None:
 
 @pytest.mark.req("FR-GOV-37")
 def test_an_artifact_type_with_no_floor_row_requires_only_its_policy() -> None:
-    """`peril_structure` has no `06` §3.3 row, so its floor is empty — deliberately.
+    """`peril_structure` has an empty floor — deliberately, but not for the stated reason.
 
-    A floor that says nothing permits anything, which is the right default for an artifact
-    type §3.3 predates. Inferring a floor for it would be this file inventing governance the
-    specification does not state.
+    **Corrected 2026-08-22 (W5, the audit-remediation slice).** This docstring used to say
+    `peril_structure` "has no `06` §3.3 row", and it has had one since 2026-08-14 — four
+    days before the claim was written. The assertion below survives the correction; the
+    justification does not. The row's **reconciliation** half is enforced structurally
+    (`review` is reachable only from `reconciled`, and a `fail` verdict is refused at
+    submission), so a floor entry would restate a lifecycle edge; its **per-peril model
+    approvals** half is enforced nowhere and is FR-GOV-37's uncheckable remainder.
+
+    Inferring a floor for it here would still be this file inventing governance the
+    specification does not state, which is why the assertion is unchanged.
     """
     assert "peril_structure" not in EVIDENCE_FLOOR
     assert DEFAULT_POLICY.effective_evidence("peril_structure") == ("reconciliation",)
     #: And a type no policy names at all requires nothing here — `approvals.submit` refuses
     #: it earlier, with the reason that no policy defines it.
     assert DEFAULT_POLICY.effective_evidence("dossier") == ()
+
+
+@pytest.mark.req("FR-GOV-19")
+def test_a_policy_that_drops_the_metric_certificate_is_below_the_floor() -> None:
+    """Negative: `custom_metric` gained a `06` §3.3 row and a floor entry on 2026-08-22.
+
+    Before that date §4.2's `DEFAULT_POLICY` named `metric_certificate` for `custom_metric`
+    while §3.3 had no row for it, so `EVIDENCE_FLOOR` had no key and `below_floor()`
+    returned nothing — a workspace could edit the kind out of its own policy and be
+    accepted. That was never exploitable (the lifecycle refuses an uncertified metric at
+    submission regardless), but the policy reader was told a floor existed where none did,
+    which is precisely what `POLICY_BELOW_EVIDENCE_FLOOR` was added to prevent.
+    """
+    edited = ApprovalPolicy(
+        policies=(
+            ApprovalPolicyEntry(
+                artifact_type="custom_metric",
+                approvers_required=1,
+                approver_roles=("approver",),
+                evidence=(),
+            ),
+        )
+    )
+    assert edited.below_floor() == {"custom_metric": ("metric_certificate",)}
+
+
+@pytest.mark.req("FR-GOV-19")
+def test_the_metric_floor_is_exactly_what_is_checkable() -> None:
+    """The floor entry is a *complete* projection of §3.3's row, leaving no remainder.
+
+    `record_certificate` sets `certified` only when `overall` is not `failed` and sets
+    `certificate_id` in the same statement, so "Metric Certificate with `overall ≠ failed`"
+    is verifiable end to end from the presence of the certificate. Unlike `model`'s
+    `model_comparison_if_predecessor`, nothing in this row has to be named in FR-GOV-37 as
+    an uncheckable leftover — and this test is what stops a later slice widening the row
+    into something submission would then fail closed on.
+    """
+    assert EVIDENCE_FLOOR["custom_metric"] == ("metric_certificate",)
+    assert DEFAULT_POLICY.effective_evidence("custom_metric") == ("metric_certificate",)

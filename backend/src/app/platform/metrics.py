@@ -643,27 +643,28 @@ async def _require_evidence(
     `metric_certificate` for `custom_metric`, the way it names `objective_certificate` for
     `custom_objective` (`model_schema.approvals.DEFAULT_POLICY`).
 
-    **A known gap, stated rather than asserted away.** `custom_metric` has no
-    `EVIDENCE_FLOOR` entry, because `06` §3.3 has no row for it — so `below_floor()`
-    returns nothing for this artifact type and a workspace that edits `metric_certificate`
-    out of its policy is *accepted*, leaving this function with nothing to require.
-    `custom_objective` is in the floor and is protected; this is not. Until 2026-08-20 this
-    docstring claimed the opposite — that such an edit "will 422 here with
-    `EVIDENCE_INCOMPLETE`" — which was never true of any build.
+    **The gap this docstring recorded is closed (2026-08-22, W5's audit-remediation
+    slice).** `06` §3.3 gained a Custom Metric row and `EVIDENCE_FLOOR` gained the matching
+    `("metric_certificate",)` entry — **in that order**, because adding the entry alone
+    would have put the code above its own specification. `below_floor()` now reports a
+    policy that edits `metric_certificate` out, and `set_policy` refuses it with
+    `POLICY_BELOW_EVIDENCE_FLOOR`.
 
-    What actually protects a metric today is the **lifecycle**, not the policy: submission
-    requires status `certified`, only `record_certificate` sets that status, it sets it
-    alongside a `certificate_id`, and the `certified_metric_has_a_certificate` CHECK
-    refuses the pair coming apart at a layer a direct `UPDATE` cannot walk past. So an
-    uncertified metric cannot be
-    submitted even under an emptied policy — but the policy reader is being told a floor
-    exists where none does, which is the failure mode `POLICY_BELOW_EVIDENCE_FLOOR` was
-    added to prevent.
+    **The history is kept, because what was believed on the day is what a governed record
+    cannot lose.** Until 2026-08-20 this docstring claimed such an edit "will 422 here with
+    `EVIDENCE_INCOMPLETE`", which was never true of any build. From 2026-08-20 to
+    2026-08-22 it recorded the opposite and was right: no §3.3 row, so no floor entry, so
+    nothing for this function to require.
 
-    Owed: a `06` §3.3 evidence row for `custom_metric` and the matching `EVIDENCE_FLOOR`
-    entry. Adding the entry alone would put the code above its own specification, so it is
-    a governance change rather than part of this fix wave. Recorded in `docs/roadmap.md`'s
-    custom-metrics slice record under "Not delivered", with an owner.
+    **What was never at risk, and this record must not imply otherwise.** Even under an
+    emptied policy an uncertified metric could not be submitted, because the protection is
+    the *lifecycle* rather than the policy: submission requires status `certified`, only
+    `record_certificate` sets that status, it sets it alongside a `certificate_id`, and the
+    `certified_metric_has_a_certificate` CHECK refuses the pair coming apart at a layer a
+    direct `UPDATE` cannot walk past. The defect was that the policy *reader* was told a
+    floor existed where none did — which is the failure mode `POLICY_BELOW_EVIDENCE_FLOOR`
+    exists to prevent, and why closing it was worth a slice even though nothing was
+    exploitable.
     """
     policy = await approvals.policy_for(session, workspace_id)
 

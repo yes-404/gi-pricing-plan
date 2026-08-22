@@ -53,6 +53,7 @@ __all__ = [
     "reconcile_payload",
     "record_reconciliation",
     "request_reconciliation",
+    "resolve_artifact_ref",
     "submit_for_review",
     "to_structure",
 ]
@@ -360,6 +361,42 @@ async def load_structure(
     return to_structure(
         await _get_or_404(session, workspace_id=workspace_id, structure_id=structure_id)
     )
+
+
+async def resolve_artifact_ref(
+    session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+) -> bool:
+    """`peril_structure:<slug>@<version>` → does that version exist? (`06` FR-GOV-36.)
+
+    `False`, having done nothing, for a reference that is not this module's — the contract
+    `api/approvals.py`'s fan-out is built on, and the same guard `modelling`, `objectives`
+    and `metrics` open `apply_approval_decision` with in the other direction.
+
+    By slug and version rather than by id, unlike `load_structure`: a reference *is* a slug
+    and a version (ID-3), and `uq_peril_structures_slug_version` makes the pair identify one
+    row. Status is deliberately not consulted — FR-GOV-36 asks whether the artifact exists,
+    and which statuses may be submitted is `submit_for_review`'s question, already answered
+    for anything that reached this module's own path.
+    """
+    if artifact_ref.type != "peril_structure":
+        return False
+    row = (
+        await session.execute(
+            select(PerilStructureRow.id).where(
+                PerilStructureRow.workspace_id == workspace_id,
+                PerilStructureRow.slug == artifact_ref.slug,
+                PerilStructureRow.version == artifact_ref.version,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "Peril structure not found",
+            404,
+            f"{artifact_ref} resolves to no peril structure in this workspace.",
+        )
+    return True
 
 
 # -- internals -----------------------------------------------------------------------------

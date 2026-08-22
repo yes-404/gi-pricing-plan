@@ -11,6 +11,7 @@ cell in the book.
 
 from __future__ import annotations
 
+import math
 from uuid import uuid4
 
 import numpy as np
@@ -24,6 +25,7 @@ from model_schema import (
     GroupingProposal,
     UnseenLevelBehaviour,
 )
+from pricing_core.data.profile import one_way
 from pricing_core.modelling import (
     FactorResolutionError,
     GroupingError,
@@ -51,6 +53,39 @@ def _book(n: int = 40_000, seed: int = 20260815) -> pl.DataFrame:
             "exposure_years": exposure,
             "claim_count": counts.astype(float),
             "claim_amount_minor": (counts * 200_000).astype(np.int64),
+        }
+    )
+
+
+def _flat_book(levels: int = 5, exposure: float = 100.0, claims: int = 10) -> pl.DataFrame:
+    """Levels with **exactly** equal observed frequencies — no simulation, no seed.
+
+    `Sum m_i (X_i - Xbar)²` is then zero by construction, so Bühlmann-Straub's unbiased
+    estimate of VHM is `-(I - 1) s² / scale`: strictly negative, every time. A random book
+    that happens to produce a negative estimate would test the same branch on a coin toss.
+    """
+    return pl.DataFrame(
+        {
+            "vehicle_group": [f"L{i:02d}" for i in range(levels)],
+            "exposure_years": [exposure] * levels,
+            "claim_count": [float(claims)] * levels,
+            "claim_amount_minor": np.array([claims * 200_000] * levels, dtype=np.int64),
+        }
+    )
+
+
+def _dominant_book() -> pl.DataFrame:
+    """One level holding all but a rounding error of the exposure.
+
+    `m_dot - Sum m_i² / m_dot` underflows to zero, which is a different degeneracy from a
+    negative VHM and would otherwise divide by it.
+    """
+    return pl.DataFrame(
+        {
+            "vehicle_group": ["BIG", "TINY"],
+            "exposure_years": [1e16, 1.0],
+            "claim_count": [1e15, 1.0],
+            "claim_amount_minor": np.array([2_000_000, 200_000], dtype=np.int64),
         }
     )
 
@@ -268,9 +303,14 @@ def test_a_merge_that_destroys_real_signal_is_reported_as_one() -> None:
     assert evidence.chi2_p_value < 1e-6
 
 
-@pytest.mark.req("FR-MODEL-14")
+@pytest.mark.req("FR-MODEL-80")
 def test_credibility_weighted_merges_on_shrunk_rates() -> None:
-    """Limited fluctuation, named on the artifact so a reviewer knows which theory ran."""
+    """Limited fluctuation, named on the artifact so a reviewer knows which theory ran.
+
+    Marked FR-MODEL-14 until 2026-08-22. FR-MODEL-14 names the *method*; the recorded
+    model, the `(p, k)` pair and the standard it implies are all FR-MODEL-80's, so
+    `scope-audit.py` was crediting a requirement this test does not test.
+    """
     grouping = propose_grouping(
         _book(),
         _proposal(method=GroupingMethod.CREDIBILITY_WEIGHTED),
@@ -284,27 +324,194 @@ def test_credibility_weighted_merges_on_shrunk_rates() -> None:
     assert grouping.method_params["credibility_standard_claims"] == 1082
     assert 1 < len(grouping.target_levels) < 20
     assert set(grouping.mapping) == set(_TRUE_EFFECT)
+    # No variance components: limited fluctuation estimates none, and a dict of zeros would
+    # read as an estimate nobody made.
+    assert grouping.evidence is not None
+    assert grouping.evidence.credibility_components is None
 
 
-@pytest.mark.req("FR-MODEL-14")
-def test_buhlmann_straub_is_refused_rather_than_silently_substituted() -> None:
-    """FR-MODEL-80 specifies it and this build does not implement it.
+@pytest.mark.req("FR-MODEL-80")
+def test_buhlmann_straub_is_selectable_and_persists_its_variance_components() -> None:
+    """The second of OQ-MODEL-5's two methods, built 2026-08-22.
 
-    Refused rather than substituted: the requirement makes the model a recorded property of
-    the grouping, so returning limited fluctuation's answer under its name would be the one
-    failure it exists to prevent — and `credibility_components` would come back null for a
-    model that is meant to persist them.
+    **This test previously asserted the opposite.** From 2026-08-15 until 2026-08-22 it was
+    `test_buhlmann_straub_is_refused_rather_than_silently_substituted`: OQ-MODEL-5 had
+    decided *both* methods, one shipped, and the other raised rather than return limited
+    fluctuation's answer under Bühlmann-Straub's name. The refusal was right while the
+    variance components did not exist; the record of it stays here rather than being deleted,
+    because "was it ever refused, and when did that change?" is a question a governed
+    artifact has to be able to answer.
+
+    What it asserts now is what the refusal was protecting: the model is recorded, and the
+    components it is recorded *with* are the ones that produced the merge.
     """
-    with pytest.raises(GroupingError, match="not implemented"):
-        propose_grouping(
-            _book(),
-            _proposal(
-                method=GroupingMethod.CREDIBILITY_WEIGHTED,
-                credibility_model=CredibilityModel.BUHLMANN_STRAUB,
-            ),
-            dataset_id=DATASET,
-            slug="vg-bs",
-        )
+    grouping = propose_grouping(
+        _book(),
+        _proposal(
+            method=GroupingMethod.CREDIBILITY_WEIGHTED,
+            credibility_model=CredibilityModel.BUHLMANN_STRAUB,
+        ),
+        dataset_id=DATASET,
+        slug="vg-bs",
+    )
+    assert grouping.credibility_model is CredibilityModel.BUHLMANN_STRAUB
+    assert grouping.evidence is not None
+    components = grouping.evidence.credibility_components
+    assert components is not None
+    assert set(components) == {"evpv", "vhm", "k"}
+    # `grouping.schema.json` gives `k` `exclusiveMinimum: 0`, and `k = EVPV / VHM` can only
+    # satisfy it if both components are positive.
+    assert components["evpv"] > 0
+    assert components["vhm"] > 0
+    assert components["k"] == pytest.approx(components["evpv"] / components["vhm"])
+    # EVPV is E[lambda(Theta)] under the Poisson process variance — the portfolio frequency,
+    # which this book generates at ~0.08 x mean(0.6, 0.9, 1.3, 1.9).
+    assert components["evpv"] == pytest.approx(0.08 * 1.175, rel=0.15)
+    # No limited-fluctuation standard: Bühlmann-Straub derives none, and recording the
+    # proposal's untouched `(0.90, 0.05)` defaults would be a standard that did not run.
+    assert "credibility_pk" not in grouping.method_params
+    assert "credibility_standard_claims" not in grouping.method_params
+    assert set(grouping.mapping) == set(_TRUE_EFFECT)
+
+
+@pytest.mark.req("FR-MODEL-80")
+def test_the_two_credibility_models_disagree_on_thin_cells() -> None:
+    """Two methods, not the same method under another name.
+
+    The same objection `_tree` had to answer against Ward linkage (`groupings.py`'s
+    "not the same method under another name"): OQ-MODEL-5 decided *both* methods, so the
+    second one has to be shown doing something the first does not.
+
+    On a thin book each level carries ~6 claims, so limited fluctuation reads
+    `Z = sqrt(6 / 1082) ~ 0.07` off a fixed standard and shrinks almost everything onto the
+    portfolio rate — the sweep then merges nearly all of it. Bühlmann-Straub estimates `k`
+    from *this* book, finds the levels genuinely far apart, and keeps far more of the
+    observed spread. Same rows, same tolerance, different mapping.
+    """
+    thin = _book(n=1_200)
+    limited = propose_grouping(
+        thin,
+        _proposal(method=GroupingMethod.CREDIBILITY_WEIGHTED),
+        dataset_id=DATASET,
+        slug="vg-lf",
+    )
+    buhlmann = propose_grouping(
+        thin,
+        _proposal(
+            method=GroupingMethod.CREDIBILITY_WEIGHTED,
+            credibility_model=CredibilityModel.BUHLMANN_STRAUB,
+        ),
+        dataset_id=DATASET,
+        slug="vg-bs",
+    )
+    assert limited.mapping != buhlmann.mapping
+    assert len(buhlmann.target_levels) > len(limited.target_levels)
+
+    # And the mechanism, not just the outcome: the two Zs for the same thin level.
+    assert buhlmann.evidence is not None
+    components = buhlmann.evidence.credibility_components
+    assert components is not None
+    row = one_way(thin, column="vehicle_group").rows[0]
+    exposure = float(row.exposure_years)
+    z_limited = math.sqrt(min(row.claim_count / 1082, 1.0))
+    z_buhlmann = exposure / (exposure + components["k"])
+    assert z_limited < 0.15 < z_buhlmann
+
+
+@pytest.mark.req("FR-MODEL-80")
+def test_a_reviewer_can_rederive_the_merge_from_the_stored_components() -> None:
+    """FR-MODEL-80's actual promise: re-derive `Z`, do not take it.
+
+    The stored `(evpv, vhm, k)` plus the dataset version is enough to reproduce every
+    level's credibility, its shrunk rate and therefore the whole mapping. Re-implemented
+    here from the artifact alone — if the components were decorative, or estimated from
+    different rows than the merge used, this reconstruction would not land on the same
+    mapping.
+    """
+    frame = _book(n=1_200)
+    grouping = propose_grouping(
+        frame,
+        _proposal(
+            method=GroupingMethod.CREDIBILITY_WEIGHTED,
+            credibility_model=CredibilityModel.BUHLMANN_STRAUB,
+        ),
+        dataset_id=DATASET,
+        slug="vg-bs",
+    )
+    assert grouping.evidence is not None
+    components = grouping.evidence.credibility_components
+    assert components is not None
+
+    shrunk: dict[str, float] = {}
+    for row in one_way(frame, column="vehicle_group").rows:
+        exposure = float(row.exposure_years)
+        credibility = exposure / (exposure + components["k"])
+        observed = row.claim_count / exposure
+        shrunk[row.level] = credibility * observed + (1 - credibility) * components["evpv"]
+
+    # The published sweep: ascending shrunk rate, a new target level whenever the rate
+    # leaves `merge_tolerance_relativity` of the group's anchor (5 % by default).
+    rederived: dict[str, str] = {}
+    anchor: float | None = None
+    index = 0
+    for level in sorted(shrunk, key=lambda name: shrunk[name]):
+        rate = shrunk[level]
+        if anchor is not None and (anchor <= 0 or abs(rate - anchor) / anchor > 0.05):
+            index += 1
+            anchor = None
+        if anchor is None:
+            anchor = rate
+        rederived[level] = f"G{index + 1}"
+
+    assert rederived == grouping.mapping
+
+
+@pytest.mark.req("FR-MODEL-80")
+@pytest.mark.req("FR-MODEL-113")
+@pytest.mark.parametrize(
+    ("frame", "fragment"),
+    [
+        pytest.param(_flat_book(), "not positive", id="between-level-variance-non-positive"),
+        pytest.param(_flat_book(levels=1), "at least two levels", id="one-exposed-level"),
+        pytest.param(_flat_book(claims=0), "no claims", id="no-claims"),
+        pytest.param(_dominant_book(), "all of the exposure", id="one-level-holds-everything"),
+    ],
+)
+def test_buhlmann_straub_refuses_a_book_it_cannot_estimate_on(
+    frame: pl.DataFrame, fragment: str
+) -> None:
+    """The degenerate cases are refused by name, never clamped into a plausible `k`.
+
+    A non-positive VHM estimate is routine on real data — it is the finding that the levels'
+    spread is no wider than Poisson noise, which makes `Z = 0` for every level and `k`
+    unbounded. Clamping `a` to some small positive number would produce an artifact carrying
+    a credibility nobody computed, which is what `grouping.schema.json`'s
+    `exclusiveMinimum: 0` on `k` is there to stop. `limited_fluctuation` needs no
+    between-level estimate and is still available on exactly this book.
+    """
+    proposal = _proposal(
+        method=GroupingMethod.CREDIBILITY_WEIGHTED,
+        credibility_model=CredibilityModel.BUHLMANN_STRAUB,
+    )
+    with pytest.raises(GroupingError, match=fragment) as raised:
+        propose_grouping(frame, proposal, dataset_id=DATASET, slug="vg-bs")
+    # Its own code: `GROUPING_NOT_EXHAUSTIVE` is about a mapping that misses a level, and a
+    # caller cannot act on it here — the mapping is fine, the book is thin.
+    assert raised.value.code == "CREDIBILITY_VARIANCE_NOT_ESTIMABLE"
+
+
+@pytest.mark.req("FR-MODEL-80")
+def test_limited_fluctuation_still_groups_the_book_buhlmann_straub_refuses() -> None:
+    """The refusal above is Bühlmann-Straub's, not the platform giving up on the column."""
+    grouping = propose_grouping(
+        _flat_book(),
+        _proposal(method=GroupingMethod.CREDIBILITY_WEIGHTED),
+        dataset_id=DATASET,
+        slug="vg-lf-flat",
+    )
+    assert grouping.credibility_model is CredibilityModel.LIMITED_FLUCTUATION
+    assert grouping.evidence is not None
+    assert grouping.evidence.credibility_components is None
 
 
 @pytest.mark.req("FR-MODEL-14")

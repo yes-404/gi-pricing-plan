@@ -99,7 +99,7 @@ the maths.
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
 ├── tests/                    ✔ repository invariants — enforcement the audit can see
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
-│                               contracts · bench-data · demo (§11 runs them)
+│                               contracts · bench-data · bench-model · demo (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit-docs checks them)
 ├── .claude/skills/           ✔ project procedures, written and vendored (§12)
 └── .claude/agents/           ✔ delegable specialists — own context, not the turn's (§12)
@@ -403,6 +403,17 @@ uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
 uv run python scripts/scope-audit.py DATA --endpoints    # §5.1 table vs the contract
 uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item catalogue
 
+# NFR measurement (§13 rule 5: measured, not asserted). `bench-data.py` knows `01`'s budgets;
+# `bench-model.py` knows `02`'s. Phases run in separate processes because glibc does not
+# return freed arenas, so a peak-RSS reading taken after an earlier phase is that phase's.
+#
+# **This machine is shared between concurrent agent sessions.** The same grouping proposal
+# measured 8.58 s at load 1.6 and 20.01 s at load 8.4 — a 2.3x contention factor that reads
+# exactly like a regression. Both harnesses report `/proc/loadavg` and CPU seconds beside
+# wall-clock for that reason; quote the load with every number, and re-take a headline
+# figure in a quiet window before recording it in a spec.
+uv run python scripts/bench-model.py --only curve   # one phase at a time
+
 # ADR-0001's promise, made usable (OQ-OVR-4, decided 2026-08-14). `pricing-core` is not
 # published to PyPI in Phase 1 — publishing would force semver stability on an API still
 # being discovered — so this is how a reviewer runs the maths outside the platform.
@@ -441,7 +452,15 @@ pnpm --dir frontend dev                      # proxies /api to localhost:8000
 GIP_DEV_AUTH_ENABLED=true uv run uvicorn app.main:create_app \
     --factory --reload --app-dir backend/src --port 8000
 
-uv run alembic upgrade head                  # W2
+# Migrations (W2). **The bare command does not work against the compose stack** and
+# this line said it did until 2026-08-22. `backend/src/app/config.py`'s `database_url`
+# defaults to `gip:gip@localhost:5432/gip`; `deploy/docker-compose.yml` provisions
+# `gipricing:gipricing@…/gipricing`. Alembic reads `Settings`, so it dies with
+# `InvalidPasswordError: password authentication failed for user "gip"`. The tests do
+# not, because `backend/tests/conftest_db.py`'s `DEFAULT_TEST_DSN` carries the compose
+# credentials itself — which is why the gap survived every green suite.
+GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+    uv run alembic upgrade head
 ```
 
 ## 12. Skills

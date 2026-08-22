@@ -7133,6 +7133,42 @@
         "title": "Page[Job]",
         "type": "object"
       },
+      "Page_Model_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Model"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[Model]",
+        "type": "object"
+      },
       "Page_dict_str__Any__": {
         "additionalProperties": false,
         "properties": {
@@ -7955,18 +7991,11 @@
             "type": "string"
           },
           "tolerance": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
             "default": "0.02",
             "description": "Fractional tolerance on |modelled/observed - 1| (FR-MODEL-60).",
-            "title": "Tolerance"
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Tolerance",
+            "type": "string"
           }
         },
         "required": [
@@ -11010,7 +11039,7 @@
         ]
       },
       "post": {
-        "description": "Anyone authenticated may submit; the policy decides who may approve.\n\nDeliberately not permission-gated beyond authentication: submitting is asking, and the\nmodule that owns the artifact has already decided whether this principal could create\nit. Gating the ask as well would mean an analyst who built a model could not put it\nforward.",
+        "description": "Anyone authenticated may submit; the policy decides who may approve.\n\nDeliberately not permission-gated beyond authentication: submitting is asking, and the\nmodule that owns the artifact has already decided whether this principal could create\nit. Gating the ask as well would mean an analyst who built a model could not put it\nforward.\n\nThe `404` this route now declares is FR-GOV-36's: the reference is the pin, and a\nreference to a version that was never created pins nothing. `_resolve_the_artifact` is\nwhat makes that refusal, and `service.submit` is what sequences it.",
         "operationId": "submit_for_approval_api_v1_approval_requests_post",
         "requestBody": {
           "content": {
@@ -11064,6 +11093,21 @@
               }
             },
             "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
           },
           "409": {
             "content": {
@@ -11848,6 +11892,7 @@
         "operationId": "list_bandings_api_v1_bandings_get",
         "parameters": [
           {
+            "description": "Restrict to factors/bandings/groupings defined against this Dataset.",
             "in": "query",
             "name": "dataset_id",
             "required": false,
@@ -11861,6 +11906,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Restrict to factors/bandings/groupings defined against this Dataset.",
               "title": "Dataset Id"
             }
           }
@@ -16203,9 +16249,11 @@
     },
     "/api/v1/factors": {
       "get": {
+        "description": "Filtered by Dataset (FR-MODEL-2), or the workspace's factors when unfiltered.\n\n`?dataset_id=` and nothing else: an unrecognised parameter is a `422`, not a silently\nunfiltered list — see `DatasetFilter`.",
         "operationId": "list_factors_api_v1_factors_get",
         "parameters": [
           {
+            "description": "Restrict to factors/bandings/groupings defined against this Dataset.",
             "in": "query",
             "name": "dataset_id",
             "required": false,
@@ -16219,6 +16267,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Restrict to factors/bandings/groupings defined against this Dataset.",
               "title": "Dataset Id"
             }
           }
@@ -16370,6 +16419,7 @@
         "operationId": "list_groupings_api_v1_groupings_get",
         "parameters": [
           {
+            "description": "Restrict to factors/bandings/groupings defined against this Dataset.",
             "in": "query",
             "name": "dataset_id",
             "required": false,
@@ -16383,6 +16433,7 @@
                   "type": "null"
                 }
               ],
+              "description": "Restrict to factors/bandings/groupings defined against this Dataset.",
               "title": "Dataset Id"
             }
           }
@@ -17494,6 +17545,156 @@
       }
     },
     "/api/v1/models": {
+      "get": {
+        "description": "Filtered, cursor-paginated (`00` §5.2), newest first.\n\nFactors, bandings and groupings each published a list route and models did not, so the\nonly way to find a model whose slug you did not already know was to read the `models`\ntable. The endpoint audit reported a complete surface throughout, because it compares\nthe specification against the contract and a route in neither is invisible to it —\nthe same blind spot `01`'s reference lifecycle fell into.\n\n**`flags` are not computed here.** FR-MODEL-67's flag is a read of the dataset\nversion's *current* status, one query per model (`flags_for`), so a page of 50 would be\n51 round trips to decorate rows a caller is about to narrow down. Every listed model\ntherefore reports `[]`, and `GET /models/{slug}` is where the flag is answered — which\nis also the only place it gates anything.\n\nSorted by id descending. Ids are UUIDv7 and therefore time-ordered, so one column gives\nboth a stable sort and a unique cursor.",
+        "operationId": "list_models_api_v1_models_get",
+        "parameters": [
+          {
+            "description": "Model family slug, exactly as `GET /models/{slug}` takes it.",
+            "in": "query",
+            "name": "family",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Model family slug, exactly as `GET /models/{slug}` takes it.",
+              "title": "Family"
+            }
+          },
+          {
+            "description": "Restrict to models in this lifecycle state.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ModelStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to models in this lifecycle state.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Opaque; pass back the previous page's `next_cursor`.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque; pass back the previous page's `next_cursor`.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Model_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List models",
+        "tags": [
+          "modelling"
+        ]
+      },
       "post": {
         "description": "**202** with a Job for a new fit; **200** with the model when it already exists.\n\n`02` R1 is answered here rather than in the worker: a dataset version that is not\n`validated` is refused with a `409` before any Job exists, because learning it from a\nfailed job twenty seconds later is a worse answer to the same question.",
         "operationId": "fit_model_api_v1_models_post",

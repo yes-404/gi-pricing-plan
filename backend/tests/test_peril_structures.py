@@ -629,3 +629,53 @@ def test_reading_a_structure_that_does_not_exist_is_a_404(
     response = api_client.get(f"/api/v1/peril-structures/{uuid4()}", headers=actuary)
     assert response.status_code == 404
     assert response.json()["code"] == "NOT_FOUND"
+
+
+@pytest.mark.req("FR-OVR-18")
+def test_a_float_tolerance_is_refused_at_the_wire(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    """Negative: `ReconcileRequest.tolerance` was a bare `Decimal` until 2026-08-22.
+
+    A bare `Decimal` accepts a JSON number and keeps the binary error verbatim — measured,
+    not assumed: `{"tolerance": 0.1 + 0.2}` validated to `Decimal('0.30000000000000004')`
+    against this exact model. That number then decides a reconciliation, since FR-MODEL-60's
+    verdict is `|ratio - 1| <= tolerance`, so the float reached the one comparison the
+    artifact exists to record.
+
+    FR-OVR-18 closed this for `DecimalStr` fields on 2026-08-19. It could not close it here,
+    because the audit behind it swept fields that *were* `DecimalStr` — a field that should
+    have been one and was not is invisible to that search. This test is the shape of guard
+    that search could not be.
+
+    A random `structure_id` is deliberate: body validation precedes the handler, so the
+    refusal must not depend on the structure existing.
+    """
+    response = api_client.post(
+        f"/api/v1/peril-structures/{uuid4()}/reconcile",
+        headers=actuary,
+        json={
+            "observed_column": "claim_amount",
+            "exposure_column": "exposure",
+            "tolerance": 0.1 + 0.2,
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert "float" in response.text
+
+
+@pytest.mark.req("FR-OVR-18")
+def test_the_published_tolerance_admits_no_json_number() -> None:
+    """The contract half, which is the half that was actually wrong.
+
+    Pydantic renders a bare `Decimal` as `anyOf: [{"type": "number"}, {"type": "string"}]`
+    — research finding F7, recorded in `model_schema.money`. So the *published* contract
+    admitted the lossy binary form FR-OVR-7 forbids, and a payload could satisfy
+    `docs/contracts/` while violating the specification it is generated from. Asserting the
+    422 alone would not have caught that: the refusal and the declaration are different
+    claims, and external consumers read the declaration.
+    """
+    schema = _load(OPENAPI)["components"]["schemas"]["ReconcileRequest"]
+    tolerance = schema["properties"]["tolerance"]
+    assert tolerance.get("type") == "string", tolerance
+    assert "anyOf" not in tolerance, tolerance

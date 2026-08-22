@@ -192,9 +192,22 @@ def test_the_error_code_registry_matches_the_specs() -> None:
         )
 
 
-@pytest.mark.req("FR-OVR-13")
+@pytest.mark.req("FR-PLAT-47")
 def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> None:
     """A code `pricing-core` raises reaches the caller through `PlatformError`.
+
+    **Marker corrected 2026-08-22 (W5 audit).** This claimed `FR-OVR-13`, which is *"one
+    tenant, one deployment"* (`00` §3, ADR-0006) and has nothing to do with error codes — so
+    `req-coverage.py` counted tenant isolation as evidenced by a test that never mentions it.
+    `CLAUDE.md` §13: a marker is a claim, not a proof. `FR-PLAT-47` is the requirement this
+    test actually evidences — *"RFC 9457 problem responses with stable `code`s"* — and it is
+    what `test_the_error_code_registry_matches_the_specs` above already carries for the same
+    property approached from the specification side.
+
+    Deliberately **not** `FR-OVR-19`, which is the closest match by wording: that requirement
+    specifies an `audit-docs.py` check that does not exist yet, is owned by the maintainer,
+    and is triggered by Phase 1a's exit demo. Marking a passing test with it would claim
+    evidence for unbuilt work — the same defect being corrected here.
 
     The fit handler maps a `GlmFitError`/`GbmFitError` code straight across, and
     `PlatformError` refuses a code it does not know — so an unregistered one turns a named

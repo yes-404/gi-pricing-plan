@@ -238,6 +238,12 @@ async def evaluate_grouping_for_version(
             exposure_column=evaluation.exposure_column,
             claim_count_column=evaluation.claim_count_column,
             claim_amount_column=evaluation.claim_amount_column,
+            # FR-MODEL-80: re-evaluating a `buhlmann_straub` grouping must re-derive its
+            # variance components on **this** version, not drop them. Without this the
+            # evidence comes back with `credibility_components: null` under a
+            # `buhlmann_straub` `method_params` — the exact contradiction the requirement
+            # exists to prevent, written by the platform rather than by a bad request.
+            credibility_model=grouping.credibility_model,
         )
     except ModellingError as exc:
         raise _refuse(exc, "The grouping could not be evaluated") from exc

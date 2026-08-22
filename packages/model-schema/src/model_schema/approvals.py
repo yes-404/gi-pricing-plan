@@ -86,12 +86,22 @@ VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]
 #: the standard. The uncheckable remainder is named in FR-GOV-37 with an owner, which is
 #: the difference between a deferral and a silence.
 #:
-#: An artifact type absent here has an **empty** floor. `peril_structure` is that case: it
-#: has no §3.3 row at all, and a floor that says nothing permits anything, which is the
-#: right default for an artifact §3.3 predates.
+#: An artifact type absent here has an **empty** floor. `peril_structure` is that case.
+#:
+#: **Corrected 2026-08-22 (W5, the audit-remediation slice).** Until this date both this
+#: docstring and FR-GOV-37 justified that empty floor by saying `peril_structure` "has no
+#: §3.3 row at all". It has had one since 2026-08-14 — four days *before* the claim was
+#: written, in the Phase 0 commit that created the document. The conclusion survives the
+#: premise, but only for one half of the row and for a different reason: the
+#: **reconciliation** is enforced structurally, since `review` is reachable only from
+#: `reconciled` and a `fail` verdict is refused at submission, so a floor entry here would
+#: restate a lifecycle edge. The row's other half — **per-peril model approvals** — is
+#: enforced nowhere, and is FR-GOV-37's uncheckable remainder rather than something this
+#: floor's silence permits.
 EVIDENCE_FLOOR: Final[dict[str, tuple[str, ...]]] = {
     "validation_rule": ("dry_run_result",),
     "custom_objective": ("objective_certificate",),
+    "custom_metric": ("metric_certificate",),
     "model": ("diagnostics", "transparency_artifact_if_non_glm"),
     "rating_version": ("structural_diff", "regression_run", "dislocation_run"),
     "deployment": ("rating_version_approval", "uat_deployment"),
