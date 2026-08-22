@@ -1083,7 +1083,10 @@ def _constraint_map(
 #: exempted silently, and `test_the_escalated_constraint_disagreements_are_still_unresolved`
 #: is what notices when a decision lands and this entry should go.
 #:
-#: TODO — UNRESOLVED, raised 2026-08-22 (W32-1), owner: maintainer.
+#: TODO — UNRESOLVED, raised 2026-08-22 (W32-1) as **OQ-MODEL-30**, owner: maintainer.
+#: Options and a recommendation are in `docs/open-questions.md`; `02` §10 mirrors it. The
+#: carve-out dies with the question — `test_the_escalated_constraint_disagreements_are_still_
+#: unresolved` goes red the moment either side moves.
 #: `objective-certificate` / `result.checks` / `minItems`: model 1, contract 8. **Neither
 #: number is the specification's.** `02` §4.7's dated 2026-08-18 amendment says *"All nine
 #: checks are emitted for every template, always"* and names them; the authored contract's
