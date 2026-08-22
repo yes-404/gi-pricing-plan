@@ -43,6 +43,7 @@ from model_schema import (
     Banding,
     CalibrationBin,
     ComplexityDiagnostic,
+    EbmFitResult,
     EbmSpec,
     Factor,
     FactorType,
@@ -71,13 +72,14 @@ from model_schema import (
     Weighting,
 )
 from pricing_core.modelling.factors import resolve_factors
-from pricing_core.modelling.predict import predict_glm, score_fitted
+from pricing_core.modelling.predict import predict_ebm, predict_glm, score_fitted
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
     "DiagnosticsResult",
     "backtest_model",
     "compute_diagnostics",
+    "compute_ebm_diagnostics",
     "compute_gbm_diagnostics",
     "deviance",
     "unit_deviance",
@@ -1033,4 +1035,77 @@ def compute_gbm_diagnostics(
             max_depth=max_depth,
             mean_depth=mean_depth,
         ),
+    )
+
+
+def compute_ebm_diagnostics(
+    result: EbmFitResult,
+    spec: EbmSpec,
+    factors: Sequence[Factor],
+    *,
+    train: pl.DataFrame,
+    holdout: pl.DataFrame,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+    max_factor_count: int | None = None,
+    min_exposure_per_parameter: float | None = None,
+    progress: ProgressCallback | None = None,
+) -> DiagnosticsResult:
+    """Everything `02` §3.8 asks of an EBM fit (FR-MODEL-49, 50, 54, 55, 81).
+
+    The universal block is the *same code* as the GLM's and GBM's — `_partition`
+    takes `mu` and knows nothing about how it was produced. The EBM's family is
+    gaussian (identity link); its complexity is the number of real bins across the
+    exported tables, counted off `bin_weights` — the estimator is gone by the time
+    this runs, and the tables are the model (ADR-0003). `glm` and `gbm` blocks are
+    `None`: this model has no coefficient vector, no trees, no eval curve, and its
+    dependence structure *is* the transparency artifact.
+    """
+    family, power = "gaussian", 1.5
+    report = progress or NullProgress()
+    report.check_cancelled()
+    report.update(0.05, "diagnostics: train")
+    train_part = _partition(
+        train, spec, factors,
+        mu=predict_ebm(result, train, factors,
+                       bandings=bandings, groupings=groupings),
+        family=family, power=power,
+        bandings=bandings, groupings=groupings,
+    )
+    report.check_cancelled()
+    report.update(0.30, "diagnostics: holdout")
+    holdout_part = _partition(
+        holdout, spec, factors,
+        mu=predict_ebm(result, holdout, factors,
+                       bandings=bandings, groupings=groupings),
+        family=family, power=power,
+        bandings=bandings, groupings=groupings,
+    )
+
+    report.update(0.95, "diagnostics: complexity")
+    # Real bins, not terms and not slots. `bin_weights` zeroes the unused base slot,
+    # the trailing missing-value slot and any empty bins, so the nonzero count is what
+    # the model actually uses — and a grid counts its cells, which is what makes a pair
+    # interaction's cost visible rather than one more term (FR-MODEL-81).
+    parameter_count = sum(
+        int((np.asarray(term.bin_weights) != 0).sum()) for term in result.terms
+    )
+    y = train[spec.response_column].cast(pl.Float64).to_numpy()
+    exposure_total = float(np.sum(_weights(spec, train)))
+    claims_total = float(np.sum(y))
+    complexity = ComplexityDiagnostic(
+        factor_count=len(factors),
+        parameter_count=parameter_count,
+        exposure_per_parameter=exposure_total / parameter_count if parameter_count else None,
+        claims_per_parameter=claims_total / parameter_count if parameter_count else None,
+        max_factor_count=max_factor_count,
+        min_exposure_per_parameter=min_exposure_per_parameter,
+    )
+
+    report.update(1.0, "diagnostics complete")
+    return DiagnosticsResult(
+        universal=UniversalDiagnostics(train=train_part, holdout=holdout_part),
+        complexity=complexity,
+        glm=None,
+        gbm=None,
     )
