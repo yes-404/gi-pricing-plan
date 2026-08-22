@@ -43,6 +43,7 @@ from model_schema import (
     Banding,
     CalibrationBin,
     ComplexityDiagnostic,
+    EbmSpec,
     Factor,
     FactorType,
     FeatureImportance,
@@ -669,17 +670,21 @@ def compute_diagnostics(
 
 
 def _family_of(fit: FitResult, spec: ModelSpec) -> tuple[str, float]:
-    """The family and Tweedie power the deviance-based metrics need, for either arm.
+    """The family and Tweedie power the deviance-based metrics need, for every arm.
 
     A GLM declares its family; a GBM's is implied by its objective, and `objective_family`
-    is the one place that mapping lives. Read here rather than passed in, because a caller
-    who had to supply it could supply a different one for the backtest than the fit used —
-    and A/E computed under two families is two numbers a reader will place side by side.
+    is the one place that mapping lives; an EBM's link is identity, which is gaussian —
+    the power is unused there and kept for the shared signature. Read here rather than
+    passed in, because a caller who had to supply it could supply a different one for the
+    backtest than the fit used — and A/E computed under two families is two numbers a
+    reader will place side by side.
     """
     if isinstance(spec, GbmSpec):
         from pricing_core.modelling.gbm import objective_family
 
         return objective_family(spec)
+    if isinstance(spec, EbmSpec):
+        return "gaussian", 1.5
     assert isinstance(spec, GlmSpec)
     assert isinstance(fit, GlmFitResult)
     return spec.family, _power_of(fit, spec)

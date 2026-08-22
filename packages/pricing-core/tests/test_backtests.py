@@ -27,6 +27,7 @@ import polars as pl
 import pytest
 
 from model_schema import (
+    EbmSpec,
     Factor,
     FactorType,
     GbmFunctionRef,
@@ -36,7 +37,13 @@ from model_schema import (
     SplitRef,
     Weighting,
 )
-from pricing_core.modelling import backtest_model, compute_diagnostics, fit_gbm, fit_glm
+from pricing_core.modelling import (
+    backtest_model,
+    compute_diagnostics,
+    fit_ebm,
+    fit_gbm,
+    fit_glm,
+)
 
 TRUE = {"a": 1.0, "b": 2.0, "c": 3.0}
 BASE_RATE = 0.10
@@ -228,3 +235,50 @@ def test_a_gbm_is_backtested_through_the_same_path(backend: str) -> None:
 
     assert 1.1 < summary.partition.ae_overall < 1.35
     assert summary.partition.rows == later.height
+
+
+@pytest.mark.req("FR-MODEL-57")
+def test_an_ebm_backtests_through_the_shared_path() -> None:
+    """FR-MODEL-57 says nothing about model type, so neither does this.
+
+    The EBM arm runs through the same `_partition` over `score_fitted` + `_family_of`:
+    A/E by level, lift, Gini and calibration are functions of `(y, mu, weights)` and
+    know nothing about how `mu` was produced — for an EBM, `mu` is the additive lookups
+    evaluated on this frame, and the identity link makes it a gaussian deviance.
+    """
+    factors = [_factor("area")]
+    spec = EbmSpec(
+        model_family_slug="freq",
+        dataset_version_id=uuid4(),
+        split_ref=SplitRef(split_artifact_id=uuid4()),
+        response_column="claim_count",
+        objective="rmse",
+        factors=tuple(f.id for f in factors),
+    )
+    train = _book()
+    fit = fit_ebm(train, spec, factors)
+
+    # The train-side reconciliation asserted before the later period is read — an
+    # unconverged EBM's A/E is shrinkage, and a bound calibrated against it would be
+    # a bound accepting almost any arithmetic (the GBM rule, same reason).
+    on_train = backtest_model(
+        fit, spec, factors, train,
+        model_ref=MODEL_REF,
+        dataset_version_ref=LATER_REF,
+        fitted_on_ref=FITTED_ON_REF,
+    )
+    assert on_train.partition.ae_overall == pytest.approx(1.0, abs=0.05)
+
+    later = _book(seed=999, uplift=1.30)
+    summary = backtest_model(
+        fit, spec, factors, later,
+        model_ref=MODEL_REF,
+        dataset_version_ref=LATER_REF,
+        fitted_on_ref=FITTED_ON_REF,
+    )
+
+    assert 1.1 < summary.partition.ae_overall < 1.4
+    assert summary.partition.rows == later.height
+    assert summary.partition.lift
+    assert summary.partition.calibration
+    assert np.isfinite(summary.partition.gini)

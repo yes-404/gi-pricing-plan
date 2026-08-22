@@ -26,6 +26,7 @@ from model_schema import (
 )
 from pricing_core.modelling.ebm import EbmFitError, fit_ebm
 from pricing_core.modelling.factors import resolve_factors
+from pricing_core.modelling.predict import PredictionError, predict_ebm
 
 
 def _book(n: int = 2000, seed: int = 20260821) -> pl.DataFrame:
@@ -279,6 +280,77 @@ def test_an_interaction_fit_exports_a_rectangular_grid() -> None:
     x_sweep, _ = _design(sweep, pair)
     rebuilt = _rebuilt(fit, _slots(fit, estimator, x_sweep))
     assert np.allclose(rebuilt, estimator.predict(x_sweep), atol=1e-9)
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-37 — `predict_ebm`, scoring from the exported tables
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-37")
+def test_scoring_matches_interpret_on_a_held_out_frame() -> None:
+    """`predict_ebm` agrees with the fitted estimator on a frame the fit never saw.
+
+    `interactions=1` on purpose: the pair term is scored through the 2-D lookup
+    `scores[slots[a], slots[b]]`, and this is the test that measures it against
+    `interpret` — an unexercised branch of the scorer is a silently wrong grid.
+
+    The same `atol=1e-9` as the Task 6 round trip: the scorer re-runs the same
+    arithmetic the estimator ran — lookups into the exported tables — so the tolerance
+    is a reproduction tolerance, not a model tolerance.
+    """
+    data = _book()
+    spec = _spec(interactions=1)
+    fit = fit_ebm(data, spec, FACTORS, bandings=BANDINGS)
+
+    x, feature_types = _design(data, FACTORS)
+    estimator = _estimator(spec, feature_types)
+    estimator.fit(x, data["claim_count"].cast(pl.Float64).to_numpy())
+
+    held_out = _book(seed=7)
+    mu = predict_ebm(fit, held_out, FACTORS, bandings=BANDINGS)
+    x_held, _ = _design(held_out, FACTORS)
+    assert np.allclose(mu, estimator.predict(x_held), atol=1e-9)
+
+
+@pytest.mark.req("FR-MODEL-32")
+def test_an_unseen_level_is_refused_by_name() -> None:
+    """A level the fit never saw has no slot — inventing one would score it as
+    whichever level shares the number (the `gbm._encode` rule, FR-MODEL-32)."""
+    fit = fit_ebm(_book(), _spec(), FACTORS, bandings=BANDINGS)
+    frame = pl.DataFrame({"speed": [30.0], "area": ["Q"], "age": [40.0]})
+
+    with pytest.raises(PredictionError) as error:
+        predict_ebm(fit, frame, FACTORS, bandings=BANDINGS)
+    assert error.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert "area" in str(error.value)
+
+
+@pytest.mark.req("FR-MODEL-37")
+def test_a_scored_term_resolves_from_the_artifact_alone() -> None:
+    """The artifact's `feature_order` and `bins` are the only ground truth.
+
+    Fresh `Factor` identities and a fresh frame: the fit-time `factors` and `data` are
+    dropped, and only the slugs have to match — scoring a model needs the model, and
+    the model is the tables.
+    """
+    data = _book()
+    spec = _spec()
+    fit = fit_ebm(data, spec, FACTORS, bandings=BANDINGS)
+
+    x, feature_types = _design(data, FACTORS)
+    estimator = _estimator(spec, feature_types)
+    estimator.fit(x, data["claim_count"].cast(pl.Float64).to_numpy())
+
+    fresh = [
+        _factor("speed", "speed"),
+        _factor("area", "area"),
+        _factor("age_band", "age", type=FactorType.BANDING, banding_id=AGE_BANDING.id),
+    ]
+    frame = _book(seed=11)
+    mu = predict_ebm(fit, frame, fresh, bandings=BANDINGS)
+    x_fresh, _ = _design(frame, fresh)
+    assert np.allclose(mu, estimator.predict(x_fresh), atol=1e-9)
 
 
 # --------------------------------------------------------------------------------------

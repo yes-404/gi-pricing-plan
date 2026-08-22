@@ -1,9 +1,10 @@
-"""Scoring a fitted GLM from its artifact alone (`02` FR-MODEL-62, ADR-0003).
+"""Scoring a fitted GLM or EBM from its artifact alone (`02` FR-MODEL-62/37, ADR-0003).
 
-The point of this module is what it does **not** import. `glum` fits; nothing here needs
-it. A Model is a set of named coefficients, and scoring is rebuilding the design columns
-those names describe and taking a dot product — which a process that never ran the fitting
-library can do, which is the whole of ADR-0003.
+The point of this module is what it does **not** import. `glum` fits and `interpret`
+fits; nothing here needs either. A GLM is a set of named coefficients, and scoring is
+rebuilding the design columns those names describe and taking a dot product; an EBM is
+its additive lookup tables, and scoring is the lookups themselves — both things a
+process that never ran the fitting library can do, which is the whole of ADR-0003.
 
 The term naming is the contract between `glm._design` and this module: a categorical
 contributes `slug[level]` for every level except the base, and a continuous factor
@@ -25,6 +26,8 @@ import polars as pl
 from model_schema import (
     Banding,
     Coefficient,
+    EbmFitResult,
+    EbmNumericBins,
     Factor,
     FitResult,
     GbmFitResult,
@@ -39,6 +42,7 @@ __all__ = [
     "PredictionError",
     "detect_quantile_crossing",
     "linear_predictor",
+    "predict_ebm",
     "predict_glm",
     "predict_glm_interval",
     "score_fitted",
@@ -331,6 +335,74 @@ def predict_glm_interval(
     return expected, np.minimum(first, second), np.maximum(first, second)
 
 
+def predict_ebm(
+    fit: EbmFitResult,
+    data: pl.DataFrame,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> npt.NDArray[np.float64]:
+    """`μ` for an EBM, from its additive lookup tables alone (FR-MODEL-37, ADR-0003).
+
+    No `interpret` import, no spec, no offset, no link inversion: the tables are the
+    model, the link is identity, and `μ = intercept + Σ term scores`. The index rule
+    is the one the fit recorded: numeric `np.searchsorted(cuts, v, side="right") + 1`
+    (slot 0 is the unused base slot — below-range values land in bin 1, above-range
+    in the last populated bin, no clamping), categorical by position in `levels` plus
+    one. A level the fit never saw has no slot, and inventing one would score it as
+    whichever level shares the number — `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` (the
+    `gbm._encode` rule, FR-MODEL-32).
+    """
+    matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
+
+    # One slot array per feature, positional against `fit.feature_order` — the same
+    # relationship `fit.bins` and `EbmTerm.term_features` use, so a term's lookup can
+    # only ever touch the feature it names.
+    slots: list[npt.NDArray[np.int64]] = []
+    for slug, bins in zip(fit.feature_order, fit.bins, strict=True):
+        column = matrix.terms.get(slug)
+        if column is None:
+            raise PredictionError(
+                "MODEL_TERM_UNRESOLVED",
+                f"a term names factor {slug!r}, which this frame does not resolve. "
+                "Scoring with the term dropped would silently move every prediction "
+                "toward the intercept.",
+                terms=[slug],
+            )
+        if isinstance(bins, EbmNumericBins):
+            values = matrix.frame[column].cast(pl.Float64).to_numpy()
+            # Non-finite values follow `np.searchsorted` semantics exactly — the same
+            # rule the fitted estimator applied, so scoring agrees with `interpret`
+            # on every input by construction.
+            slots.append(
+                np.searchsorted(np.asarray(bins.cuts), values, side="right") + 1
+            )
+        else:
+            lookup = {level: i + 1 for i, level in enumerate(bins.levels)}
+            text = matrix.frame[column].cast(pl.String)
+            unknown = sorted({str(level) for level in text.unique().to_list()} - set(lookup))
+            if unknown:
+                raise PredictionError(
+                    "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
+                    f"factor {slug!r} carries level {unknown[0]!r} that the fitted "
+                    "model never saw (FR-MODEL-32).",
+                    terms=[slug],
+                )
+            slots.append(text.replace_strict(lookup, return_dtype=pl.Int32).to_numpy())
+
+    eta = np.full(data.height, fit.intercept, dtype=np.float64)
+    for term in fit.terms:
+        scores = np.asarray(term.scores)
+        if len(term.term_features) == 2:
+            first, second = term.term_features
+            eta += scores[slots[first], slots[second]]
+        else:
+            (feature,) = term.term_features
+            eta += scores[slots[feature]]
+    return eta
+
+
 def score_fitted(
     fit: FitResult,
     spec: ModelSpec,
@@ -342,20 +414,25 @@ def score_fitted(
     groupings: Mapping[UUID, Grouping] | None = None,
     booster: bytes | None = None,
 ) -> npt.NDArray[np.float64]:
-    """`μ` for a fitted model of **either** kind, on the mean scale.
+    """`μ` for a fitted model of **any** kind, on the mean scale.
 
-    The dispatch is the only thing that separates scoring a GLM from scoring a GBM, and two
-    callers need it: the comparison (`wf-01` E1, an actuary weighing a booster's lift
-    against a GLM's transparency) and the peril structure (E4, where each peril's models are
-    scored before they are summed). It lives here rather than in either, because a second
-    copy of a dispatch is a second place for the two kinds to diverge — and a peril priced
-    through the wrong branch is a silently wrong risk premium.
+    The dispatch is the only thing that separates scoring a GLM from scoring a GBM or an
+    EBM, and the callers need it: the comparison (`wf-01` E1, an actuary weighing a
+    booster's lift against a GLM's transparency), the peril structure (E4, where each
+    peril's models are scored before they are summed), and the backtest (FR-MODEL-57,
+    where every arm is re-measured on data it never saw). It lives here rather than in
+    any of them, because a second copy of a dispatch is a second place for the kinds to
+    diverge — and a peril priced through the wrong branch is a silently wrong risk
+    premium.
 
-    A GBM's `booster` is required: a GLM's fit result *is* its model, a GBM's is a reference
-    to bytes the caller must fetch (ADR-0001 keeps that fetch out of this package).
+    `booster` is required only for a GBM: a GLM's fit result *is* its model, a GBM's is
+    a reference to bytes the caller must fetch (ADR-0001 keeps that fetch out of this
+    package), and an EBM's *is* its model in the strongest sense — the exported lookup
+    tables themselves, which `predict_ebm` scores without the fitting stack.
 
-    `model_offset` is forwarded on the GLM arm only (FR-MODEL-24): a `GbmSpec` declaring
-    `kind="model"` is schema-refused, so there is no GBM arm that could use it.
+    `model_offset` is forwarded on the GLM arm only (FR-MODEL-24): a `GbmSpec` or
+    `EbmSpec` declaring `kind="model"` is schema-refused, so there is no arm that could
+    use it.
     """
     if isinstance(fit, GbmFitResult):
         from pricing_core.modelling.gbm import predict_gbm
@@ -372,6 +449,8 @@ def score_fitted(
             ).to_numpy(),
             dtype=np.float64,
         )
+    if isinstance(fit, EbmFitResult):
+        return predict_ebm(fit, data, factors, bandings=bandings, groupings=groupings)
     assert isinstance(fit, GlmFitResult)
     assert isinstance(spec, GlmSpec)
     return predict_glm(

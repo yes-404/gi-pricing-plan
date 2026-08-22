@@ -17,7 +17,10 @@ fitting stack raises.
 
 `xgboost` and `lightgbm` are deliberately not blocked. `02` FR-MODEL-62 scores a GBM by
 loading its JSON booster, so a boosting library is a scoring dependency by design; what the
-split sheds is the libraries that fit.
+split sheds is the libraries that fit. `interpret` is blocked like `glum`: an EBM's fit
+exports the additive lookup tables and `predict_ebm` rescored them (FR-MODEL-37) — the
+tables are the model, and the child proves it by scoring with the fitting library
+unimportable.
 """
 
 from __future__ import annotations
@@ -31,8 +34,17 @@ import numpy as np
 import polars as pl
 import pytest
 
-from model_schema import Factor, FactorType, GlmSpec, OffsetSpec
+from model_schema import (
+    EbmSpec,
+    Factor,
+    FactorType,
+    GlmSpec,
+    OffsetSpec,
+    SplitRef,
+)
+from pricing_core.modelling.ebm import fit_ebm
 from pricing_core.modelling.glm import fit_glm
+from pricing_core.modelling.predict import predict_ebm
 
 #: Run in the child, where the fitting stack must not be reachable. Everything it needs
 #: arrives as JSON on argv — which is also the point: a scoring process receives artifacts,
@@ -40,7 +52,7 @@ from pricing_core.modelling.glm import fit_glm
 CHILD = r'''
 import json, sys
 
-BLOCKED = {"glum", "sklearn", "celery", "dagster"}
+BLOCKED = {"glum", "sklearn", "celery", "dagster", "interpret"}
 
 
 class Blocker:
@@ -57,17 +69,23 @@ class Blocker:
 sys.meta_path.insert(0, Blocker())
 
 import polars as pl  # noqa: E402
-from model_schema import Factor, GlmFitResult, GlmSpec  # noqa: E402
+from model_schema import EbmFitResult, Factor, GlmFitResult, GlmSpec  # noqa: E402
 
-from pricing_core.modelling.predict import predict_glm  # noqa: E402
+from pricing_core.modelling.predict import predict_ebm, predict_glm  # noqa: E402
 
 payload = json.loads(sys.argv[1])
-fit = GlmFitResult.model_validate_json(payload["fit"])
-spec = GlmSpec.model_validate_json(payload["spec"])
+kind = payload["kind"]
 factors = [Factor.model_validate_json(f) for f in payload["factors"]]
 frame = pl.DataFrame(payload["rows"])
-
-mu = predict_glm(fit, frame, factors, spec)
+if kind == "glm":
+    fit = GlmFitResult.model_validate_json(payload["fit"])
+    spec = GlmSpec.model_validate_json(payload["spec"])
+    mu = predict_glm(fit, frame, factors, spec)
+elif kind == "ebm":
+    fit = EbmFitResult.model_validate_json(payload["fit"])
+    mu = predict_ebm(fit, frame, factors)
+else:
+    raise SystemExit(f"unknown scoring kind {kind!r}")
 
 for blocked in BLOCKED:
     assert blocked not in sys.modules, f"{blocked} reached sys.modules while scoring"
@@ -119,6 +137,7 @@ def test_a_glm_scores_in_a_process_where_the_fitting_stack_cannot_be_imported() 
 
     payload = json.dumps(
         {
+            "kind": "glm",
             "fit": fit.model_dump_json(),
             "spec": spec.model_dump_json(),
             "factors": [f.model_dump_json() for f in factors],
@@ -139,16 +158,67 @@ def test_a_glm_scores_in_a_process_where_the_fitting_stack_cannot_be_imported() 
 
 
 @pytest.mark.req("NFR-PLAT-11")
-def test_the_blocker_would_notice_a_fitting_import() -> None:
+@pytest.mark.parametrize("blocked", ["glum", "interpret"])
+def test_the_blocker_would_notice_a_fitting_import(blocked: str) -> None:
     """The guard above is only worth its runtime if the block actually blocks.
 
     Without this, a `Blocker` that silently returned `None` for everything would let the
-    test above pass by importing `glum` freely — a green test proving nothing, which is the
-    failure mode a check like this is most prone to.
+    tests above pass by importing the fitting stack freely — a green test proving nothing,
+    which is the failure mode a check like this is most prone to. Parametrized over both
+    fitting libraries each arm's test relies on being absent.
     """
-    child = CHILD.split("payload = json.loads")[0] + "import glum\n"
+    child = CHILD.split("payload = json.loads")[0] + f"import {blocked}\n"
     completed = subprocess.run(
         [sys.executable, "-c", child], capture_output=True, text=True, check=False
     )
     assert completed.returncode != 0
     assert "NFR-PLAT-11 forbids it" in completed.stderr
+
+
+@pytest.mark.req("NFR-PLAT-11")
+@pytest.mark.req("FR-MODEL-37")
+def test_an_ebm_scores_in_a_process_where_interpret_cannot_be_imported() -> None:
+    """The strongest ADR-0003 statement in the suite: the tables ARE the model.
+
+    Fitted with `interpret` here, then the artifact JSON alone is handed to a child where
+    `import interpret` raises. `predict_ebm` rescored the frame from the exported lookup
+    tables, and the child's totals reproduce the in-process scoring exactly — a scoring
+    process receives artifacts, never a live fitting session.
+    """
+    frame = _book()
+    factors = [
+        Factor(
+            id=uuid4(), slug="area", dataset_id=uuid4(), version=1,
+            type=FactorType.IDENTITY, source_columns=("area",),
+        )
+    ]
+    spec = EbmSpec(
+        model_family_slug="motor-freq",
+        dataset_version_id=uuid4(),
+        split_ref=SplitRef(split_artifact_id=uuid4()),
+        response_column="claim_count",
+        objective="rmse",
+        factors=tuple(f.id for f in factors),
+    )
+    fit = fit_ebm(frame, spec, factors)
+    in_process = predict_ebm(fit, frame, factors)
+
+    payload = json.dumps(
+        {
+            "kind": "ebm",
+            "fit": fit.model_dump_json(),
+            "factors": [f.model_dump_json() for f in factors],
+            "rows": frame.to_dict(as_series=False),
+        }
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", CHILD, payload],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    scored = json.loads(completed.stdout)
+    assert scored["rows"] == frame.height
+    assert scored["total"] == pytest.approx(float(in_process.sum()), rel=1e-9)
