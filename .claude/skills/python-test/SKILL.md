@@ -212,6 +212,55 @@ hardest in a **worktree**, where `uv sync --all-packages --dev` has to be run ag
 and it is easy to assume the shared Postgres came with it. Run `alembic upgrade head` after
 checking out any branch that adds a migration, before reading a single failure.
 
+### The test database is never cleaned, and `TRUNCATE` will not clean it
+
+`conftest_db.py`'s `database` fixture creates an engine per test and disposes it. **Nothing
+rolls back and nothing truncates** — every row every test writes stays, and it is the same
+database `scripts/demo.py` seeds into. Measured 2026-08-22: six days of runs left **766 MB**,
+11 915 `models` rows across 737 throwaway workspaces and 448 k `audit_events`. Nothing breaks,
+but a hand-written query against it answers for the debris of every branch anyone has tested
+— which is how "find the stale `v9:` digests" returns 1045 rows that are all test fixtures.
+
+**`TRUNCATE` is refused, by design.** `audit_events` carries two triggers,
+`audit_events_no_modify` and `audit_events_no_truncate`, enforcing the append-only audit
+chain in the database rather than only in the application:
+
+```
+ERROR: ... CONTEXT: PL/pgSQL function audit_events_append_only() line 3 at RAISE
+```
+
+One `DO` block truncating every table is a single transaction, so that refusal rolls the
+whole statement back and **nothing at all is cleaned** — including the 40 tables that would
+have truncated fine. **Do not disable the triggers to force it through.** A governance guard
+switched off during a cleanup and not switched back on is precisely the defect the guard
+exists to prevent, and it fails silently ever after.
+
+Drop and recreate instead. It rebuilds the triggers from the migration that declares them,
+so the guard cannot be left off by forgetting a step:
+
+```bash
+docker exec gi-pricing-postgres-1 psql -U gipricing -d postgres \
+  -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+      WHERE datname='gipricing' AND pid <> pg_backend_pid();"
+docker exec gi-pricing-postgres-1 psql -U gipricing -d postgres -v ON_ERROR_STOP=1 \
+  -c "DROP DATABASE gipricing;" -c "CREATE DATABASE gipricing OWNER gipricing;"
+export GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+uv run alembic upgrade head
+```
+
+Then confirm the guard came back, because a rebuild is exactly where it could silently not:
+
+```bash
+docker exec gi-pricing-postgres-1 psql -U gipricing -d gipricing -tAc \
+  "SELECT tgname FROM pg_trigger WHERE tgrelid='audit_events'::regclass AND NOT tgisinternal;"
+# expects both: audit_events_no_modify, audit_events_no_truncate
+```
+
+`pg_dump | gzip` first if you would regret it — the 766 MB above compressed to 93 MB in under
+a minute. Two traps on the way out: `psql ... 2>&1 | tail -3; echo $?` reports **tail's**
+status, so a refused statement reads as a clean exit — read psql's own code or the `ERROR:`
+line. And the demo seed goes with everything else; `uv run python scripts/demo.py` rebuilds it.
+
 ## A gate run is only valid if the tree held still for all of it
 
 The gate is eight commands over several minutes, and every one of them reads the working
@@ -465,6 +514,12 @@ wait it out — `pgrep -af "bin/pytest"` confirms the process is alive, then kil
 the fixture for a nested `unit_of_work`.
 
 ## Verified
+
+2026-08-22 — W5, resetting the shared test database after the GBM weighting slice. `TRUNCATE`
+over every table was refused by `audit_events`' append-only triggers and rolled back whole;
+the drop-and-recreate path above was run end to end, `alembic upgrade head` returned to the
+same head, both triggers were confirmed restored, and 62 DB-backed tests passed against the
+rebuilt schema (766 MB to 9.9 MB).
 
 2026-08-19 — W5, the GLM approximation as a Model. The `git checkout --` rule above cost a
 whole task's rewrite: reverting a deliberately-broken file with `git checkout -- <file>` to
