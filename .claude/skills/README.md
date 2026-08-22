@@ -49,8 +49,8 @@ to be read as one: `using-superpowers` routes to the others by name.
 |---|---|---|
 | [`using-superpowers`](using-superpowers/SKILL.md) | The router — find and invoke a skill before responding | Read first. Its own "user instructions outrank skills" line is why the precedence rule had to be written into `CLAUDE.md` §12 to bind |
 | [`brainstorming`](brainstorming/SKILL.md) | Turning an idea into a design before implementation | Bundles an optional local visual companion — see the security note below |
-| [`writing-plans`](writing-plans/SKILL.md) | A written implementation plan, bite-sized, for an engineer with no context | Pairs with this repo's `spec-change`: the spec is the design, the plan is the execution order |
-| [`executing-plans`](executing-plans/SKILL.md) | Executing a written plan in a fresh session, with review checkpoints | |
+| [`writing-plans`](writing-plans/SKILL.md) | A written implementation plan, bite-sized, for an engineer with no context | Pairs with this repo's `spec-change`: the spec is the design, the plan is the execution order. Saves to `docs/plans/`, where the audit reads it — see the deviation below |
+| [`executing-plans`](executing-plans/SKILL.md) | Executing a written plan in a fresh session, with review checkpoints | Upstream never named a plan location; here it reads from `docs/plans/` |
 | [`subagent-driven-development`](subagent-driven-development/SKILL.md) | Fresh implementer subagent per task, review after each | Three bundled shell scripts; writes to an untracked `.superpowers/sdd/` |
 | [`dispatching-parallel-agents`](dispatching-parallel-agents/SKILL.md) | 2+ independent tasks with no shared state | |
 | [`systematic-debugging`](systematic-debugging/SKILL.md) | Root cause before any fix — symptom fixes are failure | The rule this repository already lives by: a spec/code disagreement is *resolved*, never quietly matched (`CLAUDE.md` §0) |
@@ -97,6 +97,23 @@ access, no writes outside the invoking project. Every outbound URL in the prose 
   behaviour the maintainer asked for. Noted because prior reviews here recorded "no
   instructions aimed at the agent beyond their subject" — this set does not meet that
   description, deliberately.
+
+**One deviation from upstream: where a plan is saved.** `CLAUDE.md` §12 keeps vendored
+files as upstream wrote them; this is the third recorded exception, and the first that is a
+project convention rather than a path that fails to resolve. Upstream saves plans to
+`docs/superpowers/plans/`, and `executing-plans` never says where to find one at all. This
+repository files them in `docs/plans/`, so five lines changed across four skills:
+`writing-plans` (the save path, and the handoff sentence that quotes it back to the user),
+`executing-plans` (step 1.2 now names the directory), and the worked examples in
+`subagent-driven-development` and `requesting-code-review`.
+
+The directory is load-bearing rather than a preference. `docs/plans/` sits inside
+`scripts/audit-docs.py`'s scope, so a filed plan's links, requirement citations and tables
+are checked like every other document in the suite — the 20 plans filed on 2026-08-22 cite
+116 distinct requirements between them, and three real defects surfaced the moment they
+moved in. `writing-plans` also gained a two-line pointer to `docs/plans/README.md`, which
+carries the conventions. Nothing else in the four skills changed; neither `.superpowers/sdd/`
+nor `.planning/` moved, both still hold live scratch and both stay git-ignored.
 
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a

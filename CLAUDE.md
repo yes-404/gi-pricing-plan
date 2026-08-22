@@ -74,6 +74,7 @@ the maths.
 │   ├── contracts/            ◐ JSON Schema + OpenAPI — partly generated, partly Phase-0
 │   │                           hand-written
 │   ├── research/             ✔ spike findings, with what each one changed
+│   ├── plans/                ✔ filed implementation plans and their execution ledgers
 │   ├── roadmap.md            ✔ phases, workstreams, decision gates
 │   ├── open-questions.md     ✔ every unresolved choice, gated by phase
 │   ├── skills-map.md         ✔ stack component → where used → skills (§10)
@@ -231,6 +232,11 @@ says what one module does; a workflow says what actually happens, across all of 
 
 `contracts/` holds JSON Schema and OpenAPI **generated from `model-schema`** and committed;
 CI fails on drift (FR-PLAT-48). It is a published artifact — never hand-edit it.
+
+`plans/` files the implementation plans work was done from, and the ledgers recording what
+executing them actually did. A filed plan is frozen at its date and **is not edited to agree
+with today's repository** — `docs/plans/README.md` has that rule and the four conventions
+that keep a plan passing the audit.
 
 `skills-map.md` maps stack component → where it is used → skills to research (§10).
 `open-questions.md` carries every unresolved choice, gated by phase.
@@ -489,9 +495,10 @@ Skills that teach an approach §3 has decided against were **not** taken (Option
 React/shadcn), because a skill teaching a rejected approach is worse than a missing one. The
 same test governs `.claude/agents/` — only **three** of upstream's 158 survived it, and
 `.claude/agents/README.md` records what each is for and why the rest were refused.
-Vendored skills are kept as upstream wrote them and excluded from `ruff`, with two recorded
-exceptions — both a path variable that does not resolve for a project-level checkout, both
-evidenced in the README.
+Vendored skills are kept as upstream wrote them and excluded from `ruff`, with three recorded
+exceptions — two a path variable that does not resolve for a project-level checkout, and the
+plan directory the superpowers set writes to (`docs/plans/`, where the audit can read it).
+All three are evidenced in the README.
 
 **graphify's semantic pass over docs, PDFs and images calls a configured LLM provider.**
 Code extraction is local tree-sitter and always safe; the semantic pass must never be
