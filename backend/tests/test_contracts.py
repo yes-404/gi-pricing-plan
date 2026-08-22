@@ -877,6 +877,21 @@ REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
             "perils.[].large_loss.evidence_blob.sha256",
         }
     ),
+    #: Added 2026-08-22 (W32-1). `grouping` had no entry, which is why
+    #: `evidence.source_level_stats` could be declared in the contract since Phase 0 and
+    #: absent from `GroupingEvidence` throughout with every check green: the field-name
+    #: comparison reads top-level names only, and the type comparison reads only paths
+    #: present on both sides — an undeclared nested field is on neither list.
+    "grouping": frozenset(
+        {
+            "evidence.source_level_stats.[].level",
+            "evidence.source_level_stats.[].exposure_years",
+            "evidence.source_level_stats.[].claim_count",
+            "evidence.target_level_stats.[].level",
+            "evidence.target_level_stats.[].exposure_years",
+            "evidence.target_level_stats.[].claim_count",
+        }
+    ),
 }
 
 
