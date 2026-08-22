@@ -67,8 +67,8 @@
     },
     "ebm_shape_functions": {
       "type": ["object", "null"],
-      "description": "EBMs are transparent by construction; their term shape functions export directly as rateable tables (FR-MODEL-37).",
-      "properties": {"terms_blob": {"type": "string"}}
+      "description": "EBMs are transparent by construction; their term shape functions export directly as rateable tables (FR-MODEL-37). Amended 2026-08-22 (W5, EBM slice): `terms_blob` is non-empty, mirroring `EbmShapeFunctions.terms_blob`'s `min_length=1`.",
+      "properties": {"terms_blob": {"type": "string", "minLength": 1}}
     },
     "fidelity_statement": {
       "type": "string",
