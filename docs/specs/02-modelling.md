@@ -551,11 +551,23 @@ Common block:
 applied to the **response at fit time** (FR-MODEL-73). Two models differing only in their
 cap are different models, and must not collide on `spec_hash`.
 
-> **The `spec_hash` version lineage, completed 2026-08-22 (FR-MODEL-86).** This section
-> recorded `v4 → v5` and `v8 → v9` beside the fields that caused them and skipped the three
-> transitions between; `backend/src/app/platform/modelling.py`'s comment block carried all
-> of them. Recorded here so the two agree, in the order they happened:
+> **The `spec_hash` version lineage, assembled 2026-08-22 and corrected the same day
+> (FR-MODEL-86; W5, the closure slice).** This section recorded `v4 → v5` and `v8 → v9`
+> beside the fields that caused them and skipped the three transitions between;
+> `backend/src/app/platform/modelling.py`'s comment block carried all of them. Recorded here
+> so the two agree, in the order they happened.
 >
+> **The list as first assembled skipped `v3 → v4` itself**, and that is this note's own
+> failure mode one level up: a list written to reconcile two records against each other
+> omitted a transition *both* of them held — `modelling.py:113` and FR-MODEL-100's row in §3
+> each carry it. It is restored to its chronological place below rather than appended, so
+> the sequence reads without a gap and nobody infers from the ordering that `v4` arrived
+> before `v3`.
+>
+> - **`v3 → v4`** (2026-08-19, FR-MODEL-100) — `interval_for` joined the payload: a bound's
+>   link to the model it bounds is part of that model's identity, so two bounds taken
+>   against different central versions must not collide on one digest and be answered for
+>   each other by FR-MODEL-66's dedup.
 > - **`v5 → v6`** (2026-08-21, FR-MODEL-20/53) — `select_by` and `cv` joined the payload:
 >   how a fit is selected, one alpha or a CV scan of `cv.alphas`, is part of the fitted
 >   question, and two specs differing there must not share a digest.
