@@ -1179,6 +1179,36 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
     )
 
 
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize(
+    ("walker", "slug", "path"),
+    [
+        (_required_map, "grouping", "evidence.source_level_stats.[]"),
+        (_required_map, "model", "fit_result.bins.[]"),
+        (_closure_map, "model-spec", "family_params"),
+        (_constraint_map, "grouping", "evidence.source_level_stats.[].claim_count"),
+    ],
+)
+def test_each_new_walker_reaches_a_nested_path_it_is_supposed_to(
+    walker: Any, slug: str, path: str
+) -> None:
+    """The control for the three comparisons above, at the depth where they go quiet.
+
+    A comparison that intersects two maps is green when both maps are empty. Counting what
+    a walker produced does not catch a walker that stopped descending — the count shrinks
+    with it, so any threshold expressed as a fraction of its own output moves out of the
+    way of the defect it exists to catch. So this names one path per walker instead, each
+    one nested at least two levels down and each chosen because a plausible refactor of the
+    walker would lose it.
+    """
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+    reached = walker(authored, authored, AUTHORED)
+    assert path in reached, (
+        f"{walker.__name__} no longer reaches {path} in {slug} — the comparison built on "
+        "it is now silent about everything beneath that point"
+    )
+
+
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
 #: noticed. Each must be a path the comparison reaches **on both sides**.
 #:
