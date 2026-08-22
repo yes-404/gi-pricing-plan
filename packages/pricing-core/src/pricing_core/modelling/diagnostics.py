@@ -63,6 +63,8 @@ from model_schema import (
     MonotonicDirection,
     MonotonicityCheck,
     PartialDependence,
+    PartialDependenceOmission,
+    PartialDependenceOmissionReason,
     PartialDependencePoint,
     PartitionDiagnostics,
     PermutationImportance,
@@ -806,6 +808,16 @@ def _importances(result: GbmFitResult, booster: bytes) -> tuple[FeatureImportanc
     )
 
 
+#: FR-MODEL-118's cap on a categorical partial-dependence grid.
+#:
+#: **20 is a measurement, not a chart convention.** NFR-MODEL-14 measured 0.0480 fits
+#: per full-population scoring pass, so 20 passes is 0.96 of one fit — which puts a
+#: GBM's per-factor block at the same order as NFR-MODEL-13's budget for the GLM's, one
+#: fit wall-clock per tested factor, and leaves a numeric factor's ten quantile points
+#: already inside it.
+DEFAULT_PARTIAL_DEPENDENCE_LEVELS = 20
+
+
 def _permutation_importances(
     result: GbmFitResult,
     booster: bytes,
@@ -838,6 +850,12 @@ def _permutation_importances(
 
     out: list[PermutationImportance] = []
     for index, factor in enumerate(factors):
+        # FR-MODEL-119. An `interaction` names no source columns of its own — its
+        # columns are its operands' — so indexing here raised `IndexError` for any GBM
+        # declaring one, which no test covered because none fitted a GBM whose factor
+        # *list* held a cross. Skipped until OQ-MODEL-28 settles what to permute.
+        if not factor.source_columns:
+            continue
         column = factor.source_columns[0]
         if column not in holdout.columns:
             continue
@@ -872,12 +890,24 @@ def _sweep(
     *,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
-) -> tuple[list[str], list[float], list[float]]:
+    max_levels: int,
+) -> tuple[list[str], list[float], list[float], PartialDependenceOmission | None]:
     """Mean prediction with one factor held at each of its values, over the whole book.
 
     The book is swept rather than sampled: partial dependence averaged over a sample and
     partial dependence averaged over the portfolio differ exactly where exposure is thin,
     which is where the curve is most dramatic and least trustworthy.
+
+    **A categorical grid is capped at `max_levels` (FR-MODEL-118).** Each bar costs one
+    full-population scoring pass, so an uncapped column costs one pass per distinct
+    level — 10 000 of them for a column at the scale NFR-MODEL-3 names. The levels the
+    cap drops are **named, not pooled**: a pooled `other` bar would have to be *scored*,
+    and a synthetic level the fitted model never saw is refused at encoding by
+    FR-MODEL-32, so there is no value the column could be held at to produce one.
+
+    Levels are ranked by the same share `PartialDependencePoint.exposure_share` reports,
+    so the cap keeps what the artifact will call the largest and the two cannot
+    disagree.
     """
     from pricing_core.modelling.gbm import predict_gbm
 
@@ -892,10 +922,25 @@ def _sweep(
         grid = sorted(dict.fromkeys(grid))
         labels = [f"{value:g}" for value in grid]
         values: list[object] = list(grid)
+        omission: PartialDependenceOmission | None = None
     else:
-        levels = sorted({v for v in series.cast(pl.String).unique().to_list() if v is not None})
-        labels = list(levels)
-        values = list(levels)
+        counts = series.cast(pl.String).value_counts(sort=True)
+        ranked = [v for v in counts[counts.columns[0]].to_list() if v is not None]
+        kept, dropped = ranked[:max_levels], ranked[max_levels:]
+        # Ranked by share to *choose*, sorted to *present*. The emitted order stays the
+        # sorted one it has always been, so introducing the cap changes which bars a curve
+        # carries and never the order of the ones it already carried.
+        labels = sorted(kept)
+        values = list(labels)
+        omission = None
+        if dropped:
+            text_all = series.cast(pl.String)
+            dropped_rows = sum(float((text_all == level).sum()) for level in dropped)
+            omission = PartialDependenceOmission(
+                reason=PartialDependenceOmissionReason.LEVEL_CAP,
+                levels=len(dropped),
+                exposure_share=min(1.0, dropped_rows / max(rows, 1)),
+            )
 
     means: list[float] = []
     shares: list[float] = []
@@ -909,7 +954,7 @@ def _sweep(
             shares.append(1.0 / len(labels))
         else:
             shares.append(float((text == label).sum()) / max(rows, 1))
-    return labels, means, shares
+    return labels, means, shares, omission
 
 
 def compute_gbm_diagnostics(
@@ -926,6 +971,7 @@ def compute_gbm_diagnostics(
     max_factor_count: int | None = None,
     min_exposure_per_parameter: float | None = None,
     permutation_repeats: int = 1,
+    max_partial_dependence_levels: int = DEFAULT_PARTIAL_DEPENDENCE_LEVELS,
     progress: ProgressCallback | None = None,
 ) -> DiagnosticsResult:
     """Everything `02` §3.8 asks of a GBM fit (FR-MODEL-50, 52, 54, 55, 81).
@@ -978,9 +1024,24 @@ def compute_gbm_diagnostics(
     dependence: list[PartialDependence] = []
     monotonicity: list[MonotonicityCheck] = []
     for factor in factors:
-        labels, means, shares = _sweep(
+        # FR-MODEL-119. A cross sources no column of its own, so there is nothing to
+        # hold at a value; it used to reach `_sweep` and index off an empty tuple. It
+        # is emitted with no points and a stated reason rather than dropped, so a
+        # reviewer sees every declared factor and sees which ones no curve describes.
+        if not factor.source_columns:
+            dependence.append(
+                PartialDependence(
+                    factor=factor.slug,
+                    omitted=PartialDependenceOmission(
+                        reason=PartialDependenceOmissionReason.NO_SOURCE_COLUMN,
+                    ),
+                )
+            )
+            continue
+        labels, means, shares, omitted = _sweep(
             result, booster, factors, holdout, factor,
             bandings=bandings, groupings=groupings,
+            max_levels=max_partial_dependence_levels,
         )
         dependence.append(
             PartialDependence(
@@ -990,6 +1051,7 @@ def compute_gbm_diagnostics(
                                            exposure_share=share)
                     for label, mean, share in zip(labels, means, shares, strict=True)
                 ),
+                omitted=omitted,
             )
         )
         direction = factor.monotonic_direction

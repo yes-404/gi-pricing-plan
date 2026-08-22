@@ -23,6 +23,7 @@ from model_schema import (
     Banding,
     BandingMethod,
     Factor,
+    FactorIntent,
     FactorType,
     GlmSpec,
     Grouping,
@@ -226,3 +227,98 @@ def test_a_glm_through_a_banding_and_a_grouping_recovers_the_step_relativities()
 
     region = {row.level: row for row in result.relativities["region_ns"]}
     assert set(region) == {"NORTH", "SOUTH"}
+
+
+# -- Intent, the second refusal axis (OQ-MODEL-25, decided 2026-08-22) -------------------
+#
+# `Factor.intent` was read in exactly one place in the repository — `rateable()`, which no
+# production code calls yet because `03` is unbuilt — so no arm of the enum changed a fit.
+# `risk` and `control` were correct by coincidence: being fitted with a free coefficient is
+# what both *mean*. `offset` and `diagnostic`, the two arms FR-MODEL-3 never glossed, were
+# accepted through the API and quietly fitted the same way. These are the tests that were
+# missing while that was true.
+
+
+@pytest.mark.req("FR-MODEL-116")
+def test_an_offset_intent_factor_is_refused_and_the_refusal_is_permanent() -> None:
+    """FR-MODEL-116: superseded, so the message must not say "yet"."""
+    factor = _factor("exposure_offset", "exposure_years", intent=FactorIntent.OFFSET)
+    with pytest.raises(FactorResolutionError) as excinfo:
+        resolve_factors(_book(200), [factor])
+
+    message = str(excinfo.value)
+    assert "exposure_offset" in message
+    assert "FR-MODEL-116" in message
+    assert "superseded" in message
+    # The distinction FR-MODEL-114 draws for the type arm, held here for the intent arm:
+    # a permanent refusal that reads as a pending one invites a caller to wait for it.
+    assert "yet" not in message
+
+
+@pytest.mark.req("FR-MODEL-117")
+def test_a_diagnostic_intent_factor_is_refused_and_the_refusal_is_pending() -> None:
+    """FR-MODEL-117: refused because it has no meaning, not because it will never have one."""
+    factor = _factor("age_watch", "driver_age", intent=FactorIntent.DIAGNOSTIC)
+    with pytest.raises(FactorResolutionError) as excinfo:
+        resolve_factors(_book(200), [factor])
+
+    message = str(excinfo.value)
+    assert "FR-MODEL-117" in message
+    assert "OQ-MODEL-27" in message
+    # The two arms do not share a reason, and a reader must be able to tell which applies.
+    assert "superseded" not in message
+
+
+@pytest.mark.req("FR-MODEL-3")
+def test_risk_and_control_intents_still_resolve_and_are_fitted() -> None:
+    """The other half of the refusal: it must not swallow the two arms that are correct.
+
+    FR-MODEL-3's amendment of 2026-08-22 states what the enum had never said — `risk` and
+    `control` both enter the design matrix with a free coefficient and differ only in
+    rateability. A refusal that caught them would be a worse defect than the one it fixed.
+    """
+    risk = _factor("age", "driver_age")
+    control = _factor("region_control", "region", intent=FactorIntent.CONTROL)
+    matrix = resolve_factors(_book(200), [risk, control])
+
+    assert set(matrix.terms) == {"age", "region_control"}
+
+
+@pytest.mark.req("FR-MODEL-116")
+def test_the_intent_refusal_reaches_the_fit_and_not_only_the_resolver() -> None:
+    """Sited in `resolve_factors` precisely so every path inherits it.
+
+    Asserting it on `resolve_factors` alone would prove the refusal exists, not that a fit
+    is unable to route around it — which is the claim FR-MODEL-116 actually makes.
+    """
+    factor = _factor("exposure_offset", "exposure_years", intent=FactorIntent.OFFSET)
+    spec = GlmSpec(
+        model_family_slug="steps",
+        dataset_version_id=uuid4(),
+        response_column="claim_count",
+        offset=OffsetSpec(kind="log_column", column="exposure_years"),
+        factors=(factor.id,),
+    )
+    with pytest.raises(FactorResolutionError, match="FR-MODEL-116"):
+        fit_glm(_book(2_000), spec, [factor])
+
+
+@pytest.mark.req("FR-MODEL-116")
+def test_an_interaction_declaring_a_refused_intent_is_refused_too() -> None:
+    """The check sits above the second-pass `continue`, which is why this holds.
+
+    An `interaction` is deferred to a second pass part-way down the loop. A refusal placed
+    after that deferral would let exactly one factor type through — and it is the type that
+    reaches the design matrix carrying its operands with it.
+    """
+    left = _factor("age", "driver_age")
+    right = _factor("region", "region")
+    cross = _factor(
+        "age_x_region", "driver_age",
+        type=FactorType.INTERACTION,
+        source_columns=(),
+        operand_factor_ids=(left.id, right.id),
+        intent=FactorIntent.OFFSET,
+    )
+    with pytest.raises(FactorResolutionError, match="FR-MODEL-116"):
+        resolve_factors(_book(200), [left, right, cross])

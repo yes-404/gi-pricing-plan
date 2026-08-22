@@ -1582,3 +1582,236 @@ def test_a_custom_eval_metric_receives_the_declared_weights(
         f"every weight array reaching the metric was the wrong size: {[a.size for a in seen]}"
     )
     np.testing.assert_allclose(train[0], expected)
+
+
+# --------------------------------------------------------------------------------------
+# FR-MODEL-118 / FR-MODEL-119 — what the partial-dependence sweep costs, and what it skips
+# (OQ-MODEL-26, decided 2026-08-22)
+# --------------------------------------------------------------------------------------
+
+
+def _wide_book(n: int = 4_000, levels: int = 60, seed: int = 20260822) -> pl.DataFrame:
+    """A book whose `vehicle_group` has many levels and a deliberately skewed exposure.
+
+    Skewed rather than uniform because the cap keeps the *most exposed* levels, and a
+    uniform column cannot tell a correct ranking from an arbitrary one — every level would
+    be an equally defensible thing to keep.
+    """
+    rng = np.random.default_rng(seed)
+    exposure = rng.uniform(0.1, 1.0, n)
+    # Zipf-ish: level 0 is common, level 59 is rare.
+    weights = 1.0 / np.arange(1, levels + 1)
+    group = rng.choice(levels, n, p=weights / weights.sum())
+    age = rng.integers(18, 80, n)
+    eta = np.log(exposure) - 2.0 + 0.02 * (age - 40)
+    return pl.DataFrame(
+        {
+            "exposure_years": exposure,
+            "vehicle_group": [f"G{g:03d}" for g in group],
+            "driv_age": age.astype(float),
+            "claim_count": rng.poisson(np.exp(eta)).astype(float),
+        }
+    )
+
+
+def _crossable_book(n: int = 6_000, seed: int = 20260822) -> pl.DataFrame:
+    """`_frequency_data` with a second *categorical* column, so a cross has two legal sides.
+
+    FR-MODEL-97 refuses an interaction over a continuous operand, and `driv_age` is the only
+    other column there — so a cross cannot be built on that frame at all.
+    """
+    rng = np.random.default_rng(seed)
+    exposure = rng.uniform(0.1, 1.0, n)
+    urban = rng.integers(0, 2, n)
+    fuel = rng.integers(0, 3, n)
+    age = rng.integers(18, 80, n)
+    eta = np.log(exposure) - 2.0 + 0.5 * urban + 0.2 * fuel + 0.02 * (age - 40)
+    return pl.DataFrame(
+        {
+            "exposure_years": exposure,
+            "area": ["urban" if u else "rural" for u in urban],
+            "fuel": [("petrol", "diesel", "hybrid")[f] for f in fuel],
+            "driv_age": age.astype(float),
+            "claim_count": rng.poisson(np.exp(eta)).astype(float),
+        }
+    )
+
+
+def _diagnose_wide(backend: str, **over: object):  # type: ignore[no-untyped-def]
+    from pricing_core.modelling import compute_gbm_diagnostics
+
+    factors = [_factor("vehicle_group", "vehicle_group"), _factor("driv_age", "driv_age")]
+    train, holdout = _wide_book(), _wide_book(n=1_500, seed=99)
+    spec = _spec(backend, factors=tuple(f.id for f in factors))
+    fit = fit_gbm(train, spec, factors)
+    return compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes, spec, factors,
+        train=train, holdout=holdout, eval_curve=fit.eval_curve,
+        **over,  # type: ignore[arg-type]
+    )
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_categorical_grid_is_capped_and_says_what_it_dropped(backend: str) -> None:
+    """FR-MODEL-118: 20 bars, and the other 40 levels named rather than silently absent.
+
+    The count is the whole point. Before this, one 60-level column cost 60 full-population
+    scoring passes and the artifact recorded it as one factor — which is what made
+    NFR-MODEL-14's per-pass budget unbounded in the level count of its worst column.
+    """
+    diagnostics = _diagnose_wide(backend)
+    assert diagnostics.gbm is not None
+    curves = {pd.factor: pd for pd in diagnostics.gbm.partial_dependence}
+
+    wide = curves["vehicle_group"]
+    assert len(wide.points) == 20
+    assert wide.omitted is not None
+    assert wide.omitted.reason.value == "level_cap"
+    assert wide.omitted.levels == 40
+    # The dropped levels are the rare tail, so they must hold a *minority* of the book —
+    # an omission covering most of the exposure would make the curve worse than none.
+    assert 0.0 < wide.omitted.exposure_share < 0.5
+
+    # A numeric factor is ten quantile points and was never the problem: it must not
+    # acquire an omission it does not have.
+    assert curves["driv_age"].omitted is None
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_the_cap_keeps_the_most_exposed_levels_and_is_what_bounds_the_grid(
+    backend: str,
+) -> None:
+    """Two claims at once: the ranking is by share, and the cap is what does the bounding.
+
+    Raising the cap above the level count must produce the whole column back. Without that
+    half, a test asserting "20 points" would pass just as happily if something unrelated
+    were truncating the grid.
+    """
+    capped = _diagnose_wide(backend)
+    uncapped = _diagnose_wide(backend, max_partial_dependence_levels=1_000)
+
+    assert capped.gbm is not None
+    assert uncapped.gbm is not None
+    kept = {p.value for c in capped.gbm.partial_dependence if c.factor == "vehicle_group"
+            for p in c.points}
+    full = next(c for c in uncapped.gbm.partial_dependence if c.factor == "vehicle_group")
+
+    assert len(full.points) == 60
+    assert full.omitted is None
+    # Everything kept must outrank everything dropped, by the same share the artifact
+    # reports on each point — so the cap and `exposure_share` cannot disagree.
+    shares = {p.value: p.exposure_share for p in full.points}
+    dropped = set(shares) - kept
+    assert min(shares[v] for v in kept) >= max(shares[v] for v in dropped)
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_pooled_other_bar_cannot_be_computed_which_is_why_the_cap_truncates(
+    backend: str,
+) -> None:
+    """The refutation the decision rests on, made checkable.
+
+    OQ-MODEL-26's recommendation was to pool the dropped levels into an "other" bar. A
+    partial-dependence bar requires the column to be *held at a value and scored*, and a
+    synthetic level the fitted model never saw has no code in its persisted encoding map —
+    FR-MODEL-32 refuses to invent one, because it would score as whichever level happens
+    to share the number. So there is no value the column can be held at to represent the
+    pooled remainder, and the cap names what it dropped instead of summarising it.
+    """
+    factors = [_factor("vehicle_group", "vehicle_group"), _factor("driv_age", "driv_age")]
+    train = _wide_book()
+    spec = _spec(backend, factors=tuple(f.id for f in factors))
+    fit = fit_gbm(train, spec, factors)
+
+    pooled = train.with_columns(pl.lit("other").alias("vehicle_group"))
+    with pytest.raises(GbmFitError) as excinfo:
+        predict_gbm(fit.result, fit.booster_bytes, pooled, factors)
+
+    assert excinfo.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+
+
+@pytest.mark.req("FR-MODEL-119")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_gbm_declaring_an_interaction_produces_diagnostics_instead_of_an_indexerror(
+    backend: str,
+) -> None:
+    """FR-MODEL-119: both per-factor blocks assumed one source column per factor.
+
+    An `interaction` names none — its columns are its operands' — so
+    `factor.source_columns[0]` raised `IndexError` inside permutation importance, at 0.60
+    progress, for any GBM whose factor *list* held a cross. It survived because the suite
+    covers `interaction_constraints`, a backend parameter of a similar name, and never
+    fitted this.
+    """
+    from pricing_core.modelling import compute_gbm_diagnostics
+
+    # Both operands must resolve to levels: FR-MODEL-97 refuses crossing a continuous one,
+    # so `driv_age` cannot be a side here.
+    left = _factor("area", "area")
+    right = _factor("fuel", "fuel")
+    cross = _factor(
+        "area_x_fuel", "area",
+        type=FactorType.INTERACTION,
+        source_columns=(),
+        operand_factor_ids=(left.id, right.id),
+    )
+    factors = [left, right, cross]
+    train, holdout = _crossable_book(), _crossable_book(n=2_000, seed=4242)
+    spec = _spec(backend, factors=tuple(f.id for f in factors))
+    fit = fit_gbm(train, spec, factors)
+
+    diagnostics = compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes, spec, factors,
+        train=train, holdout=holdout, eval_curve=fit.eval_curve,
+    )
+    assert diagnostics.gbm is not None
+    curves = {pd.factor: pd for pd in diagnostics.gbm.partial_dependence}
+
+    # Recorded, not dropped: every declared factor appears, and the cross says why it has
+    # no curve. A reviewer must be able to see that the term carrying the interaction is
+    # the one no per-factor diagnostic describes.
+    assert "area_x_fuel" in curves
+    assert curves["area_x_fuel"].points == ()
+    assert curves["area_x_fuel"].omitted is not None
+    assert curves["area_x_fuel"].omitted.reason.value == "no_source_column"
+    # Its operands still get real curves, so the skip is the cross and nothing else.
+    assert curves["area"].points
+
+
+@pytest.mark.req("FR-MODEL-119")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_gbm_can_fit_an_interaction_and_designs_on_the_cross_alone(backend: str) -> None:
+    """FR-MODEL-91's interaction arm was delivered for the GLM path only.
+
+    `resolve_factors` **requires** a cross's operands to be supplied — it refuses a cross
+    missing a side — and then gives them no term of their own, because the cross already
+    spans every cell. `fit_glm` iterates `matrix.terms` and so never sees them; `_encode`
+    iterated the factor *list* and raised `KeyError` on the first operand, so no GBM could
+    fit an interaction at all between 2026-08-18 and 2026-08-22. Only the GLM suite ever
+    fitted a cross, which is exactly why nothing caught it.
+
+    The second assertion is the one that matters actuarially: the design carries the cross
+    and **not** its operands' main effects, which are collinear with it.
+    """
+    left = _factor("area", "area")
+    right = _factor("fuel", "fuel")
+    cross = _factor(
+        "area_x_fuel", "area",
+        type=FactorType.INTERACTION,
+        source_columns=(),
+        operand_factor_ids=(left.id, right.id),
+    )
+    factors = [left, right, cross]
+    train = _crossable_book()
+    spec = _spec(backend, factors=tuple(f.id for f in factors))
+
+    fit = fit_gbm(train, spec, factors)
+
+    assert list(fit.result.feature_order) == ["area_x_fuel"]
+    # And it scores: the encoding map persisted for the cross is the one predict reuses.
+    mu = predict_gbm(fit.result, fit.booster_bytes, train, factors)
+    assert mu.len() == train.height
+    assert float(mu.min()) > 0.0

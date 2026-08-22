@@ -631,6 +631,17 @@
           "title": "Factor",
           "type": "string"
         },
+        "omitted": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PartialDependenceOmission"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "points": {
           "default": [],
           "items": {
@@ -645,6 +656,56 @@
       ],
       "title": "PartialDependence",
       "type": "object"
+    },
+    "PartialDependenceOmission": {
+      "additionalProperties": false,
+      "description": "What a curve leaves out, and why (FR-MODEL-118).\n\nPresent **only** when the curve is incomplete. A complete curve carries `None`, so\n\"omitted nothing\" and \"omitted something not worth recording\" cannot be confused — the\nsecond is the state this model exists to make impossible.\n\n`levels` and `exposure_share` are optional because one arm cannot count them:\n`no_source_column` omits the whole curve for a factor that has no column to sweep, so\nthere is no level count to report and `0` would be a false statement rather than a\nmissing one.",
+      "properties": {
+        "exposure_share": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Share"
+        },
+        "levels": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Levels"
+        },
+        "reason": {
+          "$ref": "#/$defs/PartialDependenceOmissionReason"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "title": "PartialDependenceOmission",
+      "type": "object"
+    },
+    "PartialDependenceOmissionReason": {
+      "description": "Why a partial-dependence curve does not cover its factor (FR-MODEL-118).",
+      "enum": [
+        "level_cap",
+        "no_source_column"
+      ],
+      "title": "PartialDependenceOmissionReason",
+      "type": "string"
     },
     "PartialDependencePoint": {
       "additionalProperties": false,
