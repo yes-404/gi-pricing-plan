@@ -339,8 +339,12 @@ class PartialDependenceOmissionReason(enum.StrEnum):
     #: (FR-MODEL-32). So they are named as missing rather than summarised.
     LEVEL_CAP = "level_cap"
     #: The factor sources no column of its own, so there is nothing to hold at a value —
-    #: an `interaction`, whose columns are its operands' (FR-MODEL-119). Interim until
-    #: OQ-MODEL-27's sibling OQ-MODEL-28 settles what a cross should report.
+    #: an `interaction`, whose columns are its operands' (FR-MODEL-119). **Interim, and
+    #: now with a decided replacement rather than an open question**: FR-MODEL-121 holds a
+    #: cross's operands *together* at one observed cell, which is the only way to reach a
+    #: term `predict_gbm` re-derives from raw columns. Until W30 builds it, this reason is
+    #: also the marker for a gap that FR-MODEL-122 shows is wider than a missing curve —
+    #: on a sparse cross the operands' own curves do not merely mislead, they raise.
     NO_SOURCE_COLUMN = "no_source_column"
 
 

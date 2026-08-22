@@ -14,11 +14,13 @@ and the only test that answers it is one that removes them and watches the accep
 still work. So the two tests below are the clause, and the overlap in the input strings is
 incidental.
 
-**The requirement's second clause is not met and carries no marker here.** `ExpressionError`
-is a bare `ValueError` with no `lineno` or `col_offset`, so "the parser rejects
-out-of-grammar input with a position-accurate error" is untrue today:
-`test_out_of_grammar_input_carries_no_position` below records what the parser does instead,
-under FR-DATA-10, so the gap is visible in the suite rather than only in a report.
+**The requirement's second clause was met on 2026-08-22.** `ExpressionError` was a bare
+`ValueError` with no `lineno` or `col_offset`, so "the parser rejects out-of-grammar input
+with a position-accurate error" was untrue; `test_out_of_grammar_input_carries_no_position`
+pinned that absence under FR-DATA-10 so the gap was visible in the suite rather than only
+in a report. That test is now inverted rather than deleted — the two below assert the
+position instead, and the second exists because a position that merely repeats the
+expression's own start would satisfy the first without being accurate.
 
 Its third clause — compiled objectives bounded in memory and per-round time (FR-MODEL-48) —
 is **half built and owned elsewhere**. Template objectives *are* compiled, on fixed-size
@@ -101,22 +103,43 @@ def test_a_route_to_eval_is_refused_by_the_parser_not_by_python(expression: str)
 
 
 @pytest.mark.req("FR-DATA-10")
-def test_out_of_grammar_input_carries_no_position() -> None:
-    """What the parser does today, pinned so the gap is visible in the suite.
+@pytest.mark.req("NFR-MODEL-8")
+def test_out_of_grammar_input_carries_its_position() -> None:
+    """NFR-MODEL-8's position-accurate clause, which was unmet until 2026-08-22.
 
-    NFR-MODEL-8 also asks for a *position-accurate* error. `ExpressionError` is a bare
-    `ValueError`: it names what was refused and where in the *grammar*, never where in the
-    string. A caller cannot underline the offending token, and a UI cannot put a caret
-    under it.
+    This assertion is the inverse of the one it replaces. `ExpressionError` was a bare
+    `ValueError`, so no caller could underline the offending token; the old test pinned
+    that absence deliberately rather than leaving it unstated.
 
-    Deliberately **not** marked `NFR-MODEL-8`. A marker on this test would report the
-    requirement as evidenced when half of it is unbuilt, which is the failure mode
-    `CLAUDE.md` §13 rule 1 calls "a marker is a claim, not a proof". It is marked
-    FR-DATA-10 — the requirement the behaviour it pins actually belongs to.
+    The span is the refused `Subscript` node's own — `premium[0]`, columns 0 to 10 — not
+    the enclosing expression's. `ast` reports `lineno` 1-based and the columns 0-based,
+    and `ExpressionError` passes both through unchanged.
     """
     with pytest.raises(ExpressionError) as excinfo:
-        compile_expression("premium + missing[0]")
+        compile_expression("premium[0] + 1")
+
     error = excinfo.value
-    assert getattr(error, "lineno", None) is None
-    assert getattr(error, "col_offset", None) is None
     assert "Subscript" in str(error)
+    assert error.lineno == 1
+    assert error.col_offset == 0
+    assert error.end_col_offset == 10
+
+
+@pytest.mark.req("NFR-MODEL-8")
+def test_the_position_names_the_offending_operator_not_the_whole_expression() -> None:
+    """An operator node carries no position of its own, so the parent is what is threaded.
+
+    `ast` gives `lineno`/`col_offset` to `expr` and `stmt` subclasses only — `operator`
+    and `cmpop` get none. A refusal that reported the expression's own start would be
+    position-*shaped* without being position-*accurate*, which is the failure this test
+    exists to catch.
+    """
+    with pytest.raises(ExpressionError) as excinfo:
+        compile_expression("exposure + premium // 2")
+
+    error = excinfo.value
+    assert "FloorDiv" in str(error)
+    assert error.lineno == 1
+    # The `premium // 2` sub-expression starts at column 11, not the expression's 0.
+    assert error.col_offset == 11
+    assert error.end_col_offset == 23

@@ -512,9 +512,236 @@ it rather than at its edges.
 one nobody asked:** the Phase 1b workstream rows need no re-cut, and no requirement needs
 superseding beyond `transparency_artifact_id`, which this slice struck with its reason.
 
-**Maintainer acceptance:** _pending_. Nothing above has been applied to the plan; the four
-owner proposals in question 2, the skill in question 3, the `--params` axis in question 4 and
-the generated-counts proposal in question 5 each need an explicit dated line.
+**Maintainer acceptance: accepted as proposed, 2026-08-22.** Each proposal below binds from
+that date. Recorded per line rather than as one blanket sentence, because a single "accepted"
+over five proposals leaves no way to tell later which of them anyone actually read.
+
+- **Question 2, the owner assignments — accepted 2026-08-22.** (b) the constraint-level
+  contract-drift guard and (d) `FR-MODEL-15`'s `source_level_stats` are **W6b's**, as the
+  first consumer of these contracts; (c) `06` §3.3's per-peril model approvals are **W17's**,
+  as the workstream that owns evidence enforcement.
+- **Question 2 (a), `NFR-MODEL-7` — accepted 2026-08-22 at the option the proposal named:
+  out of Phase 1 scope.** The review said it "may simply be out of Phase 1 scope, in which
+  case NFR-MODEL-7 should say so"; it now does, in `02` §9. There is no Model export path and
+  no import path anywhere — not a route, not a CLI, not a bundle schema — and its parent
+  FR-OVR-2 carries zero markers. It is a capability nobody has been asked to build, and no row
+  ever named it, so it was never a W5 defect. Saying so is the verdict §13 rule 1 requires;
+  leaving it "unassigned" was the one row in the audit-remediation slice's verdict table that
+  stated an absence of a verdict rather than a verdict.
+- **Question 3, the `contract-guard` skill — accepted 2026-08-22, owned by W6b**, as either a
+  skill of its own or a section in `contract-schema`. The author's discretion which; the
+  binding part is that the schema-drift knowledge stops being rediscovered.
+- **Question 4, `scope-audit.py` gains a `--params` axis — accepted 2026-08-22.** Three axes
+  exist and a wrong *parameter* is invisible to all three. Accepted as the review argues: a
+  hole in the instrument rather than an oversight in one audit.
+- **Question 5, the derived counts stop living in prose — accepted 2026-08-22.** Either
+  generated or deleted with the reader pointed at `scope-audit.py`; not left as prose to go
+  stale a fourth time. This is the only structural proposal of the five and the only one that
+  would have prevented the staleness that prompted it. **It does not bind retroactively**: the
+  counts already written into this file stay as written, struck and corrected in place where a
+  later slice re-derived them, because a roadmap row states what was known when it was written.
+- **The two "no change" answers stand**, and needed no acceptance: the Phase 1b workstream
+  rows are not re-cut, and no requirement is superseded beyond `transparency_artifact_id`.
+
+### W5 — Modelling: closed 2026-08-22
+
+**Scope, derived from `02` with `scope-audit.py` before opening any source file:
+136 requirements** — 122 `FR-MODEL` and 14 `NFR-MODEL`, across the
+module's eight deliverables. W5 is the largest single workstream in the project and the first
+Phase-1b workstream to close.
+
+**The roadmap's own figures disagreed with the specification in three places, and that
+disagreement is the finding.** W5's row at the "Original scope" table claims "All **124**
+`MODEL` requirements"; plan review 3, written at this close, states "125 in scope, 111
+evidenced (89 %), 14 without". The spec holds 136. Neither number was wrong when
+written — OQ-MODEL-23 through 28 have since appended FR-MODEL-114 to FR-MODEL-122, and
+requirement ids only ever accumulate (`CLAUDE.md` §5), so a count written once goes stale by
+construction rather than by error. The rows are left as written and this record carries the
+correction. **This is the third time the same mechanism has bitten this workstream**, which is
+why plan review 3's question 5 proposed that derived counts stop living in prose — accepted
+2026-08-22, and it does not bind retroactively.
+
+##### `CLAUDE.md` §13, rule by rule
+
+1. **Scope derived from the specification first** — `scope-audit.py MODEL` run before any
+   source file was opened; the three-way disagreement with the roadmap is recorded above as a
+   finding rather than reconciled away. Every unevidenced requirement has one of the four
+   verdicts, or a recorded measurement with the reason a test is the wrong instrument.
+2. **Deliverables audited against the definition** — the roadmap row's eight, each checked to
+   **exist** *and* **work**, in the table above.
+3. **Gates green locally, both halves, each exit code read** — below.
+4. **Enforcement proven on broken input** — four proofs, listed above, including one that
+   showed the plan's own proposed implementation would have passed the wrong test.
+5. **NFRs measured, not asserted** — fourteen, with the measurement and the budget beside it;
+   two breached and said so.
+6. **What was *not* delivered** — the three numbers, the sixteen verdicts, the items owned
+   elsewhere, and the retrofit list.
+7. **Documents updated in the same PR** — `02`, the roadmap, `open-questions.md` and
+   `CLAUDE.md` §2's layout marks. The demo guide is derived (FR-PLAT-54), so there is nothing
+   to write; that it still derives is checked by `backend/tests/test_demo_guide.py` in the run
+   below.
+8. **Repository clean** — no tracked build artifacts, verified by content below.
+
+| Deliverable (roadmap §6) | Evidence |
+|---|---|
+| Factors | Four of FR-MODEL-1's eight types resolve — `identity`, `banding`, `grouping`, `interaction`. The other four are **refused by name**, not missing: `spline`/`polynomial` gated on continuous-factor rateability (FR-MODEL-115), `expression` on the Phase-2 grammar (FR-MODEL-6), `offset` superseded by `OffsetSpec` (FR-MODEL-114). `FactorIntent.OFFSET` and `.DIAGNOSTIC` are permanently refused on the layer argument (FR-MODEL-116/120) |
+| Bandings | **6 of 6 methods** — manual, equal-width, quantile, exposure-quantile, credibility, tree. `propose_banding` returns a complete *editable* `Banding` with per-band exposure, frequency, severity and burning cost with intervals (FR-MODEL-10); `manual` is refused at the proposal call site because the boundaries are the actuary's |
+| Groupings | **4 of 5 methods** — manual, credibility-weighted (both limited-fluctuation *and* Bühlmann–Straub, FR-MODEL-80), hierarchical clustering, tree. `reference_hierarchy` is **refused by name**: it rolls levels up through a Reference Table, which ADR-0001 forbids `pricing-core` from reading. `unseen_level_behaviour` is mandatory and type-enforced — there is no default, because a silent default is a mispricing |
+| glum GLM | Poisson, Gamma and Tweedie with the power estimated by profile likelihood and its 95 % interval recorded (FR-MODEL-22); regularisation and CV selection (FR-MODEL-20/53); offsets including offset-from-another-model, GLM-to-GLM (FR-MODEL-24). Every coefficient carries estimate, standard error, z, p and interval, with the base level marked (FR-MODEL-21). Non-convergence, rank deficiency and separation are named errors, not silent results (FR-MODEL-23) |
+| XGBoost | One `GbmSpec`, two backends, two translation paths. Offsets are handled per backend — XGBoost `base_margin`, LightGBM `init_score` — and `test_a_prediction_scales_exactly_with_exposure` pins that they agree (FR-MODEL-72). LightGBM is the declared secondary and is tested at parity; EBM via interpret-core exports terms and bins directly rather than a serialised estimator (FR-MODEL-37, ADR-0003) |
+| Diagnostics | Always on **both** train and holdout with the weighting recorded (FR-MODEL-54/55). GLM: type-III p-values, deviance, residuals. GBM: eval curve, permutation importance, partial dependence with exposure share, monotonicity. A/E, lift, calibration and Gini are computed identically for both model types so a comparison holds (FR-MODEL-56), plus backtests (FR-MODEL-57). Deviance is computed once at fit time and diagnostics are insert-only, immutable at three layers |
+| Transparency artifacts | The GLM approximation of a GBM is a **Model in its own right** (FR-MODEL-96), carrying R², deviance explained and worst regions named by factor level with exposure share. TreeSHAP comes from the backends' native implementations rather than the `shap` package (FR-MODEL-35, amended 2026-08-17). A rebuild now reuses those stored numbers instead of refitting (FR-MODEL-110, this slice) |
+| Custom objectives — templates only | The template catalogue — **12 templates, each with a hand-written analytic gradient *and* hessian, so 24 analytic derivatives, every one checked against a Richardson-extrapolated numeric derivative of that template's own loss** (FR-MODEL-70), plus the certification machinery (FR-MODEL-75/76) built in Phase 1 as the 2026-08-15 decision required, and custom **metrics** on the same lifecycle and grammar (FR-MODEL-45/103/105–108). `kind: expression` is refused at the Pydantic type boundary for both objectives and metrics — the absence of a `parse_expression` stub *is* the statement |
+
+**Gate (local, 2026-08-22, both halves, each command's own exit code read):** ruff 0 · mypy 131 source files · lint-imports **3 kept, 0 broken** (ADR-0001/0002/DEP-3) · `pytest -q` **1 720 passed, 1 xfailed** in 404 s · audit-docs all checks (506 requirements, 81 open questions all mirrored, 54 JSON schemas, 140 error codes with ownership exclusive) · req-coverage **506 specified / 257 marked** · `generate-contracts.py --check` **23 generated contracts match the models** · frontend install, `generate:api`, lint, type-check, **131 tests**, build — all 0. `alembic heads` is `9e4c7b21fa08`. The demo guide still derives (FR-PLAT-54): `test_demo_guide.py` runs inside the suite above.
+
+> **One honest qualification on the frontend half:** `pnpm install --frozen-lockfile` ran
+> against an already-populated `node_modules`, which `CLAUDE.md` §11 warns can hide a missing
+> dependency. The lockfile was unchanged and CI runs it clean, so this is a caveat on the
+> local evidence rather than a known defect.
+
+**Coverage, re-derivable from the documents rather than recalled:**
+
+| Command | Result |
+|---|---|
+| `scope-audit.py MODEL` | 136 in scope, 120 with evidence (88 %), 16 without |
+| `scope-audit.py MODEL --endpoints` | **41 declared, 41 published (100 %)** |
+| `scope-audit.py MODEL --catalogue` | Nothing to run — MODEL declares no catalogue |
+| `alembic heads` | `9e4c7b21fa08`, matching the migration this workstream's last slice added |
+
+**Enforcement proven, not assumed** (§13 rule 4). Every check this slice introduced was shown
+to fail on deliberately broken input before it was trusted:
+
+- **NFR-MODEL-8's position tests, in both directions.** Removing `node=` entirely fails both.
+  More usefully, threading the *refused child* rather than its nearest positioned ancestor
+  passes the subscript case and fails the operator case — which is precisely the distinction
+  the second test exists to catch, and it means the ancestor walk is load-bearing rather than
+  decorative.
+- **NFR-MODEL-6's determinism test.** It passed on the first run, which proves nothing until
+  it is shown capable of failing: refitting on one row fewer of 20 000 moves the intercept by
+  5.8e-05, roughly six orders of magnitude above the 1e-10 gate.
+- **FR-MODEL-110's call-count test.** Fails on the pre-change handler with both
+  `build_glm_approximation` and `compute_diagnostics` recorded. Separately, swapping the
+  probe's read session for `unit_of_work()` fails the leaves-no-reserved-surrogate test,
+  proving the rollback is what keeps a failed build from leaving a surrogate behind.
+- **A test that could not fail was deleted rather than kept.** A third FR-MODEL-110 test
+  counting surrogate rows on the happy path passed in both the good and the deliberately
+  broken state. Two tests that bite beat three with one that cannot.
+
+**Specification defects found by implementing it** (§0 — resolved, not quietly reconciled):
+
+| Defect | Resolution |
+|---|---|
+| FR-MODEL-110 said the branch **loads** the surrogate's `Diagnostics`. It is not implementable as a load — the result is consumed only inside the `should_fit` arm, so on the reuse path a load would be a query whose result is discarded | Requirement amended with a dated note: the branch **skips** that compute. The `glm_approximation` half was exactly right and is implemented as written |
+| The roadmap's FR-MODEL-110 verdict, "Delivered but untested — a marker is owed, not a feature", was false on both counts | Struck rather than overwritten, with what was found and when. The marker it called owed would have been a false claim |
+| `02` §4.4's `spec_hash` lineage note — written to reconcile the spec with the code comment — omitted `v3 → v4`, a transition **both** of its source records held | Restored to its chronological place with the omission named. The same failure one level up as the note exists to fix |
+| `fit_glm` **and `fit_ebm`** accept a `seed` neither reads, and §5.2 publishes both parameters. Twenty call sites pass it, seven outside tests | **OQ-MODEL-29 — decided 2026-08-22 at option (b) and removed**, as FR-MODEL-123, pinned by a negative test asserting `seed=` now raises. `spec.seed` is the single seed for every fitter, which is what `spec_hash` pins — an argument-supplied seed would sit outside the digest and let two fits with one `spec_hash` differ, the precise thing NFR-MODEL-6 forbids. *(Original entry, kept:)* **OQ-MODEL-29**, open, with options and a recommendation; not deleted here, because nineteen call sites and a published signature are a maintainer's change |
+| NFR-MODEL-7 carried "Owner: unassigned", which is a stated absence of a verdict rather than one of §13's four | Maintainer verdict 2026-08-22: **out of Phase 1 scope**. Not superseded — ids are permanent and the capability is real; it is out of *this phase's* scope |
+
+#### The headline, as three numbers rather than one
+
+`scope-audit.py` counts a requirement as evidenced when *any* test carries its marker, so
+"120 of 136" means **declared-or-refused**, not built. Stated properly, at this close:
+
+- **110 built** — implemented and evidenced by a test of the behaviour.
+- **10 declared-and-refused-by-name.** Five where a capability is owed and the refusal stands
+  in for it: FR-MODEL-59 (`separate_model`, `LOSS_TREATMENT_UNIMPLEMENTED`), FR-MODEL-87
+  (whose subject *is* the staged contract), FR-MODEL-88 (`spline`/`polynomial`/`expression`
+  refused at resolution), FR-MODEL-112 (the peril-reconciliation offset path), FR-MODEL-122.
+  Five where the capability is **permanently withheld and the refusal *is* the requirement**:
+  FR-MODEL-114 (`offset` as a Factor type), FR-MODEL-116 (`FactorIntent.OFFSET`),
+  FR-MODEL-117 and FR-MODEL-120 (`FactorIntent.DIAGNOSTIC`), FR-MODEL-75 (`expression`
+  objectives, gated off with the flag **on** as well as off).
+- **16 unevidenced, each with a verdict** — every one below.
+
+**The bucket grew from three to ten while `built` moved from 108 to 110**, because nine of
+the eleven requirements appended since the last census are refusals or unbuilt. And this
+slice's own FR-MODEL-112 marker raised `evidenced` from 119 to 120 **without moving `built`
+at all** — it lands in the refusal bucket. That is precisely the overstatement the
+three-number split exists to catch, and it happened inside the slice that reports it.
+
+> **The weakest evidence in the module, named rather than averaged away.** FR-MODEL-122 is
+> carried by a `@pytest.mark.xfail(strict=True)` — the only one in MODEL. That is not a
+> refusal, it is a **pinned defect**: a GBM whose cross is sparse still dies inside
+> `compute_gbm_diagnostics` with `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, and it dies *uncoded*,
+> outside the block that maps a `GbmFitError` to a platform code. Counted in the refusal
+> bucket because the test does mark the boundary, but it is the one entry there that a
+> reader should not take comfort from. Owner: **W30**.
+
+> **Three requirements whose evidence is thinner than their marker suggests** — found by
+> reading the tests rather than trusting the marks (§13 rule 1: a marker is a claim, not a
+> proof). **FR-MODEL-92** and **FR-MODEL-95** are each evidenced only by a test asserting the
+> route is *published in the OpenAPI document*; no test in `backend/tests/` ever calls
+> `GET /api/v1/models/backtests/{id}` or any `/custom-objectives` route. The routes exist and
+> the service layer is tested, but the endpoint behaviour — the 200 and the 404 FR-MODEL-92
+> names — is unproven, which is the failure FR-MODEL-92 was itself written to fix, one layer
+> up. **FR-MODEL-109**'s only marker is a meta-test that every eligible schema is in the
+> comparison list. These stay counted as built, because the capability is there and reachable;
+> they are recorded so the next reader does not have to rediscover it. **Owner: W6b**, as the
+> first consumer of these endpoints.
+
+**Not delivered by W5.** Every unevidenced requirement, with the verdict §13 rule 1 requires
+— one of delivered-but-untested, deferred with an owner, reassigned, or not started, or a
+recorded measurement where a test is the wrong instrument:
+
+| Requirement | Verdict | Owner |
+|---|---|---|
+| FR-MODEL-6 — `expression` factors | Not started | **W30**, accepted by the maintainer 2026-08-22 |
+| FR-MODEL-40 — `expression` objectives | Not started. Its gate, FR-MODEL-75, *is* evidenced — as a refusal | **W30** (OQ-MODEL-1) |
+| FR-MODEL-82 — proxy detection | Not started | **Phase 3 / W31** (OQ-MODEL-7) |
+| FR-MODEL-115 — continuous Factor rateability | Not started. Gates `spline`/`polynomial`, which is why FR-MODEL-88 refuses them | **W30** |
+| FR-MODEL-121 — an interaction measured jointly through its operands | Not started | **W30**. Its sibling FR-MODEL-122 is the pinned defect above |
+| NFR-MODEL-1, -10 | **Measured by extrapolation** — 173 s of 600 s, 16.0 GB of 32 GB | The slice with a 16-core worker |
+| NFR-MODEL-2 | **Measured once, growth unmeasured** — 963 s of 1 200 s on an *assumed* linearity | Same |
+| NFR-MODEL-3 | **Measured and breached by all three grouping methods**; the cause is the one-way summary, not Ward. The remedy is to compute from the stored Profile — 2.60 s against a 5 s budget | The factor-workbench slice |
+| NFR-MODEL-4 | **Measured and met** — 32.1 % at the worst measured arm against 50 % | None required |
+| NFR-MODEL-5, -11 | **Measured and met**, 50× and 380× headroom | None required. NFR-MODEL-11's blob spill belongs to the slice that first stores a per-row residual series |
+| NFR-MODEL-7 | **Out of Phase 1 scope** — maintainer verdict 2026-08-22, on plan review 3's question 2(a). No export path, no import path, no CLI, no bundle schema; parent FR-OVR-2 carries zero markers | **None in Phase 1.** Not superseded — the id is permanent and the capability is real |
+| NFR-MODEL-12 | **Measured and held** — 0.22 s against 5.22 s | None required |
+| NFR-MODEL-13 — the type-III per-factor block | **Measured and breached** at 678 013 × 60: more than 1.61× per tested factor against a 1.0× bound, and the observation is *censored* | **Phase 1b**, with the warm-denominator run the corrected multiples rest on |
+| NFR-MODEL-14 — the GBM block | **Measured and met** — 0.0480 fits per scoring pass against 0.06 | None required; FR-MODEL-118's cap now bounds the sweep it prices |
+
+**Also not delivered, and owned elsewhere rather than by W5** — listed so the boundary is
+auditable rather than implied, each owner quoted from the document that assigns it:
+`GroupingEvidence.source_level_stats` in the Python (FR-MODEL-15), `_sweep`'s two
+`exposure_share` defects, the sweep running over source columns rather than resolved levels
+(FR-MODEL-118 context), §5.3's absent intent controls and `rateable()`'s absence from §5.2
+(FR-MODEL-116 context), the five constraint-level contract-drift classes (FR-PLAT-48,
+FR-OVR-6), every `02` §5.3 view and the EBM predict arm — **all W6b's**. `custom_objective_ref`
+on `Model`/`GlmSpec` (FR-MODEL-87) is **W30's**. The evidence-bundle checklist and FR-GOV-37's
+unenforced half are **W17's**. Valid penalised inference (FR-MODEL-99) belongs to the slice
+that builds the first of them.
+
+**FR-MODEL-112(c) is W5's by the offsets slice's own list and is deliberately still refused.**
+FR-MODEL-112 fixes the order — "(a) The next slice extends the reference to a fitted GBM … as
+its own slice in Phase 1b. (c) The peril-reconciliation scoring path is **then** wired to the
+resolver." Building (c) now would invert a recorded sequencing decision, and (a) is itself
+demand-gated. It stays refused by name, which this slice made true in the code as well as the
+sentence — that is a verdict, not a silence.
+
+**Retrofit list (`docs/roadmap.md` §5) — where W5 leaves each item:**
+
+| Item | State after W5 |
+|---|---|
+| **Append-only audit log, written in the caller's transaction** | **Delivered and used.** `audit.record(session, …)` takes the *caller's* `AsyncSession` — verified at the signature, not assumed — and the modelling write path calls it inside its own unit of work (`platform/modelling.py:248`, `:438`). W5 added the per-arm payload, because "what was fitted" is a different sentence per model type |
+| **Artifact immutability + versioning + `parent_id`** | **Delivered and extended by W5.** Models, diagnostics and transparency artifacts are immutable once written, enforced by database trigger; the audit-remediation slice added `models.diagnostics_id` to that trigger by migration `9e4c7b21fa08`. Model lineage carries `parent_model_id` with a typed `change_reason` (FR-MODEL-65) |
+| **`model-schema` as the single source of truth** | **Delivered and load-bearing.** All 49 `02` shapes live there; the contracts are generated and CI fails on drift (FR-PLAT-48). W5 hand-wrote no shared shape. The *constraint-level* drift guard remains unbuilt and is **W6b's** — the field-existence and nullability halves are done |
+| **The Job model with progress and cancellation** | **Delivered by W2, used throughout W5.** Every long modelling operation is a Job taking `ProgressCallback` — `_fit`, `_compare`, `_transparency`, `_reconcile`, `_quantile_crossing`. W5's own defect here was the reverse of missing: a fit sat at one fraction for its whole duration until `progress` was restored to `fit_glm`'s signature |
+| **Decimal money discipline** | **Delivered by W2, honoured by W5.** `DecimalStr` and `MoneyMinor` carry every monetary field crossing the boundary; W5 added the exact-decimal refusal of a float, which is a whole slice of this workstream |
+| **`trace_id` propagation API → worker → core** | **Delivered by W2, inherited by W5.** The Job row carries `trace_id` from `current_trace_id()` at submission and the outbox payload carries it to the worker (`platform/jobs.py:123`, `:156`, `:327`), so a modelling handler needs no code of its own to stay traceable |
+| **RBAC checks in the backend from the first endpoint** | **Delivered and used.** `Perm.MODEL_READ` / `MODEL_FIT` / `MODEL_SUBMIT` are FastAPI dependencies on the model routes (`api/models.py:104-106`). W5 added `reserve_model`'s refusals, which this slice moved *before* the expensive compute rather than after it |
+| **Content-addressed blob store** | **Delivered by W2, used by W5.** Booster artifacts and split frames are content-addressed blobs read by digest. `02`'s "declarative JSON artifacts, never pickled objects" holds — the EBM path exports terms and bins rather than a serialised estimator (ADR-0003) |
+
+**"W5 closed" must not be read as "the modelling module is finished."** It is not. Two NFRs
+are measured and **breached** — NFR-MODEL-3 by all three grouping methods, and NFR-MODEL-13
+at 678 013 × 60 on a *censored* observation, so the true multiple is unknown and worse than
+1.61×. Three more are met only by extrapolation from a machine smaller than the one the
+budget assumes. A sparse interaction still crashes the GBM diagnostics pass, uncoded. Every
+`02` §5.3 view is unbuilt. What W5 closed is the **modelling engine and its API**: the maths,
+the artifacts, the jobs, the lifecycle and the contracts — with 41 of 41 endpoints published,
+and every remaining gap named above with an owner.
+
+---
 
 ### Independent audit — 2026-08-15, and what it changed
 
@@ -3285,7 +3512,7 @@ FR-MODEL-81 (2026-08-16) and never applied it to the headline. Stated properly:
 | FR-MODEL-6 — `expression` factors | Not started | **W30**, accepted by the maintainer 2026-08-22 |
 | FR-MODEL-40 — `expression` objectives | Not started | **W30** (OQ-MODEL-1) |
 | FR-MODEL-82 — proxy detection | Not started | **Phase 3 / W31** (OQ-MODEL-7) |
-| FR-MODEL-110 — rebuild reuses stored numbers | **Delivered but untested** (OQ-MODEL-17, 2026-08-21) | W5 — a marker is owed, not a feature |
+| FR-MODEL-110 — rebuild reuses stored numbers | **Built 2026-08-22** (W5, the closure slice), and the verdict this row carried was false. *(Original verdict, struck rather than overwritten:)* ~~**Delivered but untested** (OQ-MODEL-17, 2026-08-21)~~ — **it was neither.** The branch FR-MODEL-110 describes runs *before* `build_glm_approximation` and `compute_diagnostics`; in the handler both ran unconditionally and `should_fit` first appeared after them. A call-counting test on the pre-change code shows **both** running on a rebuild, so the marker this row said was owed would have been a false claim rather than a missing one. The requirement is amended in one clause by building it: the branch **skips** the surrogate's `Diagnostics` compute rather than **loading** it, because the result is consumed only inside the `should_fit` arm and loading it would be a query whose result is discarded — `02` FR-MODEL-110(ii) | ~~W5 — a marker is owed, not a feature~~ **Discharged by W5.** Three marks, and the audit found it rather than the Phase-1b measurement its owner clause named |
 | FR-MODEL-112 — offsets-from-model widening | Not started, sequenced | **Phase 1b**, (a) then (c) |
 | NFR-MODEL-1, -10 | **Measured by extrapolation** — 173 s of 600 s, 16.0 GB of 32 GB | The slice with a 16-core worker |
 | NFR-MODEL-2 | **Measured once, growth unmeasured** — 963 s of 1 200 s on an *assumed* linearity | Same |
@@ -3294,7 +3521,7 @@ FR-MODEL-81 (2026-08-16) and never applied it to the headline. Stated properly:
 | NFR-MODEL-13 — the type-III block | **Measured and breached** at 678 013 × 60: more than 1.61× per tested factor against a 1.0× bound, and the observation is *censored* | **Phase 1b**, with the warm-denominator run the corrected multiples rest on |
 | NFR-MODEL-14 — the GBM block | **Measured and met** — 0.0480 fits per scoring pass against 0.06, 1.25× headroom | None required. The sweep it prices is **no longer uncapped**: OQ-MODEL-26 decided 2026-08-22, FR-MODEL-118 bounds the categorical grid to the 20 most-exposed levels — 0.96 of one fit at this measured rate |
 | NFR-MODEL-5, -11 | **Measured and met**, 50× and 380× headroom | None required |
-| NFR-MODEL-7 | **Nothing to test** — zero export and import paths exist | **Unassigned**, needs a verdict before it can have a test |
+| NFR-MODEL-7 | **Out of Phase 1 scope — maintainer verdict 2026-08-22**, on plan review 3's question 2(a). Zero export and import paths exist, no row ever named one, and its parent FR-OVR-2 carries zero markers. *(Original verdict, kept:)* **Nothing to test** — zero export and import paths exist | **None in Phase 1.** *(Original owner cell, kept:)* **Unassigned**, needs a verdict before it can have a test — which is the absence this verdict removes |
 | NFR-MODEL-12 | **Measured and held** — 0.22 s against 5.22 s | None required |
 
 Nine of the fourteen carry a **recorded measurement** rather than a marker, which §13 rule 1
@@ -3326,7 +3553,17 @@ admits as evidence where a test is the wrong instrument — and says so with the
   `factor.created` audit event, which **records** the declared intent without gating on it,
   so the platform attested to a property the fit never had — and **`diagnostic` carried the identical
   defect** — refused by FR-MODEL-117 pending OQ-MODEL-27 rather than left live beside a
-  fixed twin.
+  fixed twin, and **since superseded with it** (2026-08-22, OQ-MODEL-27, FR-MODEL-120).
+- ~~**`FactorIntent.DIAGNOSTIC` has no stated meaning**~~ — **decided 2026-08-22 as OQ-MODEL-27**,
+  superseded by FR-MODEL-120 **without the missing meaning ever being supplied**, because both
+  readings of it fail: the distinct one — resolved and reported, held out of the linear
+  predictor — is a property of *one fit* mis-sited on a Factor reused by every spec that names
+  it, and the redundant one is `control` already. The capability is real and is re-sited on the
+  Model Spec, where `ModelSpecCommon.factors` is a flat `tuple[UUID, ...]` with no per-factor
+  attribute to carry it; gated, owner W30. **FR-MODEL-117's ground for holding the question
+  open was wrong against the decision that wrote it** — it measured `diagnostic` against the
+  *duplication* argument, which OQ-MODEL-25 had refuted, rather than the *layer* argument it
+  actually decided on. Corrected in place rather than quietly dropped.
 
 - **No GBM could fit an `interaction` Factor at all**, from FR-MODEL-91 on 2026-08-18 until
   2026-08-22 — **found and fixed here** (FR-MODEL-119), not merely recorded. `resolve_factors`
@@ -3338,6 +3575,32 @@ admits as evidence where a test is the wrong instrument — and says so with the
   the GLM suite ever fitted a cross** — the GBM suite covers `interaction_constraints`, a
   backend parameter of a similar name and no relation. Found while deciding OQ-MODEL-26, by
   writing the test the requirement implied rather than by reading the code.
+- **A GBM declaring a *sparse* interaction still could not produce diagnostics** — found
+  2026-08-22 while deciding OQ-MODEL-28 (FR-MODEL-122), one day after FR-MODEL-119 was believed
+  to have cleared that path, and **recorded rather than fixed**: the remedy is W30's slice.
+  FR-MODEL-119 skipped the cross and left its **operands** in the list, and both per-factor
+  blocks permute and sweep an operand's raw column *alone* — which recombines the operands into
+  cells the fit never saw. Measured on a book carrying 3 of 9 cells, which FR-MODEL-91 says is
+  what a real cross looks like: the fit succeeds, the booster's whole feature order is
+  `('area_x_fuel',)`, and `compute_gbm_diagnostics` then raises
+  `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` naming all six absent cells. It reaches production —
+  `load_factors` returns `ordered + operands` — and dies **uncoded**, the raise landing outside
+  the block that maps a `GbmFitError` to a platform error code, which is the same reader-facing
+  failure FR-MODEL-119 recorded for the bare `KeyError` and believed it had removed. **A dense
+  fixture hid both defects**: the suite's only cross draws its two sides independently, so every
+  cell is populated and no shuffle there can produce an unseen pair. The lesson is a fixture
+  one — a cross whose cells are all full is not a cross, and FR-MODEL-91 said so in writing
+  before either defect was built.
+- **Two of OQ-MODEL-28's four options turned out to be one option**, on the half the question
+  believed separated them — recorded because the lesson is general to this codebase. "Permute
+  the cross's combined column" is not reachable at all: `predict_gbm` re-resolves the cross from
+  the operands' **raw** columns on every call, so **every per-factor GBM diagnostic is bounded by
+  what can be expressed as a raw-column edit**. A shuffle applied to both operands under one
+  shared order permutes the *pairs*, which is exactly a permutation of the resolved cross column
+  — measured, the observed cell set is identical before and after and 67.8 % of holdout
+  predictions move. The options differ only on the sweep grid, where the cross's observed cells
+  score and the Cartesian product of operand levels does not: FR-MODEL-32 again, the wall that
+  killed FR-MODEL-118's pooled `other` bar four requirements earlier.
 - **Two defects in `_sweep` found and deliberately *not* fixed**, recorded rather than
   tuned away because neither is what OQ-MODEL-26 asked and both change numbers already
   persisted on fitted artifacts. First, `PartialDependencePoint.exposure_share` reports a
@@ -3418,7 +3681,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 
 | # | Workstream | Depends on | Notes |
 |---|---|---|---|
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them. **Started 2026-08-15**: ~~twenty-two~~ **twenty-eight** slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, the GLM approximation as a Model (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer), and **custom metrics** (FR-MODEL-45/103/105/106/107/108 — a Custom Metric reaches `approved` on the same lifecycle and grammar as a Custom Objective, `GbmSpec.eval_metrics` is now honoured rather than merely declared, and MODEL's endpoint axis closed at **40 of 40**, the first module in this repository to publish every declared endpoint), **regularisation and cross-validation** (FR-MODEL-20/53), **Tweedie power by profile likelihood** (FR-MODEL-22), **offset from another model** (FR-MODEL-24), **EBM via interpret-core** (FR-MODEL-37) and **GBM declared weights with the dropped eval metric record** (FR-MODEL-19/111), and **the audit-remediation slice** (2026-08-22, this one); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* *(It went stale the same way again and is corrected 2026-08-22 by the audit-remediation slice: five slices — regularisation/CV (#124), Tweedie (#125), offset (#126), EBM (#129) and GBM weights (#130) — landed between 08-21 and 08-22 with the count left at twenty-two, while this file's own newest record already called itself "the twenty-seventh slice". Both stale values are kept. **The mechanism is the same both times and is worth naming rather than re-fixing:** a slice's PR strikes its row in the outstanding-work table and stops there, and this count is a second place nothing reconciles against that table — #116 did it, then #124 and #125 did it again. The same mechanism left the buildable-slice counter at one when every row beneath it was struck, and left six verdicts stale in the diagnostics slice's table. **A slice updates the row that describes itself; every other place that counts slices is unowned.** The count is of **numbered** slices, so the three decision-only records of 2026-08-18 (PRs #106, #107, #108) have records and no number and have never been in it.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys |
+| ~~**W5**~~ ✔ | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | **Closed 2026-08-22** — 110 built · 10 declared-and-refused-by-name · 16 unevidenced with a verdict, of 136; 41/41 endpoints. See the closure record above. Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them, and per plan review 3's question 5 (accepted 2026-08-22) that is now the only place a reader should take a count from. **Started 2026-08-15**: ~~twenty-two~~ **twenty-eight** slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, the GLM approximation as a Model (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer), and **custom metrics** (FR-MODEL-45/103/105/106/107/108 — a Custom Metric reaches `approved` on the same lifecycle and grammar as a Custom Objective, `GbmSpec.eval_metrics` is now honoured rather than merely declared, and MODEL's endpoint axis closed at **40 of 40**, the first module in this repository to publish every declared endpoint), **regularisation and cross-validation** (FR-MODEL-20/53), **Tweedie power by profile likelihood** (FR-MODEL-22), **offset from another model** (FR-MODEL-24), **EBM via interpret-core** (FR-MODEL-37) and **GBM declared weights with the dropped eval metric record** (FR-MODEL-19/111), and **the audit-remediation slice** (2026-08-22, this one); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* *(It went stale the same way again and is corrected 2026-08-22 by the audit-remediation slice: five slices — regularisation/CV (#124), Tweedie (#125), offset (#126), EBM (#129) and GBM weights (#130) — landed between 08-21 and 08-22 with the count left at twenty-two, while this file's own newest record already called itself "the twenty-seventh slice". Both stale values are kept. **The mechanism is the same both times and is worth naming rather than re-fixing:** a slice's PR strikes its row in the outstanding-work table and stops there, and this count is a second place nothing reconciles against that table — #116 did it, then #124 and #125 did it again. The same mechanism left the buildable-slice counter at one when every row beneath it was struck, and left six verdicts stale in the diagnostics slice's table. **A slice updates the row that describes itself; every other place that counts slices is unowned.** The count is of **numbered** slices, so the three decision-only records of 2026-08-18 (PRs #106, #107, #108) have records and no number and have never been in it.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys. **The closure slice (2026-08-22) is the last, and the count above is deliberately not incremented to twenty-nine**: plan review 3's question 5 was accepted the same day, and adding a fourth hand-written count to the file whose staleness prompted the proposal would be the clearest possible way to ignore it. The slice records below are the list; `scope-audit.py` is the count |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, workspace selection, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
@@ -3447,7 +3710,7 @@ XGBoost model, compares them, and gets one approved — i.e. **`wf-01` executed 
 | ~~**W2**~~ ✔ | Platform core: jobs, blobs, settings, OIDC auth, health, tracing | W1 | **Closed 2026-08-14** — ~35 of 61 `PLAT` requirements |
 | ~~**W3**~~ ✔ | Governance write path: audit log + hash chain, RBAC enforcement, approval state machine | W1, W2 | **Closed 2026-08-14** — §5 skeleton only, no governance UI |
 | ~~**W4**~~ ✔ | Data: sources, ingestion, preparation recipes, parquet, profiling, the four validation layers + built-in rule catalogue, reference tables | W2, W3 | **Closed 2026-08-15** — 48 of **50** `DATA` requirements (the row's "49" predates FR-DATA-40), 28/28 endpoints, 38/38 catalogue rules |
-| **W5** | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 | All **124** `MODEL` requirements — the largest single workstream. *(Re-derived 2026-08-22 with `scope-audit.py MODEL`; the row said 78, the count when it was written. Requirement ids only ever accumulate — §5 — so a number written once goes stale by construction rather than by error.)* |
+| ~~**W5**~~ ✔ | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective templates | W4 | **Closed 2026-08-22** — 136 in scope at close, of which 110 built. All ~~**124**~~ `MODEL` requirements — the largest single workstream. *(Re-derived 2026-08-22 with `scope-audit.py MODEL`; the row said 78, the count when it was written. Requirement ids only ever accumulate — §5 — so a number written once goes stale by construction rather than by error.)* |
 | **W6** | Frontend: app shell, dataset views, **validation report view**, **factor workbench**, model detail, diagnostics | W4, W5 | The two bolded views are where `01` §5.3 and `02` §5.3 place their interaction requirements |
 | **W7** | freMTPL2 demo seed **and the demo entrance** | W4, W5, W6 | `07` FR-PLAT-37, plus FR-PLAT-53/54 (`NT-0002`). The data half closed early as **W7a** |
 
@@ -3572,7 +3835,7 @@ you never block on a decision you have not reached.
 |---|---|---|
 | ~~**Before Phase 1a**~~ ✔ **all decided** | ~~OQ-OVR-2~~, ~~OQ-PLAT-1~~, ~~OQ-DATA-1~~, ~~OQ-DATA-2~~ *all 2026-08-14*, ~~OQ-DATA-7~~ *2026-08-15, raised and decided inside the phase by driving the exit demo*, ~~OQ-OVR-8~~ ✔, ~~OQ-MODEL-16~~ ✔, ~~OQ-MODEL-18~~ ✔, ~~OQ-MODEL-19~~ ✔, ~~OQ-MODEL-20~~ ✔, ~~OQ-DATA-11~~ ✔ *all 2026-08-19, raised and decided inside the phase*, ~~OQ-OVR-9~~ ✔, ~~OQ-MODEL-21~~ ✔ *2026-08-21, raised and decided inside the phase — FR-OVR-19's delivery precedes the exit demo, FR-MODEL-111 is a W5 obligation*, ~~OQ-MODEL-24~~ ✔ *2026-08-22, raised and decided inside the phase from the first measurement of NFR-MODEL-4 — it gated W5's closure, because the answer changes whether a delivered requirement is in breach* | 14 (0 open) |
 | **Before Phase 1b** — *re-opened 2026-08-22* | ~~OQ-OVR-5~~ ✔ *2026-08-14*, ~~OQ-MODEL-1~~ ✔, ~~OQ-MODEL-5~~ ✔, ~~OQ-PLAT-6~~ ✔, ~~OQ-OVR-6~~ ✔ *all 2026-08-15*, ~~OQ-OVR-7~~ ✔, ~~OQ-DATA-8~~ ✔, ~~OQ-MODEL-8~~ ✔, ~~OQ-MODEL-9~~ ✔ *all 2026-08-17*, ~~OQ-MODEL-10~~ ✔, ~~OQ-GOV-7~~ ✔, ~~OQ-MODEL-14~~ ✔ *all 2026-08-18*, ~~OQ-DATA-9~~ ✔ *2026-08-19 — raised in W5 and never placed on this table until it was decided, so the gate it belonged to had already closed; it gates W6b's dataset list, which is Phase 1b work*, ~~OQ-MODEL-15~~ ✔, ~~OQ-MODEL-17~~ ✔, ~~OQ-MODEL-22~~ ✔ *all 2026-08-21, raised in W5 and never placed on this table until decided — FR-MODEL-109 delivered with the decision, FR-MODEL-110's trigger is Phase 1b's job-latency measurement, FR-MODEL-112's first slice is Phase 1b's*, ~~OQ-MODEL-25~~ ✔, ~~OQ-MODEL-26~~ ✔ *both raised **and decided** 2026-08-22, out of the two modelling decisions taken that day — the first a live silent mis-fit, the second an unbounded diagnostics sweep. This gate had been closed since 2026-08-21; it re-opened rather than pretending they arrived earlier, and closes again the same day. Neither landed where its question pointed: FR-MODEL-116 supersedes the offset **intent** on a layer argument, the duplication argument having failed checking, and half of OQ-MODEL-26 was withdrawn as a no-op. Each raised a successor owned by W30, which is Phase 2 — placed at that gate rather than held here* | 18 (0 open) |
-| **Before Phase 2** — *re-opened 2026-08-22* | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18*, ~~OQ-MODEL-23~~ ✔ *2026-08-22 — decided into FR-MODEL-114 and FR-MODEL-115; the continuous-effect gate it turns on is W30's, which is Phase 2 work*, **OQ-MODEL-27**, **OQ-MODEL-28** *both raised 2026-08-22 out of the OQ-MODEL-25 and OQ-MODEL-26 decisions. Placed **here** and not at Before Phase 1b, where their parents sat, because FR-MODEL-117 and FR-MODEL-119 both name W30 as owner and W30 is Phase 2 — a question filed against a gate its owner cannot reach is an appointment nobody keeps. Both have interim behaviour in place, so neither blocks: `diagnostic` is refused and an interaction factor is skipped-and-recorded* | 13 (2 open) |
+| **Before Phase 2** — *re-opened 2026-08-22* | ~~OQ-RATE-1~~ ✔, ~~OQ-RATE-2~~ ✔ *both decided by spike*, ~~OQ-MODEL-3~~ ✔ *2026-08-17*, ~~OQ-MODEL-11~~ ✔, ~~OQ-MODEL-12~~ ✔, ~~OQ-RATE-3~~ ✔, ~~OQ-RATE-4~~ ✔, ~~OQ-RATE-6~~ ✔, ~~OQ-PLAT-3~~ ✔, ~~OQ-GOV-8~~ ✔ *all 2026-08-18*, ~~OQ-MODEL-23~~ ✔ *2026-08-22 — decided into FR-MODEL-114 and FR-MODEL-115; the continuous-effect gate it turns on is W30's, which is Phase 2 work*, ~~OQ-MODEL-27~~ ✔, ~~OQ-MODEL-28~~ ✔ *both raised 2026-08-22 out of the OQ-MODEL-25 and OQ-MODEL-26 decisions and **both decided the same day**, before the gate they were filed against — OQ-MODEL-27 into FR-MODEL-120, OQ-MODEL-28 into FR-MODEL-121 and FR-MODEL-122. Filing them here rested on a claim that held for one of them: "both have interim behaviour in place, so neither blocks" is true of `diagnostic`, which really is refused, and **false of the interaction**, whose skip-and-record leaves a sparse cross raising `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` out of `compute_gbm_diagnostics` (FR-MODEL-122). Deciding both early cost one day and turned an interim nobody had exercised into a measured defect with a remedy. W30 still owns the slices; what it no longer owns is the choice* | 13 (2 open) |
 | ~~**Before Phase 3**~~ ✔ **all decided** | ~~OQ-GOV-1..6~~ ✔ *2026-08-18*, ~~OQ-OVR-1~~ ✔ *decided 2026-08-15 — ADR-0006, and it changes what W14 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-MODEL-7~~ ✔ *evidence in Phase 3 (W31), never a block* | 8 (0 open) |
 | **Before Phase 4** | OQ-OPT-1..6, OQ-MON-1..5, ~~OQ-DATA-4~~ ✔ *decided 2026-08-14 — out of scope* | 12 (11 open) |
 | **Deferred / any time** | ~~OQ-OVR-3~~ ✔, ~~OQ-OVR-4~~ ✔ *both decided 2026-08-14*, ~~OQ-DATA-3~~ ✔, ~~OQ-DATA-5~~ ✔, ~~OQ-DATA-6~~ ✔ *all decided 2026-08-14*, ~~OQ-MODEL-2~~ ✔, ~~OQ-MODEL-4~~ ✔, ~~OQ-MODEL-6~~ ✔ *all decided 2026-08-15*, ~~OQ-MODEL-13~~ ✔ *2026-08-18 — reopened by its own trigger, the first consumer of an aggregate interval*, ~~OQ-DATA-10~~ ✔ *2026-08-19 — a deferral with a trigger (FR-DATA-52), raised in W5 and never placed here until decided*, OQ-RATE-5, OQ-PLAT-2, OQ-PLAT-4, OQ-PLAT-5, OQ-PLAT-7 *raised 2026-08-19 in the FR-MODEL-96 slice and placed 2026-08-21* | 15 (5 open) |

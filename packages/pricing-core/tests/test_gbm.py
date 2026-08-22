@@ -1815,3 +1815,75 @@ def test_a_gbm_can_fit_an_interaction_and_designs_on_the_cross_alone(backend: st
     mu = predict_gbm(fit.result, fit.booster_bytes, train, factors)
     assert mu.len() == train.height
     assert float(mu.min()) > 0.0
+
+
+def _sparse_crossable_book(n: int = 6_000, seed: int = 20260822) -> pl.DataFrame:
+    """A crossable book whose cross is **sparse** — 3 observed cells of 9.
+
+    `_crossable_book` draws `area` and `fuel` independently, so every cell of the cross is
+    populated. That is not what a cross looks like: FR-MODEL-91 makes only *observed*
+    combinations levels precisely because "on any real cross most cells are empty", and a
+    dense fixture is what hid FR-MODEL-122 for as long as it hid FR-MODEL-119. Here the
+    two sides move together, so the cross carries its diagonal and nothing else.
+    """
+    rng = np.random.default_rng(seed)
+    exposure = rng.uniform(0.1, 1.0, n)
+    cell = rng.integers(0, 3, n)
+    eta = np.log(exposure) - 2.0 + 0.4 * cell
+    return pl.DataFrame(
+        {
+            "exposure_years": exposure,
+            "area": [("rural", "urban", "coastal")[c] for c in cell],
+            "fuel": [("petrol", "diesel", "hybrid")[c] for c in cell],
+            "claim_count": rng.poisson(np.exp(eta)).astype(float),
+        }
+    )
+
+
+@pytest.mark.req("FR-MODEL-122")
+@pytest.mark.xfail(
+    strict=True,
+    reason="FR-MODEL-122: an operand is permuted and swept ALONE, which recombines the "
+    "operands into cells the fit never saw, so a sparse cross raises "
+    "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED out of compute_gbm_diagnostics. FR-MODEL-121 is the "
+    "remedy and W30 owns the slice; strict=True so that building it turns this green and "
+    "forces the marker off rather than leaving a stale xfail behind.",
+)
+def test_a_gbm_with_a_sparse_interaction_can_produce_diagnostics() -> None:
+    """FR-MODEL-122, the defect FR-MODEL-119's skip-and-record interim did not reach.
+
+    FR-MODEL-119 stopped the `IndexError` by skipping the **cross**, and left the cross's
+    **operands** in the list — `load_factors` returns `ordered + operands`, so they are
+    always there. Both per-factor blocks then permute and sweep an operand's raw column on
+    its own, and `predict_gbm` re-resolves the cross from those raw columns, so shuffling
+    one side pairs it with the other side's untouched values: three observed cells become
+    nine, six of which the fitted model has no code for.
+
+    Written as the *desired* behaviour rather than as a `pytest.raises` around the current
+    one, so the fix deletes a marker instead of rewriting an assertion — a characterisation
+    test would have locked the defect in.
+    """
+    from pricing_core.modelling import compute_gbm_diagnostics
+
+    left = _factor("area", "area")
+    right = _factor("fuel", "fuel")
+    cross = _factor(
+        "area_x_fuel", "area",
+        type=FactorType.INTERACTION,
+        source_columns=(),
+        operand_factor_ids=(left.id, right.id),
+    )
+    factors = [left, right, cross]
+    train = _sparse_crossable_book()
+    holdout = _sparse_crossable_book(n=2_000, seed=4242)
+    assert train.select(["area", "fuel"]).unique().height == 3, "the fixture must be sparse"
+
+    spec = _spec("xgboost", factors=tuple(f.id for f in factors))
+    fit = fit_gbm(train, spec, factors)
+    # The fit itself is fine — FR-MODEL-119 made it so, and the cross is the only feature.
+    assert list(fit.result.feature_order) == ["area_x_fuel"]
+
+    compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes, spec, factors,
+        train=train, holdout=holdout, eval_curve=fit.eval_curve,
+    )

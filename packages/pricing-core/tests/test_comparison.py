@@ -89,7 +89,7 @@ def _spec(factors: list[Factor], **over: object) -> GlmSpec:
 def _candidate(ref: str, frame: pl.DataFrame, slug: str, **over: object) -> ComparisonCandidate:
     factors = [_factor(slug)]
     spec = _spec(factors, **over)
-    fit = fit_glm(frame, spec, factors, seed=1).result
+    fit = fit_glm(frame, spec, factors).result
     return ComparisonCandidate(ref=ref, fit=fit, spec=spec, factors=tuple(factors))
 
 

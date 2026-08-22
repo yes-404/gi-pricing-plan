@@ -525,7 +525,6 @@ def fit_glm(
     spec: GlmSpec,
     factors: Sequence[Factor],
     *,
-    seed: int = 0,
     model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
@@ -536,6 +535,10 @@ def fit_glm(
     `factors`, `bandings` and `groupings` are passed explicitly rather than read from the
     spec's ids: `pricing-core` resolves shapes, not references — looking one up would need
     a database, which ADR-0001 forbids this package.
+
+    `spec.seed` is the only seed, because it is what `spec_hash` pins — the spec alone must
+    reproduce the fit (NFR-MODEL-6). There is no `seed` argument: one existed, was read by
+    nothing, and was removed 2026-08-22 (OQ-MODEL-29, FR-MODEL-123).
 
     When the spec carries `tweedie`, the Tweedie power is estimated by profile likelihood
     over `tweedie.p_grid` and recorded with its 95% profile-likelihood interval on

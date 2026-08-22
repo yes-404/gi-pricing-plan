@@ -724,3 +724,44 @@ def test_a_singular_design_still_reaches_the_rank_deficient_code() -> None:
     with pytest.raises(GlmFitError) as refused:
         fit_glm(data, _spec(), factors)
     assert refused.value.code == "GLM_RANK_DEFICIENT"
+
+
+@pytest.mark.req("NFR-MODEL-6")
+def test_two_fits_of_one_spec_reproduce_identical_coefficients() -> None:
+    """NFR-MODEL-6's GLM half, which carried no marker until 2026-08-22.
+
+    The requirement asks for two things and the suite proved one: `test_gbm.py` pins the
+    booster hash, and nothing anywhere refitted a GLM and compared coefficients. The
+    tolerance is the requirement's own 1e-10, not `pytest.approx`'s default — a solver
+    that had gone non-deterministic would still pass a relative 1e-6.
+    """
+    data = _frequency_data()
+    factors = [_factor("area", "area"), _factor("driv_age", "driv_age")]
+    spec = _spec()
+
+    first = fit_glm(data, spec, factors)
+    second = fit_glm(data, spec, factors)
+
+    assert [c.term for c in first.result.coefficients] == [
+        c.term for c in second.result.coefficients
+    ]
+    for left, right in zip(
+        first.result.coefficients, second.result.coefficients, strict=True
+    ):
+        assert abs(left.estimate - right.estimate) <= 1e-10, left.term
+
+
+@pytest.mark.req("FR-MODEL-123")
+def test_fit_glm_refuses_a_seed_argument() -> None:
+    """FR-MODEL-123: `spec.seed` is the only seed, and the dead kwarg is gone.
+
+    A deleted parameter and a silently-ignored one are indistinguishable to a caller until
+    one of them raises — which is how `fit_glm(..., seed=…)` reached twenty call sites, four
+    of them outside tests, without anyone noticing it did nothing. Asserting the raise is
+    what stops the removal regressing into a re-added kwarg that is ignored again.
+
+    No data is needed: Python binds arguments before the body runs, so the unexpected
+    keyword is refused before the frame is ever touched.
+    """
+    with pytest.raises(TypeError, match="seed"):
+        fit_glm(pl.DataFrame(), _spec(), [], seed=0)  # type: ignore[call-arg]

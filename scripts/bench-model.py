@@ -354,7 +354,7 @@ def _fit_glm_once(frame: pl.DataFrame, *, label: str) -> tuple[object, object, f
     factors = factor_set(frame, dataset_id)
     spec = glm_spec(uuid4(), factors)
     with timed(label) as slot:
-        fit = fit_glm(frame, spec, factors, seed=0)
+        fit = fit_glm(frame, spec, factors)
     return fit, (spec, factors), slot[0]
 
 
@@ -458,7 +458,7 @@ def bench_diagnostics(rows: int, factors: int, *, type_iii: bool) -> None:
     factor_objects = factor_set(train, dataset_id)
     spec = glm_spec(uuid4(), factor_objects)
     with timed("NFR-MODEL-4 glm fit (denominator)") as fit_slot:
-        fit = fit_glm(train, spec, factor_objects, seed=0)
+        fit = fit_glm(train, spec, factor_objects)
 
     with timed("NFR-MODEL-4 diagnostics, no type-III") as base_slot:
         computed = compute_diagnostics(
@@ -627,7 +627,7 @@ def bench_curve(scales: list[int], factors: int, rounds: int, *, gbm: bool) -> N
 
         spec = glm_spec(uuid4(), factor_objects)
         with timed(f"  glm  {rows:>9,} rows") as slot:
-            fit_glm(frame, spec, factor_objects, seed=0)
+            fit_glm(frame, spec, factor_objects)
         glm_points.append((rows, slot[0], results[-1][2], results[-1][3]))
 
         if gbm:

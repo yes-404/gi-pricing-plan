@@ -52,10 +52,14 @@ from pricing_core.modelling.groupings import apply_grouping
 #: where such a decision becomes behaviour.
 SUPERSEDED_FACTOR_TYPES = frozenset({FactorType.OFFSET})
 
-#: FR-MODEL-116 and FR-MODEL-117: the `FactorIntent` arms no fit path honours, mapped
-#: to the reason the refusal gives. The two do **not** share a reason — one is
-#: permanent and one is pending — so the message says which applies, exactly as
-#: FR-MODEL-88's type refusals do (OQ-MODEL-25, decided 2026-08-22).
+#: FR-MODEL-116 and FR-MODEL-120: the `FactorIntent` arms no fit path honours, mapped
+#: to the reason the refusal gives. Both are now **permanent**: FR-MODEL-117 refused
+#: `diagnostic` pending OQ-MODEL-27, and OQ-MODEL-27 superseded it a day later on the same
+#: layer argument as `offset` — hold-out-ness is a property of *one fit*, while an intent
+#: is a property of a Factor every spec reuses. The mapping keeps a reason per arm rather
+#: than collapsing to one string because the two are superseded for arguments that differ
+#: in what they point at, and a reader of the refusal should get the one that applies —
+#: exactly as FR-MODEL-88's type refusals do (OQ-MODEL-25 and OQ-MODEL-27, 2026-08-22).
 REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
     {
         FactorIntent.OFFSET: (
@@ -65,10 +69,12 @@ REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
             "on the Factor."
         ),
         FactorIntent.DIAGNOSTIC: (
-            "has no defined meaning at fit time yet (`02` FR-MODEL-117). `02` FR-MODEL-3 "
-            "lists the arm and never says what it does, so honouring it would mean "
-            "inventing the meaning; OQ-MODEL-28's sibling OQ-MODEL-27 owns that "
-            "decision and W30 owns the slice."
+            "is **superseded** and will never be honoured (`02` FR-MODEL-120). `02` "
+            "FR-MODEL-3 never said what the arm means, and both readings of it fail: "
+            "'resolved and reported but held out of the linear predictor' is a property "
+            "of one fit, mis-sited on a Factor every Model Spec reuses, and anything "
+            "weaker is `control` already. Holding a term out of one model's predictor is "
+            "a Model Spec field, not a Factor intent."
         ),
     }
 )

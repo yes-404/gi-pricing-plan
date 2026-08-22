@@ -15,6 +15,8 @@ remembered to forbid; a translator can only produce what it knows how to build.
 from __future__ import annotations
 
 import ast
+from collections import deque
+from collections.abc import Iterator
 from typing import Final
 
 import polars as pl
@@ -63,27 +65,71 @@ _FUNCTIONS: Final[frozenset[str]] = frozenset(
 
 
 class ExpressionError(ValueError):
-    """The expression is outside the grammar. The message names what was refused."""
+    """The expression is outside the grammar. The message names what was refused.
+
+    It also names *where*, when the AST can say (NFR-MODEL-8). `lineno` and `col_offset`
+    are exactly what `ast` reports — 1-based and 0-based respectively — so a caller can
+    underline the offending token without re-parsing.
+
+    They are `None` when nothing in the tree above the refusal has a position: `ast` gives
+    `lineno` only to `expr` and `stmt` subclasses, and the refusals below are often handed
+    an `operator` or a `cmpop`, which are neither. Those sites thread the nearest
+    **enclosing** expression node for that reason, so `None` means "the parser could not
+    know", never "nobody threaded it".
+    """
+
+    def __init__(self, message: str, *, node: ast.AST | None = None) -> None:
+        super().__init__(message)
+        self.lineno: int | None = getattr(node, "lineno", None)
+        self.col_offset: int | None = getattr(node, "col_offset", None)
+        self.end_col_offset: int | None = getattr(node, "end_col_offset", None)
+
+
+def _walk_positioned(node: ast.AST) -> Iterator[tuple[ast.AST, ast.AST | None]]:
+    """`ast.walk`, pairing each node with the nearest node that knows where it is.
+
+    `ast` gives `lineno`/`col_offset` to `expr` and `stmt` subclasses only, so an
+    `operator`, `cmpop`, `boolop` or `unaryop` can never say where it is — and those are
+    exactly the nodes a grammar refusal most often names (`FloorDiv`, `Is`, `In`). The
+    enclosing expression can say, and its span is what a caller should underline
+    (NFR-MODEL-8): for `exposure + premium // 2` that is `premium // 2`, not the whole
+    string.
+
+    Breadth-first, in `ast.walk`'s own order, so which node is refused first is unchanged
+    by adding positions.
+    """
+    queue: deque[tuple[ast.AST, ast.AST | None]] = deque([(node, None)])
+    while queue:
+        current, inherited = queue.popleft()
+        position = current if hasattr(current, "lineno") else inherited
+        queue.extend((child, position) for child in ast.iter_child_nodes(current))
+        yield current, position
 
 
 def _check(node: ast.AST) -> None:
-    for child in ast.walk(node):
+    for child, position in _walk_positioned(node):
         if not isinstance(child, _ALLOWED_NODES):
             raise ExpressionError(
                 f"{type(child).__name__} is not permitted in a derive_expression "
                 "(FR-DATA-10). The grammar admits arithmetic, comparison, conditionals and "
-                f"a fixed function list: {sorted(_FUNCTIONS)}."
+                f"a fixed function list: {sorted(_FUNCTIONS)}.",
+                node=position,
             )
         if isinstance(child, ast.Call):
             if not isinstance(child.func, ast.Name):
-                raise ExpressionError("only plain function calls are permitted")
+                raise ExpressionError(
+                    "only plain function calls are permitted", node=child
+                )
             if child.func.id not in _FUNCTIONS:
                 raise ExpressionError(
                     f"{child.func.id!r} is not an allowed function; permitted: "
-                    f"{sorted(_FUNCTIONS)}"
+                    f"{sorted(_FUNCTIONS)}",
+                    node=child,
                 )
             if child.keywords:
-                raise ExpressionError("keyword arguments are not permitted")
+                raise ExpressionError(
+                    "keyword arguments are not permitted", node=child.keywords[0]
+                )
 
 
 def referenced_columns(expression: str) -> frozenset[str]:
@@ -120,30 +166,32 @@ def _translate(node: ast.AST) -> pl.Expr:
             return _translate(operand)
         case ast.UnaryOp(op=ast.Not(), operand=operand):
             return ~_translate(operand)
-        case ast.BinOp(left=left, op=op, right=right):
-            return _binary(op, _translate(left), _translate(right))
+        case ast.BinOp(left=left, op=op, right=right) as binop:
+            return _binary(op, _translate(left), _translate(right), node=binop)
         case ast.BoolOp(op=op, values=values):
             translated = [_translate(v) for v in values]
             result = translated[0]
             for other in translated[1:]:
                 result = result & other if isinstance(op, ast.And) else result | other
             return result
-        case ast.Compare(left=left, ops=[op], comparators=[right]):
-            return _compare(op, _translate(left), _translate(right))
-        case ast.Compare():
-            raise ExpressionError("chained comparisons are not permitted; use `and`")
+        case ast.Compare(left=left, ops=[op], comparators=[right]) as comparison:
+            return _compare(op, _translate(left), _translate(right), node=comparison)
+        case ast.Compare() as chained:
+            raise ExpressionError(
+                "chained comparisons are not permitted; use `and`", node=chained
+            )
         case ast.IfExp(test=test, body=body, orelse=orelse):
             return (
                 pl.when(_translate(test))
                 .then(_translate(body))
                 .otherwise(_translate(orelse))
             )
-        case ast.Call(func=ast.Name(id=name), args=args):
-            return _call(name, [_translate(a) for a in args])
-    raise ExpressionError(f"{type(node).__name__} is not translatable")
+        case ast.Call(func=ast.Name(id=name), args=args) as call:
+            return _call(name, [_translate(a) for a in args], node=call)
+    raise ExpressionError(f"{type(node).__name__} is not translatable", node=node)
 
 
-def _binary(op: ast.operator, left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def _binary(op: ast.operator, left: pl.Expr, right: pl.Expr, *, node: ast.AST) -> pl.Expr:
     match op:
         case ast.Add():
             return left + right
@@ -157,10 +205,10 @@ def _binary(op: ast.operator, left: pl.Expr, right: pl.Expr) -> pl.Expr:
             return left % right
         case ast.Pow():
             return left**right
-    raise ExpressionError(f"{type(op).__name__} is not a permitted operator")
+    raise ExpressionError(f"{type(op).__name__} is not a permitted operator", node=node)
 
 
-def _compare(op: ast.cmpop, left: pl.Expr, right: pl.Expr) -> pl.Expr:
+def _compare(op: ast.cmpop, left: pl.Expr, right: pl.Expr, *, node: ast.AST) -> pl.Expr:
     match op:
         case ast.Eq():
             return left == right
@@ -174,12 +222,12 @@ def _compare(op: ast.cmpop, left: pl.Expr, right: pl.Expr) -> pl.Expr:
             return left > right
         case ast.GtE():
             return left >= right
-    raise ExpressionError(f"{type(op).__name__} is not a permitted comparison")
+    raise ExpressionError(f"{type(op).__name__} is not a permitted comparison", node=node)
 
 
-def _call(name: str, args: list[pl.Expr]) -> pl.Expr:
+def _call(name: str, args: list[pl.Expr], *, node: ast.AST) -> pl.Expr:
     if not args:
-        raise ExpressionError(f"{name}() needs at least one argument")
+        raise ExpressionError(f"{name}() needs at least one argument", node=node)
     match name:
         case "abs":
             return args[0].abs()
@@ -202,4 +250,4 @@ def _call(name: str, args: list[pl.Expr]) -> pl.Expr:
             return pl.max_horizontal(args)
         case "coalesce":
             return pl.coalesce(args)
-    raise ExpressionError(f"{name!r} is not an allowed function")
+    raise ExpressionError(f"{name!r} is not an allowed function", node=node)

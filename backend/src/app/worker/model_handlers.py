@@ -55,6 +55,7 @@ from model_schema import (
     GbmEvalPoint,
     GbmFitResult,
     GbmSpec,
+    GlmApproximation,
     GlmFitResult,
     GlmSpec,
     Grouping,
@@ -361,14 +362,14 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             # `booster`/`covariance` keep their pre-initialised None values and
             # `store()` writes no blob.
             result = fit_ebm(
-                frame, spec, factors, seed=spec.seed,
+                frame, spec, factors,
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 progress=fitting,
             )
         else:
             glm_fit = fit_glm(
-                frame, spec, factors, seed=spec.seed,
+                frame, spec, factors,
                 bandings=transformations.bandings,
                 groupings=transformations.groupings,
                 progress=fitting,
@@ -811,6 +812,11 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     holdout is loaded beside the train frame for that reason alone — the approximation is
     still built on train (above), and the holdout only ever reaches `compute_diagnostics`,
     which FR-MODEL-54 refuses to run one-sided.
+
+    FR-MODEL-110 then makes the **rebuild** cheap: the reservation is probed before either
+    expensive call, and a surrogate that is already fitted has its stored block read back
+    instead of refitted. The SHAP summary is not part of that bargain — it is rebuilt every
+    time, because no Model holds it and nothing makes a stored one findable.
     """
     progress = _bridge(callback)
     blob_store = progress.blob_store
@@ -949,6 +955,8 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     assert source_version is not None
 
     from pricing_core.modelling import (
+        DiagnosticsResult,
+        GlmApproximationFit,
         approximation_spec,
         build_glm_approximation,
         build_shap_summary,
@@ -971,28 +979,85 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             "cannot be stored.",
         )
 
-    progress.update(0.20, "fitting the GLM approximation")
-    approximation = build_glm_approximation(
-        result, booster, spec, factors, frame,
-        holdout=holdout,
-        source_model_id=model_id,
-        bandings=transformations.bandings,
-        groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.20, end=0.50),
+    reservation_reason = (
+        f"glm approximation of {source_slug}@{source_version} (FR-MODEL-34)"
     )
-    progress.update(0.50, "diagnostics of the approximation")
-    # FR-MODEL-96(iii): the surrogate reaches `fitted` on diagnostics of itself against the
-    # source model's predictions — FR-MODEL-36's quantity, on both partitions. The frames
-    # carry the booster's predictions in `SURROGATE_RESPONSE_COLUMN`, so this is the
-    # ordinary GLM diagnostics path measuring an extraordinary target, and FR-MODEL-102's
-    # spec invariant is what says so to every later reader.
-    surrogate_diagnostics = compute_diagnostics(
-        approximation.result, approximation.spec, factors,
-        train=approximation.train, holdout=approximation.holdout,
-        bandings=transformations.bandings,
-        groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.50, end=0.62),
-    )
+
+    async def reusable_numbers() -> GlmApproximation | None:
+        """FR-MODEL-110 — the stored block to reuse, or `None` meaning "fit it".
+
+        The branch belongs **before** `build_glm_approximation` and `compute_diagnostics`,
+        not after: `reserve_model` already knows whether the surrogate is fitted, and a
+        rebuild that pays a full `glum` fit plus one type-III refit per factor
+        (FR-MODEL-51) for numbers `store()` then discards is buying the same answer twice.
+        Nothing new has to be proved to reuse them — the source Model and the surrogate's
+        own spec are both immutable once fitted, so `spec_hash` (FR-MODEL-66) already says
+        a recompute would land on the numbers stored at the first build.
+
+        Reserved in a **read** session, which never commits. The reservation that counts is
+        still the one inside `store()`'s single transaction, so a failed compute still
+        leaves nothing behind. On the reuse path `reserve_model` returns before it writes
+        anything at all; on the first-build path its insert and audit event are rolled back
+        with the session, and the refusals it raises now arrive before the compute rather
+        than after it.
+        """
+        async with progress.database.session() as session:
+            reserved, should_fit = await model_service.reserve_model(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                spec=surrogate_spec,
+                change_reason=reservation_reason,
+            )
+            if should_fit:
+                return None
+            try:
+                previous = await transparency_service.load_transparency(
+                    session, workspace_id=workspace_id, model_id=model_id
+                )
+            except PlatformError as exc:
+                if exc.code != "NOT_FOUND":
+                    raise
+                # A fitted surrogate no artifact cites. `store()` writes both in one
+                # transaction so this should be unreachable, and the honest response to
+                # reaching it is to fit rather than to invent the block.
+                return None
+            block = previous.glm_approximation
+            # The same refusal for a block that names a *different* Model: correct numbers
+            # under the wrong model id, or the wrong numbers under the right one, is the
+            # only failure this reuse could introduce and it is unreadable afterwards.
+            if block is None or block.approximating_model_id != reserved.id:
+                return None
+            return block
+
+    progress.update(0.15, "looking for an approximation already fitted")
+    stored = progress.run_on_loop(reusable_numbers())
+
+    approximation: GlmApproximationFit | None = None
+    surrogate_diagnostics: DiagnosticsResult | None = None
+    if stored is None:
+        progress.update(0.20, "fitting the GLM approximation")
+        approximation = build_glm_approximation(
+            result, booster, spec, factors, frame,
+            holdout=holdout,
+            source_model_id=model_id,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=ScaledProgress(progress, start=0.20, end=0.50),
+        )
+        progress.update(0.50, "diagnostics of the approximation")
+        # FR-MODEL-96(iii): the surrogate reaches `fitted` on diagnostics of itself against
+        # the source model's predictions — FR-MODEL-36's quantity, on both partitions. The
+        # frames carry the booster's predictions in `SURROGATE_RESPONSE_COLUMN`, so this is
+        # the ordinary GLM diagnostics path measuring an extraordinary target, and
+        # FR-MODEL-102's spec invariant is what says so to every later reader.
+        surrogate_diagnostics = compute_diagnostics(
+            approximation.result, approximation.spec, factors,
+            train=approximation.train, holdout=approximation.holdout,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=ScaledProgress(progress, start=0.50, end=0.62),
+        )
     progress.update(0.62, "tree shap")
     summary = build_shap_summary(
         result, booster, spec, factors, frame,
@@ -1025,12 +1090,17 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                 session,
                 workspace_id=workspace_id,
                 actor=actor,
-                spec=approximation.spec,
-                change_reason=(
-                    f"glm approximation of {source_slug}@{source_version} (FR-MODEL-34)"
-                ),
+                spec=surrogate_spec,
+                change_reason=reservation_reason,
             )
             if should_fit:
+                # `reusable_numbers()` returned `None` on every path that reaches a
+                # `should_fit` of `True` here, so the fit exists. It could only be absent
+                # if the surrogate row lost its numbers between the two calls, which model
+                # immutability makes unreachable — and failing loudly beats writing an
+                # artifact whose block came from nowhere.
+                assert approximation is not None, "should_fit without a fit to record"
+                assert surrogate_diagnostics is not None
                 await model_service.record_fit(
                     session,
                     workspace_id=workspace_id,
@@ -1054,13 +1124,22 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                     job_id=job_id,
                 )
 
-            # On the `should_fit=False` path this block's `r_squared` and `worst_regions`
-            # come from the fit **just computed**, while the Model it names holds the first
-            # one. They agree only because `fit_glm` is deterministic under `spec.seed`,
-            # which `approximation_spec` carries over from the GBM — an artifact that
-            # disagreed with the Model it cites would be the failure this sentence exists
-            # to make visible.
-            block = approximation.artifact_block(surrogate.id)
+            # FR-MODEL-110. The block is the fit's own summary when one was computed, and
+            # otherwise the numbers the first build stored against this same Model — read
+            # back rather than recomputed, so the artifact cannot disagree with the Model
+            # it cites. Rebuilt around `surrogate.id` rather than copied whole: the id is
+            # the platform's to assign, and re-running `GlmApproximation`'s validator is
+            # what keeps "exactly one table" true of a block assembled here.
+            if approximation is not None:
+                block = approximation.artifact_block(surrogate.id)
+            else:
+                assert stored is not None
+                block = GlmApproximation(
+                    approximating_model_id=surrogate.id,
+                    r_squared=stored.r_squared,
+                    deviance_explained=stored.deviance_explained,
+                    worst_regions=stored.worst_regions,
+                )
             artifact = TransparencyArtifact(
                 id=new_uuid7(),
                 model_id=model_id,
@@ -1350,21 +1429,40 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
             booster=candidate.booster,
         )
 
-    predictions = [
-        PerilPrediction(
-            peril=peril.peril,
-            method=peril.method,
-            frequency=_score(peril.frequency_model) if peril.frequency_model else None,
-            severity=_score(peril.severity_model) if peril.severity_model else None,
-            burning_cost=(
-                _score(peril.burning_cost_model) if peril.burning_cost_model else None
-            ),
-            large_loss=peril.large_loss,
-        )
-        for peril in structure.perils
-    ]
+    from pricing_core.modelling import ModellingError, PredictionError
 
-    from pricing_core.modelling import ModellingError
+    try:
+        predictions = [
+            PerilPrediction(
+                peril=peril.peril,
+                method=peril.method,
+                frequency=_score(peril.frequency_model) if peril.frequency_model else None,
+                severity=_score(peril.severity_model) if peril.severity_model else None,
+                burning_cost=(
+                    _score(peril.burning_cost_model) if peril.burning_cost_model else None
+                ),
+                large_loss=peril.large_loss,
+            )
+            for peril in structure.perils
+        ]
+    except (ModellingError, PredictionError) as exc:
+        # Without this the refusal loses its name. `PredictionError` is a sibling of
+        # `ModellingError` — both bare `RuntimeError`s from `pricing-core` — and neither is
+        # a `PlatformError`, so `execute_job`'s OQ-PLAT-7 clause does not catch it. The Job
+        # would store `JOB_HANDLER_FAILED` with the code absent even from the message,
+        # leaving a named refusal indistinguishable from a handler crash, which is the exact
+        # failure OQ-PLAT-7 exists to remove. `platform/prediction.py` catches the pair
+        # together for the synchronous path; this is the worker path saying the same thing.
+        #
+        # It bites hardest on FR-MODEL-24's model-referenced offset: `_score` calls
+        # `score_fitted` with no `model_offset=`, so a GLM whose `offset.kind == "model"`
+        # reaches `predict._offset` without its resolved array and is refused
+        # `MODEL_OFFSET_MISSING` — never scored on a silently-absent offset, which would
+        # misprice the whole reconciliation. FR-MODEL-112(c) wires the resolver in; until it
+        # does, the named refusal *is* the deliverable, and a caller must be able to see it.
+        raise PlatformError(
+            exc.code, "A peril component could not be scored", 409, str(exc)
+        ) from exc
 
     try:
         assembled = assemble_risk_premium(predictions)

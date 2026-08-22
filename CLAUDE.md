@@ -84,16 +84,16 @@ the maths.
 │   └── pricing-core/         ◐ progress + money + the `data/` maths, and `modelling/`:
 │                               factors, bandings, groupings, GLM, GBM,
 │                               diagnostics, transparency, custom
-│                               objectives                            [W1, W4, W5]
+│                               objectives                           [W1, W4, W5✔]
 │
 ├── backend/                  ◐ API + worker: jobs, blobs, auth, RBAC, approvals,
 │                               datasets, validation, profiling, reference,
 │                               the demo guide, factors/bandings/groupings/models,
 │                               GBM fits, transparency artifacts and custom objectives
-│                                                     [W2✔ W3✔ W4✔ W7b✔ W5]
+│                                                    [W2✔ W3✔ W4✔ W7b✔ W5✔]
 ├── pipelines/                … Dagster ingestion and scheduling      [deferred to W7]
 ├── frontend/                 ◐ Vue 3 SPA — `01` §5.3's 7 views routed, plus `/demo`
-│                               and `02` §5.3's factor workbench     [W6a✔ W7b✔ W5 W6b]
+│                               and `02` §5.3's factor workbench    [W6a✔ W7b✔ W5✔ W6b]
 ├── examples/                 ◐ freMTPL2 seed — data half done  [W7a✔] rest [1b W7]
 │
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
