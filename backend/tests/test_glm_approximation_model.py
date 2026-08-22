@@ -17,8 +17,10 @@ import pytest
 from backend.tests.test_model_jobs import _actuary, _dataset, _validated_version
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
 from backend.tests.test_prediction import _fitted_glm
+from sqlalchemy import func, select
 
-from app.db.models import TransparencyArtifactRow
+import pricing_core.modelling as pricing_modelling
+from app.db.models import AuditEventRow, ModelRow, TransparencyArtifactRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import diagnostics as diagnostics_service
@@ -219,6 +221,7 @@ async def test_the_surrogate_carries_no_covariance_blob(
     assert surrogate.fit_result["covariance_blob"] is None
 
 
+@pytest.mark.req("FR-MODEL-110")
 @pytest.mark.req("FR-MODEL-96")
 async def test_rebuilding_the_artifact_reuses_the_surrogate_rather_than_refitting_it(
     database: Database, blob_store: BlobStore, workspace_id: UUID
@@ -469,3 +472,126 @@ async def test_a_surrogate_on_a_different_dataset_version_is_refused(
     assert caught.value.code == "MODEL_APPROXIMATION_INVALID"
     assert caught.value.status_code == 409
     assert "dataset_version_id" in str(caught.value.detail)
+
+
+@pytest.mark.req("FR-MODEL-110")
+async def test_a_rebuild_does_not_refit_the_surrogate_it_reuses(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FR-MODEL-110: on `should_fit=False` the numbers are loaded, not recomputed.
+
+    The rebuild test above proves the surrogate *Model row* is reused. It cannot see the
+    cost, which is the whole point of the requirement: a full `glum` fit plus one type-III
+    refit per factor (FR-MODEL-51), paid for numbers the handler then discards. This
+    counts the calls instead of trusting the ordering.
+
+    Patched on `pricing_core.modelling` rather than on `app.worker.model_handlers`: the
+    handler imports both names at call-site scope, so the module namespace it resolves
+    them through is the source package's, not its own.
+    """
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+    first = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
+
+    calls: list[str] = []
+    real_build = pricing_modelling.build_glm_approximation
+    real_diagnostics = pricing_modelling.compute_diagnostics
+
+    def _counted_build(*args: object, **kwargs: object):
+        calls.append("build_glm_approximation")
+        return real_build(*args, **kwargs)  # type: ignore[arg-type]
+
+    def _counted_diagnostics(*args: object, **kwargs: object):
+        calls.append("compute_diagnostics")
+        return real_diagnostics(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(pricing_modelling, "build_glm_approximation", _counted_build)
+    monkeypatch.setattr(pricing_modelling, "compute_diagnostics", _counted_diagnostics)
+
+    second = await _transparency_job(database, blob_store, workspace_id, model_id, actor)
+
+    assert second.id != first.id, "each build appends an artifact (FR-MODEL-33)"
+    assert calls == [], "a rebuild must not refit the surrogate it is about to reuse"
+    assert second.glm_approximation is not None
+    assert first.glm_approximation is not None
+    assert (
+        second.glm_approximation.approximating_model_id
+        == first.glm_approximation.approximating_model_id
+    )
+    assert second.glm_approximation.r_squared == first.glm_approximation.r_squared
+    assert (
+        second.glm_approximation.deviance_explained
+        == first.glm_approximation.deviance_explained
+    )
+    assert second.glm_approximation.worst_regions == first.glm_approximation.worst_regions
+
+
+@pytest.mark.req("FR-MODEL-110")
+async def test_a_failed_build_leaves_no_reserved_surrogate_behind(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FR-MODEL-110's branch asks `reserve_model` a second time, ahead of the compute, and
+    that question has to cost nothing.
+
+    Asked inside a transaction that committed, a build that then failed would leave a draft
+    surrogate and a `model.reserved` event describing a model nothing ever fitted — the
+    state `store()`'s single transaction exists to make unreachable, and the one way the
+    cheaper rebuild path could be paid for with a governance defect. The probe reserves in
+    a read session for that reason, and this is what says so.
+    """
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+
+    def _explode(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("the approximation failed after the reservation was probed")
+
+    monkeypatch.setattr(pricing_modelling, "build_glm_approximation", _explode)
+
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_TRANSPARENCY,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id), "sample": 2_000},
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+
+    async with database.session() as session:
+        source = MODEL_SPEC_ADAPTER.validate_python(
+            (await model_service.load_model_by_id(
+                session, workspace_id=workspace_id, model_id=model_id)).spec
+        )
+        slug = approximation_spec(source, source_model_id=model_id).model_family_slug
+        surrogates = list(
+            (
+                await session.execute(
+                    select(ModelRow.id).where(
+                        ModelRow.workspace_id == workspace_id,
+                        ModelRow.model_family_slug == slug,
+                    )
+                )
+            ).scalars()
+        )
+        reservations = (
+            await session.execute(
+                select(func.count())
+                .select_from(AuditEventRow)
+                .where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "model.reserved",
+                    AuditEventRow.entity_ref == f"model:{slug}@1",
+                )
+            )
+        ).scalar_one()
+
+    assert surrogates == [], "a failed build must leave no reserved surrogate behind"
+    assert reservations == 0, "nor an audit event for a reservation that did not happen"
+

@@ -512,9 +512,36 @@ it rather than at its edges.
 one nobody asked:** the Phase 1b workstream rows need no re-cut, and no requirement needs
 superseding beyond `transparency_artifact_id`, which this slice struck with its reason.
 
-**Maintainer acceptance:** _pending_. Nothing above has been applied to the plan; the four
-owner proposals in question 2, the skill in question 3, the `--params` axis in question 4 and
-the generated-counts proposal in question 5 each need an explicit dated line.
+**Maintainer acceptance: accepted as proposed, 2026-08-22.** Each proposal below binds from
+that date. Recorded per line rather than as one blanket sentence, because a single "accepted"
+over five proposals leaves no way to tell later which of them anyone actually read.
+
+- **Question 2, the owner assignments — accepted 2026-08-22.** (b) the constraint-level
+  contract-drift guard and (d) `FR-MODEL-15`'s `source_level_stats` are **W6b's**, as the
+  first consumer of these contracts; (c) `06` §3.3's per-peril model approvals are **W17's**,
+  as the workstream that owns evidence enforcement.
+- **Question 2 (a), `NFR-MODEL-7` — accepted 2026-08-22 at the option the proposal named:
+  out of Phase 1 scope.** The review said it "may simply be out of Phase 1 scope, in which
+  case NFR-MODEL-7 should say so"; it now does, in `02` §9. There is no Model export path and
+  no import path anywhere — not a route, not a CLI, not a bundle schema — and its parent
+  FR-OVR-2 carries zero markers. It is a capability nobody has been asked to build, and no row
+  ever named it, so it was never a W5 defect. Saying so is the verdict §13 rule 1 requires;
+  leaving it "unassigned" was the one row in the audit-remediation slice's verdict table that
+  stated an absence of a verdict rather than a verdict.
+- **Question 3, the `contract-guard` skill — accepted 2026-08-22, owned by W6b**, as either a
+  skill of its own or a section in `contract-schema`. The author's discretion which; the
+  binding part is that the schema-drift knowledge stops being rediscovered.
+- **Question 4, `scope-audit.py` gains a `--params` axis — accepted 2026-08-22.** Three axes
+  exist and a wrong *parameter* is invisible to all three. Accepted as the review argues: a
+  hole in the instrument rather than an oversight in one audit.
+- **Question 5, the derived counts stop living in prose — accepted 2026-08-22.** Either
+  generated or deleted with the reader pointed at `scope-audit.py`; not left as prose to go
+  stale a fourth time. This is the only structural proposal of the five and the only one that
+  would have prevented the staleness that prompted it. **It does not bind retroactively**: the
+  counts already written into this file stay as written, struck and corrected in place where a
+  later slice re-derived them, because a roadmap row states what was known when it was written.
+- **The two "no change" answers stand**, and needed no acceptance: the Phase 1b workstream
+  rows are not re-cut, and no requirement is superseded beyond `transparency_artifact_id`.
 
 ### Independent audit — 2026-08-15, and what it changed
 
@@ -3285,7 +3312,7 @@ FR-MODEL-81 (2026-08-16) and never applied it to the headline. Stated properly:
 | FR-MODEL-6 — `expression` factors | Not started | **W30**, accepted by the maintainer 2026-08-22 |
 | FR-MODEL-40 — `expression` objectives | Not started | **W30** (OQ-MODEL-1) |
 | FR-MODEL-82 — proxy detection | Not started | **Phase 3 / W31** (OQ-MODEL-7) |
-| FR-MODEL-110 — rebuild reuses stored numbers | **Delivered but untested** (OQ-MODEL-17, 2026-08-21) | W5 — a marker is owed, not a feature |
+| FR-MODEL-110 — rebuild reuses stored numbers | **Built 2026-08-22** (W5, the closure slice), and the verdict this row carried was false. *(Original verdict, struck rather than overwritten:)* ~~**Delivered but untested** (OQ-MODEL-17, 2026-08-21)~~ — **it was neither.** The branch FR-MODEL-110 describes runs *before* `build_glm_approximation` and `compute_diagnostics`; in the handler both ran unconditionally and `should_fit` first appeared after them. A call-counting test on the pre-change code shows **both** running on a rebuild, so the marker this row said was owed would have been a false claim rather than a missing one. The requirement is amended in one clause by building it: the branch **skips** the surrogate's `Diagnostics` compute rather than **loading** it, because the result is consumed only inside the `should_fit` arm and loading it would be a query whose result is discarded — `02` FR-MODEL-110(ii) | ~~W5 — a marker is owed, not a feature~~ **Discharged by W5.** Three marks, and the audit found it rather than the Phase-1b measurement its owner clause named |
 | FR-MODEL-112 — offsets-from-model widening | Not started, sequenced | **Phase 1b**, (a) then (c) |
 | NFR-MODEL-1, -10 | **Measured by extrapolation** — 173 s of 600 s, 16.0 GB of 32 GB | The slice with a 16-core worker |
 | NFR-MODEL-2 | **Measured once, growth unmeasured** — 963 s of 1 200 s on an *assumed* linearity | Same |
@@ -3294,7 +3321,7 @@ FR-MODEL-81 (2026-08-16) and never applied it to the headline. Stated properly:
 | NFR-MODEL-13 — the type-III block | **Measured and breached** at 678 013 × 60: more than 1.61× per tested factor against a 1.0× bound, and the observation is *censored* | **Phase 1b**, with the warm-denominator run the corrected multiples rest on |
 | NFR-MODEL-14 — the GBM block | **Measured and met** — 0.0480 fits per scoring pass against 0.06, 1.25× headroom | None required. The sweep it prices is **no longer uncapped**: OQ-MODEL-26 decided 2026-08-22, FR-MODEL-118 bounds the categorical grid to the 20 most-exposed levels — 0.96 of one fit at this measured rate |
 | NFR-MODEL-5, -11 | **Measured and met**, 50× and 380× headroom | None required |
-| NFR-MODEL-7 | **Nothing to test** — zero export and import paths exist | **Unassigned**, needs a verdict before it can have a test |
+| NFR-MODEL-7 | **Out of Phase 1 scope — maintainer verdict 2026-08-22**, on plan review 3's question 2(a). Zero export and import paths exist, no row ever named one, and its parent FR-OVR-2 carries zero markers. *(Original verdict, kept:)* **Nothing to test** — zero export and import paths exist | **None in Phase 1.** *(Original owner cell, kept:)* **Unassigned**, needs a verdict before it can have a test — which is the absence this verdict removes |
 | NFR-MODEL-12 | **Measured and held** — 0.22 s against 5.22 s | None required |
 
 Nine of the fourteen carry a **recorded measurement** rather than a marker, which §13 rule 1
