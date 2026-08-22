@@ -2177,7 +2177,7 @@ def grouping_evidence(frame: pl.DataFrame, mapping: dict[str, str], *,
 
 # pricing_core/modelling/glm.py
 def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
-            seed: int = 0,
+            seed: int = 0,   # INERT — nothing reads it; `spec.seed` is the live one (OQ-MODEL-29)
             model_offset: np.ndarray | None = None,
             bandings: Mapping[UUID, Banding] | None = None,
             groupings: Mapping[UUID, Grouping] | None = None,
@@ -2881,11 +2881,30 @@ for grouping.
 >   markers**, and its serialisability half is evidenced only incidentally by `model-schema`
 >   round-trip tests naming other requirements. **Owner: unassigned** — this is a capability
 >   nobody has been asked to build, and it needs a verdict before it can have a test.
-> * **NFR-MODEL-6 — half evidenced, and the roadmap called it evidenced.** It asks for
->   identical GLM coefficients to 1e-10 **and** an identical booster hash. The single marker it
->   carries is the **booster half**; nothing anywhere refits a GLM on the same `spec_hash` and
->   seed and compares coefficients. **Owner: the GLM slice** — a two-fit determinism test in
->   `packages/pricing-core/tests/test_glm.py`, beside the code it is about.
+> * **NFR-MODEL-6 — ~~half evidenced, and the roadmap called it evidenced~~ both halves now
+>   carry markers, 2026-08-22 (W5, the closure slice).** It asks for identical GLM coefficients
+>   to 1e-10 **and** an identical booster hash. Until this date the single marker it carried was
+>   the **booster half** (`test_gbm.py:270`); nothing anywhere refitted a GLM and compared
+>   coefficients. The GLM half is now
+>   `packages/pricing-core/tests/test_glm.py::test_two_fits_of_one_spec_reproduce_identical_coefficients`,
+>   beside the code it is about. It fits **one `GlmSpec` object twice** over one frame and
+>   asserts term-order equality plus `abs(Δestimate) <= 1e-10` per coefficient — the
+>   requirement's own **absolute** tolerance, not `pytest.approx`'s relative default, which a
+>   solver gone non-deterministic would still pass. **`spec_hash` itself does not appear in the
+>   test**, and cannot: the digest is the *platform's* (`backend/src/app/platform/modelling.py`,
+>   `v10`) and the DEP-3 import contract forbids `pricing-core` importing it. Holding one spec
+>   object constant satisfies the "identical `spec_hash`" clause by construction — the digest is
+>   a function of that object — and holding it constant also pins `spec.seed`, which is the seed
+>   the fit actually honours. **Proven able to fail** rather than merely observed passing
+>   (§13 rule 4): refitting on one row fewer of 20 000 moves the intercept by 5.8e-05, roughly
+>   six orders of magnitude above the gate.
+>
+>   **A defect found while evidencing it, and left standing deliberately: `fit_glm`'s `seed`
+>   keyword is inert.** The requirement's own wording is "identical `spec_hash` **+ seed**", and
+>   the parameter a caller would reach for to supply that seed is read by nothing. `spec.seed` is
+>   the live one. It is **OQ-MODEL-29**, not a silent deletion — six non-test callers pass the
+>   argument, `02` §5.2 publishes it, and removing it is a contract change with a maintainer's
+>   name on it.
 
 ---
 
@@ -2923,3 +2942,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-MODEL-26**~~ ✔ | ~~**The GBM partial-dependence sweep caps nothing and covers every factor, where FR-MODEL-52 says declared ones. What bounds it?** Partial dependence runs one full-population scoring pass per grid point — ten quantiles for a numeric factor, but **every distinct level** for a categorical. At the 10 000 levels NFR-MODEL-3 itself names, one column costs 10 000 passes, roughly 1.9 hours, which a per-factor budget records as a single factor. Raised 2026-08-22 from OQ-MODEL-24's measurement, which attributed 90 % of the GBM diagnostics cost to this sweep.~~ **DECIDED 2026-08-22: the grid is capped at the 20 most-exposed levels and the omission recorded (FR-MODEL-118); the "covers every factor" half is withdrawn.** The sweep already covers exactly the declared factors — the worker passes `spec.factors` — so that half named no gap. The recommendation's pooled bar is **not implementable**: a pooled "other" is an unseen level and FR-MODEL-32 refuses scoring one, so the cap truncates and names what it dropped. A live `IndexError` on interaction factors was found in the same two functions — FR-MODEL-119, OQ-MODEL-28. |
 | ~~**OQ-MODEL-27**~~ ✔ | ~~**What does `FactorIntent.DIAGNOSTIC` mean, now that FR-MODEL-117 refuses it?** FR-MODEL-3 lists the arm and glosses only `risk` and `control`, so the arm has never had a stated meaning at either fit or rating time. Raised 2026-08-22 out of OQ-MODEL-25, whose remedy could not be applied to it without inventing the meaning the specification omits.~~ **DECIDED 2026-08-22: superseded — FR-MODEL-120**, on FR-MODEL-116's layer argument and without inventing the missing meaning, because both candidate readings fail: the distinct one is a per-fit property mis-sited on a Factor, and the redundant one is `control` already. The capability it named is real and is re-sited on the Model Spec, gated and owned by W30. FR-MODEL-117's ground for keeping it open is corrected in place. |
 | ~~**OQ-MODEL-28**~~ ✔ | ~~**What should permutation importance and partial dependence report for an `interaction` Factor?** A cross sources no column of its own, so neither block has a column to permute or to hold; FR-MODEL-119 makes both skip it and record the skip, having first made a GBM able to fit a cross at all. Permuting or sweeping the operands jointly is the obvious candidate and is not obviously the right one — the operands' own main effects are collinear with the cross by FR-MODEL-91's argument. **The operands raise a second half of the same question**: they carry source columns, so each is swept and reported as though it were a model factor, at full scoring cost, for a term the booster has no column for — while the GLM's type-III block skips exactly those operands and says why. The two paths disagree, and this question owns the disagreement. Raised 2026-08-22 while deciding OQ-MODEL-26.~~ **DECIDED 2026-08-22: the cross is measured jointly through its operands — FR-MODEL-121 — and the operands themselves are skipped — FR-MODEL-122.** A joint shuffle *is* a permutation of the resolved cross column, so the two candidate mechanisms are one on that half; they differ only on the sweep grid, where the observed cells are scoreable and the Cartesian product is refused by FR-MODEL-32. The second half was understated: an operand swept alone is not a wasted pass but a **live crash** on any sparse cross. |
+| **OQ-MODEL-29** | **`fit_glm`'s `seed` keyword is read by nothing, and §5.2 publishes it.** NFR-MODEL-6 asks for reproducibility under "identical `spec_hash` + seed", and the parameter a caller would supply that seed through is inert; `spec.seed` is the live one. Six non-test callers pass it, five test sites pass a value that disagrees with their spec's, and `fit_ebm`'s docstring already records the fact for its own copy of the same dead parameter. Raised 2026-08-22 while evidencing NFR-MODEL-6's GLM half. |
