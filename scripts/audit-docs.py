@@ -27,8 +27,6 @@ Checks (all non-destructive, exit 1 on any failure):
      in the owning module's §5.1 or §5.2 (FR-OVR-17, OQ-OVR-6).
  22. Every markdown table row has its own header's cell count — catching a literal
      `|` inside a cell, which shifts every column after it while still rendering.
- 22. Every markdown table row has its own header's cell count — catching a literal
-     `|` inside a cell, which shifts every column after it while still rendering.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -272,7 +270,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
 
 
 def check_table_rows(md: list[pathlib.Path]) -> None:
-    """Check 22: every table row has as many cells as its own header.
+    r"""Check 22: every table row has as many cells as its own header.
 
     The defect this catches is a literal `|` inside a table cell. GFM decides cell
     boundaries **before** it parses anything inline, so a pipe inside a code span still
