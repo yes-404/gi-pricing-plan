@@ -46,6 +46,8 @@ from model_schema import (
     CustomMetric,
     CustomObjective,
     Diagnostics,
+    EbmFitResult,
+    EbmSpec,
     Factor,
     FitResult,
     GbmEvalPoint,
@@ -294,8 +296,10 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
      offset_source) = progress.run_on_loop(load())
 
     from pricing_core.modelling import (
+        EbmFitError,
         GbmFitError,
         GlmFitError,
+        fit_ebm,
         fit_gbm,
         fit_glm,
         linear_predictor,
@@ -341,6 +345,16 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 progress=fitting,
             )
             result, booster, eval_curve = fit.result, fit.booster_bytes, fit.eval_curve
+        elif isinstance(spec, EbmSpec):
+            # No wrapper, no bytes: an EBM's fit result IS the model (Task 0.6), so
+            # `booster`/`covariance` keep their pre-initialised None values and
+            # `store()` writes no blob.
+            result = fit_ebm(
+                frame, spec, factors, seed=spec.seed,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=fitting,
+            )
         else:
             glm_fit = fit_glm(
                 frame, spec, factors, seed=spec.seed,
@@ -363,7 +377,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 result = result.model_copy(
                     update={"offset_model_ref": str(spec.offset.offset_model_ref)}
                 )
-    except (GbmFitError, GlmFitError) as exc:
+    except (EbmFitError, GbmFitError, GlmFitError) as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape. Mapped
         # rather than re-raised so a job's stored error carries `02` §5.1's code and a
         # reader can look it up.
@@ -380,12 +394,21 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         ) from exc
     progress.update(0.85, "diagnostics")
     from pricing_core.modelling import compute_diagnostics, compute_gbm_diagnostics
+    from pricing_core.modelling.diagnostics import compute_ebm_diagnostics
 
     diagnostic_progress = ScaledProgress(progress, start=0.85, end=0.97)
     if isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult) and booster:
         computed = compute_gbm_diagnostics(
             result, booster, spec, factors,
             train=frame, holdout=holdout, eval_curve=eval_curve,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=diagnostic_progress,
+        )
+    elif isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
+        computed = compute_ebm_diagnostics(
+            result, spec, factors,
+            train=frame, holdout=holdout,
             bandings=transformations.bandings,
             groupings=transformations.groupings,
             progress=diagnostic_progress,
@@ -405,8 +428,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "MODEL_TYPE_UNSUPPORTED",
             "This model type cannot be fitted",
             409,
-            f"{spec.model_type!r} has a spec arm and no fit path. `ebm` is declared by "
-            "`CLAUDE.md` §7 and built by no slice.",
+            f"{spec.model_type!r} has a spec arm and no fit path.",
         )
     # FR-MODEL-78. Only the **second** bound of a pair has a counterpart to cross: the
     # first is fitted against nothing, and FR-MODEL-49 computes diagnostics once at fit
@@ -599,6 +621,15 @@ async def _resolve_candidate(
             f"{row.model_family_slug}@{row.version} has no fit result.",
         )
     fit = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
+    if isinstance(spec, EbmSpec) or isinstance(fit, EbmFitResult):
+        raise PlatformError(
+            "MODELS_NOT_COMPARABLE",
+            "An EBM has no surrogate to compare",
+            409,
+            f"{row.model_family_slug}@{row.version} is an EBM: comparison (wf-01 E1) is "
+            "GLM-vs-GBM surrogate validation, and an EBM is transparent by construction "
+            "(FR-MODEL-37) with no approximation to compare (2026-08-21, the W5 EBM slice).",
+        )
     # `wf-01` E1 compares the GLM against the GBM. A GLM's fit result *is* its model; a
     # GBM's is a reference to the booster, so the bytes are fetched here — the resolution
     # ADR-0001 keeps out of `pricing-core`, exactly like the factors and the frames.
@@ -716,6 +747,11 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     summary says which factors the booster is actually using and, on XGBoost, which pairs
     are worth an actuary authoring an `interaction` Factor for (FR-MODEL-79).
 
+    An EBM takes neither arm: its exported shape functions ARE the rateable model
+    (FR-MODEL-37), so the artifact is built directly from the fit result — no sample, no
+    split frames, no booster, no approximation — and `kinds` carries only
+    `ebm_shape_functions`.
+
     The model is scored over the **training** partition of its own split, so the fidelity
     statement describes the population the model was fitted on. Approximating on the
     holdout would report how well a surrogate generalises, which is a different question
@@ -737,15 +773,15 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     progress.update(0.05, "loading the model")
 
     async def load() -> tuple[
-        GbmSpec,
-        GbmFitResult,
-        bytes,
-        list[Factor],
-        _Transformations,
-        pl.DataFrame,
-        pl.DataFrame,
-        str,
-        int,
+        EbmSpec | GbmSpec,
+        EbmFitResult | GbmFitResult,
+        bytes | None,
+        list[Factor] | None,
+        _Transformations | None,
+        pl.DataFrame | None,
+        pl.DataFrame | None,
+        str | None,
+        int | None,
     ]:
         async with progress.database.session() as session:
             row = await transparency_service.fitted_gbm_or_refuse(
@@ -753,55 +789,116 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             )
             spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
             result = FIT_RESULT_ADAPTER.validate_python(row.fit_result)
-            if not isinstance(spec, GbmSpec) or not isinstance(result, GbmFitResult):
+            if isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
+                # The EBM arm returns before the GBM machinery: the export needs nothing
+                # but the fit result and the spec (Task 0.7) — no sample, no split
+                # frames, no booster read, no approximation.
+                return spec, result, None, None, None, None, None, None, None
+            elif isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult):
+                if spec.split_ref is None:
+                    raise PlatformError(
+                        "MODEL_SPLIT_REQUIRED",
+                        "This model spec declares no split",
+                        422,
+                        "The approximation is a Model in its own right (FR-MODEL-96), and "
+                        "FR-MODEL-54 makes a diagnostic reported without its holdout "
+                        "counterpart a defect. Without a split there is no holdout to report.",
+                    )
+                factors = await model_service.load_factors(
+                    session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+                )
+                transformations = _Transformations(
+                    bandings=await transform_service.load_bandings(
+                        session, workspace_id=workspace_id,
+                        ids=[f.banding_id for f in factors if f.banding_id],
+                    ),
+                    groupings=await transform_service.load_groupings(
+                        session, workspace_id=workspace_id,
+                        ids=[f.grouping_id for f in factors if f.grouping_id],
+                    ),
+                )
+                version = await dataset_service.fittable_or_refuse(
+                    session, workspace_id=workspace_id, version_id=spec.dataset_version_id
+                )
+                parent = await _frame_of(session, blob_store, version)
+                train, holdout = await _split_frames(
+                    session, blob_store, workspace_id=workspace_id, spec=spec,
+                    parent=parent
+                )
+                booster = await blob_store.read(result.booster_blob)
+                # The source's identity travels with the frames rather than being re-read
+                # in a second session later: `store()` needs it only for the change
+                # reason, and a second read is a second answer to a question already
+                # asked.
+                return (
+                    spec, result, booster, factors, transformations, train, holdout,
+                    row.model_family_slug, row.version,
+                )
+            else:
                 raise PlatformError(
                     "MODEL_TYPE_UNSUPPORTED",
                     "This model type has no transparency builder",
                     409,
-                    f"{spec.model_type!r} is not a gradient boosting model.",
+                    f"{spec.model_type!r} is neither a gradient boosting nor an EBM "
+                    "model.",
                 )
-            if spec.split_ref is None:
-                raise PlatformError(
-                    "MODEL_SPLIT_REQUIRED",
-                    "This model spec declares no split",
-                    422,
-                    "The approximation is a Model in its own right (FR-MODEL-96), and "
-                    "FR-MODEL-54 makes a diagnostic reported without its holdout "
-                    "counterpart a defect. Without a split there is no holdout to report.",
-                )
-            factors = await model_service.load_factors(
-                session, workspace_id=workspace_id, factor_ids=list(spec.factors)
-            )
-            transformations = _Transformations(
-                bandings=await transform_service.load_bandings(
-                    session, workspace_id=workspace_id,
-                    ids=[f.banding_id for f in factors if f.banding_id],
-                ),
-                groupings=await transform_service.load_groupings(
-                    session, workspace_id=workspace_id,
-                    ids=[f.grouping_id for f in factors if f.grouping_id],
-                ),
-            )
-            version = await dataset_service.fittable_or_refuse(
-                session, workspace_id=workspace_id, version_id=spec.dataset_version_id
-            )
-            parent = await _frame_of(session, blob_store, version)
-            train, holdout = await _split_frames(
-                session, blob_store, workspace_id=workspace_id, spec=spec, parent=parent
-            )
-            booster = await blob_store.read(result.booster_blob)
-            # The source's identity travels with the frames rather than being re-read in a
-            # second session later: `store()` needs it only for the change reason, and a
-            # second read is a second answer to a question already asked.
-            return (
-                spec, result, booster, factors, transformations, train, holdout,
-                row.model_family_slug, row.version,
-            )
 
     (
         spec, result, booster, factors, transformations, frame, holdout,
         source_slug, source_version,
     ) = progress.run_on_loop(load())
+
+    if isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
+        # The EBM arm, before any of the GBM machinery: the exported tables ARE the model
+        # (FR-MODEL-37), so the artifact needs nothing but the fit result and the spec —
+        # no sample, no split frames, no booster, no approximation (Task 0.7).
+        from pricing_core.modelling.transparency import (
+            build_ebm_shape_functions,
+            ebm_fidelity_statement,
+            ebm_monotonicity_verified,
+        )
+
+        artifact = TransparencyArtifact(
+            id=new_uuid7(),
+            model_id=model_id,
+            created_at=datetime.now(UTC),
+            job_id=job_id,
+            ebm_shape_functions=build_ebm_shape_functions(result),
+            fidelity_statement=ebm_fidelity_statement(),
+            monotonicity_verified=ebm_monotonicity_verified(result, spec),
+        )
+
+        async def store_ebm() -> UUID:
+            # One transaction, and never a second inside it — the same rule as the GBM
+            # arm's `store` below: a failed write leaves nothing behind.
+            async with progress.database.unit_of_work() as session:
+                row = await transparency_service.record_transparency(
+                    session,
+                    workspace_id=workspace_id,
+                    actor=actor,
+                    model_id=model_id,
+                    artifact=artifact,
+                    job_id=job_id,
+                )
+                return row.id
+
+        artifact_id = progress.run_on_loop(store_ebm())
+        progress.update(1.0, "done")
+        return JobResult(kind="artifact", ref=f"transparency:{artifact_id}")
+
+    # `load()` refused every spec/result mismatch (MODEL_TYPE_UNSUPPORTED), so the
+    # survivors are exactly the two pairs: (EbmSpec, EbmFitResult) — handled above —
+    # and (GbmSpec, GbmFitResult), which the machinery below needs narrowed.
+    assert isinstance(spec, GbmSpec)
+    assert isinstance(result, GbmFitResult)
+    # The EBM arm above is the only path that leaves these unset.
+    assert booster is not None
+    assert factors is not None
+    assert transformations is not None
+    assert frame is not None
+    assert holdout is not None
+    assert source_slug is not None
+    assert source_version is not None
 
     from pricing_core.modelling import (
         approximation_spec,

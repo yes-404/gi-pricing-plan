@@ -21,7 +21,14 @@ import pytest
 from app.db.models import ModelRow
 from app.errors import MODELLING_ERROR_CODES, PlatformError
 from app.platform.modelling import SPEC_HASH_VERSION, spec_hash, spec_hash_is_current
-from model_schema import GbmFunctionRef, GbmSpec, GlmSpec, IntervalFor, OffsetSpec
+from model_schema import (
+    EbmSpec,
+    GbmFunctionRef,
+    GbmSpec,
+    GlmSpec,
+    IntervalFor,
+    OffsetSpec,
+)
 
 
 def _spec(**over: object) -> GlmSpec:
@@ -114,6 +121,10 @@ def test_a_separated_fit_can_be_reported_as_the_named_refusal() -> None:
         # started being honoured — the same gap this test caught for `glm.py`, now
         # covered on the GBM side too rather than trusted by construction.
         ("pricing_core.modelling.gbm", "GbmFitError"),
+        # The same rule, applied to the EBM arm: `ebm.py` raised
+        # `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` the day the W5 slice wired its fit.
+        # This test does not auto-discover modules — the row is mandatory.
+        ("pricing_core.modelling.ebm", "EbmFitError"),
     ],
 )
 def test_every_code_the_fit_path_can_raise_is_registered(
@@ -162,6 +173,7 @@ def _bound(**over: object) -> GbmSpec:
 
 @pytest.mark.req("FR-MODEL-86")
 @pytest.mark.req("FR-MODEL-100")
+@pytest.mark.req("FR-MODEL-37")
 def test_the_algorithm_version_moved_with_the_new_field() -> None:
     """FR-MODEL-86: adding a spec field increments `n` in the same commit as the field.
 
@@ -174,14 +186,46 @@ def test_the_algorithm_version_moved_with_the_new_field() -> None:
     # scaffold's `model_ref` to `offset_model_ref` — the offset a fit means is now part
     # of the payload, and two specs differing there must not share a digest or FR-MODEL-66
     # hands the second caller the first caller's model.
-    assert SPEC_HASH_VERSION == 8, (
-        "OffsetSpec.offset_model_ref joined the payload (FR-MODEL-24); the tag "
-        "moves with it"
+    # v8 -> v9 (2026-08-21, FR-MODEL-37): EbmSpec joined the union — model_type,
+    # objective, interactions, max_bins, max_rounds and monotone_constraints join the
+    # payload, and two EBM specs differing there must not share a digest or FR-MODEL-66
+    # hands the second caller the first caller's model.
+    assert SPEC_HASH_VERSION == 9, (
+        "EbmSpec joined the payload (FR-MODEL-37); the tag moves with it"
     )
-    assert spec_hash(_bound()).startswith("v8:sha256:")
-    assert spec_hash_is_current("v7:sha256:" + "0" * 64) is False, (
-        "every v7 digest is now stale and must be findable with LIKE 'v7:%'"
+    assert spec_hash(_bound()).startswith("v9:sha256:")
+    assert spec_hash_is_current("v8:sha256:" + "0" * 64) is False, (
+        "every v8 digest is now stale and must be findable with LIKE 'v8:%'"
     )
+
+
+@pytest.mark.req("FR-MODEL-66")
+@pytest.mark.req("FR-MODEL-37")
+def test_an_ebm_spec_hashes_distinctly() -> None:
+    """An EBM is a different fitted question than a GLM over the same skeleton.
+
+    FR-MODEL-66 answers by digest, so the moment EbmSpec joins the union it must hash away
+    from every other arm's spec — a resubmission as an EBM must not receive the GLM fitted
+    on the same design. And within the arm, the fields a fit actually consumes are part of
+    the identity: two EBM specs differing only in their bin grid or their objective are two
+    different models, and a dedup that conflates them hands the second caller the first
+    caller's fit.
+    """
+    skeleton: dict[str, object] = {
+        "model_family_slug": "motor-ad-frequency",
+        "dataset_version_id": uuid4(),
+        "response_column": "claim_count",
+        "offset": OffsetSpec(kind="none"),
+        "factors": (uuid4(),),
+    }
+    ebm = EbmSpec(**skeleton)
+    # The same skeleton as a GLM: poisson would refuse the shared no-offset (FR-MODEL-19),
+    # so the comparison uses a family the skeleton fits.
+    glm = GlmSpec(**skeleton, family="gaussian")
+    assert spec_hash(ebm) != spec_hash(glm)
+
+    assert spec_hash(EbmSpec(**skeleton, max_bins=128)) != spec_hash(ebm)
+    assert spec_hash(EbmSpec(**skeleton, objective="mae")) != spec_hash(ebm)
 
 
 @pytest.mark.req("FR-MODEL-100")

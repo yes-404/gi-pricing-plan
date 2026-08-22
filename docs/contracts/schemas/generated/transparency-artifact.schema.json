@@ -104,6 +104,22 @@
       "title": "Coefficient",
       "type": "object"
     },
+    "EbmShapeFunctions": {
+      "additionalProperties": false,
+      "description": "FR-MODEL-37's export: the model itself, as tables.\n\nA JSON document, deliberately: the artifact row stores a JSONB payload and the\ntables ARE the model — this block is a pointer to the document rather than a\nnested copy that could drift from it. Built by `build_ebm_shape_functions`.",
+      "properties": {
+        "terms_blob": {
+          "minLength": 1,
+          "title": "Terms Blob",
+          "type": "string"
+        }
+      },
+      "required": [
+        "terms_blob"
+      ],
+      "title": "EbmShapeFunctions",
+      "type": "object"
+    },
     "GlmApproximation": {
       "additionalProperties": false,
       "description": "FR-MODEL-34 — a GLM fitted to the GBM's own predictions.\n\nWhat turns a GBM into something rateable as a table, so the coefficients and\nrelativities are *here*: a fidelity score with no table behind it says the\napproximation was good without saying what it was.",
@@ -400,6 +416,17 @@
       "format": "date-time",
       "title": "Created At",
       "type": "string"
+    },
+    "ebm_shape_functions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EbmShapeFunctions"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "fidelity_statement": {
       "minLength": 1,

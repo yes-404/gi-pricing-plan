@@ -266,12 +266,14 @@ def test_the_union_dispatches_on_model_type() -> None:
 
 @pytest.mark.req("FR-MODEL-25")
 def test_an_unknown_model_type_is_refused_by_the_discriminator() -> None:
-    """`ebm` is a declared model type (`CLAUDE.md` §7) with no arm built.
+    """The union is closed, not an open bag: a model type nobody declared is refused
+    here rather than accepted-and-ignored, which is the difference between "not built
+    yet" and a spec that stores as one thing and fits as another.
 
-    It is refused here rather than accepted-and-ignored, which is the difference between
-    "not built yet" and a spec that stores as one thing and fits as another.
+    (`ebm` used to be the example, as a declared model type with no arm built; it has
+    one now — `test_ebm_spec.py` is the sibling that says so.)
     """
-    payload = {**_spec().model_dump(mode="json"), "model_type": "ebm"}
+    payload = {**_spec().model_dump(mode="json"), "model_type": "catboost"}
     with pytest.raises(pydantic.ValidationError, match="model_type"):
         MODEL_SPEC_ADAPTER.validate_python(payload)
 

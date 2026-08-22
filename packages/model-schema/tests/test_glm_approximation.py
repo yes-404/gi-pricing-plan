@@ -7,6 +7,8 @@ recognise without holding anything else. Every test here is a prohibition, for t
 
 from __future__ import annotations
 
+import datetime
+
 import pydantic
 import pytest
 
@@ -17,8 +19,11 @@ from model_schema import (
     GlmSpec,
     OffsetSpec,
     RelativityLevel,
+    TransparencyArtifact,
+    TransparencyKind,
     new_uuid7,
 )
+from model_schema.transparency import EbmShapeFunctions
 
 EXPOSURE = OffsetSpec(kind="log_column", column="exposure_years")
 
@@ -118,3 +123,71 @@ def test_an_artifact_block_carrying_neither_era_is_refused() -> None:
     saying what it was — the module docstring's own reason for holding the table."""
     with pytest.raises(pydantic.ValidationError, match="exactly one"):
         GlmApproximation(r_squared=0.97, deviance_explained=0.96)
+
+
+@pytest.mark.req("FR-MODEL-37")
+def test_an_ebm_artifact_names_the_kind() -> None:
+    """`kinds` is derived from which blocks are present, never stored beside them.
+
+    §4.9 once declared `kinds` as a stored field and wrote the agreement between it and
+    the blocks as an invariant note — two statements of one fact. The property removes
+    the second statement, so the third kind is just another block to notice.
+    """
+    ebm_only = TransparencyArtifact(
+        id=new_uuid7(),
+        model_id=new_uuid7(),
+        created_at=datetime.datetime.now(datetime.UTC),
+        fidelity_statement="the EBM is the model, and its shape functions are its tables",
+        ebm_shape_functions=EbmShapeFunctions(terms_blob="{}"),
+    )
+    assert ebm_only.kinds == (TransparencyKind.EBM_SHAPE_FUNCTIONS,)
+
+    both = TransparencyArtifact(
+        id=new_uuid7(),
+        model_id=new_uuid7(),
+        created_at=datetime.datetime.now(datetime.UTC),
+        fidelity_statement="the GLM approximation reproduces the GBM's predictions",
+        glm_approximation=GlmApproximation(
+            approximating_model_id=new_uuid7(), r_squared=0.97, deviance_explained=0.96
+        ),
+        ebm_shape_functions=EbmShapeFunctions(terms_blob="{}"),
+    )
+    assert both.kinds == (
+        TransparencyKind.GLM_APPROXIMATION,
+        TransparencyKind.EBM_SHAPE_FUNCTIONS,
+    )
+
+
+@pytest.mark.req("FR-MODEL-33")
+def test_an_ebm_artifact_needs_no_approximation_or_shap() -> None:
+    """The EBM export alone is FR-MODEL-33's "at least one form".
+
+    This is the whole of "transparent by construction": an EBM's shape functions ARE
+    the model, exported directly as rateable tables — there is nothing to approximate,
+    and no SHAP summary over a booster that does not exist.
+    """
+    artifact = TransparencyArtifact(
+        id=new_uuid7(),
+        model_id=new_uuid7(),
+        created_at=datetime.datetime.now(datetime.UTC),
+        fidelity_statement="the EBM's shape functions are the model, exported as tables",
+        ebm_shape_functions=EbmShapeFunctions(terms_blob="{}"),
+    )
+    assert artifact.kinds == (TransparencyKind.EBM_SHAPE_FUNCTIONS,)
+
+
+@pytest.mark.req("FR-MODEL-33")
+def test_an_artifact_with_no_block_is_still_refused() -> None:
+    """The third kind does not weaken "at least one": no block is still no explanation.
+
+    An artifact with no block would satisfy R3's presence check while explaining
+    nothing — the one state this shape must not be able to represent. The match pins
+    the three-form message, so a revert to the two-form list fails here.
+    """
+    with pytest.raises(pydantic.ValidationError, match="EBM shape-functions export"):
+        TransparencyArtifact(
+            id=new_uuid7(),
+            model_id=new_uuid7(),
+            created_at=datetime.datetime.now(datetime.UTC),
+            fidelity_statement="looks fine to me",
+        )

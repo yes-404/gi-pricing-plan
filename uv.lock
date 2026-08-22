@@ -1000,6 +1000,21 @@ wheels = [
 ]
 
 [[package]]
+name = "interpret-core"
+version = "0.7.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "joblib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "scikit-learn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/85/a89ccbd5c6a318ba2a0de49febc956a49959ff668e68a407f0943e52ab0c/interpret_core-0.7.8.tar.gz", hash = "sha256:39512a4a3971d47c92f50c97f434aa603ab1449aad6d94f09a1d1c072a78dda5", size = 1347723, upload-time = "2026-03-17T21:54:29.282Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/ba/3075daaf19b8873f207a94e524f52f9a236836729828a64ee0281c723e00/interpret_core-0.7.8-py3-none-any.whl", hash = "sha256:6644f1498b8d247c5004fe691a9815ff0efc74af243f249f295a5e9f3202b483", size = 15596047, upload-time = "2026-03-17T21:54:26.42Z" },
+]
+
+[[package]]
 name = "jmespath"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1602,6 +1617,7 @@ source = { editable = "packages/pricing-core" }
 dependencies = [
     { name = "duckdb" },
     { name = "glum" },
+    { name = "interpret-core" },
     { name = "lightgbm" },
     { name = "model-schema" },
     { name = "polars" },
@@ -1615,6 +1631,7 @@ dependencies = [
 requires-dist = [
     { name = "duckdb", specifier = ">=1.1" },
     { name = "glum", specifier = ">=3.0" },
+    { name = "interpret-core", specifier = "==0.7.8" },
     { name = "lightgbm", specifier = ">=4.5,<5" },
     { name = "model-schema", editable = "packages/model-schema" },
     { name = "polars", specifier = ">=1.9" },

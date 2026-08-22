@@ -147,6 +147,390 @@
       "title": "EarlyStopping",
       "type": "object"
     },
+    "EbmCategoricalBins": {
+      "additionalProperties": false,
+      "description": "A categorical feature's lookup bins: the levels in their fitted order.\n\nThe level at position `i` has index `i + 1` — the same relationship the fitted\nestimator's `bins_[f]` dict (level -> 1-based index) records, written through\nverbatim. Slot 0 is the unused base slot; the term carries `len(levels) + 2`\nslots — base, the levels, and one trailing missing-value slot.",
+      "properties": {
+        "kind": {
+          "const": "categorical",
+          "default": "categorical",
+          "title": "Kind",
+          "type": "string"
+        },
+        "levels": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Levels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "levels"
+      ],
+      "title": "EbmCategoricalBins",
+      "type": "object"
+    },
+    "EbmFitResult": {
+      "additionalProperties": false,
+      "description": "What an EBM fit returns and the Model stores (ADR-0003, FR-MODEL-37).\n\n`02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —\nscoring reproduces `intercept + Σ term scores` exactly, each term a lookup against\nits feature's bins — so this declarative artifact alone rescores the model by a\nprocess that never ran `interpret` (there is no booster blob and no serialised\nestimator to version).",
+      "properties": {
+        "best_iteration": {
+          "minimum": 0,
+          "title": "Best Iteration",
+          "type": "integer"
+        },
+        "bins": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "categorical": "#/$defs/EbmCategoricalBins",
+                "numeric": "#/$defs/EbmNumericBins"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/EbmNumericBins"
+              },
+              {
+                "$ref": "#/$defs/EbmCategoricalBins"
+              }
+            ]
+          },
+          "title": "Bins",
+          "type": "array"
+        },
+        "feature_order": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Feature Order",
+          "type": "array"
+        },
+        "fit_seconds": {
+          "minimum": 0.0,
+          "title": "Fit Seconds",
+          "type": "number"
+        },
+        "intercept": {
+          "title": "Intercept",
+          "type": "number"
+        },
+        "library_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Library Versions",
+          "type": "object"
+        },
+        "link": {
+          "const": "identity",
+          "default": "identity",
+          "title": "Link",
+          "type": "string"
+        },
+        "model_type": {
+          "const": "ebm",
+          "default": "ebm",
+          "title": "Model Type",
+          "type": "string"
+        },
+        "objective": {
+          "enum": [
+            "rmse",
+            "mae"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "rows": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Rows",
+          "type": "integer"
+        },
+        "terms": {
+          "items": {
+            "$ref": "#/$defs/EbmTerm"
+          },
+          "title": "Terms",
+          "type": "array"
+        }
+      },
+      "required": [
+        "objective",
+        "intercept",
+        "feature_order",
+        "bins",
+        "terms",
+        "best_iteration",
+        "fit_seconds"
+      ],
+      "title": "EbmFitResult",
+      "type": "object"
+    },
+    "EbmNumericBins": {
+      "additionalProperties": false,
+      "description": "A numeric feature's lookup bins: the cut array `interpret` fitted.\n\n`EbmFitResult` stores it verbatim from `bins_[f][0]` — length is not re-derived.\nThe index of value `v` is `np.searchsorted(cuts, v, side=\"right\") + 1`; slot 0 is\nthe unused base slot. Slot layout (0.7.8, pinned): with `c` cuts the matching term\ncarries `c + 3` slots — base (0), the `c + 1` populated bins, and one trailing\nmissing-value slot — so `len(scores) == len(cuts) + 3`.",
+      "properties": {
+        "cuts": {
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "title": "Cuts",
+          "type": "array"
+        },
+        "kind": {
+          "const": "numeric",
+          "default": "numeric",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cuts"
+      ],
+      "title": "EbmNumericBins",
+      "type": "object"
+    },
+    "EbmSpec": {
+      "additionalProperties": false,
+      "description": "`02` §4.4's EBM arm (FR-MODEL-37): additive lookups, transparent by construction.",
+      "properties": {
+        "dataset_version_id": {
+          "format": "uuid",
+          "title": "Dataset Version Id",
+          "type": "string"
+        },
+        "factors": {
+          "default": [],
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Factors",
+          "type": "array"
+        },
+        "interactions": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Interactions",
+          "type": "integer"
+        },
+        "loss_treatment": {
+          "$ref": "#/$defs/LossTreatment",
+          "default": {
+            "cap_minor": null,
+            "evidence_blob": null,
+            "kind": "none",
+            "restoration_loading": null
+          }
+        },
+        "max_bins": {
+          "default": 64,
+          "maximum": 32768,
+          "minimum": 16,
+          "title": "Max Bins",
+          "type": "integer"
+        },
+        "max_rounds": {
+          "default": 50000,
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
+        },
+        "model_family_slug": {
+          "title": "Model Family Slug",
+          "type": "string"
+        },
+        "model_type": {
+          "const": "ebm",
+          "default": "ebm",
+          "title": "Model Type",
+          "type": "string"
+        },
+        "monotone_constraints": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Monotone Constraints"
+        },
+        "objective": {
+          "default": "rmse",
+          "enum": [
+            "rmse",
+            "mae"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "offset": {
+          "$ref": "#/$defs/OffsetSpec",
+          "default": {
+            "column": null,
+            "kind": "none",
+            "offset_model_ref": null
+          }
+        },
+        "peril": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peril"
+        },
+        "response": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponseKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "response_column": {
+          "title": "Response Column",
+          "type": "string"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "split_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SplitRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "weight": {
+          "$ref": "#/$defs/WeightSpec",
+          "default": {
+            "column": null,
+            "kind": "none"
+          }
+        }
+      },
+      "required": [
+        "model_family_slug",
+        "dataset_version_id",
+        "response_column"
+      ],
+      "title": "EbmSpec",
+      "type": "object"
+    },
+    "EbmTerm": {
+      "additionalProperties": false,
+      "description": "One additive term: a univariate lookup or an interaction grid (FR-MODEL-37).",
+      "properties": {
+        "bin_weights": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Bin Weights"
+        },
+        "scores": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Scores"
+        },
+        "standard_deviations": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Standard Deviations"
+        },
+        "term_features": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Term Features",
+          "type": "array"
+        },
+        "term_name": {
+          "minLength": 1,
+          "title": "Term Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "term_features",
+        "term_name",
+        "scores",
+        "standard_deviations",
+        "bin_weights"
+      ],
+      "title": "EbmTerm",
+      "type": "object"
+    },
     "GbmFitResult": {
       "additionalProperties": false,
       "description": "What a GBM fit returns and the Model stores (ADR-0003, FR-MODEL-31).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-MODEL-71 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is **not** here. FR-MODEL-52 names it a GBM-specific *diagnostic*\nand asks for train and holdout side by side, which is FR-MODEL-54's shape; it lives on\n`GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place\nthere. `best_iteration` stays, because scoring needs it and diagnostics are not loaded\nto score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code\nagreeing with it rather than the schema being edited to match.)",
@@ -1299,6 +1683,7 @@
         {
           "discriminator": {
             "mapping": {
+              "ebm": "#/$defs/EbmFitResult",
               "glm": "#/$defs/GlmFitResult",
               "lightgbm": "#/$defs/GbmFitResult",
               "xgboost": "#/$defs/GbmFitResult"
@@ -1311,6 +1696,9 @@
             },
             {
               "$ref": "#/$defs/GbmFitResult"
+            },
+            {
+              "$ref": "#/$defs/EbmFitResult"
             }
           ]
         },
@@ -1354,6 +1742,7 @@
     "spec": {
       "discriminator": {
         "mapping": {
+          "ebm": "#/$defs/EbmSpec",
           "glm": "#/$defs/GlmSpec",
           "lightgbm": "#/$defs/GbmSpec",
           "xgboost": "#/$defs/GbmSpec"
@@ -1366,6 +1755,9 @@
         },
         {
           "$ref": "#/$defs/GbmSpec"
+        },
+        {
+          "$ref": "#/$defs/EbmSpec"
         }
       ],
       "title": "Spec"

@@ -82,6 +82,154 @@
       "title": "EarlyStopping",
       "type": "object"
     },
+    "EbmSpec": {
+      "additionalProperties": false,
+      "description": "`02` §4.4's EBM arm (FR-MODEL-37): additive lookups, transparent by construction.",
+      "properties": {
+        "dataset_version_id": {
+          "format": "uuid",
+          "title": "Dataset Version Id",
+          "type": "string"
+        },
+        "factors": {
+          "default": [],
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Factors",
+          "type": "array"
+        },
+        "interactions": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Interactions",
+          "type": "integer"
+        },
+        "loss_treatment": {
+          "$ref": "#/$defs/LossTreatment",
+          "default": {
+            "cap_minor": null,
+            "evidence_blob": null,
+            "kind": "none",
+            "restoration_loading": null
+          }
+        },
+        "max_bins": {
+          "default": 64,
+          "maximum": 32768,
+          "minimum": 16,
+          "title": "Max Bins",
+          "type": "integer"
+        },
+        "max_rounds": {
+          "default": 50000,
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
+        },
+        "model_family_slug": {
+          "title": "Model Family Slug",
+          "type": "string"
+        },
+        "model_type": {
+          "const": "ebm",
+          "default": "ebm",
+          "title": "Model Type",
+          "type": "string"
+        },
+        "monotone_constraints": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Monotone Constraints"
+        },
+        "objective": {
+          "default": "rmse",
+          "enum": [
+            "rmse",
+            "mae"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "offset": {
+          "$ref": "#/$defs/OffsetSpec",
+          "default": {
+            "column": null,
+            "kind": "none",
+            "offset_model_ref": null
+          }
+        },
+        "peril": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peril"
+        },
+        "response": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponseKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "response_column": {
+          "title": "Response Column",
+          "type": "string"
+        },
+        "seed": {
+          "default": 0,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "split_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SplitRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "weight": {
+          "$ref": "#/$defs/WeightSpec",
+          "default": {
+            "column": null,
+            "kind": "none"
+          }
+        }
+      },
+      "required": [
+        "model_family_slug",
+        "dataset_version_id",
+        "response_column"
+      ],
+      "title": "EbmSpec",
+      "type": "object"
+    },
     "GbmFunctionRef": {
       "additionalProperties": false,
       "description": "A builtin objective or eval metric by name, or an approved artifact by reference.\n\nOne shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice —\na builtin the backend already implements, or a Custom Objective / Custom Metric that\ncarries its own approval status (R4). Two classes with identical fields would be a\nshape defined twice.",
@@ -819,6 +967,7 @@
   },
   "discriminator": {
     "mapping": {
+      "ebm": "#/$defs/EbmSpec",
       "glm": "#/$defs/GlmSpec",
       "lightgbm": "#/$defs/GbmSpec",
       "xgboost": "#/$defs/GbmSpec"
@@ -831,6 +980,9 @@
     },
     {
       "$ref": "#/$defs/GbmSpec"
+    },
+    {
+      "$ref": "#/$defs/EbmSpec"
     }
   ]
 }

@@ -58,6 +58,7 @@ from app.platform import modelling as model_service
 from app.platform import prediction as service
 from app.worker.tasks import execute_job
 from model_schema import (
+    EbmSpec,
     GlmSpec,
     JobKind,
     JobStatus,
@@ -133,6 +134,21 @@ async def _fitted_glm(
             spec=_spec(version_id, (area,), split_ref=split),
         )
         return actor, model_id, spare_row.id
+
+
+def _ebm_spec(
+    version_id: UUID, factor_ids: tuple[UUID, ...], **over: object
+) -> EbmSpec:
+    """The same shape a W5 fit would have reserved: the EBM arm of the union, on the
+    same version and factors `_spec` uses for the GLM."""
+    base: dict[str, object] = {
+        "model_family_slug": f"freq-{new_uuid7().hex[-6:]}",
+        "dataset_version_id": version_id,
+        "response_column": "claim_count",
+        "factors": factor_ids,
+    }
+    base.update(over)
+    return EbmSpec(**base)  # type: ignore[arg-type]
 
 
 class _ResidualPair(NamedTuple):
@@ -467,6 +483,56 @@ async def test_a_model_with_no_fit_result_cannot_be_scored(
                 rows=ROWS, blob_store=blob_store,
             )
     assert refused.value.code == "MODEL_NOT_FITTED"
+    assert refused.value.status_code == 409
+
+
+@pytest.mark.req("FR-MODEL-37")
+async def test_an_ebm_spec_is_refused_by_name_at_the_predict_boundary(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-37's model can be *stored*, and must not be *scored*.
+
+    The W5 slice fits and exports EBM models with a prediction arm still unbuilt (W6b
+    owns it), so an EBM spec reaching the dispatch is a state this endpoint must answer
+    by name rather than by falling through to the GLM arm's `assert`. The row is built
+    the way the pre-covariance-blob test builds its ghost: a reservation carries the EBM
+    spec, and a real GLM fit is written onto it while it is still unfitted — `02` R2
+    freezes `spec` and `fit_result` together once either exists. No EBM was ever fitted:
+    the refusal fires on the spec, before any scoring could start.
+    """
+    actor, fitted_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        fitted = await session.get(ModelRow, fitted_id)
+        assert fitted is not None
+        version_id = fitted.dataset_version_id
+        factors = tuple(fitted.spec["factors"])
+
+    async with database.unit_of_work() as session:
+        ebm_row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_ebm_spec(version_id, factors),
+        )
+        ebm_id = ebm_row.id
+        fitted = await session.get(ModelRow, fitted_id)
+        assert fitted is not None
+        await session.execute(
+            ModelRow.__table__.update()
+            .where(ModelRow.id == ebm_id)
+            .values(
+                fit_result=fitted.fit_result,
+                status=ModelStatus.FITTED.value,
+                diagnostics_id=fitted.diagnostics_id,
+            )
+        )
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=ebm_id,
+                rows=ROWS, blob_store=blob_store,
+            )
+    assert refused.value.code == "MODEL_TYPE_UNSUPPORTED"
     assert refused.value.status_code == 409
 
 

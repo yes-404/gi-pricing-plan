@@ -1714,7 +1714,7 @@ Python tests, 105 frontend.
 | Requirement | Verdict |
 |---|---|
 | **FR-MODEL-74** — reconciliation accounts for the loss treatment | **Reassigned.** Its other half is FR-MODEL-60's peril-structure reconciliation, which does not exist. Owner: the peril structure slice |
-| **FR-MODEL-37** — EBM shape functions | **Not started.** `interpret` is a third heavy dependency serving one requirement for a model type nothing fits. Owner: the slice that first fits an `ebm` model |
+| **FR-MODEL-37** — EBM shape functions | **Delivered 2026-08-21 (W5, the EBM slice).** `interpret-core==0.7.8`; term shape functions exported verbatim as additive lookup tables; transparency artifact built from the export with no approximation; universal diagnostics through the shared partition; scoring from the tables alone (ADR-0003). The third heavy dependency is now installed, so the 'one requirement for a model type nothing fits' objection is discharged |
 | `loss_treatment` `spliced` / `excess` | **Declared and refused by name.** Narrowing the enum would have cost a `spec_hash` version to widen later; applying them as `none` would fit an uncapped model under a spec that records a treatment |
 | **R3 enforcement** | **Deferred to `03`, by the requirement's own wording.** FR-MODEL-33 binds at the point a *Rating Version* references the model, which is a later phase. This slice provides the artifact that check will read, and `02` R3 is where the obligation stays |
 | Frontend | **W6b.** §5.3's model spec builder, the diagnostics view's GBM eval curves and FR-MODEL-79's interaction suggestions are view work. `ModelDetailView.vue` is narrowed to the GLM arm so `vue-tsc` keeps naming the GBM view as missing |
@@ -2569,7 +2569,7 @@ Smallest first:
 | ~~**2. Regularisation and cross-validation**~~ **— DELIVERED 2026-08-21** | FR-MODEL-20, FR-MODEL-53 | ~~Already paired by a verdict on file — `select_by: cv` lives in the penalty path. The schema is ahead of the code: `GlmSpec` carries `alpha` and `l1_ratio`, and `cv_folds` exists. Missing are the documented penalty path, the CV selection option, declared fold construction (`random`, `temporal`, `grouped_by_key`) with a persisted seed, and per-fold metrics **and their dispersion** persisted as diagnostics rather than the mean alone~~ **DELIVERED 2026-08-21**: `GlmSpec.select_by`/`GlmSpec.cv` (FR-MODEL-20), `GlmCvSpec`'s three fold-construction methods via `pricing_core.data.splits.assign_folds` (FR-MODEL-53), `_fit_cv_path` in `pricing_core.modelling.glm`, and `Diagnostics.cross_validation` (`CrossValidationDiagnostics`/`CvPathPoint`/`CvFoldMetric`) persisting the full path and the selected alpha's per-fold dispersion. No new HTTP endpoint (the existing `GET /api/v1/models/{id}/diagnostics` surfaces it) and no frontend work (the Diagnostics view's CV screen remains W6b's). Two spec interactions found and resolved by dated amendment in `02-modelling.md`: K-fold `temporal` semantics (undefined by FR-DATA-33/FR-MODEL-53; resolved as contiguous time-ordered blocks) and FR-MODEL-99's `uncertainty_basis` under CV selection (resolved as unconditionally naive/penalised) |
 | ~~**3. Tweedie power by profile likelihood**~~ **— DELIVERED 2026-08-21** | ~~FR-MODEL-22~~ | ~~Today `GlmSpec` only *validates* that a supplied power lies between the two families it spans. Missing: the grid, the persisted profile curve, and recording an estimated `p` as an estimate with its own uncertainty rather than silently baking it in as a constant~~ **DELIVERED 2026-08-21**: `GlmSpec.tweedie` carries the grid; `fit_glm` estimates p by profile likelihood (refit at each point, profile log-likelihood argmax scored with the Tweedie series density at the mean-deviance dispersion estimate), persists the curve on `GlmFitResult.tweedie`, and records the estimate with its 95% profile-likelihood CI — never a constant; a maximum at a scan edge is refused (`GLM_TWEEDIE_POWER_GRID_EDGE`); estimation × CV selection refused by name (FR-MODEL-87). |
 | ~~**4. Offset from another model**~~ **— DELIVERED 2026-08-21** | FR-MODEL-24 | ~~`offset_model_ref` appears nowhere…~~ **— DELIVERED 2026-08-21:** `OffsetSpec.offset_model_ref` (renamed from the dead `model_ref` scaffold), GLM-to-GLM, resolved at fit/predict/backtest time, refused by name elsewhere. |
-| **5. EBM** | FR-MODEL-37 | Verdict on file: not started, owner is "the slice that first fits an `ebm` model" — and `ebm` is one of the four Model types in `CLAUDE.md` §7's vocabulary, so W5 owns it unless reassigned. The stated cost is `interpret` as a third heavy dependency serving one requirement |
+| ~~**5. EBM**~~ **— DELIVERED 2026-08-21** | FR-MODEL-37 | ~~Verdict on file: not started, owner is "the slice that first fits an `ebm` model" — and `ebm` is one of the four Model types in `CLAUDE.md` §7's vocabulary, so W5 owns it unless reassigned. The stated cost is `interpret` as a third heavy dependency serving one requirement~~ **DELIVERED 2026-08-21**: term shape functions exported verbatim as additive lookup tables; transparency artifact built from the export with no approximation; universal diagnostics through the shared partition; scoring from the tables alone (ADR-0003). The third heavy dependency is now installed, so the 'one requirement for a model type nothing fits' objection is discharged *(2026-08-21: delivered by the EBM slice — see the slice record below.)* |
 
 **The NFR gap — 11 of 12 unevidenced**, and it is not one problem:
 
@@ -2595,7 +2595,7 @@ Smallest first:
 which is the one option `CLAUDE.md` §13 rule 1 does not allow. They are recorded above as not
 started, owner W5, by W5's own scope definition ("every `MODEL` requirement") rather than by
 a new assignment. FR-MODEL-22's verdict is delivered by the 2026-08-21 Tweedie slice and
-FR-MODEL-24's by the offset-from-another-model slice; FR-MODEL-23 remains unbuilt.
+FR-MODEL-24's by the offset-from-another-model slice; FR-MODEL-23 is delivered: markers at `test_glm.py:134,:429` and `test_spec_hash.py:99,:114`, `GLM_SEPARATION_DETECTED` registered and declared — the 'remains unbuilt' lines were stale. The remainder — a bare non-`LinAlgError` `ValueError` from glum still reaches the job unwrapped — is recorded 2026-08-21 as unbuilt, owner W5.
 
 #### W5 slice — custom metrics, and a field that was read by nothing, 2026-08-20
 
@@ -2770,7 +2770,7 @@ stay refused by name — OQ-MODEL-22 records the widening options, recommendatio
 (c) *(decided 2026-08-21: (a) then (c) — FR-MODEL-112)*; the peril-reconciliation scoring
 path is declared-and-refused (`MODEL_OFFSET_MISSING`)
 until W5 wires the resolver there; EBM as a model type is FR-MODEL-37's separate slice;
-FR-MODEL-23's fit-error surfacing remains unbuilt, owner W5; `02` §5.3's model spec builder
+FR-MODEL-23's fit-error surfacing is delivered: markers at `test_glm.py:134,:429` and `test_spec_hash.py:99,:114`, `GLM_SEPARATION_DETECTED` registered and declared — the 'remains unbuilt' lines were stale. The remainder — a bare non-`LinAlgError` `ValueError` from glum still reaches the job unwrapped — is recorded 2026-08-21 as unbuilt, owner W5; `02` §5.3's model spec builder
 is **W6b**'s, unchanged by this slice.
 
 **Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (130 source files) ·
@@ -2780,6 +2780,65 @@ codes** ownership-exclusive (was 133) · req-coverage **239 of 489 marked, 48.9 
 `generate-contracts.py --check` 0, **23 generated contracts match** · frontend:
 `install --frozen-lockfile` 0, `generate:api` 0, lint 0, type-check 0,
 **131 vitest tests**, build 0.
+
+#### W5 slice — EBM models via interpret-core, 2026-08-21
+
+The twenty-sixth slice, spanning 2026-08-21 → 08-22. FR-MODEL-37 gives the platform its
+fourth Model type: `ebm`, fitted by `interpret-core==0.7.8` and transparent by
+construction — the term shape functions ARE the model, so they are exported verbatim as
+additive lookup tables (ADR-0003: fit results are data, never pickles), and the
+transparency artifact is built from that export with no approximation, no surrogate and
+no booster blob. One requirement, one model type, pin exact: the `interpret` metapackage
+would pull notebooks and visualisation extras, so only `interpret-core` is installed
+(~115 MB incremental; the workspace's sklearn 1.9.0 satisfies its requirement).
+
+| Delivered | Evidence |
+|---|---|
+| `EbmSpec`/`EbmFitResult`, and the verbatim export | `EbmSpec` (`objective` `rmse`/`mae`, `interactions` 0–1, `max_bins` a power of two in [16, 32768], `max_rounds` 50000, `monotone_constraints` map); `fit_ebm` exports interpret's additive lookups verbatim — term scores and bin weights in the library's own slot layout (numeric `len(cuts)+3`, categorical `len(levels)+2`, the 1-based level dict), `feature_order` and the index rule scoring uses; `fit_ebm` honours `spec.weight.kind == "column"` via `sample_weight` and draws `random_state=spec.seed` |
+| The transparency artifact from the export, no approximation | `build_ebm_shape_functions` serialises the fit's own tables verbatim into `terms_blob`; `fidelity_statement` exact-by-construction prose; `monotonicity_verified` read from the exported tables in the declared directions; no surrogate reserved — FR-MODEL-33/36/84 |
+| Universal diagnostics through the shared partition | `compute_ebm_diagnostics` reuses `_partition` with `family="gaussian"` (FR-MODEL-50's "all model types" taken literally); complexity is the total real bins across terms; no eval curve or importances — an EBM's dependence structure IS the exported tables, and duplicating it as a diagnostic would be a second statement of one fact (FR-MODEL-49/50/54/55/81) |
+| Scoring from the tables alone | `predict_ebm` scores `intercept + Σ term scores` from the exported lookups — no estimator and no fitting-stack import, and `test_scoring_without_the_fitting_stack.py` gains `interpret` to its blocked set (FR-MODEL-37, ADR-0003, NFR-PLAT-11) |
+| `spec_hash` v9 | `SPEC_HASH_VERSION` moves `8 → 9` in the same commit as the EBM fields joining the payload (FR-MODEL-86); the stale-digest LIKE clause names the stale version (`v8`), corrected from the plan's incoherent `'v9:%'` — every historical entry names the version it finds |
+| Four plan-defect corrections, each with a dated note (2026-08-21) | The plan's interpret-internals facts were spike-unverified; the backstop caught each as prescribed, never a weakened test: (1) `feature_types` is `"nominal"`, not `"categorical"` — the banding `levels` are passed verbatim; (2) `monotone_constraints` is a positional int list, not the plan's `f"feature {i}"` keyed-dict convention (the plan's own Self-Review flagged it unverified); (3) `best_iteration_` is a 2-D `[stage, bag]` array — read via `np.ravel(...)[0]`; (4) the plan's own test direction was backwards (`<= 1e-9` asserted non-increasing for a +1 constraint) → `>= -1e-9`, tolerance untouched |
+| The spec note the code disproved, amended in the same commit | The §5.1 blockquote claimed `interpret` raises a bare `ValueError` on a nominal constraint; pinned 0.7.8 silently zeroes the term — the pre-check is the whole refusal and the message says the true mechanism (amended 2026-08-21, the fit task; CLAUDE.md §0) |
+| A second error code the plan never foresaw | `EBM_MONOTONE_CONSTRAINT_UNKNOWN`: a transparency-time refusal — a constraint naming a feature the fitted tables do not contain cannot be checked, and reporting `True`/`False` would fabricate a verdict. Registered in `MODELLING_ERROR_CODES` and declared in §5.1's catalogue with a dated blockquote (2026-08-22) in the same commit; the plan's "only one new code" premise is superseded by the design its own transparency task chose |
+| Backend boundary refusals — the plan's new task 2b | Widening the `ModelSpec`/`FitResult` union broke the whole-repo mypy gate at three backend sites the plan's Task 2 verification form could not see (it never runs whole-repo mypy). Two became named refusals that double as the mypy narrowing: `prediction.py` refuses an EBM predict request with `MODEL_TYPE_UNSUPPORTED` (dated note, **W6b owns the real arm**), and `_resolve_candidate` refuses an EBM row with `MODELS_NOT_COMPARABLE` — wf-01 E1 is GLM-vs-GBM surrogate validation, and an EBM has no surrogate. The third site was fixed by Task 11's planned dispatch restructure |
+| The early `EbmSpec`/`EbmFitResult` exports | The model-schema package-root exports landed ahead of Task 5 — `EbmSpec` with Task 2b and `EbmFitResult` with Task 3, one alphabetical import line each, because the boundary refusals' imports needed them; Task 5 completed the remaining names |
+| Objectives refused by name, not extended | EBM's vocabulary is `rmse`/`mae` only (identity link); §7's families and binomial `log_loss` are **declared-and-refused by name** as `objective` values under FR-MODEL-87, with the dated note in §4.4; `interactions=2` (triples) is **declared-and-unbuilt** (a triple grid at even 64 bins is 262k cells — the JSONB envelope cannot bound cubic growth); custom objectives do not apply to EBM — `ObjectiveBackend` has no EBM member by design |
+| The one authored-vs-generated divergence, hand-aligned | The comparison test compares type names and enum values only — constraint-level drift (`minLength`/`required`/`additionalProperties`) has **no mechanical guard** (Task 13's open item, owner W5). The slice found and hand-aligned exactly one divergence: `transparency-artifact.schema.json`'s hand-authored `ebm_shape_functions` block declared `terms_blob` with no `minLength` against the type's `min_length=1` — amended to `minLength: 1` with a dated note (a hand edit to a hand-authored file; regeneration never touches it) |
+| Spec-hash counter coherence (Task 1's deferred minor) | §4.4's blockquotes show `spec_hash` moving `v4 → v5` (the approximation) beside `8 → 9` (the EBM fields); the vN lineage between v5 and v8 — v6 with regularisation/CV (FR-MODEL-20/53) and v7 with Tweedie power (FR-MODEL-22) — went unrecorded in the spec. Recorded here as a coherence follow-up, owner W5 |
+
+**Recorded, not built, with owners.** `fit_gbm` ignores `spec.weight` — verified, no
+reference in `gbm.py`; dated note 2026-08-21, owner W5. **FR-MODEL-111** (a declared eval
+metric a backend could not evaluate is recorded on the fit) — the verdict is recorded here:
+owned by W5, due before W5 closes; explicitly NOT this (EBM) slice. **NFR-MODEL-7**
+recorded as-is — the export/import round-trip NFR remains unevidenced for the suite; this
+slice's EBM round-trip tests are evidence for the EBM artifact only, and the record says
+exactly that rather than claiming closure. The `06` §3.3 custom-metric evidence-row gap and
+OQ-GOV-7 remain as they were — unchanged by this slice. No frontend view renders an EBM
+(W6b owns any that will); no alembic revision — `ModelRow.spec`/`fit_result` and
+`TransparencyArtifactRow.payload` are JSONB columns, unchanged; the slice is API-only.
+
+**Gate, both halves, run locally.** ruff 0 · mypy --strict 0 (131 source files) ·
+`lint-imports` 0 (3 contracts kept) · **1609 python tests** · audit-docs 0 —
+**494 requirements** across 8 specs, **74 open questions** all mirrored, **136 error
+codes** ownership-exclusive (was 134) · req-coverage **241 of 494 marked, 48.8 %** —
+FR-MODEL-109 joins the marked set with the marker backfill that closes this record ·
+`generate-contracts.py --check` 0, **23 generated contracts match** · frontend untouched
+(W6b owns any view that renders an EBM — the slice is API-only).
+
+**Delivered on `worktree-ebm-slice` in fifteen commits** — `1bae625` (the `02`
+amendment declaring the EBM arm and its fit/transparency shapes), `328f102` (`EbmSpec`
+with the refused-by-name vocabulary), `0a0e83b` (the predict and comparison boundary
+refusals), `cc75829` (`EbmFitResult` with the additive tables), `46a2a1e` (the
+transparency artifact's EBM block), `bd80fdf` (the package-root exports), `157468e`
+(`fit_ebm` via interpret-core, tables exported verbatim), `7acde30` (the shape-functions
+blob and `EBM_MONOTONE_CONSTRAINT_UNKNOWN`), `1771254` (scoring from the tables alone),
+`e9307c2` (universal diagnostics through the shared partition), `a94b4eb`
+(`SPEC_HASH_VERSION` 9 with the EBM fields), `39e19f0` (the backend fit dispatch with
+the named constraint refusal), `c2482c5` (the backend transparency artifact through
+`model.transparency`), `e45d564` (contracts regenerated with the EBM arm) — each tagged
+FR-MODEL-37; this record and the FR-MODEL-109 marker backfill close the slice.
 
 ### Phase 1b — Modelling Workbench
 

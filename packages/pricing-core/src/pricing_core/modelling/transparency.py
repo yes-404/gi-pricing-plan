@@ -16,12 +16,20 @@ The asymmetry that costs something is **interaction values**: XGBoost computes t
 (`pred_interactions`), LightGBM does not compute them at all. `ShapSummary` reports that as
 `interactions_available=False` rather than as an empty list, because "no interactions found"
 is a finding this backend cannot make.
+
+The EBM arm needs none of the above, and says so. An EBM's artifact **is** the model
+(`ebm.py`, ADR-0003): the shape functions export directly as rateable tables, so the
+transparency block is those tables verbatim plus a fidelity statement that quotes no
+number, and the monotonicity check (FR-MODEL-52) reads the tables rather than the
+estimator.
 """
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 import numpy as np
@@ -30,6 +38,11 @@ import polars as pl
 from model_schema import (
     SURROGATE_RESPONSE_COLUMN,
     Banding,
+    EbmFitResult,
+    EbmNumericBins,
+    EbmShapeFunctions,
+    EbmSpec,
+    EbmTerm,
     Factor,
     GbmFitResult,
     GbmSpec,
@@ -48,10 +61,14 @@ from pricing_core.modelling.gbm import GbmFitError, predict_gbm
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
+    "EBM_SHAPE_BLOB_VERSION",
     "GlmApproximationFit",
     "approximation_spec",
+    "build_ebm_shape_functions",
     "build_glm_approximation",
     "build_shap_summary",
+    "ebm_fidelity_statement",
+    "ebm_monotonicity_verified",
     "fidelity_statement",
 ]
 
@@ -425,3 +442,196 @@ def fidelity_statement(
             "and not SHAP interaction values (FR-MODEL-79)."
         )
     return " ".join(parts)
+
+
+#: Version of the exported document. A reader that cannot parse it must refuse to
+#: display it, not guess — an actuary reading tables under an unknown layout is
+#: reading a different model.
+EBM_SHAPE_BLOB_VERSION = "ebm-shape-functions/1"
+
+
+def build_ebm_shape_functions(result: EbmFitResult) -> EbmShapeFunctions:
+    """FR-MODEL-37 — the model exported as tables, which is the model.
+
+    No approximation, no scoring, no data: everything a reader of the blob needs is
+    already in `result`, and copying anything else into the document would give the
+    second statement of one fact a chance to disagree with the first.
+
+    Every float is written as a JSON number (`float(x)`): the tables are float64
+    lookups, so the document carries the model's own precision rather than a rounded
+    copy.
+    """
+    document = {
+        "export_version": EBM_SHAPE_BLOB_VERSION,
+        "link": result.link,
+        "intercept": float(result.intercept),
+        "best_iteration": result.best_iteration,
+        "terms": [_ebm_term_blob(result, term) for term in result.terms],
+    }
+    return EbmShapeFunctions(terms_blob=json.dumps(document, sort_keys=True))
+
+
+def _ebm_term_blob(result: EbmFitResult, term: EbmTerm) -> dict[str, object]:
+    """One term as a rateable table: lookups, scores, uncertainty, real bins.
+
+    `cuts`/`levels` are per feature, from `result.bins` in `features` order — a pair
+    carries one list per feature of that kind, so a mixed pair has both keys, each
+    aligned with the numeric (resp. categorical) features of `features`.
+    """
+    blob: dict[str, object] = {
+        "name": term.term_name,
+        "features": [result.feature_order[index] for index in term.term_features],
+        "scores": _blob_values(term.scores),
+        "standard_deviations": _blob_values(term.standard_deviations),
+        "real_bins": _real_bins(term.bin_weights),
+    }
+    if len(term.term_features) == 1:
+        bins = result.bins[term.term_features[0]]
+        if isinstance(bins, EbmNumericBins):
+            blob["kind"] = "numeric"
+            blob["cuts"] = [float(cut) for cut in bins.cuts]
+        else:
+            blob["kind"] = "categorical"
+            blob["levels"] = list(bins.levels)
+    else:
+        blob["kind"] = "interaction"
+        cuts: list[list[float]] = []
+        levels: list[list[str]] = []
+        for index in term.term_features:
+            bins = result.bins[index]
+            if isinstance(bins, EbmNumericBins):
+                cuts.append([float(cut) for cut in bins.cuts])
+            else:
+                levels.append(list(bins.levels))
+        if cuts:
+            blob["cuts"] = cuts
+        if levels:
+            blob["levels"] = levels
+    return blob
+
+
+def _blob_values(
+    values: tuple[float, ...] | tuple[tuple[float, ...], ...],
+) -> list[float] | list[list[float]]:
+    """Scores/stds as JSON lists of numbers — nested for a grid, flat otherwise."""
+    if values and isinstance(values[0], tuple):
+        return [[float(v) for v in row] for row in values]
+    flat = cast(tuple[float, ...], values)
+    return [float(v) for v in flat]
+
+
+def _real_bins(
+    weights: tuple[float, ...] | tuple[tuple[float, ...], ...],
+) -> list[bool] | list[list[bool]]:
+    """The `bin_weights != 0` mask — where a lookup actually has a bin."""
+    if weights and isinstance(weights[0], tuple):
+        return [[w != 0.0 for w in row] for row in weights]
+    flat = cast(tuple[float, ...], weights)
+    return [w != 0.0 for w in flat]
+
+
+def ebm_fidelity_statement() -> str:
+    """FR-MODEL-36's statement for an EBM, which needs no measurement to make.
+
+    The tables are the model — there is no surrogate whose divergence to report —
+    so the statement says exactly that, rather than quoting a number that would
+    read as a measured fidelity.
+    """
+    return (
+        "This EBM's term shape functions are exported directly as rateable tables. "
+        "There is no approximation step and no fidelity to measure: the exported "
+        "tables are the fitted model, so a Rating Version that rates on them rates "
+        "on the model itself (FR-MODEL-37)."
+    )
+
+
+def ebm_monotonicity_verified(result: EbmFitResult, spec: EbmSpec) -> bool | None:
+    """FR-MODEL-52's check for the EBM arm, read off the exported tables.
+
+    `None` when the spec declared no constraints — distinct from `False`, which
+    would say a constraint was checked and failed. For a constrained feature, every
+    term that contains it must be monotone in the declared direction along that
+    feature's axis: the univariate term's real-bin scores, or each row/column of an
+    interaction grid. Same tolerance as the GBM arm (`worst <= 1e-9`).
+    """
+    constraints = spec.monotone_constraints or {}
+    active = {
+        slug: direction for slug, direction in constraints.items() if direction != 0
+    }
+    if not active:
+        return None
+    index_of = {slug: index for index, slug in enumerate(result.feature_order)}
+    worst = 0.0
+    for slug, direction in active.items():
+        if slug not in index_of:
+            raise ModellingError(
+                "EBM_MONOTONE_CONSTRAINT_UNKNOWN",
+                f"monotone constraint names {slug!r}, which feature_order does not "
+                "contain — a constraint on a feature the fit never saw cannot be "
+                "checked (FR-MODEL-52).",
+                terms=[slug],
+            )
+        feature = index_of[slug]
+        for term in result.terms:
+            if feature not in term.term_features:
+                continue
+            worst = max(worst, _term_monotonicity_worst(term, feature, direction))
+    return worst <= 1e-9
+
+
+def _term_monotonicity_worst(term: EbmTerm, feature: int, direction: int) -> float:
+    """The worst step against `direction` along `feature`'s axis of `term`.
+
+    Real bins only — the same `bin_weights != 0` mask the blob exports: a slice
+    through the unused base slot, an empty bin or the trailing missing-value slot is
+    not a reading of the model. A grid is checked per slice along the constrained
+    feature's axis: per row when the second feature is constrained, per column when
+    the first is.
+    """
+    if len(term.term_features) == 1:
+        flat_scores = cast(tuple[float, ...], term.scores)
+        flat_weights = cast(tuple[float, ...], term.bin_weights)
+        return _direction_worst(
+            [s for s, w in zip(flat_scores, flat_weights, strict=True) if w != 0.0],
+            direction,
+        )
+    grid = cast(tuple[tuple[float, ...], ...], term.scores)
+    grid_weights = cast(tuple[tuple[float, ...], ...], term.bin_weights)
+    if not grid or not grid[0]:
+        return 0.0
+    axis = term.term_features.index(feature)
+    worst = 0.0
+    if axis == 0:
+        # One column per bin of the second feature; each column's real rows are the
+        # slices along the first feature's axis.
+        for column in range(len(grid[0])):
+            worst = max(
+                worst,
+                _direction_worst(
+                    [grid[row][column] for row in range(len(grid))
+                     if grid_weights[row][column] != 0.0],
+                    direction,
+                ),
+            )
+    else:
+        for scores_row, weights_row in zip(grid, grid_weights, strict=True):
+            worst = max(
+                worst,
+                _direction_worst(
+                    [s for s, w in zip(scores_row, weights_row, strict=True) if w != 0.0],
+                    direction,
+                ),
+            )
+    return worst
+
+
+def _direction_worst(sequence: Sequence[float], direction: int) -> float:
+    """The GBM arm's convention (`diagnostics.py`): the largest step against the
+    declared direction, clamped at zero.
+
+    The sign convention matches the GBM arm: +1 means non-decreasing along the axis,
+    -1 non-increasing. The tolerance is the caller's (`worst <= 1e-9`).
+    """
+    steps = np.diff(np.asarray(sequence, dtype=np.float64))
+    against = -steps if direction == 1 else steps
+    return float(max(0.0, float(against.max()) if against.size else 0.0))

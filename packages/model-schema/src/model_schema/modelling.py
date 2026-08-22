@@ -1,9 +1,9 @@
 """Modelling shapes: Factors, Model Specs, and what a fit returns (`02` §4).
 
-`02` §4.4's tagged union has four declared arms and this carries two: `glm`, and the
-gradient-boosting pair `xgboost`/`lightgbm`. `ebm` arrives with the slice that fits one,
-because a declared arm nothing can produce is a shape that will be wrong by the time
-anything does.
+`02` §4.4's tagged union has four declared arms and this carries three: `glm`, the
+gradient-boosting pair `xgboost`/`lightgbm`, and `ebm`. An arm arrives with the slice
+that fits one, because a declared arm nothing can produce is a shape that will be wrong
+by the time anything does.
 
 **Two rules from `02` §1.3 are structural rather than checked at the edges:**
 
@@ -23,7 +23,7 @@ from __future__ import annotations
 import enum
 import math
 from decimal import Decimal
-from typing import Annotated, Any, Final, Literal
+from typing import Annotated, Any, Final, Literal, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
@@ -1404,6 +1404,78 @@ class GbmSpec(ModelSpecCommon):
         return self
 
 
+class EbmSpec(ModelSpecCommon):
+    """`02` §4.4's EBM arm (FR-MODEL-37): additive lookups, transparent by construction."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_type: Literal["ebm"] = "ebm"
+    #: The only objectives `interpret`'s regressor exposes, both with an identity link.
+    #: §7's families (poisson, gamma, tweedie, ...) and binomial `log_loss` are refused
+    #: by name here, under FR-MODEL-87's staging rule (dated note in `02` §4.4).
+    objective: Literal["rmse", "mae"] = "rmse"
+    #: 0 = univariate terms only; 1 = all pairs. 2 (triples) is declared-and-unbuilt:
+    #: a triple grid grows cubically and the JSONB envelope below cannot bound it
+    #: (dated note in `02` §4.4, FR-MODEL-87).
+    interactions: int = Field(default=0, ge=0, le=1)
+    #: `interpret` requires a power of two; the bounds are the library's own. Kept
+    #: small by default: the fit result is JSONB, and 1024² cells per pair would be
+    #: ~8 MB — see `_the_interaction_grid_stays_in_the_jsonb_envelope`.
+    max_bins: int = Field(default=64, ge=16, le=32768)
+    #: `interpret`'s own default; early stopping runs inside the library.
+    max_rounds: int = Field(default=50000, ge=1)
+    #: Direction per factor slug: -1 decreasing, 0 none, 1 increasing. Partial dicts are
+    #: allowed here — factors resolve at fit time — and coverage is checked there
+    #: (`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`).
+    monotone_constraints: dict[str, int] | None = None
+
+    @field_validator("max_bins")
+    @classmethod
+    def _max_bins_is_a_power_of_two(cls, value: int) -> int:
+        if value.bit_count() != 1:
+            raise ValueError(
+                f"max_bins must be a power of two (got {value}): `interpret` binning "
+                "works on a dyadic grid, and anything else is the library's own refusal "
+                "translated to a spec problem (FR-MODEL-37)."
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _the_interaction_grid_stays_in_the_jsonb_envelope(self) -> EbmSpec:
+        if self.interactions > 0 and self.max_bins > 256:
+            raise ValueError(
+                f"interactions={self.interactions} with max_bins={self.max_bins}: a "
+                "grid of that size is ~8 MB per pair inside the fit result's JSONB "
+                "envelope. Cap max_bins at 256 with interactions, or use 0 (FR-MODEL-37)."
+            )
+        return self
+
+    @field_validator("monotone_constraints")
+    @classmethod
+    def _monotone_constraints_are_directions(
+        cls, value: dict[str, int] | None
+    ) -> dict[str, int] | None:
+        if value is None:
+            return None
+        for slug, direction in value.items():
+            if direction not in (-1, 0, 1):
+                raise ValueError(
+                    f"monotone constraint on {slug!r} has direction {direction}; only "
+                    "-1 (decreasing), 0 (none) and 1 (increasing) exist (FR-MODEL-28)."
+                )
+        return value
+
+    @model_validator(mode="after")
+    def _an_ebm_has_no_offset(self) -> EbmSpec:
+        if self.offset.kind != "none":
+            raise ValueError(
+                f"offset kind {self.offset.kind!r} is GLM-only (FR-MODEL-37): an EBM's "
+                "lookups are additive on the identity link and `interpret` has no offset "
+                "path — declaring one and ignoring it would be a silent model change."
+            )
+        return self
+
+
 class RelativityLevel(BaseModel):
     """One level of a categorical factor, as an actuary reads it (FR-MODEL-21)."""
 
@@ -1589,6 +1661,206 @@ class GbmFitResult(BaseModel):
         return self
 
 
+class EbmNumericBins(BaseModel):
+    """A numeric feature's lookup bins: the cut array `interpret` fitted.
+
+    `EbmFitResult` stores it verbatim from `bins_[f][0]` — length is not re-derived.
+    The index of value `v` is `np.searchsorted(cuts, v, side="right") + 1`; slot 0 is
+    the unused base slot. Slot layout (0.7.8, pinned): with `c` cuts the matching term
+    carries `c + 3` slots — base (0), the `c + 1` populated bins, and one trailing
+    missing-value slot — so `len(scores) == len(cuts) + 3`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    kind: Literal["numeric"] = "numeric"
+    cuts: tuple[float, ...] = Field(min_length=1)
+
+
+class EbmCategoricalBins(BaseModel):
+    """A categorical feature's lookup bins: the levels in their fitted order.
+
+    The level at position `i` has index `i + 1` — the same relationship the fitted
+    estimator's `bins_[f]` dict (level -> 1-based index) records, written through
+    verbatim. Slot 0 is the unused base slot; the term carries `len(levels) + 2`
+    slots — base, the levels, and one trailing missing-value slot.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    kind: Literal["categorical"] = "categorical"
+    levels: tuple[str, ...] = Field(min_length=1)
+
+
+EbmFeatureBins = Annotated[EbmNumericBins | EbmCategoricalBins, Field(discriminator="kind")]
+
+
+class EbmTerm(BaseModel):
+    """One additive term: a univariate lookup or an interaction grid (FR-MODEL-37)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: Indices into `EbmFitResult.feature_order`; length 1 (univariate) or 2 (pair).
+    term_features: tuple[int, ...]
+    term_name: str = Field(min_length=1)
+    #: One score per slot, written verbatim from `term_scores_`. For a univariate
+    #: numeric term there are `len(cuts) + 3` slots (slot 0 unused, one trailing
+    #: missing-value slot); for an interaction, a rectangular grid with one row per
+    #: bin of the first feature.
+    scores: tuple[float, ...] | tuple[tuple[float, ...], ...]
+    standard_deviations: tuple[float, ...] | tuple[tuple[float, ...], ...]
+    #: Zeros mark the unused base slot, the trailing missing-value slot and any empty
+    #: bins — the real-bin filter both the blob export and the complexity count rely on.
+    bin_weights: tuple[float, ...] | tuple[tuple[float, ...], ...]
+
+
+class EbmFitResult(BaseModel):
+    """What an EBM fit returns and the Model stores (ADR-0003, FR-MODEL-37).
+
+    `02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —
+    scoring reproduces `intercept + Σ term scores` exactly, each term a lookup against
+    its feature's bins — so this declarative artifact alone rescores the model by a
+    process that never ran `interpret` (there is no booster blob and no serialised
+    estimator to version).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_type: Literal["ebm"] = "ebm"
+    #: The same closed set `EbmSpec.objective` carries; both objectives fit under an
+    #: identity link.
+    objective: Literal["rmse", "mae"]
+    link: Literal["identity"] = "identity"
+    intercept: float
+    #: The order the features were handed to `interpret`. `bins` is positional against
+    #: it and `EbmTerm.term_features` are indices into it — checked below, because a
+    #: lookup indexed by a position nobody declared is a model that mis-scores
+    #: silently.
+    feature_order: tuple[str, ...]
+    bins: tuple[EbmFeatureBins, ...]
+    terms: tuple[EbmTerm, ...]
+    best_iteration: int = Field(ge=0)
+    rows: int = Field(default=0, ge=0)
+    fit_seconds: float = Field(ge=0.0)
+    library_versions: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _bins_align_with_the_feature_order(self) -> EbmFitResult:
+        """`bins` and `feature_order` are positional: a scoring frame reads bin `i` of
+        feature `i`, so a list one short of the order is a model scored on the wrong
+        feature's cuts.
+
+        Positional data whose length is unchecked is a silent mis-scoring — the same
+        reasoning as `GbmFitResult`'s constraint-vector check.
+        """
+        if len(self.bins) != len(self.feature_order):
+            raise ValueError(
+                f"{len(self.bins)} bin definitions for {len(self.feature_order)} "
+                "features in feature_order. The bins are positional; a mismatch "
+                "silently reads the wrong feature's cuts at scoring time."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _every_term_names_existing_features(self) -> EbmFitResult:
+        """A term's `term_features` are indices into `feature_order` — 1 for a
+        univariate lookup, 2 for a pair. An index beyond the order, or a term with
+        any other count of features, is a lookup that can never be scored (triples are
+        declared-and-unbuilt, FR-MODEL-37).
+        """
+        for term in self.terms:
+            if not 1 <= len(term.term_features) <= 2:
+                raise ValueError(
+                    f"term {term.term_name!r} names {len(term.term_features)} "
+                    "features; only univariate terms (1) and pairs (2) exist "
+                    "(FR-MODEL-37)."
+                )
+            for index in term.term_features:
+                if not 0 <= index < len(self.feature_order):
+                    raise ValueError(
+                        f"term {term.term_name!r} names feature index {index}, but "
+                        f"feature_order has {len(self.feature_order)} features — a "
+                        "term naming a feature nobody declared is a lookup that can "
+                        "never be scored."
+                    )
+        return self
+
+    @model_validator(mode="after")
+    def _the_lookup_shapes_match_the_bins(self) -> EbmFitResult:
+        """`interpret`'s pinned 0.7.8 slot layout, checked rather than re-derived.
+
+        The 2026-08-21 spike's structure note is the formula source: 61 cuts → 64
+        slots, 62 nonzero weights — base (0), the `c + 1` populated bins, and one
+        trailing missing-value slot. The fit writes the arrays **verbatim** from
+        `term_scores_`, so a mismatch here is drift between what `interpret` produced
+        and what was stored — and drift surfaces as a failing fit-side round-trip test
+        rather than a silent re-shape that mis-scores every lookup downstream.
+        """
+        slots = tuple(
+            len(bins.cuts) + 3 if isinstance(bins, EbmNumericBins) else len(bins.levels) + 2
+            for bins in self.bins
+        )
+        for term in self.terms:
+            n_scores = len(term.scores)
+            n_stds = len(term.standard_deviations)
+            n_weights = len(term.bin_weights)
+            if n_scores != n_stds or n_scores != n_weights:
+                raise ValueError(
+                    f"term {term.term_name!r}: scores, standard_deviations and "
+                    f"bin_weights have lengths {n_scores}, {n_stds} and {n_weights} "
+                    "— the three arrays cover the same slots and must agree in "
+                    "length."
+                )
+            expected = (slots[term.term_features[0]], slots[term.term_features[-1]])
+            if len(term.term_features) == 1:
+                if n_scores != expected[0]:
+                    raise ValueError(
+                        f"term {term.term_name!r} carries {n_scores} scores but its "
+                        f"feature's bins demand {expected[0]} slots — the pinned "
+                        "0.7.8 layout is base + populated bins + one trailing "
+                        "missing-value slot, and the fit writes the arrays verbatim."
+                    )
+            else:
+                # A pair: a rectangular grid, one row per bin of the first feature.
+                if term.scores and not isinstance(term.scores[0], tuple):
+                    raise ValueError(
+                        f"term {term.term_name!r} names a pair, so its scores must "
+                        "be a rectangular grid — one row per bin of the first "
+                        "feature — not a flat array."
+                    )
+                grid = cast(tuple[tuple[float, ...], ...], term.scores)
+                if len(grid) != expected[0]:
+                    raise ValueError(
+                        f"term {term.term_name!r}: the grid has {len(grid)} rows but "
+                        f"the first feature's bins demand {expected[0]}."
+                    )
+                ragged = next((row for row in grid if len(row) != expected[1]), None)
+                if ragged is not None:
+                    raise ValueError(
+                        f"term {term.term_name!r}: the grid is not rectangular — a "
+                        f"row has {len(ragged)} columns where the second feature's "
+                        f"bins demand {expected[1]}."
+                    )
+        return self
+
+    @model_validator(mode="after")
+    def _the_base_slot_is_never_a_real_bin(self) -> EbmFitResult:
+        """Slot 0 is the unused base slot, never a real bin.
+
+        A nonzero weight on it would make the complexity count lie about the real
+        bins: the count reads `bin_weights`, and the base slot is not a bin.
+        """
+        for term in self.terms:
+            base_weight = term.bin_weights[0]
+            if isinstance(base_weight, tuple):
+                base_weight = base_weight[0] if base_weight else 0.0
+            if base_weight != 0.0:
+                raise ValueError(
+                    f"term {term.term_name!r} has bin_weight {base_weight} on slot 0, "
+                    "the unused base slot. A nonzero weight on the unused slot would "
+                    "make the complexity count lie about the real bins."
+                )
+        return self
+
+
 #: The response column of a GLM fitted to another model's predictions (FR-MODEL-34).
 #:
 #: A reserved name rather than a caller's choice: FR-MODEL-102 keys the surrogate invariant
@@ -1600,12 +1872,14 @@ SURROGATE_RESPONSE_COLUMN: Final = "__gbm_prediction__"
 #: `02` §4.4's tagged union, as a union rather than as a promise. Until this existed the
 #: tag was present and `GlmSpec.model_validate` was the only reader, so a GBM payload
 #: failed on a literal mismatch rather than on anything a caller could act on.
-ModelSpec = Annotated[GlmSpec | GbmSpec, Field(discriminator="model_type")]
+ModelSpec = Annotated[GlmSpec | GbmSpec | EbmSpec, Field(discriminator="model_type")]
 MODEL_SPEC_ADAPTER: Final[TypeAdapter[ModelSpec]] = TypeAdapter(ModelSpec)
 
 #: The same union over what a fit returns. Both are discriminated on `model_type`, and
 #: `Model` checks that the two agree — see `_the_fit_matches_the_specification`.
-FitResult = Annotated[GlmFitResult | GbmFitResult, Field(discriminator="model_type")]
+FitResult = Annotated[
+    GlmFitResult | GbmFitResult | EbmFitResult, Field(discriminator="model_type")
+]
 FIT_RESULT_ADAPTER: Final[TypeAdapter[FitResult]] = TypeAdapter(FitResult)
 
 

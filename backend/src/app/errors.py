@@ -205,6 +205,19 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # tweedie.p_grid is maximised at a scan edge, so the estimate would report the
         # scan's boundary as the answer.
         "GLM_TWEEDIE_POWER_GRID_EDGE",
+        # The EBM fit slice, 2026-08-21 (FR-MODEL-37). Raised by `fit_ebm` in two
+        # places: its monotone pre-check — a constraint naming an unknown slug, or
+        # declaring a direction on a categorical (non-ordinal) feature, is refused
+        # as a named code because `interpret` 0.7.8 would silently zero the term
+        # instead (dated note in `02` §5.1) — and the fit-backstop, which translates
+        # any residual library `ValueError` from the fit into the same named code
+        # rather than a stack trace (the FR-MODEL-23 lesson).
+        "EBM_MONOTONE_CONSTRAINT_INCOMPLETE",
+        # The EBM transparency slice, 2026-08-22 (FR-MODEL-52). Raised by
+        # `ebm_monotonicity_verified` when a constraint names a feature absent from the
+        # fitted tables' `feature_order`: reporting `True`/`False` for a constraint
+        # nothing in the tables can evidence would be a made-up monotonicity verdict.
+        "EBM_MONOTONE_CONSTRAINT_UNKNOWN",
     }
 )
 

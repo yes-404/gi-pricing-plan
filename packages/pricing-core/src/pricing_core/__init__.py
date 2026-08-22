@@ -9,6 +9,7 @@ is checked, not trusted, because ADR-0001's whole value is that a reviewer can v
 number without the platform.
 """
 
+from pricing_core.modelling.ebm import EbmFitError, fit_ebm
 from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
 from pricing_core.progress import (
     JobCancelled,
@@ -19,11 +20,13 @@ from pricing_core.progress import (
 
 __all__ = [
     "ROUNDING_MODES",
+    "EbmFitError",
     "JobCancelled",
     "NullProgress",
     "ProgressCallback",
     "RoundingMode",
     "ScaledProgress",
     "apply_factor",
+    "fit_ebm",
     "reconcile_ladder",
 ]
