@@ -32,6 +32,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, rbac
 from model_schema import (
+    ArtifactRef,
     JobSource,
     Permission,
     Principal,
@@ -50,6 +51,7 @@ __all__ = [
     "create_rule",
     "load_rule",
     "replace_rule_set",
+    "resolve_artifact_ref",
     "rule_set_for",
     "submit_for_review",
     "to_schema",
@@ -209,6 +211,40 @@ async def load_rule(
             "NOT_FOUND", "Validation rule not found", 404, f"No rule {rule_id}."
         )
     return row
+
+
+async def resolve_artifact_ref(
+    session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+) -> bool:
+    """`validation_rule:<slug>@<version>` → does that version exist? (`06` FR-GOV-36.)
+
+    `False`, having done nothing, for a reference that is not this module's — the contract
+    `api/approvals.py`'s fan-out is built on.
+
+    By slug and version rather than by id, unlike `load_rule`: a reference *is* a slug and a
+    version (ID-3), and `uq_validation_rule_version` makes the pair identify one row. §4.5's
+    own lifecycle question — is this rule dry-run, is the approver its author — belongs to
+    `approve_rule`; this answers only whether there is a rule to ask it about.
+    """
+    if artifact_ref.type != "validation_rule":
+        return False
+    found = (
+        await session.execute(
+            select(ValidationRuleRow.id).where(
+                ValidationRuleRow.workspace_id == workspace_id,
+                ValidationRuleRow.slug == artifact_ref.slug,
+                ValidationRuleRow.version == artifact_ref.version,
+            )
+        )
+    ).scalar_one_or_none()
+    if found is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "Validation rule not found",
+            404,
+            f"{artifact_ref} resolves to no validation rule in this workspace.",
+        )
+    return True
 
 
 async def attach_dry_run(

@@ -544,3 +544,44 @@ async def test_a_policy_stored_below_the_floor_is_still_submitted_against_the_fl
         "diagnostics",
         "transparency_artifact_if_non_glm",
     )
+
+
+@pytest.mark.req("FR-GOV-19")
+async def test_a_policy_dropping_the_metric_certificate_is_refused(
+    database: Database, workspace_id
+) -> None:
+    """Negative: the `custom_metric` floor added 2026-08-22, at the layer that enforces it.
+
+    The sibling in `packages/model-schema/tests/test_approvals.py` proves `below_floor()`
+    reports the drop; this proves `set_policy` refuses it, which is the half a workspace
+    admin actually meets. Both are needed — the shape and its enforcement are in different
+    packages by `CLAUDE.md` §2's rule, and a floor nothing refuses is a comment.
+    """
+    from model_schema import ApprovalPolicy, ApprovalPolicyEntry
+
+    admin = _user("a")
+    await _with_role(database, workspace_id, admin, "admin")
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await approvals.set_policy(
+                session,
+                workspace_id=workspace_id,
+                actor=admin,
+                policy=ApprovalPolicy(
+                    policies=(
+                        ApprovalPolicyEntry(
+                            artifact_type="custom_metric",
+                            approvers_required=1,
+                            approver_roles=("approver",),
+                            evidence=(),
+                        ),
+                    )
+                ),
+            )
+    assert exc.value.code == "POLICY_BELOW_EVIDENCE_FLOOR"
+    assert "metric_certificate" in (exc.value.detail or "")
+
+    #: And nothing was stored, on the same reasoning as the model case above.
+    async with database.unit_of_work() as session:
+        assert await approvals.policy_for(session, workspace_id) == DEFAULT_POLICY

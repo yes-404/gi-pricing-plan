@@ -34,6 +34,7 @@ from app.db.session import Database
 from app.platform import jobs as job_service
 from app.platform import perils as service
 from model_schema import (
+    DecimalStr,
     ExcludedPeril,
     Job,
     JobKind,
@@ -93,7 +94,20 @@ class ReconcileRequest(BaseModel):
         min_length=1, description="Holdout column holding exposure, in the same unit the "
         "models were fitted against.",
     )
-    tolerance: Decimal = Field(
+    #: `DecimalStr`, not a bare `Decimal` — **corrected 2026-08-22 (W5, the
+    #: audit-remediation slice).** A bare `Decimal` is the hole FR-OVR-18 closed one layer
+    #: up and this field reopened at the wire: Pydantic renders it as
+    #: `anyOf: [{"type": "number"}, {"type": "string"}]`, so the *published contract*
+    #: admitted a binary float, and `{"tolerance": 0.1 + 0.2}` validated to
+    #: `Decimal('0.30000000000000004')` — the float's error preserved verbatim inside the
+    #: value that decides whether a reconciliation passes (FR-MODEL-60's `|ratio - 1| <=
+    #: tolerance`). Measured, not assumed: research finding F7 is what `money.py` records,
+    #: and the behaviour was re-checked against this exact model before the change.
+    #:
+    #: This is a **breaking wire change**: a caller sending a JSON number now gets a 422
+    #: naming the reason. That is the same trade FR-OVR-7 has already been paid everywhere
+    #: else in the exact-decimal path, and a tolerance is squarely in it.
+    tolerance: DecimalStr = Field(
         default=Decimal("0.02"),
         description="Fractional tolerance on |modelled/observed - 1| (FR-MODEL-60).",
     )

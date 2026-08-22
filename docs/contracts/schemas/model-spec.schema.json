@@ -3,47 +3,30 @@
   "$id": "https://contracts.gi-pricing.dev/model-spec.schema.json",
   "title": "ModelSpec",
   "description": "Complete pre-fit description of a model. Tagged union on model_type. See 02-modelling.md §4.4.",
+  "$comment": "Amended 2026-08-22 (W5, the contract-reconciliation slice), when the existence check first learned to read `if`/`then` branches and this schema could be compared at all. Until that date the guard raised `KeyError: 'properties'` here — the generated counterpart is a discriminated `oneOf` with no top-level `properties` — so nothing had ever compared either arm. Kept flat-plus-`if`/`then` rather than rewritten as a `oneOf`: the authored half exists to be read by a person, and the two arms read better beside their common block than as three duplicated objects. Five resolutions, each the code's (CLAUDE.md §0): (1) the nested `regularisation` block is deleted for `GlmSpec`'s flat `alpha`/`l1_ratio`/`select_by`/`cv`, which OQ-MODEL-8 records as `corrected in place` and FR-MODEL-87 lists as `present under a different shape`; (2) `backend` is deleted — `model_type` is the backend, and two fields holding one fact can disagree with nothing able to say which to believe; (3) `base_margin` is deleted — FR-MODEL-27 has the platform construct it from the declared `offset`, and what was constructed is recorded on the fit result where FR-MODEL-71 asserts it at load time; (4) `link` loses `power` and `response` loses `elasticity`, neither of which any type has ever admitted; (5) `categorical_handling` is `native | factor_encoding`, not `native | grouping | one_hot`. The `ebm` arm is new: `model_type` has admitted `ebm` since Phase 0 with no branch to match it, so every EBM spec validated against this contract with zero field-level checking.",
   "type": "object",
-  "required": ["model_family_slug", "dataset_version_id", "response", "factors", "seed", "model_type"],
+  "required": ["model_family_slug", "dataset_version_id", "response_column"],
   "properties": {
     "model_family_slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
     "dataset_version_id": {"type": "string", "format": "uuid"},
     "split_ref": {
-      "type": ["object", "null"],
-      "required": ["split_artifact_id", "train_part", "holdout_part"],
-      "properties": {
-        "split_artifact_id": {"type": "string", "format": "uuid"},
-        "train_part": {"type": "string"},
-        "holdout_part": {"type": "string"}
-      }
+      "oneOf": [{"$ref": "#/$defs/SplitRef"}, {"type": "null"}],
+      "description": "Optional here and required to reach `fitted`: FR-MODEL-54 makes a diagnostic without its holdout counterpart a defect, so the obligation sits on the Model, where the status is."
     },
     "peril": {"type": ["string", "null"]},
-    "response": {"enum": ["claim_count", "claim_severity", "burning_cost", "retention", "conversion", "elasticity"]},
+    "response": {
+      "anyOf": [
+        {"enum": ["claim_count", "claim_severity", "burning_cost", "conversion", "retention"]},
+        {"type": "null"}
+      ],
+      "description": "Optional because every spec written before the custom-objective slice declared only the column; required whenever the objective is a Custom Objective, where FR-MODEL-44's applicability check has nothing to read without it."
+    },
     "response_column": {"type": "string"},
-    "offset": {
-      "type": ["object", "null"],
-      "required": ["kind"],
-      "properties": {
-        "kind": {"enum": ["none", "log_column", "column", "model"]},
-        "column": {"type": ["string", "null"]},
-        "offset_model_ref": {
-          "anyOf": [
-            {"type": "string", "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$"},
-            {"type": "null"}
-          ]
-        }
-      }
-    },
-    "weight": {
-      "type": "object",
-      "required": ["kind"],
-      "properties": {
-        "kind": {"enum": ["none", "column"]},
-        "column": {"type": ["string", "null"]}
-      }
-    },
+    "offset": {"$ref": "#/$defs/OffsetSpec"},
+    "weight": {"$ref": "#/$defs/WeightSpec"},
     "factors": {
       "type": "array", "minItems": 1,
+      "description": "UNRECONCILED (W5, 2026-08-22): this shape and §4.4's example both pin a Factor by version; `ModelSpecCommon.factors` is `tuple[UUID, ...]` and carries no version. Neither side is edited to match the other pending a decision — see CLAUDE.md §0.",
       "items": {
         "type": "object",
         "required": ["factor_id", "factor_version"],
@@ -53,7 +36,14 @@
         }
       }
     },
-    "filter": {"type": ["string", "null"]},
+    "loss_treatment": {
+      "$ref": "#/$defs/LossTreatment",
+      "description": "FR-MODEL-73. In the spec rather than beside it because it changes the model's identity: two models differing only in a cap must not collide on `spec_hash` (FR-MODEL-66)."
+    },
+    "filter": {
+      "type": ["string", "null"],
+      "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner Phase 1b). No `model_schema` type carries this field; it is named here rather than dropped so the staging record survives."
+    },
     "seed": {"type": "integer"},
     "model_type": {"enum": ["glm", "xgboost", "lightgbm", "ebm"]}
   },
@@ -61,72 +51,180 @@
     {
       "if": {"properties": {"model_type": {"const": "glm"}}, "required": ["model_type"]},
       "then": {
-        "required": ["family", "link"],
         "properties": {
           "family": {"enum": ["poisson", "negative_binomial", "gamma", "inverse_gaussian", "tweedie", "binomial", "gaussian"]},
-          "family_params": {"type": "object",
-            "properties": {"power": {"type": "number", "exclusiveMinimum": 1, "exclusiveMaximum": 2}}},
-          "link": {"enum": ["log", "logit", "identity", "inverse", "power"]},
-          "regularisation": {
-            "type": ["object", "null"],
-            "properties": {
-              "kind": {"enum": ["none", "l1", "l2", "elastic_net"]},
-              "alpha": {"type": "number", "minimum": 0},
-              "l1_ratio": {"type": "number", "minimum": 0, "maximum": 1},
-              "select_by": {"enum": ["fixed", "cv"]},
-              "cv_folds": {"type": "integer", "minimum": 2}
-            }
+          "family_params": {"type": "object", "additionalProperties": {"type": "number"},
+            "description": "`tweedie` carries its fixed power here as `power`, 1 < p < 2. To estimate the power instead, declare `tweedie` below (FR-MODEL-22)."},
+          "link": {"enum": ["log", "logit", "identity", "inverse"]},
+          "alpha": {"type": "number", "minimum": 0,
+            "description": "FR-MODEL-20's elastic-net penalty strength. Pinned to 0 under `select_by: cv`, where the effective penalty comes from `cv.alphas`."},
+          "l1_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+          "select_by": {"enum": ["fixed", "cv"]},
+          "cv": {
+            "oneOf": [{"$ref": "#/$defs/GlmCvSpec"}, {"type": "null"}],
+            "description": "Set iff `select_by == 'cv'` (FR-MODEL-20/53)."
           },
-          "custom_objective_ref": {"type": ["string", "null"]},
+          "tweedie": {
+            "oneOf": [{"$ref": "#/$defs/TweediePowerSpec"}, {"type": "null"}],
+            "description": "FR-MODEL-22: estimate the Tweedie power by profile likelihood over this grid. Estimation paired with CV alpha selection is refused by name."
+          },
           "max_iter": {"type": "integer", "minimum": 1},
-          "tolerance": {"type": "number", "exclusiveMinimum": 0}
+          "tolerance": {"type": "number", "exclusiveMinimum": 0},
+          "approximates_model_id": {
+            "type": ["string", "null"], "format": "uuid",
+            "description": "FR-MODEL-96 — the Model whose predictions this GLM approximates. Null for every model fitted on an observed response."
+          },
+          "custom_objective_ref": {
+            "type": ["string", "null"],
+            "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner Phase 1b). `GlmSpec` carries no such field; `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend nothing reaches yet."
+          }
         }
       }
     },
     {
       "if": {"properties": {"model_type": {"enum": ["xgboost", "lightgbm"]}}, "required": ["model_type"]},
       "then": {
-        "required": ["backend", "objective", "hyperparameters", "early_stopping"],
+        "required": ["model_type", "objective", "categorical_handling"],
         "properties": {
-          "backend": {"enum": ["xgboost", "lightgbm"]},
-          "objective": {
-            "type": "object",
-            "required": ["kind"],
-            "oneOf": [
-              {"properties": {"kind": {"const": "builtin"}, "name": {"type": "string"}}, "required": ["kind", "name"]},
-              {"properties": {"kind": {"const": "custom"}, "ref": {"$ref": "common/artifact-ref.schema.json"}}, "required": ["kind", "ref"]}
-            ]
-          },
-          "base_margin": {
-            "type": ["object", "null"],
-            "properties": {
-              "kind": {"enum": ["none", "log_column", "column"]},
-              "column": {"type": ["string", "null"]}
-            },
-            "description": "Exposure offset for count objectives; required or explicitly acknowledged (FR-MODEL-27)."
+          "objective": {"$ref": "#/$defs/GbmFunctionRef"},
+          "offset_acknowledgement": {
+            "type": ["string", "null"],
+            "description": "FR-MODEL-27's escape hatch: a counting objective with no offset is refused unless this says why."
           },
           "monotone_constraints": {
-            "oneOf": [
-              {"const": "derived_from_factors"},
-              {"type": "object", "additionalProperties": {"enum": [-1, 0, 1]}}
-            ]
+            "enum": ["derived_from_factors", "none"],
+            "description": "FR-MODEL-28. `derived_from_factors` reads each Factor's monotonic direction; the resulting vector is persisted on the fit result beside the feature order."
           },
           "interaction_constraints": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
-          "hyperparameters": {"type": "object"},
+          "hyperparameters": {"type": "object", "additionalProperties": {"type": ["integer", "number"]},
+            "description": "`max_depth`, `eta`, `subsample`, `num_boost_round` and the rest. Integers stay integers: both backends reject a float where they want an int."},
           "early_stopping": {
-            "type": "object",
-            "required": ["on", "metric", "rounds"],
-            "properties": {
-              "on": {"enum": ["holdout", "cv"], "description": "Never 'train' (FR-MODEL-30)."},
-              "metric": {"type": "string"},
-              "rounds": {"type": "integer", "minimum": 1}
-            }
+            "oneOf": [{"$ref": "#/$defs/EarlyStopping"}, {"type": "null"}]
           },
-          "categorical_handling": {"enum": ["native", "grouping", "one_hot"]},
-          "backend_params": {"type": "object"},
-          "eval_metrics": {"type": "array", "items": {"type": "object"}}
+          "categorical_handling": {"enum": ["native", "factor_encoding"]},
+          "backend_params": {"type": "object",
+            "description": "The backend-specific escape hatch (`tree_method`, `boosting_type`, …), namespaced so FR-MODEL-25's single contract does not fork into two."},
+          "eval_metrics": {"type": "array", "items": {"$ref": "#/$defs/GbmFunctionRef"}},
+          "interval_for": {
+            "oneOf": [{"$ref": "#/$defs/IntervalFor"}, {"type": "null"}],
+            "description": "FR-MODEL-78/100. Set only on a model that is itself a quantile bound; null on every other GBM."
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"model_type": {"const": "ebm"}}, "required": ["model_type"]},
+      "then": {
+        "description": "FR-MODEL-37. Added 2026-08-22 (W5): `ebm` was in `model_type`'s enum from Phase 0 with no branch, so a malformed EBM spec validated here with no field-level checking at all.",
+        "properties": {
+          "objective": {"enum": ["rmse", "mae"],
+            "description": "The only objectives `interpret`'s regressor exposes, both under an identity link. §7's families and binomial `log_loss` are refused by name (FR-MODEL-87)."},
+          "interactions": {"type": "integer", "minimum": 0, "maximum": 1,
+            "description": "0 = univariate terms only; 1 = all pairs. 2 (triples) is declared-and-unbuilt: the grid grows cubically and the JSONB fit result cannot bound it."},
+          "max_bins": {"type": "integer", "minimum": 16, "maximum": 32768,
+            "description": "A power of two — `interpret` bins on a dyadic grid. Capped at 256 when `interactions > 0`, where a pair grid is ~8 MB per pair."},
+          "max_rounds": {"type": "integer", "minimum": 1},
+          "monotone_constraints": {
+            "type": ["object", "null"], "additionalProperties": {"type": "integer"},
+            "description": "Direction per factor slug: -1 decreasing, 0 none, 1 increasing. Partial maps are allowed here and coverage is checked at fit time (`EBM_MONOTONE_CONSTRAINT_INCOMPLETE`)."
+          }
         }
       }
     }
-  ]
+  ],
+  "$defs": {
+    "OffsetSpec": {
+      "type": "object",
+      "properties": {
+        "kind": {"enum": ["none", "log_column", "column", "model"]},
+        "column": {"type": ["string", "null"]},
+        "offset_model_ref": {
+          "anyOf": [
+            {"type": "string", "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$"},
+            {"type": "null"}
+          ],
+          "description": "FR-MODEL-24: the pinned model whose linear predictor is the offset. Set iff `kind == 'model'`."
+        }
+      }
+    },
+    "WeightSpec": {
+      "type": "object",
+      "properties": {
+        "kind": {"enum": ["none", "column"]},
+        "column": {"type": ["string", "null"]}
+      }
+    },
+    "SplitRef": {
+      "type": "object",
+      "required": ["split_artifact_id"],
+      "properties": {
+        "split_artifact_id": {"type": "string", "format": "uuid"},
+        "train_part": {"type": "string"},
+        "holdout_part": {"type": "string"}
+      }
+    },
+    "GlmCvSpec": {
+      "type": "object",
+      "description": "FR-MODEL-20/53's penalty scan.",
+      "properties": {
+        "alphas": {"type": "array", "items": {"type": "number"}},
+        "folds": {"type": "integer", "minimum": 2},
+        "method": {"enum": ["random", "temporal", "grouped_by_key"]},
+        "key_column": {"type": ["string", "null"]},
+        "time_column": {"type": ["string", "null"]}
+      }
+    },
+    "TweediePowerSpec": {
+      "type": "object",
+      "description": "FR-MODEL-22's profile-likelihood grid for the Tweedie power.",
+      "properties": {
+        "p_grid": {"type": "array", "items": {"type": "number"}}
+      }
+    },
+    "GbmFunctionRef": {
+      "type": "object",
+      "required": ["kind"],
+      "description": "A builtin objective or eval metric by name, or an approved Custom Objective / Custom Metric by reference. One shape for both because FR-MODEL-26 and FR-MODEL-45 declare the same choice twice.",
+      "required_note": "builtin ⟹ name and no ref; custom ⟹ ref and no name.",
+      "properties": {
+        "kind": {"enum": ["builtin", "custom"]},
+        "name": {"type": ["string", "null"],
+          "description": "`count:poisson`, `reg:gamma`, `reg:tweedie`, `binary:logistic`, … Not an enum: the eval-metric vocabulary is the backend's and differs between them."},
+        "ref": {"type": ["string", "null"],
+          "description": "`custom_objective:<slug>@<version>` / `custom_metric:<slug>@<version>`."}
+      }
+    },
+    "EarlyStopping": {
+      "type": "object",
+      "required": ["on", "metric", "rounds"],
+      "description": "FR-MODEL-30. There is no `train` value, and that is the requirement rather than an oversight: a stopping rule read off the data being fitted stops when the model has finished memorising.",
+      "properties": {
+        "on": {"enum": ["holdout", "cv"]},
+        "metric": {"type": "string"},
+        "rounds": {"type": "integer", "minimum": 1},
+        "cv_folds": {"type": ["integer", "null"], "minimum": 2,
+          "description": "Required for `on: cv`; refused otherwise."}
+      }
+    },
+    "IntervalFor": {
+      "type": "object",
+      "required": ["model_id", "model_version", "alpha"],
+      "description": "FR-MODEL-78/100 — the central Model this bound estimates a quantile of, and which quantile.",
+      "properties": {
+        "model_id": {"type": "string", "format": "uuid"},
+        "model_version": {"type": "integer", "minimum": 1},
+        "alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+      }
+    },
+    "LossTreatment": {
+      "type": "object",
+      "description": "FR-MODEL-73 — how large losses are treated as the model is fitted. A modelling decision, not a property of the data.",
+      "properties": {
+        "kind": {"enum": ["none", "capped", "spliced", "excess"]},
+        "cap_minor": {"type": ["integer", "null"], "minimum": 0},
+        "restoration_loading": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "evidence_blob": {"oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}]}
+      }
+    }
+  }
 }

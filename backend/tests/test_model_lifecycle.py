@@ -22,6 +22,7 @@ from uuid import UUID
 import pytest
 from backend.tests.test_diagnostics import _fit
 from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
 
 from app.db.models import (
     DatasetVersionRow,
@@ -145,6 +146,131 @@ async def test_every_lifecycle_status_is_accepted_by_the_constraint(
         ).scalar_one()
     for status in ModelStatus:
         assert f"'{status.value}'" in clause, f"{status.value} missing from {clause}"
+
+
+
+async def _draft_with_diagnostics(
+    database: Database, workspace_id: UUID, slug: str
+) -> tuple[UUID, UUID]:
+    """A `draft` model and a diagnostics row naming it, written in `record_fit`'s order.
+
+    Neither is fitted: the point of the pair is the *moment before* the fit lands, which is
+    the only moment at which `diagnostics_id` may legitimately be written. `diagnostics` has
+    `uq_diagnostics_model`, so this is also the only way to obtain a second, genuinely
+    stored diagnostics artifact to try to repoint an already-fitted model at.
+    """
+    async with database.unit_of_work() as session:
+        row = ModelRow(
+            workspace_id=workspace_id,
+            model_family_slug=slug,
+            version=1,
+            status=ModelStatus.DRAFT.value,
+            dataset_version_id=new_uuid7(),
+            spec={},
+            spec_hash=f"v2:sha256:{new_uuid7().hex}",
+        )
+        session.add(row)
+        await session.flush()
+        diagnostics = DiagnosticsRow(
+            workspace_id=workspace_id, model_id=row.id, payload={}
+        )
+        session.add(diagnostics)
+        await session.flush()
+        return row.id, diagnostics.id
+
+
+@pytest.mark.req("FR-OVR-1")
+async def test_the_first_write_of_a_diagnostics_pointer_is_not_refused(
+    database, workspace_id
+) -> None:
+    """The positive control for the frozen pointer, and the case a naive guard breaks.
+
+    `models_fit_immutable` now names `diagnostics_id`. Diagnostics are written *after* the
+    numbers are computed, by the same job, so a guard that froze the column unconditionally
+    would refuse the legitimate first write and no model could ever reach `fitted`.
+
+    It does not, because `record_fit` moves the fit result, the pointer and the status in
+    **one** `UPDATE` (`app/platform/modelling.py:793-797` — four assignments on one ORM
+    object, one `flush`). At that statement `OLD.fit_result` is still null and the outer
+    `IF` never fires. This is that statement, written as SQL so the claim does not rest on
+    SQLAlchemy's batching staying as it is.
+    """
+    model_id, diagnostics_id = await _draft_with_diagnostics(
+        database, workspace_id, f"first-write-{new_uuid7().hex[-6:]}"
+    )
+
+    async with database.unit_of_work() as session:
+        await session.execute(
+            text(
+                "UPDATE models SET fit_result = '{}'::jsonb, diagnostics_id = :dx, "
+                "status = 'fitted' WHERE id = :id"
+            ),
+            {"dx": diagnostics_id, "id": model_id},
+        )
+
+    async with database.session() as session:
+        row = (
+            await session.execute(select(ModelRow).where(ModelRow.id == model_id))
+        ).scalar_one()
+        assert row.status == ModelStatus.FITTED.value
+        assert row.diagnostics_id == diagnostics_id
+
+
+@pytest.mark.req("FR-OVR-1")
+@pytest.mark.req("FR-MODEL-65")
+async def test_a_fitted_models_diagnostics_pointer_cannot_be_repointed(
+    database, blob_store, workspace_id
+) -> None:
+    """`02` R2 covers the evidence, not only the numbers.
+
+    `b2c3d4e5f6a7` froze `fit_result`, `spec`, `spec_hash` and `dataset_version_id` and left
+    `diagnostics_id` writable. That column is what an approval rests on: `02` §4.8 makes
+    `status ≥ fitted` imply a `diagnostics_id`, and `06`'s approver reads whatever it
+    reaches. A raw `UPDATE` could therefore swap the A/E, lift and calibration under an
+    already-approved model — the numbers unchanged, the reason to believe them replaced —
+    and the trigger raised nothing.
+
+    The repoint here is the realistic one rather than a dangling uuid: a **second, genuinely
+    stored** diagnostics artifact, belonging to another model. `uq_diagnostics_model` means
+    it has to come from another model, which is also what makes the attack attractive —
+    point the model under review at a healthier one's evidence.
+    """
+    _, model_id = await _fit(database, blob_store, workspace_id)
+    _, other_diagnostics_id = await _draft_with_diagnostics(
+        database, workspace_id, f"donor-{new_uuid7().hex[-6:]}"
+    )
+
+    async with database.session() as session:
+        before = (
+            await session.execute(
+                select(ModelRow.diagnostics_id).where(ModelRow.id == model_id)
+            )
+        ).scalar_one()
+    assert before is not None
+    assert before != other_diagnostics_id
+
+    with pytest.raises(DBAPIError) as repointed:
+        async with database.unit_of_work() as session:
+            await session.execute(
+                text("UPDATE models SET diagnostics_id = :dx WHERE id = :id"),
+                {"dx": other_diagnostics_id, "id": model_id},
+            )
+    assert "immutable" in str(repointed.value)
+
+    async with database.session() as session:
+        after = (
+            await session.execute(
+                select(ModelRow.diagnostics_id).where(ModelRow.id == model_id)
+            )
+        ).scalar_one()
+    assert after == before, "the pointer survived the attempt"
+
+    # ...and the lifecycle stays writable, which is why the guard is conditional rather than
+    # a blanket refusal: a fitted model still moves through review and approval.
+    async with database.unit_of_work() as session:
+        await session.execute(
+            text("UPDATE models SET status = 'review' WHERE id = :id"), {"id": model_id}
+        )
 
 
 # -- The service: `fitted → review` -------------------------------------------------------

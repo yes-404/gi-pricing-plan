@@ -1240,17 +1240,20 @@ async def apply_approval_decision(
         )
     ).scalar_one_or_none()
     if row is None:
-        # **Tolerated, not an error, and the distinction is load-bearing.**
-        # `POST /approval-requests` accepts any well-formed `{type}:{slug}@{version}`
-        # string, so a request can name a model that was never created — and if this
-        # 404'd, that request could never be decided and would sit open for ever. A dead
-        # row nobody can close is worse than a decision that moves nothing.
+        # **The hole this used to describe is closed.** `06` FR-GOV-36 is built: `POST
+        # /approval-requests` resolves the reference it is asked to pin before the row
+        # exists (`api/approvals.py::_resolve_the_artifact`), so a request naming a model
+        # that was never created is now refused with `NOT_FOUND` at submission rather than
+        # accepted and decided here without effect.
         #
-        # Nothing reachable through this platform produces such a ref: `submit_for_review`
-        # holds the row it names, and a fitted model cannot be deleted (`02` R2, enforced
-        # by trigger). The hole is in governance's own submission path, which pins a
-        # version without checking that it exists — recorded as `06` FR-GOV-36 with an
-        # owner rather than half-closed from the module on the wrong side of DEP-1.
+        # **Still tolerated, and the distinction is still load-bearing.** What reaches this
+        # branch now is a request submitted *before* that check existed — every deployed
+        # database holds some — and 404'ing it would make those requests permanently
+        # undecidable. A dead row nobody can close is worse than a decision that moves
+        # nothing, which is the whole reason the tolerance was written; closing the hole
+        # upstream shrinks what falls through it, and does not change that judgement.
+        # Nothing this platform produces adds to the residue: `submit_for_review` holds the
+        # row it names, and a fitted model cannot be deleted (`02` R2, enforced by trigger).
         return None
 
     target = _target_status(ApprovalStatus(request.status))

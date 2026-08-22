@@ -74,9 +74,14 @@ def _fitted(workspace_id: UUID) -> tuple[Principal, UUID, str, Principal]:
 async def _slug_of(database: Database, model_id: UUID) -> str:
     """The family slug behind an id.
 
-    Read from the database rather than over the API because there is **no** `GET /models`
-    list route — `02` §5.1 declares none, and inventing one for a test's convenience would
-    add an endpoint to the surface with no requirement behind it.
+    Read from the database rather than over the API because there was **no** `GET /models`
+    list route — `02` §5.1 declared none, and inventing one for a test's convenience would
+    have added an endpoint to the surface with no requirement behind it.
+
+    **`GET /models` exists from 2026-08-22** (W5, the audit-remediation slice): the gap was
+    a defect in §5.1 rather than a decision, and this docstring is the record of where it
+    was noticed. The direct read stays, because the setup for a lifecycle test should not
+    depend on a second route being correct — `test_api_models` owns the list route.
     """
     from sqlalchemy import select
 

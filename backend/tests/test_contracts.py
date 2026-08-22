@@ -258,21 +258,145 @@ def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
     assert set(generated["properties"]) == set(authored["properties"])
 
 
-#: Fields the `ArtifactEnvelope` contributes, which a hand-authored schema carries through
-#: `allOf` rather than listing (`00` §4.3). They appear in the generated shape and not in
-#: the authored one's `properties`, and that is not a divergence.
-ENVELOPE_FIELDS = frozenset({"id", "slug", "version", "dataset_id"})
+#: The schema a hand-authored contract composes to inherit `00` §4.3's envelope.
+_ENVELOPE_SCHEMA: Final = "common/artifact-envelope.schema.json"
 
-#: `custom-objective` declares `template` and `params` inside an `if kind == template`
-#: branch rather than in `properties` — the same carry-through as the envelope, for the
-#: same reason: the field is declared, just not where a flat set-comparison looks.
-CONDITIONAL_FIELDS: Final[dict[str, frozenset[str]]] = {
-    "custom-objective": frozenset({"template", "params"}),
+#: The envelope's field names, **read from the envelope contract** rather than listed here.
+#:
+#: It used to be the literal `{"id", "slug", "version", "dataset_id"}` — four names, of
+#: which the envelope actually declares three and `dataset_id` is not one of them at all.
+#: A hand-written copy of a published list is the shape-defined-twice `CLAUDE.md` §2
+#: forbids, and this copy was wrong in both directions: it under-declared the envelope by
+#: eleven fields, and it carried a `banding`/`grouping` field under a heading that had
+#: nothing to do with it (see `MODEL_ONLY_UNRECONCILED`).
+ENVELOPE_FIELDS: Final[frozenset[str]] = frozenset(
+    _load(AUTHORED / "common" / "artifact-envelope.schema.json")["properties"]
+)
+
+
+def _composes_the_envelope(authored: dict[str, Any]) -> bool:
+    """Whether this authored contract inherits `00` §4.3's envelope through `allOf`.
+
+    The carve-out below is applied **only** to schemas that actually compose it. The flat
+    exemption applied to every slug, which is why `TransparencyArtifact.id` and
+    `Diagnostics.id` — required fields on artifacts that carry no envelope at all — were
+    exempted from a check they should always have failed.
+    """
+    return any(
+        entry.get("$ref") == _ENVELOPE_SCHEMA for entry in authored.get("allOf", [])
+    )
+
+
+#: **A recorded divergence the guard is told not to litigate** (W5 audit, 2026-08-22).
+#:
+#: Twelve authored contracts `allOf` the envelope and thereby promise fourteen fields.
+#: `ArtifactEnvelope` is defined at `model_schema/envelope.py:16` and exported at
+#: `model_schema/__init__.py:83` — and **no model in the package inherits from it**. `Model`
+#: carries `id`, `version`, `status`; `PerilStructure` adds `slug` and `created_at`; the
+#: other nine fields (`workspace_id`, `created_by`, `updated_at`, `archived_at`,
+#: `parent_id`, `currency`, `labels`, `description`, `schema_version`) exist on no artifact.
+#:
+#: Composing the envelope is a data-model change across the whole suite, not a contract fix,
+#: so it is **not** made here: the finding is recorded, the owner is the maintainer, and
+#: this test stays silent about it rather than going red on nine fields nobody is fixing
+#: today. `test_the_envelope_gap_is_still_the_shape_the_carve_out_assumes` below is what
+#: stops the silence outliving the reason for it.
+ENVELOPE_GAP_IS_RECORDED_NOT_FIXED: Final = True
+
+#: Model-side fields no authored contract declares, **outside this slice's scope**.
+#:
+#: `dataset_id` is on `Factor`, `Banding` and `Grouping` (`modelling.py:133`, `:355`,
+#: `:497`) and is declared by neither `banding.schema.json` nor `grouping.schema.json`,
+#: which name `derived_on_dataset_version_id` instead. It sat inside `ENVELOPE_FIELDS`
+#: labelled an envelope field, which it has never been. Named honestly here, for `01`/`02`'s
+#: banding-and-grouping owner; W5 owns the six `02` artifact slugs and not these two.
+MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
+    "banding": frozenset({"dataset_id"}),
+    "grouping": frozenset({"dataset_id"}),
+}
+
+#: Contract fields **declared and unbuilt on purpose**, each with a requirement and an owner.
+#:
+#: FR-MODEL-87 is the rule: *"§4 is a staged contract: a field is shown live only once a
+#: slice populates it, and anything else is named in place with a dated note saying it is
+#: declared-and-unbuilt and which workstream owns it"* (OQ-MODEL-8, decided 2026-08-17).
+#: Deleting these from the published contract to make a test green would destroy exactly the
+#: staging record that requirement exists to keep, and `CLAUDE.md` §0 forbids building them
+#: to match: a later phase's capability is a spec change, not code.
+#:
+#: Each entry carries its note in the schema's own `description` beside the field, so a
+#: reader of the contract meets the same fact as a reader of this list:
+#:
+#: * `model.custom_objective_ref` / `model-spec`'s `custom_objective_ref` — FR-MODEL-87,
+#:   *"absent entirely … owned by Phase 1b"*. `ObjectiveBackend.glm` exists so an author can
+#:   narrow applicability to a backend nothing reaches yet (`objectives.py:101-114`).
+#: * `model-spec.filter` — FR-MODEL-87, same verdict, same owner.
+#: * `model.transparency_artifact_id` — FR-MODEL-87, *"declared and unbuilt, as §4.8 already
+#:   says of them … owned by W5"*. **Open question for the maintainer:** FR-MODEL-96 was
+#:   built on 2026-08-19 and made the reference run the other way — `TransparencyArtifact`
+#:   carries `model_id`, and R3 is enforced by query at
+#:   `backend/src/app/platform/modelling.py:1147`, not by a column on `Model`. Whether the
+#:   back-pointer is still wanted is a `CLAUDE.md` §0 question, not a test's to settle.
+#: * `custom-objective`'s `if kind == "expression"` branch — `loss`, `derived`,
+#:   `bound_symbols`, `parameters`. `ObjectiveKind.EXPRESSION` is Phase 2 behind
+#:   `expression_objectives_enabled` (`objectives.py:75-81`) and `CustomObjective` **refuses
+#:   to be constructed with it** (`objectives.py:8-12`), so the shape is not merely absent —
+#:   it is refused by name (OQ-MODEL-1).
+#:
+#: The `if kind == "template"` branch is *not* here: `template` and `params` are built, and
+#: the flattening above now sees them where the retired `CONDITIONAL_FIELDS` exemption used
+#: to assert them by hand.
+DECLARED_AND_UNBUILT: Final[dict[str, frozenset[str]]] = {
+    "custom-objective": frozenset({"loss", "derived", "bound_symbols", "parameters"}),
+    "model": frozenset({"custom_objective_ref", "transparency_artifact_id"}),
+    "model-spec": frozenset({"custom_objective_ref", "filter"}),
 }
 
 
+def _declared_fields(
+    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+) -> set[str]:
+    """Every field name this schema declares, wherever it declares it.
+
+    `set(schema["properties"])` was the whole of this, and it is blind to all three ways a
+    contract in this suite names a field somewhere else:
+
+    * **`allOf` composition.** `model` and `peril-structure` inherit `00` §4.3's envelope by
+      reference, so fourteen of their fields live in another file. Reading only
+      `properties` reported `PerilStructure.created_at` and `.status` as fields "the
+      contract does not declare" when the contract declares both.
+    * **`if`/`then` refinement.** `model-spec`'s two arms hold every GLM and GBM field it
+      has; `custom-objective`'s hold the template and expression blocks.
+    * **A discriminated union on the generated side.** `model-spec.schema.json` generates as
+      `oneOf: [GlmSpec, GbmSpec, EbmSpec]` with **no top-level `properties` at all**, so the
+      comparison did not merely miss fields — it raised `KeyError: 'properties'` and the
+      slug could not be checked in either direction.
+
+    `_variants` already resolves all three, so this is that walker asked for names instead
+    of types.
+    """
+    names: set[str] = set()
+    for _owner, variant in _variants(document, node, base):
+        names.update(variant.get("properties", {}))
+    return names
+
+
 @pytest.mark.req("FR-OVR-6")
-@pytest.mark.parametrize("slug", ["banding", "grouping", "custom-objective", "profile"])
+@pytest.mark.parametrize(
+    "slug",
+    [
+        "banding",
+        "grouping",
+        "custom-objective",
+        "profile",
+        "model",
+        "model-spec",
+        "diagnostics",
+        "transparency-artifact",
+        "objective-certificate",
+        "peril-structure",
+    ],
+)
 def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:
     """Both directions, for the shapes with a hand-authored Phase-0 contract.
 
@@ -297,14 +421,21 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
 
-    declared = set(authored["properties"]) | CONDITIONAL_FIELDS.get(slug, frozenset())
-    produced = set(generated["properties"])
-    assert not declared - produced, (
-        f"the contract declares fields the model lacks: {sorted(declared - produced)}"
+    declared = _declared_fields(authored, authored, AUTHORED)
+    produced = _declared_fields(generated, generated, GENERATED)
+
+    exempt = DECLARED_AND_UNBUILT.get(slug, frozenset()) | MODEL_ONLY_UNRECONCILED.get(
+        slug, frozenset()
     )
-    assert not produced - declared - ENVELOPE_FIELDS, (
+    if _composes_the_envelope(authored):
+        exempt |= ENVELOPE_FIELDS
+
+    assert not declared - produced - exempt, (
+        f"the contract declares fields the model lacks: {sorted(declared - produced - exempt)}"
+    )
+    assert not produced - declared - exempt, (
         "the model produces fields the contract does not declare: "
-        f"{sorted(produced - declared - ENVELOPE_FIELDS)}"
+        f"{sorted(produced - declared - exempt)}"
     )
 
 
@@ -397,33 +528,132 @@ def _deref(document: dict[str, Any], node: dict[str, Any], base: pathlib.Path) -
     raise AssertionError(f"more than {_MAX_REF_HOPS} $ref hops — the document is cyclic")
 
 
+#: How deep to follow composition keywords before concluding the document is malformed.
+#: `_deref` bounds `$ref` chains; this bounds `allOf`-inside-`then`-inside-`oneOf` nesting,
+#: which no `$ref` hop has to appear in.
+_MAX_COMPOSITION_DEPTH: Final = 40
+
+
 def _variants(
-    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    *,
+    _depth: int = 0,
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    """The node itself plus every `anyOf`/`oneOf`/`allOf` branch beneath it, dereferenced.
+    """The node itself plus every composed subschema beneath it, dereferenced.
 
     An optional field is `anyOf: [{...}, {"type": "null"}]` when generated and a bare type
     when authored. Flattening both to the set of branches lets one comparison read them the
     same way, which is what makes `severity_ci` — an optional *array* — comparable at all.
+
+    **`then`/`else` joined `anyOf`/`oneOf`/`allOf` on 2026-08-22 (W5).** A hand-authored
+    contract refines a tagged union with `allOf: [{"if": …, "then": {"properties": …}}]`,
+    and a walker reading only the three combinators sees a branch node carrying neither
+    `properties` nor `type` and moves on. Every field in every conditional arm of the suite
+    was therefore invisible: `model-spec` produced exactly its 12 flat properties and
+    **nothing** from either arm — no `family`, no `link`, no `objective`, no
+    `early_stopping` — and `model.spec` `$ref`s it, so a Model's whole specification went
+    uncompared too. `CONDITIONAL_FIELDS` was the hand-maintained patch over one slug's
+    corner of this, and it is deleted with this change rather than extended.
+
+    `if` is deliberately **not** followed. It is the discriminator test, not a description
+    of the artifact: reading it would fold `{"const": "glm"}` into `model_type`'s admitted
+    types as though the contract declared a second field there.
     """
+    if _depth > _MAX_COMPOSITION_DEPTH:
+        raise AssertionError(
+            f"more than {_MAX_COMPOSITION_DEPTH} composition levels — the document nests "
+            "without bottoming out"
+        )
     node, document = _deref(document, node, base)
     found = [(document, node)]
     for keyword in ("anyOf", "oneOf", "allOf"):
         for branch in node.get(keyword, []):
-            found.extend(_variants(document, branch, base))
+            found.extend(_variants(document, branch, base, _depth=_depth + 1))
+    for keyword in ("then", "else"):
+        branch = node.get(keyword)
+        if branch is not None:
+            found.extend(_variants(document, branch, base, _depth=_depth + 1))
     return found
 
 
-def _scalar_types(
-    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
-) -> set[str]:
-    """The JSON types this node admits, ignoring `null`.
+#: Slugs whose nullability is compared as well as their types (`keep_null` below).
+#:
+#: Scoped rather than universal **because the reconciliation is scoped, not because the
+#: rest are believed to agree.** The measurement on 2026-08-22 found 43 nullability
+#: divergences across the twelve compared slugs; the 20 in these six were fixed with this
+#: change, and the remainder belongs to their owners. Re-measured after the fix, with the
+#: `if`/`then` flattening in place, **24 remain** — one more than the original count, because
+#: `custom-objective.template` sits inside a conditional branch nothing used to read:
+#:
+#: * `audit-event` — `actor.display`
+#: * `banding` — `band_stats.[].frequency`, `.mean_burning_cost`, `.mean_severity`,
+#:   `derived_on_dataset_version_id`
+#: * `custom-objective` — `applicability.y_domain.max_inclusive`, `.min_inclusive`,
+#:   `template`
+#: * `grouping` — `derived_on_dataset_version_id`, `evidence.chi2_p_value`,
+#:   `evidence.deviance_after`, `.deviance_before`, `rationale`
+#: * `job` — `error.trace_id`, `resource_budget.memory_gb`, `.wall_clock_s`, `result.ref`,
+#:   `trace_id`
+#: * `profile` — `columns.[].top_levels.[].exposure_years`, `one_ways.[].banding`†,
+#:   `one_ways.[].rows.[].frequency`, `.level`†, `.mean_burning_cost`, `.mean_severity`
+#:
+#: † runs *contract*-nullable — the contract admits a `null` the model refuses, which is the
+#: direction a client can actually be broken by. Removing a slug from this set is how the
+#: check would go quiet, so it is written out and `test_every_model_owned_slug_compares_
+#: nullability` holds it to the six.
+NULLABILITY_COMPARED_SLUGS: Final[frozenset[str]] = frozenset(
+    {
+        "model",
+        "model-spec",
+        "diagnostics",
+        "transparency-artifact",
+        "objective-certificate",
+        "peril-structure",
+    }
+)
 
-    `null` is dropped deliberately. The generated contracts mark every `X | None` nullable
-    and the authored ones mark almost none, so comparing nullability would report a
-    divergence on nearly every optional field — a uniform difference of idiom, not the
-    integer-for-a-float this test exists to find. Nullability is worth reconciling, but as
-    its own change against the whole authored suite, not smuggled in here.
+
+def _scalar_types(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    *,
+    keep_null: bool = False,
+) -> set[str]:
+    """The JSON types this node admits — including `null` where `keep_null` is set.
+
+    **Corrected 2026-08-22 (W5).** This function dropped `null` unconditionally, and said
+    why: *"the generated contracts mark every `X | None` nullable and the authored ones mark
+    almost none, so comparing nullability would report a divergence on nearly every optional
+    field — a uniform difference of idiom, not the integer-for-a-float this test exists to
+    find."* Both halves of that were measured and are false.
+
+    * **The authored suite is not silent on nullability.** 70 of its 417 dotted paths across
+      the twelve compared slugs are marked nullable — 17 %, not "almost none". `model`
+      alone spells `{"type": ["string", "null"]}` eleven times.
+    * **It is not uniform.** 40 of the 43 hidden divergences run model-nullable, and **3 run
+      the other way** — `model.fit_result.iterations`, `profile.one_ways.[].banding`,
+      `profile.one_ways.[].rows.[].level`. A difference of idiom has no exceptions; this has
+      three, and they are the dangerous direction: the contract promises a `null` the
+      platform refuses.
+
+    And the conclusion did not hold either. `model.fit_result.coefficients.[].relativity` is
+    `float | None` in the code and `{"type": "number"}` in the contract — and `02` §4.8's
+    dated amendment records that nullability as the **fix** to a real defect: *"Reporting
+    `exp(β)` as 1.0 for a `logit` model said 'no effect' for a factor spanning eighteen
+    log-odds."* The contract still published the pre-fix shape, and this line is the reason
+    nothing said so. Not a difference of idiom — a resolved bug, re-published.
+
+    The docstring's own closing sentence named the right remedy — *"as its own change
+    against the whole authored suite"* — and `NULLABILITY_COMPARED_SLUGS` is that change,
+    landed for the six `02`-owned slugs and scoped in the open for the rest.
+
+    `const` is read alongside `enum`, and for the same reason the enum handling exists: a
+    hand-authored `{"const": "derived_from_factors"}` carries no `"type"`, so a walker
+    reading only `type` and `enum` called that branch typeless and reported the field as
+    `object` against a model admitting `object | string`.
     """
     admitted: set[str] = set()
     for owner, variant in _variants(document, node, base):
@@ -432,12 +662,18 @@ def _scalar_types(
             admitted.add(declared)
         elif isinstance(declared, list):
             admitted.update(declared)
-        for member in variant.get("enum", ()):
+        members = list(variant.get("enum", ()))
+        if "const" in variant:
+            members.append(variant["const"])
+        for member in members:
+            if member is None:
+                admitted.add("null")
+                continue
             named = _JSON_TYPE_OF.get(type(member))
             if named is not None:
                 admitted.add(named)
         del owner
-    return admitted - {"null"}
+    return admitted if keep_null else admitted - {"null"}
 
 
 def _type_map(
@@ -445,6 +681,8 @@ def _type_map(
     node: dict[str, Any],
     base: pathlib.Path,
     path: str = "",
+    *,
+    keep_null: bool = False,
 ) -> dict[str, frozenset[str]]:
     """Flatten a schema to `dotted.path -> admitted JSON types`, descending into arrays.
 
@@ -455,27 +693,45 @@ def _type_map(
     to fail. Element positions collapse onto one `.[]` path: a contract that types position
     0 differently from position 1 is a separate defect, and a comparison that reported it
     as a type mismatch would be describing the wrong problem.
+
+    **A property declared by more than one variant is unioned, not overwritten (2026-08-22,
+    W5).** This read `properties.update(...)`, so the *last* variant to name a field
+    replaced every earlier definition of it wholesale. A conditional refinement is exactly
+    that shape — `peril-structure`'s `{"if": large_loss.kind == "capped", "then":
+    {"properties": {"large_loss": {"required": [...]}}}}` names `large_loss` again only to
+    add two required keys — so following `then` at all silently deleted the block's real
+    definition and took the walker from 36 paths to 28. Collecting the nodes per name and
+    unioning their subtrees is what makes the extra reach an addition rather than a trade.
     """
     found: dict[str, frozenset[str]] = {}
-    properties: dict[str, Any] = {}
+    properties: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
     elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for owner, variant in _variants(document, node, base):
-        properties.update(variant.get("properties", {}))
+        for name, child in variant.get("properties", {}).items():
+            properties.setdefault(name, []).append((owner, child))
         if "items" in variant:
             elements.append((owner, variant["items"]))
         elements.extend((owner, entry) for entry in variant.get("prefixItems", ()))
 
     if properties:
-        for name, child in sorted(properties.items()):
-            found.update(_type_map(document, child, base, f"{path}.{name}".lstrip(".")))
+        for name in sorted(properties):
+            for owner, child in properties[name]:
+                subtree = _type_map(
+                    owner, child, base, f"{path}.{name}".lstrip("."), keep_null=keep_null
+                )
+                for key, types in subtree.items():
+                    found[key] = found.get(key, frozenset()) | types
         return found
     if elements:
         for owner, child in elements:
-            for key, types in _type_map(owner, child, base, f"{path}.[]".lstrip(".")).items():
+            subtree = _type_map(
+                owner, child, base, f"{path}.[]".lstrip("."), keep_null=keep_null
+            )
+            for key, types in subtree.items():
                 found[key] = found.get(key, frozenset()) | types
         return found
 
-    types = _scalar_types(document, node, base)
+    types = _scalar_types(document, node, base, keep_null=keep_null)
     if types:
         found[path] = frozenset(types)
     return found
@@ -535,8 +791,9 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
 
-    produced = _type_map(generated, generated, GENERATED)
-    declared = _type_map(authored, authored, AUTHORED)
+    keep_null = slug in NULLABILITY_COMPARED_SLUGS
+    produced = _type_map(generated, generated, GENERATED, keep_null=keep_null)
+    declared = _type_map(authored, authored, AUTHORED, keep_null=keep_null)
 
     compared = set(produced) & set(declared)
     disagreed = {
@@ -547,6 +804,171 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     assert not disagreed, (
         "the model and the contract disagree on the type of "
         + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+    )
+
+
+#: Nested fields this slice added to the `02`-owned contracts, named so their removal is
+#: noticed. Each must be a path the comparison reaches **on both sides**.
+#:
+#: `test_an_artifact_shape_carries_exactly_what_its_contract_declares` compares **top-level**
+#: field names only, and `test_generated_and_authored_agree_on_scalar_types` compares only
+#: paths present on both sides — so a *nested* field deleted from a contract appears in
+#: neither: it stops being a shared path and the type comparison simply says less. That is
+#: exactly how `gbm.quantile_crossing` (FR-MODEL-78) and `gbm.tree_count` came to be absent
+#: from `diagnostics.schema.json` for months with every check green, and it was rediscovered
+#: on 2026-08-22 by trying to break the improved guard and finding it did not notice
+#: (`CLAUDE.md` §13.4).
+#:
+#: A general nested-existence comparison would light up every legitimately unshared path in
+#: the suite, so this is the same instrument
+#: `test_the_type_comparison_reaches_the_one_way_row` uses: name the paths that matter.
+REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
+    "model": frozenset(
+        {
+            "fit_result.booster_format",
+            "fit_result.best_iteration",
+            "fit_result.base_margin.kind",
+            "fit_result.feature_dtypes",
+            "fit_result.categorical_maps",
+            "fit_result.dropped_eval_metrics.[].reason",
+            "fit_result.coefficients.[].relativity",
+            "fit_result.covariance_blob.sha256",
+            "fit_result.tweedie.estimated_power",
+            "fit_result.intercept",
+        }
+    ),
+    "model-spec": frozenset(
+        {"alpha", "select_by", "tweedie.p_grid.[]", "interval_for.alpha", "max_bins",
+         "loss_treatment.kind", "approximates_model_id", "offset_acknowledgement"}
+    ),
+    "diagnostics": frozenset(
+        {
+            "gbm.quantile_crossing.rows_crossing",
+            "gbm.tree_count",
+            "gbm.max_depth",
+            "gbm.mean_depth",
+            "gbm.importances.[].feature",
+            "gbm.permutation_importances.[].degradation",
+            "gbm.partial_dependence.[].points.[].exposure_share",
+            "gbm.monotonicity.[].holds",
+            "gbm.eval_curve.[].metric",
+            "cross_validation.path.[].alpha",
+            "cross_validation.fold_metrics.[].fold",
+            "cross_validation.selected_alpha",
+            "universal.train.rows",
+            "universal.holdout.residual_summary.p99",
+        }
+    ),
+    "transparency-artifact": frozenset(
+        {
+            "glm_approximation.relativity_table_blob.sha256",
+            "glm_approximation.coefficients.[].estimate",
+            "glm_approximation.family",
+            "shap_summary.dependence_blob.sha256",
+            "shap_summary.interactions_available",
+            "shap_summary.top_interactions.[].exposure_share",
+        }
+    ),
+    "peril-structure": frozenset(
+        {
+            "reconciliation.perils.[].peril",
+            "reconciliation.perils.[].modelled_burning_cost_minor",
+            "reconciliation.computed_at",
+            "perils.[].large_loss.evidence_blob.sha256",
+        }
+    ),
+}
+
+
+@pytest.mark.req("FR-OVR-6")
+@pytest.mark.parametrize("slug", sorted(REACHED_NESTED_PATHS))
+def test_the_comparison_reaches_the_nested_fields_this_slice_added(slug: str) -> None:
+    """The control for the two comparisons above, at the depth where they go quiet.
+
+    Neither of them fails when a *nested* contract field is deleted — the top-level name set
+    does not contain it, and the type comparison only narrows. So these paths are named, and
+    they must be present on **both** sides: the contract declares them, and the walker
+    still reaches them.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+    keep_null = slug in NULLABILITY_COMPARED_SLUGS
+    compared = set(_type_map(generated, generated, GENERATED, keep_null=keep_null)) & set(
+        _type_map(authored, authored, AUTHORED, keep_null=keep_null)
+    )
+
+    wanted = REACHED_NESTED_PATHS[slug]
+    assert wanted <= compared, (
+        f"the comparison no longer reaches {sorted(wanted - compared)} in {slug} — either "
+        "the contract stopped declaring them or the walker stopped descending, and both "
+        "read as a passing test"
+    )
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_every_model_owned_slug_compares_nullability() -> None:
+    """The nullability comparison is scoped; this is what stops the scope shrinking.
+
+    `NULLABILITY_COMPARED_SLUGS` is the only thing standing between `keep_null` and a check
+    that silently stops running, and a set literal is edited as easily as it is read. The
+    six `02`-owned slugs were reconciled on 2026-08-22 and none of them may leave without
+    this failing — which is the same bargain `test_every_eligible_schema_is_compared` makes
+    for the outer list.
+
+    It does **not** demand the other six join: those 23 divergences belong to `01`, `06` and
+    `07`, are enumerated by name beside the set, and widening the scope here would be this
+    slice fixing another's contracts.
+    """
+    owned = {
+        "model",
+        "model-spec",
+        "diagnostics",
+        "transparency-artifact",
+        "objective-certificate",
+        "peril-structure",
+    }
+    assert owned <= NULLABILITY_COMPARED_SLUGS, (
+        "these `02`-owned slugs were reconciled for nullability and have been dropped from "
+        f"the comparison: {sorted(owned - NULLABILITY_COMPARED_SLUGS)}"
+    )
+    assert set(COMPARED_SLUGS) >= NULLABILITY_COMPARED_SLUGS, (
+        "a slug is marked for nullability comparison but is not compared at all: "
+        f"{sorted(NULLABILITY_COMPARED_SLUGS - set(COMPARED_SLUGS))}"
+    )
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_the_envelope_gap_is_still_the_shape_the_carve_out_assumes() -> None:
+    """The recorded-not-fixed envelope divergence, held to its recorded shape.
+
+    `ENVELOPE_FIELDS` buys the existence test's silence about `00` §4.3's envelope, and an
+    exemption nobody re-reads is how a real divergence acquires tenure. So the exemption
+    states what it is covering for, and fails if that stops being true:
+
+    * the envelope contract still declares exactly the fourteen fields being exempted, and
+    * no `model_schema` model has quietly started composing `ArtifactEnvelope` — because on
+      the day one does, the carve-out is hiding a *narrower* gap than it claims and should
+      shrink with it.
+
+    The verdict and the owner for the gap itself are the maintainer's; this only guarantees
+    the description stays accurate while it is open.
+    """
+    envelope = _load(AUTHORED / "common" / "artifact-envelope.schema.json")
+    assert set(envelope["properties"]) == set(ENVELOPE_FIELDS)
+    assert len(ENVELOPE_FIELDS) == 14, sorted(ENVELOPE_FIELDS)
+
+    import model_schema
+
+    composing = sorted(
+        name
+        for name in model_schema.__all__
+        if isinstance(getattr(model_schema, name, None), type)
+        and issubclass(getattr(model_schema, name), model_schema.ArtifactEnvelope)
+        and getattr(model_schema, name) is not model_schema.ArtifactEnvelope
+    )
+    assert composing == [], (
+        f"{composing} now compose(s) ArtifactEnvelope. The carve-out above is written for a "
+        "suite where nothing does; narrow it to the artifacts still outside."
     )
 
 

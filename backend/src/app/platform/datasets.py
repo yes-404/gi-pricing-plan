@@ -36,6 +36,7 @@ from app.observability.logging import get_logger
 from app.platform import audit, rbac
 from model_schema import (
     VALID_DATASET_TRANSITIONS,
+    ArtifactRef,
     DataDictionaryEntry,
     Dataset,
     DatasetKind,
@@ -63,6 +64,7 @@ __all__ = [
     "promote_to_validated",
     "purge_subject",
     "record_split",
+    "resolve_artifact_ref",
     "to_schema",
     "to_split",
     "transition",
@@ -618,6 +620,47 @@ async def load_version(
             "NOT_FOUND", "Dataset version not found", 404, f"No version {version_id}."
         )
     return row
+
+
+async def resolve_artifact_ref(
+    session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+) -> bool:
+    """`dataset_version:<slug>@<version>` → does that version exist? (`06` FR-GOV-36.)
+
+    `False`, having done nothing, for a reference that is not this module's — the contract
+    `api/approvals.py`'s fan-out is built on.
+
+    The only one of the six that needs a join: the slug in the reference is the **dataset's**
+    (`uq_datasets_workspace_slug`) and the version is the snapshot's
+    (`uq_dataset_versions_dataset_version`), so neither table holds the whole key on its own.
+    Together they do, and `load_version`'s by-id lookup cannot be reused for it.
+
+    Neither status nor `01` §1.3's validated gate is consulted. FR-GOV-36 asks whether the
+    version exists; `fittable_or_refuse` asks whether it may be fitted on, and answering that
+    question here would refuse a submission whose whole purpose might be to get the version
+    validated.
+    """
+    if artifact_ref.type != "dataset_version":
+        return False
+    found = (
+        await session.execute(
+            select(DatasetVersionRow.id)
+            .join(DatasetRow, DatasetRow.id == DatasetVersionRow.dataset_id)
+            .where(
+                DatasetVersionRow.workspace_id == workspace_id,
+                DatasetRow.slug == artifact_ref.slug,
+                DatasetVersionRow.version == artifact_ref.version,
+            )
+        )
+    ).scalar_one_or_none()
+    if found is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "Dataset version not found",
+            404,
+            f"{artifact_ref} resolves to no dataset version in this workspace.",
+        )
+    return True
 
 
 async def derive_version(

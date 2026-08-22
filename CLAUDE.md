@@ -441,7 +441,15 @@ pnpm --dir frontend dev                      # proxies /api to localhost:8000
 GIP_DEV_AUTH_ENABLED=true uv run uvicorn app.main:create_app \
     --factory --reload --app-dir backend/src --port 8000
 
-uv run alembic upgrade head                  # W2
+# Migrations (W2). **The bare command does not work against the compose stack** and
+# this line said it did until 2026-08-22. `backend/src/app/config.py`'s `database_url`
+# defaults to `gip:gip@localhost:5432/gip`; `deploy/docker-compose.yml` provisions
+# `gipricing:gipricing@…/gipricing`. Alembic reads `Settings`, so it dies with
+# `InvalidPasswordError: password authentication failed for user "gip"`. The tests do
+# not, because `backend/tests/conftest_db.py`'s `DEFAULT_TEST_DSN` carries the compose
+# credentials itself — which is why the gap survived every green suite.
+GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+    uv run alembic upgrade head
 ```
 
 ## 12. Skills

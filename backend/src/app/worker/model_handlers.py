@@ -13,6 +13,7 @@ learns it from a `409`, not from a failed job twenty seconds later.
 from __future__ import annotations
 
 import io
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -24,6 +25,7 @@ from sqlalchemy import select
 
 from app.db.models import BlobRow, DatasetSplitRow, DatasetVersionRow, ModelRow
 from app.errors import PlatformError
+from app.observability.logging import get_logger
 from app.platform import backtests as backtest_service
 from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
@@ -70,6 +72,8 @@ from model_schema import (
 from pricing_core import ProgressCallback, ScaledProgress
 
 __all__ = ["register_model_handlers"]
+
+_log = get_logger("app.worker.model")
 
 
 @dataclass(frozen=True, slots=True)
@@ -393,6 +397,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             "a version; this is that resolution failing.",
         ) from exc
     progress.update(0.85, "diagnostics")
+    # NFR-MODEL-4's other half. Every fit result already carries `fit_seconds`; nothing
+    # timed the diagnostics, so the 30 % budget could only be asserted. This is a
+    # *measurement*, emitted as a log field rather than persisted on the artifact: a
+    # wall-clock reading is a fact about one worker on one day, and the Diagnostics
+    # artifact is the model's evidence, not the machine's.
+    diagnostics_started = time.perf_counter()
     from pricing_core.modelling import compute_diagnostics, compute_gbm_diagnostics
     from pricing_core.modelling.diagnostics import compute_ebm_diagnostics
 
@@ -430,6 +440,24 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             409,
             f"{spec.model_type!r} has a spec arm and no fit path.",
         )
+    diagnostics_seconds = time.perf_counter() - diagnostics_started
+    _log.info(
+        "diagnostics complete",
+        extra={
+            "model_id": str(model_id),
+            "model_type": spec.model_type,
+            "fit_seconds": result.fit_seconds,
+            "diagnostics_seconds": round(diagnostics_seconds, 4),
+            # NFR-MODEL-4's ratio, computed here rather than by whoever reads the two
+            # numbers. `None` when the fit was too fast to time: a ratio over a zero
+            # denominator is not "infinitely over budget", it is unmeasured.
+            "diagnostics_over_fit": (
+                round(diagnostics_seconds / result.fit_seconds, 4)
+                if result.fit_seconds > 0
+                else None
+            ),
+        },
+    )
     # FR-MODEL-78. Only the **second** bound of a pair has a counterpart to cross: the
     # first is fitted against nothing, and FR-MODEL-49 computes diagnostics once at fit
     # time, so there is no later pass in which to fill this in. Scoring the counterpart

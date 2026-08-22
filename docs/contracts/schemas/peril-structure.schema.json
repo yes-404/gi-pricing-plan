@@ -3,8 +3,9 @@
   "$id": "https://contracts.gi-pricing.dev/peril-structure.schema.json",
   "title": "PerilStructure",
   "description": "Declarative composition of per-peril models into a Risk Premium. What a Rating Version references, rather than a scatter of individual models (02 FR-MODEL-58..61, §4.10).",
+  "$comment": "Amended 2026-08-22 (W5, the contract-reconciliation slice). Five resolutions, each the code's (CLAUDE.md §0): (1) every optional model reference and large-loss field is nullable, which they are on the type and were not here — the eight of them were invisible until the type comparison learned to read `null`; (2) `evidence_blob` is a BlobRef, not a string, the same defect `model.covariance_blob` and `transparency-artifact.relativity_table_blob` carried; (3) `flat_loading_minor` is deleted for `loading_factor` — a minor-unit amount and an exact-decimal multiplier are different quantities, and `LargeLossTreatment` has only ever had the second; (4) the reconciliation carries its per-peril breakdown and `computed_at`, which FR-MODEL-74 puts each treatment's number beside its treatment and §4.10's amendment records as new; (5) `excluded_perils` and `reconciliation` leave `required` — both are defaulted on the type, and `_coherent` requires the reconciliation only from `reconciled` onward. `ratio` and `status` stay declared and required here although the generated counterpart omits them: they are `computed_field`s, so they ARE on the wire, and `generate-contracts.py` emits the validation schema, which by construction cannot show them. NOT a divergence — see §4.10's 2026-08-18 note.",
   "type": "object",
-  "required": ["perils", "excluded_perils", "reconciliation"],
+  "required": ["perils"],
   "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
   "properties": {
     "perils": {
@@ -13,26 +14,38 @@
         "type": "object",
         "required": ["peril", "method", "large_loss"],
         "properties": {
-          "peril": {"type": "string"},
+          "peril": {"$ref": "#/$defs/PerilCode"},
           "method": {"enum": ["frequency_severity", "burning_cost"]},
-          "frequency_model": {"$ref": "common/artifact-ref.schema.json"},
-          "severity_model": {"$ref": "common/artifact-ref.schema.json"},
-          "burning_cost_model": {"$ref": "common/artifact-ref.schema.json"},
+          "frequency_model": {"oneOf": [{"$ref": "common/artifact-ref.schema.json"}, {"type": "null"}]},
+          "severity_model": {"oneOf": [{"$ref": "common/artifact-ref.schema.json"}, {"type": "null"}]},
+          "burning_cost_model": {"oneOf": [{"$ref": "common/artifact-ref.schema.json"}, {"type": "null"}]},
           "large_loss": {
             "type": "object",
             "required": ["kind"],
             "description": "Whatever is chosen is recorded with its calibration evidence (FR-MODEL-59).",
             "properties": {
               "kind": {"enum": ["none", "capped", "separate_model", "flat_loading"]},
-              "cap_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-              "restoration_loading": {"$ref": "common/money.schema.json#/$defs/Decimal",
-                "description": "Exact decimal string; the model enforces >= 1 (a restoration loading below 1 would shrink the mean it exists to restore)."},
-              "loading_factor": {"$ref": "common/money.schema.json#/$defs/Decimal",
-                "description": "Exact decimal string; the flat_loading multiplier."},
-              "excess_model": {"$ref": "common/artifact-ref.schema.json"},
-              "attachment_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-              "flat_loading_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-              "evidence_blob": {"type": ["string", "null"]}
+              "cap_minor": {
+                "oneOf": [{"$ref": "common/money.schema.json#/$defs/MoneyMinor"}, {"type": "null"}]
+              },
+              "restoration_loading": {
+                "oneOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}],
+                "description": "Exact decimal string; the model enforces >= 1 (a restoration loading below 1 would shrink the mean it exists to restore)."
+              },
+              "loading_factor": {
+                "oneOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}],
+                "description": "Exact decimal string; the flat_loading multiplier."
+              },
+              "excess_model": {
+                "oneOf": [{"$ref": "common/artifact-ref.schema.json"}, {"type": "null"}]
+              },
+              "attachment_minor": {
+                "oneOf": [{"$ref": "common/money.schema.json#/$defs/MoneyMinor"}, {"type": "null"}]
+              },
+              "evidence_blob": {
+                "oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}],
+                "description": "FR-MODEL-59's calibration evidence, required for every kind that has something to calibrate — which is every kind but `none`."
+              }
             }
           }
         },
@@ -42,9 +55,11 @@
           {"if": {"properties": {"method": {"const": "burning_cost"}}, "required": ["method"]},
            "then": {"required": ["burning_cost_model"]}},
           {"if": {"properties": {"large_loss": {"properties": {"kind": {"const": "capped"}}, "required": ["kind"]}}},
-           "then": {"properties": {"large_loss": {"required": ["cap_minor", "restoration_loading"]}}}},
+           "then": {"properties": {"large_loss": {"required": ["cap_minor", "restoration_loading", "evidence_blob"]}}}},
           {"if": {"properties": {"large_loss": {"properties": {"kind": {"const": "separate_model"}}, "required": ["kind"]}}},
-           "then": {"properties": {"large_loss": {"required": ["excess_model", "attachment_minor"]}}}}
+           "then": {"properties": {"large_loss": {"required": ["excess_model", "attachment_minor", "evidence_blob"]}}}},
+          {"if": {"properties": {"large_loss": {"properties": {"kind": {"const": "flat_loading"}}, "required": ["kind"]}}},
+           "then": {"properties": {"large_loss": {"required": ["loading_factor", "evidence_blob"]}}}}
         ]
       }
     },
@@ -54,24 +69,69 @@
       "items": {
         "type": "object",
         "required": ["peril", "reason"],
-        "properties": {"peril": {"type": "string"}, "reason": {"type": "string", "minLength": 1}}
+        "properties": {
+          "peril": {"$ref": "#/$defs/PerilCode"},
+          "reason": {"type": "string", "minLength": 1,
+            "description": "Non-blank: an exclusion whose reason is whitespace satisfies the requirement's letter and none of its purpose."}
+        }
       }
     },
     "reconciliation": {
-      "type": "object",
-      "required": ["dataset_version_id", "part", "observed_burning_cost_minor",
-                   "modelled_burning_cost_minor", "ratio", "tolerance", "status"],
+      "type": ["object", "null"],
+      "required": ["dataset_version_id", "part", "perils", "observed_burning_cost_minor",
+                   "modelled_burning_cost_minor", "ratio", "tolerance", "status", "computed_at"],
+      "description": "FR-MODEL-60's persisted coherence check and FR-MODEL-74's treatment statement. Null until the structure is reconciled; required from `reconciled` onward, where it is the evidence the approval policy names.",
       "properties": {
         "dataset_version_id": {"type": "string", "format": "uuid"},
-        "part": {"enum": ["train", "holdout", "full"]},
+        "part": {
+          "type": "string", "minLength": 1,
+          "description": "UNRECONCILED (W5, 2026-08-22): this contract has always declared `train | holdout | full` and `Reconciliation.part` is an unconstrained non-empty `str`. Widened here so the published contract does not promise a constraint nothing enforces; whether the type should close instead is a CLAUDE.md §0 question."
+        },
+        "perils": {
+          "type": "array", "minItems": 1,
+          "description": "FR-MODEL-74's per-peril breakdown: each peril's contribution to the modelled total, beside the large-loss treatment that produced it. The total is checked to be the sum of these figures — a total that is not the sum is a third number nobody can source.",
+          "items": {
+            "type": "object",
+            "required": ["peril", "large_loss_kind", "modelled_burning_cost_minor"],
+            "properties": {
+              "peril": {"$ref": "#/$defs/PerilCode"},
+              "large_loss_kind": {"enum": ["none", "capped", "separate_model", "flat_loading"]},
+              "modelled_burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}
+            }
+          }
+        },
         "observed_burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-        "modelled_burning_cost_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-        "ratio": {"$ref": "common/money.schema.json#/$defs/Decimal",
-          "description": "Derived: modelled over observed, quantised to six places. Exact decimal string, > 0."},
-        "tolerance": {"$ref": "common/money.schema.json#/$defs/Decimal",
-          "description": "Declared fractional tolerance on |ratio - 1| (FR-MODEL-60). Exact decimal string, > 0."},
-        "status": {"enum": ["pass", "fail"]}
+        "modelled_burning_cost_minor": {
+          "$ref": "common/money.schema.json#/$defs/MoneyMinor",
+          "description": "After restoration: a capped model reconciled against uncapped observed data without restoring its mean looks like a modelling error rather than an intended adjustment (FR-MODEL-74)."
+        },
+        "ratio": {
+          "$ref": "common/money.schema.json#/$defs/Decimal",
+          "description": "DERIVED, never stored — modelled over observed, quantised to six places. A `computed_field`, so it is on the wire and any incoming value is dropped and recomputed rather than refused. It is absent from the generated counterpart because `generate-contracts.py` emits the validation schema, which cannot show a computed field; that is a property of the generator, not a divergence."
+        },
+        "tolerance": {
+          "$ref": "common/money.schema.json#/$defs/Decimal",
+          "description": "Declared fractional tolerance on |ratio - 1| (FR-MODEL-60). Exact decimal string, > 0."
+        },
+        "status": {
+          "enum": ["pass", "fail"],
+          "description": "DERIVED from |ratio - 1| against `tolerance`, on the same terms as `ratio` above."
+        },
+        "computed_at": {"type": "string", "format": "date-time"}
       }
     }
-  }
+  },
+  "$defs": {
+    "PerilCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,31}$",
+      "description": "A peril's code, upper-case and underscore-separated (`PerilCode`)."
+    }
+  },
+  "invariants": [
+    "each peril appears at most once in perils, and at most once in excluded_perils (FR-MODEL-58)",
+    "no peril is both modelled and excluded — being both leaves the reader unable to say whether its cost is in the total (FR-MODEL-60)",
+    "status in {reconciled, review, approved} implies reconciliation is set (FR-MODEL-60/61)",
+    "modelled_burning_cost_minor equals the sum of reconciliation.perils[].modelled_burning_cost_minor, each rounded to minor units first (FR-MODEL-74)"
+  ]
 }

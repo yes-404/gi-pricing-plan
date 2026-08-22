@@ -27,6 +27,7 @@ from celery import Celery
 from app.config import Settings, load_settings
 from app.db.models import JobRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.observability.trace import bind_trace_id, current_trace_id, reset_trace_id
 from app.platform import jobs, outbox
@@ -178,11 +179,48 @@ async def execute_job(
                 ),
             )
             return JobStatus.FAILED
+        except PlatformError as exc:
+            # **Before the generic clause, and that order is load-bearing** (OQ-PLAT-7,
+            # decided 2026-08-22). `PlatformError`, `JobCancelled` and
+            # `JobBudgetExceededError` are three independent direct subclasses of
+            # `Exception` — none is a subclass of another, so the two clauses above are
+            # genuinely siblings and their order is free. `except Exception` is not: it is
+            # a base of `PlatformError`, so placing this clause after it would never run,
+            # and every named handler error would keep arriving as `JOB_HANDLER_FAILED`.
+            #
+            # Why it exists at all: FR-PLAT-11 makes the *code* the contract, and
+            # `PlatformError.__init__` calls `super().__init__(detail or title)`, so
+            # `str(exc)` is the prose and never the code. Falling through stored
+            # `JOB_HANDLER_FAILED` with a message that is not even a substring match for
+            # the code the handler raised, and no caller could branch on the refusal —
+            # two W5 refusal tests had to bypass `execute_job` entirely to assert one.
+            #
+            # `retryable` stays `False`, exactly as the generic clause sets it: a
+            # `PlatformError` is a deterministic refusal, and FR-PLAT-11 does not retry
+            # those. Nothing here infers retryability from `status_code` — a 429 or a 503
+            # raised by a handler is still a deterministic refusal of *this* job.
+            _log.exception(
+                "job handler failed",
+                extra={"job_id": str(job_id), "code": exc.code},
+            )
+            await _fail(
+                database,
+                job_id,
+                JobError(
+                    code=exc.code,
+                    message=exc.detail or exc.title,
+                    retryable=False,
+                    trace_id=current_trace_id(),
+                ),
+            )
+            return JobStatus.FAILED
         except Exception as exc:
-            # The message is the exception's, not the caller's input: FR-PLAT-11 wants a
-            # human message, and R3 keeps secrets out — a handler that puts a credential in an
-            # exception string is a bug in the handler, and the type name alone would leave an
-            # operator with nothing to act on.
+            # Reached only by a genuinely unexpected exception now — a handler bug rather
+            # than a refusal the handler named. The message is the exception's, not the
+            # caller's input: FR-PLAT-11 wants a human message, and R3 keeps secrets out —
+            # a handler that puts a credential in an exception string is a bug in the
+            # handler, and the type name alone would leave an operator with nothing to act
+            # on.
             _log.exception("job handler failed", extra={"job_id": str(job_id)})
             await _fail(
                 database,

@@ -104,6 +104,13 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BAND_EMPTY",
         "BAND_BELOW_MIN_EXPOSURE",
         "GROUPING_NOT_EXHAUSTIVE",
+        # FR-MODEL-80's Bühlmann-Straub arm, 2026-08-22. `GROUPING_NOT_EXHAUSTIVE` is about
+        # a mapping that misses an observed level and says nothing a caller of
+        # `/groupings/propose` could act on here: the mapping is fine, the *book* cannot
+        # support a between-level variance estimate. The two answers are different actions —
+        # re-derive the grouping, versus re-run under `limited_fluctuation` — so they are
+        # different codes.
+        "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
         "GLM_DID_NOT_CONVERGE",
         "GLM_RANK_DEFICIENT",
         # Raised by `pricing-core` since the spine and **registered only now**: the fit
@@ -218,6 +225,16 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # fitted tables' `feature_order`: reporting `True`/`False` for a constraint
         # nothing in the tables can evidence would be a made-up monotonicity verdict.
         "EBM_MONOTONE_CONSTRAINT_UNKNOWN",
+        # FR-MODEL-23's remainder, 2026-08-22 (W5). `fit_glm` caught only
+        # `np.linalg.LinAlgError` around `estimator.fit`, so every other refusal `glum`
+        # raises — a Gamma response containing a zero, a negative weight column, an
+        # all-zero response — left the worker as a bare `ValueError` and the job stored a
+        # stack trace where FR-MODEL-23 promises a named error. Not folded into
+        # `GLM_RANK_DEFICIENT`: that code's message names collinear terms, which is a lie
+        # for a response outside the family's domain. The general code alongside the three
+        # specific `GLM_*` conditions, the way `VALIDATION_FAILED` sits alongside `01`'s
+        # named refusals — glum's own message is carried verbatim in the detail.
+        "GLM_FIT_FAILED",
     }
 )
 
@@ -238,6 +255,12 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BREAK_GLASS_REASON_REQUIRED",
         "AUDIT_CHAIN_BROKEN",
         "ATTESTATION_OVERDUE",
+        # FR-GOV-36. A well-formed reference to an artifact type no module in this
+        # build can resolve — `rating_version` has a policy entry and no module
+        # because `03` is unbuilt. `07`'s JOB_HANDLER_NOT_REGISTERED settles what is
+        # owed: a platform deployable before every kind has an implementation says
+        # the capability is absent rather than accepting work it cannot move.
+        "ARTIFACT_TYPE_NOT_RESOLVABLE",
     }
 )
 

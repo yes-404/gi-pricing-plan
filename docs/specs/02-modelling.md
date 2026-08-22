@@ -113,7 +113,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-13** | A **Grouping** maps source Levels to target Levels, is exhaustive over observed Levels, and declares behaviour for unseen Levels at scoring time (`error`, `map_to_default`, `map_to_base`). Unseen-level behaviour is mandatory — there is no implicit default. |
 | **FR-MODEL-14** | The platform can propose groupings by `credibility_weighted` (merge Levels whose credibility-adjusted relativities are within a tolerance), `hierarchical_clustering` (on relativity with exposure weights), `tree`, or `reference_hierarchy` (roll up via a Reference Table, e.g. outcode → rating area → region). Manual override is always available. |
 | **FR-MODEL-80** | A `credibility_weighted` Grouping declares `credibility_model` ∈ `limited_fluctuation` (**default**) \| `buhlmann_straub` (OQ-MODEL-5, decided 2026-08-15). Limited fluctuation is the default because it is what a UK reviewer expects to see in a grouping justification: a full-credibility standard expressed in claim counts, stored with the `(p, k)` pair it was derived from (1 082 claims for ±5 % at 90 % confidence), and partial credibility `Z = sqrt(n / n_full)`. Bühlmann–Straub is selectable and persists its variance components — EVPV, VHM and the resulting `k` — in the grouping evidence, so a reviewer can re-derive `Z` rather than take it. The choice is recorded **per grouping** in `method_params` and stated in the model document: it is a modelling judgement, not a platform constant. |
-| **FR-MODEL-15** | Every Grouping stores its method, parameters, source Level statistics, the resulting target Level statistics, and the *change in fit* (deviance delta, degrees of freedom saved) it implies — grouping is a modelling decision and must be defensible as one. |
+| **FR-MODEL-15** | Every Grouping stores its method, parameters, source Level statistics, the resulting target Level statistics, and the *change in fit* (deviance delta, degrees of freedom saved) it implies — grouping is a modelling decision and must be defensible as one.  **Amended 2026-08-22 (W5, the audit-remediation slice): partly unmet, and the requirement keeps the obligation rather than being edited down to what was built.** `GroupingEvidence` carries `target_level_stats` and **no `source_level_stats`** (`model_schema/modelling.py:482`), so of the five things this requirement names — method, parameters, source Level statistics, target Level statistics, change in fit — four are stored and one is not. `grouping.schema.json` declares `source_level_stats`, so the published contract has promised it since Phase 0 while nothing populates it. **The spec is the side that is right**: a reviewer asked to accept a merge needs the levels as they were, not only as they ended up, and the deviance delta alone does not show which thin cells were absorbed into which. The marker on `test_grouping_evidence_reports_what_the_merge_cost` therefore **overstates its coverage** — it evidences the target half and the change in fit, and is not proof of this requirement whole. **Owner: W6b**, the factor-workbench slice, because the source statistics exist to be *read* beside the proposal and the workbench is the first thing that reads them; until then the field stays declared-and-unbuilt in FR-MODEL-87's sense. |
 | **FR-MODEL-16** | Groupings are first-class auditable operations: creation, edit, and use in a Model each emit Audit Events (FR-OVR-4), and a generated model document lists every grouping with its method and rationale. |
 | **FR-MODEL-17** | A Grouping may be **hierarchical** — a chain of groupings applied in order (outcode → area → region) — so an actuary can retain the finer level for diagnostics while rating on the coarser one. |
 
@@ -161,6 +161,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-23** | Non-convergence, separation, rank deficiency, and aliased columns are surfaced as explicit, named fit errors with the offending factors identified — never as a silently returned degenerate fit. |
 | **FR-MODEL-24** | An **offset from another model** is supported (`offset_model_ref`), enabling residual modelling and "fit on top of the current rating structure" workflows. The referenced model version is pinned. **Amended 2026-08-21 (W5 slice 4).** The ref is the canonical `model:slug@version` string (ID-3). v1 builds the offset for GLM specs only: the referenced model must be a fitted GLM, and the offset is its linear predictor (η, including its own offset) on the training data — the two links must be equal, refused by name otherwise (`MODEL_OFFSET_REF_INVALID`). Refused by name, not built: a `GbmSpec` whose offset is `kind: "model"`; a ref naming a GBM or EBM model; the peril-reconciliation scoring path (it fails named, `MODEL_OFFSET_MISSING`, until W5 wires the resolver there). The fit records what was constructed: `GlmFitResult.offset_model_ref` carries the resolved pinned ref. Diagnostic weighting for a model-offset fit follows `spec.weight` (COUNT default) — the exposure-weighting convention is never inferred from the offset. The Phase-0 scaffold's `model_ref: str` is renamed `offset_model_ref` with the artifact-ref pattern: the spec and the hand-authored contract have always named and typed it that way, and the scaffold field was read by nothing. |
 | **FR-MODEL-112** | **Offsets-from-model widen in this order: GBM-referenced offsets, then the peril-reconciliation scoring path** (OQ-MODEL-22, decided 2026-08-21). FR-MODEL-24's GLM-to-GLM slice is not the whole capability. (a) The next slice extends the reference to a fitted GBM — the referenced raw score minus its own `base_margin`, as η on the link scale — when a workflow needs it, as its own slice in Phase 1b. (c) The peril-reconciliation scoring path is then wired to the resolver; its owner is already W5 per the offsets slice's "not delivered, with owners" list. (b) A `GbmSpec` declaring the offset itself is **not scheduled**. (d) If residual modelling stays GLM-shaped in practice, GLM-to-GLM remains the whole capability rather than any of this — the fallback is a statement about practice, not an abandonment. |
+| **FR-MODEL-113** | Bühlmann–Straub's variance components are **estimated or refused, never clamped** (FR-MODEL-80, built 2026-08-22, W5). A non-positive VHM estimate is the ordinary outcome on a column whose levels differ by no more than Poisson noise: it gives every level `Z = 0` and leaves `k = EVPV / VHM` unbounded, and `grouping.schema.json` gives `k` `exclusiveMinimum: 0` precisely so no artifact can carry a credibility nobody computed. The proposal is refused with `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`, naming the condition — non-positive VHM, fewer than two levels carrying exposure, no claims, or one level holding effectively all the exposure — and stating that `limited_fluctuation` needs no between-level estimate and remains available on the same version. Substituting limited fluctuation's answer under Bühlmann–Straub's name is forbidden: the model is a recorded property of the grouping. |
 
 ### 3.5 Gradient boosting (XGBoost / LightGBM)
 
@@ -326,8 +327,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-MODEL-66** | The `spec_hash` (§2, Model Spec) is computed over the canonicalised spec including pinned versions and seed. Submitting an identical spec returns the existing Model instead of refitting, unless `force_refit` is set — which then requires the two fits to be compared for reproducibility (FR-OVR-8). |
 | **FR-MODEL-67** | A Model whose Dataset Version was invalidated (`01` FR-DATA-23) is flagged `dataset_invalidated` and cannot advance to `approved`; if already `approved`, the flag propagates to every Rating Version referencing it and to the Approvals inbox. |
 | **FR-MODEL-86** | **`spec_hash` carries the version of the algorithm that produced it, inside the hashed payload.** The digest is `v<n>:sha256:<64 hex>` where `n` is `SPEC_HASH_VERSION`, and the same `n` is one of the hashed fields — a prefix alone would let a reader strip it and compare across versions, which is exactly the comparison that is not meaningful. **Any change to the set of fields entering the payload increments `n` in the same commit as the field**, and `spec_hash_is_current` reports every older digest as stale so the affected rows are findable (`LIKE 'v1:%'`). Without this, one added field silently changes every stored digest and FR-MODEL-66's dedup ends with no error to see. The rule has been exercised twice: `split_ref` moved the digest `v1 → v2` (2026-08-16) and `loss_treatment` moved it `v2 → v3` (2026-08-17). (OQ-MODEL-8, decided 2026-08-17.) |
-| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec` and `custom_objective_ref` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`); **`interval_for` is the seventh, live 2026-08-19** on `GbmSpec` rather than on `Model` (FR-MODEL-100), and it leaves the absent-entirely list above with this change rather than being quietly dropped from it. **`select_by` and `cv` are the eighth, live 2026-08-21** (the regularisation-and-CV slice), on `GlmSpec` — `select_by: "fixed" \| "cv"` and the nested `cv: GlmCvSpec` block, the shape the FR-MODEL-20/FR-MODEL-53 CV path built rather than the flat `select_by`/`cv_folds` fields the decision date named — and they leave the absent-entirely list above with this change rather than being quietly dropped from it. **Tweedie power estimation — live 2026-08-21 (FR-MODEL-22)**; the estimation × CV-selection pair is refused by name, not built. **`offset_model_ref` is the ninth, live 2026-08-21** (the offset-from-another-model slice), on `OffsetSpec` — `kind: "model"` with the canonical `model:slug@version` ref, GLM-to-GLM only; `GbmSpec` naming it, and refs naming non-fitted, non-GLM or link-mismatched models, are refused by name (`MODEL_OFFSET_REF_INVALID`). **`dropped_eval_metrics` is the tenth, live 2026-08-22** (FR-MODEL-111), on `GbmFitResult` — a tuple of `DroppedEvalMetric`, empty on every fit that evaluated everything it was asked for and on every artifact written before that date, populated only where LightGBM early-stops on a Custom Metric and its declared builtins are suppressed so they cannot take position 0 and drive the stop. |
-| **FR-MODEL-88** | **The unimplemented arms of FR-MODEL-1's closed set are refused by name at resolution, never approximated.** Four of the eight — `spline`, `polynomial`, `offset` and `expression` — do not resolve, and `resolve_factors` raises naming the type rather than returning the raw column, because a fit built on the raw column is one nobody could tell from a correct one. **`expression` is the sharper case and its verdict is stated rather than implied:** `FactorType.EXPRESSION` is selectable while `Factor` carries no field to hold the expression, so a factor of that type can be *created* and can never be *resolved*. That is contained rather than corrected — the refusal is at the boundary where it would matter — and the field plus its validator arm are owned by Phase 1b with the rest of §4.7's expression work. (OQ-MODEL-8, decided 2026-08-17.) |
+| **FR-MODEL-87** | **§4 is a staged contract: a field is shown live only once a slice populates it, and anything else is named in place with a dated note saying it is declared-and-unbuilt and which workstream owns it** (OQ-MODEL-8, decided 2026-08-17). The alternative — declaring the eventual shape and letting the reader discover which fields are always null — teaches that null means *nothing* rather than *not yet*, and the frontend generates from this contract. At the decision date the residuals are, with verdicts: **absent entirely** — `filter` on `ModelSpec` and `custom_objective_ref` on `GlmSpec`, all owned by Phase 1b; **declared and unbuilt, as §4.8 already says of them** — `transparency_artifact_id` and `custom_objective_ref` on `Model`, owned by W5 and Phase 1b respectively; **present under a different shape** — §4.4's nested `regularisation` block, corrected to `GlmSpec`'s flat fields by this change. Six fields have gone live under this rule already (`banding_id`, `grouping_id`, `split_ref`, `diagnostics_id`, `loss_treatment`, `approval_request_id`); **`interval_for` is the seventh, live 2026-08-19** on `GbmSpec` rather than on `Model` (FR-MODEL-100), and it leaves the absent-entirely list above with this change rather than being quietly dropped from it. **`select_by` and `cv` are the eighth, live 2026-08-21** (the regularisation-and-CV slice), on `GlmSpec` — `select_by: "fixed" \| "cv"` and the nested `cv: GlmCvSpec` block, the shape the FR-MODEL-20/FR-MODEL-53 CV path built rather than the flat `select_by`/`cv_folds` fields the decision date named — and they leave the absent-entirely list above with this change rather than being quietly dropped from it. **Tweedie power estimation — live 2026-08-21 (FR-MODEL-22)**; the estimation × CV-selection pair is refused by name, not built. **`offset_model_ref` is the ninth, live 2026-08-21** (the offset-from-another-model slice), on `OffsetSpec` — `kind: "model"` with the canonical `model:slug@version` ref, GLM-to-GLM only; `GbmSpec` naming it, and refs naming non-fitted, non-GLM or link-mismatched models, are refused by name (`MODEL_OFFSET_REF_INVALID`). **`dropped_eval_metrics` is the tenth, live 2026-08-22** (FR-MODEL-111), on `GbmFitResult` — a tuple of `DroppedEvalMetric`, empty on every fit that evaluated everything it was asked for and on every artifact written before that date, populated only where LightGBM early-stops on a Custom Metric and its declared builtins are suppressed so they cannot take position 0 and drive the stop. **Amended 2026-08-22 (W5, the audit-remediation slice): `transparency_artifact_id` is superseded rather than owed.** It has sat on the residual list as declared-and-unbuilt "owned by W5" since 2026-08-17, and W5 cannot honestly close while owing a field it should not build. **FR-MODEL-96 settled the direction on 2026-08-19**: the link runs artifact → model, `TransparencyArtifact.model_id`, and `02` R3 is enforced by query at the approval transition (FR-MODEL-89) rather than by a column on this side. **The deciding fact is cardinality, not tidiness.** `ix_transparency_model` is `(workspace_id, model_id, created_at)` and is **not unique** — a Model accumulates transparency artifacts as it is re-derived, so a single `transparency_artifact_id` could name only one of them and would be wrong the first time a second was written. A back-pointer that cannot express the relationship it names is not an unbuilt field; it is a **second, lossy source of truth** for a link already stored, which is the defect `GbmSpec.backend` and the duplicated `base_margin` were both refused for on 2026-08-17. It is therefore **struck from the residual list**, the way `PICKLE_PERSISTENCE_REFUSED` was struck from `02` §5.1 on the same day and for the same reason — a declaration nothing should ever satisfy. `custom_objective_ref` is untouched by this and remains declared-and-unbuilt, owned by Phase 2's W30. **The contract keeps the property with a dated note rather than dropping it**, because external consumers have read it since Phase 0 and a silently vanished field is worse than a documented dead one. |
+| **FR-MODEL-88** | **The unimplemented arms of FR-MODEL-1's closed set are refused by name at resolution, never approximated.** Four of the eight — `spline`, `polynomial`, `offset` and `expression` — do not resolve, and `resolve_factors` raises naming the type rather than returning the raw column, because a fit built on the raw column is one nobody could tell from a correct one. **`expression` is the sharper case and its verdict is stated rather than implied:** `FactorType.EXPRESSION` is selectable while `Factor` carries no field to hold the expression, so a factor of that type can be *created* and can never be *resolved*. That is contained rather than corrected — the refusal is at the boundary where it would matter — and the field plus its validator arm are owned by Phase 1b with the rest of §4.7's expression work. (OQ-MODEL-8, decided 2026-08-17.) **Amended 2026-08-22 (W5, the audit-remediation slice): the refusals were contained and unowned, which is containment rather than a plan.** Two corrections. **First, `expression`'s owner was stale.** This requirement sent the field and its validator arm to "Phase 1b with the rest of §4.7's expression work" on 2026-08-17, two days after OQ-MODEL-1 had already put expressions in **Phase 2**; FR-MODEL-6's reassignment to **W30** was corrected on 2026-08-19 and accepted by the maintainer on 2026-08-22, so W30 owns it and "Phase 1b" is superseded. **Second, `spline`, `polynomial` and `offset` had no owner at all** — not a deferral, not a workstream, nothing — while a test marking the refusal let all three count among the evidenced. Scheduling them is a change to a set FR-MODEL-1 declared closed in Phase 0, which §14 makes the maintainer's rather than a closing workstream's, so it is raised as **OQ-MODEL-23** with options and a recommendation rather than decided here. Until that question is answered the three are **not started, with the open question as their owner** — which is a verdict §13 rule 1 admits, and silence is not. |
 | **FR-MODEL-89** | **§4.8 R3 is enforced artifact→model, because that is the direction the link runs.** The `TransparencyArtifact` carries `model_id` and the `Model` carries no back-reference that anything writes, so "`model_type ≠ glm` and `status = approved` ⟹ a transparency artifact exists" is checked by querying for an artifact naming the model at the approval transition, not by reading a column on the model. Stating it as a field-set invariant made it unenforceable — the same shape as §4.8's `status ≥ fitted ⟹ diagnostics_id`, which OQ-MODEL-8 was written around. (OQ-MODEL-8, decided 2026-08-17.) |
 
 ---
@@ -466,6 +467,26 @@ empty on the next.
 claims is ±5 % at 90 % confidence, and a reviewer who cannot see `(p, k)` cannot tell 1 082
 from a house number. `credibility_components` carries Bühlmann–Straub's EVPV, VHM and `k`
 and is `null` under limited fluctuation.
+
+> **Amended 2026-08-22 (W5, the audit-remediation slice).** Bühlmann–Straub is now built —
+> OQ-MODEL-5 decided on 2026-08-15 that W5 builds *two* methods, and until this date one was
+> refused at runtime. Three things the implementation settled:
+>
+> * **`credibility_components` is `{evpv, vhm, k}` on claim frequency**, with each Level one
+>   risk weighted by its exposure years — the same rate limited fluctuation shrinks, so the
+>   two theories differ in `Z` and nowhere else. A one-way summary gives **one observation
+>   per risk**, so the textbook within-risk estimator of `s²` is `0/0`; the Poisson process
+>   variance supplies it instead, `s² = E[λ(Θ)] = μ`, and VHM is the standard unbiased
+>   between-risk estimator. That identity is *why* Bühlmann–Straub is estimable from a
+>   `OneWaySummary` at all. The components are re-derived from the same source rows the merge
+>   shrank on, so the recorded `k` is the one that produced the mapping — which is what makes
+>   FR-MODEL-80's "re-derive `Z` rather than take it" literally true, and a test does exactly
+>   that from the artifact alone.
+> * **`credibility_pk` and `credibility_standard_claims` are limited fluctuation's alone.**
+>   Bühlmann–Straub derives no full-credibility standard, and writing the request's untouched
+>   `(0.90, 0.05)` defaults onto a `buhlmann_straub` artifact would record a standard that did
+>   not run.
+> * **A book that cannot support the estimate is refused, not silently shrunk** — FR-MODEL-113.
 
 > **Amended 2026-08-15 (W5).** Three corrections the implementation forced, and one it
 > **got wrong**:
@@ -1141,6 +1162,30 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
 > approval transition. `transparency_artifact_id` itself stays declared and unbuilt
 > (FR-MODEL-87).
 
+> **The invariants are about presence; R2 is about stability, and it covers
+> `diagnostics_id`** *(amended 2026-08-22, W5's audit-remediation slice).* `status ≥ fitted
+> ⟹ diagnostics_id` says a fitted Model **has** evidence. It does not say it keeps the
+> *same* evidence, and the database guard read the same way: `b2c3d4e5f6a7` froze
+> `fit_result`, `spec`, `spec_hash` and `dataset_version_id` and left the pointer writable,
+> so a raw `UPDATE models SET diagnostics_id = …` swapped the A/E, lift and calibration
+> under an approved Model with the trigger raising nothing. The numbers were immutable; the
+> reason to believe them was not.
+>
+> **§1.3 R2 was always the wider rule — the code was the side that was wrong**, and
+> `9e4c7b21fa08` adds `diagnostics_id` to the frozen set. The guard stays conditional on
+> `OLD.fit_result IS NOT NULL` because `record_fit` writes the fit result, the pointer and
+> the status in **one `UPDATE`** (`backend/src/app/platform/modelling.py:793-797`), so the
+> pointer is frozen from the statement that sets it rather than from some later one;
+> `status`, `flags` and `approval_request_id` stay writable, because a Model still has a
+> lifecycle after it is fitted.
+>
+> **The evidence is traced to `00` FR-OVR-1, not to a §4.8 requirement id, because §4.8 has
+> none for immutability.** R2 is a §1.3 hard rule with no id of its own, and the ids §4.8
+> cites are about presence, transparency and lineage. FR-OVR-1 — *"every Artifact is
+> immutable once it leaves `draft`"* — is the requirement R2 instantiates for a Model, and
+> is what the new tests carry alongside FR-MODEL-65, which the existing raw-`UPDATE`
+> trigger test already uses.
+
 `fit_result` for an EBM carries the shape functions themselves:
 
 ```json
@@ -1166,6 +1211,51 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
   "library_versions": {"interpret-core": "0.7.8", "polars": "1.x"}
 }
 ```
+
+`fit_result` for a GBM carries what a scorer needs and no booster bytes — **added
+2026-08-22 (W5, the audit-remediation slice)**. §4.8 has carried a GLM example since Phase 0
+and an EBM one since 2026-08-21, and never a GBM one, which is why FR-MODEL-111's
+`dropped_eval_metrics` amendment had no example to join and had to point readers at the
+generated contract instead. This example is **validated against `GbmFitResult` rather than
+hand-written**, and it names every field the type declares — nothing is elided, because a
+field absent from the only example on the page is a field a reader concludes is optional:
+
+```json
+{
+  "model_type": "xgboost",
+  "booster_blob": {
+    "sha256": "3f786850e387550fdab836ed7e6dc881de23001b4c2f45c7d0e6a1d1a0b9c2e7",
+    "bytes": 184320,
+    "media_type": "application/json"
+  },
+  "booster_format": "xgboost_json",
+  "feature_order": ["driver_age_banded", "vehicle_group_rated", "region_grouped"],
+  "feature_dtypes": {
+    "driver_age_banded": "category",
+    "vehicle_group_rated": "category",
+    "region_grouped": "category"
+  },
+  "categorical_maps": {"region_grouped": {"north": 0, "midlands": 1, "south": 2}},
+  "monotone_constraints": [0, 1, 0],
+  "base_margin": {"kind": "log_column", "column": "exposure_years"},
+  "best_iteration": 184,
+  "inverse_link": "exp",
+  "rows": 542410,
+  "fit_seconds": 41.7,
+  "library_versions": {"xgboost": "3.4.1", "numpy": "2.5.2"},
+  "dropped_eval_metrics": [
+    {"name": "rmse", "reason": "builtin_evaluated_before_custom_stopping_metric"}
+  ]
+}
+```
+
+Four of those fields are **required and were absent from the hand-authored contract until
+2026-08-22** — `booster_format`, `base_margin`, `best_iteration` and the two feature maps —
+and each is required for the same reason: a booster loaded without them scores, and scores
+wrongly. `booster_format` is ADR-0003 (`pickle` is not a refused value, it is not a value);
+`base_margin` is FR-MODEL-71, and omitting the offset at scoring fails **silently** on both
+backends; `best_iteration` is what `predict_gbm` passes as `iteration_range` /
+`num_iteration`, and diagnostics are not loaded at scoring time.
 
 > **The fit result IS the model (2026-08-21, W5, the EBM slice, FR-MODEL-37).** An EBM is
 > its additive shape functions: scoring reproduces `intercept + Σ term scores` exactly,
@@ -1729,18 +1819,23 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
-`GROUPING_NOT_EXHAUSTIVE`, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
+`GROUPING_NOT_EXHAUSTIVE`, `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
+`UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
 `GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,
-`GLM_SEPARATION_DETECTED`,
+`GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`,
 `OFFSET_REQUIRED_FOR_FREQUENCY`,
 `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
-`OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`, `OBJECTIVE_NOT_CERTIFIED`,
+`OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`,
+`OBJECTIVE_NOT_CERTIFIED` (declared, Phase 2),
 `OBJECTIVE_KIND_NOT_ENABLED`, `MODEL_SPEC_EXCEEDS_COMPLEXITY_LIMIT`,
-`OBJECTIVE_GRAMMAR_VIOLATION`, `OBJECTIVE_NONFINITE_DERIVATIVE`,
-`TRANSPARENCY_ARTIFACT_REQUIRED`, `MODEL_IMMUTABLE`, `PICKLE_PERSISTENCE_REFUSED`,
+`OBJECTIVE_GRAMMAR_VIOLATION` (declared, Phase 2),
+`OBJECTIVE_NONFINITE_DERIVATIVE` (declared, Phase 2),
+~~`TRANSPARENCY_ARTIFACT_REQUIRED`~~, `MODEL_IMMUTABLE`,
+~~`PICKLE_PERSISTENCE_REFUSED`~~,
 `PERIL_STRUCTURE_RECONCILIATION_FAILED`, `MODELS_NOT_COMPARABLE`,
 `OFFSET_NOT_RECONSTRUCTABLE`, `GBM_NO_FEATURES`, `SCORING_FEATURES_MISMATCH`,
 `INTERACTION_FEATURE_UNKNOWN`, `LOSS_TREATMENT_UNIMPLEMENTED`, `MODEL_NOT_FITTED`,
+`MODEL_SPLIT_REQUIRED`,
 `MODEL_ALREADY_TRANSPARENT`, `MODEL_TYPE_UNSUPPORTED`, `APPROXIMATION_TARGET_NOT_POSITIVE`,
 `SHAP_SAMPLE_EMPTY`, `OBJECTIVE_NOT_SUPPLIED`, `OBJECTIVE_REF_MISMATCH`,
 `OBJECTIVE_RESPONSE_UNDECLARED`, `OBJECTIVE_REQUIRES_OFFSET`,
@@ -1750,6 +1845,51 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `MODEL_INTERVAL_UNAVAILABLE`, `MODEL_INTERVAL_PAIR_INVALID`, `MODEL_APPROXIMATION_INVALID`,
 `METRIC_REF_UNRESOLVED`, `METRIC_NOT_APPLICABLE`, `METRIC_NOT_FITTABLE`,
 `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`, `EBM_MONOTONE_CONSTRAINT_UNKNOWN`.
+
+> **The catalogue reconciled against `errors.py`, 2026-08-22 (W5, the audit-remediation
+> slice), applying `00` FR-OVR-19's own six verdicts rather than inventing new ones.**
+> OQ-OVR-9 decided this on 2026-08-21 and FR-OVR-19 lists exactly these six; what had not
+> happened was anyone doing them. Until now the page and the registry disagreed in **both**
+> directions and nothing could see it — `audit-docs.py` check 10 tests ownership
+> *exclusivity*, not existence, and `tests/test_repository_invariants.py`'s registry test
+> deliberately excludes `02` because §5.1 declares codes whose slices are unbuilt.
+>
+> * **`MODEL_SPLIT_REQUIRED` was live and uncatalogued** — registered, and raised from two
+>   sites in `worker/model_handlers.py` (the ordinary fit path and the transparency-surrogate
+>   path), appearing on this page only as prose inside a §4.12 blockquote. It is now declared.
+> * **`TRANSPARENCY_ARTIFACT_REQUIRED` and `PICKLE_PERSISTENCE_REFUSED` are struck**: declared
+>   here since Phase 0 and never registered, so raising either would have died inside the
+>   error path with `ValueError: unknown error code`. Neither is a gap. R3 is enforced by
+>   query and re-raises `06`'s `EVIDENCE_INCOMPLETE` (FR-MODEL-89), and pickle is refused by
+>   `booster_format` having no spelling for it — `GlmFitResult`'s docstring still names the
+>   code, and that reference is now the only thing left of it.
+> * **`OBJECTIVE_NOT_CERTIFIED`, `OBJECTIVE_GRAMMAR_VIOLATION` and
+>   `OBJECTIVE_NONFINITE_DERIVATIVE` are marked declared-and-unbuilt in place**, owned by
+>   Phase 2's `expression` objectives (OQ-MODEL-1). They are not struck because the slice that
+>   raises them is scheduled. `submit_for_review` stands in with `VALIDATION_FAILED` today.
+>
+> **The machine check that would keep this true is FR-OVR-19's and the maintainer's**, with
+> Phase 1a's exit demo as its trigger. This slice did the reconciliation it names and
+> deliberately did not build the check, because a check landing before its owner's decision
+> is the kind of thing that then has to be un-built.
+
+> **`GLM_FIT_FAILED` added 2026-08-22 (W5, FR-MODEL-23's remainder).** `fit_glm` caught
+> only `np.linalg.LinAlgError` around `estimator.fit`, so rank deficiency was the only
+> library failure it named and every other refusal `glum` raises reached the Job as a bare
+> `ValueError`. Measured against glum 3.4.1 rather than assumed, those are: a response
+> outside the family's domain (`Some value(s) of y are out of the valid range for
+> familyGammaDistribution.` — a nil-settlement row in a Gamma severity table), a negative
+> or all-zero weight vector, an all-zero response, and non-finite inputs. **Not folded into
+> `GLM_RANK_DEFICIENT`:** that code's message names collinear terms, which sends the reader
+> to drop a factor that was never the problem. One code rather than one per cause, for the
+> reason `MODELS_NOT_COMPARABLE` covers four — telling them apart means pattern-matching
+> `glum`'s prose, which would pin a permanent code (§5) to a library's message text, so the
+> cause is carried verbatim in the detail instead.
+>
+> **The clause order is load-bearing and is pinned by a test.** `np.linalg.LinAlgError` is
+> a *subclass* of `ValueError`, so the two clauses are not siblings: putting the wider one
+> first turns every singular design into `GLM_FIT_FAILED`, leaving the fit correctly refused
+> and only the diagnosis wrong — which is exactly the tidy-up a later reader would make.
 
 > **Added 2026-08-22 (W5, the EBM slice).** `ebm_monotonicity_verified` refuses to
 > check a constraint naming a feature the fitted tables do not contain: reporting
@@ -1911,8 +2051,14 @@ def check_banding(df: pl.DataFrame, banding: Banding, *, min_exposure: float = 0
 def propose_grouping(df: pl.DataFrame, proposal: GroupingProposal, *,
                      dataset_id: UUID, slug: str) -> Grouping
 def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series
-def grouping_evidence(df: pl.DataFrame, mapping: dict[str, str], *,
-                      column: str) -> GroupingEvidence
+def grouping_evidence(frame: pl.DataFrame, mapping: dict[str, str], *,
+                      column: str,
+                      exposure_column: str = "exposure_years",
+                      claim_count_column: str = "claim_count",
+                      claim_amount_column: str = "claim_amount_minor",
+                      source: tuple[OneWayRow, ...] | None = None,
+                      credibility_model: CredibilityModel | None = None,
+                      ) -> GroupingEvidence
 
 # pricing_core/modelling/glm.py
 def fit_glm(data: pl.DataFrame, spec: GlmSpec, factors: Sequence[Factor], *,
@@ -2313,7 +2459,7 @@ Custom objective path: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-0
 | **NumPy** | Compiled objective evaluation | Vectorised, allocation-conscious gradient/hessian evaluation; `np.errstate` discipline for log/exp edges |
 | **Python `ast`** | Restricted grammar parsing (§4.6) | Allow-list node walking, depth/size limits, why `eval`/`compile` on user input is never acceptable |
 | **Polars** | Factor resolution, banding/grouping application, diagnostic aggregation | `replace_strict` for grouping maps (it refuses an unmapped level rather than dropping it, which is FR-MODEL-13's whole point). **Banding is `numpy.searchsorted`, not `pl.cut`** — the artifact's `closed`, `null_level`, `below_range` and `above_range` policies decide where a value lands, and `cut` implements one fixed convention (added 2026-08-15, W5) |
-| **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification, credibility standards for `credibility_weighted` groupings (FR-MODEL-80) | `scipy.optimize` for the profile grid, `scipy.stats` for CIs, plus `scipy.cluster.hierarchy` (Ward linkage + `fcluster`) for FR-MODEL-14's `hierarchical_clustering` — exposure weighting by observation repetition, since the clusterer takes no sample weights (added 2026-08-15, W5) |
+| **SciPy** | CIs, profile likelihood for Tweedie `p`, numeric derivative checks in certification, limited fluctuation's credibility standard for `credibility_weighted` groupings (FR-MODEL-80) — Bühlmann–Straub's EVPV/VHM estimators are pure NumPy and use no SciPy | `scipy.optimize` for the profile grid, `scipy.stats` for CIs, plus `scipy.cluster.hierarchy` (Ward linkage + `fcluster`) for FR-MODEL-14's `hierarchical_clustering` — exposure weighting by observation repetition, since the clusterer takes no sample weights (added 2026-08-15, W5) |
 | **scikit-learn** | FR-MODEL-9's `tree` banding and FR-MODEL-14's `tree` grouping (FR-MODEL-85) | `DecisionTreeRegressor` with `max_leaf_nodes` and `sample_weight`; cut points read off `tree_.threshold` where `tree_.feature >= 0`. Splits are midpoints between adjacent observed values, so no threshold coincides with a value in the data and a banding's `closed` convention moves no row. Declared rather than relied on transitively — it arrives with `glum`, but a package that *imports* it and does not declare it is the pandera state `01` §4.4 found in reverse (added 2026-08-17, W5) |
 | **ECharts (frontend)** | Relativity plots with CI bands, lift/gains, calibration, PD plots, convexity heatmap | Large-series performance; dual-axis A/E charts |
 | **TanStack Table (frontend)** | Coefficient, relativity, banding, and grouping grids | Inline editing for boundaries and level merges |
@@ -2395,3 +2541,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-MODEL-20** | ~~§5.1 declared one `POST /custom-metrics` row, not built and deferred to Phase 1b (FR-MODEL-45). Now that a metric gates early stopping (FR-MODEL-107), should this slice ship create only, or the full six-endpoint set FR-MODEL-95 built for `custom-objectives`?~~ **DECIDED 2026-08-19: all six — FR-MODEL-108**, the same argument FR-MODEL-95 made for objectives: an approver who cannot fetch a certificate is being asked to approve a verdict they cannot see. |
 | ~~**OQ-MODEL-21**~~ ✔ | ~~LightGBM evaluates builtin metrics before `feval`, so a spec that declares a builtin in `eval_metrics` and early-stops on a Custom Metric never gets the builtin reported (FR-MODEL-107's 2026-08-20 amendment), even though `GbmFit` says nothing about the drop. Does a documented silent drop satisfy FR-MODEL-106's "honoured"?~~ **DECIDED 2026-08-21: record the drop on the fit — FR-MODEL-111**, owned by W5, before W5 closes; FR-MODEL-107 gains a dated addendum. Found 2026-08-20 in the final branch review, before merge. |
 | ~~**OQ-MODEL-22**~~ ✔ | ~~Which offsets-from-model come after the GLM-to-GLM slice? Open, gated on W5: FR-MODEL-24's 2026-08-21 amendment builds offset-from-another-model for GLM specs referencing fitted GLMs only — GBM-referenced offsets, `GbmSpec`-declared offsets and the peril-reconciliation scoring path each wait for a workflow that needs them.~~ **DECIDED 2026-08-21: (a) then (c), each as its own slice; (d) only if residual modelling stays GLM-shaped — FR-MODEL-112.** (a) GBM-referenced offsets are the next slice, in Phase 1b, when a workflow needs one; (c) the peril-reconciliation scoring path follows, already owned by W5; (b) `GbmSpec`-declared offsets are not scheduled. |
+| **OQ-MODEL-23** | **`spline`, `polynomial` and `offset` Factors are refused by name with no owner and no schedule. Which of the three, if any, does the platform commit to — and when?** FR-MODEL-88 contains them correctly (a refusal beats a raw column silently substituted) but containment is not a plan, and W5 closes with three arms of FR-MODEL-1's closed set counted among the evidenced because a test marks the refusal. Raised 2026-08-22 (W5, the audit-remediation slice). |

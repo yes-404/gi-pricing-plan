@@ -22,7 +22,7 @@ service could forget:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 from sqlalchemy import select
@@ -50,7 +50,34 @@ from model_schema import (
     Principal,
 )
 
-__all__ = ["decide", "policy_for", "set_policy", "submit", "to_dict", "withdraw"]
+__all__ = [
+    "ArtifactResolver",
+    "decide",
+    "policy_for",
+    "set_policy",
+    "submit",
+    "to_dict",
+    "withdraw",
+]
+
+
+class ArtifactResolver(Protocol):
+    """How `submit` learns whether the version a request pins actually exists (FR-GOV-36).
+
+    A callable the caller supplies rather than a lookup performed here, because resolution
+    needs one query per artifact type and DEP-1 forbids `GOV` importing `DATA` through
+    `MON`. The route supplies it: `api/approvals.py` sits above both governance and the
+    owning modules, which is the seam `_carry_to_the_artifact` already uses for the *decide*
+    direction. A resolver registry would be a second mechanism for the same join.
+
+    It returns nothing and raises: `NOT_FOUND` where the reference names a version the
+    owning module has no row for, and — failing closed — where no module in this build owns
+    the artifact type at all.
+    """
+
+    async def __call__(
+        self, session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+    ) -> None: ...
 
 
 async def policy_for(session: AsyncSession, workspace_id: UUID) -> ApprovalPolicy:
@@ -124,8 +151,22 @@ async def submit(
     artifact_ref: ArtifactRef,
     change_summary: str,
     environment: str | None = None,
+    resolve: ArtifactResolver | None = None,
 ) -> ApprovalRequestRow:
-    """Submit an artifact for approval: `draft → review` (FR-GOV-9)."""
+    """Submit an artifact for approval: `draft → review` (FR-GOV-9).
+
+    `resolve` closes FR-GOV-36. Omitting it asserts that the caller already **holds** the
+    row it names, which is true of the four module submit paths — `modelling`,
+    `objectives`, `metrics` and `perils` each load the artifact, check its status, and build
+    the reference out of that row's own slug and version, so a lookup here would re-read a
+    row the caller is holding open.
+
+    `POST /approval-requests` is the caller that does not: it takes the reference from the
+    client, and it **must** pass a resolver. Without one a request can pin a version that
+    was never created — the owning module cannot move an artifact that does not exist, so
+    the request decides without effect and there is nothing for a reader to reconcile the
+    decision against.
+    """
     if not change_summary.strip():
         raise PlatformError(
             "VALIDATION_FAILED",
@@ -145,6 +186,15 @@ async def submit(
             f"The workspace policy defines nothing for {artifact_ref.type!r}. Approving "
             "against no policy would be approving against no requirement.",
         )
+
+    # FR-GOV-36, and **after** the policy check on purpose. A `dataset:motor-gb@3` in a
+    # workspace whose policy says nothing about datasets earns two correct refusals, and
+    # "no approval policy for this artifact type" is the one the submitter can act on;
+    # answering "no such version" first would send them off to create a version that still
+    # could not be approved. `datasets.load_version` makes the same argument about the same
+    # kind of pair — the order of two correct refusals is load-bearing.
+    if resolve is not None:
+        await resolve(session, workspace_id=workspace_id, artifact_ref=artifact_ref)
 
     row = ApprovalRequestRow(
         workspace_id=workspace_id,

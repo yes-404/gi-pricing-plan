@@ -3,396 +3,296 @@
   "$id": "https://contracts.gi-pricing.dev/diagnostics.schema.json",
   "title": "Diagnostics",
   "description": "Persisted model quality evidence. Computed once at fit time and read thereafter; every metric is reported for train AND holdout side by side (02 FR-MODEL-49..57).",
+  "$comment": "Amended 2026-08-22 (W5, the contract-reconciliation slice). The `gbm` block differed from `GbmDiagnostics` in name, shape or cardinality on almost every field, and none of it was visible: the type comparison skips a path that exists on only one side, which is what a rename or a re-shape produces. Resolutions, each the code's (CLAUDE.md §0): `backtest` is deleted — it was declared from Phase 0, typed None, and nothing could ever have populated it, because FR-MODEL-57's backtest runs against a LATER Dataset Version than the one this artifact is written for; it is its own artifact now (§4.12). `double_lift` is deleted from the partition for the same reason at a different scale — it is pairwise, the comparison model is unknown at fit time, and it lives on the comparison artifact. `importance` becomes `importances` keyed by `feature`, and `permutation_holdout` becomes the six-field `permutation_importances`, which carries the provenance a single number cannot. `partial_dependence_blob` becomes structured per-factor points, `monotonicity_verified` becomes a tuple of per-factor checks, and `tree_summary` becomes `tree_count`/`max_depth`/`mean_depth` — a forest of stumps with one deep tree and a forest of uniformly middling trees have the same mean. `best_iteration` is deleted: it lives on the fit result because `predict_gbm` needs it to score and diagnostics are not loaded at scoring time. `quantile_crossing` is added, which FR-MODEL-78 requires be reported in the diagnostics and this contract had no property for at all. The `cross_validation` block is rebuilt around what FR-MODEL-20/53 actually persist.",
   "type": "object",
-  "required": [
-    "model_id",
-    "computed_at",
-    "universal",
-    "complexity"
-  ],
+  "required": ["id", "model_id", "computed_at", "universal", "complexity"],
   "properties": {
-    "model_id": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "computed_at": {
-      "type": "string",
-      "format": "date-time"
-    },
+    "id": {"type": "string", "format": "uuid"},
+    "model_id": {"type": "string", "format": "uuid"},
+    "computed_at": {"type": "string", "format": "date-time"},
     "job_id": {
-      "type": "string",
-      "format": "uuid"
+      "type": ["string", "null"], "format": "uuid",
+      "description": "The job that computed these diagnostics, where one did."
     },
     "universal": {
       "type": "object",
-      "required": [
-        "train",
-        "holdout"
-      ],
-      "description": "A diagnostic reported without its holdout counterpart is a defect (FR-MODEL-54).",
+      "required": ["train", "holdout"],
+      "description": "A diagnostic reported without its holdout counterpart is a defect (FR-MODEL-54). Both partitions must share a weighting scheme: comparing an exposure-weighted train A/E to an unweighted holdout A/E is comparing two quantities and reading the difference as deterioration (FR-MODEL-55).",
       "properties": {
-        "train": {
-          "$ref": "#/$defs/PartitionDiagnostics"
-        },
-        "holdout": {
-          "$ref": "#/$defs/PartitionDiagnostics"
-        }
+        "train": {"$ref": "#/$defs/PartitionDiagnostics"},
+        "holdout": {"$ref": "#/$defs/PartitionDiagnostics"}
       }
     },
     "glm": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "description": "FR-MODEL-51.",
+      "type": ["object", "null"],
+      "description": "FR-MODEL-51. Null for a non-GLM fit.",
+      "required": ["deviance", "null_deviance", "dispersion", "degrees_of_freedom"],
       "properties": {
-        "deviance": {
-          "type": "number"
-        },
-        "null_deviance": {
-          "type": "number"
-        },
+        "deviance": {"type": "number"},
+        "null_deviance": {"type": "number"},
         "aic": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "description": "Null where the family has no closed-form likelihood this platform evaluates (Tweedie needs a series expansion). A deviance-based stand-in would differ from another tool's AIC by an additive constant, which reads as a disagreement between two correct numbers."
         },
-        "bic": {
-          "type": [
-            "number",
-            "null"
-          ]
-        },
-        "dispersion": {
-          "type": "number"
-        },
-        "degrees_of_freedom": {
-          "type": "integer"
-        },
+        "bic": {"type": ["number", "null"]},
+        "dispersion": {"type": "number"},
+        "degrees_of_freedom": {"type": "integer", "minimum": 0},
         "type_iii_tests": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "factor",
-              "deviance_delta",
-              "df",
-              "p_value"
-            ],
+            "required": ["factor", "deviance_delta", "df", "p_value"],
             "properties": {
-              "factor": {
-                "type": "string"
-              },
-              "deviance_delta": {
-                "type": "number"
-              },
-              "df": {
-                "type": "integer"
-              },
-              "p_value": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
+              "factor": {"type": "string"},
+              "deviance_delta": {"type": "number"},
+              "df": {"type": "integer", "minimum": 0},
+              "p_value": {"type": "number", "minimum": 0, "maximum": 1}
             }
           }
         },
-        "aliasing": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "vif": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
-          }
-        },
-        "residual_blob": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "leverage_blob": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
+        "aliasing": {"type": "array", "items": {"type": "string"}},
+        "vif": {"type": "object", "additionalProperties": {"type": "number"}},
+        "residual_blob": {"type": ["string", "null"]},
+        "leverage_blob": {"type": ["string", "null"]}
       }
     },
     "gbm": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "description": "FR-MODEL-52.",
+      "type": ["object", "null"],
+      "description": "FR-MODEL-52's GBM-specific evidence. Null for a GLM, which is the honest reading of 'GBM-specific'.",
+      "required": ["tree_count", "max_depth", "mean_depth"],
       "properties": {
         "eval_curve": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "iteration",
-              "train",
-              "holdout"
-            ],
-            "properties": {
-              "iteration": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "train": {
-                "type": "number"
-              },
-              "holdout": {
-                "type": "number"
-              }
-            }
-          }
+          "type": "array", "items": {"$ref": "#/$defs/GbmEvalPoint"},
+          "description": "Train and holdout on one row rather than two series: a metric still improving on train while flat on holdout is the shape early stopping exists to catch, and two separately-stored series can be joined wrongly."
         },
-        "best_iteration": {
-          "type": "integer",
-          "minimum": 0
+        "importances": {"type": "array", "items": {"$ref": "#/$defs/FeatureImportance"}},
+        "permutation_importances": {
+          "type": "array", "items": {"$ref": "#/$defs/PermutationImportance"},
+          "description": "Its own measurement, not a column on the importance row: a permutation score is only readable beside the baseline it degraded from, the repeat count and the seed."
         },
-        "importance": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "factor"
-            ],
-            "properties": {
-              "factor": {
-                "type": "string"
-              },
-              "gain": {
-                "type": "number"
-              },
-              "cover": {
-                "type": "number"
-              },
-              "frequency": {
-                "type": "number"
-              },
-              "permutation_holdout": {
-                "type": "number"
-              }
-            }
-          }
+        "partial_dependence": {
+          "type": "array", "items": {"$ref": "#/$defs/PartialDependence"},
+          "description": "Per declared factor, and structured — this was an opaque blob string until 2026-08-22, which no reader could plot without unpacking it first."
         },
-        "partial_dependence_blob": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "monotonicity": {
+          "type": "array", "items": {"$ref": "#/$defs/MonotonicityCheck"},
+          "description": "One check per constrained factor, carrying the worst violation. A single boolean cannot say which factor failed, and `TransparencyArtifact.monotonicity_verified` is where the rolled-up answer belongs."
         },
-        "monotonicity_verified": {
-          "type": "boolean",
-          "description": "That the fitted response actually respects declared constraints, not merely that they were passed."
+        "tree_count": {"type": "integer", "minimum": 0},
+        "max_depth": {"type": "integer", "minimum": 0},
+        "mean_depth": {
+          "type": "number", "minimum": 0,
+          "description": "Beside `max_depth`, not instead of it: a forest of stumps with one deep tree and a forest of uniformly middling trees have the same mean."
         },
-        "tree_summary": {
-          "type": "object"
+        "quantile_crossing": {
+          "oneOf": [{"$ref": "#/$defs/QuantileCrossing"}, {"type": "null"}],
+          "description": "FR-MODEL-78. Set on the SECOND bound of a paired-quantile interval and null on every other model, including the first bound, which had nothing to cross when it was fitted."
         }
       }
     },
     "cross_validation": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "required": [
-        "fold_construction",
-        "seed",
-        "folds"
-      ],
-      "description": "Per-fold metrics and their dispersion, not just the mean (FR-MODEL-53).",
+      "type": ["object", "null"],
+      "description": "The penalty path and the selected alpha's fold dispersion (FR-MODEL-20, FR-MODEL-53). Populated iff the fit's `select_by == 'cv'`; null for every fixed-alpha GLM and every GBM — the honest reading of 'this fit was not cross-validated' rather than an empty path standing in for one.",
+      "required": ["method", "seed", "folds", "metric", "selected_alpha", "path", "fold_metrics"],
       "properties": {
-        "fold_construction": {
-          "enum": [
-            "random",
-            "temporal",
-            "grouped_by_key"
-          ]
-        },
-        "group_key": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "method": {
+          "type": "string",
+          "description": "UNRECONCILED (W5, 2026-08-22): this contract declared `fold_construction` with a closed set — random | temporal | grouped_by_key — matching FR-MODEL-53, `01` FR-DATA-33 and `GlmCvSpec.method`'s own enum, while `CrossValidationDiagnostics.method` is an unconstrained `str`. Renamed to the built field and widened here so the contract does not promise a constraint nothing enforces; whether the type should close instead is a CLAUDE.md §0 question."
         },
         "seed": {
-          "type": "integer"
+          "type": "integer",
+          "description": "The seed `assign_folds` was called with, copied here so the fold assignment is reproducible from this artifact alone, with no join back to the spec."
         },
         "folds": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
+          "type": "integer", "minimum": 2,
+          "description": "The fold COUNT. This contract declared an array of unnamed objects under the same name until 2026-08-22; the per-fold records are `fold_metrics`."
         },
-        "dispersion": {
-          "type": "object"
-        }
-      }
-    },
-    "backtest": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "required": [
-        "dataset_version_id"
-      ],
-      "description": "FR-MODEL-57; the evidence bridge into monitoring.",
-      "properties": {
-        "dataset_version_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "results": {
-          "$ref": "#/$defs/PartitionDiagnostics"
-        }
+        "metric": {"type": "string", "description": "Always `deviance` today — the fitted family's own — recorded rather than assumed."},
+        "selected_alpha": {"type": "number", "minimum": 0},
+        "path": {"type": "array", "items": {"$ref": "#/$defs/CvPathPoint"}},
+        "fold_metrics": {"type": "array", "items": {"$ref": "#/$defs/CvFoldMetric"}}
       }
     },
     "complexity": {
       "type": "object",
       "description": "Recorded on every fit, beside whatever thresholds were in force (FR-MODEL-81). The thresholds are stored with the measurements because they are workspace settings that change: a fit judged against no limit and one judged against a limit of 40 are different events.",
-      "required": [
-        "factor_count",
-        "parameter_count"
-      ],
+      "required": ["factor_count", "parameter_count"],
       "properties": {
-        "factor_count": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "parameter_count": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "exposure_per_parameter": {
-          "type": [
-            "number",
-            "null"
-          ]
-        },
-        "claims_per_parameter": {
-          "type": [
-            "number",
-            "null"
-          ]
-        },
+        "factor_count": {"type": "integer", "minimum": 0},
+        "parameter_count": {"type": "integer", "minimum": 0},
+        "exposure_per_parameter": {"type": ["number", "null"]},
+        "claims_per_parameter": {"type": ["number", "null"]},
         "max_factor_count": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "description": "The workspace limit in force, or null where none is set \u2014 FR-MODEL-81's default. Distinct from 0, which would be a limit nothing could satisfy."
+          "type": ["integer", "null"],
+          "description": "The workspace limit in force, or null where none is set — FR-MODEL-81's default. Distinct from 0, which would be a limit nothing could satisfy."
         },
-        "min_exposure_per_parameter": {
-          "type": [
-            "number",
-            "null"
-          ]
-        }
+        "min_exposure_per_parameter": {"type": ["number", "null"]}
       }
     }
   },
+  "invariants": [
+    "universal.train.weighting == universal.holdout.weighting — side-by-side metrics must share a weighting scheme (FR-MODEL-55)",
+    "every eval_curve point reports at least one of train and holdout",
+    "cross_validation.selected_alpha is one of cross_validation.path[].alpha — the selection must be a point the path actually scored",
+    "cross_validation.fold_metrics covers folds 0..folds-1 exactly once: a fold's dispersion cannot include a fold that was never scored, nor double-count one",
+    "quantile_crossing.rows_crossing <= rows_checked"
+  ],
   "$defs": {
     "PartitionDiagnostics": {
       "type": "object",
-      "required": [
-        "ae_overall",
-        "weighting"
-      ],
+      "required": ["weighting", "rows", "ae_overall", "gini", "gini_normalised"],
       "properties": {
         "weighting": {
-          "enum": [
-            "exposure",
-            "count",
-            "claim_count"
-          ],
+          "enum": ["exposure", "count", "claim_count"],
           "description": "Explicit; an unweighted metric on an exposure-weighted problem is labelled as such (FR-MODEL-55)."
         },
-        "ae_overall": {
-          "type": "number",
-          "minimum": 0
-        },
-        "ae_by_factor": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "factor",
-              "level",
-              "actual",
-              "expected",
-              "ae"
-            ],
-            "properties": {
-              "factor": {
-                "type": "string"
-              },
-              "level": {
-                "type": "string"
-              },
-              "actual": {
-                "type": "number"
-              },
-              "expected": {
-                "type": "number"
-              },
-              "ae": {
-                "type": "number"
-              },
-              "ci_95": {
-                "type": "array",
-                "minItems": 2,
-                "maxItems": 2,
-                "items": {
-                  "type": "number"
-                }
-              },
-              "exposure_years": {
-                "$ref": "common/money.schema.json#/$defs/Decimal"
-              }
-            }
-          }
-        },
-        "lift": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
-        },
-        "double_lift": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "object"
-          }
-        },
-        "gini": {
-          "type": "number"
-        },
-        "gini_normalised": {
-          "type": "number"
-        },
-        "calibration": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
-        },
-        "residual_summary": {
-          "type": "object"
+        "rows": {"type": "integer", "minimum": 0},
+        "ae_overall": {"type": "number", "minimum": 0},
+        "ae_by_factor": {"type": "array", "items": {"$ref": "#/$defs/AeCell"}},
+        "lift": {"type": "array", "items": {"$ref": "#/$defs/LiftBin"}},
+        "gini": {"type": "number"},
+        "gini_normalised": {"type": "number"},
+        "calibration": {"type": "array", "items": {"$ref": "#/$defs/CalibrationBin"}},
+        "residual_summary": {"oneOf": [{"$ref": "#/$defs/ResidualSummary"}, {"type": "null"}]}
+      }
+    },
+    "AeCell": {
+      "type": "object",
+      "required": ["factor", "level", "actual", "expected", "ae"],
+      "properties": {
+        "factor": {"type": "string"},
+        "level": {"type": "string"},
+        "actual": {"type": "number"},
+        "expected": {"type": "number"},
+        "ae": {"type": "number"},
+        "ci_95": {"type": ["array", "null"], "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+        "exposure_years": {
+          "oneOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}]
         }
+      }
+    },
+    "LiftBin": {
+      "type": "object",
+      "required": ["bin", "rows", "predicted", "actual"],
+      "properties": {
+        "bin": {"type": "integer", "minimum": 1},
+        "rows": {"type": "integer", "minimum": 0},
+        "predicted": {"type": "number"},
+        "actual": {"type": "number"},
+        "exposure_years": {
+          "oneOf": [{"$ref": "common/money.schema.json#/$defs/Decimal"}, {"type": "null"}]
+        }
+      }
+    },
+    "CalibrationBin": {
+      "type": "object",
+      "required": ["bin", "rows", "predicted", "actual"],
+      "properties": {
+        "bin": {"type": "integer", "minimum": 1},
+        "rows": {"type": "integer", "minimum": 0},
+        "predicted": {"type": "number"},
+        "actual": {"type": "number"}
+      }
+    },
+    "ResidualSummary": {
+      "type": "object",
+      "required": ["mean", "std", "minimum", "maximum", "p01", "p99"],
+      "properties": {
+        "mean": {"type": "number"},
+        "std": {"type": "number"},
+        "minimum": {"type": "number"},
+        "maximum": {"type": "number"},
+        "p01": {"type": "number"},
+        "p99": {"type": "number"}
+      }
+    },
+    "GbmEvalPoint": {
+      "type": "object",
+      "required": ["iteration", "metric"],
+      "properties": {
+        "iteration": {"type": "integer", "minimum": 0},
+        "metric": {"type": "string"},
+        "train": {"type": ["number", "null"]},
+        "holdout": {"type": ["number", "null"]}
+      }
+    },
+    "FeatureImportance": {
+      "type": "object",
+      "required": ["feature", "gain", "frequency"],
+      "properties": {
+        "feature": {"type": "string"},
+        "gain": {"type": "number", "minimum": 0},
+        "frequency": {"type": "number", "minimum": 0},
+        "cover": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "PermutationImportance": {
+      "type": "object",
+      "required": ["feature", "baseline", "permuted", "degradation", "repeats", "seed"],
+      "properties": {
+        "feature": {"type": "string"},
+        "baseline": {"type": "number"},
+        "permuted": {"type": "number"},
+        "degradation": {"type": "number"},
+        "repeats": {"type": "integer", "minimum": 1},
+        "seed": {"type": "integer"}
+      }
+    },
+    "PartialDependence": {
+      "type": "object",
+      "required": ["factor"],
+      "properties": {
+        "factor": {"type": "string"},
+        "points": {"type": "array", "items": {"$ref": "#/$defs/PartialDependencePoint"}}
+      }
+    },
+    "PartialDependencePoint": {
+      "type": "object",
+      "required": ["value", "mean_prediction", "exposure_share"],
+      "properties": {
+        "value": {"type": "string"},
+        "mean_prediction": {"type": "number"},
+        "exposure_share": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "MonotonicityCheck": {
+      "type": "object",
+      "required": ["factor", "declared", "holds"],
+      "description": "That the fitted response actually respects a declared constraint, not merely that it was passed to the backend.",
+      "properties": {
+        "factor": {"type": "string"},
+        "declared": {"type": "string"},
+        "holds": {"type": "boolean"},
+        "worst_violation": {"type": "number", "minimum": 0}
+      }
+    },
+    "QuantileCrossing": {
+      "type": "object",
+      "required": ["counterpart_model_id", "rows_checked", "rows_crossing", "worst_gap"],
+      "description": "Whether this bound contradicts its counterpart over the fit population (FR-MODEL-78). Crossing means the pair does not describe one distribution; it is reported, never silently reordered.",
+      "properties": {
+        "counterpart_model_id": {"type": "string", "format": "uuid"},
+        "rows_checked": {"type": "integer", "minimum": 0},
+        "rows_crossing": {"type": "integer", "minimum": 0},
+        "worst_gap": {"type": "number", "minimum": 0}
+      }
+    },
+    "CvPathPoint": {
+      "type": "object",
+      "required": ["alpha", "mean_score", "std_score"],
+      "properties": {
+        "alpha": {"type": "number", "minimum": 0},
+        "mean_score": {"type": "number"},
+        "std_score": {"type": "number", "minimum": 0}
+      }
+    },
+    "CvFoldMetric": {
+      "type": "object",
+      "required": ["fold", "rows", "score"],
+      "properties": {
+        "fold": {"type": "integer", "minimum": 0},
+        "rows": {"type": "integer", "minimum": 0},
+        "score": {"type": "number"}
       }
     }
   }

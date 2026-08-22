@@ -13,6 +13,11 @@ fit** the merge implies, so the decision is defensible as a decision.
   `reference_hierarchy` is refused by name, for the reason the refusal gives.
 * **FR-MODEL-15** — the evidence: source and target level counts, Poisson deviance before
   and after, degrees of freedom saved, and the likelihood-ratio p-value.
+* **FR-MODEL-80** — both credibility theories OQ-MODEL-5 decided on (2026-08-15):
+  `limited_fluctuation` (the default) and `buhlmann_straub`, chosen per grouping in
+  `method_params` and differing **only** in `Z`. Bühlmann-Straub persists its variance
+  components — EVPV, VHM and `k` — in the evidence, so a reviewer re-derives `Z` rather
+  than taking it.
 
 **Deviance is Poisson deviance of claim counts against exposure**, the response the merge
 is judged on, computed from the level rates rather than from a refitted GLM. The question a
@@ -57,6 +62,92 @@ def _full_credibility_claims(p: float, k: float) -> float:
     objects to.
     """
     return float((stats.norm.ppf((1.0 + p) / 2.0) / k) ** 2)
+
+
+def _buhlmann_straub_components(
+    source: tuple[OneWayRow, ...], *, column: str
+) -> dict[str, float]:
+    """EVPV, VHM and `k` for Buhlmann-Straub credibility on claim frequency (FR-MODEL-80).
+
+    Each Level `i` is one risk, observed once: its weight `m_i` is exposure years and its
+    observation `X_i` is the frequency `claim_count / m_i` — **the same rate limited
+    fluctuation shrinks** (`_relativity`), so the two theories differ in `Z` and nowhere
+    else, which is what makes the recorded choice meaningful.
+
+    One observation per risk is why the textbook within-risk estimator of `s²`,
+    `Sum_i Sum_j m_ij (X_ij - Xbar_i)² / Sum_i (n_i - 1)`, is unusable here: with `n_i = 1`
+    both its numerator and its denominator are zero. The frequency case supplies `s²`
+    directly instead. Claim counts are Poisson with `Var(N_i | Theta_i) = m_i lambda_i`, so
+    `Var(X_i | Theta_i) = lambda_i / m_i` — exactly Buhlmann-Straub's `sigma²(Theta) / m_i`
+    with `sigma²(Theta) = lambda(Theta)`. Hence
+
+        EVPV = s² = E[sigma²(Theta)] = E[lambda(Theta)] = mu,
+
+    estimated by the exposure-weighted portfolio frequency `Xbar = Sum m_i X_i / m_dot`.
+
+    VHM is the standard unbiased between-risk estimator. Writing
+    `T = Sum_i m_i (X_i - Xbar)²`, the model gives
+    `E[T] = (I - 1) s² + a (m_dot - Sum_i m_i² / m_dot)`, so
+
+        VHM = a = (T - (I - 1) s²) / (m_dot - Sum_i m_i² / m_dot),   k = s² / a,
+        Z_i = m_i / (m_i + k).
+
+    *Buhlmann & Gisler, `A Course in Credibility Theory and its Applications` (2005) §4.8
+    for the estimators; the Poisson process-variance identity is the standard frequency
+    specialisation — Klugman, Panjer & Willmot, `Loss Models`, greatest-accuracy
+    credibility.*
+
+    **Nothing here is clamped.** Every degenerate case is refused by name, because a
+    non-positive `a` is not a small credibility — it is the finding that the levels are
+    indistinguishable, and `grouping.schema.json` gives `k` `exclusiveMinimum: 0` precisely
+    so an artifact cannot carry a credibility nobody could compute.
+    """
+    rows = [row for row in source if float(row.exposure_years) > 0]
+    if len(rows) < 2:
+        raise GroupingError(
+            "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
+            f"Buhlmann-Straub separates within-level from between-level variance and needs "
+            f"at least two levels of {column!r} carrying exposure to do it; this version "
+            f"has {len(rows)}. `limited_fluctuation` estimates nothing between levels and "
+            "remains available (FR-MODEL-80).",
+        )
+
+    weights = np.asarray([float(row.exposure_years) for row in rows], dtype=np.float64)
+    observed = np.asarray([float(row.claim_count) for row in rows], dtype=np.float64) / weights
+    total_exposure = float(weights.sum())
+    evpv = float((weights * observed).sum() / total_exposure)
+    if evpv <= 0:
+        raise GroupingError(
+            "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
+            f"{column!r} carries no claims on this version, so the Poisson process variance "
+            "E[lambda(Theta)] is zero and Buhlmann-Straub's `k = s²/a` is 0/0. That is an "
+            "absent credibility, not a small one (FR-MODEL-80).",
+        )
+
+    between = float((weights * (observed - evpv) ** 2).sum())
+    scale = total_exposure - float((weights**2).sum()) / total_exposure
+    if scale <= 0:
+        raise GroupingError(
+            "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
+            f"one level of {column!r} holds effectively all of the exposure, so the "
+            "between-level estimator's scale `m_dot - Sum m_i²/m_dot` collapses to zero and "
+            "VHM is undefined. There is no second risk to be different from (FR-MODEL-80).",
+        )
+
+    vhm = (between - (len(rows) - 1) * evpv) / scale
+    if vhm <= 0:
+        raise GroupingError(
+            "CREDIBILITY_VARIANCE_NOT_ESTIMABLE",
+            f"Buhlmann-Straub's between-level variance estimate for {column!r} is "
+            f"{vhm:.6g}, which is not positive: the levels' observed spread is no wider "
+            "than Poisson noise on their exposures, so the model gives every level `Z = 0` "
+            "and `k = s²/a` is unbounded. Refused rather than clamped — a clamped `k` would "
+            "record a credibility nobody computed, and `grouping.schema.json` gives `k` "
+            "`exclusiveMinimum: 0` for that reason. Re-run with `limited_fluctuation`, "
+            "which needs no between-level estimate, or group a column that carries signal "
+            "(FR-MODEL-80).",
+        )
+    return {"evpv": evpv, "vhm": vhm, "k": evpv / vhm}
 
 
 def propose_grouping(
@@ -151,6 +242,15 @@ def propose_grouping(
             # per-level scipy interval quantiles, and doing it twice was most of the
             # proposal's wall-clock (NFR-MODEL-3).
             source=source,
+            # Which theory ran, so the evidence can carry FR-MODEL-80's variance
+            # components. `grouping_evidence` re-derives them from the same `source` rows
+            # `_credibility_weighted` shrank on, so the recorded `k` is the one that
+            # produced the mapping rather than a second estimate of it.
+            credibility_model=(
+                proposal.credibility_model
+                if proposal.method is GroupingMethod.CREDIBILITY_WEIGHTED
+                else None
+            ),
         ),
     )
 
@@ -172,11 +272,20 @@ def _method_params(proposal: GroupingProposal) -> dict[str, object]:
         params.setdefault("random_state", 0)
     if proposal.method is GroupingMethod.CREDIBILITY_WEIGHTED:
         params["credibility_model"] = proposal.credibility_model.value
-        params["credibility_pk"] = {"p": proposal.credibility_p, "k": proposal.credibility_k}
-        params.setdefault(
-            "credibility_standard_claims",
-            round(_full_credibility_claims(proposal.credibility_p, proposal.credibility_k)),
-        )
+        # The `(p, k)` pair and the count it implies belong to **limited fluctuation** and
+        # to nothing else. Bühlmann-Straub derives no full-credibility standard, so writing
+        # `(0.90, 0.05)` — the proposal's defaults, which it never reads — onto a
+        # `buhlmann_straub` artifact would record a standard that did not run, which is the
+        # failure FR-MODEL-80 exists to prevent. Its variance components go in the evidence.
+        if proposal.credibility_model is CredibilityModel.LIMITED_FLUCTUATION:
+            params["credibility_pk"] = {
+                "p": proposal.credibility_p,
+                "k": proposal.credibility_k,
+            }
+            params.setdefault(
+                "credibility_standard_claims",
+                round(_full_credibility_claims(proposal.credibility_p, proposal.credibility_k)),
+            )
     return params
 
 
@@ -212,44 +321,67 @@ def _credibility_weighted(
 ) -> list[list[OneWayRow]]:
     """Merge Levels whose credibility-adjusted rates are within a tolerance (FR-MODEL-14).
 
-    **Limited fluctuation**, which is OQ-MODEL-5's standing recommendation and what a UK GI
-    reviewer expects to see. Each level's observed rate is shrunk toward the portfolio rate
-    by `Z = sqrt(min(n / n_full, 1))`; levels are then swept in rate order and merged while
-    the adjusted rates stay within `merge_tolerance_relativity` of the group's running mean.
+    Each level's observed **frequency** — claim count per exposure year, `_relativity` — is
+    shrunk toward the portfolio frequency, and the levels are then swept in shrunk-rate
+    order and merged while the adjusted rates stay within `merge_tolerance_relativity` of
+    the group's running anchor.
 
     Shrinkage before merging is the whole point: without it, a level with three claims has a
     rate estimated to ±60 % and is merged — or not — on noise.
-    """
-    if proposal.credibility_model is not CredibilityModel.LIMITED_FLUCTUATION:
-        raise GroupingError(
-            "GROUPING_NOT_EXHAUSTIVE",
-            f"credibility model {proposal.credibility_model.value!r} is specified "
-            "(FR-MODEL-80) and not implemented: Bühlmann-Straub needs the EVPV and VHM "
-            "variance components this build does not estimate, and `credibility_components` "
-            "would come back null for a model that is supposed to persist them. Refused "
-            "rather than substituted — recording a model that did not run is the one thing "
-            "FR-MODEL-80 exists to prevent.",
-        )
 
-    full = float(
-        proposal.method_params.get(
-            "credibility_standard_claims",
-            _full_credibility_claims(proposal.credibility_p, proposal.credibility_k),
-        )
-    )
+    Which `Z` does the shrinking is FR-MODEL-80's recorded choice, and the two theories
+    differ **only** there (OQ-MODEL-5, decided 2026-08-15):
+
+    * `limited_fluctuation` (the default, and what a UK GI reviewer expects to see) —
+      `Z = sqrt(min(n / n_full, 1))` on the level's **claim count**, against a
+      full-credibility standard derived from `(p, k)`.
+    * `buhlmann_straub` — `Z = m / (m + k)` on the level's **exposure**, with
+      `k = EVPV / VHM` estimated across the levels by `_buhlmann_straub_components`.
+
+    They disagree hardest exactly where the choice matters. A level with 200 claims out of
+    1 082 gets `Z ≈ 0.43` from limited fluctuation whatever the rest of the book looks like;
+    Bühlmann-Straub gives it `Z` near 1 when the levels are genuinely far apart and `Z` near
+    0 when they are not, because `k` is estimated from this book rather than from a table.
+    """
     tolerance = float(proposal.method_params.get("merge_tolerance_relativity", 0.05))
-    total_exposure = sum(float(row.exposure_years) for row in source)
-    total_claims = sum(row.claim_count for row in source)
-    portfolio = total_claims / total_exposure if total_exposure > 0 else 0.0
+    buhlmann_straub = proposal.credibility_model is CredibilityModel.BUHLMANN_STRAUB
+    components = (
+        _buhlmann_straub_components(source, column=proposal.column) if buhlmann_straub else None
+    )
+
+    if components is None:
+        full = float(
+            proposal.method_params.get(
+                "credibility_standard_claims",
+                _full_credibility_claims(proposal.credibility_p, proposal.credibility_k),
+            )
+        )
+        total_exposure = sum(float(row.exposure_years) for row in source)
+        total_claims = sum(row.claim_count for row in source)
+        complement = total_claims / total_exposure if total_exposure > 0 else 0.0
+        credibility = [
+            math.sqrt(min(row.claim_count / full, 1.0)) if full > 0 else 1.0 for row in source
+        ]
+    else:
+        # `evpv` **is** the collective frequency: `s² = E[sigma²(Theta)] = E[lambda(Theta)]
+        # = mu` under the Poisson process variance, so the single estimate plays both roles
+        # and the complement of credibility cannot drift from the component recorded beside
+        # it. The portfolio ratio would differ here whenever a zero-exposure level carries a
+        # claim, and a reviewer re-deriving `Z` from the evidence could then not reproduce
+        # the shrunk rate — which is the one thing the components are stored for.
+        complement = components["evpv"]
+        credibility = [
+            float(row.exposure_years) / (float(row.exposure_years) + components["k"])
+            for row in source
+        ]
 
     adjusted: list[tuple[float, OneWayRow]] = []
-    for row in source:
+    for weight, row in zip(credibility, source, strict=True):
         observed = _relativity(row)
-        credibility = math.sqrt(min(row.claim_count / full, 1.0)) if full > 0 else 1.0
         rate = (
-            credibility * observed + (1 - credibility) * portfolio
+            weight * observed + (1 - weight) * complement
             if observed is not None
-            else portfolio
+            else complement
         )
         adjusted.append((rate, row))
     adjusted.sort(key=lambda pair: pair[0])
@@ -442,6 +574,7 @@ def grouping_evidence(
     claim_count_column: str = "claim_count",
     claim_amount_column: str = "claim_amount_minor",
     source: tuple[OneWayRow, ...] | None = None,
+    credibility_model: CredibilityModel | None = None,
 ) -> GroupingEvidence:
     """What the merge cost, in deviance and degrees of freedom (FR-MODEL-15).
 
@@ -451,8 +584,16 @@ def grouping_evidence(
     answers the actuary's real question: *could* these levels be the same?
 
     `source` lets a caller that already has the source-level summary hand it over rather
-    than pay for it twice; only the level *count* is read from it, so an inconsistent one
-    could not change a deviance.
+    than pay for it twice; the level *count* and — under `buhlmann_straub` — the source
+    rates are read from it.
+
+    `credibility_model` names which theory a `credibility_weighted` grouping applied, and is
+    the only way this function can know: it receives a mapping, not a `Grouping`. Under
+    `buhlmann_straub` the evidence gains `credibility_components` — EVPV, VHM and `k`,
+    **re-derived here from the same source rows the merge shrank on**, so a reviewer can
+    recompute every `Z = m / (m + k)` rather than take it (FR-MODEL-80). It stays `None`
+    under `limited_fluctuation`, which estimates no variance components, and `None` for a
+    grouping that used no credibility model at all.
     """
     grouped = frame.with_columns(
         pl.col(column).cast(pl.String).replace_strict(mapping, default=None).alias("_group")
@@ -495,6 +636,11 @@ def grouping_evidence(
         if statistic is not None and statistic >= 0 and df_saved > 0
         else None
     )
+    components = (
+        _buhlmann_straub_components(tuple(before.rows), column=column)
+        if credibility_model is CredibilityModel.BUHLMANN_STRAUB
+        else None
+    )
     return GroupingEvidence(
         source_level_count=len(before.rows),
         target_level_count=len(after.rows),
@@ -502,6 +648,7 @@ def grouping_evidence(
         deviance_after=deviance_after,
         df_saved=df_saved,
         chi2_p_value=p_value,
+        credibility_components=components,
         target_level_stats=tuple(after.rows),
     )
 

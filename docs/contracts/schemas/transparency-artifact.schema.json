@@ -3,55 +3,84 @@
   "$id": "https://contracts.gi-pricing.dev/transparency-artifact.schema.json",
   "title": "TransparencyArtifact",
   "description": "Mandatory explanation of a non-GLM model. Fitting a black box is allowed; pricing with an unexplained one is not (02 R3, FR-MODEL-33..37, §4.9).",
+  "$comment": "Amended 2026-08-22 (W5, the contract-reconciliation slice). Six resolutions, each the code's (CLAUDE.md §0): (1) `kinds` is deleted — it is a derived `@property` on `TransparencyArtifact`, never stored, which is how §4.9's invariant is made unable to be violated; §4.10's own amendment records that it 'reached the same conclusion and became a plain property'. (2) `id`, `created_at` and `job_id` are declared; the first two are required and this contract named neither. (3) `approximating_model_id` leaves `required`: FR-MODEL-96 makes it exclusive with the inline table, so requiring it unconditionally invalidated every artifact written before 2026-08-19. (4) `r_squared` and `deviance_explained` lose `minimum: 0`, which the type deliberately does not apply — a fit can be worse than the mean, and clamping a negative R² would report a useless approximation as a mediocre one. (5) `relativity_table_blob` and `dependence_blob` are BlobRefs, not strings; §4.9's example still shows the pre-BlobRef `blob:sha256:…` spelling. (6) the GLM approximation's own `family`, `link`, `coefficients` and `relativities` are declared — the last two are FR-MODEL-96's legacy era, and a reader deciding whether an old artifact is still readable had no way to see them here.",
   "type": "object",
-  "required": ["model_id", "kinds", "fidelity_statement"],
+  "required": ["id", "model_id", "created_at", "fidelity_statement"],
   "properties": {
+    "id": {"type": "string", "format": "uuid"},
     "model_id": {"type": "string", "format": "uuid"},
-    "kinds": {
-      "type": "array", "minItems": 1,
-      "items": {"enum": ["glm_approximation", "shap_summary", "ebm_shape_functions"]}
+    "created_at": {"type": "string", "format": "date-time"},
+    "job_id": {
+      "type": ["string", "null"], "format": "uuid",
+      "description": "The job that produced this artifact, where one did."
     },
     "glm_approximation": {
       "type": ["object", "null"],
-      "required": ["approximating_model_id", "target", "r_squared", "deviance_explained"],
+      "required": ["target", "r_squared", "deviance_explained"],
       "description": "A GLM fitted to the GBM's own predictions — what turns a GBM into something rateable as a table (FR-MODEL-34).",
       "properties": {
-        "approximating_model_id": {"type": "string", "format": "uuid"},
         "target": {"const": "gbm_prediction"},
-        "r_squared": {"type": "number", "minimum": 0, "maximum": 1},
-        "deviance_explained": {"type": "number", "minimum": 0, "maximum": 1},
+        "approximating_model_id": {
+          "type": ["string", "null"], "format": "uuid",
+          "description": "FR-MODEL-96 — the Model that holds the approximation's table. Set on every artifact written from 2026-08-19; null on artifacts written before, which carry the table inline instead. Exactly one of the two, never both and never neither."
+        },
+        "family": {"type": "string"},
+        "link": {"type": "string"},
+        "r_squared": {
+          "type": "number", "maximum": 1,
+          "description": "Bounded above by 1 and deliberately not below: a fit can be worse than the mean."
+        },
+        "deviance_explained": {"type": "number", "maximum": 1},
+        "coefficients": {
+          "type": "array", "items": {"$ref": "model.schema.json#/$defs/Coefficient"},
+          "description": "LEGACY ERA. Populated only on artifacts written before FR-MODEL-96 was built (2026-08-19), where the table had nowhere else to live. New artifacts name a Model and leave this empty."
+        },
+        "relativities": {
+          "type": "object",
+          "additionalProperties": {"type": "array", "items": {"$ref": "model.schema.json#/$defs/RelativityLevel"}},
+          "description": "LEGACY ERA, exclusive with `approximating_model_id` exactly as `coefficients` is."
+        },
         "worst_regions": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["description", "exposure_share", "mean_abs_error_pct"],
             "properties": {
-              "description": {"type": "string"},
+              "description": {"type": "string", "minLength": 1},
               "exposure_share": {"type": "number", "minimum": 0, "maximum": 1},
               "mean_abs_error_pct": {"type": "number", "minimum": 0}
             }
-          }
+          },
+          "description": "Where the approximation is worst, and over how much of the book (FR-MODEL-36). The exposure share is required: '11 % out for young high-mileage drivers' is a different sentence at 0.8 % of exposure than at 8 %."
         },
-        "relativity_table_blob": {"type": ["string", "null"]}
+        "relativity_table_blob": {
+          "oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}]
+        }
       }
     },
     "shap_summary": {
       "type": ["object", "null"],
-      "required": ["sample_rows", "seed", "algorithm", "mean_abs_contribution"],
+      "required": ["sample_rows", "seed"],
       "description": "FR-MODEL-35; computed on a reproducible sample with a persisted seed.",
       "properties": {
         "sample_rows": {"type": "integer", "minimum": 1},
         "seed": {"type": "integer"},
-        "algorithm": {"enum": ["tree_shap", "tree_shap_interventional", "kernel_shap"]},
+        "algorithm": {
+          "type": "string",
+          "description": "UNRECONCILED (W5, 2026-08-22): this contract has always declared a closed set — tree_shap, tree_shap_interventional, kernel_shap — and `ShapSummary.algorithm` is an unconstrained `str` defaulting to `tree_shap`. Widened to `string` so the published contract does not promise a constraint nothing enforces; whether the type should close instead is a CLAUDE.md §0 question."
+        },
         "mean_abs_contribution": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["factor", "value"],
             "properties": {"factor": {"type": "string"}, "value": {"type": "number", "minimum": 0}}
-          }
+          },
+          "description": "Mean |contribution| on the raw score scale, exposure-weighted (FR-MODEL-35)."
         },
-        "dependence_blob": {"type": ["string", "null"]},
+        "dependence_blob": {
+          "oneOf": [{"$ref": "common/blob-ref.schema.json"}, {"type": "null"}]
+        },
         "top_interactions": {
           "type": "array",
           "items": {
@@ -59,15 +88,22 @@
             "required": ["pair", "strength"],
             "properties": {
               "pair": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
-              "strength": {"type": "number"}
+              "strength": {"type": "number", "minimum": 0},
+              "exposure_share": {"type": "number", "minimum": 0, "maximum": 1}
             }
-          }
+          },
+          "description": "A suggestion, never an addition (FR-MODEL-79): an interaction becomes rateable only as an explicit `interaction` Factor carrying an intent and a written rationale."
+        },
+        "interactions_available": {
+          "type": "boolean",
+          "description": "False on LightGBM, which computes SHAP values and not SHAP interaction values. `top_interactions` is then empty rather than absent, because a missing list reads as 'no interactions found' — a finding this backend cannot make."
         }
       }
     },
     "ebm_shape_functions": {
       "type": ["object", "null"],
       "description": "EBMs are transparent by construction; their term shape functions export directly as rateable tables (FR-MODEL-37). Amended 2026-08-22 (W5, EBM slice): `terms_blob` is non-empty, mirroring `EbmShapeFunctions.terms_blob`'s `min_length=1`.",
+      "required": ["terms_blob"],
       "properties": {"terms_blob": {"type": "string", "minLength": 1}}
     },
     "fidelity_statement": {
@@ -75,10 +111,14 @@
       "minLength": 1,
       "description": "How well the approximation reproduces the model, WHERE it does not, and the exposure share of that region. Surfaced at rating-version approval (FR-MODEL-36)."
     },
-    "monotonicity_verified": {"type": "boolean"}
+    "monotonicity_verified": {
+      "type": ["boolean", "null"],
+      "description": "FR-MODEL-52's monotonicity check, carried upward. Null where the model declared no constrained factor — distinct from false, which would say a constraint was checked and failed."
+    }
   },
   "invariants": [
-    "'glm_approximation' in kinds implies the glm_approximation block is present (and likewise for the other kinds)",
-    "a non-GLM Model cannot reach approved without this artifact (02 R3)"
+    "at least one of glm_approximation, shap_summary, ebm_shape_functions is present (FR-MODEL-33) — an artifact with no block is a fidelity statement about nothing, and it would satisfy R3",
+    "glm_approximation carries exactly one table: approximating_model_id, or the inline coefficients/relativities of an artifact written before 2026-08-19 (FR-MODEL-96)",
+    "a non-GLM Model cannot reach approved without this artifact (02 R3, FR-MODEL-89)"
   ]
 }

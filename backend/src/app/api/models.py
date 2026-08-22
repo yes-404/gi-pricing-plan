@@ -14,6 +14,7 @@
 | `GET` | `/groupings` | List groupings |
 | `POST` | `/model-specs/validate` | Check a spec without fitting (FR-MODEL-64) |
 | `POST` | `/models` | **202** Fit → Job; returns the existing model on `spec_hash` match |
+| `GET` | `/models` | List models, filtered and cursor-paginated (`00` §5.2) |
 | `GET` | `/models/{slug}` | The model artifact, latest or a named version |
 | `GET` | `/models/{slug}/diagnostics` | The stored diagnostics for a fitted model |
 | `POST` | `/models/{id}/submit` | Move a model to `pending_approval` |
@@ -43,10 +44,19 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import func, select
 
 from app.api.authz import requires
 from app.api.concurrency import IF_MATCH_DESCRIPTION, etag_for, require_if_match
 from app.api.deps import Caller, SettingsDep, job_identity
+from app.api.pagination import (
+    COUNT_CAP,
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    Page,
+    decode_cursor,
+    encode_cursor,
+)
 from app.api.responses import problems
 from app.db.models import ModelRow
 from app.db.session import Database
@@ -79,6 +89,7 @@ from model_schema import (
     Model,
     ModelComparison,
     ModelSpec,
+    ModelStatus,
     MonotonicDirection,
     Prediction,
     SpecValidation,
@@ -123,6 +134,62 @@ def _blob_store(request: Request) -> BlobStore:
 
 
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
+
+
+class DatasetFilter(BaseModel):
+    """The one filter the factor/banding/grouping list routes take (`02` §5.1).
+
+    A **query model** rather than three loose `Annotated[UUID | None, Query()]` parameters,
+    and `extra="forbid"` is the whole reason. FastAPI drops a query parameter no handler
+    declares, so an unrecognised filter is not an error — it is *nothing*, and the caller
+    gets `200` with the collection unfiltered. `02` §5.1 published this route as
+    `?dataset={slug}` while the code took `?dataset_id={uuid}`, so a caller copying the
+    page received every factor in the workspace and no indication that the filter had not
+    been applied. A wrong list is the one answer a caller cannot tell from a right one.
+
+    `extra="forbid"` turns that into a `422` naming the parameter — the same `ConfigDict`
+    every request body in this module already carries, now applied to the query string.
+    The cost is that a caller may not append arbitrary parameters to these routes, which is
+    the intended trade: this API has no undeclared filters to append.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_id: UUID | None = Field(
+        default=None,
+        description="Restrict to factors/bandings/groupings defined against this Dataset.",
+    )
+
+
+DatasetFilterDep = Annotated[DatasetFilter, Query()]
+
+
+class ModelFilter(BaseModel):
+    """`GET /models`' filters and cursor page (`00` §5.2).
+
+    `extra="forbid"` for `DatasetFilter`'s reason. `family` is the model family slug —
+    the lookup that motivated the route, because until it existed the only way to find a
+    model by family was to read the `models` table directly.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    family: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="Model family slug, exactly as `GET /models/{slug}` takes it.",
+    )
+    status: ModelStatus | None = Field(
+        default=None, description="Restrict to models in this lifecycle state."
+    )
+    cursor: str | None = Field(
+        default=None, description="Opaque; pass back the previous page's `next_cursor`."
+    )
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+
+
+ModelFilterDep = Annotated[ModelFilter, Query()]
 
 
 class FactorCreate(BaseModel):
@@ -224,11 +291,16 @@ async def create_factor(
 async def list_factors(
     caller: ReadModels,
     database: DatabaseDep,
-    dataset_id: Annotated[UUID | None, Query()] = None,
+    filters: DatasetFilterDep,
 ) -> list[Factor]:
+    """Filtered by Dataset (FR-MODEL-2), or the workspace's factors when unfiltered.
+
+    `?dataset_id=` and nothing else: an unrecognised parameter is a `422`, not a silently
+    unfiltered list — see `DatasetFilter`.
+    """
     async with database.session() as session:
         rows = await service.list_factors(
-            session, workspace_id=caller.workspace_id, dataset_id=dataset_id
+            session, workspace_id=caller.workspace_id, dataset_id=filters.dataset_id
         )
         return [service.to_factor(row) for row in rows]
 
@@ -320,11 +392,11 @@ async def create_banding(
 async def list_bandings(
     caller: ReadModels,
     database: DatabaseDep,
-    dataset_id: Annotated[UUID | None, Query()] = None,
+    filters: DatasetFilterDep,
 ) -> list[Banding]:
     async with database.session() as session:
         rows = await transform_service.list_bandings(
-            session, workspace_id=caller.workspace_id, dataset_id=dataset_id
+            session, workspace_id=caller.workspace_id, dataset_id=filters.dataset_id
         )
         return [transform_service.to_banding(row) for row in rows]
 
@@ -405,11 +477,11 @@ async def create_grouping(
 async def list_groupings(
     caller: ReadModels,
     database: DatabaseDep,
-    dataset_id: Annotated[UUID | None, Query()] = None,
+    filters: DatasetFilterDep,
 ) -> list[Grouping]:
     async with database.session() as session:
         rows = await transform_service.list_groupings(
-            session, workspace_id=caller.workspace_id, dataset_id=dataset_id
+            session, workspace_id=caller.workspace_id, dataset_id=filters.dataset_id
         )
         return [transform_service.to_grouping(row) for row in rows]
 
@@ -467,6 +539,71 @@ async def fit_model(
         response.status_code = status.HTTP_202_ACCEPTED
         response.headers["Location"] = f"/api/v1/jobs/{job.id}"
         return job
+
+
+@router.get(
+    "/models",
+    summary="List models",
+    responses=problems(400, 401, 403, 422),
+)
+async def list_models(
+    caller: ReadModels,
+    database: DatabaseDep,
+    filters: ModelFilterDep,
+) -> Page[Model]:
+    """Filtered, cursor-paginated (`00` §5.2), newest first.
+
+    Factors, bandings and groupings each published a list route and models did not, so the
+    only way to find a model whose slug you did not already know was to read the `models`
+    table. The endpoint audit reported a complete surface throughout, because it compares
+    the specification against the contract and a route in neither is invisible to it —
+    the same blind spot `01`'s reference lifecycle fell into.
+
+    **`flags` are not computed here.** FR-MODEL-67's flag is a read of the dataset
+    version's *current* status, one query per model (`flags_for`), so a page of 50 would be
+    51 round trips to decorate rows a caller is about to narrow down. Every listed model
+    therefore reports `[]`, and `GET /models/{slug}` is where the flag is answered — which
+    is also the only place it gates anything.
+
+    Sorted by id descending. Ids are UUIDv7 and therefore time-ordered, so one column gives
+    both a stable sort and a unique cursor.
+    """
+    after = decode_cursor(filters.cursor)
+
+    conditions = [ModelRow.workspace_id == caller.workspace_id]
+    if filters.family is not None:
+        conditions.append(ModelRow.model_family_slug == filters.family)
+    if filters.status is not None:
+        conditions.append(ModelRow.status == filters.status.value)
+
+    query = (
+        select(ModelRow)
+        .where(*conditions)
+        .order_by(ModelRow.id.desc())
+        .limit(filters.limit + 1)
+    )
+    if after is not None:
+        query = query.where(ModelRow.id < after)
+
+    async with database.session() as session:
+        rows = list((await session.execute(query)).scalars())
+        total = (
+            await session.execute(
+                select(func.count()).select_from(
+                    select(ModelRow.id).where(*conditions).limit(COUNT_CAP).subquery()
+                )
+            )
+        ).scalar_one()
+
+    # The extra row exists only to answer "is there another page?" and is not returned.
+    has_more = len(rows) > filters.limit
+    page_rows = rows[: filters.limit]
+
+    return Page[Model](
+        items=[service.to_model(row) for row in page_rows],
+        next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
+        total_estimate=total,
+    )
 
 
 @router.get(

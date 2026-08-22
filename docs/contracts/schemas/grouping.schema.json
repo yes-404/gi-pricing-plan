@@ -51,9 +51,11 @@
         "target_level_count": {"type": "integer", "minimum": 1},
         "credibility_components": {
           "type": ["object", "null"],
-          "properties": {"evpv": {"type": "number"}, "vhm": {"type": "number"},
+          "required": ["evpv", "vhm", "k"],
+          "properties": {"evpv": {"type": "number", "exclusiveMinimum": 0},
+                         "vhm": {"type": "number", "exclusiveMinimum": 0},
                          "k": {"type": "number", "exclusiveMinimum": 0}},
-          "description": "Buhlmann-Straub variance components, so a reviewer can re-derive Z rather than take it. Null under limited fluctuation (FR-MODEL-80)."},
+          "description": "Buhlmann-Straub variance components, so a reviewer can re-derive Z rather than take it. Null under limited fluctuation (FR-MODEL-80). All three are strictly positive because a non-positive EVPV or VHM is refused with CREDIBILITY_VARIANCE_NOT_ESTIMABLE rather than clamped (FR-MODEL-113) - only k carried the bound until 2026-08-22, so a zero or negative variance component validated against a contract the platform would never emit. NOTE: this k is EVPV/VHM, Buhlmann-Straub's credibility constant. It is NOT method_params.credibility_pk.k, which is limited fluctuation's tolerance (0.05). Two different quantities, one letter, one artifact."},
         "deviance_before": {"type": "number"},
         "deviance_after": {"type": "number"},
         "df_saved": {"type": "integer"},

@@ -832,3 +832,149 @@ async def test_a_fixed_alpha_model_still_records_no_cross_validation(
             session, workspace_id=workspace_id, model_id=model_id
         )
     assert diagnostics.cross_validation is None
+
+
+# -- OQ-PLAT-7: a handler's own error code has to survive the worker ----------------------
+#
+# `execute_job`'s generic `except Exception` stored `JOB_HANDLER_FAILED` for every
+# unexpected exception, `PlatformError` included, and `PlatformError.__init__` calls
+# `super().__init__(detail or title)` — so `str(exc)` is the prose and the `.code` was
+# dropped on the floor. The consequence is the one FR-PLAT-11 exists to prevent: a named
+# refusal reached the caller indistinguishable from a handler crash, and no test going
+# through the real dispatch path could assert a specific code. Two W5 refusal tests had to
+# call the handler function directly to get around it.
+#
+# Marked **FR-PLAT-11** rather than an `FR-MODEL` id: the requirement is `07` §3's — "Failed
+# Jobs record a typed error code, a human message, and — where the failure is deterministic
+# — the field-level cause" — and what is being fixed is the platform's job machinery, not
+# the modelling module. `backend/tests/test_worker.py`'s
+# `test_a_failing_handler_records_a_typed_error` carries the same mark for the other half
+# of the same behaviour.
+
+
+@pytest.mark.req("FR-PLAT-11")
+async def test_a_handler_raised_platform_error_keeps_its_own_code(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """Negative, through the real dispatch path: `model.fit` on a model that is not there.
+
+    The subject is `_fit`'s own `NOT_FOUND` guard (`model_handlers.py`, the spec load),
+    chosen over the deeper refusals — `MODEL_SPLIT_REQUIRED`, `MODELS_NOT_COMPARABLE` —
+    because it needs no dataset, no factors and no reservation. Nothing else in the path
+    can fail first, so a red here can only mean the worker lost the code.
+    """
+    from app.db.models import JobRow
+
+    actor = await _actuary(database, workspace_id)
+    missing = uuid4()
+
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(missing)},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert row is not None
+    assert row.error is not None
+    assert row.error["code"] == "NOT_FOUND", (
+        "the handler's own code must survive the worker; "
+        f"{row.error['code']!r} is what a caller would have to branch on"
+    )
+    assert row.error["code"] != "JOB_HANDLER_FAILED"
+    # `message` is the error's detail, not `str(exc)` dressed with a type name — and the
+    # detail names the id, which is what makes the failure actionable.
+    assert row.error["message"] == f"No model {missing}."
+    assert "PlatformError" not in row.error["message"]
+
+
+@pytest.mark.req("FR-PLAT-11")
+async def test_an_unexpected_exception_still_fails_as_job_handler_failed(
+    database: Database, blob_store: BlobStore, workspace_id, monkeypatch
+) -> None:
+    """The control on the test above: the new clause must not have swallowed everything.
+
+    Without this, a change that caught every exception and read some code off it would
+    leave the `NOT_FOUND` assertion green while `JOB_HANDLER_FAILED` — still the right
+    answer for a handler *bug* — had quietly stopped being reachable. Same job kind and
+    same payload as the `PlatformError` case, so the only variable is the exception type.
+    """
+    from app.db.models import JobRow
+    from app.worker import handlers as handler_registry
+
+    def boom(parameters, progress):
+        raise RuntimeError("the fit ran off the end of the world")
+
+    monkeypatch.setitem(handler_registry.HANDLERS, JobKind.MODEL_FIT, boom)
+
+    actor = await _actuary(database, workspace_id)
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(uuid4())},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert row is not None
+    assert row.error is not None
+    assert row.error["code"] == "JOB_HANDLER_FAILED"
+    assert row.error["message"] == "RuntimeError: the fit ran off the end of the world"
+    assert row.error["retryable"] is False
+
+
+@pytest.mark.req("FR-PLAT-11")
+async def test_a_platform_error_is_stored_as_not_retryable(
+    database: Database, blob_store: BlobStore, workspace_id, monkeypatch
+) -> None:
+    """OQ-PLAT-7 changed the stored *code*, and nothing about retry.
+
+    `RATE_LIMITED` is deliberate: its 429 is the one status an HTTP client is taught to
+    retry, so a clause that inferred retryability from `PlatformError.status_code` would
+    show up here and nowhere else. FR-PLAT-11 retries infrastructure failures, and a
+    handler that refused deterministically is not one — re-running it burns a worker to
+    produce the same refusal.
+    """
+    from app.db.models import JobRow
+    from app.worker import handlers as handler_registry
+
+    def refuse(parameters, progress):
+        raise PlatformError(
+            "RATE_LIMITED", "Too many requests", 429, "The upstream said to slow down."
+        )
+
+    monkeypatch.setitem(handler_registry.HANDLERS, JobKind.MODEL_FIT, refuse)
+
+    actor = await _actuary(database, workspace_id)
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(uuid4())},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert row is not None
+    assert row.error is not None
+    assert row.error["code"] == "RATE_LIMITED"
+    assert row.error["retryable"] is False, "a deterministic refusal is not retried"
+    assert row.error["message"] == "The upstream said to slow down."
