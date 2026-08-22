@@ -159,6 +159,19 @@ while blind.
   `items` made every tuple field in every contract invisible: `OneWayRow.severity_ci` was
   deliberately retyped from number to integer and the comparison passed.
 
+  **It was written again on 2026-08-22, in this file, hours after the line above was drafted.**
+  A new comparison collected `path.rsplit(".", 1)[-1]` and rebuilt `f"{block}.{name}"` — valid
+  only where every leaf sits one level below the block. `OneWayRow`'s two tuple fields arrive
+  as `…frequency_ci.[]` and `…severity_ci.[]`, whose last segment is `[]`, so the reassembly
+  asserted `…source_level_stats.[].[]`: a path neither side can produce. The test failed
+  unconditionally while saying nothing about the contract, and because it was red for a
+  plausible-looking reason it nearly read as a real finding.
+
+  **Never rebuild a path from a segment. Compare whole paths, as sets.** A dotted path is the
+  walker's output; splitting and rejoining it re-implements the walker, badly. That the same
+  trap caught the same file twice in one day is the argument for the rule rather than for
+  remembering the trap.
+
 ## A hand-copy of a shared shape is where divergence starts
 
 `OneWayRow` is computed once and shared by `01`'s profile and `02`'s factor workbench precisely
