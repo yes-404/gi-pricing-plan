@@ -109,11 +109,43 @@ Squash-merge rewrites history, so `git branch -d` **refuses** even when the cont
 fully merged. Never reach for `-D` without checking first:
 
 ```bash
-git diff --stat main <branch>      # must be empty
-git branch -D <branch>             # only then
+git fetch origin                          # local main goes stale the moment a PR merges
+git diff --stat origin/main <branch>      # must be empty
+git branch -D <branch>                    # only then
 ```
 
 Verify by **content**, not by PR status or git ancestry.
+
+**Compare against `origin/main`, not local `main`.** A PR merges on the server, so the
+local ref is behind until something pulls it — and against a stale `main` the diff lists
+the branch's own files as additions. That reads as "not merged" for a branch that is, which
+fails safe but for the wrong reason, and the next move after a misread is usually `-D`
+anyway.
+
+### `ExitWorktree` refuses for the same reason, and says something scarier
+
+Removing a worktree whose branch was squash-merged is refused:
+
+```
+Worktree has 1 commit on <branch>. Removing will discard this work permanently.
+Confirm with the user, then re-invoke with discard_changes: true
+```
+
+The commit is already on `main`. This is the `git branch -d` illusion above wearing
+different words — unmerged by **ancestry**, fully captured by **content** — but "discard
+this work permanently" invites either abandoning the cleanup or discarding blind, and the
+tool cannot tell the two situations apart because ancestry is all it has.
+
+Run the two-dot diff first. Empty means `discard_changes: true` is the correct answer and
+nothing is lost; non-empty means read it before doing anything.
+
+**Removing the worktree does not pull the merge.** The session returns to a main checkout
+still sitting at the pre-merge commit, so the files that just landed are absent from disk
+and `git status` reports `[behind 1]`. Finish the job:
+
+```bash
+git merge --ff-only origin/main
+```
 
 ## What goes in `.gitignore` — and what must not
 
@@ -216,6 +248,18 @@ grows one miss at a time; the standing plan (`CLAUDE.md` §2) is an always-runni
 aggregator job once branch protection arrives.
 
 ## Verified
+
+**2026-08-22 — PR #139, where `ExitWorktree` said "discard this work permanently" about
+work that was already on `main`.** The `(#N)` rule below was followed and the landed subject
+read back green — one `(#139)`, neither missing nor doubled — so the merge itself held. What
+was new is the cleanup: `ExitWorktree` refused, reporting one commit it would discard, for a
+branch whose `git diff --stat origin/main <branch>` was **empty**. The section above was
+written for `git branch -d` and did not mention the tool the harness actually offers, so the
+warning arrived with no procedure attached. Two things were confirmed rather than assumed:
+`discard_changes: true` lost nothing — both files were present in `6319d2d` afterwards — and
+removing the worktree left the main checkout at the *pre-merge* commit with the new files
+absent from disk, which is why the `--ff-only` line is now part of the procedure instead of
+something a reader is expected to think of.
 
 **2026-08-22 — PR #136, and the `(#136)` that never arrived.** Merged through the REST API
 rather than `gh pr merge`, passing `commit_title` as the bare PR title on the theory that
