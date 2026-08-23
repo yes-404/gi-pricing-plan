@@ -81,3 +81,57 @@ def test_a_known_catalogue_id_returns_its_rule() -> None:
     assert rule.slug == "column-presence"
     assert rule.check == "column_presence"
     assert rule.severity is Severity.FAIL
+
+
+@pytest.mark.req("FR-DATA-16")
+def test_a_stored_rule_can_name_the_catalogue_entry_it_came_from() -> None:
+    """Without this the only link back is the slug, which a workspace may version away from.
+
+    The frontend needs the id to show "VR-DST-1" beside a rule, and `profiles.ts` currently
+    hard-codes that rule's thresholds precisely because it has no way to ask.
+    """
+    from uuid import uuid4
+
+    from model_schema import ValidationRule
+
+    seeded = ValidationRule(
+        id=uuid4(),
+        slug="psi-column",
+        version=1,
+        layer=ValidationLayer.DISTRIBUTIONAL,
+        check="psi_column",
+        severity=Severity.WARN,
+        catalogue_id="VR-DST-1",
+    )
+    assert seeded.catalogue_id == "VR-DST-1"
+
+    own = ValidationRule(
+        id=uuid4(),
+        slug="our-own-rule",
+        version=1,
+        layer=ValidationLayer.STRUCTURAL,
+        check="column_presence",
+        severity=Severity.FAIL,
+    )
+    assert own.catalogue_id is None
+
+
+@pytest.mark.req("FR-DATA-16")
+def test_a_catalogue_id_that_names_no_catalogue_entry_is_refused() -> None:
+    """`extra="forbid"` catches a misspelled *field*; nothing caught a misspelled *value*."""
+    from uuid import uuid4
+
+    import pydantic
+
+    from model_schema import ValidationRule
+
+    with pytest.raises(pydantic.ValidationError):
+        ValidationRule(
+            id=uuid4(),
+            slug="psi-column",
+            version=1,
+            layer=ValidationLayer.DISTRIBUTIONAL,
+            check="psi_column",
+            severity=Severity.WARN,
+            catalogue_id="VR-DST-99",
+        )

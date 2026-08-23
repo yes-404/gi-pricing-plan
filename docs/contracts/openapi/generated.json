@@ -10421,6 +10421,17 @@
         "additionalProperties": false,
         "description": "One rule (`01` §4.3). A tagged union on `layer` + `check`.",
         "properties": {
+          "catalogue_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogue Id"
+          },
           "check": {
             "title": "Check",
             "type": "string"

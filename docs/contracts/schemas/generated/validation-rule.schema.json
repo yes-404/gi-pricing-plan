@@ -1,0 +1,110 @@
+{
+  "$defs": {
+    "Severity": {
+      "description": "What a violation means. `warn` is not \"ignore\" — it needs an acknowledgement.",
+      "enum": [
+        "warn",
+        "fail"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "ValidationLayer": {
+      "description": "The four layers of FR-DATA-16, all of which a Rule Set must cover.",
+      "enum": [
+        "structural",
+        "referential",
+        "actuarial_sanity",
+        "distributional"
+      ],
+      "title": "ValidationLayer",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One rule (`01` §4.3). A tagged union on `layer` + `check`.",
+  "properties": {
+    "catalogue_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Catalogue Id"
+    },
+    "check": {
+      "title": "Check",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "layer": {
+      "$ref": "#/$defs/ValidationLayer"
+    },
+    "message": {
+      "default": "",
+      "title": "Message",
+      "type": "string"
+    },
+    "params": {
+      "additionalProperties": true,
+      "title": "Params",
+      "type": "object"
+    },
+    "rationale": {
+      "default": "",
+      "title": "Rationale",
+      "type": "string"
+    },
+    "scope": {
+      "additionalProperties": true,
+      "title": "Scope",
+      "type": "object"
+    },
+    "severity": {
+      "$ref": "#/$defs/Severity"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
+    "status": {
+      "default": "approved",
+      "title": "Status",
+      "type": "string"
+    },
+    "target": {
+      "additionalProperties": true,
+      "title": "Target",
+      "type": "object"
+    },
+    "tolerance": {
+      "additionalProperties": true,
+      "title": "Tolerance",
+      "type": "object"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "version",
+    "layer",
+    "check",
+    "severity"
+  ],
+  "title": "ValidationRule",
+  "type": "object"
+}

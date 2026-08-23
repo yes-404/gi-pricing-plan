@@ -44,6 +44,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "peril-structure",
     "profile",
     "transparency-artifact",
+    "validation-rule",
 )
 
 

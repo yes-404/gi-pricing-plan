@@ -94,6 +94,18 @@ class ValidationRule(BaseModel):
     message: str = ""
     rationale: str = ""
     status: str = "approved"
+    #: The `01` §4.4 catalogue entry this row was seeded from, or `None` for a workspace's
+    #: own rule (FR-DATA-53). Not a foreign key and not a slug: a workspace may version a
+    #: seeded rule and change its slug, and the catalogue id is what survives that.
+    catalogue_id: str | None = None
+
+    @model_validator(mode="after")
+    def _catalogue_id_names_a_catalogue_entry(self) -> ValidationRule:
+        if self.catalogue_id is not None and self.catalogue_id not in BUILTIN_RULES:
+            raise ValueError(
+                f"catalogue_id {self.catalogue_id!r} names no rule in `01` §4.4's catalogue"
+            )
+        return self
 
 
 class RuleSetEntry(BaseModel):

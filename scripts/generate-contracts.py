@@ -109,6 +109,14 @@ GENERATED_SHAPES: dict[str, str] = {
     # the contract promises and the model does not carry is a wrong number on a screen
     # rather than a documentation defect.
     "profile": "Profile",
+    # Added 2026-08-23 (W32-2, the built-in rule catalogue). `validation-rule.schema.json`
+    # is a hand-authored Phase-0 contract with no generated counterpart, so nothing has ever
+    # compared it against `ValidationRule` — and it had drifted three ways: a `severity`
+    # enum containing `"info"`, which `Severity` has never had; a `check` enum missing most
+    # of the registry; and two fields the model does not carry (`owner`,
+    # `dry_run_result_id`). Patching those would leave the mechanism that produced them in
+    # place, which is what FR-PLAT-48 exists to remove.
+    "validation-rule": "ValidationRule",
 }
 
 

@@ -2,16 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.gi-pricing.dev/validation-rule.schema.json",
   "title": "ValidationRule",
-  "description": "One named check. Tagged union on `check`. See 01-data-management.md §4.3 and §4.5.",
+  "description": "One named check. Tagged union on `check`. See 01-data-management.md §4.3 and §4.5. Reconciled against `model_schema.ValidationRule` on 2026-08-23 (W32-2, FR-DATA-53), when the shape first gained a generated counterpart under `generated/` and FR-PLAT-48's drift guard. This file was the wrong side on three counts and the code the right one: `severity` listed `info`, which `Severity` has never had and which §4.4's 2026-08-15 amendment ruled out (a rule carries one severity); `check` enumerated a vocabulary that never matched `pricing_core.data.validate.CHECKS` — `set_membership` and `uniqueness` are not registered and most of the registry was absent — while §4.5 says the vocabulary is enforced when the rule *runs*, not when it is authored; and `owner` and `dry_run_result_id` are carried by no field of the model and emitted by no projection (`app.platform.validation_rules.to_schema`). The dry-run obligation FR-DATA-21 states is real and lives on the row (`validation_rules.dry_run_report_id`, note the name) and in `approved_rule_dry_run_and_separate_approver`; it was never part of this wire shape.",
   "type": "object",
   "required": ["layer", "check", "severity", "target", "message", "rationale"],
   "properties": {
     "layer": {"enum": ["structural", "referential", "actuarial_sanity", "distributional"]},
     "check": {
-      "enum": ["range", "set_membership", "regex", "uniqueness", "not_null", "relationship",
-               "expression", "aggregate", "reference_lookup", "distribution_compare", "sql"]
+      "type": "string",
+      "description": "A name registered in `pricing_core.data.validate.CHECKS`. Not enumerated here: §4.5 enforces the vocabulary when the rule runs — an unknown check produces an `error` outcome that FR-DATA-19 refuses to count as a pass — and an enum copied into this file is a second register that drifts, which is what it did."
     },
-    "severity": {"enum": ["fail", "warn", "info"]},
+    "severity": {"enum": ["fail", "warn"]},
+    "catalogue_id": {"type": ["string", "null"],
+      "description": "The 01 §4.4 catalogue entry this rule was seeded from, or null for a workspace's own rule (FR-DATA-53)."},
     "status": {"enum": ["draft", "review", "approved", "deprecated"]},
     "target": {
       "type": "object",
@@ -38,10 +40,7 @@
       }
     },
     "message": {"type": "string"},
-    "rationale": {"type": "string", "minLength": 1},
-    "owner": {"type": "string"},
-    "dry_run_result_id": {"type": ["string", "null"], "format": "uuid",
-      "description": "Required before submission (FR-DATA-21)."}
+    "rationale": {"type": "string", "minLength": 1}
   },
   "allOf": [
     {"$ref": "common/artifact-envelope.schema.json"},
