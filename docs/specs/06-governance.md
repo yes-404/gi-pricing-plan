@@ -552,7 +552,7 @@ governance-heavy: [`wf-05-custom-objective-lifecycle.md`](../workflows/wf-05-cus
 
 | From | What |
 |---|---|
-| `07-platform` | Authenticated principals, user directory/OIDC claims, notification channels, job identity for `system` audit events |
+| `07-platform` | Authenticated principals **and their workspace memberships** (FR-PLAT-62, FR-PLAT-63 — the identity endpoint carries the list a selector renders), user directory/OIDC claims, notification channels, job identity for `system` audit events |
 
 **Not a dependency:** the artifact states, evidence artifacts and flags that gate approval
 (FR-GOV-17) are **pushed to** this module by `01`–`05` — they appear in those modules'
