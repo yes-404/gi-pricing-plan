@@ -3,10 +3,14 @@
 This file gives Claude Code the context, conventions, and roadmap to develop this project
 continuously and consistently. Read it fully before making changes.
 
-## 0. CURRENT PROJECT PHASE: 1a — DATA WORKBENCH (read this before anything else)
+## 0. CURRENT PROJECT PHASE: 1b — MODELLING WORKBENCH (read this before anything else)
 
-**Phase 0 (Specification) closed 2026-08-14. Phase 1a is active, and writing application
-code is now the expected default** for work inside its scope (§9).
+**Phase 0 closed 2026-08-14; Phase 1a closed 2026-08-15. Phase 1b is active, and writing
+application code is the expected default** for work inside its scope (§9).
+
+**Which workstreams are open is `docs/roadmap.md` §6's to state, not this file's.** The
+phase line above sat at "1a" for eight days after 1a's exit demo was accepted — the same
+failure §9 already records, one section further down.
 
 The specification suite in `docs/` is the contract Phase 1 builds against: module specs,
 workflow journeys, ADRs, and the artifact contracts and numbered requirements they define.
@@ -17,7 +21,7 @@ precise enough that guessing is never the faster path.
 
 | Request | Deliverable |
 |---|---|
-| Implement something inside Phase 1a's scope (§9) | **Code**, plus any spec change the implementation proves necessary |
+| Implement something inside the current phase's scope (§9) | **Code**, plus any spec change the implementation proves necessary |
 | Add a capability not yet specified | **Spec change first**, then code — the spec is the design step, not paperwork |
 | Something in a later phase (rating, optimisation, monitoring, governance UI) | **Spec change only.** Do not build ahead of the phase |
 | A design choice the specs leave open | Record it in `docs/open-questions.md` with options and a recommendation; do not silently pick one |
@@ -39,10 +43,11 @@ the thing a governed system cannot afford to lose.
   the demo guide derived rather than written.
 - Every spec change runs `python3 scripts/audit-docs.py` before commit.
 - `.claude/skills/` holds the procedures for this repo; §12's maintenance rules apply.
-- The retrofit-impossible foundations (`docs/roadmap.md` §5) land in Phase 1a. Audit writes
-  share the caller's transaction, artifacts are immutable, money is integer minor units,
-  `model-schema` is the single source of truth (§2). **These are not deferrable to a later
-  phase** — retrofitting any of them is a rewrite, and Phase 1a is where they are cheap.
+- The retrofit-impossible foundations (`docs/roadmap.md` §5) **landed in Phase 1a**: audit
+  writes share the caller's transaction, artifacts are immutable, money is integer minor
+  units, `model-schema` is the single source of truth (§2). They are now invariants to be
+  preserved, not work to be scheduled — regressing one is the same rewrite that deferring
+  it would have been.
 
 ## 1. Project Mission
 
@@ -63,11 +68,14 @@ the maths.
 ├── CLAUDE.md                 ✔ this file — phase, conventions, roadmap
 ├── LICENSE                   ✔ Apache-2.0 (OQ-OVR-2)
 ├── .gitignore                ✔ see .claude/skills/git-hygiene
+├── alembic.ini               ✔ migrations — §11 has the DSN it does *not* default to
+├── .github/workflows/        ✔ python.yml · frontend.yml · docs.yml, path-filtered
 ├── pyproject.toml            ✔ uv workspace root; ruff, mypy, pytest config
 ├── uv.lock                   ✔ COMMITTED — a lockfile, not an environment
 ├── .importlinter             ✔ ADR-0001/0002/DEP-3 — 3 contracts, enforced in CI
 │
 ├── docs/                     ✔ the specification suite — still authoritative
+│   ├── README.md             ✔ the fuller index of the suite (§4 is the one-line version)
 │   ├── specs/                ✔ 00–07, the contract code is written against
 │   ├── workflows/            ✔ wf-01…05, the end-to-end journeys
 │   ├── adr/                  ✔ architecture decisions
@@ -100,7 +108,8 @@ the maths.
 ├── deploy/                   ✔ compose stack verified, 21 s cold start    [W1]
 ├── tests/                    ✔ repository invariants — enforcement the audit can see
 ├── scripts/                  ✔ audit-docs · req-coverage · scope-audit · generate-
-│                               contracts · bench-data · bench-model · demo (§11 runs them)
+│                               contracts · bench-data · bench-model · demo ·
+│                               graphify-docs-extract (§11 runs them)
 ├── .claude/notes/            ✔ maintainer notes, `NT-NNNN` (audit-docs checks them)
 ├── .claude/skills/           ✔ project procedures, written and vendored (§12)
 └── .claude/agents/           ✔ delegable specialists — own context, not the turn's (§12)
@@ -125,10 +134,6 @@ make the repository a Python project.
 **CI is path-filtered per component.** GitHub applies `paths:` at workflow level, not per
 job, so each component gets its own workflow file — a docs-only change must not resolve
 Python dependencies, and neither side should wait on the other's toolchain.
-
-> **If branch protection is ever enabled**, do not mark a path-filtered workflow as a
-> required check. A required check that does not run on a given PR blocks it forever. Add an
-> always-running aggregator job instead.
 
 ### The seam between backend and frontend
 
@@ -186,7 +191,10 @@ Standing architecture rules (already decided — do not reopen without an ADR):
   Alembic; PostgreSQL 16; Celery + Redis for long-running jobs
 - Data engine: Polars (dataframes) + DuckDB (ad-hoc aggregation). No pandas in new code
   except at unavoidable library boundaries.
-- GLM fitting: `glum` (primary), `statsmodels` (fallback diagnostics)
+- GLM fitting: `glum`. **`statsmodels` is not a dependency and never has been** — it is
+  named in `02` §8 for FR-MODEL-51, but the type-III block was built on `glum` refits
+  instead. That spec row is stale, and correcting it is a §0 resolution rather than a
+  deletion here
 - **Gradient boosting: XGBoost (primary GBM) and LightGBM (secondary), both with
   monotonic constraint support.** interpret/EBM for transparent ML.
 - **Custom objectives are a first-class capability**: user-defined objective and eval
@@ -200,20 +208,23 @@ Standing architecture rules (already decided — do not reopen without an ADR):
   (`01-data-management.md` §3.3, and §4.4's catalogue of named rules). **Not pandera** —
   §4.4 records why, and the repository depends on it nowhere
 - Rating execution: GoRules ZEN Engine (JSON decision graphs) wrapped by pricing-core
-- Ruff (line 100), mypy --strict on packages/, pytest + hypothesis
+- Ruff (line 100), mypy --strict over `packages/*/src` **and `backend/src`**, pytest +
+  hypothesis
 
 ### Frontend
 - Vue 3 Composition API (`<script setup lang="ts">` only), Vite, TS strict, Pinia,
   Vue Router, pnpm, Tailwind
-- ECharts via vue-echarts (diagnostics), TanStack Table (factor/rate tables),
-  Vue Flow (rating DAG designer)
+- ECharts via vue-echarts (diagnostics). **Named as the intended choice, not yet
+  installed:** TanStack Table (factor/rate tables — the W5 factor workbench shipped
+  without it), Vue Flow (rating DAG designer, Phase 2)
 - API client generated from OpenAPI (`openapi-typescript`); never hand-written types
 - Vitest + Vue Testing Library; Playwright E2E later
 
 ## 4. Documentation Suite — the module map
 
-**§2 has the layout.** This is what each document is *for*, which nothing else states in
-one place.
+**§2 has the layout; [`docs/README.md`](docs/README.md) is the fuller index.** This table
+is the one-line version, kept here so §0's deliverable question can be answered without
+leaving the file.
 
 | Spec | Covers |
 |---|---|
@@ -262,18 +273,16 @@ Requirement IDs are permanent: never renumber, only append or mark superseded.
 
 ## 6. Dataset Validation — *superseded by `01-data-management.md`*
 
-This section was the **brief** for writing that spec. It is now written, with 40 `FR-DATA`
-requirements, four validation layers in §3.3, and a catalogue of named rules in §4.4.
-Read `docs/specs/01-data-management.md`.
-
-The number stays here rather than being reclaimed: **section numbers are cited from a dozen
-other files** and behave like every other identifier in this repository (§5) — assigned
-once, never renumbered, never reused.
+Read that spec. The number is kept, not reclaimed: §5's permanence rule covers section
+numbers as well as requirement ids.
 
 ## 7. Domain Model (shared vocabulary — use these names in every doc)
 
-- **Dataset**: immutable versioned snapshot of policy/claims/exposure data; carries its
-  validation report and status (`draft → validated → archived`).
+- **Dataset / Dataset Version**: a Dataset is a named container and holds no data; a
+  **Dataset Version** is the immutable snapshot, carrying its validation report, profile
+  and status (`draft → validated → archived`). **Modelling references a Dataset Version,
+  never a Dataset.** `00-overview.md` §2 is authoritative for this and every term below —
+  it says so itself, and this list is the seed it restates and extends.
 - **Factor / Level / Banding / Grouping**: rating variables and their transformations;
   groupings are first-class auditable operations.
 - **Model**: fitted statistical model for one peril/response. Types: `glm`, `xgboost`,
@@ -299,16 +308,12 @@ Actuarial correctness defaults (specs must not contradict these):
 - Standard errors / uncertainty surfaced with every estimate; money is integer
   pence/cents or Decimal in the rating path, never float.
 
-## 8. skills-map.md — *folded into §10*
-
-Its one binding instruction — **update `docs/skills-map.md` in the same PR as any spec
-change that adds or alters a tech dependency** — is stated in §10 among the other document
-rules, where a reader looking for "what must I update?" will actually find it.
+## 8. skills-map.md — *folded into §10*, which carries its one binding instruction.
 
 ## 9. Roadmap — *the plan lives in `docs/roadmap.md`*
 
-**Phase 1a — Data Workbench is current.** Exit: a freMTPL2 dataset version reaches
-`validated`, having been through the failure loop at least once.
+**Phase 1b — Modelling Workbench is current.** Exit: `wf-01` end to end on freMTPL2.
+`docs/roadmap.md` §6 is the authority on which workstreams within it are open.
 
 Everything else about the plan — the phase list, workstream rows, closure records, decision
 gates, the retrofit-impossible list, and which workstreams are closed — is in
@@ -319,9 +324,9 @@ nobody updates is the one that gets read first.
 The two things worth keeping here, because they change how you work rather than what is
 planned:
 
-- **The retrofit-impossible foundations land in Phase 1a** (`docs/roadmap.md` §5) —
+- **The retrofit-impossible foundations landed in Phase 1a** (`docs/roadmap.md` §5) —
   audit-in-transaction, artifact immutability, integer money, the Job model,
-  `model-schema` as SSOT. Not deferrable: retrofitting any of them is a rewrite.
+  `model-schema` as SSOT. Preserve them: regressing one is a rewrite.
 - **Do not build ahead of the phase** (§0's table). A later phase's capability is a spec
   change, not code.
 
@@ -355,26 +360,17 @@ planned:
 Every turn re-reads the whole accumulated context, so anything that enters it is paid for
 again on each turn after. A session that ends at 900k tokens costs several times one that
 stays under 200k, and on a subscription that is rate-limit headroom rather than money.
-Measured over 2026-08-14 → 08-19 (11 722 assistant messages): **73% of spend came from
-calls carrying more than 200k tokens of context**, and two marathon sessions were 38% of
-it. The two rules below are the half of that which is Claude's to follow.
+Measured once over 2026-08-14 → 08-19 and **not maintained since** — §0 says counts that
+change are not written here, and this one is kept only because it is a closed historical
+measurement rather than a status: **73% of spend came from calls carrying more than 200k
+tokens of context**. The two rules below are the half of that which is Claude's to follow.
 
 - **Delegate noisy investigation to a subagent.** Grep sweeps, log trawls, broad
   multi-file searches — spawn one with the Agent tool and keep the conclusion, not the
   file dumps. A subagent's context is discarded when it returns; the main thread's is not.
-  That week's 5 493 tool calls included **21** Agent calls, which is why the tail ran as
-  long as it did.
 - **Read bounded ranges, not whole files.** `sed -n '100,160p'`, `grep -n -C3`, `head`,
   and a `wc -l` before anything large. `cat`-ing a whole file to find one function puts
-  the whole file in context permanently, and re-reads it every turn thereafter. 4 884 of
-  those 5 493 tool calls were Bash against 52 Read calls — whole-file dumps are where the
-  context went.
-
-The session-level levers belong to the maintainer and are set at launch, not here:
-`claude --autocompact <100k–1M>` compacts earlier than the 1M default, `/clear` at task
-boundaries resets the base every later turn pays for, and `--model sonnet` suits
-mechanical work. Cache TTL is **not** a lever — writes were 17% of that week's cost, and
-a shorter TTL trades that for lost cache hits.
+  the whole file in context permanently, and re-reads it every turn thereafter.
 
 ## 11. Commands Reference
 
@@ -419,14 +415,6 @@ uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item c
 # wall-clock for that reason; quote the load with every number, and re-take a headline
 # figure in a quiet window before recording it in a spec.
 uv run python scripts/bench-model.py --only curve   # one phase at a time
-
-# ADR-0001's promise, made usable (OQ-OVR-4, decided 2026-08-14). `pricing-core` is not
-# published to PyPI in Phase 1 — publishing would force semver stability on an API still
-# being discovered — so this is how a reviewer runs the maths outside the platform.
-# From Phase 2 it publishes as `0.x` with an explicit no-stability-guarantee notice.
-# `uv venv` ships no pip, so a bare `pip install -e` fails; use `uv pip install --python`.
-uv venv .venv-review && uv pip install --python .venv-review/bin/python \
-    -e packages/pricing-core
 
 # The demo entrance (FR-PLAT-53). One command from a clean checkout to a browser: compose,
 # migrations, freMTPL2 seeded through the real Job path, the API and the frontend, with a
@@ -475,35 +463,18 @@ Project-specific procedures live in `.claude/skills/`, versioned with the repo s
 travel with it. **`.claude/skills/README.md` is the index** — it lists every skill, records
 why each was added, and carries the provenance, security-review dates and local
 modifications for the vendored sets. Read it when starting work on an unfamiliar part of
-the suite; it is the authority on what is installed, not this section.
-
-- **Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`,
-  `phase-review`, `adr-write`, `contract-schema`, `contract-guard`, `library-spike`,
-  `git-hygiene`, `python-package`, `python-test`, `fastapi-service`, `vue-frontend`.
-- **Vendored, subject matter:** `python-skills` (CI, security, testing, code quality,
-  secret hygiene), `vue3-skills` (Vue 3, router, Pinia, testing, composables),
-  `ui-ux-pro-max` (colour, typography, accessibility, chart choice).
-- **Vendored, process:** `superpowers` — how work is approached, not what it is about.
-- **Vendored, working memory:** `planning-with-files` — plan state on disk that survives
-  `/clear`, compaction and session death.
-- **Installed by its own tool:** `graphify` (`/graphify`) — the repository as a traversable
-  knowledge graph. Refreshed by re-running `graphify install`, never by editing its files;
-  `graphify-out/` is git-ignored. Two things its installer does are deliberately not
-  committed, and re-running it reintroduces both — the README has the detail.
+the suite; it is the authority on what is installed, and **this section deliberately keeps
+no second list** — one existed, went stale, and disagreed with the README it pointed at.
+`graphify` is the only skill installed by its own tool rather than committed by hand;
+`.claude/CLAUDE.md` carries its rules, including the one about real data.
 
 Skills that teach an approach §3 has decided against were **not** taken (Options API, JSX,
 React/shadcn), because a skill teaching a rejected approach is worse than a missing one. The
 same test governs `.claude/agents/` — only **three** of upstream's 158 survived it, and
 `.claude/agents/README.md` records what each is for and why the rest were refused.
-Vendored skills are kept as upstream wrote them and excluded from `ruff`, with three recorded
-exceptions — two a path variable that does not resolve for a project-level checkout, and the
-plan directory the superpowers set writes to (`docs/plans/`, where the audit can read it).
-All three are evidenced in the README.
 
-**graphify's semantic pass over docs, PDFs and images calls a configured LLM provider.**
-Code extraction is local tree-sitter and always safe; the semantic pass must never be
-pointed at real policy, claims or exposure data. `examples/`'s freMTPL2 is public and is
-the exception.
+**Vendored files are kept as upstream wrote them** and excluded from `ruff`; every
+deviation is recorded in `.claude/skills/README.md` rather than made silently.
 
 ### Subagents — evidence is delegated, verdicts are not
 

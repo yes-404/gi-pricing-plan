@@ -18,6 +18,23 @@ contract failure by adding the module to the allow-list** — the failure means 
 in the wrong package. ADR-0001's value is that a reviewer can reproduce a number without
 the platform, and one convenience import ends that.
 
+### Proving that promise — how a reviewer actually runs `pricing-core` standalone
+
+OQ-OVR-4, decided 2026-08-14: `pricing-core` is **not published to PyPI in Phase 1**, since
+publishing would force semver stability on an API still being discovered. From Phase 2 it
+publishes as `0.x` with an explicit no-stability-guarantee notice. Until then this is the
+only way to exercise ADR-0001's promise, and it is worth running whenever a contract is
+edited — a boundary that holds under `lint-imports` can still fail at import time.
+
+```bash
+# `uv venv` ships no pip, so a bare `pip install -e` fails; use `uv pip install --python`.
+uv venv .venv-review && uv pip install --python .venv-review/bin/python \
+    -e packages/pricing-core
+```
+
+*(Moved here from `CLAUDE.md` §11 on 2026-08-23: it is a reviewer's procedure about this
+package's boundaries, not a command any session runs.)*
+
 `src/` layout throughout; `uv` workspace with **one lockfile at the root**.
 
 ```bash

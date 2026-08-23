@@ -244,8 +244,17 @@ was found.
 
 Two filters here were each missing a directory of real Python — `scripts/**`, then
 `examples/**` — both found the same way, months apart. A filter enumerating directories
-grows one miss at a time; the standing plan (`CLAUDE.md` §2) is an always-running
-aggregator job once branch protection arrives.
+grows one miss at a time.
+
+### If branch protection is ever enabled
+
+**Do not mark a path-filtered workflow as a required check.** A required check that does
+not run on a given PR never reports, and the PR is blocked forever — a docs-only change
+would sit waiting on `python.yml`, which its own `paths:` filter guarantees will never
+fire. Add an always-running aggregator job and require *that* instead.
+
+*(Moved here from `CLAUDE.md` §2 on 2026-08-23: it is PR-flow procedure, conditional on
+something that has not happened, and an always-loaded file is the wrong place for both.)*
 
 ## Verified
 
