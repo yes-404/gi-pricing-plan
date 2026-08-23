@@ -7780,7 +7780,8 @@
             "enum": [
               "glm",
               "xgboost",
-              "lightgbm"
+              "lightgbm",
+              "ebm"
             ],
             "title": "Model Type",
             "type": "string"
@@ -10190,12 +10191,13 @@
         "type": "object"
       },
       "UnavailableReason": {
-        "description": "Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's.\n\n**All four are reachable from 2026-08-19** (FR-MODEL-100, the paired-quantile slice).\nTwo of them — `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` — were declared\nhere and returned by nothing until that slice, named in place under FR-MODEL-87's\nstaging rule. That note is removed with the state it described rather than left\ndescribing a platform which has moved on.\n\nWhat those two *mean* was not decided by FR-MODEL-77, which named them and stopped.\nFR-MODEL-100 decides both, as requirements rather than as implementation choices,\nbecause each had two defensible readings and the built one is the one a reader will\nassume was specified.",
+        "description": "Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's\nand FR-MODEL-124's.\n\n**All four of FR-MODEL-77's and FR-MODEL-93's are reachable from 2026-08-19**\n(FR-MODEL-100, the paired-quantile slice); the fifth, `MODEL_TYPE_HAS_NO_INTERVAL`,\narrives with the EBM predict arm on 2026-08-23 (FR-MODEL-124).\nTwo of them — `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` — were declared\nhere and returned by nothing until that slice, named in place under FR-MODEL-87's\nstaging rule. That note is removed with the state it described rather than left\ndescribing a platform which has moved on.\n\nWhat those two *mean* was not decided by FR-MODEL-77, which named them and stopped.\nFR-MODEL-100 decides both, as requirements rather than as implementation choices,\nbecause each had two defensible readings and the built one is the one a reader will\nassume was specified.",
         "enum": [
           "no_interval_models_fitted",
           "interval_models_not_approved",
           "interval_models_stale",
-          "covariance_not_stored"
+          "covariance_not_stored",
+          "model_type_has_no_interval"
         ],
         "title": "UnavailableReason",
         "type": "string"

@@ -779,17 +779,25 @@ async def test_a_crossing_pair_is_refused_rather_than_reordered(
 
 
 @pytest.mark.req("FR-MODEL-87")
+@pytest.mark.req("FR-MODEL-124")
 def test_every_unavailable_reason_is_returned_by_the_platform() -> None:
     """FR-MODEL-87's staging rule, as a check rather than as a sentence.
 
     Two of these were declared and unreachable until this slice, and the docstrings saying
     so have been removed. This is what stops that removal being a claim: if a member is ever
     added, or one stops being produced, the set stops matching and this fails.
+
+    It fired as designed on 2026-08-23: `MODEL_TYPE_HAS_NO_INTERVAL` was added for the EBM
+    predict arm (FR-MODEL-124) and this test failed until the new member was listed here.
+    The EBM arm in `app.platform.prediction` returns it, so listing it is the resolution
+    rather than a weakening — `backend/tests/test_prediction.py` holds the test that shows
+    a scored EBM actually carries it.
     """
     returned = {
         UnavailableReason.NO_INTERVAL_MODELS_FITTED,
         UnavailableReason.INTERVAL_MODELS_NOT_APPROVED,
         UnavailableReason.INTERVAL_MODELS_STALE,
         UnavailableReason.COVARIANCE_NOT_STORED,
+        UnavailableReason.MODEL_TYPE_HAS_NO_INTERVAL,
     }
     assert returned == set(UnavailableReason)
