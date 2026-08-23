@@ -102,9 +102,12 @@ class UncertaintyKind(enum.StrEnum):
 
 
 class UnavailableReason(enum.StrEnum):
-    """Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's.
+    """Why a prediction carries no interval — FR-MODEL-77's vocabulary, plus FR-MODEL-93's
+    and FR-MODEL-124's.
 
-    **All four are reachable from 2026-08-19** (FR-MODEL-100, the paired-quantile slice).
+    **All four of FR-MODEL-77's and FR-MODEL-93's are reachable from 2026-08-19**
+    (FR-MODEL-100, the paired-quantile slice); the fifth, `MODEL_TYPE_HAS_NO_INTERVAL`,
+    arrives with the EBM predict arm on 2026-08-23 (FR-MODEL-124).
     Two of them — `INTERVAL_MODELS_NOT_APPROVED` and `INTERVAL_MODELS_STALE` — were declared
     here and returned by nothing until that slice, named in place under FR-MODEL-87's
     staging rule. That note is removed with the state it described rather than left
@@ -133,6 +136,13 @@ class UnavailableReason(enum.StrEnum):
     #: where the matrix is `p x p`. A blob that *should* exist and does not is a platform
     #: fault and surfaces as one; it is not this reason.
     COVARIANCE_NOT_STORED = "covariance_not_stored"
+    #: FR-MODEL-124. An EBM. Not "no pair was fitted" (FR-MODEL-77) — `interval_for` lives
+    #: on `GbmSpec` and an EBM cannot have one, so that reason would tell a reader to do
+    #: something the schema forbids. Not `covariance_not_stored` either: there is no matrix
+    #: that was not kept. An EBM is a sum of exported lookup tables and the tables are the
+    #: whole model, so the absence is a property of the model *type* and no refit changes
+    #: it.
+    MODEL_TYPE_HAS_NO_INTERVAL = "model_type_has_no_interval"
 
 
 class IntervalModels(BaseModel):
@@ -320,7 +330,7 @@ class Prediction(BaseModel):
     model_id: UUID
     model_family_slug: str
     version: int = Field(ge=1)
-    model_type: Literal["glm", "xgboost", "lightgbm"]
+    model_type: Literal["glm", "xgboost", "lightgbm", "ebm"]
     uncertainty: Uncertainty
     rows: tuple[PredictedRow, ...]
 
