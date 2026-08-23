@@ -37,6 +37,7 @@ from model_schema import (
     FactorType,
     GbmFunctionRef,
     GbmSpec,
+    Grouping,
     LossTreatment,
     MetricDirection,
     MetricStatus,
@@ -593,17 +594,49 @@ def test_a_declared_interaction_group_reaches_the_backend(backend: str) -> None:
 # --------------------------------------------------------------------------------------
 
 
-def _diagnose(backend: str, factors: list[Factor] | None = None):  # type: ignore[no-untyped-def]
+def _diagnose(  # type: ignore[no-untyped-def]
+    backend: str,
+    factors: list[Factor] | None = None,
+    *,
+    data: pl.DataFrame | None = None,
+    bandings: dict[Any, Banding] | None = None,
+    groupings: dict[Any, Grouping] | None = None,
+):
+    """The established diagnostics driver.
+
+    `data` overrides both partitions with **one** deterministic frame. Two independent
+    random draws cannot pin down an exposure profile, and the tests below assert on the
+    exact share the sweep reports — so a caller checking arithmetic passes the frame it
+    constructed rather than trusting a second draw to resemble the first.
+    """
     from pricing_core.modelling import compute_gbm_diagnostics
 
     use = factors or FACTORS
-    train, holdout = _frequency_data(), _frequency_data(n=3_000, seed=4242)
-    fit = fit_gbm(train, _spec(backend, factors=tuple(f.id for f in use)), use)
+    if data is None:
+        train, holdout = _frequency_data(), _frequency_data(n=3_000, seed=4242)
+    else:
+        train = holdout = data
+    spec = _spec(backend, factors=tuple(f.id for f in use))
+    fit = fit_gbm(train, spec, use, bandings=bandings, groupings=groupings)
     return fit, compute_gbm_diagnostics(
-        fit.result, fit.booster_bytes,
-        _spec(backend, factors=tuple(f.id for f in use)), use,
+        fit.result, fit.booster_bytes, spec, use,
         train=train, holdout=holdout, eval_curve=fit.eval_curve,
+        bandings=bandings, groupings=groupings,
     )
+
+
+def _curve_for(diagnostics, factor_slug: str):  # type: ignore[no-untyped-def]
+    """The one partial-dependence curve for a factor, or a failure naming what was there.
+
+    A bare `[0]` on an empty list raises `IndexError` and tells the reader nothing about
+    which factors the diagnostics actually carried.
+    """
+    assert diagnostics.gbm is not None
+    for curve in diagnostics.gbm.partial_dependence:
+        if curve.factor == factor_slug:
+            return curve
+    available = [curve.factor for curve in diagnostics.gbm.partial_dependence]
+    raise AssertionError(f"no curve for {factor_slug!r}; got {available}")
 
 
 @pytest.mark.req("FR-MODEL-54")
@@ -666,18 +699,65 @@ def test_permutation_importance_degrades_the_holdout_when_signal_is_destroyed(
 
 @pytest.mark.req("FR-MODEL-52")
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_partial_dependence_carries_the_exposure_share_of_each_point(backend: str) -> None:
-    """A partial dependence curve is most dramatic exactly where the book is thinnest.
+def test_partial_dependence_shares_are_exposure_and_not_row_counts(backend: str) -> None:
+    """A frame where the two definitions disagree by construction.
 
-    The share rides with every point so a spike over 0.2 % of exposure cannot be read as a
-    rating signal by a chart that never had the denominator.
+    `rare` has few rows and almost all the exposure; `common` has most of the rows and
+    almost none. A row-count share ranks and reports them one way and an exposure share the
+    other, so this test can only pass under one of the two definitions — which the previous
+    `sum == approx(1.0)` assertion could not distinguish, and did not.
     """
-    _, diagnostics = _diagnose(backend)
-    assert diagnostics.gbm is not None
-    curves = {c.factor: c for c in diagnostics.gbm.partial_dependence}
-    area = curves["area"]
-    assert [p.value for p in area.points] == ["rural", "urban"]
-    assert sum(p.exposure_share for p in area.points) == pytest.approx(1.0, abs=1e-9)
+    n_common, n_rare = 400, 20
+    frame = pl.DataFrame(
+        {
+            "area": ["common"] * n_common + ["rare"] * n_rare,
+            "driv_age": [40.0] * (n_common + n_rare),
+            "exposure_years": [0.01] * n_common + [10.0] * n_rare,
+            "claim_count": [0.0] * n_common + [1.0] * n_rare,
+        }
+    )
+    _, diagnostics = _diagnose(backend, data=frame)
+    curve = _curve_for(diagnostics, "area")
+    share = {point.value: point.exposure_share for point in curve.points}
+
+    # Row counts: common 0.952, rare 0.048. Exposure: common 4.0/204.0 = 0.0196,
+    # rare 200.0/204.0 = 0.980. The two orderings are opposite.
+    assert share["rare"] > share["common"]
+    assert share["rare"] == pytest.approx(200.0 / 204.0, abs=1e-6)
+    assert share["common"] == pytest.approx(4.0 / 204.0, abs=1e-6)
+    assert sum(share.values()) == pytest.approx(1.0)
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_numeric_partial_dependence_point_carries_the_exposure_at_that_value(
+    backend: str,
+) -> None:
+    """`1.0 / len(labels)` was not a wrong weighting; it was no measurement at all.
+
+    Every point on a numeric curve claimed identical exposure regardless of where the
+    portfolio sat, so a chart showed a confidently flat exposure profile for a book that
+    was concentrated at one end of the range.
+    """
+    n = 400
+    # Age is uniform on the grid, but exposure is concentrated in the young half, so a
+    # per-cell exposure share must be visibly non-uniform while the row counts are flat.
+    ages = [float(20 + (i % 40)) for i in range(n)]
+    frame = pl.DataFrame(
+        {
+            "area": ["urban" if i % 2 else "rural" for i in range(n)],
+            "driv_age": ages,
+            "exposure_years": [5.0 if age < 40 else 0.05 for age in ages],
+            "claim_count": [1.0 if age < 40 else 0.0 for age in ages],
+        }
+    )
+    _, diagnostics = _diagnose(backend, data=frame)
+    curve = _curve_for(diagnostics, "driv_age")
+    shares = [point.exposure_share for point in curve.points]
+
+    assert len(set(shares)) > 1, "every point carried the same share — the constant is back"
+    assert sum(shares) == pytest.approx(1.0)
+    assert max(shares) > 10 * min(shares)
 
 
 @pytest.mark.req("FR-MODEL-52")

@@ -24,6 +24,7 @@ diagnostics and the fit result carries it for convenience.
 
 from __future__ import annotations
 
+import itertools
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -892,9 +893,71 @@ def _permutation_importances(
     return tuple(out)
 
 
+def _share(weight: float, total_weight: float) -> float:
+    """One exposure share, guarded the way `_partition` guards its own denominators.
+
+    A frame whose weights sum to zero has no exposure to apportion, so every share is zero.
+    Dividing anyway returns `nan`, which `PartialDependencePoint`'s `ge=0.0, le=1.0` bound
+    rejects with a validation error naming the field rather than the empty book.
+    """
+    return weight / total_weight if total_weight > 0 else 0.0
+
+
+def _weighted_levels(
+    series: pl.Series, weights: npt.NDArray[np.float64]
+) -> list[tuple[str, float]]:
+    """Each level of a categorical column and its summed exposure, most exposed first.
+
+    Ties break on the label so the cap keeps a reproducible set: two levels carrying equal
+    exposure either side of the cut would otherwise be chosen by whatever order the group-by
+    happened to produce, and a diagnostic that differs between two runs of the same fit is
+    not evidence.
+    """
+    frame = pl.DataFrame({"__level": series.cast(pl.String), "__weight": weights})
+    grouped = (
+        frame.group_by("__level")
+        .agg(pl.col("__weight").sum())
+        .sort(["__weight", "__level"], descending=[True, False])
+    )
+    return [
+        (str(level), float(weight))
+        for level, weight in zip(
+            grouped["__level"].to_list(), grouped["__weight"].to_list(), strict=True
+        )
+        if level is not None
+    ]
+
+
+def _grid_shares(
+    series: pl.Series,
+    grid: Sequence[float],
+    weights: npt.NDArray[np.float64],
+    total_weight: float,
+) -> list[float]:
+    """The exposure sitting at each point of a numeric grid (FR-MODEL-125).
+
+    The grid is quantile *points*, not bin edges, so the cells are the midpoints between
+    consecutive points — every row falls in exactly one, and the row nearest a point counts
+    toward it. Until 2026-08-23 this was `1.0 / len(grid)`: not a wrong weighting but no
+    measurement at all, so a book concentrated at one end of the range plotted as a flat
+    exposure profile.
+    """
+    if not grid:
+        return []
+    raw = series.cast(pl.Float64).to_numpy()
+    present = ~np.isnan(raw)
+    edges = np.asarray(
+        [(a + b) / 2.0 for a, b in itertools.pairwise(grid)], dtype=np.float64
+    )
+    index = np.searchsorted(edges, raw[present], side="left")
+    summed = np.bincount(index, weights=weights[present], minlength=len(grid))
+    return [_share(float(summed[i]), total_weight) for i in range(len(grid))]
+
+
 def _sweep(
     result: GbmFitResult,
     booster: bytes,
+    spec: GbmSpec,
     factors: Sequence[Factor],
     data: pl.DataFrame,
     factor: Factor,
@@ -916,15 +979,18 @@ def _sweep(
     and a synthetic level the fitted model never saw is refused at encoding by
     FR-MODEL-32, so there is no value the column could be held at to produce one.
 
-    Levels are ranked by the same share `PartialDependencePoint.exposure_share` reports,
-    so the cap keeps what the artifact will call the largest and the two cannot
-    disagree.
+    The level ranking that the cap applies and the share each surviving point emits are the
+    same quantity, deliberately: a chart whose bars are ordered by one measure and labelled
+    with another is a chart that cannot be read. Both are exposure (the spec's weight
+    column, or ones where it declares none), not row counts — a row-count share on a motor
+    book ranks a level held for a fortnight beside one held for a year (FR-MODEL-125).
     """
     from pricing_core.modelling.gbm import predict_gbm
 
     column = factor.source_columns[0]
     series = data[column]
-    rows = data.height
+    weights = _weights(spec, data)
+    total_weight = float(weights.sum())
 
     if series.dtype.is_numeric():
         quantiles = np.linspace(0.05, 0.95, 10)
@@ -933,38 +999,33 @@ def _sweep(
         grid = sorted(dict.fromkeys(grid))
         labels = [f"{value:g}" for value in grid]
         values: list[object] = list(grid)
+        shares = _grid_shares(series, grid, weights, total_weight)
         omission: PartialDependenceOmission | None = None
     else:
-        counts = series.cast(pl.String).value_counts(sort=True)
-        ranked = [v for v in counts[counts.columns[0]].to_list() if v is not None]
+        ranked = _weighted_levels(series, weights)
         kept, dropped = ranked[:max_levels], ranked[max_levels:]
-        # Ranked by share to *choose*, sorted to *present*. The emitted order stays the
+        # Ranked by exposure to *choose*, sorted to *present*. The emitted order stays the
         # sorted one it has always been, so introducing the cap changes which bars a curve
         # carries and never the order of the ones it already carried.
-        labels = sorted(kept)
+        labels = sorted(level for level, _ in kept)
         values = list(labels)
+        by_level = dict(ranked)
+        shares = [_share(by_level[label], total_weight) for label in labels]
         omission = None
         if dropped:
-            text_all = series.cast(pl.String)
-            dropped_rows = sum(float((text_all == level).sum()) for level in dropped)
+            dropped_weight = sum(weight for _, weight in dropped)
             omission = PartialDependenceOmission(
                 reason=PartialDependenceOmissionReason.LEVEL_CAP,
                 levels=len(dropped),
-                exposure_share=min(1.0, dropped_rows / max(rows, 1)),
+                exposure_share=min(1.0, _share(dropped_weight, total_weight)),
             )
 
     means: list[float] = []
-    shares: list[float] = []
-    text = series.cast(pl.String)
-    for label, value in zip(labels, values, strict=True):
+    for value in values:
         held = data.with_columns(pl.lit(value).cast(series.dtype).alias(column))
         mu = predict_gbm(result, booster, held, factors, bandings=bandings, groupings=groupings)
         mean = mu.mean()
         means.append(float(mean) if isinstance(mean, int | float) else 0.0)
-        if series.dtype.is_numeric():
-            shares.append(1.0 / len(labels))
-        else:
-            shares.append(float((text == label).sum()) / max(rows, 1))
     return labels, means, shares, omission
 
 
@@ -1050,7 +1111,7 @@ def compute_gbm_diagnostics(
             )
             continue
         labels, means, shares, omitted = _sweep(
-            result, booster, factors, holdout, factor,
+            result, booster, spec, factors, holdout, factor,
             bandings=bandings, groupings=groupings,
             max_levels=max_partial_dependence_levels,
         )
