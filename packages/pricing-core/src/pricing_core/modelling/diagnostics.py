@@ -954,6 +954,61 @@ def _grid_shares(
     return [_share(float(summed[i]), total_weight) for i in range(len(grid))]
 
 
+#: The factor types whose curve is drawn on a transformed axis rather than the raw column
+#: underneath it. An `identity` factor's resolved column **is** its source column, so it is
+#: absent here and takes the unchanged path. A cross is absent too, and deliberately: its
+#: level is a tuple of raw values across several columns, so there is no single column to
+#: hold at a representative value (FR-MODEL-121, owned by W6b).
+_TRANSFORMED_FACTOR_TYPES = (FactorType.BANDING, FactorType.GROUPING)
+
+
+def _resolved_axis(
+    data: pl.DataFrame,
+    factor: Factor,
+    *,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> pl.Series | None:
+    """The factor's own levels, or `None` where the factor *is* its source column.
+
+    A banded or grouped factor was swept over its raw column until 2026-08-23: a 40-band
+    age factor produced a point per integer age, labelled with the age, so the chart's axis
+    was not the axis the model was fitted on (FR-MODEL-118).
+    """
+    if factor.type not in _TRANSFORMED_FACTOR_TYPES:
+        return None
+    matrix = resolve_factors(data, [factor], bandings=bandings, groupings=groupings)
+    return matrix.frame[matrix.terms[factor.slug]]
+
+
+def _representatives(axis: pl.Series, source: pl.Series) -> dict[str, object]:
+    """One raw source value per resolved level, taken from the data.
+
+    `predict_gbm` re-runs `resolve_factors` on whatever frame it is handed and
+    **overwrites** any `{slug}__resolved` column the caller wrote, so pre-resolving inside
+    the sweep would be a silent no-op. The level is therefore held by holding the *source*
+    column at a value that resolves to it, which puts the production resolution path under
+    test rather than around it.
+
+    The value must come from `data`: a synthesised one may fall in no band or in no group,
+    and the unseen-level policy would then price the held frame as something else — or
+    refuse it outright under `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`.
+    """
+    frame = pl.DataFrame({"__level": axis.cast(pl.String), "__source": source})
+    picked = (
+        frame.filter(pl.col("__source").is_not_null())
+        .group_by("__level", maintain_order=True)
+        .agg(pl.col("__source").first())
+    )
+    return {
+        str(level): value
+        for level, value in zip(
+            picked["__level"].to_list(), picked["__source"].to_list(), strict=True
+        )
+        if level is not None
+    }
+
+
 def _sweep(
     result: GbmFitResult,
     booster: bytes,
@@ -988,7 +1043,12 @@ def _sweep(
     from pricing_core.modelling.gbm import predict_gbm
 
     column = factor.source_columns[0]
-    series = data[column]
+    source = data[column]
+    # The axis is the factor's, not the raw column's: a banded or grouped factor is swept
+    # over its own levels and labelled with them (FR-MODEL-118). `None` means the two are
+    # the same column, which is every identity factor.
+    axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
+    series = source if axis is None else axis
     weights = _weights(spec, data)
     total_weight = float(weights.sum())
 
@@ -1020,9 +1080,20 @@ def _sweep(
                 exposure_share=min(1.0, _share(dropped_weight, total_weight)),
             )
 
+    if axis is not None:
+        representatives = _representatives(axis, source)
+        missing = [label for label in labels if label not in representatives]
+        if missing:
+            raise ValueError(
+                f"factor {factor.slug!r} resolves to levels {missing} that no row of this "
+                "frame carries a source value for, so there is nothing to hold the column "
+                "at. A partial-dependence bar must be scored, not imputed (FR-MODEL-118)."
+            )
+        values = [representatives[label] for label in labels]
+
     means: list[float] = []
     for value in values:
-        held = data.with_columns(pl.lit(value).cast(series.dtype).alias(column))
+        held = data.with_columns(pl.lit(value).cast(source.dtype).alias(column))
         mu = predict_gbm(result, booster, held, factors, bandings=bandings, groupings=groupings)
         mean = mu.mean()
         means.append(float(mean) if isinstance(mean, int | float) else 0.0)

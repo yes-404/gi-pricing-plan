@@ -38,6 +38,7 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     Grouping,
+    GroupingMethod,
     LossTreatment,
     MetricDirection,
     MetricStatus,
@@ -48,6 +49,7 @@ from model_schema import (
     OffsetSpec,
     ResponseKind,
     SplitRef,
+    UnseenLevelBehaviour,
     WeightSpec,
     YDomain,
 )
@@ -758,6 +760,95 @@ def test_a_numeric_partial_dependence_point_carries_the_exposure_at_that_value(
     assert len(set(shares)) > 1, "every point carried the same share — the constant is back"
     assert sum(shares) == pytest.approx(1.0)
     assert max(shares) > 10 * min(shares)
+
+
+def _age_banding() -> Banding:
+    """Four bands over `driv_age`, cut so every band holds ten of the forty ages."""
+    return Banding(
+        id=uuid4(), slug="age-bands", dataset_id=uuid4(), version=1,
+        column="driv_age", method=BandingMethod.MANUAL,
+        boundaries=(20.0, 30.0, 40.0, 50.0, 60.0),
+        labels=("20-29", "30-39", "40-49", "50-59"),
+    )
+
+
+def _region_grouping() -> Grouping:
+    """Six regions behind two groups."""
+    return Grouping(
+        id=uuid4(), slug="region-inland-coastal", dataset_id=uuid4(), version=1,
+        column="region", method=GroupingMethod.MANUAL,
+        mapping={
+            "north": "inland", "south": "inland", "east": "inland",
+            "west": "coastal", "centre": "coastal", "coast": "coastal",
+        },
+        unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+    )
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_banded_factor_has_one_partial_dependence_point_per_band(backend: str) -> None:
+    """The curve's axis must be the axis the model was fitted on.
+
+    Forty integer ages behind four bands produced forty points labelled `20`, `21`, ...
+    — a chart of the raw column, not of the factor. One point per band, labelled with the
+    band, is what a reviewer comparing the curve against the fitted factor needs.
+    """
+    n = 400
+    ages = [float(20 + (i % 40)) for i in range(n)]
+    frame = pl.DataFrame(
+        {
+            "driv_age": ages,
+            "exposure_years": [1.0] * n,
+            "claim_count": [1.0 if age < 40 else 0.0 for age in ages],
+        }
+    )
+    banding = _age_banding()
+    factors = [
+        _factor("driv_age", "driv_age", type=FactorType.BANDING, banding_id=banding.id)
+    ]
+    _, diagnostics = _diagnose(
+        backend, factors, data=frame, bandings={banding.id: banding}
+    )
+    curve = _curve_for(diagnostics, "driv_age")
+
+    assert len(curve.points) == 4, [point.value for point in curve.points]
+    assert {point.value for point in curve.points} == set(banding.labels)
+    assert sum(point.exposure_share for point in curve.points) == pytest.approx(1.0)
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_grouped_factor_has_one_partial_dependence_point_per_group(backend: str) -> None:
+    """Six regions behind two groups is two points, labelled with the groups.
+
+    Asserted separately from the banding case because the two take different arms of
+    `resolve_factors`'s type dispatch, and a fix that handles intervals and not
+    membership would pass the banding test alone.
+    """
+    regions = ["north", "south", "east", "west", "centre", "coast"]
+    n = 420
+    values = [regions[i % len(regions)] for i in range(n)]
+    frame = pl.DataFrame(
+        {
+            "region": values,
+            "exposure_years": [1.0] * n,
+            "claim_count": [
+                1.0 if v in ("north", "south", "east") else 0.0 for v in values
+            ],
+        }
+    )
+    grouping = _region_grouping()
+    factors = [
+        _factor("region", "region", type=FactorType.GROUPING, grouping_id=grouping.id)
+    ]
+    _, diagnostics = _diagnose(
+        backend, factors, data=frame, groupings={grouping.id: grouping}
+    )
+    curve = _curve_for(diagnostics, "region")
+
+    assert {point.value for point in curve.points} == {"inland", "coastal"}
+    assert sum(point.exposure_share for point in curve.points) == pytest.approx(1.0)
 
 
 @pytest.mark.req("FR-MODEL-52")
