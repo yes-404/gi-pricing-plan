@@ -1,6 +1,6 @@
 ---
 name: spec-change
-description: Add or modify a requirement, section, or open question in the docs/specs/ specification suite of this GI pricing platform. Use whenever adding an FR-/NFR- requirement, editing a module spec (00-overview through 07-platform), raising or resolving an OQ- open question, or changing a spec's data contracts, interfaces, or tech dependencies. Enforces the append-only requirement-ID rule, the ten-section standard, and both-direction cross-referencing.
+description: Add or modify a requirement, section, or open question in the docs/specs/ specification suite of this GI pricing platform. Use whenever adding an FR-/NFR- requirement, editing a module spec (00-overview through 07-platform), raising or resolving an OQ- open question, or changing a spec's data contracts, interfaces, or tech dependencies. Enforces the append-only requirement-ID rule, the ten-section standard, and both-direction cross-referencing. Also carries the four things a spec introducing a custom objective must say (declaration, validation, versioning, audit) before it is complete.
 ---
 
 # Changing a spec
@@ -34,8 +34,27 @@ bold for the row that defines them.
 A new ID may sit anywhere in the document — position is free, the number is not. Placing
 FR-MODEL-68 next to FR-MODEL-42 because they are topically related is correct.
 
-**Every spec keeps all ten sections** (`CLAUDE.md` §5). If a change adds a tech dependency,
-§8 of that spec **and** `docs/skills-map.md` must both change in the same commit.
+**Every spec keeps all ten sections**, in this order (`CLAUDE.md` §5 is the standard; this
+is the list it points at):
+
+1. **Purpose & scope** — what the module does and explicitly does not do
+2. **Concepts & glossary** — domain terms, matching `00-overview.md` §2 exactly
+3. **Functional requirements** — numbered `FR-<module>-<n>` for traceability
+4. **Data contracts** — entities, fields, types, invariants; reference or define the
+   JSON Schema in `docs/contracts/`
+5. **Interfaces** — API endpoints (method, path, request/response shape), pricing-core
+   function signatures, frontend views touched
+6. **Workflows** — sequence of steps with actors (user / frontend / backend / worker /
+   pricing-core); link to the relevant `docs/workflows/` journey
+7. **Cross-module dependencies** — what this module consumes from and provides to others
+8. **Tech dependencies** — which stack components it uses and for what (feeds
+   `skills-map.md`)
+9. **Non-functional requirements** — performance, audit, security where relevant
+10. **Open questions** — mirrored into `docs/open-questions.md`
+
+If a change adds a tech dependency, §8 of that spec **and** `docs/skills-map.md` must both
+change in the same commit, and **every `skills-map.md` row cites at least one spec section
+or requirement id** — a row that cites nothing cannot be checked against anything.
 
 **Open questions are mirrored in both directions.** An `OQ-` raised in a spec's §10 must
 appear in `docs/open-questions.md` with options, trade-offs, a recommendation, an owner and
@@ -72,6 +91,27 @@ column as the decision, naming the requirements it became; set the status. Then 
 obligation itself lands in §3 as an appended `FR-`. **A decision that appends no
 requirement usually has not been applied** — it is still a recommendation.
 
+## Specifying a custom objective
+
+Custom objectives are a first-class capability of this platform (`CLAUDE.md` §3): a spec may
+define user-defined objective and eval functions for XGBoost/LightGBM over the gradient +
+hessian interface, and custom loss specifications where the standard families do not fit —
+Tweedie variance-power tuning, capped or large-loss-adjusted losses, asymmetric pricing
+losses. `02-modelling.md` §4.4 catalogues the permitted forms; `wf-05` is the lifecycle.
+
+**An arbitrary-code objective is a governance risk**, so a spec that introduces one is not
+complete until it says four things:
+
+1. **How it is declared** — the restricted expression form or the sandbox, never bare code
+   evaluated as given.
+2. **How it is validated** — what is checked before a fit is allowed to start.
+3. **How it is versioned** — a named, versioned definition reusable across models, with its
+   own approval status (`CLAUDE.md` §7).
+4. **How it is audited** — what the audit log records when one is declared, approved and used.
+
+A spec that names a new objective form without those four is the failure mode this rule
+exists for: the maths is reviewable and the execution path is not.
+
 ## After editing
 
 ```bash
@@ -88,6 +128,11 @@ explicit status enums. Avoid "the system should handle…". Small illustrative s
 encouraged; full implementations are not.
 
 ## Verified
+
+2026-08-23 — the ten-section enumeration and the `skills-map.md` citation rule moved here
+from `CLAUDE.md` §5 and §10, and the custom-objective governance rules from §3, when that
+file was cut to its binding rules. No procedure changed; the standard is still §5's, this is
+the list it points at.
 
 2026-08-18 — Confirmed while recording five maintainer decisions (OQ-MODEL-10..13, OQ-GOV-7 →
 FR-MODEL-96/97/98, FR-RATE-61, FR-GOV-37; 456 → 461 requirements). Both halves of the

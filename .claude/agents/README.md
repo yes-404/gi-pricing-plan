@@ -4,7 +4,11 @@ Delegable specialists for **this** repository, versioned with it. A subagent is 
 a skill loads *into* the current turn, a subagent runs in **its own context** and returns
 only a conclusion. That difference is the reason these exist — `CLAUDE.md` §10 measures the
 cost of a turn in the context it carries, and an investigation delegated here never lands in
-the main thread.
+the main thread. The arithmetic behind that rule: every turn re-reads the whole accumulated
+context, so **a session ending at 900k tokens costs several times one that stays under
+200k** — and on a subscription that is rate-limit headroom rather than money. §10 carries
+the measured share (73% of spend from calls over 200k, 2026-08-14 → 08-19); this is why
+that share is worth moving.
 
 Personal/global agents live in `~/.claude/agents/` and are **never** modified as part of
 project work, by the same rule `CLAUDE.md` §12 applies to skills.

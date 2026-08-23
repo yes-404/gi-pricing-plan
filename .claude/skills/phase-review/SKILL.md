@@ -62,11 +62,17 @@ Never install an external skill without the maintainer's approval.
 
 Specs first — §14 makes the **specification** the main target, in both directions:
 §5.1 endpoint tables, §5.2 signatures, §5.3 Contents columns, named catalogues, and the
-params a caller would copy off the page. Then the roadmap, open questions, and §2's marks.
+params a caller would copy off the page. Then the roadmap and open questions. `CLAUDE.md`
+§2 no longer carries component status marks — `docs/roadmap.md` §6 owns them outright since
+the 2026-08-23 restructure ([`NT-0003`](../../notes/0003-duplicated-status-goes-stale.md)),
+so check them there and not in two places.
 
 Resolve, never soften (§0). Where the code is right, amend the spec with a dated note
 saying which side was wrong. Where the *spec* is right and the code does not meet it, the
-spec gains the obligation — an appended requirement, an owner, a verdict.
+spec gains the obligation — an appended requirement, an owner, a verdict. **FR-DATA-41 and
+FR-DATA-42 are what that looks like**: a review that found the code short of the spec, and
+left the spec carrying the precise obligation rather than editing it down to what was
+built.
 
 ### 5. Shape — is the cut still right?
 
@@ -105,6 +111,10 @@ Proposals land in `docs/roadmap.md` as a dated `### Plan review N` section, and 
 undecided goes to `docs/open-questions.md` with options and a recommendation.
 
 ## Verified
+
+2026-08-23 — question 4 amended when `CLAUDE.md` was cut to its binding rules: §2's
+component status marks no longer exist to check, and the FR-DATA-41/42 exemplar moved here
+from §14. The five questions and their order are unchanged.
 
 2026-08-15 — written after review 2, from what reviews 1 and 2 actually did. Review 1
 found the browser could not authenticate at all; review 2 found the workflow journeys
