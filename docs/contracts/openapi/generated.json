@@ -7177,6 +7177,42 @@
         "title": "Page[Model]",
         "type": "object"
       },
+      "Page_ValidationRule_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationRule"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[ValidationRule]",
+        "type": "object"
+      },
       "Page_dict_str__Any__": {
         "additionalProperties": false,
         "properties": {
@@ -10421,6 +10457,17 @@
         "additionalProperties": false,
         "description": "One rule (`01` §4.3). A tagged union on `layer` + `check`.",
         "properties": {
+          "catalogue_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogue Id"
+          },
           "check": {
             "title": "Check",
             "type": "string"
@@ -21233,6 +21280,136 @@
       }
     },
     "/api/v1/validation-rules": {
+      "get": {
+        "description": "FR-DATA-53. The workspace's rules, cursor-paginated (`00` §5.2).\n\nUntil the catalogue was seeded there was nothing to list: `validation_rules` held only\nwhat a workspace had authored, and `01` §4.4's 38 rules existed as prose. A catalogue\na caller cannot enumerate is one they re-type, which is how a shipped rule and a\nworkspace's copy of it come to disagree.\n\n**Ascending by id, not descending.** Ids are UUIDv7, so id order is insertion order,\nand the catalogue is inserted in §4.4's own order — ascending therefore reads as the\nspecification reads. `list_models` sorts descending because a model list wants the\nnewest fit first; a catalogue wants its first entry first. Lexical `catalogue_id` order\nwould put `VR-STR-10` between `VR-STR-1` and `VR-STR-2`, which is neither.",
+        "operationId": "list_rules_api_v1_validation_rules_get",
+        "parameters": [
+          {
+            "description": "`true` for `01` §4.4's shipped catalogue only, `false` for the workspace's own rules only. Omitted returns both.",
+            "in": "query",
+            "name": "builtin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`true` for `01` §4.4's shipped catalogue only, `false` for the workspace's own rules only. Omitted returns both.",
+              "title": "Builtin"
+            }
+          },
+          {
+            "description": "Opaque; pass back the previous page's `next_cursor`.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque; pass back the previous page's `next_cursor`.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ValidationRule_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List validation rules",
+        "tags": [
+          "validation"
+        ]
+      },
       "post": {
         "description": "FR-DATA-21 step 1: authored → `draft`.\n\nThe permission depends on the *check*, which is why it is not on the route: a\ndeclarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`\n**instead** (`01` §4.5 step 5). Requiring both would leave no built-in role able to\nauthor one. The service makes the choice, and it fails closed either way.",
         "operationId": "create_rule_api_v1_validation_rules_post",

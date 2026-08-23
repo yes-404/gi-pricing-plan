@@ -16,7 +16,9 @@ by whoever writes the report:
 from __future__ import annotations
 
 import enum
+from collections.abc import Mapping
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any, Final
 from uuid import UUID
 
@@ -24,7 +26,9 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validat
 
 __all__ = [
     "ALL_LAYERS",
+    "BUILTIN_RULES",
     "Acknowledgement",
+    "BuiltinRule",
     "OverallOutcome",
     "RuleOutcome",
     "RuleResult",
@@ -34,6 +38,7 @@ __all__ = [
     "ValidationReport",
     "ValidationRule",
     "ValidationRuleSet",
+    "builtin_rule",
 ]
 
 
@@ -89,6 +94,18 @@ class ValidationRule(BaseModel):
     message: str = ""
     rationale: str = ""
     status: str = "approved"
+    #: The `01` §4.4 catalogue entry this row was seeded from, or `None` for a workspace's
+    #: own rule (FR-DATA-53). Not a foreign key and not a slug: a workspace may version a
+    #: seeded rule and change its slug, and the catalogue id is what survives that.
+    catalogue_id: str | None = None
+
+    @model_validator(mode="after")
+    def _catalogue_id_names_a_catalogue_entry(self) -> ValidationRule:
+        if self.catalogue_id is not None and self.catalogue_id not in BUILTIN_RULES:
+            raise ValueError(
+                f"catalogue_id {self.catalogue_id!r} names no rule in `01` §4.4's catalogue"
+            )
+        return self
 
 
 class RuleSetEntry(BaseModel):
@@ -165,6 +182,266 @@ class ValidationRuleSet(BaseModel):
         unordered one would make two identical rule sets serialise differently.
         """
         return tuple(sorted(ALL_LAYERS - self.covered_layers))
+
+
+#: The layer each catalogue-id prefix belongs to. Derived rather than listed per rule: the
+#: prefix *is* the layer (`01` §4.4's four tables are the four layers of FR-DATA-16), and a
+#: rule carrying both could carry them inconsistently.
+_LAYER_BY_PREFIX: Final[Mapping[str, ValidationLayer]] = MappingProxyType(
+    {
+        "STR": ValidationLayer.STRUCTURAL,
+        "REF": ValidationLayer.REFERENTIAL,
+        "ACT": ValidationLayer.ACTUARIAL_SANITY,
+        "DST": ValidationLayer.DISTRIBUTIONAL,
+    }
+)
+
+
+class BuiltinRule(BaseModel):
+    """One rule the platform ships, from `01` §4.4's catalogue (FR-DATA-53).
+
+    Distinct from `ValidationRule`, which is a *stored* rule: it carries a workspace-scoped
+    `id` and a `version`, and a built-in rule has neither until it is seeded into a
+    workspace. Keeping them apart is what stops the catalogue needing a fabricated UUID at
+    import time.
+
+    Thresholds are deliberately absent. `01` §4.4 — "Thresholds are Rule Set configuration,
+    not code. Every threshold shown is a default." — and a catalogue that carried them
+    would be a second place a threshold is written.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    catalogue_id: str = Field(pattern=r"^VR-(STR|REF|ACT|DST)-\d{1,2}$")
+    slug: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")
+    #: The registered check this rule runs — `pricing_core.data.validate.CHECKS`. **Not**
+    #: derivable from the slug: nine of the 38 differ, and `range` backs three of them.
+    check: str
+    severity: Severity
+    #: `01` §4.4's third column, trimmed to one line. The spec's own wording, so that a
+    #: reader comparing the two can see they are the same rule.
+    summary: str
+
+    @property
+    def layer(self) -> ValidationLayer:
+        return _LAYER_BY_PREFIX[self.catalogue_id.split("-")[1]]
+
+
+def _rule(
+    catalogue_id: str, slug: str, check: str, severity: Severity, summary: str
+) -> BuiltinRule:
+    return BuiltinRule(
+        catalogue_id=catalogue_id, slug=slug, check=check, severity=severity, summary=summary
+    )
+
+
+_W, _F = Severity.WARN, Severity.FAIL
+
+#: `01` §4.4's catalogue, in the order the spec lists it. Keyed by catalogue id because that
+#: is the identifier `01` §4.4 calls stable and says workflows and the UI reference.
+#:
+#: A rule appears here and nowhere else. Before this constant existed the ids lived only in
+#: prose, and `scripts/scope-audit.py DATA --catalogue VR` scored 1 of 38 — the one hit being
+#: a `VR-STR-5` mention inside another rule's skip message, which is to say zero.
+BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
+    {
+        r.catalogue_id: r
+        for r in (
+            _rule(
+                "VR-STR-1", "column-presence", "column_presence", _F,
+                "Every column declared in the schema exists",
+            ),
+            _rule(
+                "VR-STR-2", "dtype-match", "dtype_match", _F,
+                "Each column's Arrow dtype matches the declaration (no silent coercion)",
+            ),
+            _rule(
+                "VR-STR-3", "nullability", "not_null", _F,
+                "Columns declared non-nullable contain no nulls",
+            ),
+            _rule(
+                "VR-STR-4", "primary-key-unique", "unique_key", _F,
+                "Declared primary key is unique and non-null (policy id x exposure period)",
+            ),
+            _rule(
+                "VR-STR-5", "date-parse", "date_parsed", _F,
+                "All date columns parsed to date32/timestamp with no fallback-to-string",
+            ),
+            _rule(
+                "VR-STR-6", "encoding", "encoding", _W,
+                "No mojibake / invalid UTF-8 sequences in string columns",
+            ),
+            _rule(
+                "VR-STR-7", "allowed-values", "allowed_values", _F,
+                "Categorical columns contain only values in the declared domain",
+            ),
+            _rule(
+                "VR-STR-8", "no-unexpected-columns", "no_unexpected_columns", _W,
+                "No columns present that are absent from the schema",
+            ),
+            _rule(
+                "VR-STR-9", "reject-rate", "reject_rate", _F,
+                "Quarantined rows <= threshold (default 0.1 % of rows read) - FR-DATA-7",
+            ),
+            _rule(
+                "VR-REF-1", "reference-resolve", "reference_lookup", _F,
+                "Every value of a reference-backed column resolves in the pinned Reference "
+                "Table Version, evaluated as at the declared date column (FR-DATA-31)",
+            ),
+            _rule(
+                "VR-REF-2", "reference-coverage", "reference_coverage", _W,
+                "At least X % of reference table keys are exercised by the data (catches a "
+                "stale or wrong reference version)",
+            ),
+            _rule(
+                "VR-REF-3", "effective-date-in-range", "effective_date_in_range", _F,
+                "The declared as-at date lies within the Reference Table Version's covered "
+                "period",
+            ),
+            _rule(
+                "VR-REF-4", "cross-table-key", "cross_table_key", _F,
+                "Every claim.policy_id exists in policy_exposure",
+            ),
+            _rule(
+                "VR-REF-5", "code-list-drift", "code_list_drift", _W,
+                "New codes present that did not exist in the reference dataset version",
+            ),
+            _rule(
+                "VR-ACT-1", "exposure-positive", "range", _F,
+                "exposure_years > 0 for every row",
+            ),
+            _rule(
+                "VR-ACT-2", "exposure-plausible", "range", _F,
+                "exposure_years <= 1.05 per row; annual policies sum to about 1.0 per "
+                "policy year",
+            ),
+            _rule(
+                "VR-ACT-3", "exposure-period-consistent", "period_consistent", _F,
+                "exposure_end > exposure_start; exposure_years is about "
+                "(end - start)/365.25 within tolerance",
+            ),
+            _rule(
+                "VR-ACT-4", "no-overlapping-exposure", "no_overlap", _F,
+                "A single policy_id has no overlapping exposure intervals",
+            ),
+            _rule(
+                "VR-ACT-5", "claim-date-in-exposure", "claim_date_in_exposure", _F,
+                "date_of_loss is in [exposure_start, exposure_end) for the linked row "
+                "(FR-DATA-12)",
+            ),
+            _rule(
+                "VR-ACT-6", "claim-linkage-complete", "claim_linkage_complete", _F,
+                "100 % of claims link to exactly one exposure row",
+            ),
+            _rule(
+                "VR-ACT-7", "claim-not-multi-linked", "claim_not_multi_linked", _F,
+                "No claim links to more than one exposure row",
+            ),
+            _rule(
+                "VR-ACT-8", "claim-count-non-negative", "range", _F,
+                "claim_count >= 0, integer",
+            ),
+            _rule(
+                "VR-ACT-9", "claim-amount-sign", "claim_amount_sign", _W,
+                "Negative incurred amounts exist only where recoveries/reversals are "
+                "expected; flagged with counts",
+            ),
+            _rule(
+                "VR-ACT-10", "severity-outlier", "severity_outlier", _W,
+                "Claims above a configurable threshold (absolute, or a percentile of the "
+                "peril's own distribution) are flagged for large-loss treatment - never "
+                "auto-removed",
+            ),
+            _rule(
+                "VR-ACT-11", "frequency-plausible", "frequency_plausible", _W,
+                "Portfolio and per-peril frequency within a configured band (e.g. motor AD "
+                "0.02-0.25)",
+            ),
+            _rule(
+                "VR-ACT-12", "severity-plausible", "severity_plausible", _W,
+                "Portfolio and per-peril mean severity within a configured band",
+            ),
+            _rule(
+                "VR-ACT-13", "zero-claim-cohort", "zero_claim_cohort", _W,
+                "No factor level with material exposure (> 1 % of total) has exactly zero "
+                "claims where the prior version had claims",
+            ),
+            _rule(
+                "VR-ACT-14", "development-maturity", "development_maturity", _W,
+                "The most recent N months of experience are flagged as immature (IBNR risk) "
+                "with the configured development pattern; modelling on them without an "
+                "adjustment is a warning",
+            ),
+            _rule(
+                "VR-ACT-15", "currency-consistency", "currency_consistency", _F,
+                "All monetary columns share the Dataset's declared currency; no "
+                "mixed-currency rows",
+            ),
+            _rule(
+                "VR-ACT-16", "duplicate-claim", "duplicate_claim", _W,
+                "No two claims share (policy, date_of_loss, peril, amount) - a classic "
+                "double-load signature",
+            ),
+            # `01` §4.4 gives this rule's severity cell as "the rule's own severity, at
+            # `warn_above`" rather than a plain token. The 2026-08-15 amendment immediately
+            # below the tables settled that a rule carries **one** severity and that neither
+            # two-band form is reachable — a check reports pass or fail and `_run_one` maps
+            # that through the rule's static severity. The catalogue therefore records
+            # `warn`; nothing is lost in the transcription.
+            _rule(
+                "VR-DST-1", "psi-column", "psi_column", _W,
+                "Per-column PSI against the reference version, for categorical, ordinal and "
+                "boolean columns only",
+            ),
+            _rule(
+                "VR-DST-2", "new-level", "new_level", _W,
+                "Categorical levels present now, absent in reference",
+            ),
+            _rule(
+                "VR-DST-3", "vanished-level", "vanished_level", _W,
+                "Levels with material reference exposure now absent",
+            ),
+            _rule(
+                "VR-DST-4", "null-rate-shift", "null_rate_shift", _W,
+                "Null rate moved by more than X percentage points (a broken feed's clearest "
+                "signal)",
+            ),
+            _rule(
+                "VR-DST-5", "volume-shift", "volume_shift", _W,
+                "Row count against the reference version's row count",
+            ),
+            _rule(
+                "VR-DST-6", "mean-shift", "mean_shift", _W,
+                "Numeric column mean moved more than N reference standard errors",
+            ),
+            _rule(
+                "VR-DST-7", "target-rate-shift", "target_rate_shift", _W,
+                "Observed frequency / severity / burning cost moved more than X % vs "
+                "reference",
+            ),
+            _rule(
+                "VR-DST-8", "mix-shift-exposure", "mix_shift_exposure", _W,
+                "Exposure distribution across a declared key factor moved (PSI on the "
+                "exposure weights, not the row counts)",
+            ),
+        )
+    }
+)
+
+
+def builtin_rule(catalogue_id: str) -> BuiltinRule:
+    """One catalogue entry by its `01` §4.4 id.
+
+    Raises rather than returning `None` because every call site has a specific id in hand;
+    a missing one means the caller's id is wrong, not that there is nothing to return.
+    """
+    try:
+        return BUILTIN_RULES[catalogue_id]
+    except KeyError:
+        raise ValueError(
+            f"unknown built-in rule {catalogue_id!r}; the catalogue is `01` §4.4's 38 rules, "
+            "and a workspace's own rules are stored, not defined here"
+        ) from None
 
 
 class Acknowledgement(BaseModel):

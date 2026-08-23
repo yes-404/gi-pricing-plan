@@ -1059,20 +1059,53 @@ class ValidationRuleRow(Base):
     approved_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     dry_run_report_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
+    #: Seeded from `01` §4.4's catalogue rather than authored in this workspace
+    #: (FR-DATA-53), mirroring `RoleRow.builtin` and seeded the same way and for the same
+    #: reason: a workspace can *see* the rule it is validated against, and changing the
+    #: shipped catalogue never silently changes what an existing workspace already ran.
+    builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: The catalogue entry a built-in row came from — `VR-STR-1`, `VR-DST-8`. Kept beside
+    #: `slug` rather than replacing it because §4.4 calls the *id* stable and a workspace
+    #: may version a seeded rule and rename it; the id is what survives that.
+    catalogue_id: Mapped[str | None] = mapped_column(String(16))
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", "version", name="uq_validation_rule_version"),
+        Index("ix_validation_rules_catalogue", "workspace_id", "catalogue_id"),
         CheckConstraint("version >= 1", name="rule_version_starts_at_one"),
         # §4.5 step 2: approval requires a dry run, and step 3 requires an approver who is
         # not the author. Both are enforced by the service; the pair that cannot be
         # expressed any other way is enforced here.
+        #
+        # `builtin IS TRUE` is the third arm, added 2026-08-23 with FR-DATA-53. A shipped
+        # rule has no in-workspace author to be distinct from and no dry run to point at:
+        # it was reviewed once, in `01` §4.4, and every workspace gets the same reviewed
+        # text. Without this arm the only way to seed the catalogue approved — and an
+        # unapproved rule cannot enter a rule set — is to invent a `dry_run_report_id`
+        # naming no report, which `examples/fremtpl2/seed.py` did and this slice removes.
+        # Fabricating the evidence is a worse governance outcome than naming the exemption.
         CheckConstraint(
-            "status <> 'approved' OR (approved_by IS NOT NULL "
+            "builtin IS TRUE OR status <> 'approved' OR (approved_by IS NOT NULL "
             "AND approved_by <> authored_by AND dry_run_report_id IS NOT NULL)",
             name="approved_rule_dry_run_and_separate_approver",
+        ),
+        # A built-in row must say *which* entry it is: `builtin` with no id is a row
+        # claiming an approval exemption nothing can trace back to a reviewed rule.
+        #
+        # The converse is deliberately **not** constrained. A workspace that configures a
+        # shipped rule against its own tables authors the next version of it — `01` §4.5
+        # step 4's ordinary "an edit is a new version" — and that version is workspace
+        # data, carrying its own approver and its own dry run, while still recording the
+        # catalogue entry it derives from. `examples/fremtpl2/seed.py` is exactly that
+        # case. Requiring `builtin` for a catalogue id would lose the lineage or forge the
+        # exemption, and neither is the honest answer.
+        CheckConstraint(
+            "builtin IS FALSE OR catalogue_id IS NOT NULL",
+            name="builtin_rule_names_its_catalogue_entry",
         ),
     )
 
