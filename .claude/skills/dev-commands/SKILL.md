@@ -1,0 +1,167 @@
+---
+name: dev-commands
+description: The commands that build, gate, migrate, benchmark and demo this repository, each with the trap that makes the obvious form of it wrong — why `uv sync` without `--all-packages` produces a venv that looks fine and fails, why a "gate" covering only Python has been green while the frontend was red, why `cmd | tail -1 && echo ok` reports the wrong exit code, why a benchmark number taken on this shared machine can read as a 2.3x regression, and the alembic DSN that the bare command does not use. Use when running the gate, setting up a fresh checkout or worktree, migrating, benchmarking an NFR, or starting the demo.
+---
+
+# Development commands
+
+`CLAUDE.md` §11 carries the bare invocations. This carries the commentary — which is the
+part that was learned by something failing, and the part a bare command list cannot hold.
+
+## Setup — `--all-packages` is not optional
+
+```bash
+uv sync --all-packages --dev
+```
+
+The root sets `package = false` and depends on no member, so a plain `uv sync` installs the
+dev tools and **none of the workspace packages**. `mypy` and `pytest` then fail on
+`No module named 'pydantic'` in a venv that looks fine. A fresh worktree with no `.venv`
+reports ~690 phantom errors that read as real code defects.
+
+## The gate is two halves, and one of them is not Python
+
+This repository is polyglot and CI runs two workflows. **A "gate" that covers only Python
+has been green here while the frontend was red.** Run both.
+
+### Python (`.github/workflows/python.yml`) and docs (`docs.yml`)
+
+```bash
+uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
+python3 scripts/audit-docs.py                # structural checks over docs/ and .claude/notes/
+uv run python scripts/req-coverage.py        # requirement traceability
+uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
+```
+
+Use `generate-contracts.py --check` rather than the plain regenerate when auditing: the
+plain form *writes* the drift away instead of reporting it.
+
+### Frontend (`.github/workflows/frontend.yml`)
+
+```bash
+pnpm --dir frontend install --frozen-lockfile
+pnpm --dir frontend generate:api        # then type-check: the client is git-ignored,
+                                        # so a diff against it can never fail
+pnpm --dir frontend lint && pnpm --dir frontend type-check
+pnpm --dir frontend test && pnpm --dir frontend build
+```
+
+`--frozen-lockfile` from a **clean** `node_modules` is what CI does, and a populated one
+hides a missing dependency.
+
+**pnpm is not on this image** and `corepack enable pnpm` fails on it. The way in is:
+
+```bash
+npm config set prefix ~/.npm-global && npm i -g pnpm    # then put that bin on PATH
+```
+
+### Read each command's own exit code
+
+`cmd | tail -1 && echo ok` reports **tail's** exit code, and has produced a false "clean"
+here more than once. The same trap in other clothes: a `✓` echoed on `head`'s status rather
+than the command's, and a `\echo` in `psql` that printed unconditionally and read as success
+while the `ERROR` line above it proved the opposite.
+
+## Closure audit — expected scope first, then evidence
+
+```bash
+uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
+uv run python scripts/scope-audit.py DATA --endpoints    # §5.1 table vs the contract
+uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item catalogue
+```
+
+The three axes answer different questions and none substitutes for another —
+[`close-workstream`](../close-workstream/SKILL.md) has the method and the incident behind each.
+
+## NFR measurement — and the contention factor that reads like a regression
+
+`bench-data.py` knows `01`'s budgets; `bench-model.py` knows `02`'s. Run phases in separate
+processes: glibc does not return freed arenas, so a peak-RSS reading taken after an earlier
+phase is **that phase's**.
+
+```bash
+uv run python scripts/bench-model.py --only curve   # one phase at a time
+```
+
+**This machine is shared between concurrent agent sessions.** The same grouping proposal
+measured **8.58 s at load 1.6 and 20.01 s at load 8.4** — a **2.3x contention factor that
+reads exactly like a regression**. Both harnesses report `/proc/loadavg` and CPU seconds
+beside wall-clock for that reason.
+
+**Quote the load with every number, and re-take a headline figure in a quiet window before
+recording it in a spec.**
+
+## The demo entrance (FR-PLAT-53)
+
+```bash
+uv run python scripts/demo.py                # then open http://localhost:5173/demo
+uv run python scripts/demo.py --rows 60000   # a sample; the full seed is 678 013 rows
+```
+
+One command from a clean checkout to a browser: compose, migrations, freMTPL2 seeded
+through the **real Job path**, the API and the frontend, with a development identity for the
+seeded workspace. Ctrl-C stops everything it started.
+
+It **refuses outside local/dev before starting anything** — the whole path hangs off
+`dev_auth_enabled`, `False` by default and fatal at startup in a deployed environment.
+
+The demo *guide* (FR-PLAT-54) is derived, not written, so there is nothing to update — but
+check that it still derives: `uv run pytest backend/tests/test_demo_guide.py`, which also
+runs in the gate.
+
+## Local infrastructure
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --wait
+docker compose -f deploy/docker-compose.yml down
+```
+
+`deploy/README.md` has the credentials and ports. Compose brings up **postgres/redis/minio
+only** — there is no app container, because a Dockerfile for it is deployment (W14) rather
+than a dev loop.
+
+## Migrations — the bare command does not work against the compose stack
+
+```bash
+GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+    uv run alembic upgrade head
+```
+
+`CLAUDE.md` §11 claimed the bare `alembic upgrade head` worked until 2026-08-22. It does
+not: `backend/src/app/config.py`'s `database_url` defaults to `gip:gip@localhost:5432/gip`
+while `deploy/docker-compose.yml` provisions `gipricing:gipricing@…/gipricing`, and Alembic
+reads `Settings`, so it dies with
+`InvalidPasswordError: password authentication failed for user "gip"`.
+
+**Why it survived every green suite:** `backend/tests/conftest_db.py`'s `DEFAULT_TEST_DSN`
+carries the compose credentials itself, so the tests never touch the default.
+[`fastapi-service`](../fastapi-service/SKILL.md) carries the full post-mortem and the other
+paths that route around it.
+
+## Serving the API and the frontend by hand
+
+```bash
+GIP_DEV_AUTH_ENABLED=true uv run uvicorn app.main:create_app \
+    --factory --reload --app-dir backend/src --port 8000
+pnpm --dir frontend dev                      # proxies /api to localhost:8000
+```
+
+Without `GIP_DEV_AUTH_ENABLED`, a browser gets 401 on everything — see
+[`vue-frontend`](../vue-frontend/SKILL.md).
+
+## Worker and outbox relay
+
+```bash
+celery -A app.worker.entrypoint worker --queues compute,default,io,scoring
+celery -A app.worker.entrypoint beat
+```
+
+The relay is what moves a committed job to the broker. **Without `beat` running, jobs stay
+`queued` and nothing explains why.**
+
+## Verified
+
+2026-08-23 — extracted from `CLAUDE.md` §11 verbatim when that section was cut to bare
+invocations. Every trap here was recorded in `CLAUDE.md` at the date its own line states;
+the alembic mismatch was found 2026-08-22 during W5 audit remediation, and the contention
+factor during a W5 grouping measurement.

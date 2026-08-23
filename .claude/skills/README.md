@@ -16,14 +16,31 @@ follow superpowers for the procedure and the repo-local skill for the facts — 
 commands, requirement ids — that a general skill cannot contain.
 
 Start a task by reading [`using-superpowers`](using-superpowers/SKILL.md); it is the
-router, and it points at the rest.
+router, and it points at the rest. Then read the superpowers process skill for the *shape*
+of the work, and only then the repo-local skill for the specifics:
+
+| Shape of the work | Read first |
+|---|---|
+| Creative or open-ended design | [`brainstorming`](brainstorming/SKILL.md) |
+| Any fix | [`systematic-debugging`](systematic-debugging/SKILL.md) |
+| Multi-step work | [`writing-plans`](writing-plans/SKILL.md) · [`executing-plans`](executing-plans/SKILL.md) · [`subagent-driven-development`](subagent-driven-development/SKILL.md) |
+| Implementation code | [`test-driven-development`](test-driven-development/SKILL.md) |
+| Claiming anything passes | [`verification-before-completion`](verification-before-completion/SKILL.md) |
+
+The carve-out is narrow and factual: where superpowers gives a *procedure* and a repo skill
+states a *fact about this repository*, the fact wins, because superpowers does not contain
+it and cannot. `git-hygiene`'s `.gitignore` rules and squash-merge flow and `python-test`'s
+`@pytest.mark.req` markers are facts of that kind — `finishing-a-development-branch` still
+decides *how* a branch ends. Nothing in superpowers overrides `CLAUDE.md` §0, §5 or §13:
+the phase table, permanent requirement ids and the closure standard are this project's
+contract, not a default behaviour a general skill is entitled to replace.
 
 ## Index
 
 | Skill | Purpose | Source | Last verified |
 |---|---|---|---|
 | [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup — both `git branch -d` and `ExitWorktree`, which refuse for the same ancestry reason and say different things about it — how a squash title and body are composed, the merge-order trap that strands work, and how a stacked PR survives the merge below it | self-written | 2026-08-22 |
-| [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing, and what recording a *decision* touches | self-written | 2026-08-18 |
+| [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing, what recording a *decision* touches, and the four things a spec introducing a custom objective must say | self-written | 2026-08-23 |
 | [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — 22 checks (8 bookkeeping, 8 structural, 5 over the `.claude/notes/` working notes, 1 over the journeys' interface citations) plus the decision-gate invariant the script does not cover | self-written | 2026-08-18 |
 | [`close-workstream`](close-workstream/SKILL.md) | Audit a workstream against `CLAUDE.md` §13 before writing "closed" into the roadmap — **scope derived from the specs first**, then evidence; gate run locally, new checks proven non-trivial, NFRs measured, every gap given a verdict | self-written | 2026-08-14 |
 | [`phase-review`](phase-review/SKILL.md) | Run `CLAUDE.md` §14's plan review — five questions in order, each answered including "no change"; proposals with a maintainer acceptance line, never edits. Written after the procedure had run twice, as §14 requires | self-written | 2026-08-15 |
@@ -33,6 +50,8 @@ router, and it points at the rest.
 | [`python-package`](python-package/SKILL.md) | Write Python in the uv workspace — where code belongs, the import-linter boundaries, the Pydantic v2 idioms the contracts depend on, **the compiled dependencies that abort rather than raise**, and **why `model_copy(update=...)` silently skips a cross-field validator**, and **why path-scoping `mypy` invents ~113 errors the gate does not have** | self-written | 2026-08-22 |
 | [`fastapi-service`](fastapi-service/SKILL.md) | Backend conventions and traps — app factory, RFC 9457 problem responses, the Starlette middleware-ordering trap that drops `trace_id` from 500s, liveness vs readiness, typed settings, and the persistence traps: three-layer append-only enforcement, Alembic ENUM cleanup, async fixture scope, and the alembic credential mismatch every automated path routes around | self-written | 2026-08-22 |
 | [`python-test`](python-test/SKILL.md) | Testing discipline — requirement-traceability markers, the negative-test emphasis, pytest config, running without pip, **why a green run with no database is a partial one**, the **forced write order for a fitted model row**, **choosing a metric that responds to what the fixture changed**, **how a journey test pins the steps it cannot drive**, **why a gate run needs a tree that holds still**, **why a value four declarations agree on can still not work**, **why loosening a tolerance means pinning the other side of it in the same commit**, and **why `git checkout --` on a file mid-edit destroys more than the injected defect**, **why seventeen tables refuse `TRUNCATE` and the suite empties itself at session end instead**, and **why a fixture that cannot express the failure is not coverage — one dense `interaction` book hid two defects four days apart**, **why counting calls in a worker handler must patch the source module rather than the handler**, and **why pinning a refusal code through a Job needs the handler's wrap checked first** | self-written | 2026-08-22 |
+| [`repo-architecture`](repo-architecture/SKILL.md) | How the monorepo is shaped and why — the annotated tree, the polyglot component map and why CI is three path-filtered workflow files rather than one, why the generated contract is committed under `docs/` while the frontend client is ignored, how `audit-docs.py` and `req-coverage.py` hold spec and code consistent, and the dependency-level stack choices decided against. `CLAUDE.md` §2 and §3 keep the rules only | self-written | 2026-08-23 |
+| [`dev-commands`](dev-commands/SKILL.md) | Every command that builds, gates, migrates, benchmarks or demos this repo, each with the trap that makes the obvious form wrong — `uv sync --all-packages`, the **two-halved** gate, the exit-code pitfall, the 2.3x load-contention factor that reads as a regression, the alembic DSN the bare command does not use, and the pnpm-without-corepack way in. `CLAUDE.md` §11 keeps the bare invocations only | self-written | 2026-08-23 |
 | [`library-spike`](library-spike/SKILL.md) | Empirically verify library behaviour where pip is unavailable — wheel fetching, version pinning, missing native libs — then land the finding across the suite | self-written | 2026-08-14 |
 | [`vue-frontend`](vue-frontend/SKILL.md) | Frontend conventions specific to **this** platform — the generated-client seam, how money and exact decimals cross into TypeScript, the RFC 9457 error shape, cursor pagination, and the 202-plus-Job model, and the dev-identity proxy without which a browser gets 401 on everything | self-written | 2026-08-19 |
 
@@ -368,9 +387,10 @@ Verified after patching: `search.py` runs from the vendored path, `--domain ux`,
 `CLAUDE_PLUGIN_ROOT` reference remains anywhere in the skill.
 
 **Fifth pass, 2026-08-17 — installed on request, like graphify.** The gap it fills is real
-and was visible in `CLAUDE.md` §3: the stack names ECharts, TanStack Table and Vue Flow, and
-`01`–`07` each declare §5.3 views, but nothing in this repository said how any of it should
-*look*. W6a routed seven views and a factor workbench with no design reference at all.
+and was visible in `CLAUDE.md` §3 as it read then: the stack named ECharts, TanStack Table
+and Vue Flow — the last two now recorded in `docs/skills-map.md` and `roadmap.md` as
+declared-but-not-installed — and `01`–`07` each declare §5.3 views, but nothing in this
+repository said how any of it should *look*. W6a routed seven views and a factor workbench with no design reference at all.
 
 ### Original discovery passes
 

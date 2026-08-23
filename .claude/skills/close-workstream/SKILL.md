@@ -43,6 +43,16 @@ grep -nE '\| \*\*W[0-9]+' docs/roadmap.md | grep PLAT     # e.g. FR-PLAT-28..31 
 **Reconcile against the roadmap's own count.** A disagreement is a finding: W2's row said
 "of 60" where the spec now holds 61, because FR-PLAT-51 was appended afterwards.
 
+**Requirement coverage is not interface coverage, nor catalogue coverage.** Run all three
+axes; each answers a different question and a green one says nothing about the others:
+
+```bash
+uv run python scripts/scope-audit.py <MOD> --endpoints    # §5.1 table vs the contract
+uv run python scripts/scope-audit.py <MOD> --catalogue VR # a spec's named-item catalogue
+```
+
+W4 stood at **49 of 50 requirements with 0 of 28 endpoints published**, and nothing said so.
+
 **Give every unevidenced requirement a verdict** — delivered but untested, deferred with an
 owner, reassigned, or not started. Silence is not one of the options, and it was the
 default for four of W2's six gaps until an audit went looking.
@@ -91,6 +101,10 @@ that, and NFR-PLAT-4 was unverified the whole time. "Committed" is not evidence.
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
 python3 scripts/audit-docs.py && uv run python scripts/req-coverage.py
 ```
+
+**Both halves.** The frontend half is a separate workflow and has been red while this one
+was green — [`dev-commands`](../dev-commands/SKILL.md) has it, with the `--frozen-lockfile` and
+generated-client traps.
 
 Locally, not just "CI is green" — see `reproducing-ci-locally`. Paste the real output into
 the closure record; a summary you typed from memory is not evidence either.
@@ -161,8 +175,18 @@ cannot fix cheaply later.
 ## 6. Update the plan docs in the same commit
 
 - `docs/roadmap.md` — status table, closure evidence with dates, the §5 mapping
-- `CLAUDE.md` §2 — layout marks; verify all of them against the filesystem, `…` → `✔`
+- **Component status is `docs/roadmap.md` §6's alone.** `CLAUDE.md` §2 carried layout marks
+  until the 2026-08-23 restructure and no longer does
+  ([`NT-0003`](../../notes/0003-duplicated-status-goes-stale.md)) — verify the roadmap's
+  marks against the filesystem, and do not reintroduce a second copy anywhere
 - Any spec the implementation proved wrong — resolve it, don't silently match (§0)
+
+The demo guide (FR-PLAT-54) is **derived, not written**, so there is nothing to update —
+but check that it still derives:
+
+```bash
+uv run pytest backend/tests/test_demo_guide.py     # also runs in the gate
+```
 
 ## 7. Clean up
 
@@ -208,6 +232,12 @@ mapping.
 ```
 
 ## Verified
+
+2026-08-23 — the three scope-audit axes, the demo-guide derivation check and the
+both-halves gate note moved here from `CLAUDE.md` §13 when that section was cut to its
+binding rule. No procedure changed. Step 6's `CLAUDE.md` §2 layout-marks line was corrected
+in the same pass: those marks no longer exist, and `docs/roadmap.md` §6 owns the status
+outright.
 
 2026-08-15 — the injection lesson above came from plan review 2, after an independent
 audit found that this skill's own worked example had passed for the wrong reason.
