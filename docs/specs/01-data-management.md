@@ -56,7 +56,7 @@ used here unchanged. Additional terms owned by this module:
 
 | Term | Definition |
 |---|---|
-| **Source** | A registered origin of data: `upload` (file), `object_store` (S3 prefix), `sql` (read-only connection + query), `pipeline` (Dagster asset). Holds connection config and credentials by reference, never inline. |
+| **Source** | A registered origin of data: `upload` (file), `object_store` (S3 prefix), `sql` (read-only connection + query), `pipeline` (a scheduled ingestion run, `07` FR-PLAT-61). Holds connection config and credentials by reference, never inline. |
 | **Ingestion Run** | One execution of a Source into a new Dataset Version. A Job (FR-OVR-10). Records row counts in/out, rejected rows, and the exact preparation recipe applied. |
 | **Preparation Recipe** | The declarative, ordered list of preparation steps applied during ingestion. Stored with the Dataset Version; re-running it on the same source bytes reproduces the same version (FR-OVR-8). |
 | **Dataset Table** | One parquet table within a Dataset Version, with a `record_grain` and a pandera schema. A Dataset Version typically has `policy_exposure` and `claim` tables, sometimes more. |
@@ -1031,7 +1031,6 @@ Rule authoring governance mirrors [`wf-05-custom-objective-lifecycle.md`](../wor
 | **Object storage (S3/MinIO)** | Content-addressed parquet blobs (ID-4) | Multipart upload for large versions |
 | **PostgreSQL 16** | Version metadata, reports, rule sets, lineage edges | JSONB for report bodies + GIN indexes; exclusion constraint for reference effective dating (FR-DATA-29) |
 | **Celery + Redis** | Ingestion, validation, profiling, derivation Jobs | Progress callbacks; per-rule time budgets (FR-DATA-19) |
-| **Dagster** | Scheduled recurring ingestion from `pipeline` sources | Partitioned assets keyed by dataset version |
 | **SciPy** | Poisson/Gamma confidence intervals on one-ways (FR-DATA-26) | Exact CIs at low counts, not normal approximations |
 | **ECharts + TanStack Table (frontend)** | One-way charts with CI bands; report and rejected-row grids | Virtualised grids for large offending samples |
 

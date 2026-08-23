@@ -53,7 +53,6 @@ where the project's hard problems live.
 | DuckDB | ADR-0005; 01 FR-DATA-27/28, §4.5 `sql` check | ★★ | Querying parquet directly, `read_parquet` globbing, window functions for one-ways, `QUALIFY`, **read-only connections and disabling extension/filesystem access for user-supplied SQL (NFR-DATA-9)**, statement parsing to reject non-`SELECT` | [DuckDB docs](https://duckdb.org/docs/), [Securing DuckDB](https://duckdb.org/docs/operations_manual/securing_duckdb/overview) |
 | Apache Parquet / Arrow | ADR-0005, ID-4, 01 §4.2 | ★★ | Schema evolution, row groups & predicate pushdown, dictionary encoding, **`decimal128` logical types for money (FR-OVR-7) and exposure**, content-hashing a multi-part dataset deterministically | [Parquet format](https://parquet.apache.org/docs/), [Arrow Python](https://arrow.apache.org/docs/python/) |
 | Object storage (S3 / MinIO) | ID-4, NFR-OVR-9 | ★ | Content-addressed layout, presigned URLs, multipart upload, lifecycle rules | [MinIO docs](https://min.io/docs/minio/linux/index.html) |
-| Dagster | `pipelines/`; 05 FR-MON-2 | ★★ | Assets vs ops, partitioned assets by dataset version and by monitoring period, **backfilling a Monitor created after the fact (NFR-MON-8)**, schedules & sensors (deployment-triggered monitor creation), resource configuration | [Dagster docs](https://docs.dagster.io/), [Partitions & backfills](https://docs.dagster.io/guides/build/partitions-and-backfills) |
 
 ## 3. Actuarial / ML
 
