@@ -2245,6 +2245,29 @@
             "title": "Id",
             "type": "string"
           },
+          "last_validated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Validated At"
+          },
+          "last_validated_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Validated Version"
+          },
           "latest_version": {
             "anyOf": [
               {
@@ -2255,6 +2278,16 @@
               }
             ],
             "title": "Latest Version"
+          },
+          "latest_version_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "line_of_business": {
             "anyOf": [

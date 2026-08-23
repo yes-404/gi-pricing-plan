@@ -165,6 +165,22 @@ class Dataset(BaseModel):
     validation_rule_set_id: UUID | None = None
     latest_version: int | None = None
 
+    #: The status of the version `latest_version` names (FR-DATA-50). Derived per request
+    #: and stored on no row: a status column on `datasets` would be a second answer to
+    #: "can I fit on this?", free to disagree with `DatasetVersion.status`, which §1.3
+    #: makes the only one.
+    latest_version_status: DatasetStatus | None = None
+
+    #: When the most recently `validated` version finished validating — **not necessarily
+    #: `latest_version`**. The badge answers *what state is the newest version in*; this
+    #: answers *when was this Dataset last usable*, and FR-DATA-50 scopes them differently
+    #: on purpose.
+    last_validated_at: datetime | None = None
+
+    #: Which version `last_validated_at` describes. FR-DATA-50: "where the two refer to
+    #: different versions the list states which, so the pair cannot be read as one fact".
+    last_validated_version: int | None = None
+
     created_at: datetime
     archived_at: datetime | None = None
 
@@ -180,6 +196,25 @@ class Dataset(BaseModel):
             for column, entry in self.data_dictionary.items()
             if entry.pii_class in MODELLING_FORBIDDEN_PII
         )
+
+    @model_validator(mode="after")
+    def _the_latest_version_and_its_status_travel_together(self) -> Dataset:
+        if (self.latest_version is None) != (self.latest_version_status is None):
+            raise ValueError(
+                "latest_version and latest_version_status are one fact: a version with no "
+                "status renders a blank badge, and a status with no version describes "
+                "nothing"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _the_validation_date_and_its_version_travel_together(self) -> Dataset:
+        if (self.last_validated_at is None) != (self.last_validated_version is None):
+            raise ValueError(
+                "last_validated_at and last_validated_version are one fact (FR-DATA-50): a "
+                "date with no version cannot be distinguished from the latest version's"
+            )
+        return self
 
 
 
