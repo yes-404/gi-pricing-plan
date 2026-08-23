@@ -897,8 +897,11 @@ def _share(weight: float, total_weight: float) -> float:
     """One exposure share, guarded the way `_partition` guards its own denominators.
 
     A frame whose weights sum to zero has no exposure to apportion, so every share is zero.
-    Dividing anyway returns `nan`, which `PartialDependencePoint`'s `ge=0.0, le=1.0` bound
-    rejects with a validation error naming the field rather than the empty book.
+    Both operands are Python floats by this point, so dividing anyway raises
+    `ZeroDivisionError` out of the middle of a diagnostics run — measured 2026-08-23 by
+    removing this guard. A numpy `nan` would have survived one line further and died at
+    `PartialDependencePoint`'s `ge=0.0, le=1.0` bound instead; neither failure names the
+    empty book, which is why the guard is here rather than at either wall.
     """
     return weight / total_weight if total_weight > 0 else 0.0
 
