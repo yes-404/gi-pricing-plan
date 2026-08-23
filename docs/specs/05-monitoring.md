@@ -79,7 +79,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 | ID | Requirement |
 |---|---|
 | **FR-MON-1** | A **Monitor** declares: the metric family (`input_drift`, `model_ae`, `demand`, `price_portfolio`, `operational`, `shadow`), the live population source (traces, a batch dataset, or both), the Monitoring Baseline, the segment breakdown, the cadence (`daily`, `weekly`, `monthly`), the thresholds, and the alert routing. |
-| **FR-MON-2** | Monitors run on schedule as Jobs (Dagster-orchestrated), and can also be run on demand. Each run produces an immutable Monitoring Result (FR-OVR-1). |
+| **FR-MON-2** | Monitors run on schedule as Jobs — submitted by the scheduler tick, `07` FR-PLAT-61 — and can also be run on demand. Each run produces an immutable Monitoring Result (FR-OVR-1). *Amended 2026-08-23 (OQ-PLAT-2): "(Dagster-orchestrated)". The scheduling mechanism changed and the requirement did not — a Monitor still runs as a Job, on a period, or on demand.* |
 | **FR-MON-3** | Monitoring Baselines are pinned to specific artifact versions, never "the current model". Rebaselining is an explicit, audited act with a required reason — because a silently moving baseline is how drift stops being detected. |
 | **FR-MON-4** | A Monitor is automatically created (from a template) when a Rating Version is first deployed to `prod`, so a deployed structure is never unmonitored by default. The auto-created Monitor is editable and deletable, but deleting it is audited. |
 | **FR-MON-5** | Monitoring Results retain their metric values indefinitely at aggregate level (they are small) and their supporting evidence for ≥ 13 months (NFR-OVR-6). |
@@ -352,7 +352,7 @@ constructing a query by hand (R2, FR-MON-15).
 | Step | Actor | Action |
 |---|---|---|
 | 1 | Backend | On first `prod` deployment, auto-creates the template Monitors (FR-MON-4) |
-| 2 | Worker (Dagster) | On cadence, aggregates traces and claims into the monitoring population |
+| 2 | Worker (scheduled) | On cadence, aggregates traces and claims into the monitoring population |
 | 3 | Worker → pricing-core | Computes drift, A/E, demand, rate-achieved, operational metrics |
 | 4 | Backend | Evaluates thresholds with consecutive-breach logic; persists the Monitoring Result |
 | 5 | Backend | Raises, deduplicates, and routes Alerts (FR-MON-30/31) |
@@ -375,7 +375,7 @@ Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-moni
 | `01-data-management` | Claims and exposure Dataset Versions for actuals; Profiles as baselines; the PSI implementation (R1) |
 | `02-modelling` | Fit-time diagnostics as the performance baseline; the A/E kernel (R1); factor importances for FR-MON-10 |
 | `04-optimisation` | Expected volume/profit/loss-ratio targets from the Optimisation Run behind current prices |
-| `07-platform` | Job scheduling (Dagster), notification channels, secrets for webhooks, time-series storage |
+| `07-platform` | Job scheduling (FR-PLAT-61), notification channels, secrets for webhooks, time-series storage |
 
 ### 7.2 Provides
 
@@ -392,7 +392,6 @@ Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-moni
 
 | Component | Used for | Notes for `skills-map.md` |
 |---|---|---|
-| **Dagster** | Scheduled monitoring pipelines, partitioned by period | Partitioned assets keyed by monitoring period; backfills when a Monitor is created late; sensors for deployment-triggered monitor creation |
 | **DuckDB** | Aggregating sampled traces and claims into monitoring populations | Querying trace parquet at scale; window functions for cohort development |
 | **Polars** | Metric computation, joins between quotes, policies, and claims | Reused `pricing-core` kernels (R1) |
 | **PostgreSQL 16** | Monitors, results, alerts; time-series of aggregate metrics | Partitioning the results table by period; JSONB metric bodies with GIN indexes |
@@ -403,7 +402,8 @@ Full journey: [`wf-04-deploy-and-monitor.md`](../workflows/wf-04-deploy-and-moni
 
 New skills this spec adds to `skills-map.md`: claims development/maturity treatment for
 live monitoring; alert lifecycle and fatigue design; rate achieved vs intended
-decomposition (pure rate vs mix); Dagster partitioned assets and backfills.
+decomposition (pure rate vs mix); period-anchored scheduling and backfill requests
+(`07` FR-PLAT-61).
 
 ---
 
@@ -418,7 +418,7 @@ decomposition (pure rate vs mix); Dagster partitioned assets and backfills.
 | **NFR-MON-5** | Alert delivery within 5 minutes of the run completing; routing failures are retried with backoff and surfaced in-app. |
 | **NFR-MON-6** | Aggregate metric history is retained indefinitely; supporting evidence blobs for ≥ 13 months (NFR-OVR-6). |
 | **NFR-MON-7** | Audit: monitor creation/edit, rebaselining, threshold changes, alert acknowledgement/resolution/suppression, and refit decisions all emit Audit Events. |
-| **NFR-MON-8** | A monitoring outage does not lose data: traces and claims remain in their source stores and a missed run is backfillable (FR-MON-2, Dagster backfill). |
+| **NFR-MON-8** | A monitoring outage does not lose data: traces and claims remain in their source stores and a missed run is backfillable (FR-MON-2, and `07` FR-PLAT-61's backfill request). *Amended 2026-08-23 (OQ-PLAT-2): "Dagster backfill". A missed *tick* now catches up on its own, because schedules are period-anchored; a missed run whose Job **failed** does not, and needs the explicit backfill request — the distinction Dagster's name hid.* |
 
 ---
 

@@ -108,7 +108,8 @@ Actors are used with these exact names in every workflow document.
 ```
 
 Batch/scheduled data movement (ingestion, nightly re-rates, monitoring aggregation) is
-orchestrated by **Dagster** in `pipelines/`, which calls the same backend APIs and
+orchestrated by the **scheduler tick** (`07` FR-PLAT-61), with the pipeline code it
+submits living in `pipelines/`, which calls the same backend APIs and
 `pricing-core` functions rather than reimplementing logic.
 
 ---
@@ -485,7 +486,6 @@ Cross-cutting stack usage. Module specs list their own; all of it aggregates int
 | **XGBoost / LightGBM / interpret (EBM)** | Gradient boosting with monotone constraints; transparent ML |
 | **pandera** | Structural dataset schemas stored with each Dataset Version |
 | **GoRules ZEN Engine** | Execution of rating DAGs as JSON decision models |
-| **Dagster** | Scheduled ingestion, batch re-rate, monitoring aggregation pipelines |
 | **OpenTelemetry** | `trace_id` propagation across API → worker → pricing-core (§5.3) |
 | **Vue 3 + Vite + TS + Pinia + Tailwind** | The SPA |
 | **ECharts / TanStack Table / Vue Flow** | Diagnostics charts, rate-table grids, DAG designer |

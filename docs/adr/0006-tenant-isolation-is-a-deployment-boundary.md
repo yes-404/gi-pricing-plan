@@ -63,7 +63,7 @@ supported path — a flag-day upgrade across every tenant is not.
 
 **Neutral** — per-tenant resource quotas (OQ-PLAT-4) do not disappear, but their purpose
 changes: they protect a tenant's own workloads from each other, never a neighbour from a
-noisy one. That question is sharpened by this ADR, not answered by it. Likewise OQ-GOV-1's
+noisy one. That question is sharpened by this ADR, not answered by it. *Answered 2026-08-23, as a rejection: `07` **FR-PLAT-60** keeps the Job (FR-PLAT-16) and the queue (FR-PLAT-13, FR-PLAT-34) as the only resource boundaries and specifies no Workspace quota. The sharpening above is what made the rejection available — once a neighbour is a different deployment, the contention left is a deployment's own, and those two already bound it.* Likewise OQ-GOV-1's
 "per workspace or global" now reads as "per workspace or per deployment", and a chain the
 operator controls end to end is still a chain the operator controls end to end.
 

@@ -65,7 +65,7 @@
 
 | # | Actor | Action | Refs |
 |---|---|---|---|
-| E1 | Worker (Dagster) | Daily: input drift against the modelling baseline **and** against the prior period. | `05` FR-MON-6/8 |
+| E1 | Worker (scheduled) | Daily: input drift against the modelling baseline **and** against the prior period. | `05` FR-MON-6/8 |
 | E2 | Worker | Weekly: price and portfolio metrics, including **rate achieved vs rate intended**. | `05` FR-MON-20 |
 | E3 | Worker | Weekly: realised conversion and retention against the demand models and against the optimisation run's expectations. | `05` FR-MON-17, `04` FR-OPT-28 |
 | E4 | Worker | Monthly: A/E by peril, factor, and cohort — with maturity, never without. | `05` FR-MON-11/12, R4 |

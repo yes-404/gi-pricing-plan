@@ -49,7 +49,7 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 │                           validation, profiling, reference, the demo guide,
 │                           factors/bandings/groupings/models, GBM fits, transparency
 │                           artifacts and custom objectives
-├── pipelines/              Dagster ingestion and scheduling
+├── pipelines/              scheduled ingestion (07 FR-PLAT-61)
 ├── frontend/               Vue 3 SPA — the routed views, /demo, the factor workbench
 ├── examples/               freMTPL2 seed
 │
