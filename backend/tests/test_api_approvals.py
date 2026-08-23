@@ -170,7 +170,9 @@ async def _create_artifact(
             # The only one that takes two rows: the slug in the reference is the
             # **dataset's** and the version is the snapshot's, which is why
             # `datasets.resolve_artifact_ref` is the only one of the six that joins.
-            dataset = DatasetRow(workspace_id=workspace_id, slug=slug, name=slug)
+            dataset = DatasetRow(
+                workspace_id=workspace_id, slug=slug, name=slug, owner_id=new_uuid7()
+            )
             session.add(dataset)
             await session.flush()
             session.add(
@@ -234,7 +236,9 @@ async def the_model_every_test_here_pins(database: Database, workspace_id) -> No
     decision moved nothing and no state on the other side had to be coherent.
     """
     async with database.unit_of_work() as session:
-        dataset = DatasetRow(workspace_id=workspace_id, slug=MODEL_SLUG, name=MODEL_SLUG)
+        dataset = DatasetRow(
+            workspace_id=workspace_id, slug=MODEL_SLUG, name=MODEL_SLUG, owner_id=new_uuid7()
+        )
         session.add(dataset)
         await session.flush()
         version = DatasetVersionRow(
