@@ -1079,7 +1079,7 @@ authentication is **OQ-PLAT-6**, open, recommendation recorded.
 | Accessibility beyond semantics | **Partial.** Tables carry `aria-label`, alerts carry `role`, and every test queries by role or label — which keeps the semantics honest. NFR-OVR-10's tabular fallback for charts is **not** built; owner W6b |
 | `07` §5.1's six `PLAT` endpoints | Unchanged from W2's record — still owned by W14 |
 | **Six §5.3 Contents items** | **Added 2026-08-15.** Dataset status badge, last validated, owner; lineage graph; histograms; PSI comparison selector. Plus threshold editing in the rule set editor. The original record did not list them because it audited routes and not Contents. Owner: **W6b**, except the two blocked by a model/contract divergence (owner/status/validated, and `histogram`), which need a spec decision first — recorded as unresolved in `01`, not silently designed around. **Two of the six delivered 2026-08-19** — histograms, via FR-DATA-48, and the PSI comparison selector, whose `compareProfiles()` now has a caller; four remain |
-| **Two unresolved model/contract divergences** | **Added 2026-08-15.** `Dataset` has no status, validated-at or owner while §5.3 asks to display all three; `ColumnProfile` has no `histogram` while `01` §4.7 *and* `docs/contracts/schemas/profile.schema.json` both define one. Four other divergences from the same fortnight got dated amendment notes; these two were built around in silence, which is the `CLAUDE.md` §0 failure the notes exist to prevent. **Both owned 2026-08-18.** The `ColumnProfile` half is **resolved 2026-08-19** by the profile-contract slice (W5): the contract was right and the requirement was incomplete, so `01` gained **FR-DATA-48**, both profiling engines compute the histogram, and the Profile view renders it. The `Dataset` half is not a slice task: it has two defensible answers, so it is recorded as **OQ-DATA-9** rather than picked. **Decided 2026-08-19, and the row closes with it:** two of the three are projections the list endpoint derives from the Dataset's versions (`FR-DATA-50`) and the third is a new explicit `Dataset.owner_id` (`FR-DATA-51`). Neither is built — the decision moved the divergence from *unanswerable* to *unbuilt*, owner W6b |
+| **Two unresolved model/contract divergences** | **Added 2026-08-15.** `Dataset` has no status, validated-at or owner while §5.3 asks to display all three; `ColumnProfile` has no `histogram` while `01` §4.7 *and* `docs/contracts/schemas/profile.schema.json` both define one. Four other divergences from the same fortnight got dated amendment notes; these two were built around in silence, which is the `CLAUDE.md` §0 failure the notes exist to prevent. **Both owned 2026-08-18.** The `ColumnProfile` half is **resolved 2026-08-19** by the profile-contract slice (W5): the contract was right and the requirement was incomplete, so `01` gained **FR-DATA-48**, both profiling engines compute the histogram, and the Profile view renders it. The `Dataset` half is not a slice task: it has two defensible answers, so it is recorded as **OQ-DATA-9** rather than picked. **Decided 2026-08-19, and the row closes with it:** two of the three are projections the list endpoint derives from the Dataset's versions (`FR-DATA-50`) and the third is a new explicit `Dataset.owner_id` (`FR-DATA-51`). Neither is built — the decision moved the divergence from *unanswerable* to *unbuilt*, owner W6b **Both built 2026-08-23 (W32-3), and the decision's field count was one short.** `FR-DATA-50` landed as **three** derived fields, not two: "where the two refer to different versions the list states which" cannot be satisfied by a bare `last_validated_at`, so `last_validated_version` travels with it and a validator refuses either alone. `FR-DATA-51`'s `owner_id` is a non-null column backfilled from the audit chain, with `PATCH /api/v1/datasets/{dataset_id}` as the Admin-or-owner change path the requirement implies and `01` §5.1 had nowhere to put. **The three view columns are still not rendered** — that half of this row stands, and is W6b-3's; this slice delivered the fields the columns need, not the columns |
 
 **Retrofit list (`docs/roadmap.md` §5):** unchanged by W6a. The frontend consumes the
 contract; it does not touch audit-in-transaction, artifact immutability, integer money or
@@ -4028,6 +4028,28 @@ placed** — the six above, the six decided 2026-08-19 that had never reached th
 still open, on the any-time row. A question invisible to the plan gets answered by whoever
 trips over it; this is the fourth time the `missing` half of the check has caught a batch,
 and the first where the batch included questions still open.
+
+**2026-08-23 — FR-DATA-50 and FR-DATA-51 delivered (W32-3), and what stays open beside them.**
+Both were "Not delivered. Phase 1b, owner W6b". `GET /api/v1/datasets` now derives the status
+badge and the last-validated date per request, storing neither, and `Dataset` carries a
+non-null `owner_id` with an audited Admin-or-owner change route. FR-DATA-50 landed as **three**
+fields rather than the two it named — its own "states which" clause needs the version beside the
+date — which is recorded on the requirement rather than smoothed over. `01` §5.1's endpoint
+table gained the `PATCH` row and `scope-audit.py DATA --endpoints` counts 38 of 38.
+
+**Still open, and deliberately so:** `FR-DATA-52` is a decided deferral with **no owner, by its
+own terms** — its trigger is a named reader asking for an exposure-ordered view, and assigning
+it to a workstream would schedule work nobody has asked for. It appears in
+`scope-audit.py DATA`'s unevidenced list beside the two delivered above and **should not be read
+as a gap**; that adjacency is the whole reason this paragraph exists.
+
+**Still open, and owned elsewhere:** `NFR-DATA-1` and `NFR-DATA-2` are budgets, not behaviour.
+§13 rule 5 makes them a recorded `bench-data.py` measurement rather than a `@pytest.mark.req`
+marker, and taking one is not this slice's work — nor is it honest on a machine running five
+concurrent agent sessions, where the same measurement has varied 2.3x with load.
+
+**Not delivered here:** `01` §5.3's Dataset list columns. The fields exist and the endpoint
+returns them; rendering them is **W6b-3's**.
 
 ---
 

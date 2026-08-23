@@ -709,6 +709,11 @@ class DatasetRow(Base):
     )
     validation_rule_set_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
 
+    #: FR-DATA-51. Non-null and set at ingestion: a Dataset with no owner has nobody to ask
+    #: about it, and every review path that reaches for one would have to invent a
+    #: fallback. Not a `ForeignKey` — `:1282-1285` states the rule and the reason.
+    owner_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

@@ -8,6 +8,8 @@ the transition a caller wants.
 
 from __future__ import annotations
 
+import asyncio
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -15,6 +17,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.db.session import Database
 from model_schema import new_uuid7
 
 
@@ -825,3 +828,368 @@ def test_the_dataset_list_carries_each_dataset_s_latest_version(
     # A dataset with no versions reports null rather than 0 — "none yet" and "version zero"
     # are different claims, and only one of them is true.
     assert listed[bare]["latest_version"] is None
+
+
+def _run(coro):
+    """Drive one coroutine from a synchronous test.
+
+    `asyncio.get_event_loop()` rather than a loop of our own: the `database` fixture's
+    engine binds its connections to the loop `pytest-asyncio` created for it, and a second
+    loop produces `got Future attached to a different loop` — which reads like a driver
+    bug. `test_the_dataset_list_carries_each_dataset_s_latest_version` above reaches for
+    the same construction.
+    """
+    return asyncio.get_event_loop().run_until_complete(coro)
+
+
+async def _draft_dataset(
+    database: Database, workspace_id: UUID, actor, slug: str, *, versions: int = 1
+) -> UUID:
+    from app.platform import datasets as dataset_service
+
+    async with database.unit_of_work() as session:
+        row = await dataset_service.create_dataset(
+            session, workspace_id=workspace_id, actor=actor, slug=slug
+        )
+        for _ in range(versions):
+            await dataset_service.new_version(
+                session, workspace_id=workspace_id, actor=actor, dataset_id=row.id
+            )
+        return row.id
+
+
+async def _validate_latest(
+    database: Database,
+    workspace_id: UUID,
+    actor,
+    dataset_id: UUID,
+    *,
+    finished_at: datetime,
+) -> int:
+    """Take the dataset's newest version through `validating → validated`, and say which.
+
+    The report row is inserted directly rather than through `validation.store_report`:
+    what `_last_validated` reads is `finished_at`, and building a whole `ValidationReport`
+    to carry one timestamp would put the rule engine in the path of a list test.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import DatasetVersionRow, ValidationReportRow
+    from app.platform import datasets as dataset_service
+    from model_schema import DatasetStatus
+
+    async with database.unit_of_work() as session:
+        version = (
+            await session.execute(
+                select(DatasetVersionRow)
+                .where(DatasetVersionRow.dataset_id == dataset_id)
+                .order_by(DatasetVersionRow.version.desc())
+                .limit(1)
+            )
+        ).scalar_one()
+        version_id, version_number = version.id, version.version
+        report = ValidationReportRow(
+            id=new_uuid7(),
+            workspace_id=workspace_id,
+            dataset_version_id=version_id,
+            rule_set_id=new_uuid7(),
+            rule_set_version=1,
+            overall="pass",
+            rule_count=0,
+            body={},
+            started_at=finished_at,
+            finished_at=finished_at,
+        )
+        session.add(report)
+        await session.flush()
+        await dataset_service.transition(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            version_id=version_id,
+            to_status=DatasetStatus.VALIDATING,
+        )
+        await dataset_service.promote_to_validated(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            version_id=version_id,
+            report_id=report.id,
+            report_passed=True,
+            unacknowledged_warnings=0,
+        )
+    return int(version_number)
+
+
+@pytest.mark.req("FR-DATA-50")
+def test_the_list_carries_the_latest_version_s_status(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """The badge. Blank before this slice: `to_schema` had nowhere to put a status."""
+    _run(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+    slug = _slug()
+    _run(_draft_dataset(database, workspace_id, principal, slug, versions=1))
+
+    body = client.get("/api/v1/datasets", headers=headers).json()
+    row = next(item for item in body["items"] if item["slug"] == slug)
+    assert row["latest_version"] == 1
+    assert row["latest_version_status"] == "draft"
+    assert row["last_validated_at"] is None
+    assert row["last_validated_version"] is None
+
+
+@pytest.mark.req("FR-DATA-50")
+def test_a_draft_above_a_validated_version_reports_both_and_says_which(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """FR-DATA-50's worked example, and the only test that can catch the two fields being
+    computed from the same version.
+
+    Build v1, validate it, then create v2 and leave it `draft`. The badge must read
+    `draft` for v2 while the date belongs to v1 — a list that computed both from
+    `latest_version` would report no validation date at all and look entirely plausible.
+    """
+    from app.platform import datasets as dataset_service
+
+    _run(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+    slug = _slug()
+    dataset_id = _run(_draft_dataset(database, workspace_id, principal, slug, versions=1))
+    validated = _run(
+        _validate_latest(
+            database,
+            workspace_id,
+            principal,
+            dataset_id,
+            finished_at=datetime(2026, 8, 20, 9, 30, tzinfo=UTC),
+        )
+    )
+
+    async def _second_version() -> None:
+        async with database.unit_of_work() as session:
+            await dataset_service.new_version(
+                session, workspace_id=workspace_id, actor=principal, dataset_id=dataset_id
+            )
+
+    _run(_second_version())
+
+    body = client.get("/api/v1/datasets", headers=headers).json()
+    row = next(item for item in body["items"] if item["slug"] == slug)
+    assert row["latest_version"] == 2
+    assert row["latest_version_status"] == "draft"
+    assert row["last_validated_version"] == validated == 1
+    assert row["last_validated_at"] is not None
+    assert row["last_validated_at"].startswith("2026-08-20T09:30")
+
+    # The detail route must agree with the list — a detail page showing nothing where the
+    # list shows a date would be its own defect.
+    detail = client.get(f"/api/v1/datasets/{slug}", headers=headers).json()
+    assert detail["latest_version_status"] == "draft"
+    assert detail["last_validated_version"] == 1
+
+
+@pytest.mark.req("FR-DATA-50")
+def test_the_page_costs_the_same_number_of_statements_at_any_size(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """FR-DATA-50 budgets "one further aggregate"; `_latest_versions`' own docstring
+    records the 51-round-trip defect this guards against.
+
+    Counted with a SQLAlchemy `before_cursor_execute` listener rather than asserted in
+    prose, because an N+1 reintroduced by a later refactor is invisible to every other
+    test in this file.
+    """
+    from sqlalchemy import event
+    from sqlalchemy.engine import Engine
+
+    _run(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+    for _ in range(3):
+        _run(_draft_dataset(database, workspace_id, principal, _slug(), versions=1))
+
+    # Warm the pool and the app's lazily-built state, so what is counted below is the page
+    # and not a first-request cost.
+    client.get("/api/v1/datasets", headers=headers)
+
+    statements: list[str] = []
+
+    def _count(conn, cursor, statement, parameters, context, executemany) -> None:
+        statements.append(statement)
+
+    event.listen(Engine, "before_cursor_execute", _count)
+    try:
+        small = client.get("/api/v1/datasets?limit=3", headers=headers)
+        at_three = len(statements)
+
+        event.remove(Engine, "before_cursor_execute", _count)
+        for _ in range(7):
+            _run(_draft_dataset(database, workspace_id, principal, _slug(), versions=1))
+        statements.clear()
+        event.listen(Engine, "before_cursor_execute", _count)
+
+        large = client.get("/api/v1/datasets?limit=10", headers=headers)
+        at_ten = len(statements)
+    finally:
+        event.remove(Engine, "before_cursor_execute", _count)
+
+    assert small.status_code == 200, small.text
+    assert large.status_code == 200, large.text
+    assert len(small.json()["items"]) == 3
+    assert len(large.json()["items"]) == 10
+    # Five, not four. FR-DATA-50's "one further aggregate" budgets the *page's* queries,
+    # and four of these are it: the row query, the capped count, `_latest_versions` and
+    # `_last_validated`. The fifth is `requires(DATASET_READ)`'s role-assignment lookup —
+    # a per-request authorisation cost every route in this file pays, independent of the
+    # page and of this slice. Counted rather than filtered out, because a listener that
+    # only counts the statements it expects cannot catch an N+1 in one it does not.
+    assert at_three == at_ten == 5, (
+        f"a page costs {at_three} statements at 3 rows and {at_ten} at 10; the budget is "
+        "five — the permission check, the row query, the capped count, the latest-version "
+        f"aggregate and the one further aggregate.\n{statements!r}"
+    )
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_a_created_dataset_is_owned_by_its_creator(
+    client: TestClient, analyst: dict[str, str], principal
+) -> None:
+    slug = _slug()
+    created = client.post("/api/v1/datasets", json={"slug": slug}, headers=analyst)
+    assert created.status_code == 201, created.text
+    assert created.json()["owner_id"] == str(principal.id)
+
+
+@pytest.mark.req("FR-DATA-51")
+async def test_the_system_principal_cannot_own_a_dataset(database, workspace_id) -> None:
+    """`Principal.id` is null only for `system`, and FR-DATA-51 makes `owner_id` non-null.
+
+    Asserted at the service rather than over HTTP: no route authenticates as `system`, and
+    a nullable column would have swallowed this silently.
+    """
+    from app.errors import PlatformError
+    from app.platform import datasets as dataset_service
+    from model_schema import ActorKind, Principal
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await dataset_service.create_dataset(
+                session,
+                workspace_id=workspace_id,
+                actor=Principal(kind=ActorKind.SYSTEM),
+                slug=_slug(),
+            )
+    assert exc.value.code == "VALIDATION_FAILED"
+    assert "owner" in exc.value.detail.lower()
+
+
+def _owner_change(client: TestClient, dataset_id, headers, owner_id):
+    return client.patch(
+        f"/api/v1/datasets/{dataset_id}",
+        json={"owner_id": str(owner_id)},
+        headers=headers,
+    )
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_the_owner_can_hand_the_dataset_on(
+    client: TestClient, analyst: dict[str, str], workspace_id
+) -> None:
+    successor = new_uuid7()
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+
+    response = _owner_change(client, created.json()["id"], analyst, successor)
+    assert response.status_code == 200, response.text
+    assert response.json()["owner_id"] == str(successor)
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_an_admin_can_reassign_a_dataset_they_do_not_own(
+    client: TestClient, analyst: dict[str, str], workspace_id, grant
+) -> None:
+    """The second arm.
+
+    Without this test the rule collapses to "the owner may", and an Admin unable to
+    reassign a dataset whose owner has left is exactly the situation the Admin arm exists
+    for. The admin here holds no `dataset:write` — `admin` is not a superset of `analyst`
+    in `BUILTIN_ROLES` — so this also proves the two conditions are independent.
+    """
+    administrator, successor = new_uuid7(), new_uuid7()
+    _run(grant("admin", principal_id=administrator))
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+
+    response = _owner_change(
+        client,
+        created.json()["id"],
+        _headers(administrator, workspace_id),
+        successor,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["owner_id"] == str(successor)
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_a_third_party_with_dataset_write_is_refused(
+    client: TestClient, analyst: dict[str, str], workspace_id, grant
+) -> None:
+    """The load-bearing refusal.
+
+    `dataset:write` is not enough — a writer who is neither Admin nor owner may edit the
+    dictionary and may not reassign the dataset, and a route that checked only the
+    permission would look correct in every other test in this file.
+    """
+    third_party = new_uuid7()
+    _run(grant("analyst", principal_id=third_party))
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+
+    # The same principal *can* edit the dictionary, which is what makes the refusal below
+    # about ownership rather than about holding no permission at all.
+    edited = client.put(
+        f"/api/v1/datasets/{created.json()['slug']}/dictionary",
+        json={"data_dictionary": {}},
+        headers=_headers(third_party, workspace_id),
+    )
+    assert edited.status_code == 200, edited.text
+
+    response = _owner_change(
+        client, created.json()["id"], _headers(third_party, workspace_id), new_uuid7()
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_the_reassignment_is_audited_with_both_owners(
+    client: TestClient, analyst: dict[str, str], database, workspace_id, principal
+) -> None:
+    """`06` R2 and FR-DATA-51's "audited as a metadata change".
+
+    `before` must carry the outgoing owner: an audit event saying only who owns it now
+    cannot answer who lost it, which is the question an ownership record exists for.
+    """
+    successor = new_uuid7()
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+    assert _owner_change(client, created.json()["id"], analyst, successor).status_code == 200
+
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+
+    async def event():
+        async with database.session() as session:
+            return (
+                await session.execute(
+                    select(AuditEventRow).where(
+                        AuditEventRow.workspace_id == workspace_id,
+                        AuditEventRow.action == "dataset.owner_changed",
+                    )
+                )
+            ).scalar_one()
+
+    entry = _run(event())
+    assert entry.before["owner_id"] == str(principal.id)
+    assert entry.after["owner_id"] == str(successor)

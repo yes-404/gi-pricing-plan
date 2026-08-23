@@ -17,6 +17,7 @@ This module is where that is true or not. Three things make it true:
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -154,6 +155,19 @@ async def create_dataset(
     data_dictionary: Mapping[str, DataDictionaryEntry] | None = None,
 ) -> DatasetRow:
     """Create a Dataset — the named container its versions belong to (`01` §4.1)."""
+    # Before the permission check, not after. A `system` principal fails both — it holds no
+    # role, so `effective_permissions` returns the empty set — but `PERMISSION_DENIED`
+    # sends the caller looking for a grant, and no grant would fix this: FR-DATA-51 makes
+    # `owner_id` non-null and `Principal.id` is null for `system` by construction.
+    if actor.id is None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "A dataset needs an owner",
+            422,
+            "FR-DATA-51 makes owner_id non-null and set at ingestion; the system principal "
+            "has no id and cannot own one. Create it as the user or service account "
+            "responsible for it.",
+        )
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -163,6 +177,7 @@ async def create_dataset(
     row = DatasetRow(
         workspace_id=workspace_id,
         slug=slug,
+        owner_id=actor.id,
         name=name or slug,
         description=description,
         line_of_business=line_of_business,
@@ -188,7 +203,15 @@ async def create_dataset(
         source=JobSource.API,
         action="dataset.created",
         entity_ref=f"dataset:{slug}@1",
-        after={"slug": slug, "name": row.name, "currency": row.currency},
+        after={
+            "slug": slug,
+            "name": row.name,
+            "currency": row.currency,
+            # Ownership is part of what creating a Dataset established (FR-DATA-51), and
+            # the `after` should say so — otherwise the chain records who acted but not
+            # what the act made them responsible for.
+            "owner_id": str(row.owner_id),
+        },
     )
     return row
 
@@ -274,8 +297,78 @@ async def update_dictionary(
     return row
 
 
-def to_schema(row: DatasetRow, *, latest_version: int | None = None) -> Dataset:
-    """The row as the `01` §4.1 artifact the API returns."""
+async def set_owner(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    dataset_id: UUID,
+    owner_id: UUID,
+) -> DatasetRow:
+    """Hand a Dataset to a new owner (FR-DATA-51).
+
+    Two conditions, not one: **Admin, or the current owner**. Both live here rather than in
+    the route so the rule is written once, and so the refusal can name which condition
+    failed — a caller who holds `DATASET_WRITE` and is refused would otherwise have no way
+    to tell this from a missing permission.
+
+    `ADMIN_MANAGE_ROLES` stands for "an Admin" (FR-DATA-51 names the actor, not a
+    permission). It is held by the `admin` role and by no other built-in role, and of the
+    five admin permissions it is the one about *who is accountable for what* rather than
+    about settings, environments or service accounts — which is exactly what an owner is.
+    No new permission was added: FR-GOV-3's set is closed, and a permission invented for
+    one route is a permission no role grants.
+
+    `load_dataset_by_id` folds `workspace_id` into its predicate, which is what makes a
+    cross-workspace request a 404 rather than a 403.
+    """
+    row = await load_dataset_by_id(
+        session, workspace_id=workspace_id, dataset_id=dataset_id
+    )
+    is_owner = actor.id is not None and actor.id == row.owner_id
+    if not is_owner and not await rbac.has_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.ADMIN_MANAGE_ROLES,
+    ):
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Not permitted",
+            403,
+            "FR-DATA-51 lets a Dataset's owner be changed by an Admin or by the current "
+            "owner, and you are neither. `dataset:write` is not enough — it permits "
+            "editing the data dictionary, not reassigning accountability.",
+        )
+
+    before = {"owner_id": str(row.owner_id)}
+    row.owner_id = owner_id
+    await session.flush()
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="dataset.owner_changed",
+        entity_ref=f"dataset:{row.slug}",
+        before=before,
+        after={"owner_id": str(owner_id)},
+    )
+    return row
+
+
+def to_schema(
+    row: DatasetRow,
+    *,
+    latest_version: tuple[int, str] | None = None,
+    last_validated: tuple[int, datetime] | None = None,
+) -> Dataset:
+    """The row as the `01` §4.1 artifact the API returns.
+
+    `latest_version` is a `(version, status)` pair rather than two parameters so a caller
+    cannot supply one without the other — the schema refuses that combination anyway
+    (FR-DATA-50), and a pair turns a runtime `ValidationError` into a type error.
+    """
     return Dataset(
         id=row.id,
         workspace_id=row.workspace_id,
@@ -293,7 +386,13 @@ def to_schema(row: DatasetRow, *, latest_version: int | None = None) -> Dataset:
             for column, entry in row.data_dictionary.items()
         },
         validation_rule_set_id=row.validation_rule_set_id,
-        latest_version=latest_version,
+        owner_id=row.owner_id,
+        latest_version=latest_version[0] if latest_version else None,
+        latest_version_status=(
+            DatasetStatus(latest_version[1]) if latest_version else None
+        ),
+        last_validated_version=last_validated[0] if last_validated else None,
+        last_validated_at=last_validated[1] if last_validated else None,
         created_at=row.created_at,
         archived_at=row.archived_at,
     )
