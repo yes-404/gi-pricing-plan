@@ -700,6 +700,7 @@ def test_permutation_importance_degrades_the_holdout_when_signal_is_destroyed(
 
 
 @pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-MODEL-125")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_partial_dependence_shares_are_exposure_and_not_row_counts(backend: str) -> None:
     """A frame where the two definitions disagree by construction.
@@ -731,6 +732,7 @@ def test_partial_dependence_shares_are_exposure_and_not_row_counts(backend: str)
 
 
 @pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-MODEL-125")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_numeric_partial_dependence_point_carries_the_exposure_at_that_value(
     backend: str,

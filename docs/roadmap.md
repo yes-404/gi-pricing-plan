@@ -3612,14 +3612,24 @@ admits as evidence where a test is the wrong instrument — and says so with the
   numeric column collapses to a few points and each is then reported at an equal share it
   does not hold. The field exists to stop a reader taking a spike over thin exposure for a
   rating signal (`02` §4), so both are worth an owner. Owner: W6b, with the frontend that
-  first plots the curve.
+  first plots the curve. Fixed 2026-08-23 (W32-5), under FR-MODEL-125 — all four sites
+  moved together, the level ranking and the omission record's share included, because the
+  requirement makes the ranking and the emitted share the same quantity. NFR-MODEL-14
+  re-measured after the fix: 0.0356 fits per scoring pass against the 0.06 budget, at load
+  average 0.85, on the 75 000 x 60 x 500 arm the 0.0480 reading was taken on.
 - **The sweep runs over a factor's *source column*, not its resolved levels** — found while
   deciding OQ-MODEL-26, recorded not fixed. `_sweep` holds `source_columns[0]`, so a `grouping`
   factor collapsing a 10 000-code column to eight groups still costs 10 000 scoring passes and
   emits 10 000 points that take eight distinct values, and a `banding` factor gets a curve over
   raw ages rather than over its bands. FR-MODEL-118's cap bounds this — it is the pathological
   case the cap was written for — but the cap counts *source* levels, so the requirement says so
-  rather than implying it counts the factor's own. Owner: W6b.
+  rather than implying it counts the factor's own. Owner: W6b. Fixed 2026-08-23 (W32-5),
+  under FR-MODEL-125 — a banding or grouping factor is now gridded over its resolved levels
+  and the source column held at a representative raw value drawn from the frame, so
+  `predict_gbm` runs `resolve_factors` exactly as it does in production. Cross factors are
+  *not* covered: they still grid over their first source column, because a representative
+  value for a cross level is a tuple across several columns. Owner: W6b, with the frontend
+  that first plots a cross factor's curve.
 - **Two §14 question-4 spec-accuracy findings against `02`**, both surfaced by OQ-MODEL-25 and
   neither fixed here, because §14's output is a proposal rather than an edit. §5.3's factor
   workbench Contents column claims "monotonic-direction and intent controls", and the built
