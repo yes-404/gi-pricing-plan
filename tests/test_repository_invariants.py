@@ -276,3 +276,38 @@ def test_every_error_code_pricing_core_raises_is_registered_and_declared() -> No
     declared = set(re.findall(r"`([A-Z][A-Z0-9_]{2,})`", block))
     undeclared = sorted(code for code in raised if code not in declared)
     assert not undeclared, f"raised and registered but absent from `02` §5.1: {undeclared}"
+
+
+@pytest.mark.req("FR-PLAT-57")
+def test_the_migration_chain_has_exactly_one_head() -> None:
+    """Two branches adding a revision off the same parent merge cleanly and break the deploy.
+
+    Found on 2026-08-23: W32-2 and W32-3 executed concurrently and each added a migration
+    parented on `9e4c7b21fa08`. Nothing in the repository objected. Both branches were
+    green, both would have squash-merged without conflict — `git` sees two new files in a
+    directory, which is not a conflict — and the damage would first have appeared at the
+    next `alembic upgrade head` as `Multiple head revisions are present`.
+
+    That combination is the reason this is checked rather than trusted: the defect exists
+    from the moment it lands, and it is invisible until somebody migrates. The chain is read
+    through Alembic's own `ScriptDirectory`, so this test fails for the same reason and on
+    the same data as the deployment it is protecting, rather than on a private re-parse of
+    the version files.
+    """
+    import configparser
+
+    from alembic.script import ScriptDirectory
+
+    ini = configparser.ConfigParser()
+    ini.read(ROOT / "alembic.ini", encoding="utf-8")
+    location = ROOT / ini["alembic"]["script_location"]
+    assert location.is_dir(), f"alembic.ini script_location does not resolve: {location}"
+
+    heads = ScriptDirectory(str(location)).get_heads()
+
+    assert len(heads) == 1, (
+        f"the migration chain has {len(heads)} heads: {sorted(heads)}. Two branches each "
+        "added a revision off the same parent. Re-parent the later migration's "
+        "`down_revision` onto the other head — or, if the divergence was deliberate, record "
+        "that with `alembic merge`, which is the documented way to say so."
+    )
