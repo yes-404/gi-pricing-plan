@@ -3672,6 +3672,86 @@ admits as evidence where a test is the wrong instrument — and says so with the
 
 **Gate:** both halves, run locally, each exit code read. Recorded in rule 3 above.
 
+#### W32-6 slice — the backtest and custom-objective endpoint tests, 2026-08-23
+
+One of six concurrent test-hardening slices. **Nine routes that had two OpenAPI-presence
+assertions between them now carry endpoint tests** — six over the backtest routes, sixteen
+over the custom-objective ones. **No requirement id was allocated**: every marker names one
+that already existed, which is also why the coverage total did not move (below).
+
+##### What was built
+
+| Delivered | Evidence |
+|---|---|
+| The backtest routes over HTTP (FR-MODEL-57, FR-MODEL-92) | `backend/tests/test_api_backtests.py` — **6 passed, 0 skipped**. 202-and-a-job on request, the stored summary on read, a 404 that names the id asked for, cross-workspace absence, and both refusals (`model:fit` to request, `model:read` to read) |
+| The custom-objective routes over HTTP (FR-MODEL-95, FR-MODEL-75) | `backend/tests/test_custom_objectives_api.py` — **16 passed, 0 skipped**. Create, read, usage, certify and submit; two cross-workspace 404s; four RBAC refusals **each with a passing case beside it**; three conflicts (certify while under review, submit twice, evidence incomplete); and the `expression` kind refused by name |
+| `backtests` joins the append-only row list (`00` FR-OVR-1) | `test_artifact_immutability.py`, 13 tests → **14**. The table carried both layers already — the narrowed grant and the `artifact_append_only` row and statement triggers — but was **absent from `_APPEND_ONLY_ROWS`**, the one list that makes the test fire against it |
+| The derive refusal split in two (FR-MODEL-75) | `test_custom_objectives.py` — finding 1 below |
+
+##### The findings, and which side was wrong in each
+
+1. **The derive refusal proved something other than what it claimed — the test was wrong.**
+   It granted the caller nothing and asserted `status_code in (403, 409)`. `FitModels` is a
+   *route* dependency, resolved before the handler body, so the 409 arm was unreachable and
+   the test could never observe the kind gate it was named for. Split in two: an ungranted
+   caller must get **403 `PERMISSION_DENIED`**, and a caller holding `analyst` must get
+   **409 `OBJECTIVE_KIND_NOT_ENABLED`**. Proven load-bearing by mutating the raised code to
+   `VALIDATION_FAILED` — exactly one of the two fails, while the status stays 409, so the
+   `["code"]` assertion and not merely the status is what carries the test.
+2. **`backtests` was locked in the database and missing from the test's list — the test list
+   was wrong.** Entry added, and the trigger shown to fire against a deliberate `INSERT`.
+3. **The plan named FR-MODEL-40 as "backtest results" — the plan was wrong.** FR-MODEL-40 is
+   the **symbolic derivation of gradient and hessian from an `expression` objective's loss**,
+   a Phase 2 capability gated off by FR-MODEL-75 and implemented by nothing. Marking backtest
+   tests with it would have put a traceability claim on a requirement no line of this
+   repository satisfies — precisely the "a marker is a claim, not a proof" failure
+   `CLAUDE.md` §13 rule 1 warns about. The backtest requirement is **FR-MODEL-57**, which
+   `test_backtests.py` already carried; the new markers were corrected to it before commit.
+   **Verdict on FR-MODEL-40: deferred, owner Phase 2**, recorded on its spec row.
+4. **A docstring documented `n_points=300` — the comment was wrong**, and by more than
+   staleness: `SamplingSpec` now forbids that value (`ge=1_000`). Corrected to name
+   `COUNT_GRID`, which is where the real grid lives.
+5. **`02` §5.1 said `/derive` answers 422; the code answers 409 — the spec was wrong.** The
+   code is right: the kind gate fires before the request body is looked at, so there is
+   nothing to report as a validation failure. Corrected by a dated §5.1 amendment.
+6. **Three shape findings recorded rather than fixed**, each with an owner, below.
+7. **Three read permits were granted by a principal holding both permissions — the
+   tests were wrong.** Found by mutation while proving the suite load-bearing (§13
+   rule 4): swapping `ReadModels` for `FitModels` on `GET /models/backtests/{id}`,
+   `GET /custom-objectives/{id}` and `.../usage` left all 22 new tests green, because
+   every permit read as the `analyst`, which holds `model:read` *and* `model:fit`. A
+   route re-gated on `model:fit` would have kept them green while every read-only
+   principal lost the artifact. Corrected: the three permits now read as the
+   `auditor`, and the same mutation fails them.
+
+##### Recorded, not fixed
+
+- **`uq_backtests_model_version` is not workspace-scoped.** Every other uniqueness constraint
+  on a workspace-owned table is. Whether that is a defect or a deliberate global identity is
+  a governance question and a migration, not a test change. **Owner: unassigned — raise
+  before the next slice that touches this table.** Recorded in `02` §4.12.
+- **The `derive` route publishes a `200 CustomObjective` it can never return** — the only
+  reachable outcome is the 409. A `model-schema` change. **Owner: the Phase 2 slice that
+  lands `expression` objectives.** Recorded in `02` §5.1.
+- **The custom-objective read routes are single-layer RBAC.** Consistent with the rest of the
+  API, so this is noted rather than proposed as a change. **Owner: the next `06` RBAC slice.**
+
+##### What did not move, and why that is the point
+
+**This slice moved requirement coverage by zero** — measured on the branch with its two new
+test files present and again with them moved aside, and identical both times (**263 of 507,
+51.6%**, on the base it landed against). The plan predicted a rise on the strength of
+FR-MODEL-40 gaining its first marker; finding 3 is why it did not. *(The plan's stated
+starting figure of 258 was stale before this slice finished — W32-2, W32-3, W32-4 and `07`
+FR-PLAT-57 all landed on `main` while it ran. The absolute figure is whichever of them landed
+last; the movement attributable to W32-6 is zero against any of them.)* FR-MODEL-57, FR-MODEL-92, FR-MODEL-95 and FR-MODEL-75 were each
+already marked somewhere, so **four requirements gained real endpoint evidence while the
+count stood still** — the clearest demonstration to hand that the coverage number counts
+markers, not proof, and that §13 rule 1's "a marker is a claim" is the load-bearing half.
+
+`scope-audit.py MODEL --endpoints` is unchanged at **41 of 41 declared endpoints published**;
+this slice added tests, not routes.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
