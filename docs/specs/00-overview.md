@@ -357,7 +357,12 @@ defect, corrected 2026-08-14 when W2 implemented the propagation.
 - Mutating requests on versioned entities require `If-Match: <etag>`; a mismatch yields
   `409 CONFLICT_STALE_WRITE`.
 - All `POST` endpoints that create jobs or artifacts accept an `Idempotency-Key` header;
-  a repeat within 24 h returns the original result.
+  a repeat returns the original result. *Amended 2026-08-23 (`07` OQ-PLAT-8): the
+  **24-hour window this line used to state is withdrawn** — it was never implemented, and
+  the late duplicate a window forgives is exactly the one a key exists to catch. Keys are
+  permanent, with one release: a Job that failed terminally frees its key so the work can
+  be attempted again, while success and cancellation do not. `07` FR-PLAT-64 is the
+  authority, and FR-PLAT-47 binds the API to this section as amended.*
 
 ### 5.5 pricing-core function conventions
 

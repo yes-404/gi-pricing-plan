@@ -155,8 +155,6 @@ class Settings(BaseSettings):
     # NFR-PLAT-3 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
-    # FR-PLAT-12: a repeat submission within this window returns the original job.
-    idempotency_window_hours: Annotated[int, Field(gt=0, le=168)] = 24
 
     @field_validator("database_url")
     @classmethod

@@ -11,8 +11,15 @@ With none of these configured or presented, the answer is `401`, never a default
 
 The workspace is not taken from the request. A caller states nothing about which workspace
 it is acting in; the platform derives it from membership (users) or from the account's own
-workspace (service accounts). A header-supplied workspace would make the scope a claim
-rather than a fact.
+workspace (service accounts). An *unverified* header-supplied workspace would make the
+scope a claim rather than a fact.
+
+That is what stays refused, and it is narrower than it reads. OQ-PLAT-9, decided
+2026-08-23 (`07` FR-PLAT-65), settled that a principal with several memberships names one
+in a `Workspace-Id` header and the platform checks it against the memberships it already
+holds: a choice among facts is not a claim. Until W32 builds that check, the multi-
+membership caller below is refused rather than defaulted — which is the same rule, not a
+placeholder for it.
 
 A workspace is *not* the tenant boundary — ADR-0006 makes that the deployment, and one
 deployment serves one tenant. What this scoping buys is that a home-pricing team cannot
@@ -87,9 +94,10 @@ async def require_caller(request: Request, settings: SettingsDep) -> Caller:
 def _single_workspace(identity: AuthenticatedIdentity) -> Caller:
     """Collapse an authenticated identity to the one workspace it is acting in.
 
-    A user may belong to several. Until the API carries a workspace selector — which
-    arrives with governance in W3, alongside the roles that make the choice meaningful —
-    a caller with more than one must choose, and the platform must not choose for them.
+    A user may belong to several. Until the API carries the verified `Workspace-Id` header
+    OQ-PLAT-9 decided on — `07` FR-PLAT-65, owner W32 — a caller with more than one must
+    choose, and the platform must not choose for them. Refusing is the permanent rule; the
+    header only gives the caller a way to satisfy it.
     """
     from app.auth.service import AuthenticatedIdentity
 
@@ -107,8 +115,9 @@ def _single_workspace(identity: AuthenticatedIdentity) -> Caller:
             "UNAUTHENTICATED",
             "Workspace selection required",
             403,
-            "This principal belongs to more than one workspace and the API has no "
-            "selector yet. Workspace selection arrives with W3.",
+            "This principal belongs to more than one workspace and the API cannot yet "
+            "read the selection. Send a verified Workspace-Id header once W32 has built "
+            "it (07 FR-PLAT-65); the platform will not choose a workspace for you.",
         )
     return Caller(
         principal=identity.principal,
