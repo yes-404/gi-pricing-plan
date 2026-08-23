@@ -101,11 +101,18 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
         from sqlalchemy import select
 
         from app.db.models import RoleAssignmentRow, RoleRow
-        from app.platform import rbac
+        from app.platform import rbac, validation_rules
         from model_schema import ScopeType
 
         async with database.unit_of_work() as session:
             await rbac.seed_builtin_roles(session, workspace_id)
+            # The catalogue arrives with the workspace, exactly as the roles do
+            # (FR-DATA-53). `grant` is the only workspace-creation path this suite has —
+            # a workspace is a bare `UUID` column, not a row — so seeding hangs off it for
+            # the same reason `seed_builtin_roles` does.
+            await validation_rules.seed_builtin_rules(
+                session, workspace_id, authored_by=principal.id
+            )
             role = (
                 await session.execute(
                     select(RoleRow).where(

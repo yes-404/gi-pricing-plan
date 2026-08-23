@@ -32,6 +32,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit, rbac
 from model_schema import (
+    BUILTIN_RULES,
     ArtifactRef,
     JobSource,
     Permission,
@@ -53,6 +54,7 @@ __all__ = [
     "replace_rule_set",
     "resolve_artifact_ref",
     "rule_set_for",
+    "seed_builtin_rules",
     "submit_for_review",
     "to_schema",
 ]
@@ -78,8 +80,81 @@ def to_schema(row: ValidationRuleRow) -> ValidationRule:
             "check": row.check,
             "severity": row.severity,
             "status": row.status,
+            "catalogue_id": row.catalogue_id,
         }
     )
+
+
+async def seed_builtin_rules(
+    session: AsyncSession, workspace_id: UUID, *, authored_by: UUID
+) -> list[ValidationRuleRow]:
+    """Create `01` §4.4's catalogue in a workspace if it is absent (FR-DATA-53).
+
+    `rbac.seed_builtin_roles`' sibling, idempotent for the same reason: it runs on paths
+    that may be retried, and `uq_validation_rule_version` turns a second run into an
+    `IntegrityError` surfacing far from its cause.
+
+    A copy rather than a reference, also for `seed_builtin_roles`' reason — changing the
+    shipped catalogue must not silently change what an existing workspace's reports
+    *meant*. §4.4's ids are stable, so a later slice can offer a workspace the newer text
+    as a new version it approves; nothing rewrites the rule a report already cites.
+
+    Seeded **`approved`, with no approver and no dry run**. `01` §4.5's step-2 and step-3
+    obligations are about a rule this workspace wrote: a shipped rule was reviewed once,
+    in the specification, and there is no in-workspace author for an approver to differ
+    from. `approved_rule_dry_run_and_separate_approver`'s `builtin IS TRUE` arm names that
+    exemption rather than leaving callers to fabricate a `dry_run_report_id` pointing at no
+    report, which is what `examples/fremtpl2/seed.py` did before this slice.
+
+    No audit event, matching `seed_builtin_roles`: seeding is not an actor's decision about
+    this workspace's governance, it is the workspace arriving with the catalogue every
+    workspace has. `validation_rule.created` records the decisions.
+
+    Writes with `flush()`, never `commit()` — FR-GOV-22's rule that a platform write shares
+    the caller's transaction.
+    """
+    existing = {
+        catalogue_id
+        for (catalogue_id,) in (
+            await session.execute(
+                select(ValidationRuleRow.catalogue_id).where(
+                    ValidationRuleRow.workspace_id == workspace_id,
+                    ValidationRuleRow.catalogue_id.is_not(None),
+                )
+            )
+        ).all()
+    }
+    created: list[ValidationRuleRow] = []
+    for catalogue_id, rule in BUILTIN_RULES.items():
+        if catalogue_id in existing:
+            continue
+        row = ValidationRuleRow(
+            workspace_id=workspace_id,
+            slug=rule.slug,
+            version=1,
+            layer=rule.layer.value,
+            check=rule.check,
+            severity=rule.severity.value,
+            body={
+                "target": {},
+                "params": {},
+                "scope": {},
+                "tolerance": {},
+                "message": rule.summary,
+                "rationale": (
+                    f"Built-in rule {catalogue_id} from `01` §4.4's catalogue, reviewed "
+                    "there rather than in this workspace."
+                ),
+            },
+            status=APPROVED,
+            authored_by=authored_by,
+            builtin=True,
+            catalogue_id=catalogue_id,
+        )
+        session.add(row)
+        created.append(row)
+    await session.flush()
+    return created
 
 
 async def create_rule(

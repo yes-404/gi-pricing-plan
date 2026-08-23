@@ -4,6 +4,7 @@
 |---|---|---|
 | `GET` | `/validation-reports/{id}` | Full report |
 | `POST` | `/validation-reports/{id}/results/{rule_id}/acknowledge` | Acknowledge a warn |
+| `GET` | `/validation-rules` | The workspace's rules, built-in first (FR-DATA-53) |
 | `POST` | `/validation-rules` | Create a custom rule → `draft` (FR-DATA-21) |
 | `POST` | `/validation-rules/{id}/dry-run` | **202** Execute against a chosen version |
 | `POST` | `/validation-rules/{id}/submit` | Submit for approval |
@@ -18,12 +19,22 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, select
 
 from app.api.authz import requires
 from app.api.deps import Caller, job_identity, require_caller
+from app.api.pagination import (
+    COUNT_CAP,
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    Page,
+    decode_cursor,
+    encode_cursor,
+)
 from app.api.responses import problems
+from app.db.models import ValidationRuleRow
 from app.db.session import Database
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
@@ -159,6 +170,88 @@ async def acknowledge(
             "justification": row.justification,
             "acknowledged_at": row.acknowledged_at.isoformat(),
         }
+
+
+class RuleFilter(BaseModel):
+    """`GET /validation-rules`' query parameters.
+
+    `extra="forbid"` like every other filter here: a mistyped parameter silently widening
+    a governed listing is worse than a 422.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    builtin: bool | None = Field(
+        default=None,
+        description=(
+            "`true` for `01` §4.4's shipped catalogue only, `false` for the workspace's "
+            "own rules only. Omitted returns both."
+        ),
+    )
+    cursor: str | None = Field(
+        default=None, description="Opaque; pass back the previous page's `next_cursor`."
+    )
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+
+
+RuleFilterDep = Annotated[RuleFilter, Query()]
+
+
+@router.get(
+    "/validation-rules",
+    summary="List validation rules",
+    responses=problems(400, 401, 403, 422),
+)
+async def list_rules(
+    caller: ReadDatasets, database: DatabaseDep, filters: RuleFilterDep
+) -> Page[ValidationRule]:
+    """FR-DATA-53. The workspace's rules, cursor-paginated (`00` §5.2).
+
+    Until the catalogue was seeded there was nothing to list: `validation_rules` held only
+    what a workspace had authored, and `01` §4.4's 38 rules existed as prose. A catalogue
+    a caller cannot enumerate is one they re-type, which is how a shipped rule and a
+    workspace's copy of it come to disagree.
+
+    **Ascending by id, not descending.** Ids are UUIDv7, so id order is insertion order,
+    and the catalogue is inserted in §4.4's own order — ascending therefore reads as the
+    specification reads. `list_models` sorts descending because a model list wants the
+    newest fit first; a catalogue wants its first entry first. Lexical `catalogue_id` order
+    would put `VR-STR-10` between `VR-STR-1` and `VR-STR-2`, which is neither.
+    """
+    after = decode_cursor(filters.cursor)
+
+    conditions = [ValidationRuleRow.workspace_id == caller.workspace_id]
+    if filters.builtin is not None:
+        conditions.append(ValidationRuleRow.builtin.is_(filters.builtin))
+
+    query = (
+        select(ValidationRuleRow)
+        .where(*conditions)
+        .order_by(ValidationRuleRow.id.asc())
+        .limit(filters.limit + 1)
+    )
+    if after is not None:
+        query = query.where(ValidationRuleRow.id > after)
+
+    async with database.session() as session:
+        rows = list((await session.execute(query)).scalars())
+        total = (
+            await session.execute(
+                select(func.count()).select_from(
+                    select(ValidationRuleRow.id).where(*conditions).limit(COUNT_CAP).subquery()
+                )
+            )
+        ).scalar_one()
+
+    # The extra row answers "is there another page?" and is not returned.
+    has_more = len(rows) > filters.limit
+    page_rows = rows[: filters.limit]
+
+    return Page[ValidationRule](
+        items=[rule_service.to_schema(row) for row in page_rows],
+        next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
+        total_estimate=total,
+    )
 
 
 @router.post(

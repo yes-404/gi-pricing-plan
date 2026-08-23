@@ -277,6 +277,7 @@ async def run(rows: int | None) -> int:
     from app.worker.data_handlers import register_data_handlers
     from app.worker.tasks import execute_job
     from model_schema import (
+        BUILTIN_RULES,
         ActorKind,
         JobKind,
         JobStatus,
@@ -285,6 +286,13 @@ async def run(rows: int | None) -> int:
         ScopeType,
         new_uuid7,
     )
+
+    #: Which catalogue entry each of `RULES` configures, where one exists. Four of the nine
+    #: — the structural, referential and distributional ones — are freMTPL2's own and map
+    #: to nothing; `dict.get` returning `None` for those is the intended answer.
+    catalogue_id_by_slug = {
+        rule.slug: catalogue_id for catalogue_id, rule in BUILTIN_RULES.items()
+    }
 
     register_data_handlers()
     settings = load_settings()
@@ -345,6 +353,9 @@ async def run(rows: int | None) -> int:
 
     slug = f"fremtpl2-{new_uuid7().hex[-6:]}"
     async with database.unit_of_work() as session:
+        from sqlalchemy import func
+
+        from app.platform import validation_rules as rule_service
         from model_schema import DataDictionaryEntry, RecordGrain
 
         dataset = await dataset_service.create_dataset(
@@ -359,15 +370,42 @@ async def run(rows: int | None) -> int:
         )
         dataset_id = dataset.id
 
+        # `01` §4.4's catalogue arrives with the workspace, exactly as the roles do
+        # (FR-DATA-53). It is the shipped *definitions*: names, checks and severities, with
+        # no target — §4.4 says what the rule is, and a workspace says which of its tables
+        # the rule runs against.
+        await rule_service.seed_builtin_rules(
+            session, workspace_id, authored_by=analyst.id
+        )
+
         rule_ids: list[str] = []
         for rule in RULES:
+            # Five of the nine configure a catalogue entry rather than inventing one, so
+            # `version=1` is already taken by the seeded definition. The next version is
+            # allocated the way `create_rule` allocates it — §4.5 step 4's ordinary "an
+            # edit is a new version", which is exactly what pointing a shipped rule at
+            # `policy_exposure` is.
+            version = 1 + (
+                await session.execute(
+                    select(func.coalesce(func.max(ValidationRuleRow.version), 0)).where(
+                        ValidationRuleRow.workspace_id == workspace_id,
+                        ValidationRuleRow.slug == rule["slug"],
+                    )
+                )
+            ).scalar_one()
             row = ValidationRuleRow(
-                workspace_id=workspace_id, slug=rule["slug"], version=1,
+                workspace_id=workspace_id, slug=rule["slug"], version=version,
                 layer=rule["layer"], check=rule["check"], severity=rule["severity"],
                 body={"target": rule["target"], "params": rule["params"], "scope": {},
                       "tolerance": {}, "message": "", "rationale": ""},
                 status="approved", authored_by=analyst.id, approved_by=actuary.id,
                 dry_run_report_id=new_uuid7(),
+                # Workspace data, not a shipped row: it carries its own approver and its
+                # own dry run. `catalogue_id` records which shipped rule it configures, so
+                # the lineage survives the version bump; `builtin` stays false, because the
+                # approval exemption belongs to the reviewed definition and not to a
+                # workspace's configuration of it.
+                catalogue_id=catalogue_id_by_slug.get(rule["slug"]),
             )
             session.add(row)
             await session.flush()
@@ -383,7 +421,10 @@ async def run(rows: int | None) -> int:
             slug=str(dataset_id),
             members=[rule_service.RuleSetMember(rule_id=UUID(r)) for r in rule_ids],
         )
-    print(f"  dataset {slug} with {len(RULES)} approved rules across four layers\n")
+    print(
+        f"  dataset {slug} with {len(RULES)} approved rules across four layers, "
+        f"and `01` \u00a74.4's {len(BUILTIN_RULES)}-rule catalogue seeded\n"
+    )
 
     async def ingest(label: str, *, cleaned: bool) -> UUID:
         started = time.perf_counter()

@@ -14,7 +14,7 @@ from model_schema import BUILTIN_RULES
 from pricing_core.data.validate import CHECKS
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-DATA-53")
 def test_every_builtin_rule_names_a_registered_check() -> None:
     missing = sorted(
         f"{rule.catalogue_id} -> {rule.check}"
@@ -24,7 +24,7 @@ def test_every_builtin_rule_names_a_registered_check() -> None:
     assert not missing, missing
 
 
-@pytest.mark.req("FR-DATA-16")
+@pytest.mark.req("FR-DATA-53")
 def test_the_registry_is_not_trivially_satisfied() -> None:
     """The check above passes vacuously if `CHECKS` is empty or over-broad.
 
