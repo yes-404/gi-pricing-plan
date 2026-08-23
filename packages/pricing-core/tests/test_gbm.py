@@ -37,6 +37,8 @@ from model_schema import (
     FactorType,
     GbmFunctionRef,
     GbmSpec,
+    Grouping,
+    GroupingMethod,
     LossTreatment,
     MetricDirection,
     MetricStatus,
@@ -47,6 +49,7 @@ from model_schema import (
     OffsetSpec,
     ResponseKind,
     SplitRef,
+    UnseenLevelBehaviour,
     WeightSpec,
     YDomain,
 )
@@ -593,17 +596,49 @@ def test_a_declared_interaction_group_reaches_the_backend(backend: str) -> None:
 # --------------------------------------------------------------------------------------
 
 
-def _diagnose(backend: str, factors: list[Factor] | None = None):  # type: ignore[no-untyped-def]
+def _diagnose(  # type: ignore[no-untyped-def]
+    backend: str,
+    factors: list[Factor] | None = None,
+    *,
+    data: pl.DataFrame | None = None,
+    bandings: dict[Any, Banding] | None = None,
+    groupings: dict[Any, Grouping] | None = None,
+):
+    """The established diagnostics driver.
+
+    `data` overrides both partitions with **one** deterministic frame. Two independent
+    random draws cannot pin down an exposure profile, and the tests below assert on the
+    exact share the sweep reports — so a caller checking arithmetic passes the frame it
+    constructed rather than trusting a second draw to resemble the first.
+    """
     from pricing_core.modelling import compute_gbm_diagnostics
 
     use = factors or FACTORS
-    train, holdout = _frequency_data(), _frequency_data(n=3_000, seed=4242)
-    fit = fit_gbm(train, _spec(backend, factors=tuple(f.id for f in use)), use)
+    if data is None:
+        train, holdout = _frequency_data(), _frequency_data(n=3_000, seed=4242)
+    else:
+        train = holdout = data
+    spec = _spec(backend, factors=tuple(f.id for f in use))
+    fit = fit_gbm(train, spec, use, bandings=bandings, groupings=groupings)
     return fit, compute_gbm_diagnostics(
-        fit.result, fit.booster_bytes,
-        _spec(backend, factors=tuple(f.id for f in use)), use,
+        fit.result, fit.booster_bytes, spec, use,
         train=train, holdout=holdout, eval_curve=fit.eval_curve,
+        bandings=bandings, groupings=groupings,
     )
+
+
+def _curve_for(diagnostics, factor_slug: str):  # type: ignore[no-untyped-def]
+    """The one partial-dependence curve for a factor, or a failure naming what was there.
+
+    A bare `[0]` on an empty list raises `IndexError` and tells the reader nothing about
+    which factors the diagnostics actually carried.
+    """
+    assert diagnostics.gbm is not None
+    for curve in diagnostics.gbm.partial_dependence:
+        if curve.factor == factor_slug:
+            return curve
+    available = [curve.factor for curve in diagnostics.gbm.partial_dependence]
+    raise AssertionError(f"no curve for {factor_slug!r}; got {available}")
 
 
 @pytest.mark.req("FR-MODEL-54")
@@ -665,19 +700,157 @@ def test_permutation_importance_degrades_the_holdout_when_signal_is_destroyed(
 
 
 @pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-MODEL-125")
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_partial_dependence_carries_the_exposure_share_of_each_point(backend: str) -> None:
-    """A partial dependence curve is most dramatic exactly where the book is thinnest.
+def test_partial_dependence_shares_are_exposure_and_not_row_counts(backend: str) -> None:
+    """A frame where the two definitions disagree by construction.
 
-    The share rides with every point so a spike over 0.2 % of exposure cannot be read as a
-    rating signal by a chart that never had the denominator.
+    `rare` has few rows and almost all the exposure; `common` has most of the rows and
+    almost none. A row-count share ranks and reports them one way and an exposure share the
+    other, so this test can only pass under one of the two definitions — which the previous
+    `sum == approx(1.0)` assertion could not distinguish, and did not.
     """
-    _, diagnostics = _diagnose(backend)
-    assert diagnostics.gbm is not None
-    curves = {c.factor: c for c in diagnostics.gbm.partial_dependence}
-    area = curves["area"]
-    assert [p.value for p in area.points] == ["rural", "urban"]
-    assert sum(p.exposure_share for p in area.points) == pytest.approx(1.0, abs=1e-9)
+    n_common, n_rare = 400, 20
+    frame = pl.DataFrame(
+        {
+            "area": ["common"] * n_common + ["rare"] * n_rare,
+            "driv_age": [40.0] * (n_common + n_rare),
+            "exposure_years": [0.01] * n_common + [10.0] * n_rare,
+            "claim_count": [0.0] * n_common + [1.0] * n_rare,
+        }
+    )
+    _, diagnostics = _diagnose(backend, data=frame)
+    curve = _curve_for(diagnostics, "area")
+    share = {point.value: point.exposure_share for point in curve.points}
+
+    # Row counts: common 0.952, rare 0.048. Exposure: common 4.0/204.0 = 0.0196,
+    # rare 200.0/204.0 = 0.980. The two orderings are opposite.
+    assert share["rare"] > share["common"]
+    assert share["rare"] == pytest.approx(200.0 / 204.0, abs=1e-6)
+    assert share["common"] == pytest.approx(4.0 / 204.0, abs=1e-6)
+    assert sum(share.values()) == pytest.approx(1.0)
+
+
+@pytest.mark.req("FR-MODEL-52")
+@pytest.mark.req("FR-MODEL-125")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_numeric_partial_dependence_point_carries_the_exposure_at_that_value(
+    backend: str,
+) -> None:
+    """`1.0 / len(labels)` was not a wrong weighting; it was no measurement at all.
+
+    Every point on a numeric curve claimed identical exposure regardless of where the
+    portfolio sat, so a chart showed a confidently flat exposure profile for a book that
+    was concentrated at one end of the range.
+    """
+    n = 400
+    # Age is uniform on the grid, but exposure is concentrated in the young half, so a
+    # per-cell exposure share must be visibly non-uniform while the row counts are flat.
+    ages = [float(20 + (i % 40)) for i in range(n)]
+    frame = pl.DataFrame(
+        {
+            "area": ["urban" if i % 2 else "rural" for i in range(n)],
+            "driv_age": ages,
+            "exposure_years": [5.0 if age < 40 else 0.05 for age in ages],
+            "claim_count": [1.0 if age < 40 else 0.0 for age in ages],
+        }
+    )
+    _, diagnostics = _diagnose(backend, data=frame)
+    curve = _curve_for(diagnostics, "driv_age")
+    shares = [point.exposure_share for point in curve.points]
+
+    assert len(set(shares)) > 1, "every point carried the same share — the constant is back"
+    assert sum(shares) == pytest.approx(1.0)
+    assert max(shares) > 10 * min(shares)
+
+
+def _age_banding() -> Banding:
+    """Four bands over `driv_age`, cut so every band holds ten of the forty ages."""
+    return Banding(
+        id=uuid4(), slug="age-bands", dataset_id=uuid4(), version=1,
+        column="driv_age", method=BandingMethod.MANUAL,
+        boundaries=(20.0, 30.0, 40.0, 50.0, 60.0),
+        labels=("20-29", "30-39", "40-49", "50-59"),
+    )
+
+
+def _region_grouping() -> Grouping:
+    """Six regions behind two groups."""
+    return Grouping(
+        id=uuid4(), slug="region-inland-coastal", dataset_id=uuid4(), version=1,
+        column="region", method=GroupingMethod.MANUAL,
+        mapping={
+            "north": "inland", "south": "inland", "east": "inland",
+            "west": "coastal", "centre": "coastal", "coast": "coastal",
+        },
+        unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+    )
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_banded_factor_has_one_partial_dependence_point_per_band(backend: str) -> None:
+    """The curve's axis must be the axis the model was fitted on.
+
+    Forty integer ages behind four bands produced forty points labelled `20`, `21`, ...
+    — a chart of the raw column, not of the factor. One point per band, labelled with the
+    band, is what a reviewer comparing the curve against the fitted factor needs.
+    """
+    n = 400
+    ages = [float(20 + (i % 40)) for i in range(n)]
+    frame = pl.DataFrame(
+        {
+            "driv_age": ages,
+            "exposure_years": [1.0] * n,
+            "claim_count": [1.0 if age < 40 else 0.0 for age in ages],
+        }
+    )
+    banding = _age_banding()
+    factors = [
+        _factor("driv_age", "driv_age", type=FactorType.BANDING, banding_id=banding.id)
+    ]
+    _, diagnostics = _diagnose(
+        backend, factors, data=frame, bandings={banding.id: banding}
+    )
+    curve = _curve_for(diagnostics, "driv_age")
+
+    assert len(curve.points) == 4, [point.value for point in curve.points]
+    assert {point.value for point in curve.points} == set(banding.labels)
+    assert sum(point.exposure_share for point in curve.points) == pytest.approx(1.0)
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_grouped_factor_has_one_partial_dependence_point_per_group(backend: str) -> None:
+    """Six regions behind two groups is two points, labelled with the groups.
+
+    Asserted separately from the banding case because the two take different arms of
+    `resolve_factors`'s type dispatch, and a fix that handles intervals and not
+    membership would pass the banding test alone.
+    """
+    regions = ["north", "south", "east", "west", "centre", "coast"]
+    n = 420
+    values = [regions[i % len(regions)] for i in range(n)]
+    frame = pl.DataFrame(
+        {
+            "region": values,
+            "exposure_years": [1.0] * n,
+            "claim_count": [
+                1.0 if v in ("north", "south", "east") else 0.0 for v in values
+            ],
+        }
+    )
+    grouping = _region_grouping()
+    factors = [
+        _factor("region", "region", type=FactorType.GROUPING, grouping_id=grouping.id)
+    ]
+    _, diagnostics = _diagnose(
+        backend, factors, data=frame, groupings={grouping.id: grouping}
+    )
+    curve = _curve_for(diagnostics, "region")
+
+    assert {point.value for point in curve.points} == {"inland", "coastal"}
+    assert sum(point.exposure_share for point in curve.points) == pytest.approx(1.0)
 
 
 @pytest.mark.req("FR-MODEL-52")
