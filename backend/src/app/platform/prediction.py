@@ -39,8 +39,10 @@ from model_schema import (
     MODEL_SPEC_ADAPTER,
     SCOREABLE_MODEL_STATUSES,
     Banding,
+    EbmFitResult,
     EbmSpec,
     Factor,
+    FitResult,
     GbmFitResult,
     GbmSpec,
     GlmFitResult,
@@ -156,12 +158,12 @@ async def predict_rows(
             bandings=bandings, groupings=groupings, blob_store=blob_store,
         )
     elif isinstance(spec, EbmSpec):
-        raise PlatformError(
-            "MODEL_TYPE_UNSUPPORTED",
-            "This model type cannot be predicted",
-            409,
-            "an EBM prediction arm is not built (2026-08-21, the W5 EBM slice fitted and "
-            "exported EBM models; W6b owns the endpoint).",
+        expected, lower, upper, uncertainty = await _score_ebm(
+            fit,
+            frame,
+            factors,
+            bandings=bandings,
+            groupings=groupings,
         )
     else:
         assert isinstance(fit, GlmFitResult)
@@ -420,6 +422,66 @@ async def _score_gbm(
                 lower_alpha=lower_alpha,
                 upper_alpha=upper_alpha,
             ),
+        ),
+    )
+
+
+async def _score_ebm(
+    fit: FitResult,
+    frame: pl.DataFrame,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding],
+    groupings: Mapping[UUID, Grouping],
+) -> tuple[
+    npt.NDArray[np.float64],
+    npt.NDArray[np.float64] | None,
+    npt.NDArray[np.float64] | None,
+    Uncertainty,
+]:
+    """`mu` from an EBM's exported tables, and the typed absence its type forces.
+
+    The shortest of the three arms, and the shortness is the requirement rather than a
+    convenience: an EBM's fit result *is* its model (ADR-0003), so there is no blob to
+    fetch, no link to invert, and no `model_offset` to forward — FR-MODEL-24 refuses an
+    EBM offset ref at the schema, so no spec reaching here can carry one.
+
+    The interval is absent by construction (FR-MODEL-124). `interval_for` lives on
+    `GbmSpec`, so no quantile pair is fittable for an EBM, and there is no covariance
+    matrix that could have been stored and was not. Reporting either of those reasons
+    would tell a reader to do something the schema forbids, which is why this arm carries
+    a reason of its own.
+    """
+    from pricing_core.modelling import ModellingError
+    from pricing_core.modelling.predict import PredictionError, predict_ebm
+
+    if not isinstance(fit, EbmFitResult):
+        # `02` R2 freezes `spec` and `fit_result` together, so this pairing should not
+        # exist — but the two are validated out of the row by independent adapters and
+        # nothing in the type system joins them. Refused rather than asserted: an `assert`
+        # compiled out under `-O` turns a governed refusal into an `AttributeError`, and
+        # `model_handlers.py` already names this same mismatch with this same code.
+        raise PlatformError(
+            "MODEL_TYPE_UNSUPPORTED",
+            "This model's spec and fit result disagree about its type",
+            409,
+            f"the spec is an EBM and the stored fit result is a "
+            f"{type(fit).__name__}. `02` R2 freezes the two together, so this row was "
+            "written by something that bypassed the model service.",
+        )
+
+    try:
+        expected = predict_ebm(fit, frame, factors, bandings=bandings, groupings=groupings)
+    except (ModellingError, PredictionError) as exc:
+        raise _unscoreable(exc) from exc
+
+    return (
+        expected,
+        None,
+        None,
+        Uncertainty(
+            kind=UncertaintyKind.UNAVAILABLE,
+            reason=UnavailableReason.MODEL_TYPE_HAS_NO_INTERVAL,
         ),
     )
 

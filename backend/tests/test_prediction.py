@@ -136,6 +136,53 @@ async def _fitted_glm(
         return actor, model_id, spare_row.id
 
 
+async def _fitted_ebm(database, blob_store, workspace_id) -> tuple[Principal, UUID]:
+    """One EBM fitted through the real `MODEL_FIT` Job, exactly as `_fitted_glm` fits a GLM.
+
+    Through the Job rather than by writing a `fit_result` onto a reservation, because the
+    thing under test is scoring an artifact the platform actually produced: a hand-built
+    `EbmFitResult` would pin this test to whatever shape the test author believed in rather
+    than to the one `fit_ebm` exports.
+
+    Seeded off `_fitted_glm` so the two fixtures share one dataset/version/factor setup
+    path — the EBM is reserved on the very factors the GLM was fitted on, and on the same
+    split. `split_ref` is not optional in practice: the fit handler refuses a spec without
+    one (`01` FR-DATA-36, FR-MODEL-54), so the GLM's is read back off its stored spec
+    rather than a second split being cut for the same version.
+    """
+    actor, glm_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        glm = await session.get(ModelRow, glm_id)
+        assert glm is not None
+        version_id = glm.dataset_version_id
+        factor_ids = tuple(UUID(f) for f in glm.spec["factors"])
+        split = SplitRef.model_validate(glm.spec["split_ref"])
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            spec=_ebm_spec(version_id, factor_ids, split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_id": str(model_id),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    return actor, model_id
+
+
 def _ebm_spec(
     version_id: UUID, factor_ids: tuple[UUID, ...], **over: object
 ) -> EbmSpec:
@@ -487,53 +534,117 @@ async def test_a_model_with_no_fit_result_cannot_be_scored(
 
 
 @pytest.mark.req("FR-MODEL-37")
-async def test_an_ebm_spec_is_refused_by_name_at_the_predict_boundary(
+async def test_an_ebm_is_scored_and_states_that_its_type_has_no_interval(
     database, blob_store, workspace_id
 ) -> None:
-    """FR-MODEL-37's model can be *stored*, and must not be *scored*.
+    """The arm this slice builds, end to end through the real fit Job.
 
-    The W5 slice fits and exports EBM models with a prediction arm still unbuilt (W6b
-    owns it), so an EBM spec reaching the dispatch is a state this endpoint must answer
-    by name rather than by falling through to the GLM arm's `assert`. The row is built
-    the way the pre-covariance-blob test builds its ghost: a reservation carries the EBM
-    spec, and a real GLM fit is written onto it while it is still unfitted — `02` R2
-    freezes `spec` and `fit_result` together once either exists. No EBM was ever fitted:
-    the refusal fires on the spec, before any scoring could start.
+    Two things are asserted together because separating them would let either pass alone
+    and neither is the requirement on its own: the rows carry an expectation that differs
+    between the two areas — a model returning the intercept for every row would also
+    "score" — and the response says *why* it carries no bounds rather than leaving the
+    caller to infer it from three nulls.
     """
-    actor, fitted_id = await _fitted_glm(database, blob_store, workspace_id)
+    actor, model_id = await _fitted_ebm(database, blob_store, workspace_id)
 
     async with database.session() as session:
-        fitted = await session.get(ModelRow, fitted_id)
-        assert fitted is not None
-        version_id = fitted.dataset_version_id
-        factors = tuple(fitted.spec["factors"])
+        prediction = await service.predict_rows(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            model_id=model_id,
+            rows=ROWS,
+            blob_store=blob_store,
+        )
+
+    assert prediction.model_type == "ebm"
+    assert prediction.uncertainty.kind is UncertaintyKind.UNAVAILABLE
+    assert prediction.uncertainty.reason is UnavailableReason.MODEL_TYPE_HAS_NO_INTERVAL
+    assert prediction.uncertainty.level is None
+    assert len(prediction.rows) == len(ROWS)
+    assert all(row.lower is None and row.upper is None for row in prediction.rows)
+    assert prediction.rows[0].expected != prediction.rows[1].expected
+
+
+@pytest.mark.req("FR-MODEL-37")
+async def test_an_ebm_scored_on_a_level_it_never_saw_is_refused_by_name(
+    database, blob_store, workspace_id
+) -> None:
+    """An EBM's categorical lookup has one slot per level the fit observed, and a level
+    with no slot has no score. Inventing one would price the row as whichever level shares
+    its index — FR-MODEL-32's rule, reaching the caller as a named 409 rather than as an
+    `IndexError` in a traceback."""
+    actor, model_id = await _fitted_ebm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                model_id=model_id,
+                rows=[{"exposure_years": 1.0, "area": "offshore"}],
+                blob_store=blob_store,
+            )
+
+    assert refused.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert refused.value.status_code == 409
+    assert "area" in (refused.value.detail or "")
+
+
+@pytest.mark.req("FR-MODEL-37")
+async def test_an_ebm_spec_carrying_a_glm_fit_result_is_refused_by_name(
+    database, blob_store, workspace_id
+) -> None:
+    """The narrower refusal that replaced the blanket one.
+
+    Built the way the deleted refusal test built its ghost: a reservation carries the EBM
+    spec and a real GLM fit is written onto it directly, because `02` R2 freezes the two
+    together once either exists and no service path will produce this pair. Without this
+    test, deleting the guard and leaving it in place look identical from outside.
+    """
+    actor, glm_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        glm = await session.get(ModelRow, glm_id)
+        assert glm is not None
+        version_id = glm.dataset_version_id
+        factor_ids = tuple(glm.spec["factors"])
+        glm_fit_result = glm.fit_result
+        glm_diagnostics_id = glm.diagnostics_id
 
     async with database.unit_of_work() as session:
         ebm_row, _ = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor,
-            spec=_ebm_spec(version_id, factors),
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            spec=_ebm_spec(version_id, factor_ids),
         )
         ebm_id = ebm_row.id
-        fitted = await session.get(ModelRow, fitted_id)
-        assert fitted is not None
         await session.execute(
             ModelRow.__table__.update()
             .where(ModelRow.id == ebm_id)
             .values(
-                fit_result=fitted.fit_result,
+                fit_result=glm_fit_result,
                 status=ModelStatus.FITTED.value,
-                diagnostics_id=fitted.diagnostics_id,
+                diagnostics_id=glm_diagnostics_id,
             )
         )
 
     async with database.session() as session:
         with pytest.raises(PlatformError) as refused:
             await service.predict_rows(
-                session, workspace_id=workspace_id, actor=actor, model_id=ebm_id,
-                rows=ROWS, blob_store=blob_store,
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                model_id=ebm_id,
+                rows=ROWS,
+                blob_store=blob_store,
             )
+
     assert refused.value.code == "MODEL_TYPE_UNSUPPORTED"
     assert refused.value.status_code == 409
+    assert "GlmFitResult" in (refused.value.detail or "")
 
 
 @pytest.mark.req("FR-MODEL-62")
