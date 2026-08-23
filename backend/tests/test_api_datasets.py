@@ -1048,3 +1048,36 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
         "five — the permission check, the row query, the capped count, the latest-version "
         f"aggregate and the one further aggregate.\n{statements!r}"
     )
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_a_created_dataset_is_owned_by_its_creator(
+    client: TestClient, analyst: dict[str, str], principal
+) -> None:
+    slug = _slug()
+    created = client.post("/api/v1/datasets", json={"slug": slug}, headers=analyst)
+    assert created.status_code == 201, created.text
+    assert created.json()["owner_id"] == str(principal.id)
+
+
+@pytest.mark.req("FR-DATA-51")
+async def test_the_system_principal_cannot_own_a_dataset(database, workspace_id) -> None:
+    """`Principal.id` is null only for `system`, and FR-DATA-51 makes `owner_id` non-null.
+
+    Asserted at the service rather than over HTTP: no route authenticates as `system`, and
+    a nullable column would have swallowed this silently.
+    """
+    from app.errors import PlatformError
+    from app.platform import datasets as dataset_service
+    from model_schema import ActorKind, Principal
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await dataset_service.create_dataset(
+                session,
+                workspace_id=workspace_id,
+                actor=Principal(kind=ActorKind.SYSTEM),
+                slug=_slug(),
+            )
+    assert exc.value.code == "VALIDATION_FAILED"
+    assert "owner" in exc.value.detail.lower()

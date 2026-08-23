@@ -16,6 +16,7 @@ def _dataset(**kwargs: object) -> Dataset:
         id=uuid4(),
         workspace_id=uuid4(),
         slug="motor-gb",
+        owner_id=uuid4(),
         created_at=datetime(2026, 8, 23, tzinfo=UTC),
         **kwargs,  # type: ignore[arg-type]
     )

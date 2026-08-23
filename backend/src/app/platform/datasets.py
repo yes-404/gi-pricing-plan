@@ -155,6 +155,19 @@ async def create_dataset(
     data_dictionary: Mapping[str, DataDictionaryEntry] | None = None,
 ) -> DatasetRow:
     """Create a Dataset — the named container its versions belong to (`01` §4.1)."""
+    # Before the permission check, not after. A `system` principal fails both — it holds no
+    # role, so `effective_permissions` returns the empty set — but `PERMISSION_DENIED`
+    # sends the caller looking for a grant, and no grant would fix this: FR-DATA-51 makes
+    # `owner_id` non-null and `Principal.id` is null for `system` by construction.
+    if actor.id is None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "A dataset needs an owner",
+            422,
+            "FR-DATA-51 makes owner_id non-null and set at ingestion; the system principal "
+            "has no id and cannot own one. Create it as the user or service account "
+            "responsible for it.",
+        )
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
@@ -164,6 +177,7 @@ async def create_dataset(
     row = DatasetRow(
         workspace_id=workspace_id,
         slug=slug,
+        owner_id=actor.id,
         name=name or slug,
         description=description,
         line_of_business=line_of_business,
@@ -189,7 +203,15 @@ async def create_dataset(
         source=JobSource.API,
         action="dataset.created",
         entity_ref=f"dataset:{slug}@1",
-        after={"slug": slug, "name": row.name, "currency": row.currency},
+        after={
+            "slug": slug,
+            "name": row.name,
+            "currency": row.currency,
+            # Ownership is part of what creating a Dataset established (FR-DATA-51), and
+            # the `after` should say so — otherwise the chain records who acted but not
+            # what the act made them responsible for.
+            "owner_id": str(row.owner_id),
+        },
     )
     return row
 
@@ -304,6 +326,7 @@ def to_schema(
             for column, entry in row.data_dictionary.items()
         },
         validation_rule_set_id=row.validation_rule_set_id,
+        owner_id=row.owner_id,
         latest_version=latest_version[0] if latest_version else None,
         latest_version_status=(
             DatasetStatus(latest_version[1]) if latest_version else None

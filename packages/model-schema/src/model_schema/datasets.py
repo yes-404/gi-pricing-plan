@@ -153,6 +153,13 @@ class Dataset(BaseModel):
     id: UUID
     workspace_id: UUID
     slug: Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9-]{1,62}$")]
+
+    #: The accountable party (FR-DATA-51). Non-null and with no default, so a projection
+    #: that forgets it fails loudly rather than reporting a plausible null — and **not**
+    #: derived from `workspace_id`, which would make every Dataset in a workspace equally
+    #: owned and leave `06`'s review trails with no named subject to address.
+    owner_id: UUID
+
     name: str = ""
     description: str | None = None
 

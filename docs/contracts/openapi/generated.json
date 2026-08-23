@@ -2305,6 +2305,11 @@
             "title": "Name",
             "type": "string"
           },
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
           "slug": {
             "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
             "title": "Slug",
@@ -2343,6 +2348,7 @@
           "id",
           "workspace_id",
           "slug",
+          "owner_id",
           "created_at"
         ],
         "title": "Dataset",
