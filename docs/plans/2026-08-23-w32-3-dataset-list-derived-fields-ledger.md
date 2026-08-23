@@ -75,3 +75,19 @@ This slice's migration `82edffbe1dce` and W32-2's `7c1a9e40b3d2` both parent on
 `9e4c7b21fa08`, which is two Alembic heads the moment both land. W32-2 lands first and this
 migration is re-parented onto it. Nothing in the repository enforces a single head, so the
 collision would otherwise have merged silently.
+
+## Landing, 2026-08-23: the migration was re-parented after W32-2 merged
+
+W32-2 and W32-3 were executed concurrently and each added a migration off the same parent,
+`9e4c7b21fa08`. Once W32-2 landed on `main`, `git rebase origin/main` here **succeeded with
+no conflict** — git sees two new files in a directory, which is not a conflict — and left the
+chain with two heads, `7c1a9e40b3d2` and `82edffbe1dce`. Nothing in the diff looked wrong.
+
+`82edffbe1dce.down_revision` was therefore moved from `9e4c7b21fa08` to `7c1a9e40b3d2`, in
+both the docstring's `Revises:` line and the module attribute. Verified through Alembic's own
+`ScriptDirectory`: `heads: ['82edffbe1dce']`, walking back
+`82edffbe1dce → 7c1a9e40b3d2 → 9e4c7b21fa08`. The two migrations are independent — one adds a
+table, the other a column — so the order between them is arbitrary and chaining is safe.
+
+The divergence is now caught rather than remembered: FR-PLAT-57 and its guard test landed
+separately (PR #145) for exactly this case, which is why it was looked for here at all.

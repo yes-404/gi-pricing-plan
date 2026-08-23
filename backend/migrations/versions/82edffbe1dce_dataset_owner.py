@@ -6,7 +6,7 @@ FR-DATA-50's status and last-validated date, which are derived per request and s
 nowhere.
 
 Revision ID: 82edffbe1dce
-Revises: 9e4c7b21fa08
+Revises: 7c1a9e40b3d2
 Create Date: 2026-08-23 11:28:43.137862+00:00
 """
 
@@ -19,7 +19,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "82edffbe1dce"
-down_revision: str | None = "9e4c7b21fa08"
+down_revision: str | None = "7c1a9e40b3d2"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
