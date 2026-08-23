@@ -20,6 +20,11 @@ on:
       # and the python workflow did not run.
       - 'examples/**'
       - 'docs/contracts/**'
+      # tests/** for the third time this has bitten: the repository-invariant suite
+      # lives here and `uv run pytest -q` runs it, so a change touching only this
+      # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
+      # triggered only the docs workflow — a check that cannot run is not enforcement.
+      - 'tests/**'
       - '.github/workflows/python.yml'
   pull_request:
     paths:
@@ -35,6 +40,11 @@ on:
       - 'scripts/**'
       - 'examples/**'
       - 'docs/contracts/**'
+      # tests/** for the third time this has bitten: the repository-invariant suite
+      # lives here and `uv run pytest -q` runs it, so a change touching only this
+      # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
+      # triggered only the docs workflow — a check that cannot run is not enforcement.
+      - 'tests/**'
       - '.github/workflows/python.yml'
 
 concurrency:
