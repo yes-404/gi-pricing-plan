@@ -60,6 +60,14 @@ would collide with W32-4, and requirement ids are permanent ([`CLAUDE.md`](../..
 requirement 124 is in `main`. Landing W32-4 first, or landing both together, clears it.
 Recorded here for the maintainer rather than resolved on this branch's own authority.
 
+**It cleared itself before this branch was finished.** W32-4 merged as #147 and W32-3 as
+#148 while the gate was running, so the branch was rebased a second time. The `02` §3 table
+and the §5.2 blockquote each collided as a pure both-added hunk — 124 and 125 claiming the
+same row position, and the two "this block was incomplete" notes claiming the same paragraph
+— and both were resolved by keeping both sides in id order rather than by choosing. After
+the rebase `audit-docs.py` exits **0**. The finding stands as a property of the id-allocation
+rule against the gap check; the instance is gone.
+
 ## The measurement was taken at a different scale from the one the plan named
 
 Task 3 Step 2 says to run `uv run python scripts/bench-model.py --only gbm` and compare the
@@ -187,8 +195,8 @@ than from a pipe.
 | `uv run ruff check .` | 0 |
 | `uv run mypy` | 0 — no issues in 131 source files |
 | `uv run lint-imports` | 0 |
-| `uv run pytest -q` | **1** — 2 failed, 1794 passed, 1 xfailed, 26:30 at load 10.4 |
-| `python3 scripts/audit-docs.py` | **1** |
+| `uv run pytest -q` | 0 — 1818 passed, 1 xfailed, 10:53 at load 5.1 |
+| `python3 scripts/audit-docs.py` | 0 |
 | `uv run python scripts/req-coverage.py` | 0 |
 | `uv run python scripts/generate-contracts.py --check` | 0 — "Contracts: 3 kept, 0 broken", no regenerate |
 | `pnpm --dir frontend install --frozen-lockfile` | 0 |
@@ -198,14 +206,17 @@ than from a pipe.
 | `pnpm --dir frontend test` | 0 |
 | `pnpm --dir frontend build` | 0 |
 
-**The two red commands are one cause.** `tests/test_repository_invariants.py`'s two failures
-are `subprocess`-invocations of `audit-docs.py` asserting `returncode == 0`, and both print
-the same `FR-MODEL has numbering gaps` line. Nothing else in the suite is red, and the W30
-`xfail` is still counted as `xfailed` rather than turning green.
+**The run before the second rebase was red, and both failures were one cause.** It reported
+`2 failed, 1794 passed, 1 xfailed` in 26:30 at load 10.4, and both failures were
+`tests/test_repository_invariants.py` `subprocess`-invoking `audit-docs.py` and asserting
+`returncode == 0` — each printing the same `FR-MODEL has numbering gaps` line. Nothing else
+in the suite was red, and the W30 `xfail` was counted as `xfailed` rather than turning green.
+Recorded because it is the evidence that the id gap was the sole failure across the entire
+gate, and because a red suite that a rebase turns green deserves an explanation on the record
+rather than a silent second run.
 
-The suite ran at 1-minute load average 10.4 on a 4-core machine shared with a concurrent
-agent session running its own suite, which is why 26:30 is not comparable to the 7:34 the
-W32-2 ledger records.
+The suite ran on a 4-core machine shared with a concurrent agent session running its own
+suite, which is why 26:30 is not comparable to the 7:34 the W32-2 ledger records.
 
 ## Carried forward, with owners
 
