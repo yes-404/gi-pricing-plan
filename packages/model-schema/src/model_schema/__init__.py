@@ -262,7 +262,9 @@ from model_schema.transparency import (
 )
 from model_schema.validation import (
     ALL_LAYERS,
+    BUILTIN_RULES,
     Acknowledgement,
+    BuiltinRule,
     OverallOutcome,
     RuleOutcome,
     RuleResult,
@@ -272,12 +274,14 @@ from model_schema.validation import (
     ValidationReport,
     ValidationRule,
     ValidationRuleSet,
+    builtin_rule,
 )
 
 __all__ = [
     "ALL_LAYERS",
     "ARTIFACT_TYPES",
     "BUILTIN_ROLES",
+    "BUILTIN_RULES",
     "DEFAULT_POLICY",
     "EVIDENCE_FLOOR",
     "FITTABLE_METRIC_STATUSES",
@@ -327,6 +331,7 @@ __all__ = [
     "BandingProposal",
     "BelowRangePolicy",
     "BlobRef",
+    "BuiltinRule",
     "CalibrationBin",
     "CertificateCheck",
     "CertificateOutcome",
@@ -513,6 +518,7 @@ __all__ = [
     "WorstRegion",
     "YDomain",
     "apply_factor",
+    "builtin_rule",
     "canonical_payload",
     "compute_event_hash",
     "new_uuid7",
