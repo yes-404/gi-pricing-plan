@@ -398,10 +398,17 @@ def _gbm_passes(computed: object, diagnostics: float, wall: float, fit: object) 
     """NFR-MODEL-14: the GBM block is priced per scoring pass, not per factor.
 
     The driver is the **sum of grid points**, not the factor count: partial dependence runs
-    one full-population pass per grid point - ten quantiles for a numeric factor, but every
-    distinct level for a categorical, with no cap. So a single 10 000-level column costs
-    10 000 passes that a per-factor budget would record as one factor (OQ-MODEL-26). The
-    pass count is therefore read off the artifact rather than derived from `len(factors)`.
+    one full-population pass per grid point — ten quantiles for a numeric factor, and one
+    per level for a categorical, bounded by FR-MODEL-118's cap
+    (`max_partial_dependence_levels`, 20 by default). A banded or grouped factor costs one
+    pass per *band or group* rather than one per raw value since 2026-08-23 (FR-MODEL-125's
+    slice), so a 40-value column behind four bands costs four passes and not forty. The
+    pass count is therefore read off the artifact rather than derived from `len(factors)`:
+    it depends on what each factor resolved to and on where the cap fell, neither of which
+    the factor list states.
+
+    OQ-MODEL-26 asked what bounds the sweep and is **decided**; this docstring described the
+    uncapped behaviour until 2026-08-23.
 
     Counted: one pass per partition, one permutation baseline plus one per factor, and one
     per partial-dependence grid point. That reproduces the ~625 passes behind `02` §9's
