@@ -535,7 +535,46 @@ Two consequences for how the code is written:
 
 `PlatformError`'s attribute is `status_code`, not `status`.
 
+## `admin` is not a superset, and the route gate runs before your rule
+
+Two RBAC facts that only bite when a rule is not "hold this permission", and both cost a
+red test in W32-3's owner-transfer route.
+
+**`BUILTIN_ROLES` gives `admin` the read set plus the five `admin:*` permissions — and no
+write permission at all.** It is not `analyst` plus more. So a route whose rule is *"an
+Admin **or** the resource's owner"* must not be gated on the write permission the owner
+would hold:
+
+```python
+# WRONG — refuses the Admin arm before the rule is ever reached.
+caller: WriteDatasets   # Depends(requires(Perm.DATASET_WRITE)); admin holds none
+```
+
+Gate on the *read* permission both arms hold and put the real rule in the service, where it
+is written once and its refusal can name **which** arm failed. A caller holding
+`dataset:write` and refused by a bare `PERMISSION_DENIED` will go looking for a grant, and
+no grant would help.
+
+**The `system` principal fails every permission check, for a reason unrelated to roles.**
+`rbac.effective_permissions` returns `frozenset()` when `principal.id is None`, which is
+true of `system` by construction. So a validation refusal *about the principal itself* —
+"this action needs a named accountable party" — must be raised **before**
+`require_permission`, or the caller gets `PERMISSION_DENIED` for a condition no role can
+satisfy. Same rule as "order the refusals" above, with RBAC as the generic gate.
+
+**How to check, in one grep, before writing the route:**
+
+```bash
+grep -n "BUILTIN_ROLES" -A 40 packages/model-schema/src/model_schema/permissions.py
+```
+
+Read what the role actually holds. Do not add a `Permission` member to make a route
+convenient: the enum is closed by design, and a permission invented for one route is one no
+role grants.
+
 ## Verified
+
+2026-08-23 — W32-3, dataset owner transfer. The `admin`-is-not-a-superset rule was found by a test that expected 200 for an Admin reassigning a dataset and got 403 from the route's `dataset:write` dependency; the `system`-principal ordering rule by a test that expected `VALIDATION_FAILED` and got `PERMISSION_DENIED`. Gate green both halves.
 
 2026-08-18 — W5, backtests. The refusal-ordering rule above was found by a test that expected the specific message and got the generic gate's. Gate green both halves at 1073 Python / 105 frontend.
 
