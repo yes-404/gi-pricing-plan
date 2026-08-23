@@ -1081,3 +1081,115 @@ async def test_the_system_principal_cannot_own_a_dataset(database, workspace_id)
             )
     assert exc.value.code == "VALIDATION_FAILED"
     assert "owner" in exc.value.detail.lower()
+
+
+def _owner_change(client: TestClient, dataset_id, headers, owner_id):
+    return client.patch(
+        f"/api/v1/datasets/{dataset_id}",
+        json={"owner_id": str(owner_id)},
+        headers=headers,
+    )
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_the_owner_can_hand_the_dataset_on(
+    client: TestClient, analyst: dict[str, str], workspace_id
+) -> None:
+    successor = new_uuid7()
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+
+    response = _owner_change(client, created.json()["id"], analyst, successor)
+    assert response.status_code == 200, response.text
+    assert response.json()["owner_id"] == str(successor)
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_an_admin_can_reassign_a_dataset_they_do_not_own(
+    client: TestClient, analyst: dict[str, str], workspace_id, grant
+) -> None:
+    """The second arm.
+
+    Without this test the rule collapses to "the owner may", and an Admin unable to
+    reassign a dataset whose owner has left is exactly the situation the Admin arm exists
+    for. The admin here holds no `dataset:write` — `admin` is not a superset of `analyst`
+    in `BUILTIN_ROLES` — so this also proves the two conditions are independent.
+    """
+    administrator, successor = new_uuid7(), new_uuid7()
+    _run(grant("admin", principal_id=administrator))
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+
+    response = _owner_change(
+        client,
+        created.json()["id"],
+        _headers(administrator, workspace_id),
+        successor,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["owner_id"] == str(successor)
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_a_third_party_with_dataset_write_is_refused(
+    client: TestClient, analyst: dict[str, str], workspace_id, grant
+) -> None:
+    """The load-bearing refusal.
+
+    `dataset:write` is not enough — a writer who is neither Admin nor owner may edit the
+    dictionary and may not reassign the dataset, and a route that checked only the
+    permission would look correct in every other test in this file.
+    """
+    third_party = new_uuid7()
+    _run(grant("analyst", principal_id=third_party))
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+
+    # The same principal *can* edit the dictionary, which is what makes the refusal below
+    # about ownership rather than about holding no permission at all.
+    edited = client.put(
+        f"/api/v1/datasets/{created.json()['slug']}/dictionary",
+        json={"data_dictionary": {}},
+        headers=_headers(third_party, workspace_id),
+    )
+    assert edited.status_code == 200, edited.text
+
+    response = _owner_change(
+        client, created.json()["id"], _headers(third_party, workspace_id), new_uuid7()
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_the_reassignment_is_audited_with_both_owners(
+    client: TestClient, analyst: dict[str, str], database, workspace_id, principal
+) -> None:
+    """`06` R2 and FR-DATA-51's "audited as a metadata change".
+
+    `before` must carry the outgoing owner: an audit event saying only who owns it now
+    cannot answer who lost it, which is the question an ownership record exists for.
+    """
+    successor = new_uuid7()
+    created = client.post("/api/v1/datasets", json={"slug": _slug()}, headers=analyst)
+    assert created.status_code == 201, created.text
+    assert _owner_change(client, created.json()["id"], analyst, successor).status_code == 200
+
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+
+    async def event():
+        async with database.session() as session:
+            return (
+                await session.execute(
+                    select(AuditEventRow).where(
+                        AuditEventRow.workspace_id == workspace_id,
+                        AuditEventRow.action == "dataset.owner_changed",
+                    )
+                )
+            ).scalar_one()
+
+    entry = _run(event())
+    assert entry.before["owner_id"] == str(principal.id)
+    assert entry.after["owner_id"] == str(successor)

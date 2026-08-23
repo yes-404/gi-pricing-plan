@@ -7000,6 +7000,21 @@
         "title": "OverallOutcome",
         "type": "string"
       },
+      "OwnerUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "owner_id": {
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner_id"
+        ],
+        "title": "OwnerUpdate",
+        "type": "object"
+      },
       "Page_AuditEventView_": {
         "additionalProperties": false,
         "properties": {
@@ -15443,6 +15458,125 @@
           }
         },
         "summary": "Create a dataset",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}": {
+      "patch": {
+        "description": "FR-DATA-51's change path: Admin or the current owner, audited.\n\nA PATCH with one settable field rather than a bespoke `/owner` sub-resource, so the\nnext Dataset metadata field has somewhere to go.\n\nGated on `dataset:read`, which is weaker than it looks: `set_owner` applies the real\nrule. `dataset:write` would be **wrong** here — the `admin` role does not hold it\n(`BUILTIN_ROLES` gives admin the read set plus the five `admin:*` permissions), so\ngating on write would refuse FR-DATA-51's Admin arm before the service ever ran.\n\nBy id and not by slug, unlike the neighbouring routes: ownership is a fact about the\nDataset rather than about a name, and a slug is the one piece of a Dataset a future\nrename could change.",
+        "operationId": "patch_dataset_owner_api_v1_datasets__dataset_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dataset"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Change a dataset's owner",
         "tags": [
           "datasets"
         ]

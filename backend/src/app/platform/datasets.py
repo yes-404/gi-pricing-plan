@@ -297,6 +297,66 @@ async def update_dictionary(
     return row
 
 
+async def set_owner(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    dataset_id: UUID,
+    owner_id: UUID,
+) -> DatasetRow:
+    """Hand a Dataset to a new owner (FR-DATA-51).
+
+    Two conditions, not one: **Admin, or the current owner**. Both live here rather than in
+    the route so the rule is written once, and so the refusal can name which condition
+    failed — a caller who holds `DATASET_WRITE` and is refused would otherwise have no way
+    to tell this from a missing permission.
+
+    `ADMIN_MANAGE_ROLES` stands for "an Admin" (FR-DATA-51 names the actor, not a
+    permission). It is held by the `admin` role and by no other built-in role, and of the
+    five admin permissions it is the one about *who is accountable for what* rather than
+    about settings, environments or service accounts — which is exactly what an owner is.
+    No new permission was added: FR-GOV-3's set is closed, and a permission invented for
+    one route is a permission no role grants.
+
+    `load_dataset_by_id` folds `workspace_id` into its predicate, which is what makes a
+    cross-workspace request a 404 rather than a 403.
+    """
+    row = await load_dataset_by_id(
+        session, workspace_id=workspace_id, dataset_id=dataset_id
+    )
+    is_owner = actor.id is not None and actor.id == row.owner_id
+    if not is_owner and not await rbac.has_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        permission=Permission.ADMIN_MANAGE_ROLES,
+    ):
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Not permitted",
+            403,
+            "FR-DATA-51 lets a Dataset's owner be changed by an Admin or by the current "
+            "owner, and you are neither. `dataset:write` is not enough — it permits "
+            "editing the data dictionary, not reassigning accountability.",
+        )
+
+    before = {"owner_id": str(row.owner_id)}
+    row.owner_id = owner_id
+    await session.flush()
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="dataset.owner_changed",
+        entity_ref=f"dataset:{row.slug}",
+        before=before,
+        after={"owner_id": str(owner_id)},
+    )
+    return row
+
+
 def to_schema(
     row: DatasetRow,
     *,

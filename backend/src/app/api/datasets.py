@@ -8,6 +8,7 @@
 | `GET` | `/datasets` | List / filter |
 | `GET` | `/datasets/{slug}` | Detail with `latest_version` |
 | `PUT` | `/datasets/{slug}/dictionary` | Replace the Data Dictionary, audited |
+| `PATCH` | `/datasets/{dataset_id}` | Change the owner — Admin or current owner, audited |
 | `POST` | `/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job |
 | `GET` | `/datasets/{slug}/versions/{version}` | Version detail |
 | `PATCH` | `/datasets/{slug}/versions/{version}/schema` | Correct inferred schema while `draft` |
@@ -137,6 +138,12 @@ class DictionaryUpdate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     data_dictionary: dict[str, DataDictionaryEntry]
+
+
+class OwnerUpdate(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    owner_id: UUID
 
 
 class VersionCreate(BaseModel):
@@ -436,6 +443,44 @@ async def get_dataset(slug: str, caller: ReadDatasets, database: DatabaseDep) ->
             last_validated=validated.get(row.id),
         )
 
+
+@router.patch(
+    "/datasets/{dataset_id}",
+    summary="Change a dataset's owner",
+    responses=problems(400, 401, 403, 404, 422),
+)
+async def patch_dataset_owner(
+    dataset_id: UUID, body: OwnerUpdate, caller: ReadDatasets, database: DatabaseDep
+) -> Dataset:
+    """FR-DATA-51's change path: Admin or the current owner, audited.
+
+    A PATCH with one settable field rather than a bespoke `/owner` sub-resource, so the
+    next Dataset metadata field has somewhere to go.
+
+    Gated on `dataset:read`, which is weaker than it looks: `set_owner` applies the real
+    rule. `dataset:write` would be **wrong** here — the `admin` role does not hold it
+    (`BUILTIN_ROLES` gives admin the read set plus the five `admin:*` permissions), so
+    gating on write would refuse FR-DATA-51's Admin arm before the service ever ran.
+
+    By id and not by slug, unlike the neighbouring routes: ownership is a fact about the
+    Dataset rather than about a name, and a slug is the one piece of a Dataset a future
+    rename could change.
+    """
+    async with database.unit_of_work() as session:
+        row = await service.set_owner(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            dataset_id=dataset_id,
+            owner_id=body.owner_id,
+        )
+        latest = await _latest_versions(session, [row.id])
+        validated = await _last_validated(session, [row.id])
+        return service.to_schema(
+            row,
+            latest_version=latest.get(row.id),
+            last_validated=validated.get(row.id),
+        )
 
 @router.put(
     "/datasets/{slug}/dictionary",

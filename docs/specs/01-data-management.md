@@ -777,6 +777,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 | `GET` | `/api/v1/datasets` | List / filter datasets, each with `latest_version`, `latest_version_status` and `last_validated_at` (FR-DATA-50) |
 | `GET` | `/api/v1/datasets/{slug}` | Dataset detail incl. `latest_version` |
 | `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) |
+| `PATCH` | `/api/v1/datasets/{dataset_id}` | Change the owner — Admin or the current owner, audited as `dataset.owner_changed` (FR-DATA-51) |
 | `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated |
 | `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-DATA-2) |
 | `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail |
