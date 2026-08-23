@@ -300,6 +300,14 @@ async def test_the_application_role_holds_only_select_and_insert(
 #: the artifact's real production path is exercised by its own module's tests, and what is
 #: under test here is the table, not the writer.
 _APPEND_ONLY_ROWS: dict[str, str] = {
+    #: **Added 2026-08-23 (W32-6).** `backtests` was in `APPEND_ONLY_TABLES` above — so the
+    #: grants and the both-triggers checks covered it — and absent from this list, which is
+    #: the only one that makes a trigger *fire*. Every other locked table had its refusal
+    #: observed and this one did not.
+    "backtests": (
+        "INSERT INTO backtests (id, workspace_id, model_id, dataset_version_id, payload) "
+        "VALUES (:id, :ws, gen_random_uuid(), gen_random_uuid(), :body)"
+    ),
     "bandings": (
         "INSERT INTO bandings (id, workspace_id, dataset_id, slug, version, column_name, "
         "body) VALUES (:id, :ws, gen_random_uuid(), :slug, 1, 'vehicle_age', :body)"
