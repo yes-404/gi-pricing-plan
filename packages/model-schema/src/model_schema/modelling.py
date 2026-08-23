@@ -467,8 +467,14 @@ class GroupingEvidence(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    source_level_count: int = Field(ge=0)
-    target_level_count: int = Field(ge=0)
+    #: Tightened to `ge=1` on 2026-08-22. Both were `ge=0` against the authored contract's
+    #: `minimum: 1`, and the *contract* stated the real invariant (`CLAUDE.md` §0): a
+    #: grouping with zero source levels collapses nothing and one with zero target levels
+    #: maps every source level nowhere, so neither is an evidence block the platform can
+    #: produce. The model was loose, and a bound the model does not enforce is a bound a
+    #: client validates against and the platform does not.
+    source_level_count: int = Field(ge=1)
+    target_level_count: int = Field(ge=1)
     deviance_before: float | None = None
     deviance_after: float | None = None
     df_saved: int = 0
@@ -476,6 +482,11 @@ class GroupingEvidence(BaseModel):
     #: FR-MODEL-80: EVPV, VHM and `k`, so a reviewer can re-derive `Z` rather than take it.
     #: `None` under limited fluctuation, which has no variance components to report.
     credibility_components: dict[str, float] | None = None
+    #: The source levels the grouping collapsed, carrying the statistics a target level
+    #: carries — so "which thin cells went into G1, and what were they worth?" is answered
+    #: from the artifact rather than by re-running the one-way against the dataset version
+    #: (FR-MODEL-15). Declared in the contract since Phase 0; added to the model 2026-08-22.
+    source_level_stats: tuple[OneWayRow, ...] = ()
     #: The resulting target levels, carrying the statistics a source level carries — so
     #: "what did merging these four into G1 do to the frequency?" is a comparison rather
     #: than a re-run.

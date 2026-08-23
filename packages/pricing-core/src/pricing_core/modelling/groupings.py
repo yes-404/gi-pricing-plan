@@ -649,6 +649,7 @@ def grouping_evidence(
         df_saved=df_saved,
         chi2_p_value=p_value,
         credibility_components=components,
+        source_level_stats=tuple(before.rows),
         target_level_stats=tuple(after.rows),
     )
 

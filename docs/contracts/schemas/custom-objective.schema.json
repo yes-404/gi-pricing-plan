@@ -37,7 +37,8 @@
           "template": {"enum": ["poisson", "gamma", "tweedie", "capped_gamma", "spliced_severity",
                                 "asymmetric_squared", "asymmetric_poisson", "huber", "pseudo_huber",
                                 "quantile", "zero_inflated_poisson", "focal_binomial"]},
-          "params": {"type": "object", "additionalProperties": {"type": "number"}}
+          "params": {"type": "object", "additionalProperties": {"type": ["integer", "number"]},
+            "description": "Corrected 2026-08-22: ObjectiveParams' value type is `int | float` and this contract admitted `number` alone, so a Tweedie power of 2, a cap in whole units or an integer period — all legitimate parameter values, and JSON has no way to mark `2` as a float — was a document the published contract rejected and the platform accepted."}
         }
       }
     },

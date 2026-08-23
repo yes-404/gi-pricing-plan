@@ -46,9 +46,13 @@ number to integer and the comparison passed. Hand-authored schemas spell the sam
 `"items"`, so the two sides of a comparison do **not** use the same keyword for it.
 
 Related, when comparing a generated schema against a hand-authored one: the generated side
-marks every `X | None` nullable via `anyOf` and the authored side almost never does. Compare
-the admitted types with `null` removed, or the comparison reports a divergence on nearly
-every optional field and gets ignored.
+marks every `X | None` nullable through `anyOf` and the authored side often does not. The
+advice here used to be "compare with `null` removed", and it was **measured false on
+2026-08-22**: 70 of 417 authored paths are nullable, the comparison found 43 divergences
+rather than the predicted noise, 20 were real and were fixed, and one was a bug this skill's
+own advice had helped re-publish. Nullability is compared for the slugs in
+`NULLABILITY_COMPARED_SLUGS` and the remainder is scoped, not excused. See
+`.claude/skills/contract-guard`.
 
 **A new authored schema is not compared until its slug is registered.**
 `test_generated_and_authored_agree_on_scalar_types` in `backend/tests/test_contracts.py`
@@ -115,6 +119,12 @@ the edit in reflow and destroying the layout a reader relies on. Patch the text,
 `json.loads` the result to prove it still parses.
 
 ## Verified
+
+2026-08-22 — W32-1, the contracts-and-drift-guard slice. The nullability paragraph above was
+reversed: it advised stripping `null` before comparing, and the measurement that tested the
+advice found 43 real divergences under it. The lesson is the one `CLAUDE.md` §0 states about
+counts and this skill restated about a grep — an assertion about how noisy a check *would* be
+is a prediction, and a prediction in a skill is read as a finding.
 
 2026-08-19 — W5's `OQ-OVR-8` slice, applying the decision that `DecimalStr` refuses a float.
 The fourth trap above was found by widening the comparison from 6 slugs to 11 while looking

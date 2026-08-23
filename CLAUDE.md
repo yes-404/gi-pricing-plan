@@ -478,8 +478,8 @@ modifications for the vendored sets. Read it when starting work on an unfamiliar
 the suite; it is the authority on what is installed, not this section.
 
 - **Written for this repo:** `spec-change`, `docs-audit`, `close-workstream`,
-  `phase-review`, `adr-write`, `contract-schema`, `library-spike`, `git-hygiene`,
-  `python-package`, `python-test`, `fastapi-service`, `vue-frontend`.
+  `phase-review`, `adr-write`, `contract-schema`, `contract-guard`, `library-spike`,
+  `git-hygiene`, `python-package`, `python-test`, `fastapi-service`, `vue-frontend`.
 - **Vendored, subject matter:** `python-skills` (CI, security, testing, code quality,
   secret hygiene), `vue3-skills` (Vue 3, router, Pinia, testing, composables),
   `ui-ux-pro-max` (colour, typography, accessibility, chart choice).

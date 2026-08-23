@@ -807,6 +807,411 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     )
 
 
+_ROOT_PATH: Final = "<root>"
+
+
+def _required_at(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    *,
+    _depth: int = 0,
+) -> frozenset[str]:
+    """The keys required **at this node**, respecting what each combinator means.
+
+    `_variants` deliberately flattens every combinator into one list, which is right for
+    asking "what fields exist anywhere in this shape?" and wrong for asking "what must be
+    present?". So this does not use it. `allOf` is conjunction — every branch's obligations
+    hold, so union them. `oneOf`/`anyOf` is disjunction — a key is required only if
+    **every** arm demands it, so intersect. `then`/`else` are conditional on an `if` this
+    suite does not evaluate, and contribute nothing unconditionally.
+
+    Getting this wrong **invents** requirements rather than missing them, which is the more
+    expensive failure. `model.fit_result.bins.[]` is
+    `oneOf: [EbmNumericBins, EbmCategoricalBins]` with a discriminator: the first requires
+    `cuts`, the second requires `levels`, and no single bin requires both. A union reports
+    both as model-required, and a contract "corrected" to match would then refuse every
+    valid categorical bin — a guard that manufactures the defect it reports.
+    """
+    if _depth > _MAX_COMPOSITION_DEPTH:
+        raise AssertionError(
+            f"more than {_MAX_COMPOSITION_DEPTH} composition levels — the document nests "
+            "without bottoming out"
+        )
+    node, document = _deref(document, node, base)
+    here = set(node.get("required", ()))
+    for branch in node.get("allOf", []):
+        here |= _required_at(document, branch, base, _depth=_depth + 1)
+    for keyword in ("oneOf", "anyOf"):
+        arms = [b for b in node.get(keyword, []) if b.get("type") != "null"]
+        if not arms:
+            continue
+        common = _required_at(document, arms[0], base, _depth=_depth + 1)
+        for arm in arms[1:]:
+            common &= _required_at(document, arm, base, _depth=_depth + 1)
+        here |= common
+    return frozenset(here)
+
+
+def _required_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+) -> dict[str, frozenset[str]]:
+    """Flatten a schema to `dotted.path -> the keys required at that path`.
+
+    Descends the way `_type_map` does — `_variants` to find children, the same `.[]`
+    collapse for arrays — so a path here is a path there and the two maps can be read
+    against each other. What is required *at* each node comes from `_required_at` instead,
+    because **finding children and deciding obligations are different questions** and only
+    the first one wants a flattened view.
+    """
+    found: dict[str, frozenset[str]] = {}
+    required = _required_at(document, node, base)
+    if required:
+        found[path or _ROOT_PATH] = required
+
+    for owner, variant in _variants(document, node, base):
+        for name, child in variant.get("properties", {}).items():
+            subtree = _required_map(owner, child, base, f"{path}.{name}".lstrip("."))
+            for key, keys in subtree.items():
+                found[key] = found.get(key, frozenset()) | keys
+        elements = list(variant.get("prefixItems", ()))
+        if "items" in variant:
+            elements.append(variant["items"])
+        for child in elements:
+            subtree = _required_map(owner, child, base, f"{path}.[]".lstrip("."))
+            for key, keys in subtree.items():
+                found[key] = found.get(key, frozenset()) | keys
+    return found
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.req("FR-OVR-6")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_the_contract_never_marks_optional_what_the_model_requires(slug: str) -> None:
+    """One direction, deliberately, and the direction is the whole design.
+
+    The two sides answer different questions. Pydantic's `required` lists the fields with
+    no default — a fact about *construction*. A hand-authored contract's `required` lists
+    what a reader may rely on. A field carrying a default is still always serialised, so
+    "the contract requires more than the model" is safe, and on 2026-08-22 it accounted for
+    fourteen of the eighteen differences across the twelve compared slugs. Asserting
+    equality would land red on seven schemas for a reason that is mostly not a defect, and
+    a guard that lands like that is one somebody switches off.
+
+    The other direction is a live bug. A field the model demands and the contract calls
+    optional is a request a client will build from the published contract, send, and have
+    refused — and the refusal names a field the contract said was not needed.
+
+    The two this found on the day it was written are `model.fit_result.terms.[]`'s
+    `bin_weights` and `standard_deviations`, which `EbmTerm` requires and the contract
+    marks optional.
+
+    It found them only because `_required_at` respects combinators. The naive union also
+    reported `bins.[].cuts` and `bins.[].levels`, which are **not** defects: `bins.[]` is a
+    discriminated `oneOf` and no single arm requires both.
+
+    `dataset_id` on `banding` and `grouping` is not among them because it is already a
+    recorded divergence with a named owner (`MODEL_ONLY_UNRECONCILED`) — the same field,
+    the same finding, and re-reporting it here would be a second account of one fact.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _required_map(generated, generated, GENERATED)
+    declared = _required_map(authored, authored, AUTHORED)
+
+    exempt = MODEL_ONLY_UNRECONCILED.get(slug, frozenset())
+    if _composes_the_envelope(authored):
+        exempt |= ENVELOPE_FIELDS
+
+    optional_but_demanded = {
+        path: sorted(produced[path] - declared.get(path, frozenset()) - exempt)
+        for path in sorted(set(produced) & set(declared))
+        if produced[path] - declared.get(path, frozenset()) - exempt
+    }
+    assert not optional_but_demanded, (
+        "the model requires fields the contract marks optional, so a client following the "
+        "published contract builds a request the platform refuses: "
+        + ", ".join(f"{p} ({', '.join(n)})" for p, n in optional_but_demanded.items())
+    )
+
+
+def _closure_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+) -> dict[str, frozenset[str]]:
+    """Flatten a schema to `dotted.path -> what `additionalProperties` says there`.
+
+    Both spellings land in one vocabulary so they cannot be silently compared against each
+    other: the boolean form becomes `{"CLOSED"}` or `{"OPEN"}`, the schema form becomes the
+    JSON types its value schema admits. A path where one side says `CLOSED` and the other
+    says `number` is then a reported disagreement rather than an accidental match.
+
+    Only nodes that *state* `additionalProperties` are recorded. Absence is not `OPEN`:
+    JSON Schema's default is open, but a hand-authored contract that says nothing is silent
+    rather than deliberate, and reporting every silence would bury the real disagreements —
+    which measured **one** across the whole compared suite.
+    """
+    found: dict[str, frozenset[str]] = {}
+    for owner, variant in _variants(document, node, base):
+        extra = variant.get("additionalProperties")
+        if extra is not None:
+            key = path or _ROOT_PATH
+            if isinstance(extra, bool):
+                says = frozenset({"OPEN" if extra else "CLOSED"})
+            else:
+                says = frozenset(_scalar_types(owner, extra, base)) or frozenset({"ANY"})
+            found[key] = found.get(key, frozenset()) | says
+        for name, child in variant.get("properties", {}).items():
+            for key, says in _closure_map(
+                owner, child, base, f"{path}.{name}".lstrip(".")
+            ).items():
+                found[key] = found.get(key, frozenset()) | says
+        elements = list(variant.get("prefixItems", ()))
+        if "items" in variant:
+            elements.append(variant["items"])
+        for child in elements:
+            for key, says in _closure_map(
+                owner, child, base, f"{path}.[]".lstrip(".")
+            ).items():
+                found[key] = found.get(key, frozenset()) | says
+    return found
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> None:
+    """An open map's value type is published, and a client validates against it.
+
+    Seventeen paths declare `additionalProperties` on both sides and nothing has ever read
+    one. The measured disagreement is `custom-objective.params`: the model admits
+    `integer | number` and the contract admits `number` alone, so an objective parameterised
+    with a whole number — a period, a count, a cap in whole units — is a document the
+    published contract rejects and the platform accepts. That is the direction that wastes
+    an author's afternoon, because the thing refusing them is their own validator.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _closure_map(generated, generated, GENERATED)
+    declared = _closure_map(authored, authored, AUTHORED)
+
+    disagreed = {
+        path: (sorted(produced[path]), sorted(declared[path]))
+        for path in sorted(set(produced) & set(declared))
+        if produced[path] != declared[path]
+    }
+    assert not disagreed, (
+        "the model and the contract disagree on what extra properties are admitted at "
+        + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+    )
+
+
+#: The constraint keywords compared. Written out rather than "every keyword that is not a
+#: structural one", because the structural set grows with the spec and a negative list would
+#: quietly start comparing things this guard has no opinion about.
+_COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
+    {
+        "minLength",
+        "maxLength",
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "pattern",
+        "minItems",
+        "maxItems",
+    }
+)
+
+
+def _constraint_map(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+    *,
+    _depth: int = 0,
+) -> dict[str, dict[str, Any]]:
+    """Flatten a schema to `dotted.path -> the constraint keywords declared there`.
+
+    Only keywords in `_COMPARED_CONSTRAINTS`, and only where a side declares one: a path
+    constrained on neither side is not a disagreement, and a path constrained on one side
+    only is reported by the comparison rather than by this walker.
+    """
+    if _depth > _MAX_COMPOSITION_DEPTH:
+        raise AssertionError(
+            f"more than {_MAX_COMPOSITION_DEPTH} composition levels — the document nests "
+            "without bottoming out"
+        )
+    found: dict[str, dict[str, Any]] = {}
+    properties: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
+
+    for owner, variant in _variants(document, node, base):
+        declared = {k: v for k, v in variant.items() if k in _COMPARED_CONSTRAINTS}
+        if declared:
+            found.setdefault(path or _ROOT_PATH, {}).update(declared)
+        for name, child in variant.get("properties", {}).items():
+            properties.setdefault(name, []).append((owner, child))
+        if "items" in variant:
+            elements.append((owner, variant["items"]))
+        elements.extend((owner, entry) for entry in variant.get("prefixItems", ()))
+
+    for name in sorted(properties):
+        for owner, child in properties[name]:
+            for key, declared in _constraint_map(
+                owner, child, base, f"{path}.{name}".lstrip("."), _depth=_depth + 1
+            ).items():
+                found.setdefault(key, {}).update(declared)
+    for owner, child in elements:
+        for key, declared in _constraint_map(
+            owner, child, base, f"{path}.[]".lstrip("."), _depth=_depth + 1
+        ).items():
+            found.setdefault(key, {}).update(declared)
+    return found
+
+
+#: Constraint disagreements this slice found and deliberately did **not** resolve, keyed by
+#: slug and holding `(dotted path, keyword)` pairs. Scoped out in the open rather than
+#: exempted silently, and `test_the_escalated_constraint_disagreements_are_still_unresolved`
+#: is what notices when a decision lands and this entry should go.
+#:
+#: TODO — UNRESOLVED, raised 2026-08-22 (W32-1) as **OQ-MODEL-30**, owner: maintainer.
+#: Options and a recommendation are in `docs/open-questions.md`; `02` §10 mirrors it. The
+#: carve-out dies with the question — `test_the_escalated_constraint_disagreements_are_still_
+#: unresolved` goes red the moment either side moves.
+#: `objective-certificate` / `result.checks` / `minItems`: model 1, contract 8. **Neither
+#: number is the specification's.** `02` §4.7's dated 2026-08-18 amendment says *"All nine
+#: checks are emitted for every template, always"* and names them; the authored contract's
+#: own `$comment` from that same amendment calls `branch_discontinuity` a *ninth* named
+#: check and adds it to the `name` enum while leaving `minItems` at 8 — so the 8 is the
+#: pre-amendment count of named checks and nothing has justified it since.
+#:
+#: The model's 1 is loose but **not simply raisable**: `CertificateResult` is shared, by
+#: `ObjectiveCertificate` and by `MetricCertificate` (`metrics.py`), and FR-MODEL-105 gives
+#: a metric certificate **four** checks — `finiteness`, `direction_holds`,
+#: `scale_behaviour`, `smoke_evaluation` — sharing §4.7's vocabulary unchanged. A `min_length`
+#: of 9 on the shared type would refuse every metric certificate the spec requires.
+#:
+#: So resolving it is a design decision, not a bound: an obligation carried per artifact
+#: (an `ObjectiveCertificate` validator asserting §4.7's nine named checks, with the
+#: contract's `minItems` moved 8 → 9 beside it) rather than on `CertificateResult`. That is
+#: `CLAUDE.md` §0 territory with a new requirement attached, which is the maintainer's call
+#: and not this guard's.
+UNRESOLVED_CONSTRAINT_DISAGREEMENTS: Final[dict[str, frozenset[tuple[str, str]]]] = {
+    "objective-certificate": frozenset({("result.checks", "minItems")}),
+}
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
+    """A bound is part of the published contract, and a wrong one is refused input.
+
+    The type comparison above answers "may this be a string?" and stops. It says nothing
+    about a `minLength: 1` the model enforces and the contract omits — under which a client
+    posts the empty string the contract permitted and meets a 422 naming a rule it was
+    never told. Only keywords declared on **both** sides are compared, for the same reason
+    the type comparison intersects paths: a constraint on one side alone is a difference of
+    intent, and `test_an_artifact_shape_carries_exactly_what_its_contract_declares` is
+    where intent is arbitrated.
+
+    One pair is scoped out — see `UNRESOLVED_CONSTRAINT_DISAGREEMENTS`, which says which and
+    why it is a question rather than a fix.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _constraint_map(generated, generated, GENERATED)
+    declared = _constraint_map(authored, authored, AUTHORED)
+    unresolved = UNRESOLVED_CONSTRAINT_DISAGREEMENTS.get(slug, frozenset())
+
+    disagreed: dict[str, dict[str, tuple[Any, Any]]] = {}
+    for path in sorted(set(produced) & set(declared)):
+        for keyword in sorted(set(produced[path]) & set(declared[path])):
+            if (path, keyword) in unresolved:
+                continue
+            if produced[path][keyword] != declared[path][keyword]:
+                disagreed.setdefault(path, {})[keyword] = (
+                    produced[path][keyword],
+                    declared[path][keyword],
+                )
+    assert not disagreed, (
+        "the model and the contract disagree on a bound at "
+        + "; ".join(
+            f"{p}: " + ", ".join(f"{k} model={g} contract={a}" for k, (g, a) in d.items())
+            for p, d in disagreed.items()
+        )
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS))
+def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) -> None:
+    """The carve-out above must not outlive the question it was taken for.
+
+    `CLAUDE.md` §12's rule for a curated list: whatever notices it went stale ships with it.
+    An exemption written for a live disagreement is a hole in the guard the moment the
+    disagreement is settled, and nothing else in this file would say so — the comparison
+    just keeps skipping a pair that now agrees. So this asserts the exemption is still
+    earning its place, and goes red with instructions when it stops.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    produced = _constraint_map(generated, generated, GENERATED)
+    declared = _constraint_map(authored, authored, AUTHORED)
+
+    settled = [
+        (path, keyword)
+        for path, keyword in sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS[slug])
+        if produced.get(path, {}).get(keyword) == declared.get(path, {}).get(keyword)
+    ]
+    assert not settled, (
+        f"{slug} no longer disagrees at "
+        + ", ".join(f"{p}.{k}" for p, k in settled)
+        + " — the question was answered, so delete the entry from "
+        "UNRESOLVED_CONSTRAINT_DISAGREEMENTS rather than leaving the guard blind there"
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize(
+    ("walker", "slug", "path"),
+    [
+        (_required_map, "grouping", "evidence.source_level_stats.[]"),
+        (_required_map, "model", "fit_result.bins.[]"),
+        (_closure_map, "model-spec", "family_params"),
+        (_constraint_map, "grouping", "evidence.source_level_stats.[].claim_count"),
+    ],
+)
+def test_each_new_walker_reaches_a_nested_path_it_is_supposed_to(
+    walker: Any, slug: str, path: str
+) -> None:
+    """The control for the three comparisons above, at the depth where they go quiet.
+
+    A comparison that intersects two maps is green when both maps are empty. Counting what
+    a walker produced does not catch a walker that stopped descending — the count shrinks
+    with it, so any threshold expressed as a fraction of its own output moves out of the
+    way of the defect it exists to catch. So this names one path per walker instead, each
+    one nested at least two levels down and each chosen because a plausible refactor of the
+    walker would lose it.
+    """
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+    reached = walker(authored, authored, AUTHORED)
+    assert path in reached, (
+        f"{walker.__name__} no longer reaches {path} in {slug} — the comparison built on "
+        "it is now silent about everything beneath that point"
+    )
+
+
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
 #: noticed. Each must be a path the comparison reaches **on both sides**.
 #:
@@ -875,6 +1280,21 @@ REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
             "reconciliation.perils.[].modelled_burning_cost_minor",
             "reconciliation.computed_at",
             "perils.[].large_loss.evidence_blob.sha256",
+        }
+    ),
+    #: Added 2026-08-22 (W32-1). `grouping` had no entry, which is why
+    #: `evidence.source_level_stats` could be declared in the contract since Phase 0 and
+    #: absent from `GroupingEvidence` throughout with every check green: the field-name
+    #: comparison reads top-level names only, and the type comparison reads only paths
+    #: present on both sides — an undeclared nested field is on neither list.
+    "grouping": frozenset(
+        {
+            "evidence.source_level_stats.[].level",
+            "evidence.source_level_stats.[].exposure_years",
+            "evidence.source_level_stats.[].claim_count",
+            "evidence.target_level_stats.[].level",
+            "evidence.target_level_stats.[].exposure_years",
+            "evidence.target_level_stats.[].claim_count",
         }
     ),
 }
@@ -1025,6 +1445,53 @@ def test_the_type_comparison_reaches_the_one_way_row(slug: str, row: str) -> Non
     assert wanted <= compared, (
         f"the type comparison no longer reaches {sorted(wanted - compared)} in {slug} — "
         "it is passing because it stopped looking, not because the contracts agree"
+    )
+
+
+@pytest.mark.req("FR-MODEL-15")
+@pytest.mark.parametrize(
+    "block", ["evidence.source_level_stats.[]", "evidence.target_level_stats.[]"]
+)
+def test_the_grouping_evidence_rows_are_the_shared_one_way_row(block: str) -> None:
+    """Both halves of the evidence describe `OneWayRow`, and describe it the same way.
+
+    The authored contract hand-copied a four-field subset of `OneWayRow` into
+    `target_level_stats` and gave it a `relativity` the shared model has never had, while
+    `source_level_stats` was `{"items": {"type": "object"}}` — untyped, describing nothing.
+    Neither was visible: the type comparison reads only paths present on both sides, so a
+    field on one side alone is skipped rather than reported, and a wholly untyped item has
+    no leaves to compare at all.
+
+    **Compare whole paths, never a path rebuilt from its last segment.** The first version
+    of this test collected `path.rsplit(".", 1)[-1]` and reassembled `f"{block}.{name}"`,
+    which is only valid where every leaf is one level down. `OneWayRow` carries two
+    `tuple[float, float]` fields, and Pydantic emits a tuple as `prefixItems`, so
+    `frequency_ci` and `severity_ci` reach this walker as `…frequency_ci.[]`. Their last
+    segment is `[]`, and the reassembly then asserted `…source_level_stats.[].[]` — a path
+    neither side can ever produce, so the test failed unconditionally and said nothing
+    about the contract. `prefixItems` is the same blindness recorded against `_type_map`
+    itself; it is worth noticing that knowing the trap did not prevent writing it again.
+    """
+    generated = _load(GENERATED / "grouping.schema.json")
+    authored = _load(AUTHORED / "grouping.schema.json")
+
+    produced = {
+        path
+        for path in _type_map(generated, generated, GENERATED)
+        if path.startswith(f"{block}.")
+    }
+    declared = {
+        path
+        for path in _type_map(authored, authored, AUTHORED)
+        if path.startswith(f"{block}.")
+    }
+
+    assert produced, f"the model produces no leaves under {block}"
+    assert not produced - declared, (
+        f"the contract does not declare: {sorted(produced - declared)}"
+    )
+    assert not declared - produced, (
+        f"the contract declares fields the model lacks: {sorted(declared - produced)}"
     )
 
 
