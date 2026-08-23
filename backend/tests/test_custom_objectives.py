@@ -15,10 +15,14 @@ This owns the six things only the platform can be wrong about:
   the ref is the seam `pricing-core` cannot test, because resolving a reference is exactly
   what ADR-0001 forbids it to do.
 
-The certificate is run over a **small grid** (`n_points=300`). §4.7's checks are analytic
-comparisons at each sampled point; the sampling density decides how long the Job takes and
-not what it concludes, and the default 2 000 points makes this file three times slower for
-nothing.
+The certificate is run over a **small grid** — `COUNT_GRID` below, whose `n_points` is the
+floor `SamplingSpec` permits. §4.7's checks are analytic comparisons at each sampled point;
+the sampling density decides how long the Job takes and not what it concludes, and
+`default_sampling`'s grid makes this file correspondingly slower for nothing.
+
+*(Corrected 2026-08-23, W32-6: this paragraph said `n_points=300`, a value `SamplingSpec`
+has since forbidden — its `ge=1_000` would reject it. Naming the constant rather than
+restating its value is what stops the next change going stale here again.)*
 """
 
 from __future__ import annotations
@@ -606,17 +610,52 @@ def test_every_custom_objective_route_is_in_the_published_contract() -> None:
 
 
 @pytest.mark.req("FR-MODEL-75")
-def test_the_derive_route_refuses_rather_than_pretending_the_concept_is_unknown(
+def test_deriving_without_model_fit_is_refused(
     api_client: TestClient, workspace_id, principal
 ) -> None:
-    """A 404 would say "this platform has no such concept". The truth is "not until Phase 2",
-    and FR-MODEL-75 names this endpoint as one of the two that must say so."""
+    """The RBAC half, said plainly.
+
+    **Split from a single test on 2026-08-23 (W32-6).** That test granted the caller nothing
+    and asserted `status_code in (403, 409)`. `FitModels` is a route dependency, resolved
+    before the handler body, so the 409 arm was unreachable — and a disjunctive assertion
+    cannot fail when the wrong one of the two arrives. It was marked as evidence for
+    FR-MODEL-75, which is about *what this platform will and will not derive*, and observed
+    only that an unauthorised caller is refused. The requirement's actual subject is the
+    test below.
+    """
     response = api_client.post(
         f"/api/v1/custom-objectives/{new_uuid7()}/derive",
         json={},
         headers=_headers(principal.id, workspace_id),
     )
-    assert response.status_code in (403, 409)
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-MODEL-75")
+async def test_deriving_refuses_by_name_rather_than_pretending_the_concept_is_unknown(
+    api_client: TestClient, workspace_id, principal, grant
+) -> None:
+    """The arm the old test could never reach. Granting `model:fit` is what makes this a test
+    of FR-MODEL-75 rather than of RBAC.
+
+    A 404 would say "this platform has no such concept". The truth is "not until Phase 2",
+    and FR-MODEL-75 names this endpoint as one of the two that must say so — so the code is
+    asserted, not merely the status.
+
+    The objective id names nothing, deliberately: `refuse_expression_kind` is reached before
+    any lookup, so the answer to an authorised caller is the same refusal whatever they point
+    at. A route that looked the objective up first would answer 404 here and hide the
+    capability question behind a missing row.
+    """
+    await grant("analyst")
+    response = api_client.post(
+        f"/api/v1/custom-objectives/{new_uuid7()}/derive",
+        json={},
+        headers=_headers(principal.id, workspace_id),
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
 
 
 @pytest.mark.req("FR-MODEL-38")
