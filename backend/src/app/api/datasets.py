@@ -20,6 +20,7 @@ be forgotten — the response shape simply has nowhere to put one.
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -52,7 +53,12 @@ from app.api.pagination import (
 from app.api.responses import problems
 from app.data import ingestion
 from app.data.formats import read_tabular
-from app.db.models import DatasetRow, DatasetVersionRow, SourceRow
+from app.db.models import (
+    DatasetRow,
+    DatasetVersionRow,
+    SourceRow,
+    ValidationReportRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets as service
@@ -60,6 +66,7 @@ from app.platform import jobs as job_service
 from model_schema import (
     DataDictionaryEntry,
     Dataset,
+    DatasetStatus,
     DatasetVersion,
     Job,
     JobKind,
@@ -313,11 +320,18 @@ async def list_datasets(
     page_rows = rows[:limit]
 
     async with database.session() as session:
-        latest = await _latest_versions(session, [row.id for row in page_rows])
+        page_ids = [row.id for row in page_rows]
+        latest = await _latest_versions(session, page_ids)
+        validated = await _last_validated(session, page_ids)
 
     return Page[Dataset](
         items=[
-            service.to_schema(row, latest_version=latest.get(row.id)) for row in page_rows
+            service.to_schema(
+                row,
+                latest_version=latest.get(row.id),
+                last_validated=validated.get(row.id),
+            )
+            for row in page_rows
         ],
         next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
         total_estimate=int(total),
@@ -326,8 +340,13 @@ async def list_datasets(
 
 async def _latest_versions(
     session: AsyncSession, dataset_ids: list[UUID]
-) -> dict[UUID, int]:
-    """The latest version of each dataset on a page, in one query.
+) -> dict[UUID, tuple[int, str]]:
+    """The latest version of each dataset on a page, **and its status**, in one query.
+
+    `DISTINCT ON` rather than `max(version)`: the status must be the status *of that
+    version*, and an aggregate over `version` cannot carry a correlated column. Still one
+    query — FR-DATA-50 budgets one *further* aggregate for the whole change, and the
+    status rides on the query that was already here.
 
     The list rendered an empty "latest version" column for every row: it called
     `to_schema(row)` with no version, while the detail route passed one. `01` §5.3 names
@@ -341,23 +360,62 @@ async def _latest_versions(
         return {}
     rows = (
         await session.execute(
-            select(DatasetVersionRow.dataset_id, func.max(DatasetVersionRow.version))
+            select(
+                DatasetVersionRow.dataset_id,
+                DatasetVersionRow.version,
+                DatasetVersionRow.status,
+            )
             .where(DatasetVersionRow.dataset_id.in_(dataset_ids))
-            .group_by(DatasetVersionRow.dataset_id)
+            .distinct(DatasetVersionRow.dataset_id)
+            .order_by(DatasetVersionRow.dataset_id, DatasetVersionRow.version.desc())
         )
     ).all()
-    return {dataset_id: version for dataset_id, version in rows}
+    return {dataset_id: (version, status) for dataset_id, version, status in rows}
 
 
-async def _latest_version(session: AsyncSession, dataset_id: UUID) -> int | None:
-    latest: int | None = (
+async def _last_validated(
+    session: AsyncSession, dataset_ids: list[UUID]
+) -> dict[UUID, tuple[int, datetime]]:
+    """The most recently validated version of each dataset, and when (FR-DATA-50).
+
+    Not necessarily the latest version, which is the whole point of the field: a Dataset
+    whose v12 is a fresh draft above a validated v11 was last usable at v11's validation,
+    and a list computing this from `latest_version` would report it as never validated.
+
+    The timestamp is the report's `finished_at` rather than a column on the version:
+    `validated_names_its_report` guarantees a `validated` version has a report, so the
+    join cannot drop a row, and a stored `validated_at` would duplicate it.
+
+    Ordered by `finished_at` and not by `version`: "most recently validated" is a fact
+    about time, and re-validating an older version after a newer one is a legitimate
+    sequence.
+    """
+    if not dataset_ids:
+        return {}
+    rows = (
         await session.execute(
-            select(func.max(DatasetVersionRow.version)).where(
-                DatasetVersionRow.dataset_id == dataset_id
+            select(
+                DatasetVersionRow.dataset_id,
+                DatasetVersionRow.version,
+                ValidationReportRow.finished_at,
+            )
+            .join(
+                ValidationReportRow,
+                ValidationReportRow.id == DatasetVersionRow.validation_report_id,
+            )
+            .where(
+                DatasetVersionRow.dataset_id.in_(dataset_ids),
+                DatasetVersionRow.status == DatasetStatus.VALIDATED.value,
+            )
+            .distinct(DatasetVersionRow.dataset_id)
+            .order_by(
+                DatasetVersionRow.dataset_id, ValidationReportRow.finished_at.desc()
             )
         )
-    ).scalar_one_or_none()
-    return latest
+    ).all()
+    return {
+        dataset_id: (version, finished_at) for dataset_id, version, finished_at in rows
+    }
 
 
 @router.get(
@@ -368,7 +426,15 @@ async def get_dataset(slug: str, caller: ReadDatasets, database: DatabaseDep) ->
         row = await service.load_dataset(
             session, workspace_id=caller.workspace_id, slug=slug
         )
-        return service.to_schema(row, latest_version=await _latest_version(session, row.id))
+        # The same two aggregates the list runs, over one id: a detail page that showed
+        # nothing where the list showed a date would be its own defect (FR-DATA-50).
+        latest = await _latest_versions(session, [row.id])
+        validated = await _last_validated(session, [row.id])
+        return service.to_schema(
+            row,
+            latest_version=latest.get(row.id),
+            last_validated=validated.get(row.id),
+        )
 
 
 @router.put(
