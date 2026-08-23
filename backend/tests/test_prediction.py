@@ -534,6 +534,7 @@ async def test_a_model_with_no_fit_result_cannot_be_scored(
 
 
 @pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-MODEL-124")
 async def test_an_ebm_is_scored_and_states_that_its_type_has_no_interval(
     database, blob_store, workspace_id
 ) -> None:
