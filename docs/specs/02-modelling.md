@@ -2542,11 +2542,13 @@ def make_xgb_objective(fns: ObjectiveFns):
 | Factor workbench | `/factors/:datasetVersionId` | Column list with profile one-ways (`01` FR-DATA-26), banding editor with draggable boundaries and live band stats, grouping editor with relativity-ordered levels and merge tolerance slider, monotonic-direction and intent controls, interaction suggestions with exposure share and holdout lift which the actuary adds as explicit Factors or ignores (FR-MODEL-79) |
 | Model spec builder | `/models/new` | Dataset/split pickers, response & offset/weight, factor multi-select, model-type tabs, objective picker (builtin or approved custom), hyperparameters, live spec validation (FR-MODEL-44) |
 | Model detail | `/models/:slug` | Spec summary, coefficient/relativity tables with CI bars, fit metadata, lineage strip, flags. `?version=` selects one; the latest by default |
-| Diagnostics | `/models/:slug@:version/diagnostics` | Train/holdout side-by-side throughout; A/E by factor, lift & double-lift, calibration, residuals, GBM eval curves and importances, CV fold dispersion |
+| Diagnostics | `/models/:slug/diagnostics?version=` | Train/holdout side-by-side throughout; A/E by factor, lift & double-lift, calibration, residuals, GBM eval curves and importances, CV fold dispersion |
 | Model comparison | `/models/compare?ids=` | Aligned metric table, double-lift chart, factor-by-factor relativity diff |
 | Custom objective library | `/objectives` | List with status, applicability, usage count; editor with live parse errors (expression authoring is gated by `expression_objectives_enabled` and off throughout Phase 1 — FR-MODEL-75), derived gradient/hessian display, loss-curve preview at chosen parameter values |
-| Objective certificate | `/objectives/:slug@:version/certificate` | Per-check `pass` / `warn` / `violated` / `failed` (§4.7) — `violated` presented as a **finding**, never as a failure, since it is the ordinary result for a legitimate non-convex pricing loss (FR-MODEL-43) — convexity heatmap over the sampled `(y, f)` domain, smoke-fit result |
-| Peril structure | `/peril-structures/:slug@:version` | Per-peril model pins, large-loss treatment, reconciliation panel |
+| Objective certificate | `/objectives/{id}/certificate` | Per-check `pass` / `warn` / `violated` / `failed` (§4.7) — `violated` presented as a **finding**, never as a failure, since it is the ordinary result for a legitimate non-convex pricing loss (FR-MODEL-43) — convexity heatmap over the sampled `(y, f)` domain, smoke-fit result |
+| Peril structure | `/peril-structures/{id}` | Per-peril model pins, large-loss treatment, reconciliation panel |
+| Backtest | `/models/:slug/backtests/:backtestId` | *(registered 2026-08-23)* Period-by-period A/E and lift against the held-out window, the backtest's own definition (split, periods, exposure basis) shown beside its results, and the fit it was run against. Addressed by backtest id, not by model — a model has many (FR-MODEL-92) |
+| Prediction | `/models/:slug/predict` | *(registered 2026-08-23)* Ad-hoc scoring against a fitted Model: input row or uploaded batch, the prediction with its interval where the model type offers one, and the refusal by name where it does not (FR-MODEL-124) |
 
 **Interaction requirement:** the banding/grouping editors must show the *consequence* of an
 edit before it is saved — band stats and CI widths update live, and merging levels shows
@@ -2576,6 +2578,32 @@ find out whether a grouping was sensible.
 > Also not built: the column list's inline profile one-ways (the `/profile` view has them),
 > and the monotonic-direction and intent controls — those belong with creating the Factor
 > that *pins* a banding, which is the next slice.
+
+> **Addressing corrected, and two rows registered — 2026-08-23 (slice-map §4 items 5, 9 and 10).**
+> Three route cells in this table addressed an artifact as `:slug@:version`: Diagnostics,
+> Objective certificate and Peril structure. **The spec was the wrong side.** `@version` in a
+> path was removed from §5.1 by the 2026-08-15 amendment, and FR-MODEL-90 and FR-MODEL-95 —
+> both appended 2026-08-18 and both built — declare `{id}`. These cells were written in Phase 0
+> and never revisited when those landed, so they contradicted their own document rather than
+> the implementation. Diagnostics keeps `:slug` with `?version=`, the form Model detail already
+> uses and the router already carries; the other two take the id their routes actually serve.
+> **What id addressing cannot express is a governance deep link** — "the certificate as it stood
+> at version 3" needs a read arm that resolves `(slug, version)`, and there is none. That is a
+> read to add when the governance UI needs it (Phase 3), not a frontend route the platform has
+> nothing to serve; it is written here so the cost is recorded rather than discovered.
+>
+> **Backtest and Prediction are registered rows as of today, not new requirements.** A roadmap
+> closure record owed "a backtest view (`02` §5.3)" against a table that had no such row — the
+> record named an obligation the spec did not carry. Both capabilities are specified and built
+> (FR-MODEL-92, FR-MODEL-57, FR-MODEL-124); what was missing was the registry entry.
+>
+> **And the rule those two items assumed is not this project's:** a view is an obligation
+> because it has a row in a §5.3 table, not because a requirement names it. Forty-seven of the
+> fifty-one registered views have no FR; the demo guide (`07` FR-PLAT-54) parses these tables as
+> the list of what is owed; and `req-coverage.py` scans backend tests only, so a frontend-only FR
+> could never be evidenced and would arrive permanently unbacked. Adding one for Model detail or
+> Diagnostics would imply the other forty-seven rows are not obligations — the opposite of what
+> asking for it was trying to protect.
 
 > **Not built, 2026-08-18 (W5, custom objectives).** Neither `/objectives` nor
 > `/objectives/:slug@:version/certificate` has a view, and both stay owned by **W6b** with
