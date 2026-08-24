@@ -173,11 +173,24 @@ code must not use `git checkout` as its undo.
 
 ## Contract regeneration
 
-`generate-contracts.py` rewrote exactly three artifacts — `openapi/generated.json`,
-`custom-objective.schema.json` and `custom-metric.schema.json`. **`peril-structure.schema.json`
-was not rewritten**, which is independent confirmation that Task 4 added no schema field: the
-absence asserted by `test_the_row_carries_no_usage_count` is visible in the generated contract
-too, from a different direction.
+`generate-contracts.py` rewrote exactly three artifacts, **all three on the generated side**
+(`7bbb758`) — `docs/contracts/openapi/generated.json`,
+`docs/contracts/schemas/generated/custom-objective.schema.json` and
+`docs/contracts/schemas/generated/custom-metric.schema.json`.
+`docs/contracts/schemas/generated/peril-structure.schema.json` **was not rewritten**, which is
+independent confirmation that Task 4 added no schema field: the absence asserted by
+`test_the_row_carries_no_usage_count` is visible in the generated contract too, from a different
+direction.
+
+Every path here is written in full deliberately. Two of these slugs have a hand-authored contract
+as well — `docs/contracts/schemas/custom-objective.schema.json` and the peril-structure
+equivalent — and this slice wrote to the authored custom-objective too, but **by hand, in its own
+commit** (`4d92f08`), never by the generator. `custom-metric` has no authored side at all
+(`scripts/generate-contracts.py:98` records why). Naming these files by bare basename invites the
+reading that `generate-contracts.py` wrote a hand-authored contract, which would be an ADR-0002
+violation rather than a slice detail: the flow is one-way, `model-schema` → `generated/`, and
+nothing generates the authored side. The bare-basename form was in this ledger's first draft and
+did mislead a later reader, which is why it is spelled out rather than left to context.
 
 ## §13 verdicts
 
