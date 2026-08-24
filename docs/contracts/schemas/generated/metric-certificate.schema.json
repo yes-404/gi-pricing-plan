@@ -43,7 +43,6 @@
           "items": {
             "$ref": "#/$defs/CertificateCheck"
           },
-          "minItems": 1,
           "title": "Checks",
           "type": "array"
         },

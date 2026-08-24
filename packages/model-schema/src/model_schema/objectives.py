@@ -48,6 +48,7 @@ from model_schema.refs import Slug
 
 __all__ = [
     "FITTABLE_OBJECTIVE_STATUSES",
+    "OBJECTIVE_CERTIFICATE_CHECKS",
     "TEMPLATE_APPLICABILITY",
     "TEMPLATE_PARAMETERS",
     "TERMINAL_OBJECTIVE_STATUSES",
@@ -69,6 +70,7 @@ __all__ = [
     "SamplingSpec",
     "TemplateParameter",
     "YDomain",
+    "battery_is_exactly",
 ]
 
 
@@ -600,6 +602,48 @@ class CertificateCheck(BaseModel):
     detail: str = Field(min_length=1)
 
 
+#: §4.7's nine named checks, in the order the spec's 2026-08-18 amendment lists them:
+#: *"All nine checks are emitted for every template, always"*. The names are the vocabulary
+#: `pricing_core.modelling.objectives.certify_objective` emits and the authored contract's
+#: `name` enum publishes; this is where an `ObjectiveCertificate` is held to all nine
+#: (FR-MODEL-126).
+OBJECTIVE_CERTIFICATE_CHECKS: Final[tuple[str, ...]] = (
+    "analytic_vs_numeric_gradient",
+    "analytic_vs_numeric_hessian",
+    "finiteness",
+    "convexity",
+    "branch_discontinuity",
+    "minimum_at_truth",
+    "monotone_loss",
+    "scale_behaviour",
+    "smoke_fit",
+)
+
+
+def battery_is_exactly(
+    checks: tuple[CertificateCheck, ...], required: tuple[str, ...], *, artifact: str
+) -> None:
+    """Raise unless `checks` carries each of `required` once and nothing else.
+
+    The **set** of names, not the count: a battery of the right length with
+    `branch_discontinuity` missing and `finiteness` run twice is the failure a count-only
+    floor waves through, and it is the one that reads as a full certificate to an approver.
+    Shared by the two certificate types because the rule is one rule (FR-MODEL-126); the
+    *names* differ and the obligation does not.
+    """
+    present = [check.name for check in checks]
+    missing = [name for name in required if name not in present]
+    unexpected = sorted({name for name in present if name not in required})
+    duplicated = sorted({name for name in present if present.count(name) > 1})
+    if missing or unexpected or duplicated:
+        raise ValueError(
+            f"{artifact} carries {len(checks)} checks against the {len(required)} required "
+            f"(FR-MODEL-126): missing {missing or 'nothing'}, unexpected "
+            f"{unexpected or 'nothing'}, duplicated {duplicated or 'nothing'}. A short "
+            "battery is a failure of the run, never a silently smaller certificate."
+        )
+
+
 class SamplingSpec(BaseModel):
     """The grid the checks ran over (§4.7).
 
@@ -649,7 +693,11 @@ class CertificateResult(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    checks: tuple[CertificateCheck, ...] = Field(min_length=1)
+    #: **Unbounded, deliberately** (FR-MODEL-126, 2026-08-23, OQ-MODEL-30). This type is
+    #: shared by `ObjectiveCertificate` and `MetricCertificate`, whose batteries are nine
+    #: and four checks; any floor here is wrong for one of them or for both. The count is
+    #: the artifact's obligation and is enforced on each of those two types.
+    checks: tuple[CertificateCheck, ...]
     sampling: SamplingSpec
     overall: CertificateOutcome
     #: Every library whose version changes the numbers above (§4.7). A certificate that does
@@ -700,6 +748,19 @@ class ObjectiveCertificate(BaseModel):
     certified_at: _datetime.datetime
     job_id: UUID | None = None
     result: CertificateResult
+
+    @model_validator(mode="after")
+    def _the_battery_is_all_nine_named_checks(self) -> Self:
+        """FR-MODEL-126 — the count is enforced here, not on the shared `CertificateResult`.
+
+        §4.7 emits all nine for every template, `branch_discontinuity` included: a check
+        omitted because it had nothing to report is indistinguishable from one that was
+        never run, and nine is what an approver is told they are reading.
+        """
+        battery_is_exactly(
+            self.result.checks, OBJECTIVE_CERTIFICATE_CHECKS, artifact="objective certificate"
+        )
+        return self
 
 
 class ObjectiveUsageModel(BaseModel):

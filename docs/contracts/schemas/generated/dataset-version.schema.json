@@ -1,0 +1,355 @@
+{
+  "$defs": {
+    "BlobRef": {
+      "description": "A content-addressed object reference (ID-4).",
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "part_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Part Count"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "bytes",
+        "media_type"
+      ],
+      "title": "BlobRef",
+      "type": "object"
+    },
+    "DatasetKind": {
+      "enum": [
+        "ingested",
+        "derived"
+      ],
+      "title": "DatasetKind",
+      "type": "string"
+    },
+    "DatasetStatus": {
+      "enum": [
+        "draft",
+        "validating",
+        "validated",
+        "failed",
+        "archived"
+      ],
+      "title": "DatasetStatus",
+      "type": "string"
+    },
+    "DatasetTable": {
+      "additionalProperties": false,
+      "description": "One table within a version (`01` §4.2).\n\n`_rejected` is a table like any other — the quarantine FR-DATA-7 requires, stored with\nthe version rather than discarded. A row that could not be parsed is evidence about the\nfeed, and throwing it away is how a broken upstream export goes unnoticed for a quarter.",
+      "properties": {
+        "arrow_schema": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Arrow Schema",
+          "type": "object"
+        },
+        "blob": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BlobRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "pattern": "^_?[a-z][a-z0-9_]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "pandera_schema_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pandera Schema Ref"
+        },
+        "primary_key": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Primary Key",
+          "type": "array"
+        },
+        "record_grain": {
+          "title": "Record Grain",
+          "type": "string"
+        },
+        "row_count": {
+          "minimum": 0,
+          "title": "Row Count",
+          "type": "integer"
+        },
+        "source_names": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Normalised column name to the header it came from (FR-DATA-5). Kept because normalisation is lossy and occasionally surprising: freMTPL2's `IDpol` becomes `i_dpol`, since the splitter reads it as `I` + `Dpol` — the same rule that correctly gives `HTTPServer` → `http_server`. Without the original, a user cannot tell which of their columns a rule is talking about.",
+          "title": "Source Names",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "record_grain",
+        "row_count"
+      ],
+      "title": "DatasetTable",
+      "type": "object"
+    },
+    "VersionTotals": {
+      "additionalProperties": false,
+      "description": "The headline numbers, checked by validation and shown everywhere.\n\nMoney is integer minor units and exposure is a decimal string (FR-OVR-7): a float\nexposure total silently disagrees with the sum of its parts, and the disagreement is\nexactly the kind of thing an actuary is asked to explain.",
+      "properties": {
+        "claim_amount_minor": {
+          "default": 0,
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Claim Amount Minor",
+          "type": "integer"
+        },
+        "claim_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Claim Count",
+          "type": "integer"
+        },
+        "exposure_years": {
+          "description": "Exact decimal as a string; never a binary float (FR-OVR-7).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Exposure Years",
+          "type": "string"
+        }
+      },
+      "required": [
+        "exposure_years"
+      ],
+      "title": "VersionTotals",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An immutable versioned snapshot of policy, claims and exposure data (`01` §4.2).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "dataset_id": {
+      "format": "uuid",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "derived_from": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Derived From"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "ingestion_run_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ingestion Run Id"
+    },
+    "kind": {
+      "$ref": "#/$defs/DatasetKind",
+      "default": "ingested"
+    },
+    "library_versions": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Library Versions",
+      "type": "object"
+    },
+    "period_from": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Period From"
+    },
+    "period_to": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Period To"
+    },
+    "preparation_recipe_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Preparation Recipe Id"
+    },
+    "profile_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Profile Id"
+    },
+    "source_fingerprint": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Fingerprint"
+    },
+    "source_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Id"
+    },
+    "status": {
+      "$ref": "#/$defs/DatasetStatus"
+    },
+    "tables": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DatasetTable"
+      },
+      "title": "Tables",
+      "type": "array"
+    },
+    "totals": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VersionTotals"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "validation_report_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Validation Report Id"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "workspace_id": {
+      "format": "uuid",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "dataset_id",
+    "workspace_id",
+    "version",
+    "status",
+    "created_at"
+  ],
+  "title": "DatasetVersion",
+  "type": "object"
+}

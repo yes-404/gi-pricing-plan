@@ -103,6 +103,7 @@ from model_schema.jobs import (
 )
 from model_schema.metrics import (
     FITTABLE_METRIC_STATUSES,
+    METRIC_CERTIFICATE_CHECKS,
     TERMINAL_METRIC_STATUSES,
     VALID_METRIC_TRANSITIONS,
     CustomMetric,
@@ -172,6 +173,7 @@ from model_schema.modelling import (
 from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
 from model_schema.objectives import (
     FITTABLE_OBJECTIVE_STATUSES,
+    OBJECTIVE_CERTIFICATE_CHECKS,
     TEMPLATE_APPLICABILITY,
     TEMPLATE_PARAMETERS,
     TERMINAL_OBJECTIVE_STATUSES,
@@ -193,6 +195,7 @@ from model_schema.objectives import (
     SamplingSpec,
     TemplateParameter,
     YDomain,
+    battery_is_exactly,
 )
 from model_schema.perils import (
     TERMINAL_PERIL_STRUCTURE_STATUSES,
@@ -287,8 +290,10 @@ __all__ = [
     "FITTABLE_METRIC_STATUSES",
     "FITTABLE_OBJECTIVE_STATUSES",
     "FIT_RESULT_ADAPTER",
+    "METRIC_CERTIFICATE_CHECKS",
     "MODELLING_FORBIDDEN_PII",
     "MODEL_SPEC_ADAPTER",
+    "OBJECTIVE_CERTIFICATE_CHECKS",
     "READ_PERMISSIONS",
     "SCOREABLE_MODEL_STATUSES",
     "SURROGATE_RESPONSE_COLUMN",
@@ -518,6 +523,7 @@ __all__ = [
     "WorstRegion",
     "YDomain",
     "apply_factor",
+    "battery_is_exactly",
     "builtin_rule",
     "canonical_payload",
     "compute_event_hash",

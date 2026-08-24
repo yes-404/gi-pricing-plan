@@ -72,6 +72,13 @@ GENERATED_SHAPES: dict[str, str] = {
     # §4.10 printed an example and defined no contract, so this is the shape's first
     # written form. It is also the artifact `03-rating-engine.md` will reference, which
     # makes it the one an external consumer reads before anything downstream exists.
+    # **Superseded 2026-08-24 (W32-11): it has an authored side now**, added by #133's audit
+    # remediation, so this slug is two-sided and compared like any other. The sentence above
+    # is kept rather than rewritten because it was true when written and the drift is the
+    # point: nothing checks these comments against the corpus, so the only place this
+    # module's one-sidedness was ever declared went stale silently for six days. That is the
+    # worked instance behind `OQ-PLAT-10`, which asks for the declaration to be derived
+    # rather than narrated here.
     "peril-structure": "PerilStructure",
     # Added 2026-08-18 (W5, backtests). No hand-authored Phase-0 counterpart: FR-MODEL-57
     # named the operation and no document defined what it produces, so this is the shape's
@@ -117,6 +124,15 @@ GENERATED_SHAPES: dict[str, str] = {
     # `dry_run_result_id`). Patching those would leave the mechanism that produced them in
     # place, which is what FR-PLAT-48 exists to remove.
     "validation-rule": "ValidationRule",
+    # Added 2026-08-24 (W32-11). The last two of the three Phase-1a shapes `contract-guard`
+    # names as a genuine gap in the guard's reach — `validation-rule` was the first and was
+    # closed by W32-2. Both have hand-authored Phase-0 contracts
+    # (`dataset-version.schema.json`, `validation-report.schema.json`) that nothing has ever
+    # compared against code, which is the position `banding` and `grouping` were in when
+    # four divergences had accumulated unseen. With these published, no shape in the
+    # contract corpus is a hand-authored promise no code is checked against.
+    "dataset-version": "DatasetVersion",
+    "validation-report": "ValidationReport",
 }
 
 

@@ -4,9 +4,14 @@
   "title": "ValidationReport",
   "description": "Immutable result of one validation run. See 01-data-management.md §4.6.",
   "type": "object",
-  "required": ["dataset_version_id", "rule_set_id", "rule_set_version", "job_id",
+  "required": ["id", "dataset_version_id", "rule_set_id", "rule_set_version", "job_id",
                "started_at", "finished_at", "overall", "counts", "results"],
   "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "$comment": "Added 2026-08-24 (W32-11). `ValidationReport.id` is a required `UUID` on the model and this contract declared no `id` at all — found the day this slug first gained a generated side, by the comparison that gaining one switches on. The omission was never ambiguous: `dataset-version.schema.json` references `validation_report_id`, so a report demonstrably has identity. Declared directly rather than by composing the envelope, following `diagnostics` and `transparency-artifact`; composing it here would import the nine unbuilt envelope fields `ENVELOPE_GAP_IS_RECORDED_NOT_FIXED` records."
+    },
     "dataset_version_id": {"type": "string", "format": "uuid"},
     "rule_set_id": {"type": "string", "format": "uuid"},
     "rule_set_version": {"type": "integer", "minimum": 1},

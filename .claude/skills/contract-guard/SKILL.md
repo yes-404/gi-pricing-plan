@@ -16,7 +16,7 @@ Two sides of one shape are compared:
 - `docs/contracts/schemas/<slug>.schema.json` — hand-authored since Phase 0. The
   **published** account, which external readers build against.
 
-`COMPARED_SLUGS` is the twelve slugs that have both. A disagreement is a `CLAUDE.md` §0
+`COMPARED_SLUGS` is the fifteen slugs that have both. A disagreement is a `CLAUDE.md` §0
 question — say which side was wrong and why — never a quiet edit to whichever is easier.
 
 ## The walkers, and what each one is for
@@ -202,14 +202,40 @@ that test is the exemption list this suite refuses to grow.
 
 ## What the guard does not reach
 
-**14 authored schemas have no generated counterpart** and are therefore compared against
-nothing: `approval-request`, `dataset-version`, `dislocation-run`, `dossier`, `gipp-check`,
-`monitoring`, `optimisation-run`, `rate-table`, `rating-algorithm`, `rating-version`,
-`regression-suite`, `scoring`, `validation-report`, `validation-rule`. Most describe Phase 2+
-artifacts that no model backs yet, which is why they are uncompared and not alarming — but
-**`dataset-version`, `validation-report` and `validation-rule` describe artifacts Phase 1a
-built**. Those three are a genuine gap in the guard's reach, named here so the next reader does
-not rediscover it.
+**Every count in this section is a measurement of one tree at one moment.** Taken 2026-08-24
+on the W32-11 branch, which is `946725f` plus that slice. Re-measure rather than trust it;
+`scripts/generate-contracts.py` and `COMPARED_SLUGS` are the two sources.
+
+**11 authored schemas have no generated counterpart** and are therefore compared against
+nothing: `approval-request`, `dislocation-run`, `dossier`, `gipp-check`, `monitoring`,
+`optimisation-run`, `rate-table`, `rating-algorithm`, `rating-version`, `regression-suite`,
+`scoring`. **All eleven describe Phase 2+ artifacts that no model backs yet**, which is why
+they are uncompared and not alarming — the residual is bounded by the phase rule rather than
+by oversight.
+
+**The Phase-1a gap is closed.** `validation-rule` gained a generated side in W32-2 and
+`dataset-version` and `validation-report` in W32-11, so no shape describing an artifact
+Phase 1a built is now a hand-authored promise nothing checks. The sentence this section used
+to carry — that those three were a genuine gap — is retired rather than reworded, because the
+set it named is empty.
+
+**What replaced it is a harder finding, and it is a design question rather than a gap
+(`OQ-PLAT-10`).** Every layer of this guard is scoped to the **intersection** of its two
+sides: `test_generated_and_authored_agree_on_scalar_types` intersects paths,
+`test_generated_and_authored_agree_on_scalar_constraints` intersects paths and then keywords,
+and `test_every_eligible_schema_is_compared` — the completeness check — defines an eligible
+schema as one with both sides, so it is defined over the complement of the problem. Nothing is
+wrong today. What is missing is any way to keep knowing that: **the guard is silent in exactly
+the same way whether a shape is one-sided on purpose or by accident.** Ten slugs are
+generated-only and five of those say why in a comment beside their entry in
+`generate-contracts.py` — but nothing checks those comments, and `peril-structure`'s went
+stale for six days, still denying an authored side #133 had added. A deleted authored side
+would present identically to a deliberate first written form.
+
+Two figures follow from this and **a written count must say which it means**, because both are
+true of the same tree: the guard compares 15 of 15 shapes it defines as in scope, with none
+unaccounted for; and 21 of the 36 distinct shapes in the corpus are out of scope by
+construction (11 authored-only, 10 generated-only).
 
 **Arm-level attribution is not built** (`W32-1b`, owned by W32). `_type_map` unions every arm's
 contribution onto one dotted path, so a GLM-only field declared on the GBM arm still passes.
@@ -227,3 +253,18 @@ Python model throughout**, with every check green the whole time — the field i
 fell out of the three new comparisons on their first run. The lesson to carry: a guard's reach
 is a claim like any other, and the only evidence for it is a named path it is asserted to
 reach.
+
+2026-08-24 — W32-11, which gave `dataset-version` and `validation-report` their generated
+sides and so closed the Phase-1a gap the section above used to name. Two things were learned
+by measuring rather than by reading. **First, publishing a shape is what finds its defects:**
+`validation-report` had been a hand-authored contract since Phase 0 declaring no `id` at all,
+while the model has always required one, and it was invisible until the day a generated side
+existed to compare against — the same shape of failure as `source_level_stats` above, found the
+same way. **Second, the guard's reach is narrower than "what it does not reach" made it sound.**
+Every layer intersects its two sides, so one-sidedness is not something the guard is quiet about
+by omission; it is outside the guard's scope by construction, and no test can distinguish a
+deliberate one-sided shape from an accidental one. That is `OQ-PLAT-10`. The lesson to carry is
+the same one this file already learned, applied one level up: a guard's *scope* is a claim like
+any other, and "every eligible schema is compared" is only as strong as the definition of
+eligible — which here is the intersection, so the completeness check cannot see the gap it
+would need to report.
