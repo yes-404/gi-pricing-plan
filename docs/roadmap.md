@@ -3822,6 +3822,68 @@ measurement section had named `prefixItems` as the trap before writing it again.
 lives in `.claude/skills/contract-guard`: never rebuild a path from a segment, compare whole
 paths as sets.
 
+#### W32-1b slice — arm-level attribution in the drift guard, 2026-08-24
+
+Merged as `7e09eb4` (#159). **This slice discharges the arm-level attribution deferral
+recorded immediately above**, which W32-1 left with a §13 verdict rather than a fix.
+
+| Delivered | Evidence |
+|---|---|
+| All three drift-guard walkers re-keyed from `dotted.path` to `(arm, path)` — `_type_map`, `_closure_map`, `_constraint_map` — so a field moved between tagged-union arms is no longer invisible (`07` FR-PLAT-48, `00` FR-OVR-6) | `backend/tests/test_contracts.py`, **121 passed, 1 skipped**, unchanged across every edit — the re-keying is a reach change, not a behaviour change |
+| A shared arm coordinate system: `_complete_arms` builds the arm set from **both** walked maps, `_expand` re-keys both sides onto it, `_admits` decides which arms a constraint reaches, `_arm_name` puts the arm in the failure message | Compared type paths **556 → 606**; constraint keys **189 → 196**, expanded **760 → 767**, `(arm, path, keyword)` triples **839 → 846**; closure flat **17 → 19**, keys **115 → 117** |
+| `_conjoin` replaces `.update` at the constraint expansion, refusing a within-arm keyword collision rather than dropping one last-writer-wins | 0 collisions at the walk and 0 at the expansion on this corpus, so the refusal is proven reachable rather than assumed unreachable |
+
+**Requirements evidenced:** FR-PLAT-48, FR-OVR-6. **None allocated.**
+
+**The enforcement proof, run on deliberately broken input** (§13 rule 3). Before the change,
+moving `family` from the `glm` arm to the gbm arm left `_type_map` equal dict-for-dict — 64
+paths before and after, no disagreement against the generated side either way; moving
+`family_params` from `glm` to `ebm` left `_closure_map` returning the identical three paths
+with identical values. **Both are caught now.** The merge also made
+`spec.monotone_constraints` report `{null, object, string}` — the union of `GbmSpec`'s
+`string` and `EbmSpec`'s `object | null`, a shape no arm admits.
+
+**Left with a §13 verdict.** **OQ-PLAT-10** — arm-level *existence* is still open: the
+comparison intersects twice, keys then keywords, so a bound declared on one side only is
+reported by neither walker nor comparison. Measured at **70** one-sided constrained paths
+across the corpus, **18** of them where the field exists on both sides and only the bound is
+one-sided, which the field-name comparison cannot see either. Whether a one-sided bound is
+drift is a design decision this slice deliberately does not take. **W32-1b files no new open
+question** — the case is subsumed by `OQ-PLAT-10`, which already names the double
+intersection.
+
+**The finding worth keeping — a guard can be narrowed to silence by the coordinate system it
+is measured in.** The filed plan's Step 5 built the arm set with `_arms` over the document
+root. Measured against this tree that is wrong twice: `model.schema.json`'s root declares no
+union at all, so expanding onto its arm set takes `model` from **125 compared paths to 11
+while still passing** — a guard that goes quiet without going red — and the "both sides
+declare the same arms" pre-assertion fails outright on `custom-objective` and
+`validation-rule`, whose generated sides carry no discriminator. Building arms from one side
+rather than both is the same defect at larger scale: constraint keys **760 → 177**, `model`
+**584 → 1**. The plan is frozen at its date and was not edited to agree; the correction lives
+in the code, and three reach controls now pin the numbers so the narrowing cannot recur
+silently.
+
+**Three false statements in live prose were corrected rather than carried.** `_arms`'
+docstring claimed the arm set is the same whether built from a `discriminator.mapping` or
+from four `if`s — the authored `model-spec` has **three** `allOf` `if`s carrying four values
+against the generated side's four `mapping` entries, and four-versus-three is the point
+rather than an erratum in it. `_constraint_map`'s docstring claimed a one-sided path was
+"reported by the comparison rather than by this walker"; it is reported by nothing, and the
+prose was corrected rather than the intersection widened. The **same false claim** had
+propagated into `.claude/skills/contract-guard` step 3, which named a field-*name* comparison
+as the arbiter of one-sided bounds; that skill's walkers table, its "arm-level attribution is
+not built" line — written while it was being built — and its `Verified` date were all fixed in
+the same session per `CLAUDE.md` §12.
+
+**One finding unrelated to arm attribution, booked because it is a data-loss hazard.** Step 5
+of `contract-guard` recommended `git stash` when a proof breaks the walker rather than the
+contract. **The stash stack is shared across every worktree of this repository and concurrent
+sessions push and pop it**, so a bare `stash` / `stash pop` there can restore another
+session's work over yours. Replaced with a private backup file, which is what this slice's
+own enforcement proof actually used. The general rule now lives in
+`.claude/skills/git-hygiene`.
+
 #### W32-2 slice — the built-in validation-rule catalogue, 2026-08-23
 
 Merged as `a23e16b` (#146).
