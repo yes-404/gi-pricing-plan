@@ -35,6 +35,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "audit-event",
     "banding",
     "custom-objective",
+    "dataset-version",
     "diagnostics",
     "grouping",
     "job",
@@ -44,6 +45,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "peril-structure",
     "profile",
     "transparency-artifact",
+    "validation-report",
     "validation-rule",
 )
 
@@ -156,7 +158,16 @@ def test_no_generated_money_field_admits_a_json_number() -> None:
     #: exposure any more than `exposure_per_parameter` is, and rounding either to minor
     #: units would be rounding a ratio. (Added 2026-08-17, when partial dependence and the
     #: transparency artifact both introduced one.)
-    ratio_suffix = re.compile(r"(_per_parameter|_share)$", re.I)
+    #: `_fraction` joins them on 2026-08-24 (W32-11), when `validation-report` first
+    #: generated and `RuleResult.affected_exposure_fraction` reached this scan. It is the
+    #: `_share` case under another word: `01` §4.6 declares it
+    #: `{"type": ["number", "null"], "minimum": 0, "maximum": 1}` — a proportion of the
+    #: affected exposure, dimensionless and bounded by the field itself, which a rule's
+    #: `tolerance` is compared against. Both sides already agree it is a JSON number, so
+    #: this is the heuristic's word list catching up with its own stated rule and not a
+    #: money-discipline exception. FR-OVR-7 is untouched: no quantity of money is named
+    #: `_fraction`, and a fraction rounded to minor units would be a rounded ratio.
+    ratio_suffix = re.compile(r"(_per_parameter|_share|_fraction)$", re.I)
 
     #: Two `02` types every number on which is a **fitted estimate**, not a quantity:
     #: `Coefficient` and `RelativityLevel` carry `exp(β)` and the exposure it was measured
@@ -738,6 +749,33 @@ def _type_map(
     return found
 
 
+#: Type disagreements escalated to the maintainer instead of fixed here. Keyed slug → paths.
+#: An entry is a live question, never a permission, and it is spelled out rather than
+#: curated: `test_the_escalated_type_disagreements_are_still_unresolved` deletes the excuse
+#: the moment it stops earning its place. This is the shape the pin for `diagnostics`'
+#: `aliasing` had before `OQ-MODEL-15` was decided and it was removed rather than relaxed.
+#:
+#: `OQ-DATA-12` (opened 2026-08-24, W32-11). `validation-report`'s offending sample is an
+#: array of `string` on the model and of `object` in the contract, found the day this slug
+#: first gained a generated side. **Neither side is obviously right, which is why this is a
+#: question and not a fix.** The model's string is what `_sample` in
+#: `pricing_core.data.validate` actually emits — composite key values pipe-joined with no
+#: escaping, `None` rendered as `""` and so indistinguishable from an empty string, column
+#: names dropped — an encoding no specification defines. The contract's `{"type": "object"}`
+#: is bare: it names no properties, so it constrains nothing a validator could check. `01`'s
+#: glossary and FR-DATA-20 both say "primary keys of rows" without choosing an encoding, and
+#: §4.6's only example prints `"offending_sample": []`, which is evidence for neither.
+#: Deciding it means changing `pricing-core`'s validation engine, roughly twelve assertions
+#: across `test_validate.py` and `test_catalogue.py`, the published contract, the generated
+#: frontend type and §4.6's example — a data-model change across the suite rather than a
+#: contract fix, and out of scope for a slice about certificate floors and two generated
+#: sides. So it is recorded with an owner and this comparison stays silent on that one path,
+#: on the `ENVELOPE_GAP_IS_RECORDED_NOT_FIXED` precedent above.
+UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {
+    "validation-report": frozenset({"results.[].offending_sample.[]"}),
+}
+
+
 @pytest.mark.req("FR-OVR-6")
 @pytest.mark.req("FR-DATA-46")
 @pytest.mark.parametrize("slug", COMPARED_SLUGS)
@@ -788,6 +826,14 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     on 2026-08-21 (`OQ-MODEL-15` decided — FR-MODEL-109): `aliasing` is an array of the
     strings the model always produced, and the pin that excused it is deleted rather than
     relaxed.
+
+    **A pin is live again as of 2026-08-24 (W32-11):** `validation-report`'s
+    `results.[].offending_sample.[]`, escalated as `OQ-DATA-12`. The refusal above is of a
+    *curated* exemption list — one that accumulates entries nobody can date or justify — not
+    of a single path held open against a written question with an owner, which is what
+    `diagnostics` was. `UNRESOLVED_TYPE_DISAGREEMENTS` carries the reasoning and
+    `test_the_escalated_type_disagreements_are_still_unresolved` is what stops it outliving
+    the question, on the same terms `aliasing` was held and then released.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
@@ -796,7 +842,8 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     produced = _type_map(generated, generated, GENERATED, keep_null=keep_null)
     declared = _type_map(authored, authored, AUTHORED, keep_null=keep_null)
 
-    compared = set(produced) & set(declared)
+    unresolved = UNRESOLVED_TYPE_DISAGREEMENTS.get(slug, frozenset())
+    compared = (set(produced) & set(declared)) - unresolved
     disagreed = {
         path: (sorted(produced[path]), sorted(declared[path]))
         for path in sorted(compared)
@@ -805,6 +852,49 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     assert not disagreed, (
         "the model and the contract disagree on the type of "
         + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+@pytest.mark.parametrize("slug", sorted(UNRESOLVED_TYPE_DISAGREEMENTS))
+def test_the_escalated_type_disagreements_are_still_unresolved(slug: str) -> None:
+    """The pin above must not outlive the question it was taken for.
+
+    `CLAUDE.md` §12's rule for a curated list: whatever notices it went stale ships with it.
+    A path excused while `OQ-DATA-12` is open is a hole in the type comparison the moment the
+    question is answered, and nothing else in this file would say so — the comparison just
+    keeps skipping a path that now agrees.
+
+    **Two ways an entry stops earning its place, and this checks both.** The obvious one is
+    that the sides now agree. The other is that the path stopped being compared at all —
+    renamed, restructured, or dropped from one side — after which the pin is skipping
+    something that no longer exists and would go on doing so silently. Its sibling
+    `test_the_escalated_constraint_disagreements_are_still_unresolved` tests only the first:
+    it reads both sides through `.get(...)`, so a keyword present on one side alone compares
+    a real value against `None`, which is unequal, which reads as *still disagreeing*. That
+    is the failure mode this pair is supposed to prevent, so it is not repeated here — the
+    membership test comes before the value test, and absence is reported as absence.
+    """
+    generated = _load(GENERATED / f"{slug}.schema.json")
+    authored = _load(AUTHORED / f"{slug}.schema.json")
+
+    keep_null = slug in NULLABILITY_COMPARED_SLUGS
+    produced = _type_map(generated, generated, GENERATED, keep_null=keep_null)
+    declared = _type_map(authored, authored, AUTHORED, keep_null=keep_null)
+
+    stale: list[str] = []
+    for path in sorted(UNRESOLVED_TYPE_DISAGREEMENTS[slug]):
+        if path not in produced or path not in declared:
+            sides = "model" if path in produced else "contract" if path in declared else "neither"
+            stale.append(f"{path} (no longer compared on both sides; present on {sides})")
+        elif produced[path] == declared[path]:
+            stale.append(f"{path} (now agrees: {sorted(produced[path])})")
+
+    assert not stale, (
+        f"{slug} no longer needs its type pin at "
+        + ", ".join(stale)
+        + " — delete the entry from UNRESOLVED_TYPE_DISAGREEMENTS rather than leaving the "
+        "comparison blind there, and close OQ-DATA-12 if that is what settled it"
     )
 
 
@@ -1087,10 +1177,21 @@ def _constraint_map(
 #: **Empty since 2026-08-24 (W32-11).** Its one entry —
 #: `objective-certificate` / `result.checks` / `minItems`, model 1 against contract 8 — was
 #: OQ-MODEL-30, decided as FR-MODEL-126: the shared `CertificateResult` stays unbounded and
-#: each certificate type enforces its own battery, so the pair no longer disagrees and the
-#: carve-out died with the question, in the same commit. The dict is kept rather than
-#: deleted: it is the mechanism for the next escalation, and its companion test collects
-#: zero cases while it is empty.
+#: each certificate type enforces its own battery, so the carve-out died with the question,
+#: in the same commit. The dict is kept rather than deleted: it is the mechanism for the next
+#: escalation, and its companion test collects zero cases while it is empty.
+#:
+#: **Corrected 2026-08-24 (W32-11): the pair stopped being _comparable_, not disagreeing.**
+#: Unbinding the shared type removed `minItems` from the generated side entirely, and a
+#: keyword present on one side alone is outside what this comparison speaks about. The
+#: distinction is not pedantic — the slice plan predicted that leaving the entry in place
+#: would turn the companion below red, and it did not. That companion reads both sides
+#: through `.get(...)`, so it compared the model's absent `None` against the contract's `9`,
+#: found them unequal, and reported the pair as still disagreeing. An entry could therefore
+#: have outlived its question here indefinitely without anything saying so. The defect is
+#: left standing rather than fixed mid-slice, and `UNRESOLVED_TYPE_DISAGREEMENTS`' companion
+#: is written the other way round — membership before value — so the newer pin cannot
+#: inherit it.
 UNRESOLVED_CONSTRAINT_DISAGREEMENTS: Final[dict[str, frozenset[tuple[str, str]]]] = {}
 
 

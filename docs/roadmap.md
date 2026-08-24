@@ -3762,6 +3762,87 @@ markers, not proof, and that §13 rule 1's "a marker is a claim" is the load-bea
 `scope-audit.py MODEL --endpoints` is unchanged at **41 of 41 declared endpoints published**;
 this slice added tests, not routes.
 
+#### W32-11 slice — certificate floors and two generated sides, 2026-08-24
+
+The last of the five slices the [W32 closure proposal](plans/2026-08-23-w32-closure-proposal.md)
+filed. It decides `OQ-MODEL-30` as FR-MODEL-126, and gives the last two Phase-1a shapes that had
+never been compared against code a generated side. The ledger is
+[beside the plan](plans/2026-08-24-w32-11-certificate-floors-and-two-generated-sides-ledger.md).
+
+##### What was built
+
+| Delivered | Evidence |
+|---|---|
+| The certificate battery is enforced **by name, not by a count floor** (FR-MODEL-126, OQ-MODEL-30 option (a)) | `battery_is_exactly` computes missing / unexpected / duplicated names, called from `ObjectiveCertificate` (nine names, `02` §4.7) and `MetricCertificate` (four, FR-MODEL-105). `Field(min_length=1)` is off the shared `CertificateResult`. A nine-long battery missing `branch_discontinuity` and carrying `finiteness` twice is what the old floor waved through, and it read as complete to an approver |
+| `dataset-version` gains a generated side (FR-PLAT-48) | `docs/contracts/schemas/generated/dataset-version.schema.json` |
+| `validation-report` gains a generated side, and its authored contract gains the `id` it always required (FR-PLAT-48) | `docs/contracts/schemas/generated/validation-report.schema.json`; `id` added to the authored contract's `required` and `properties` |
+| The Phase-1a gap in `contract-guard`'s reach is **closed** | That skill named `dataset-version`, `validation-report` and `validation-rule` as shapes describing artifacts Phase 1a built that nothing compared. W32-2 closed the first, this slice the other two. The set is empty and the sentence naming it is retired |
+
+`COMPARED_SLUGS` **13 → 15**; authored-without-generated **14 → 11**. Measured on `946725f` plus
+this slice: 26 authored, 25 generated, 15 both-sided, 11 authored-only, 10 generated-only, 36
+distinct. `COMPARED_SLUGS` equals the both-sided set exactly. **All 11 authored-only slugs describe
+Phase 2+ artifacts**, so the residual is bounded by the phase rule rather than by oversight.
+
+##### The finding this slice existed to produce
+
+**Every layer of the contract guard is scoped to the intersection of its two sides.** The type
+comparison intersects paths; the constraint comparison intersects paths and then keywords; and
+`test_every_eligible_schema_is_compared` — the completeness check — defines an *eligible* schema as
+one having both sides, so it is defined over the complement of the problem. Nothing is wrong today.
+What is missing is any way to keep knowing that: **the guard is silent in exactly the same way
+whether a shape is one-sided on purpose or by accident**, and no reader or test can tell the two
+apart.
+
+The two new slugs demonstrate it the day they were added. `dataset-version` passes every
+comparison — 26 shared paths, **zero** disagreements — while **22 of its paths are one-sided**: 17
+the contract promises and the model does not carry, 5 the reverse, and three of those are the same
+concept as a scalar on one side and an object on the other. `validation-report` has 24 shared
+paths, 8 one-sided, and one real disagreement.
+
+Corroborating it: `generate-contracts.py`'s comment beside `peril-structure` still read "No
+hand-authored Phase-0 counterpart" six days after #133 gave it one. The only place a shape's
+one-sidedness was ever declared had gone stale silently, which is the argument for deriving the
+declaration rather than narrating it.
+
+**Any count published from here must say which frame it means.** Both are true of the same tree:
+the guard compares 15 of 15 shapes it defines as in scope, none unaccounted for; and 21 of the 36
+distinct shapes are out of scope by construction.
+
+##### Dispositioned, not delivered
+
+Five open questions were filed rather than answered, each with an owner, and each naming the W32
+goal it bears on so a closure record can quote rather than paraphrase it. None holds W32 open.
+
+| Row | What it books |
+|---|---|
+| `OQ-PLAT-10` | The intersection scope above. Subsumes plan finding F2, the missing authored-keyword completeness check |
+| `OQ-PLAT-11` | Nothing revalidates artifacts stored under a looser shape when a shape is tightened; the failure surfaces on the read path, to a user who did nothing |
+| `OQ-PLAT-13` | `metric-certificate` has no authored contract at all — model-side floor enforced, comparison and publication outstanding |
+| `OQ-DATA-12` | Is an Offending Sample entry an opaque string or a keyed object? The model and the contract disagree and no specification chooses |
+| `OQ-DATA-13` | `DatasetVersion` diverges from its contract on 22 of 48 paths with every comparison green |
+
+**`OQ-DATA-12` was not decided rather than decided quietly.** The model emits a `|`-joined string
+with no escaping, `None` rendered as the empty string, and column names dropped; the contract
+declares a bare `{"type": "object"}` that constrains nothing. FR-DATA-20 says "primary keys of
+rows" and chooses no encoding. `CLAUDE.md` §0 forbids a silent pick, so the type comparison is
+pinned at that one path with a companion test that goes red the day the pin stops earning its
+place — the shape `diagnostics.aliasing` held until `OQ-MODEL-15` was decided and its pin deleted.
+
+##### Two plan errors, corrected in execution rather than in the plan
+
+The plan predicted that leaving the `UNRESOLVED_CONSTRAINT_DISAGREEMENTS` entry in place would turn
+its companion test red. **It did not.** That companion reads both sides through `.get(...)`, so once
+`minItems` left the model side it compared `None` against the contract's `9`, found them unequal,
+and reported the pair as still disagreeing — an entry could have outlived its question indefinitely
+with nothing saying so. The accurate statement is that the pair stopped being **comparable**, not
+that it stopped disagreeing. The successor pin's companion tests membership before value, and that
+is proven on four deliberately broken pins: a path where both sides agree, a path on neither side,
+a path on the model side only, and the real one.
+
+The plan also predicted the merged `contract-guard` would read "13 and two" and said to stop and
+reconcile otherwise. It read *twelve* and *14 authored* — the 13/two figures describe W32-1b, which
+had not landed. Reconciled by measurement rather than assumption.
+
 #### W32-10 slice — the untested behaviour, 2026-08-24
 
 The first of the five slices the [W32 closure proposal](plans/2026-08-23-w32-closure-proposal.md)

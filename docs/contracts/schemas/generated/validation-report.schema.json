@@ -1,0 +1,256 @@
+{
+  "$defs": {
+    "Acknowledgement": {
+      "additionalProperties": false,
+      "description": "A Principal accepting a warning, on this report (FR-DATA-17, FR-DATA-18).",
+      "properties": {
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "justification": {
+          "minLength": 1,
+          "title": "Justification",
+          "type": "string"
+        },
+        "user_id": {
+          "format": "uuid",
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "at",
+        "justification"
+      ],
+      "title": "Acknowledgement",
+      "type": "object"
+    },
+    "RuleOutcome": {
+      "enum": [
+        "pass",
+        "warn",
+        "fail",
+        "error",
+        "skipped"
+      ],
+      "title": "RuleOutcome",
+      "type": "string"
+    },
+    "RuleResult": {
+      "additionalProperties": false,
+      "description": "One rule's outcome (`01` §4.6, FR-DATA-20).",
+      "properties": {
+        "acknowledgement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Acknowledgement"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "affected_exposure_fraction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Affected Exposure Fraction"
+        },
+        "affected_rows": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Affected Rows"
+        },
+        "detail": {
+          "default": "",
+          "title": "Detail",
+          "type": "string"
+        },
+        "error_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Reason"
+        },
+        "layer": {
+          "$ref": "#/$defs/ValidationLayer"
+        },
+        "measured": {
+          "additionalProperties": true,
+          "title": "Measured",
+          "type": "object"
+        },
+        "offending_sample": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Offending Sample",
+          "type": "array"
+        },
+        "outcome": {
+          "$ref": "#/$defs/RuleOutcome"
+        },
+        "rule_id": {
+          "format": "uuid",
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_slug": {
+          "title": "Rule Slug",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "integer"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "threshold": {
+          "additionalProperties": true,
+          "title": "Threshold",
+          "type": "object"
+        }
+      },
+      "required": [
+        "rule_id",
+        "rule_slug",
+        "rule_version",
+        "layer",
+        "severity",
+        "outcome"
+      ],
+      "title": "RuleResult",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "What a violation means. `warn` is not \"ignore\" — it needs an acknowledgement.",
+      "enum": [
+        "warn",
+        "fail"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "ValidationLayer": {
+      "description": "The four layers of FR-DATA-16, all of which a Rule Set must cover.",
+      "enum": [
+        "structural",
+        "referential",
+        "actuarial_sanity",
+        "distributional"
+      ],
+      "title": "ValidationLayer",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The outcome of one validation run (`01` §4.6).",
+  "properties": {
+    "dataset_version_id": {
+      "format": "uuid",
+      "title": "Dataset Version Id",
+      "type": "string"
+    },
+    "empty_layers": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ValidationLayer"
+      },
+      "title": "Empty Layers",
+      "type": "array"
+    },
+    "finished_at": {
+      "format": "date-time",
+      "title": "Finished At",
+      "type": "string"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "reference_dataset_version_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reference Dataset Version Id"
+    },
+    "results": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RuleResult"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "rule_set_id": {
+      "format": "uuid",
+      "title": "Rule Set Id",
+      "type": "string"
+    },
+    "rule_set_version": {
+      "title": "Rule Set Version",
+      "type": "integer"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "dataset_version_id",
+    "rule_set_id",
+    "rule_set_version",
+    "started_at",
+    "finished_at"
+  ],
+  "title": "ValidationReport",
+  "type": "object"
+}
