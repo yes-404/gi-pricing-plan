@@ -765,9 +765,10 @@ def _type_map(
 #: is bare: it names no properties, so it constrains nothing a validator could check. `01`'s
 #: glossary and FR-DATA-20 both say "primary keys of rows" without choosing an encoding, and
 #: §4.6's only example prints `"offending_sample": []`, which is evidence for neither.
-#: Deciding it means changing `pricing-core`'s validation engine, roughly twelve assertions
-#: across `test_validate.py` and `test_catalogue.py`, the published contract, the generated
-#: frontend type and §4.6's example — a data-model change across the suite rather than a
+#: Deciding it means changing `pricing-core`'s validation engine, 13 assertions across three
+#: test modules — `test_validate.py`, `test_catalogue.py` and `test_api_datasets.py`, measured
+#: 2026-08-24 — the published contract, the generated frontend type and §4.6's example: a
+#: data-model change across the suite rather than a
 #: contract fix, and out of scope for a slice about certificate floors and two generated
 #: sides. So it is recorded with an owner and this comparison stays silent on that one path,
 #: on the `ENVELOPE_GAP_IS_RECORDED_NOT_FIXED` precedent above.

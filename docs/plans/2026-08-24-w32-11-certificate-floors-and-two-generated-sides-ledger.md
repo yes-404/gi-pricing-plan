@@ -53,8 +53,9 @@ example prints `"offending_sample": []`, which is evidence for neither.
 
 The recommendation is the keyed object, because the sample exists to be traced back to rows and
 the string form is lossy in three independent ways at exactly that job. It was not *done* because
-deciding it changes `pricing-core`'s validation engine, roughly twelve assertions across
-`test_validate.py` and `test_catalogue.py`, the published contract, the generated frontend type
+deciding it changes `pricing-core`'s validation engine, **13 assertions across three test
+modules** — `test_validate.py`, `test_catalogue.py` and `test_api_datasets.py`, measured
+2026-08-24 — the published contract, the generated frontend type
 and §4.6's example — a data-model change across the suite, in a slice scoped to certificate floors
 and two generated sides.
 
