@@ -4,7 +4,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
  * Routes follow `01` §5.3 exactly — the spec names them, and a route invented here would
  * be a second source of truth for where a thing lives.
  */
-const routes: RouteRecordRaw[] = [
+export const routes: RouteRecordRaw[] = [
   { path: "/", redirect: "/data" },
   {
     // FR-PLAT-53's entrance. Routed unconditionally; the API answers 404 where the demo is
@@ -63,6 +63,22 @@ const routes: RouteRecordRaw[] = [
     path: "/models/compare",
     name: "model-comparison",
     component: () => import("@/views/ModelComparisonView.vue"),
+  },
+  {
+    // `02` §5.3. Three segments, so it cannot collide with `/models/:slug` the way
+    // `/models/compare` does — the ranking question above does not arise here.
+    //
+    // Function-mode props, not `props: true`: the boolean form maps `route.params` only, and
+    // `?version=` is a query. The `/models/:slug` entry below declares `props: true` while
+    // its view reads `props.version`, which is the bug Task 12 fixes; this entry does not
+    // copy it.
+    path: "/models/:slug/diagnostics",
+    name: "model-diagnostics",
+    component: () => import("@/views/DiagnosticsView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: typeof route.query.version === "string" ? route.query.version : undefined,
+    }),
   },
   {
     // `02` §5.3. `?version=` selects one; the latest by default. Not `@version` in the

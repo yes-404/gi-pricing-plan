@@ -1,0 +1,149 @@
+import { render, screen, waitFor, within } from "@testing-library/vue";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createRouter,
+  createWebHistory,
+  type RouteLocationNormalizedLoaded,
+} from "vue-router";
+
+import { routes } from "@/router";
+
+import DiagnosticsView from "../DiagnosticsView.vue";
+import { DIAGNOSTICS, GBM_MODEL } from "./fixtures";
+
+const NOT_FOUND = {
+  type: "about:blank",
+  title: "Not Found",
+  status: 404,
+  code: "NOT_FOUND",
+  detail: "No such model.",
+};
+
+function stubByUrl(routes: Record<string, { status?: number; body: unknown }>): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    for (const [path, response] of Object.entries(routes)) {
+      if (url.includes(path)) {
+        return new Response(JSON.stringify(response.body), {
+          status: response.status ?? 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+    return new Response(JSON.stringify(NOT_FOUND), {
+      status: 404,
+      headers: { "content-type": "application/problem+json" },
+    });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+const mounted = { global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } } };
+
+/**
+ * The view reads two endpoints, not one: the artifact, and the model whose spec carries
+ * `approximates_model_id`. `"/diagnostics"` is matched first because the model's own URL is a
+ * prefix of the artifact's, so the looser key would answer both.
+ */
+function stubBoth(): ReturnType<typeof vi.fn> {
+  return stubByUrl({
+    "/diagnostics": { body: DIAGNOSTICS },
+    "/models/motor-frequency": { body: GBM_MODEL },
+  });
+}
+
+/**
+ * `client.ts:31` builds `new URL(path, window.location.origin)`, so what reaches `fetch` is
+ * always absolute — under jsdom, `http://localhost:3000/...`. The origin is jsdom
+ * configuration rather than this view's behaviour, so it is dropped here instead of being
+ * written into each expectation; `search` is kept, since the version query is the assertion.
+ */
+function pathOf(fetchMock: ReturnType<typeof vi.fn>): string {
+  const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+  return `${url.pathname}${url.search}`;
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("DiagnosticsView", () => {
+  it("asks for the version it was routed with", async () => {
+    const fetchMock = stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency", version: "3" }, ...mounted });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(pathOf(fetchMock)).toBe("/api/v1/models/motor-frequency/diagnostics?version=3");
+  });
+
+  it("asks for the latest when it was routed without one", async () => {
+    const fetchMock = stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(pathOf(fetchMock)).toBe("/api/v1/models/motor-frequency/diagnostics");
+  });
+
+  it("shows the problem detail when there are no diagnostics to show", async () => {
+    stubByUrl({});
+    render(DiagnosticsView, { props: { slug: "nope" }, ...mounted });
+    expect(await screen.findByText(/no such model/i)).toBeInTheDocument();
+  });
+
+  it("puts train and holdout side by side, each with its rows and overall A/E", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const table = await screen.findByRole("table", { name: /headline metrics/i });
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent?.trim())).toEqual([
+      "Metric",
+      "Train",
+      "Holdout",
+    ]);
+    const rows = within(table).getByRole("row", { name: /overall A\/E/i });
+    const cells = within(rows).getAllByRole("cell");
+    expect(cells[0]).toHaveTextContent("1.002");
+    expect(cells[1]).toHaveTextContent("0.987");
+  });
+
+  it("labels how the metrics were weighted, which the fit had to record", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    expect(await screen.findByText(/exposure-weighted/i)).toBeInTheDocument();
+  });
+
+  it("does not warn about a surrogate denominator on a model that is not one", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: /headline metrics/i });
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The router is what is under test here, not the view. Every test above hands the view its
+ * props directly, so all six would stay green against a route that never delivers
+ * `?version=` — which is exactly the `/models/:slug` bug this entry was written not to
+ * repeat.
+ */
+describe("the model-diagnostics route", () => {
+  function propsFor(route: RouteLocationNormalizedLoaded): Record<string, unknown> {
+    const record = route.matched[0];
+    const toProps = record?.props?.default;
+    return typeof toProps === "function"
+      ? (toProps(route) as Record<string, unknown>)
+      : route.params;
+  }
+
+  it("carries ?version= through to the view", async () => {
+    const router = createRouter({ history: createWebHistory(), routes });
+    await router.push("/models/motor-frequency/diagnostics?version=3");
+    expect(router.currentRoute.value.name).toBe("model-diagnostics");
+    expect(propsFor(router.currentRoute.value)).toEqual({ slug: "motor-frequency", version: "3" });
+  });
+
+  it("leaves the version undefined when the query is absent, so the latest is asked for", async () => {
+    const router = createRouter({ history: createWebHistory(), routes });
+    await router.push("/models/motor-frequency/diagnostics");
+    expect(propsFor(router.currentRoute.value)).toEqual({
+      slug: "motor-frequency",
+      version: undefined,
+    });
+  });
+});

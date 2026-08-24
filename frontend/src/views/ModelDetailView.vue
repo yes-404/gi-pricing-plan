@@ -158,6 +158,21 @@ onMounted(async () => {
            carry more weight: there a surrogate's A/E, residuals and lift are all read as fit
            to experience unless the page says otherwise. -->
       <SurrogateNotice :approximates-model-id="glmSpec?.approximates_model_id ?? null" />
+
+      <!-- Nothing else in the app reaches the diagnostics view, and a view nothing links to
+           is not delivered. The version is carried so the page shows this model's evidence
+           and not the latest fit's. -->
+      <RouterLink
+        v-if="model"
+        :to="{
+          name: 'model-diagnostics',
+          params: { slug },
+          query: { version: String(model.version) },
+        }"
+        class="mt-2 inline-block text-sm text-sky-700 hover:underline"
+      >
+        Diagnostics
+      </RouterLink>
     </header>
 
     <p
