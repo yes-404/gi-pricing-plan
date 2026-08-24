@@ -3,13 +3,23 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
 import {
+  ebmFit,
+  ebmSpec,
+  gbmFit,
+  gbmSpec,
   getModel,
+  getTransparency,
   relativityInterval,
   spansZero,
   type Coefficient,
   type Model,
+  type TransparencyArtifact,
 } from "@/api/models";
-import { ProblemError } from "@/api/problem";
+import { isProblem, ProblemError } from "@/api/problem";
+import EbmShapePanel from "@/components/EbmShapePanel.vue";
+import GbmFitPanel from "@/components/GbmFitPanel.vue";
+import QuantileBoundNotice from "@/components/QuantileBoundNotice.vue";
+import TransparencyPanel from "@/components/TransparencyPanel.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
 
@@ -36,6 +46,19 @@ const fit = computed(() => {
   const result = model.value?.fit_result ?? null;
   return result?.model_type === "glm" ? result : null;
 });
+const gbm = computed(() => (model.value ? gbmSpec(model.value) : null));
+const ebm = computed(() => (model.value ? ebmSpec(model.value) : null));
+const gbmResult = computed(() => (model.value ? gbmFit(model.value) : null));
+const ebmResult = computed(() => (model.value ? ebmFit(model.value) : null));
+
+/**
+ * Fitted is a property of the Model, not of the arm the reader happens to be looking at.
+ * `fit` above is the GLM narrowing and is null for every booster ever fitted; asking it
+ * whether a model is fitted made the page assert the opposite of the truth for two arms of
+ * the three.
+ */
+const fitted = computed(() => model.value?.fit_result != null);
+
 const coefficients = computed<Coefficient[]>(() => fit.value?.coefficients ?? []);
 const relativities = computed(() => Object.entries(fit.value?.relativities ?? {}));
 const libraries = computed(() =>
@@ -53,6 +76,33 @@ function formatInterval([low, high]: [number, number]): string {
   return `${low.toFixed(3)} – ${high.toFixed(3)}`;
 }
 
+const artifact = ref<TransparencyArtifact | null>(null);
+const transparencyState = ref<"loading" | "ready" | "absent">("loading");
+
+/**
+ * FR-MODEL-33 makes the transparency artifact an obligation for a non-GLM Model, so this is
+ * not asked for a GLM — including a GLM surrogate, which is a GLM. A missing artifact is a
+ * state and not a failure: the model simply has none built yet, and this is the only call on
+ * the page allowed to fail without reaching the error banner.
+ *
+ * Branched on the code and not the status, as `ProblemError` requires: several codes share a
+ * status, and a status branch here would swallow any future 404-shaped refusal as "no
+ * artifact yet". The endpoint raises `NOT_FOUND` for the one case this handles.
+ */
+async function loadTransparency(loaded: Model): Promise<void> {
+  if (loaded.spec.model_type === "glm") {
+    transparencyState.value = "absent";
+    return;
+  }
+  try {
+    artifact.value = await getTransparency(loaded.id);
+    transparencyState.value = "ready";
+  } catch (error) {
+    if (isProblem(error, "NOT_FOUND")) transparencyState.value = "absent";
+    else throw error;
+  }
+}
+
 onMounted(async () => {
   try {
     model.value = await getModel(props.slug, props.version ? Number(props.version) : undefined);
@@ -62,6 +112,9 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+  // After the model resolves and after `loading` clears: the page renders the model between
+  // the two fetches rather than holding a spinner until both land.
+  if (model.value) await loadTransparency(model.value);
 });
 </script>
 
@@ -87,10 +140,31 @@ onMounted(async () => {
         <template v-if="glmSpec">
           {{ glmSpec.family }} / {{ glmSpec.link }} link
         </template>
+        <template v-else-if="gbm">
+          {{ gbm.model_type }} ·
+          {{ gbm.objective.kind === "builtin" ? gbm.objective.name : gbm.objective.ref }}
+        </template>
+        <template v-else-if="ebm">
+          ebm · {{ ebm.objective }} · identity link
+        </template>
         <template v-else>
           {{ model.spec.model_type }}
         </template> ·
         response <span class="font-mono">{{ model.spec.response_column }}</span>
+      </p>
+
+      <!-- FR-MODEL-96/102. A surrogate is a GLM in every visible respect — family, link,
+           coefficients, relativities — so nothing else on this page distinguishes one, and
+           its R² and residuals are read as fit to experience unless the page says otherwise.
+           No link: the id is not resolvable to a slug from this response (§6, E1). -->
+      <p
+        v-if="glmSpec?.approximates_model_id"
+        class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      >
+        This model is a GLM approximation of model
+        <span class="font-mono text-xs">{{ glmSpec.approximates_model_id }}</span>. Its
+        diagnostics are measured against that model's predictions, not against observed
+        claims.
       </p>
     </header>
 
@@ -118,15 +192,19 @@ onMounted(async () => {
     </div>
 
     <template v-else-if="model">
+      <!-- Above the arm panels, not inside one: the notice is about what this whole page
+           *is*, and it applies whether or not the bound has finished fitting. -->
+      <QuantileBoundNotice :model="model" />
+
       <p
-        v-if="!fit"
+        v-if="!fitted"
         class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
       >
         This model is reserved but not yet fitted. The fit runs as a Job; its coefficients
         appear here when it finishes.
       </p>
 
-      <template v-else>
+      <template v-else-if="fit">
         <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div class="rounded-md border border-slate-200 p-3">
             <dt class="text-xs uppercase tracking-wide text-slate-500">
@@ -327,6 +405,28 @@ onMounted(async () => {
           new coefficients on this one.
         </p>
       </template>
+
+      <template v-else-if="gbm && gbmResult">
+        <GbmFitPanel
+          :spec="gbm"
+          :fit="gbmResult"
+        />
+      </template>
+
+      <template v-else-if="ebm && ebmResult">
+        <EbmShapePanel
+          :spec="ebm"
+          :fit="ebmResult"
+        />
+      </template>
+
+      <!-- Not for a GLM: FR-MODEL-33 makes the artifact an obligation for the non-GLM arms,
+           and a GLM surrogate is a GLM. -->
+      <TransparencyPanel
+        v-if="model.spec.model_type !== 'glm'"
+        :artifact="artifact"
+        :state="transparencyState"
+      />
     </template>
   </section>
 </template>
