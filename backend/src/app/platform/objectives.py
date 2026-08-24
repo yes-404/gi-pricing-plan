@@ -28,10 +28,11 @@ Three things about this service are worth reading before using it.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from typing import Any, NoReturn
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,6 +82,7 @@ __all__ = [
     "to_certificate",
     "to_objective",
     "usage",
+    "usage_counts",
 ]
 
 #: The seed every certification uses unless the caller names another. Fixed rather than
@@ -668,6 +670,46 @@ async def usage(
             for model in models
         ),
     )
+
+
+async def usage_counts(
+    session: AsyncSession, *, workspace_id: UUID, refs: Sequence[str]
+) -> dict[str, int]:
+    """Count the Model Specs referencing each of `refs`, in **one** query (FR-MODEL-127).
+
+    The library row's count, not the detail route's blast radius: same question, page-sized
+    answer. `usage` above answers it for one artifact and is deliberately not reused here —
+    calling it per row is the N+1 FR-MODEL-127 names as part of the requirement, and it
+    would be indistinguishable from this until a workspace held a few hundred artifacts.
+
+    **It counts exactly what `usage` counts**, because a row and its own detail route
+    disagreeing about one artifact is worse than either being absent:
+
+    * scoped by `workspace_id` and nothing else, as `usage`'s query is;
+    * **no status filter on the Model** — `usage` counts a `draft` and an `archived` model
+      alongside a `fitted` one, so this does too. "Referencing" is a property of the spec,
+      not of where the model got to.
+
+    A ref no model references is **absent** from the result rather than zero: the caller
+    supplies the zero, so a bug that drops a ref cannot present as a genuine zero.
+
+    `spec` is one JSONB column and `objective.ref` is a top-level scalar inside it, so this
+    is an equality on an extracted text value. There is no index on `models.spec` today; at
+    Phase 1b's scale the sequential scan is well inside budget, and the note is here so the
+    next person reads a decision rather than an oversight.
+
+    An empty page asks the database nothing — the caller's first screen of an empty
+    workspace should not cost a round trip.
+    """
+    if not refs:
+        return {}
+    ref_column = ModelRow.spec["objective"]["ref"].astext
+    rows = await session.execute(
+        select(ref_column, func.count())
+        .where(ModelRow.workspace_id == workspace_id, ref_column.in_(list(refs)))
+        .group_by(ref_column)
+    )
+    return {ref: count for ref, count in rows.all()}
 
 
 # -- internals -----------------------------------------------------------------------------

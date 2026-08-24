@@ -26,11 +26,12 @@ different callers making different decisions with the answer.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import cast, select
+from sqlalchemy import cast, column, func, select, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,6 +77,7 @@ __all__ = [
     "to_certificate",
     "to_metric",
     "usage",
+    "usage_counts",
 ]
 
 #: The seed every certification uses unless a future revision names another — matching
@@ -594,6 +596,53 @@ async def usage(
             for model in models
         ),
     )
+
+
+async def usage_counts(
+    session: AsyncSession, *, workspace_id: UUID, refs: Sequence[str]
+) -> dict[str, int]:
+    """Count the Model Specs referencing each metric ref, in one query (FR-MODEL-127).
+
+    `eval_metrics` is a JSONB **array**, not a scalar, so a model may name several metrics
+    and must be counted once against each. The single-artifact query above uses containment
+    (`spec["eval_metrics"] @> [{"ref": …}]`), which is right for one ref and cannot be
+    grouped across a page — containment answers "does this model use it", and the page needs
+    "which of these does each model use". Hence the lateral expansion.
+
+    It matches `usage`'s reach for the reason `objectives.usage_counts` does: scoped by
+    `workspace_id`, and **no status filter on the Model**, so the row and `GET /{id}/usage`
+    cannot answer differently about the same metric.
+
+    **A row without the key is safe, and the absence of a `coalesce` is what keeps it
+    honest.** `eval_metrics` is declared on `GbmSpec` only, so a `GlmSpec` or `EbmSpec` row
+    has no `eval_metrics` key at all, and every workspace holding a GLM has such rows.
+    There, the JSONB index expression is SQL `NULL`, and `jsonb_array_elements` is strict —
+    it yields no rows rather than raising, so the model drops out of the lateral join,
+    which is the wanted answer since it references no metric. Verified against
+    PostgreSQL 16: expanding a missing key returns zero rows.
+
+    A `coalesce(..., '[]'::jsonb)` guard was considered and rejected as guarding nothing.
+    The one input that *does* raise is a JSON `null` **value** ("cannot extract elements
+    from a scalar"), and `coalesce` cannot catch it: JSONB `null` is not SQL `NULL`, so
+    `coalesce` hands it straight through. `GbmSpec.eval_metrics` defaults to `()` and is
+    never `None`, so no row the contract can produce reaches that case either way.
+    """
+    if not refs:
+        return {}
+    element = (
+        func.jsonb_array_elements(ModelRow.spec["eval_metrics"])
+        .table_valued(column("value", JSONB))
+        .lateral()
+    )
+    ref_column = element.c.value["ref"].astext
+    rows = await session.execute(
+        select(ref_column, func.count())
+        .select_from(ModelRow)
+        .join(element, true())
+        .where(ModelRow.workspace_id == workspace_id, ref_column.in_(list(refs)))
+        .group_by(ref_column)
+    )
+    return {ref: count for ref, count in rows.all()}
 
 
 # -- internals -----------------------------------------------------------------------------
