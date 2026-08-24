@@ -88,8 +88,7 @@
             "required": ["pair", "strength"],
             "properties": {
               "pair": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
-              "strength": {"type": "number", "minimum": 0},
-              "exposure_share": {"type": "number", "minimum": 0, "maximum": 1}
+              "strength": {"type": "number", "minimum": 0}
             }
           },
           "description": "A suggestion, never an addition (FR-MODEL-79): an interaction becomes rateable only as an explicit `interaction` Factor carrying an intent and a written rationale."

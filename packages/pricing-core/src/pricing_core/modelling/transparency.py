@@ -50,6 +50,7 @@ from model_schema import (
     GlmFitResult,
     GlmSpec,
     Grouping,
+    ModelSpecCommon,
     ShapContribution,
     ShapInteraction,
     ShapSummary,
@@ -220,7 +221,8 @@ def build_glm_approximation(
 
     report.update(0.90, "locating the worst regions")
     regions = _worst_regions(
-        train_frame, factors, target, approximated, bandings=bandings, groupings=groupings
+        train_frame, factors, target, approximated,
+        spec=spec, bandings=bandings, groupings=groupings,
     )
     report.update(1.0, "approximation complete")
     return GlmApproximationFit(
@@ -240,6 +242,7 @@ def _worst_regions(
     target: np.ndarray,
     approximated: np.ndarray,
     *,
+    spec: ModelSpecCommon,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> tuple[WorstRegion, ...]:
@@ -248,10 +251,21 @@ def _worst_regions(
     By **factor level**, not by arbitrary slice: a region an actuary cannot name is a
     region they cannot act on, and "young high-mileage drivers" is a rating cell while
     "rows 40000 to 41000" is not.
+
+    The share is a share of **exposure** (FR-MODEL-36), the same quantity FR-MODEL-125
+    names one module away: a row-count share on a motor book reports a level held for a
+    fortnight as a region the same size as one held for a year, and stating how much of
+    the book the approximation is wrong over is the whole purpose of the sentence it
+    appears in. The frame is the **train** frame, deliberately — `02` §3.6 approximates
+    the population the model was fitted on, so unlike a partial-dependence curve this must
+    not report the holdout's profile.
     """
+    from pricing_core.modelling.diagnostics import _share, _weights
+
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
     error = np.abs(target - approximated) / np.maximum(target, 1e-12)
-    rows = data.height
+    weights = _weights(spec, data)
+    total_weight = float(weights.sum())
     found: list[WorstRegion] = []
 
     for slug, column in matrix.terms.items():
@@ -265,7 +279,11 @@ def _worst_regions(
             found.append(
                 WorstRegion(
                     description=f"{slug} = {level}",
-                    exposure_share=float(mask.sum()) / max(rows, 1),
+                    # Clamped because `WorstRegion.exposure_share` is `le=1.0` and the two sums
+                    # run over different arrays: a single-level factor makes `weights[mask]` and
+                    # `weights` the same set summed in a different order, which can land a last
+                    # bit above 1.0 and raise rather than round. 1.0 is the exact answer there.
+                    exposure_share=min(1.0, _share(float(weights[mask].sum()), total_weight)),
                     mean_abs_error_pct=float(np.mean(error[mask]) * 100.0),
                 )
             )
@@ -293,9 +311,10 @@ def build_shap_summary(
     computed on a different sample is a different summary, and two of them placed side by
     side in a model document would look like a change in the model.
 
-    `top_interactions` are FR-MODEL-79 **suggestions**: the platform never writes a Factor
-    into a Model Spec. Each carries its exposure share so an actuary sees what a suggestion
-    is worth and over how much of the book before authoring an `interaction` Factor for it.
+    `top_interactions` are FR-MODEL-79 **suggestions**: the platform never writes a Factor into
+    a Model Spec. Each carries its interaction `strength` alone — a per-pair exposure share was
+    `1.0` by construction and was withdrawn by OQ-MODEL-31 on 2026-08-23, and the out-of-sample
+    evidence that replaces it is FR-MODEL-128's holdout strength ratio, which is not built here.
     """
     report = progress or NullProgress()
     report.update(0.05, "sampling")
@@ -394,8 +413,7 @@ def _interaction_candidates(
             # sum, which is what the interaction contributes to the score.
             strength = float(np.mean(np.abs(values[:, i, j] + values[:, j, i])))
             strengths.append(
-                ShapInteraction(pair=(order[i], order[j]), strength=strength,
-                                exposure_share=1.0)
+                ShapInteraction(pair=(order[i], order[j]), strength=strength)
             )
     strengths.sort(key=lambda pair: pair.strength, reverse=True)
     return tuple(strengths[:5])
@@ -429,7 +447,7 @@ def fidelity_statement(
         worst = approximation.worst_regions[0]
         parts.append(
             f"Divergence concentrates in {worst.description} "
-            f"({worst.exposure_share * 100:.1f}% of rows, mean |error| "
+            f"({worst.exposure_share * 100:.1f}% of exposure, mean |error| "
             f"{worst.mean_abs_error_pct:.1f}%). Rating on the approximation would misprice "
             "that cell."
         )

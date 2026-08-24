@@ -143,7 +143,6 @@ class ShapInteraction(BaseModel):
 
     pair: tuple[str, str]
     strength: float = Field(ge=0.0)
-    exposure_share: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class ShapSummary(BaseModel):

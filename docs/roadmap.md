@@ -3832,6 +3832,89 @@ intermittent failures across runs in `test_audit.py`, `test_celery_broker.py` an
 concurrent slice its own database (`gip_w32_6`) and saw none of this. **Concurrent slices should
 take a database each**, and this record is the second observation of the same cost.
 
+
+#### W32-9 slice — the transparency exposure share, 2026-08-24
+
+The second of the five slices the [W32 closure proposal](plans/2026-08-23-w32-closure-proposal.md)
+filed. It closes in `transparency.py` the gap W32-5 closed one module away in `diagnostics.py`:
+a share called *exposure* that counted rows. **No requirement id was allocated** — every marker
+names one that already existed.
+
+##### What was built
+
+| Delivered | Evidence |
+|---|---|
+| The worst-region share is a share of exposure (FR-MODEL-36) | `packages/pricing-core/tests/test_transparency.py` — **30 passed**. A fixture whose exposure ranking and row-count ranking disagree (`area = rare` is 4 rows × 50.0 exposure years, `area = common` is 200 rows × 0.02), asserting `200/204` and `4/204`. `_worst_regions` reuses `diagnostics.py`'s `_weights` and `_share` rather than growing a second pair |
+| The fidelity statement says what it reports (FR-MODEL-36) | The rendered sentence moved from `% of rows` to `% of exposure`, so the noun and the number agree for the first time. `docs/specs/02-modelling.md:1354`'s worked example already read *"0.8% of exposure"* — **the spec was right and the code was wrong** |
+| `ShapInteraction.exposure_share` is withdrawn (FR-MODEL-79) | **31 passed** transparency, **103 passed** contracts, `generate-contracts.py --check` **0**. Deleted from the Pydantic shape, its producer, the hand-authored contract, both generated artifacts and `test_contracts.py`'s `REACHED_NESTED_PATHS` |
+
+##### Which of the three FR-MODEL-36 sites moved
+
+Two. The computation in `_worst_regions` (`mask.sum() / rows` → weighted) and the prose in
+`fidelity_statement`. The third — `WorstRegion.exposure_share` in `model-schema` — was already
+*named* for exposure and only its value was wrong, so **the published shape is unchanged** and no
+consumer of the worst-region half sees a contract change. The one contract change in this slice is
+FR-MODEL-79's deletion.
+
+##### FR-MODEL-79 was withdrawn, not computed
+
+The field was the literal `1.0` at its only construction site, so there was nothing to make
+correct. OQ-MODEL-31 decided on 2026-08-23 that the honest fix is deletion, and this slice performs
+it. **FR-MODEL-128 — the holdout strength ratio that is meant to replace it — is left unbuilt**,
+with OQ-MODEL-31 as its origin and commit `b019070` as the place it was appended. Until it is
+built, an interaction candidate carries `strength` alone: a smaller artifact than the spec's
+eventual target, and a truthful one, which the constant was not.
+
+##### The spec line this changed
+
+`docs/specs/02-modelling.md:194` — FR-MODEL-79's 2026-08-23 amendment stated that *"Removing the
+constant field from `ShapInteraction` is **W32**'s, and until it lands the artifact publishes a
+number that means nothing."* It has now landed, so that clause would have gone stale on merge. Per
+`CLAUDE.md` §0 it is resolved rather than left, and per §5 by **appending a dated note to the same
+row** — the record of what was believed on 2026-08-23 is preserved intact rather than rewritten.
+
+##### Verdicts
+
+- **FR-MODEL-36** — already marked; its coverage line does not move. This slice makes the number
+  behind the marker mean what the requirement says.
+- **FR-MODEL-79** — **delivered by withdrawal.** The requirement's exposure-share clause is
+  satisfied by the field's removal, not by a computation.
+- **FR-MODEL-128** — **not started.** Owner: a later slice or workstream; origin OQ-MODEL-31.
+  Named here so the gap between the withdrawal and its replacement is on the record rather than
+  discovered by the next audit.
+- The `02` §5.2 `holdout` keyword on `build_shap_summary` (`:2355-2359`) — **not a finding.**
+  `git log -L` attributes those lines to `b019070`, the commit that appended FR-MODEL-128; it is a
+  dated, owned forward declaration of a function this slice does not build. Recorded in
+  [the ledger](plans/2026-08-23-w32-9-transparency-exposure-share-ledger.md) so the next audit does
+  not re-derive it.
+
+**The frame is the train frame, deliberately.** `_worst_regions` weights over the train frame, not
+the holdout — `02` §3.6 approximates the population the model was fitted on, so unlike a
+partial-dependence curve this must not report the holdout's exposure profile. This is the one place
+the slice differs from the FR-MODEL-125 precedent it otherwise mirrors, and the reasoning is in the
+function's docstring so the next reader does not "fix" it.
+
+**Gate:** both halves, run locally **in the worktree**, each exit code read — all thirteen
+commands 0. `1856 passed, 1 xfailed`; requirement coverage **264 marked (50.5%)**, unchanged and
+correctly so, since both markers name requirements already marked; 24 contracts match; frontend
+**21 files / 131 tests**, `generate:api` leaving no tracked change and the regenerated
+`ShapInteraction` carrying `pair` and `strength` only.
+
+##### One operational finding: the delegated gate ran against the wrong tree
+
+The first gate run was delegated to a `gate-runner` subagent, which reported all thirteen commands
+green — having prefixed its pytest with `cd /home/puzhenhao1989/gi-pricing-plan`, the **shared
+checkout, which is on `main`**. Every number it reported was `main`'s, and its
+`grep exposure_share frontend/src` "found no results" only because the generated client there had
+never been regenerated.
+
+It was caught by arithmetic: the agent reported 1843 executed while the worktree collects **1857**,
+and a 14-test gap with no `skipped` or `deselected` is not a gap a passing run can have. **A
+wrong-tree gate agrees with a right-tree gate on every slice that does not move the counts**, which
+is what makes it hard to see. The rule: a delegated gate must be told to run in the worktree, must
+report the `pwd` it ran in, and its pytest total must be reconciled against `--collect-only` before
+it is believed.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
