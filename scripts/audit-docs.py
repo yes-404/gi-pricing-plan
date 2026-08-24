@@ -543,13 +543,17 @@ def main() -> int:
                 "which is to its right"
             )
 
-    # 12. money discipline: *_minor fields must never be fractional
+    # 12. money discipline: *_minor fields must never be fractional.
+    #: FR-OVR-20, not FR-OVR-7. FR-OVR-7 governs values and is scoped to the rating path and
+    #: persisted rate tables, so it does not reach a diagnostic; the reserved *name* is
+    #: FR-OVR-20 and is unscoped, which is the rule this check actually applies. It named
+    #: FR-OVR-7 until 2026-08-24, when FR-OVR-20 was written down (OQ-OVR-11).
     money_re = re.compile(r'"(\w*_minor)"\s*:\s*(-?\d+\.\d+)')
     for f in list(md) + schemas:
         for m in money_re.finditer(f.read_text(encoding="utf-8")):
             fail(
                 f"{f.relative_to(ROOT)}: {m.group(1)} written as fractional "
-                f"{m.group(2)} (FR-OVR-7)"
+                f"{m.group(2)} (FR-OVR-20)"
             )
 
     # 13. glossary terms not redefined downstream
