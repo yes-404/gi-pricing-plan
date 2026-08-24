@@ -52,6 +52,19 @@ const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    // `02` §5.3. Both this and `/models/:slug` match the path `/models/compare`, and a model
+    // slug of `compare` is legal under `refs.py`'s pattern — so which one wins is a real
+    // question. **Vue Router's ranking of a static segment above a dynamic one is what
+    // decides it**: moving this entry below `/models/:slug` was tried, and the resolution
+    // test still passed. Declaring it first is therefore defensive rather than load-bearing,
+    // and the test is what holds the guarantee.
+    // No `props: true`: it maps path params only, and this view's input is a query. The
+    // `/models/:slug` entry below is the precedent for a query-carried input.
+    path: "/models/compare",
+    name: "model-comparison",
+    component: () => import("@/views/ModelComparisonView.vue"),
+  },
+  {
     // `02` §5.3. `?version=` selects one; the latest by default. Not `@version` in the
     // path: an `@` must be percent-encoded by every client, and `family@7` then reads as
     // `family%407` in every log and support conversation.

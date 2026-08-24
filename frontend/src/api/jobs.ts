@@ -21,12 +21,18 @@ export function getJob(jobId: string): Promise<Job> {
  */
 export async function waitForJob(
   jobId: string,
-  { attempts = 60, intervalMs = 1000 }: { attempts?: number; intervalMs?: number } = {},
+  {
+    attempts = 60,
+    intervalMs = 1000,
+    onPoll,
+  }: { attempts?: number; intervalMs?: number; onPoll?: (job: Job) => void } = {},
 ): Promise<Job> {
   let job = await getJob(jobId);
+  onPoll?.(job);
   for (let n = 1; n < attempts && !TERMINAL.includes(job.status); n += 1) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
     job = await getJob(jobId);
+    onPoll?.(job);
   }
   return job;
 }
