@@ -9043,6 +9043,17 @@
       "RuleCreate": {
         "additionalProperties": false,
         "properties": {
+          "catalogue_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalogue Id"
+          },
           "check": {
             "title": "Check",
             "type": "string"

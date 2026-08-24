@@ -43,6 +43,7 @@ from model_schema import (
     ValidationLayer,
     ValidationRule,
     ValidationRuleSet,
+    builtin_rule,
 )
 
 __all__ = [
@@ -168,6 +169,7 @@ async def create_rule(
     severity: Severity,
     target: dict[str, Any] | None = None,
     params: dict[str, Any] | None = None,
+    catalogue_id: str | None = None,
     message: str = "",
     rationale: str = "",
     settings: Any = None,
@@ -197,6 +199,17 @@ async def create_rule(
             permission=Permission.DATASET_WRITE,
         )
 
+    if catalogue_id is not None:
+        try:
+            builtin_rule(catalogue_id)
+        except ValueError as exc:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "That catalogue entry does not exist",
+                422,
+                str(exc),
+            ) from exc
+
     version = 1 + (
         await session.execute(
             select(func.coalesce(func.max(ValidationRuleRow.version), 0)).where(
@@ -213,6 +226,7 @@ async def create_rule(
         layer=layer.value,
         check=check,
         severity=severity.value,
+        catalogue_id=catalogue_id,
         body={
             "target": target or {},
             "params": params or {},

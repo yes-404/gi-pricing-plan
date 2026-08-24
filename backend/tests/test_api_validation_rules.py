@@ -271,3 +271,52 @@ async def test_the_approval_exemption_reaches_builtin_rows_only(
         session.add(
             _a_rule(workspace_id, status="approved", builtin=True, catalogue_id="VR-STR-1")
         )
+
+
+@pytest.mark.req("FR-DATA-53")
+def test_a_workspace_rule_can_record_the_catalogue_entry_it_derives_from(
+    api_client: TestClient, analyst: dict[str, str]
+) -> None:
+    """FR-DATA-53's lineage: a workspace version of a built-in names its catalogue entry.
+
+    Without this the derivation is unreachable through the API — the column exists, the
+    read-back exists, and no caller can write it.
+    """
+    response = api_client.post(
+        "/api/v1/validation-rules",
+        headers=analyst,
+        json={
+            "slug": "psi-column-stricter",
+            "layer": "distributional",
+            "check": "psi_column",
+            "severity": "warn",
+            "params": {"warn_above": 0.05},
+            "catalogue_id": "VR-DST-1",
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["catalogue_id"] == "VR-DST-1"
+
+
+@pytest.mark.req("FR-DATA-53")
+def test_a_catalogue_id_naming_no_catalogue_entry_is_refused(
+    api_client: TestClient, analyst: dict[str, str]
+) -> None:
+    """**Negative.** Refused on the way in, not on the way out.
+
+    `ValidationRule` already refuses an unknown id when a row is read back, so without this
+    guard a bad id is *accepted* by the write and then makes the row permanently unreadable
+    — a 500 on every subsequent GET, from data the API itself allowed in.
+    """
+    response = api_client.post(
+        "/api/v1/validation-rules",
+        headers=analyst,
+        json={
+            "slug": "not-a-real-derivation",
+            "layer": "distributional",
+            "check": "psi_column",
+            "severity": "warn",
+            "catalogue_id": "VR-DST-99",
+        },
+    )
+    assert response.status_code == 422, response.text
