@@ -1250,12 +1250,13 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
   "link": "identity",
   "intercept": -2.4181,
   "feature_order": ["driver_age_banded", "vehicle_group_rated", "annual_mileage"],
-  "bins": {
-    "driver_age_banded": {"levels": ["0-1", "2-4", "5-9", "10-49", "50-99"]},
-    "annual_mileage": {"cuts": [0, 5000, 10000, 20000]}
-  },
+  "bins": [
+    {"kind": "categorical", "levels": ["0-1", "2-4", "5-9", "10-49", "50-99"]},
+    {"kind": "categorical", "levels": ["1-9", "10-19", "20-29", "30-39", "40-50"]},
+    {"kind": "numeric", "cuts": [0, 5000, 10000, 20000]}
+  ],
   "terms": [
-    {"term_name": "driver_age_banded", "term_features": ["driver_age_banded"],
+    {"term_name": "driver_age_banded", "term_features": [0],
      "scores": [0.0, 0.112, 0.054, -0.021, 0.083, 0.041, 0.0],
      "standard_deviations": [0.0, 0.008, 0.006, 0.005, 0.007, 0.005, 0.0],
      "bin_weights": [0.0, 38214.4, 52110.8, 60452.1, 33489.0, 42117.6, 0.0]}
@@ -1266,6 +1267,19 @@ derivatives rather than a SymPy-derived form (FR-MODEL-76). Every other check, a
   "library_versions": {"interpret-core": "0.7.8", "polars": "1.x"}
 }
 ```
+
+*Corrected 2026-08-24 (W6b-1a). As printed since 2026-08-21 this example was not a valid
+`EbmFitResult`: `bins` was an object keyed by feature name where the type declares an array
+positional against `feature_order`, and `term_features` held feature names where the type
+declares indices into it. `EbmFitResult` forbids extra fields, so a fixture copied from this
+page was rejected outright — the defect surfaced when a frontend slice went to build one. The
+type was the correct side and the example was behind it (`CLAUDE.md` §0): the positional join
+is enforced by a named validator that states its own reason, and `model-schema` is the
+generated contract's source while this block was checked by nothing. The object form also hid
+a gap a positional array cannot: `feature_order` names three features and the object defined
+two, so `vehicle_group_rated` is given its bins here. The `kind` discriminator defaults and
+was therefore legal to omit; it is printed because an array of a discriminated union is only
+readable positionally when each entry says which arm it is.*
 
 `fit_result` for a GBM carries what a scorer needs and no booster bytes — **added
 2026-08-22 (W5, the audit-remediation slice)**. §4.8 has carried a GLM example since Phase 0
