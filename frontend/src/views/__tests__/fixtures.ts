@@ -53,6 +53,69 @@ export const GBM_MODEL: Model = {
 };
 
 /**
+ * A fitted EBM, annotated for the same reason `GBM_MODEL` is.
+ *
+ * One numeric term and one categorical, because the slot layout differs between them: `c`
+ * cuts give `c + 3` slots and `L` levels give `L + 2`, and a fixture carrying only one kind
+ * lets the other's off-by-one through.
+ */
+export const EBM_MODEL: Model = {
+  id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  model_family_slug: "motor-severity",
+  version: 3,
+  status: "fitted",
+  spec_hash: "v10:sha256:def",
+  dataset_version_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  spec: {
+    model_type: "ebm",
+    model_family_slug: "motor-severity",
+    dataset_version_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    response_column: "claim_amount",
+    objective: "rmse",
+    max_bins: 64,
+    max_rounds: 50000,
+    interactions: 0,
+    factors: [],
+    offset: { kind: "none" },
+    weight: { kind: "none" },
+    loss_treatment: { kind: "none" },
+    seed: 0,
+  },
+  fit_result: {
+    model_type: "ebm",
+    objective: "rmse",
+    link: "identity",
+    intercept: 6.8142,
+    feature_order: ["annual_mileage", "region_grouped"],
+    bins: [
+      { kind: "numeric", cuts: [5000, 10000, 20000] },
+      { kind: "categorical", levels: ["north", "midlands", "south"] },
+    ],
+    terms: [
+      {
+        term_name: "annual_mileage",
+        term_features: [0],
+        scores: [0.0, -0.11, -0.02, 0.07, 0.19, 0.0],
+        standard_deviations: [0.0, 0.008, 0.006, 0.005, 0.007, 0.0],
+        bin_weights: [0.0, 38214.4, 52110.8, 60452.1, 33489.0, 0.0],
+      },
+      {
+        term_name: "region_grouped",
+        term_features: [1],
+        scores: [0.0, 0.04, -0.01, 0.02, 0.0],
+        standard_deviations: [0.0, 0.003, 0.002, 0.003, 0.0],
+        bin_weights: [0.0, 120000.0, 90000.0, 41000.0, 0.0],
+      },
+    ],
+    best_iteration: 412,
+    rows: 480000,
+    fit_seconds: 92.4,
+    library_versions: { "interpret-core": "0.7.8" },
+  },
+  flags: [],
+};
+
+/**
  * The same family refitted as a quantile bound of version 7 (FR-MODEL-78).
  *
  * Built through `gbmSpec` rather than by spreading `GBM_MODEL.spec`: that field is the

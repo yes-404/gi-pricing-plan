@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
 import {
+  ebmFit,
   ebmSpec,
   gbmFit,
   gbmSpec,
@@ -13,6 +14,7 @@ import {
   type Model,
 } from "@/api/models";
 import { ProblemError } from "@/api/problem";
+import EbmShapePanel from "@/components/EbmShapePanel.vue";
 import GbmFitPanel from "@/components/GbmFitPanel.vue";
 import QuantileBoundNotice from "@/components/QuantileBoundNotice.vue";
 
@@ -44,6 +46,7 @@ const fit = computed(() => {
 const gbm = computed(() => (model.value ? gbmSpec(model.value) : null));
 const ebm = computed(() => (model.value ? ebmSpec(model.value) : null));
 const gbmResult = computed(() => (model.value ? gbmFit(model.value) : null));
+const ebmResult = computed(() => (model.value ? ebmFit(model.value) : null));
 
 /**
  * Fitted is a property of the Model, not of the arm the reader happens to be looking at.
@@ -360,6 +363,13 @@ onMounted(async () => {
         <GbmFitPanel
           :spec="gbm"
           :fit="gbmResult"
+        />
+      </template>
+
+      <template v-else-if="ebm && ebmResult">
+        <EbmShapePanel
+          :spec="ebm"
+          :fit="ebmResult"
         />
       </template>
     </template>

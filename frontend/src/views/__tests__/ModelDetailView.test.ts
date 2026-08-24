@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ModelDetailView from "../ModelDetailView.vue";
-import { boundOf, GBM_MODEL } from "./fixtures";
+import { boundOf, EBM_MODEL, GBM_MODEL } from "./fixtures";
 
 const MODEL = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -173,6 +173,16 @@ describe("the model detail view, on a model that is not a GLM", () => {
     render(ModelDetailView, { props: gbmProps, ...mounted });
     await screen.findByRole("table", { name: "Features and constraints" });
     expect(screen.queryByText(/bound/i)).toBeNull();
+  });
+
+  it("renders an EBM's shape functions rather than the GBM panel", async () => {
+    // The arms are mutually exclusive branches off one narrowed spec. A view that reaches the
+    // GBM branch for an EBM renders nothing at all, and the page looks merely empty.
+    stub(EBM_MODEL);
+    render(ModelDetailView, { props: { slug: "motor-severity" }, ...mounted });
+    const table = await screen.findByRole("table", { name: "annual_mileage shape function" });
+    expect(within(table).getByText("< 5000")).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: "Features and constraints" })).toBeNull();
   });
 
   it("still says so when a model really is reserved and unfitted", async () => {
