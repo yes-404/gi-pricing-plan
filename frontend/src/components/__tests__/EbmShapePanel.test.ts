@@ -84,6 +84,27 @@ describe("the EBM shape-function panel", () => {
     expect(cellsOf(table, 1)).toEqual(["-0.1100", "-0.0200", "0.0700", "0.1900", "0.0000"]);
   });
 
+  it("reads each standard deviation from the same slot as its score", () => {
+    // The uncertainty column is what a reader uses to decide whether a bump in the shape
+    // function is real, and it was rendered without ever being read back. Both the shift and
+    // the total loss were confirmed against this suite before this test existed: replacing
+    // `deviations[i + 1]` with `deviations[i]` passed, and so did a hardcoded `sd: 0`.
+    render(EbmShapePanel, { props: { spec: SPEC, fit: FIT } });
+    const table = screen.getByRole("table", { name: "annual_mileage shape function" });
+    expect(cellsOf(table, 2)).toEqual(["0.0080", "0.0060", "0.0050", "0.0070", "0.0000"]);
+  });
+
+  it("reads a categorical term's own slots, not the numeric term's", () => {
+    // `labels` forks on `bins.kind`, and every assertion above is on the numeric arm. The
+    // categorical arm was reached only by the two badge tests, which read `weight === 0` and
+    // so pin alignment without pinning the slots themselves: dropping the trailing "missing"
+    // level from this branch passed the whole suite, including the two tests added above.
+    render(EbmShapePanel, { props: { spec: SPEC, fit: FIT } });
+    const table = screen.getByRole("table", { name: "region_grouped shape function" });
+    expect(cellsOf(table, 0)).toEqual(["north", "midlands", "south", "missing"]);
+    expect(cellsOf(table, 1)).toEqual(["0.0400", "-0.0100", "0.0200", "0.0000"]);
+  });
+
   it("does not render the unused base slot as a bin", () => {
     // Slot 0 is never reached by a lookup. Rendered as a row it is a bin with a 0.0 score that
     // a reader takes for a real level with no effect.
@@ -105,6 +126,24 @@ describe("the EBM shape-function panel", () => {
     const table = screen.getByRole("table", { name: "region_grouped shape function" });
     const north = within(table).getByText("north").closest("tr")!;
     expect(north).not.toHaveTextContent(/unpopulated/i);
+  });
+
+  it("renders each bin weight, not merely whether it is zero", () => {
+    // The two badge tests above pin the zero/non-zero split, and an off-by-one in the weights
+    // does fail them — so alignment is already covered. What they do not pin is the number:
+    // replacing every non-zero weight with `1` passed the whole suite. The exposure behind a
+    // bin is what a reader weighs its score against, so the figure itself has to be read back.
+    //
+    // The trailing slot is excluded because its `unpopulated` badge shares the cell, and its
+    // text is owned by the two tests above rather than compared as a number here.
+    render(EbmShapePanel, { props: { spec: SPEC, fit: FIT } });
+    const table = screen.getByRole("table", { name: "annual_mileage shape function" });
+    expect(cellsOf(table, 3).slice(0, 4)).toEqual([
+      "38,214.4",
+      "52,110.8",
+      "60,452.1",
+      "33,489",
+    ]);
   });
 
   it("names an interaction term and says why it is not tabulated", () => {
