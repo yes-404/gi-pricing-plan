@@ -128,6 +128,13 @@ async def _upsert_user(
 
     Keyed on `(issuer, subject)`, never on email: an email change would otherwise create a
     second user and orphan everything the first one did.
+
+    **This runs on every bearer request, not only at login.** `require_caller` calls
+    `authenticate_bearer` per request (`app/api/deps.py`), so the `last_login_at` written
+    below is stamped each time and records last-*seen*. Nothing reads the column today,
+    which is why the name has cost nothing so far; whoever first reports on it — a
+    dormant-account or last-access view under `06` — has to decide whether the intent was
+    login or activity, because the column as written cannot answer the first.
     """
     user = (
         await session.execute(
