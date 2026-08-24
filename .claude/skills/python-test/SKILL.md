@@ -283,6 +283,47 @@ one connection** — the setting is per-connection, so a test that called the te
 proves nothing: that helper builds its own engine and disposes it, taking any leak with it.
 The first version of that test did exactly that and passed with the boolean inverted.
 
+### That teardown makes two concurrent runs mutually destructive
+
+The fixture is session-scoped, and *session* means one `pytest` process — not one developer
+and not one machine. Every session on this box is told to export the same
+`GIP_TEST_DATABASE_URL` (above), so two runs in different worktrees are two sessions sharing
+one database. When the first finishes, its teardown truncates every table out from under the
+second, mid-run.
+
+**It presents as a flaky, unrelated regression, and the shape is distinctive.** Measured
+2026-08-24 across three overlapping runs from two sessions:
+
+| Symptom | Why it misleads |
+|---|---|
+| Disjoint failure sets each run — 1, then 4, then 1 test, never the same ones | Reads as flakiness in the tests, not in the environment |
+| All `NoResultFound` / `PermissionDeniedError` / DBAPIError | Reads as an RBAC or migration break |
+| Every failure passes in isolation, and passes running its own file | Reads as a test-ordering bug, and sends you hunting fixture pollution |
+| Failures appear in code the branch never touched | The only honest clue, and easy to explain away |
+
+The decisive check is the diff, not the failures:
+
+```bash
+git diff --stat origin/main...HEAD -- '*.py' pyproject.toml uv.lock backend/ packages/ scripts/
+```
+
+Empty output means the Python under test is `origin/main`'s, byte for byte, and the branch
+cannot be the cause. On the run above the change set was fourteen frontend files and one
+markdown file — zero Python — and the suite still failed three different ways.
+
+**Serialise, or give each session its own database.** `test_database_url()` reads
+`GIP_TEST_DATABASE_URL` before falling back to `DEFAULT_TEST_DSN`, so the override already
+exists; `createdb gipricing_$USER_$SLOT` and point at that. Serialising is the cheaper
+answer for two or three sessions, and it needs an actual check rather than an intention —
+`pgrep -af 'pytest'` before starting, and say in the channel when you take and release the
+slot.
+
+**A gate result taken while a second run was live is void in both directions.** It can fail
+on someone else's teardown, and it can pass because the run that would have caught something
+was truncated before it got there. This is the database half of "a gate run is only valid if
+the tree held still for all of it" below: that section asks who else is editing the tree,
+and this one asks who else is running the suite. Both questions, every time.
+
 ### Resetting it by hand
 
 The teardown covers the ordinary case. Reach for this when a run died before teardown, when
@@ -340,6 +381,11 @@ measured on is.
 
 Before starting a gate you intend to quote, check for company: `git worktree list` shows the
 sibling checkouts, but a second session in *this* directory shows up nowhere — ask.
+
+Ask about the database in the same breath. A peer who moves nothing in your tree still voids
+your run if they are running the suite, because the two share one DSN and one session-scoped
+teardown — see "that teardown makes two concurrent runs mutually destructive" above.
+`pgrep -af pytest` answers it, and unlike `git worktree list` it does see the other session.
 
 ## Assert on a metric that responds to what the fixture changed
 
@@ -645,6 +691,14 @@ does not return freed arenas to the OS — a peak-RSS reading taken after an ear
 the same process is that earlier phase's high-water mark, not this one's.
 
 ## Verified
+
+2026-08-24 — W6b. The concurrent-run section, from a live incident rather than a thought
+experiment: three overlapping runs from two sessions, three disjoint failure sets, every
+failure passing in isolation. Diagnosed independently by both sessions and reconciled — one
+from the failure shape and an empty `git diff --stat … -- '*.py'`, one from
+`conftest_db.py:35` and `:196`. Neither the teardown section nor the tree-held-still section
+covered it: the first frames the fixture's purpose as bounding *accumulation*, the second
+asks who is editing the tree, and a peer running the suite is neither.
 
 2026-08-22 — W5's closure slice. The two handler-testing sections above, both found by writing tests that would have passed for the wrong reason: a `monkeypatch` that never intercepted a function-local import, and a refusal whose code `execute_job` discarded. Reproduced both ways in each case — see each section's note.
 
