@@ -19,6 +19,7 @@ import { isProblem, ProblemError } from "@/api/problem";
 import EbmShapePanel from "@/components/EbmShapePanel.vue";
 import GbmFitPanel from "@/components/GbmFitPanel.vue";
 import QuantileBoundNotice from "@/components/QuantileBoundNotice.vue";
+import SurrogateNotice from "@/components/SurrogateNotice.vue";
 import TransparencyPanel from "@/components/TransparencyPanel.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
@@ -153,19 +154,10 @@ onMounted(async () => {
         response <span class="font-mono">{{ model.spec.response_column }}</span>
       </p>
 
-      <!-- FR-MODEL-96/102. A surrogate is a GLM in every visible respect — family, link,
-           coefficients, relativities — so nothing else on this page distinguishes one, and
-           its R² and residuals are read as fit to experience unless the page says otherwise.
-           No link: the id is not resolvable to a slug from this response (§6, E1). -->
-      <p
-        v-if="glmSpec?.approximates_model_id"
-        class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-      >
-        This model is a GLM approximation of model
-        <span class="font-mono text-xs">{{ glmSpec.approximates_model_id }}</span>. Its
-        diagnostics are measured against that model's predictions, not against observed
-        claims.
-      </p>
+      <!-- FR-MODEL-96/102. Shared with the diagnostics view, where the same warning has to
+           carry more weight: there a surrogate's A/E, residuals and lift are all read as fit
+           to experience unless the page says otherwise. -->
+      <SurrogateNotice :approximates-model-id="glmSpec?.approximates_model_id ?? null" />
     </header>
 
     <p
