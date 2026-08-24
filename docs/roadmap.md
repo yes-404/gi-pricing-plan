@@ -3762,6 +3762,76 @@ markers, not proof, and that §13 rule 1's "a marker is a claim" is the load-bea
 `scope-audit.py MODEL --endpoints` is unchanged at **41 of 41 declared endpoints published**;
 this slice added tests, not routes.
 
+#### W32-10 slice — the untested behaviour, 2026-08-24
+
+The first of the five slices the [W32 closure proposal](plans/2026-08-23-w32-closure-proposal.md)
+filed, and run first because it touches nothing the other four touch. **It adds no capability.**
+What it adds is the ability for three shipped behaviours to fail: a migration's backfill, the EBM
+prediction route over HTTP, and the partial-dependence exposure share. **No requirement id was
+allocated** — every marker names one that already existed.
+
+##### What was built
+
+| Delivered | Evidence |
+|---|---|
+| The `82edffbe1dce` dataset-owner backfill is exercised (FR-DATA-51) | `backend/tests/test_migration_dataset_owner.py` — **8 passed**. **The first test in this repository that exercises a migration.** Five resolution and negative cases over a `pg_temp` shadow table running `_BACKFILL` verbatim, plus the `nullable=False` refusal through real alembic against a per-test scratch database. Five mutation proofs: the `@%` boundary widened *and* narrowed, the `dataset.created` filter removed, `ORDER BY sequence` swapped for `ORDER BY at`, and the broken input withdrawn to prove the refusal is caused by it |
+| The EBM prediction route over HTTP (FR-MODEL-124, FR-MODEL-37, FR-MODEL-62) | `backend/tests/test_prediction.py` — **18 passed** over the file, two tests added. The route was previously asserted over HTTP only by *it is published* and one 403; it now carries per-row numbers, `model_type == "ebm"` and the named interval refusal to the wire |
+| The partial-dependence share is exposure, not rows (FR-MODEL-118, FR-MODEL-125) | `packages/pricing-core/tests/test_gbm.py` — a fixture whose exposure ranking and row-count ranking disagree, asserting `4.0/404.0` and rejecting `2/404`, parametrised over both backends. **FR-MODEL-125's first evidence that bears on the requirement** |
+
+##### The finding this slice existed to produce
+
+W32-5 changed `OmittedLevels.exposure_share` from a row-count share to an exposure share, and the
+test written to prove it asserted `0.0 < share < 0.5` — which passes identically under the
+definition it replaced. Reverting `diagnostics.py` to row counts fails the new test
+(`0.00495 != 0.00990`) while **the pre-existing assertion stays green**. The suite had been
+reporting W32-5 as delivered on evidence that does not bear on the requirement, and that is now
+demonstrated rather than argued.
+
+##### Two plan errors, corrected in execution rather than in the plan
+
+Both are recorded in
+[the ledger](plans/2026-08-23-w32-10-untested-behaviour-ledger.md); the plan is frozen at its date.
+
+1. **A blocker that did not exist.** The plan required a `blob_bucket` fixture edit before Task 2
+   could start. The EBM arm takes no `blob_store` at all — an EBM's fit result *is* its model
+   (ADR-0003) — so the buckets never meet. The edit was made, disproved by removing it, and
+   reverted; a fixture shared by 16 test modules was left untouched. **Premise disproved, edit not
+   made.**
+2. **A drafted test that could not catch the failure its own docstring named.** It compared the
+   HTTP body against `service.predict_rows` called in the test body — both sides through the same
+   service, so a mutation moves expected and actual together and `approx` still passes. Proven by
+   mutating the EBM to return the intercept for every row. Closed with an assertion that two rows
+   must differ. The same shape as the `0.0 < share < 0.5` problem, found in the slice written to
+   fix it.
+
+Task 1 also found that the plan's Step 3 claimed a proof it does not have: the two inconsistent
+`entity_ref` shapes are each excluded by the `LIKE` independently, so removing the action filter
+leaves that test green. The action filter was given its own seeding, which is what makes the
+mutation bite.
+
+##### Verdicts
+
+- **FR-DATA-51, FR-MODEL-124** — already marked before this slice; their coverage line does not
+  move. This slice deepens their evidence rather than creating it.
+- **FR-MODEL-125** — **first evidence**, moved off zero.
+- The migration's refusal branch — **tested**, not deferred. The plan permitted dropping the
+  scratch-database shape as too costly; it was built, so no §13 verdict is owed against it.
+- The three stale `datasets.py` anchors in the migration's comment (`:191` → `:205`, `:868` →
+  `:951`, `:271` → `:293`) — **deferred with an owner.** The behaviour described is unchanged and
+  only the line numbers rotted; a tests-only slice does not edit a merged migration. Owner: the
+  next slice that touches that file for a behavioural reason.
+
+**Gate:** the Python/docs half only, run locally, each exit code read — `1842 passed, 1 xfailed`,
+all seven commands 0. **The frontend half was not run and is not required**: this slice is tests
+only and changes no contract. Requirement coverage **264 marked (50.5%)**.
+
+**One operational finding.** Three tasks ran concurrently against the **shared** compose database,
+and it cost: a teardown `DeadlockDetectedError` in `conftest_db`'s session-end cleanup, and
+intermittent failures across runs in `test_audit.py`, `test_celery_broker.py` and
+`test_model_comparison.py` that did not reproduce on the clean final run. W32-6 gave each
+concurrent slice its own database (`gip_w32_6`) and saw none of this. **Concurrent slices should
+take a database each**, and this record is the second observation of the same cost.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
