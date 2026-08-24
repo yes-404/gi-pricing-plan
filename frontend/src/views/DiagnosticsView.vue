@@ -8,6 +8,7 @@ import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
 import ComplexityTable from "@/components/ComplexityTable.vue";
 import GbmEvalCurveChart from "@/components/GbmEvalCurveChart.vue";
+import GbmImportanceCharts from "@/components/GbmImportanceCharts.vue";
 import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
@@ -242,6 +243,12 @@ onMounted(async () => {
         </h2>
 
         <GbmEvalCurveChart :eval-curve="diagnostics.gbm.eval_curve" />
+
+        <GbmImportanceCharts
+          :importances="diagnostics.gbm.importances"
+          :permutation-importances="diagnostics.gbm.permutation_importances"
+          :monotonicity="diagnostics.gbm.monotonicity"
+        />
 
         <table
           aria-label="Tree summary"
