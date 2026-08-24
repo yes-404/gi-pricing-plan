@@ -32,6 +32,7 @@ from app.errors import PlatformError
 from app.platform import model_specs as spec_service
 from app.platform import modelling as model_service
 from app.platform import settings as settings_service
+from app.platform import workspaces
 from model_schema import (
     SURROGATE_RESPONSE_COLUMN,
     Factor,
@@ -43,6 +44,9 @@ from model_schema import (
 
 async def _set(database, workspace_id, actor, key, value) -> None:
     async with database.unit_of_work() as session:
+        # `workspace_settings` references `workspaces` (FR-PLAT-62) and this helper does
+        # not go through `grant`, so the workspace row arrives here.
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await settings_service.set_workspace_setting(session, workspace_id, key, value)
 
 

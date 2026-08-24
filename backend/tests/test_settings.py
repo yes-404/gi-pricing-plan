@@ -10,10 +10,23 @@ from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import settings as svc
+from app.platform import workspaces
 from model_schema import SettingSource, SettingType
 
 PSI = "validation.psi_warn_threshold"
 FLAG = "features.expression_objectives_enabled"
+
+
+async def _override(session, workspace_id, key, value) -> None:
+    """Set a workspace override, having first ensured the workspace exists.
+
+    `workspace_settings` carries a foreign key to `workspaces` (FR-PLAT-62). These tests
+    mint a bare `workspace_id` rather than going through `grant`, which is the suite's
+    other workspace-creation path, so the row has to arrive here instead.
+    """
+    await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+    await svc.set_workspace_setting(session, workspace_id, key, value)
+
 
 
 @pytest.mark.req("FR-PLAT-45")
@@ -80,7 +93,7 @@ async def test_a_workspace_override_wins_over_the_default(
     database: Database, workspace_id
 ) -> None:
     async with database.unit_of_work() as session:
-        await svc.set_workspace_setting(session, workspace_id, PSI, 0.2)
+        await _override(session, workspace_id, PSI, 0.2)
     async with database.session() as session:
         resolution = await svc.resolve(session, Settings(), workspace_id, PSI)
     assert resolution.effective_value == 0.2
@@ -95,7 +108,7 @@ async def test_an_environment_variable_wins_over_a_workspace_override(
 ) -> None:
     """The precedence FR-PLAT-43 states, asserted at its most contested point."""
     async with database.unit_of_work() as session:
-        await svc.set_workspace_setting(session, workspace_id, PSI, 0.2)
+        await _override(session, workspace_id, PSI, 0.2)
     monkeypatch.setenv("GIP_SETTING_VALIDATION_PSI_WARN_THRESHOLD", "0.35")
 
     async with database.session() as session:
@@ -146,7 +159,7 @@ async def test_a_flag_is_off_until_a_workspace_turns_it_on(
     assert before.feature_flag is True
 
     async with database.unit_of_work() as session:
-        await svc.set_workspace_setting(session, workspace_id, FLAG, True)
+        await _override(session, workspace_id, FLAG, True)
     async with database.session() as session:
         after = await svc.resolve(session, Settings(), workspace_id, FLAG)
     assert after.effective_value is True
@@ -179,7 +192,7 @@ async def test_updating_a_setting_is_audited_with_its_previous_value(
 
     async with database.unit_of_work() as session:
         before = await svc.resolve(session, Settings(), workspace_id, PSI)
-        await svc.set_workspace_setting(session, workspace_id, PSI, 0.3)
+        await _override(session, workspace_id, PSI, 0.3)
         await audit.record(
             session,
             workspace_id=workspace_id,

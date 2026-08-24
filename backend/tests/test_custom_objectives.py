@@ -50,6 +50,7 @@ from app.platform import approvals as approval_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import objectives as service
+from app.platform import workspaces
 from app.worker.data_handlers import register_data_handlers
 from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
@@ -194,6 +195,8 @@ async def test_an_expression_objective_is_refused_by_name_whether_the_flag_is_on
     assert off.value.status_code == 409
 
     async with database.unit_of_work() as session:
+        # FR-PLAT-62: the settings row now references a workspace row.
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await settings_service.set_workspace_setting(
             session, workspace_id, "features.expression_objectives_enabled", True
         )

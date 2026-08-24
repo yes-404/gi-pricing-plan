@@ -25,6 +25,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     Float,
+    ForeignKey,
     Identity,
     Index,
     Integer,
@@ -434,6 +435,30 @@ class ApiKeyRow(Base):
     )
 
 
+class WorkspaceRow(Base):
+    """A Workspace: a named, addressable entity (FR-PLAT-62).
+
+    It existed as a `workspace_id` column and nothing else, so a workspace had no name and
+    every surface that would show one showed a UUID — which is why `W6b-11`'s switcher had
+    nothing to render and was specified against an entity that did not exist.
+
+    The slug is unique **globally**, not per workspace, unlike every other slug in this
+    schema: a workspace is the scope others are unique within, so there is no outer scope for
+    it to be unique inside.
+    """
+
+    __tablename__ = "workspaces"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("slug", name="uq_workspaces_slug"),)
+
+
 class WorkspaceMemberRow(Base):
     """Which workspaces a user may act in.
 
@@ -451,7 +476,9 @@ class WorkspaceMemberRow(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
     user_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
-    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    workspace_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -474,7 +501,9 @@ class WorkspaceSettingRow(Base):
     __tablename__ = "workspace_settings"
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
-    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    workspace_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
     key: Mapped[str] = mapped_column(String(128), nullable=False)
 
     # JSONB rather than text: a setting is typed (FR-PLAT-44), and storing 0.10 as "0.10"

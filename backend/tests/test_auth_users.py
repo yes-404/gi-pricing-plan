@@ -14,6 +14,7 @@ from app.auth.service import authenticate_bearer
 from app.db.models import UserRow, WorkspaceMemberRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import workspaces
 from model_schema import ActorKind, new_uuid7
 
 ISSUER = "https://idp.test.example/realms/gip"
@@ -104,6 +105,8 @@ async def test_membership_grants_exactly_one_workspace(
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
+        # A membership names a workspace that exists (FR-PLAT-62's foreign key).
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(
             WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=workspace_id)
         )
@@ -126,8 +129,10 @@ async def test_membership_of_several_workspaces_requires_a_choice(
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
         for _ in range(2):
+            other = new_uuid7()
+            await workspaces.ensure_workspace(session, workspace_id=other)
             session.add(
-                WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=new_uuid7())
+                WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=other)
             )
 
     async with database.unit_of_work() as session:
