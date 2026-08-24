@@ -3682,6 +3682,260 @@ admits as evidence where a test is the wrong instrument — and says so with the
 
 **Gate:** both halves, run locally, each exit code read. Recorded in rule 3 above.
 
+#### W32 — the closure proposal's decisions, 2026-08-24
+
+`plans/2026-08-23-w32-closure-proposal.md` raised twelve items across Parts B, C and D and
+left every one of them *pending*. They are decided here, by the maintainer on 2026-08-24, and
+the proposal's acceptance table is signed to match. **This is a decision record, not a slice
+record** — no code was written for it. Where a decision changed a spec, the spec carries its
+own dated amendment and this block only says which.
+
+**Part B — the three structural blockers. All three accepted as recommended.** B1: the
+Phase 1b table now carries a **W32** row. B2: §3's slice boundaries are accepted as executed
+for W32-1 … W32-6 and accepted as scoped for W32-7 … W32-10; the five new ids stand. B3: the
+five missing slice records are back-filled below.
+
+**Part C — the three §13 verdicts.** Two are settled here; the third is settled at close
+because it turns on a fact that does not exist yet.
+
+| Requirement | Verdict | Owner, and why this one |
+|---|---|---|
+| **FR-MODEL-126** — the escalated constraint disagreements | **Reassigned** | To **W32-11**, below. The proposal's cell did not discharge the verdict: OQ-MODEL-30 already names the owner as **W32**, so "reassigned" is only meaningful if a *different* owner is named — reassigning it to the workstream that is closing is the same as leaving it. OQ-MODEL-30's own pairing points at W6b-7, and that is **refused**: W6b-7 is a frontend slice and this is a `model-schema` narrowing, an authored-contract `minItems` 8 → 9, a regeneration and a carve-out removal, with no browser in it. Nothing of FR-MODEL-126 is built — the three sides still disagree exactly as OQ-MODEL-30 described |
+| `dataset-version` and `validation-report` having no generated side | **Not started**, owner **W32-11** | *Not started* is straightforwardly right — neither slug is generated, neither is in `COMPARED_SLUGS`, and no commit claims otherwise. What the proposal's cell omitted is that it was also **unowned**: the slice map handed these to "W32-1's successor", and that successor — W32-1b — declines them in writing, so the ownership chain terminated. A closure record saying *not started* without naming a new owner would reproduce the exact gap §13 rule 2 exists to close, which is why the verdict carries one |
+| **FR-PLAT-63**, the fourth obligation — the request-path *trigger* that records a switch | **Settled at close, not here** | The proposal offers *deferred with an owner*, and that is defensible **only** once W32-7 has shipped `record_switch` and the both-chains audit, so that the mechanism exists and only the trigger is missing. On the repository as it stands, `record_switch` appears nowhere outside a plan file, there is no `workspaces` table, and `deps.py`'s `_single_workspace` still refuses a multi-membership caller outright — so **all four** obligations are *not started*, not just the fourth. Writing *deferred* today would report a mechanism the repository does not have. **The rule is decided here and the verdict is instantiated against fact at close**: if W32-7 ships the mechanism *and* files the trigger question as **a new `OQ-PLAT` question, whatever its number**, the fourth obligation is *deferred with an owner*, owner **W6b-11**. *(The number is deliberately not named. `OQ-PLAT-9` is the highest in use, so the next free is 10, but ids are allocated sequentially at execution and W32-7's plan specifies the question as behaviour without numbering it — a rule pinned to `10` would fail a correct W32-7 on a numbering accident if any other slice files an `OQ-PLAT` first. The verdict is taken against the merged tree.)* — the switcher is the first caller that knows a switch occurred. If either half is missing, all four are *not started*, owner **W32-7** |
+
+**W32-11 — the contract guard's two remaining gaps.** An eleventh slice is allocated here
+rather than the two items being scattered, because they are the same work: both are backend
+`FR-PLAT-48` guard work, both were left by W32-1b in writing, and both were unowned. Its
+scope is *(i)* the nine-check and four-check narrowings on `ObjectiveCertificate` and
+`MetricCertificate`, `objective-certificate.result.checks` `minItems` 8 → 9, and removal of
+the `UNRESOLVED_CONSTRAINT_DISAGREEMENTS` carve-out — **in one commit**, which OQ-MODEL-30 is
+directive about; and *(ii)* generated sides for `dataset-version` and
+`validation-report`, which need no new model — both Pydantic models and both ORM rows exist —
+only two `GENERATED_SHAPES` entries, two `COMPARED_SLUGS` additions, and reconciliation of the
+drift the first comparison exposes. **The reconciliation is where the work is**: the
+`validation-rule` precedent of 2026-08-23 found three divergences on first comparison. **W32
+does not close until W32-11 lands.** Closing while the guard is blind at a pair the project
+has already decided is precisely the roadmap-reporting-progress-it-does-not-have failure §13
+names.
+
+**Two corrections to the paragraph above, both made the same day it was written.**
+*(First, the mechanism was stated backwards, and W32-11's own measurement of the guard
+corrects it — the original wording is superseded here rather than overwritten, per §5. It is **not** the `minItems` bump that turns the policing test red:
+bumping the authored floor alone leaves the pair disagreeing, generated `1` against authored `9`,
+and `test_the_escalated_constraint_disagreements_are_still_unresolved` keeps passing. It is the
+**narrowings** that do it — unbinding the shared `CertificateResult` makes the generated side emit
+no `minItems` at all, so the pair stops disagreeing and the test asserting that it still does goes
+red unless the carve-out leaves in the same commit. The directive holds; the reason is the other
+way round.)* **Second, the agreement the commit produces is by non-comparison, and saying so is
+the point**:
+the guard intersects paths and then keywords, so a constraint present on one side only is skipped in
+**both** directions by deliberate design — "a constraint on one side alone is a difference of
+intent". After the narrowing the floor is published on the **authored** contract only; the generated
+schema and `openapi/generated.json` carry none, and enforcement is server-side in the validators.
+That satisfies FR-MODEL-126 as written, and it is **not** the same thing as the two sides having
+been reconciled. W32-10 exists because a green suite was once reporting delivery on evidence that
+did not bear on the requirement, so this record does not repeat the shape.
+
+**W32-11 had no executor when it was allocated, and it has one now — recorded in both states
+because the gap is the point.** As allocated, its plan was not filed and the five-slice run
+that closes the rest of W32 — W32-10, -9, -8, -1b, -7 — was scoped before it existed and did
+not include it, so the standing consequence was that when those five merged W32 would sit
+un-closeable with every other slice done. That was recorded in the form that forces the
+question rather than in a footnote, and the question was then answered: the closure-execution
+session picked the slice up on 2026-08-24 as an inference from "execute the remaining work to
+close W32", **surfaced the inference explicitly rather than acting on it silently**, and the
+maintainer confirmed it the same day, in a second and separate message, quoted here exactly as
+sent rather than tidied — *"plz mind slice 11 should be the last slice before closure, any new
+findings cannot resolved should be booked in a later work or phase, not stop w32 closing; close
+if all the goals achieved."* *(Relayed to this session by the executing session, which received
+it firsthand; this session did not. The chain is stated so a reader can check it rather than
+take it on trust, and the wording is left uncorrected so the check is against the instruction
+and not against someone's rendering of it.)*
+
+**That instruction changes W32's close condition, and this record follows it rather than the
+stricter one written above.** Two effects. **W32-11 is terminal** — it is the last slice, and
+no twelfth is allocated to absorb what it turns up. **A finding W32-11 cannot resolve is booked
+forward with an owner, not held against the close**: closure requires every unevidenced
+requirement to carry a §13 disposition, never for every disposition to be *done*. And the
+clause that authorises the close is the last one — **"close if all the goals achieved"** — so
+what W32's closure record must demonstrate is the goals met, not the ledger empty. The rule this
+does **not** relax is the one §13 exists for — a booked-forward finding must be booked, with an
+owner, in `open-questions.md` or a roadmap row where the next planner will meet it. Booking
+forward into prose in a slice ledger is the silence §13 forbids wearing a different hat. Three
+findings from W32-11's own measurement are already travelling that route, and they are the test
+of whether the rule was applied or merely invoked.
+
+**Part D — five spec-versus-code disagreements.** Item 2 needs no decision: W32-9 merged as
+`faff060` and settled it in code. Of the remaining four, **every one was resolved against the
+spec** — the code was right in all four, which is itself the finding and is why none of them
+was fixed by widening behaviour. The amendments are dated 2026-08-24 on the rows and blocks
+they correct, not summarised here: `02` FR-MODEL-127 (items 3 and 4), `02` §5.3 and `00` §5.6
+(item 3), `02` §4.9 and §5.2 (item 1), and `.claude/skills/contract-guard` (item 5, landing
+with W32-1b). **Item 4 is the one worth flagging**, because a plausible wrong resolution was
+rejected: a Peril Structure list carries **no** usage count, and not because the count is
+merely unimplemented — FR-MODEL-127 defines the quantity as Model Specs referencing the
+artifact, and the reference runs the other way, a Peril Structure pinning models per §4.10, so
+the count is *undefinable* on a peril row. An implementation must not invent one to make the
+three shapes symmetric.
+
+#### W32-1 … W32-5 — five slice records, back-filled 2026-08-24
+
+**These five records were written after the fact**, from each slice's ledger under
+`docs/plans/` and its merge commit, not from the diffs and not from recollection. They are
+marked as late for the same reason the W5 table marks its own: the omission is the record.
+W32-1 through W32-5 were built and merged between 2026-08-22 and 2026-08-23 with ledgers
+filed and **no roadmap record**, so for two days the plan could not answer *what did W32
+deliver* without opening six plan files — and this is the first time all such omissions in a
+run happened inside one workstream. Decided as
+`plans/2026-08-23-w32-closure-proposal.md` Part B3, accepted by the maintainer 2026-08-24.
+**They are shorter than W32-6's record and deliberately so**: a back-filled record states what
+merged and what it left with a §13 verdict, and does not reconstruct reasoning nobody wrote
+down at the time.
+
+#### W32-1 slice — contracts and the drift guard, 2026-08-23
+
+Merged as `8ac102c` (#141), executed 2026-08-22, the day its plan was written.
+
+| Delivered | Evidence |
+|---|---|
+| `GroupingEvidence.source_level_stats` added to the Python model — the field its contract had declared since Phase 0, at a construction site that already computed the value (FR-MODEL-15, `00` FR-OVR-6) | `packages/pricing-core/tests/test_groupings.py`, 29 → **30 passed** |
+| Three new constraint-level comparisons in the drift guard — `required`-set drift, `additionalProperties` closure, scalar constraints — built on the four existing walkers (`07` FR-PLAT-48) | `backend/tests/test_contracts.py`, 55 → **99 passed**; 7 new test functions, 8 new `@pytest.mark.req` markers |
+
+**Requirements evidenced:** FR-PLAT-48, FR-MODEL-15, FR-OVR-6. **None allocated.**
+
+**Left with a §13 verdict.** *(i)* **OQ-MODEL-30** — the objective-certificate check floor,
+`minItems: 8` in the contract against `1` in the model, where neither published number is
+right: `02` §4.7's 2026-08-18 amendment makes it nine, and `CertificateResult` is shared with
+`MetricCertificate`, which FR-MODEL-105 gives four. **Escalated to the maintainer as a design
+decision**, and scoped out of the guard by (path, keyword) pair with a test that fails the
+moment either side moves — the exclusion is falsifiable rather than silent. *(ii)*
+**Arm-level attribution** — a GLM-only field declared on the GBM arm still passes, because
+`_type_map` unions every arm onto one dotted path. **Deferred**, with the limit written into
+the guard's own record rather than left for the next reader to rediscover.
+
+**The finding worth keeping.** Task 2's new test failed unconditionally and said nothing
+about the contract: it rebuilt dotted paths as `f"{block}.{name}"` from
+`path.rsplit('.', 1)[-1]`, which `prefixItems` — Pydantic's tuple encoding — breaks. **The
+contract half was correct throughout; only the test was broken**, and the plan's own
+measurement section had named `prefixItems` as the trap before writing it again. The rule now
+lives in `.claude/skills/contract-guard`: never rebuild a path from a segment, compare whole
+paths as sets.
+
+#### W32-2 slice — the built-in validation-rule catalogue, 2026-08-23
+
+Merged as `a23e16b` (#146).
+
+| Delivered | Evidence |
+|---|---|
+| `01` §4.4's 38 named rules as a catalogue constant in `model-schema`, following `BUILTIN_ROLES`' precedent, seeded into every workspace as approved built-ins beside `seed_builtin_roles` (FR-DATA-53, newly allocated) | `packages/model-schema/tests/test_validation_catalogue.py` — 8 new tests |
+| `GET /api/v1/validation-rules` — the workspace's rules, cursor-paginated, filterable by `builtin`, ordering pinned to `id ASC` (FR-DATA-53) | `backend/tests/test_api_validation_rules.py` — 6 new tests; the refusal code is `PERMISSION_DENIED` |
+| Built-in rule check bindings in `pricing-core` | `packages/pricing-core/tests` |
+
+**Requirements evidenced:** FR-DATA-53. **Allocated:** FR-DATA-53.
+
+**Left with a §13 verdict.** *(i)* FR-DATA-52, NFR-DATA-1 and NFR-DATA-2 — out of scope;
+their verdicts are already written elsewhere in this file. *(ii)*
+`examples/fremtpl2/seed.py` still fabricates a `dry_run_report_id` for its nine workspace
+rules, and removing it needs a real dry-run report the seed does not produce. **Deferred,
+unowned.** *(iii)* `frontend/src/api/profiles.ts` still hard-codes VR-DST-1's PSI bands.
+**Deferred, owner W6b-13.**
+
+**The finding worth keeping.** **The plan's acceptance instrument was wrong and the code was
+right.** It demanded `38/38` *and* exit 0 from the same `scope-audit.py` run, but the script
+exits 1 as soon as any in-scope requirement lacks evidence — before the catalogue result is
+consulted — so a slice leaving FR-DATA-52 and the two DATA NFRs untouched can never produce
+exit 0 however complete its catalogue. The two numbers answer different questions: catalogue
+completeness, and whether the whole module is closed, which is a §13 question no single slice
+can settle. Recorded rather than fixed; `scope-audit.py` was left alone.
+
+#### W32-3 slice — the dataset list's derived fields, and dataset ownership, 2026-08-23
+
+Merged as `225a8b9` (#148).
+
+| Delivered | Evidence |
+|---|---|
+| The dataset list's derived fields — `latest_version_status`, `last_validated_at`, `last_validated_version` — computed per request and stored nowhere, governed by a paired-field validator so the pair cannot be half-populated (FR-DATA-50) | `packages/model-schema/tests/test_dataset_derived_fields.py` — 6 new tests; `backend/tests/test_api_datasets.py` — 8 new tests; 9 FR-DATA-50 markers |
+| `Dataset.owner_id`, non-null, set from the creating principal and changed only through the new `PATCH /api/v1/datasets/{dataset_id}` by an Admin (`admin:manage_roles`) or the current owner, audited (FR-DATA-51) | `backend/tests/test_api_datasets.py` |
+
+**Requirements evidenced:** FR-DATA-50, FR-DATA-51. **None allocated.**
+
+**Left with a §13 verdict.** *(i)* `scripts/demo.py` was **not** run end to end — it
+unconditionally runs `docker compose up` and binds ports 8000/5173, forbidden while sibling
+slices were executing. The seed half was exercised through the real Job path (exit 0) and
+`backend/tests/test_demo_guide.py` passes, but the browser walk-through at `/demo` is
+unverified. **Delivered but untested**, worth a manual check in a quiet window. *(ii)*
+FR-DATA-52, NFR-DATA-1, NFR-DATA-2 — out of scope, verdicts elsewhere in this file.
+
+**Two findings worth keeping.** **First**, promoting `owner_id` to `NOT NULL` made 26 tests
+in `backend/tests/test_api_approvals.py` raise `NotNullViolationError`, and the tempting
+repair — a column default — **was refused deliberately**: it would have satisfied all 26
+while making the new constraint impossible to falsify, and a constraint that cannot fail is
+not enforcement (§13 rule 3). The helpers now pass an explicit owner. **Second, the landing
+hazard, which is a property of any fan-out and not of this slice**: this slice's migration and
+W32-2's both parented on `9e4c7b21fa08`, and `git rebase origin/main` succeeded with **no
+conflict** — git sees two new files in a directory — leaving two Alembic heads that only
+`alembic upgrade head` reports.
+
+#### W32-4 slice — the EBM predict arm, 2026-08-23
+
+Merged as `54624c7` (#147).
+
+| Delivered | Evidence |
+|---|---|
+| `POST /api/v1/models/{model_id}/predict` scores an EBM instead of refusing it, routing the EBM arm to the `predict_ebm` `pricing-core` has had since 2026-08-21 (FR-MODEL-37) | `backend/tests/test_prediction.py` — 2 FR-MODEL-37 markers |
+| A new `UnavailableReason` member giving the response a typed reason for having no interval — an EBM has no covariance matrix and no quantile pair — and a narrowed refusal: an EBM spec carrying a GLM fit result is refused by name (FR-MODEL-124, newly allocated) | `packages/model-schema/tests/test_ebm_prediction.py` — 5 new tests |
+
+**Requirements evidenced:** FR-MODEL-37, FR-MODEL-124, FR-MODEL-87. **Allocated:** FR-MODEL-124.
+
+**Left with a §13 verdict.** *(i)* The plan's closing step asked for its own checkboxes to be
+ticked; **they were left unticked deliberately** — `docs/plans/README.md` freezes a filed plan
+as a record of what was believed at its date, and that rule outranks an instruction inside the
+frozen file. The ledger is the execution record instead. *(ii)* Two of the four roadmap sites
+the plan named were left alone: they correctly attribute the frontend EBM views to W6b. **No
+in-scope requirement was left without evidence.**
+
+**Two findings worth keeping.** **First, this one slice resolved a spec-vs-code disagreement
+in each direction.** The blanket EBM refusal existed only in a docstring with the spec silent
+on it — there the **code** was wrong, and the obligation was written down as FR-MODEL-124
+rather than the behaviour quietly widened; the reciprocal case, `02` §5.2's incomplete
+`predict.py` block, was a **spec** defect fixed with a dated note. **Second, no timing from
+that session is quotable**: the same suite took 12:09 at load 5.8 and 2:36:57 at load 16–31
+earlier the same day — a contention factor of roughly 13 on a machine shared by five
+concurrent slices. This is why a duration measured during a fan-out is not a regression
+signal.
+
+#### W32-5 slice — the two partial-dependence defects, 2026-08-23
+
+Merged as `ae4cdc1` (#150).
+
+| Delivered | Evidence |
+|---|---|
+| `exposure_share` is summed exposure over total exposure at both categorical points (was a row count) and numeric grid points (was the constant `1.0 / len(labels)`); the omission record's share is dropped exposure over total exposure (FR-MODEL-52, FR-MODEL-118) | `packages/pricing-core/tests/test_gbm.py` — 4 new tests, 5 new markers |
+| FR-MODEL-118's cap ranks levels by exposure rather than row count (FR-MODEL-118) | as above |
+| A banded or grouped factor's curve gives one point per band or group rather than one per raw source value (FR-MODEL-125, newly allocated) | two new tests |
+
+**Requirements evidenced:** FR-MODEL-52, FR-MODEL-118, FR-MODEL-125, NFR-MODEL-14.
+**Allocated:** FR-MODEL-125.
+
+**Left with a §13 verdict.** *(i)*
+`packages/pricing-core/src/pricing_core/modelling/transparency.py` still computes
+`exposure_share` as a row count at `:268` and hardcodes `1.0` at `:398`, in the SHAP fidelity
+path. **Deliberately untouched** — `02` §5.2 describes *that* site as a percentage of rows, so
+changing it is a separate resolution needing its own requirement. **Deferred, unowned.**
+*(ii)* Cross factors still grid over their first source column, where a representative value
+for a cross level is a tuple across several columns. **Deferred, owner W6b**, with the
+frontend that first plots such a curve.
+
+**The finding worth keeping, because it is a property of the rules and not of this slice.**
+**The id-allocation rule and `audit-docs.py`'s gap check cannot both hold for two concurrent
+slices.** Defining FR-MODEL-125 while W32-4's 124 lived on an unlanded branch failed the gate
+with a numbering-gap error naming 124, and the failure was **measured** — a placeholder row
+for 124 gave exit 0, then was removed — rather than argued. The id was left at 125 because
+renumbering would collide and ids are permanent (§5); the instance cleared itself when W32-4
+merged. **The consequence a fan-out has to plan for is a merge-order dependency**, and it is
+the second one this workstream found after W32-3's two-heads hazard.
+
 #### W32-6 slice — the backtest and custom-objective endpoint tests, 2026-08-23
 
 One of six concurrent test-hardening slices. **Nine routes that had two OpenAPI-presence
@@ -3927,6 +4181,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 |---|---|---|---|
 | ~~**W5**~~ ✔ | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | **Closed 2026-08-22** — 110 built · 10 declared-and-refused-by-name · 16 unevidenced with a verdict, of 136; 41/41 endpoints. See the closure record above. Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them, and per plan review 3's question 5 (accepted 2026-08-22) that is now the only place a reader should take a count from. **Started 2026-08-15**: ~~twenty-two~~ **twenty-eight** slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, the GLM approximation as a Model (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer), and **custom metrics** (FR-MODEL-45/103/105/106/107/108 — a Custom Metric reaches `approved` on the same lifecycle and grammar as a Custom Objective, `GbmSpec.eval_metrics` is now honoured rather than merely declared, and MODEL's endpoint axis closed at **40 of 40**, the first module in this repository to publish every declared endpoint), **regularisation and cross-validation** (FR-MODEL-20/53), **Tweedie power by profile likelihood** (FR-MODEL-22), **offset from another model** (FR-MODEL-24), **EBM via interpret-core** (FR-MODEL-37) and **GBM declared weights with the dropped eval metric record** (FR-MODEL-19/111), and **the audit-remediation slice** (2026-08-22, this one); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* *(It went stale the same way again and is corrected 2026-08-22 by the audit-remediation slice: five slices — regularisation/CV (#124), Tweedie (#125), offset (#126), EBM (#129) and GBM weights (#130) — landed between 08-21 and 08-22 with the count left at twenty-two, while this file's own newest record already called itself "the twenty-seventh slice". Both stale values are kept. **The mechanism is the same both times and is worth naming rather than re-fixing:** a slice's PR strikes its row in the outstanding-work table and stops there, and this count is a second place nothing reconciles against that table — #116 did it, then #124 and #125 did it again. The same mechanism left the buildable-slice counter at one when every row beneath it was struck, and left six verdicts stale in the diagnostics slice's table. **A slice updates the row that describes itself; every other place that counts slices is unowned.** The count is of **numbered** slices, so the three decision-only records of 2026-08-18 (PRs #106, #107, #108) have records and no number and have never been in it.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys. **The closure slice (2026-08-22) is the last, and the count above is deliberately not incremented to twenty-nine**: plan review 3's question 5 was accepted the same day, and adding a fourth hand-written count to the file whose staleness prompted the proposal would be the clearest possible way to ignore it. The slice records below are the list; `scope-audit.py` is the count |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, the workspace selector's **shell control only**, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one. **Corrected 2026-08-23 (W6b slice-map backlog item 2): that clause read as a citation and was a forecast — §3.1 had never contained the requirement.** It does now, as FR-PLAT-62 (a Workspace becomes a named entity; there was no `workspaces` table, so a selector had nothing to render) and FR-PLAT-63 (the selection, verified against membership). **Both are W32's, not W6b's** — a table, a migration and an API — and the transport is OQ-PLAT-9. W6b keeps the shell control and stays blocked until the backend half lands. |
+| **W32** | Everything in Phase 1b that is not a browser — the contract guards, `model-schema` shapes, a migration, backend defects, endpoint tests and one skill | W5 | **Added 2026-08-24** (`plans/2026-08-23-w32-closure-proposal.md` Part B1, accepted by the maintainer that day). **Split from W6b 2026-08-22** and accepted the same day (`plans/2026-08-22-w6b-slice-map.md` §1, acceptance table row 1) — but the split created a workstream name without creating a row, so for two days work merged under a name this plan did not contain, and the coverage figure under Phase 1b described a scope that excluded it. **Eleven slices**, W32-1 … W32-11 — ten as scoped on 2026-08-22, plus **W32-11** allocated 2026-08-24 by the closure proposal's Part C decisions, which W32's close waits on. **W32-11 is the terminal slice**, picked up 2026-08-24 by the closure-execution session and confirmed by the maintainer the same day; findings it cannot resolve are booked forward with an owner rather than held against the close — see the decision record above; W6b-1, -3, -5 and -13 are blocked on it. Slice records are above — W32-1 … W32-5 back-filled 2026-08-24, which is the same omission in its second form |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).

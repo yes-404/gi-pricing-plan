@@ -394,6 +394,8 @@ def fit_glm(
 | Factor workbench (bandings, groupings) | `/factors/:datasetVersionId` | 02 |
 | Model list / detail / diagnostics | `/models`, `/models/:slug?version=` | 02 |
 | Custom objective library | `/objectives` | 02 |
+| Custom metric library | `/metrics` | 02 |
+| Peril structure library / detail | `/peril-structures`, `/peril-structures/:id` | 02 |
 | Rating DAG designer | `/rating/:slug/v/:version/design` | 03 |
 | Rate table editor | `/rating/:slug/v/:version/tables/:tableSlug` | 03 |
 | Quote sandbox & trace viewer | `/rating/:slug/v/:version/sandbox` | 03 |
