@@ -95,11 +95,27 @@ mirror. Before writing sample tests for a module, grep its test file for the ver
 test; a zero means that path has no coverage at all, which is larger than a formatting
 detail and belongs in the plan's scope section rather than in its samples.
 
-The gate does reach one of these, from the document side. `audit-docs.py` rejected a
-threshold copied byte-for-byte out of `pricing-core`, because FR-OVR-7 makes money integer
-minor units and the source writes that fallback as a float. Copying exactly was the right
-general rule and wrong on that row, and only the gate knew. Run it early enough that its
-answer can still change the plan.
+The gate does reach one of these from the document side, and *how* it did is the useful part,
+because the obvious fix was the wrong one. `audit-docs.py` rejected a threshold copied
+byte-for-byte out of `pricing-core`: `min_severity_minor` written as `0.0`, a `_minor` field
+carrying a fraction, which FR-OVR-7 forbids because money is integer minor units. Rewriting
+the plan's value as `0` satisfied the gate.
+
+It was the wrong half. Mean severity is a **ratio**, kept float deliberately — rounding a mean
+to whole minor units loses the precision the confidence interval beside it expresses — and
+`_minor` is reserved for integer minor units. The value was right; the **name** was the defect.
+FR-DATA-46 renamed the profile row's two mean fields for exactly that reason, and its own
+**2026-08-19 correction is the same mistake a second time**: the rename "carried the *names*
+and left the *types*", so the published contract went on asserting the rounding the requirement
+forbids, and nothing caught it because every conformance test compared field names only.
+
+Two rules, then. **Run the gate early enough that its answer can still change the plan** — that
+half held, and it is why any of this surfaced. And **when a check fires on something you copied
+out of the source, establish which half it is pointing at before you change either one.** An
+edit that stops the alarm is not evidence the alarm was about the thing you edited. That is
+rule 2 one level up, applied to a check rather than a prediction: a true signal, a plausible
+reading of it, and a fix that silences it without touching what it was reporting.
+
 
 ## Live plan state is *not* here
 
