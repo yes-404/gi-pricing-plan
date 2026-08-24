@@ -94,6 +94,17 @@ describe("the EBM shape-function panel", () => {
     expect(cellsOf(table, 2)).toEqual(["0.0080", "0.0060", "0.0050", "0.0070", "0.0000"]);
   });
 
+  it("reads a categorical term's own slots, not the numeric term's", () => {
+    // `labels` forks on `bins.kind`, and every assertion above is on the numeric arm. The
+    // categorical arm was reached only by the two badge tests, which read `weight === 0` and
+    // so pin alignment without pinning the slots themselves: dropping the trailing "missing"
+    // level from this branch passed the whole suite, including the two tests added above.
+    render(EbmShapePanel, { props: { spec: SPEC, fit: FIT } });
+    const table = screen.getByRole("table", { name: "region_grouped shape function" });
+    expect(cellsOf(table, 0)).toEqual(["north", "midlands", "south", "missing"]);
+    expect(cellsOf(table, 1)).toEqual(["0.0400", "-0.0100", "0.0200", "0.0000"]);
+  });
+
   it("does not render the unused base slot as a bin", () => {
     // Slot 0 is never reached by a lookup. Rendered as a row it is a bin with a 0.0 score that
     // a reader takes for a real level with no effect.
