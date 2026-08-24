@@ -320,3 +320,25 @@ def test_a_catalogue_id_naming_no_catalogue_entry_is_refused(
         },
     )
     assert response.status_code == 422, response.text
+
+
+@pytest.mark.req("FR-DATA-54")
+def test_seeded_builtins_carry_their_catalogue_default_thresholds(
+    api_client: TestClient, analyst: dict[str, str], workspace_id: UUID
+) -> None:
+    """FR-DATA-54: every threshold in force is readable by a caller.
+
+    Both directions matter. A rule whose check reads a threshold must publish it, and a rule
+    whose check reads none must publish nothing — an invented default would advertise
+    configuration the code does not have.
+    """
+    rows = [row for row in _rule_rows(workspace_id) if row.builtin]
+    by_catalogue_id = {row.catalogue_id: row for row in rows}
+
+    assert by_catalogue_id["VR-DST-1"].body["params"] == {"warn_above": 0.10}
+    assert by_catalogue_id["VR-ACT-14"].body["params"] == {
+        "immature_months": 3,
+        "max_immature_exposure_share": 0.05,
+    }
+    assert by_catalogue_id["VR-STR-1"].body["params"] == {}
+    assert sum(1 for row in rows if row.body["params"]) == 15

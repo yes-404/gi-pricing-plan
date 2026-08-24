@@ -138,7 +138,11 @@ async def seed_builtin_rules(
             severity=rule.severity.value,
             body={
                 "target": {},
-                "params": {},
+                # FR-DATA-54: the catalogue carries a built-in's default thresholds, so the
+                # seeded row publishes them rather than leaving every threshold a literal in
+                # `pricing-core` that no caller can read. Copied, not aliased — the catalogue
+                # is a process-wide constant and this dict is about to be handed to the ORM.
+                "params": dict(rule.params),
                 "scope": {},
                 "tolerance": {},
                 "message": rule.summary,
