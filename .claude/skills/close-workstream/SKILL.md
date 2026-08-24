@@ -179,6 +179,46 @@ reading an inert file, a fixture that drifted from the tree under test, a bold-c
 anchor, a conflated clause. A design note that lists only match and non-match implies the
 field of view is the world.
 
+### A gate whose passing state is empty output cannot be tested on the live tree
+
+This is the shell case, and it is not covered by "prove it fails on broken input" — there is
+nothing to break. A closure tripwire passes by printing **nothing**, and on a tree where the
+answer is already *no match* an empty result is indistinguishable from a gate that is
+misspelt, pointed at the wrong ref, or silently erroring. **Running it and seeing nothing
+proves nothing.** Validate it against a copy of the real artifact with controls injected:
+
+```bash
+git show origin/main:docs/roadmap.md > live.md      # pin the REF, not the working tree
+P='<the gate pattern, verbatim>'
+grep -cE "$P" live.md                                # live       — expect 0
+cp live.md pos.md; printf '\n<a real closure heading>\n' >> pos.md
+grep -cE "$P" pos.md                                 # positive   — expect 1
+cp live.md neg.md; printf '\n<the near-miss it must ignore>\n' >> neg.md
+grep -cE "$P" neg.md                                 # negative   — expect 0
+grep -cE '<the tempting simplification>' neg.md      # must be > 0 = the bug it avoids
+```
+
+Four rules, each learned by getting it wrong here:
+
+- **Pin the ref.** Both halves must read `git show <ref>:path`, never the working tree.
+  Parallel sessions run in worktrees routinely a commit apart, and a gate that reads whatever
+  tree it lands in makes a claim about the wrong thing. That confusion misread a W32
+  attribution line once already.
+- **The positive control must run the gate's own pattern, verbatim.** A control that
+  substitutes an equivalent-looking regex body tests a pattern nobody ships. That is exactly
+  how a correct false-positive charge came to be wrongly retracted here: the check substituted
+  a *constrained* separator into a proposal that used a *permissive* one, and the constrained
+  form passed — so the retraction absolved a real bug.
+- **The positive control must be a hard case, not an easy one.** Three of the five real
+  closure records in this repository carry a suffix after the workstream name; a control using
+  the bare form goes green because of everything it never exercises.
+- **Add the fourth line.** Scoring the *tempting simplification* against the same negative
+  input turns the safety token's necessity into a number rather than an argument, which is what
+  a future maintainer weighing "this looks over-engineered" actually needs.
+
+Keep the script. When the gate is discharged, keep its design note too — delete the gate, not
+the reasoning, or the next person writing one starts from nothing.
+
 ### Do not re-derive a metric a script already computes — run the script
 
 Auditing `req-coverage.py` by reimplementing its walk returned **261** against the script's
@@ -311,6 +351,12 @@ mapping.
 ```
 
 ## Verified
+
+2026-08-24 (second entry, at W32's close) — the empty-output gate section. Written from the
+control script actually run before the closure record was accepted: live **0**, positive
+control **1**, negative control **0**, and the tempting simplification **2** on the same
+negative input. Filed as gap (a) of plan review 4's Q3, which found the shell case stated
+nowhere — the nearest cousin was `contract-guard:91-95` on two empty maps intersecting green.
 
 2026-08-24 — the four §3 subsections on instruments were added from the W32 closure gate's
 own defects and each is verified from an artifact, not from an account of one: the four
