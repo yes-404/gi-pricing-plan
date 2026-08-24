@@ -14,6 +14,7 @@ from app.auth.service import authenticate_bearer
 from app.db.models import UserRow, WorkspaceMemberRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import workspaces
 from model_schema import ActorKind, new_uuid7
 
 ISSUER = "https://idp.test.example/realms/gip"
@@ -89,10 +90,10 @@ async def test_a_user_with_no_membership_reaches_no_workspace(database: Database
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
     assert identity.workspaces == frozenset()
 
-    from app.api.deps import _single_workspace
+    from app.api.deps import _select_workspace
 
     with pytest.raises(PlatformError) as exc:
-        _single_workspace(identity)
+        _select_workspace(identity, None)
     assert exc.value.status_code == 403
     assert "never the default" in (exc.value.detail or "")
 
@@ -104,6 +105,8 @@ async def test_membership_grants_exactly_one_workspace(
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
+        # A membership names a workspace that exists (FR-PLAT-62's foreign key).
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(
             WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=workspace_id)
         )
@@ -111,9 +114,9 @@ async def test_membership_grants_exactly_one_workspace(
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
 
-    from app.api.deps import _single_workspace
+    from app.api.deps import _select_workspace
 
-    caller = _single_workspace(identity)
+    caller = _select_workspace(identity, None)
     assert caller.workspace_id == workspace_id
 
 
@@ -126,18 +129,22 @@ async def test_membership_of_several_workspaces_requires_a_choice(
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
         for _ in range(2):
-            session.add(
-                WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=new_uuid7())
-            )
+            other = new_uuid7()
+            await workspaces.ensure_workspace(session, workspace_id=other)
+            session.add(WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=other))
 
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
 
-    from app.api.deps import _single_workspace
+    from app.api.deps import _select_workspace
 
     with pytest.raises(PlatformError) as exc:
-        _single_workspace(identity)
+        _select_workspace(identity, None)
     assert exc.value.status_code == 403
+    # The code, not only the status. This refusal used to be `UNAUTHENTICATED` because the
+    # API could not read a selection; FR-PLAT-65 gave it one of its own, and an assertion
+    # on the status alone would go on passing if it regressed.
+    assert exc.value.code == "WORKSPACE_SELECTION_REQUIRED"
 
 
 @pytest.mark.req("FR-PLAT-1")

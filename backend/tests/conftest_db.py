@@ -101,15 +101,18 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
         from sqlalchemy import select
 
         from app.db.models import RoleAssignmentRow, RoleRow
-        from app.platform import rbac, validation_rules
+        from app.platform import rbac, validation_rules, workspaces
         from model_schema import ScopeType
 
         async with database.unit_of_work() as session:
+            # The workspace row arrives first: `workspace_members` and `workspace_settings`
+            # now carry a foreign key to it (FR-PLAT-62), so seeding either without it is an
+            # integrity error rather than a missing name.
+            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
             await rbac.seed_builtin_roles(session, workspace_id)
             # The catalogue arrives with the workspace, exactly as the roles do
-            # (FR-DATA-53). `grant` is the only workspace-creation path this suite has —
-            # a workspace is a bare `UUID` column, not a row — so seeding hangs off it for
-            # the same reason `seed_builtin_roles` does.
+            # (FR-DATA-53). `grant` is the only workspace-creation path this suite has, so
+            # seeding hangs off it for the same reason `seed_builtin_roles` does.
             await validation_rules.seed_builtin_rules(
                 session, workspace_id, authored_by=principal.id
             )
