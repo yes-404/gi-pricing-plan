@@ -21,6 +21,7 @@ import pydantic
 import pytest
 
 from model_schema import (
+    OBJECTIVE_CERTIFICATE_CHECKS,
     TEMPLATE_APPLICABILITY,
     TEMPLATE_PARAMETERS,
     VALID_OBJECTIVE_TRANSITIONS,
@@ -46,6 +47,29 @@ SAMPLING = SamplingSpec(
     n_points=1000, seed=20260818, y_range=(0.0, 1e7), f_range=(-20.0, 20.0),
     w_range=(1e-3, 1e4),
 )
+
+
+def _battery(names: tuple[str, ...] = OBJECTIVE_CERTIFICATE_CHECKS) -> tuple[CertificateCheck, ...]:
+    """A passing check per name — §4.7's nine unless a test asks for something else."""
+    return tuple(
+        CertificateCheck(name=name, status=CheckStatus.PASS, detail=f"{name} ran")
+        for name in names
+    )
+
+
+def _certificate(checks: tuple[CertificateCheck, ...]) -> ObjectiveCertificate:
+    return ObjectiveCertificate(
+        id=new_uuid7(),
+        custom_objective_id=new_uuid7(),
+        objective_version=3,
+        certified_at=_datetime.datetime(2026, 8, 18, tzinfo=_datetime.UTC),
+        result=CertificateResult(
+            checks=checks,
+            sampling=SAMPLING,
+            overall=CertificateResult.outcome_of(checks),
+            library_versions={"numpy": "2.3.0"},
+        ),
+    )
 
 
 def _objective(
@@ -276,19 +300,54 @@ def test_a_certificate_over_an_empty_grid_is_refused() -> None:
 
 @pytest.mark.req("FR-MODEL-42")
 def test_the_persisted_certificate_pins_the_objective_version_it_certified() -> None:
-    certificate = ObjectiveCertificate(
-        id=new_uuid7(),
-        custom_objective_id=new_uuid7(),
-        objective_version=3,
-        certified_at=_datetime.datetime(2026, 8, 18, tzinfo=_datetime.UTC),
-        result=CertificateResult(
-            checks=(
-                CertificateCheck(name="finiteness", status=CheckStatus.PASS, detail="no NaN"),
-            ),
-            sampling=SAMPLING,
-            overall=CertificateOutcome.CERTIFIED,
-            library_versions={"numpy": "2.3.0"},
-        ),
-    )
+    certificate = _certificate(_battery())
     assert certificate.objective_version == 3
     assert certificate.result.overall is CertificateOutcome.CERTIFIED
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_the_full_nine_check_battery_is_accepted() -> None:
+    """The positive control for the two refusals below — nine names, each once."""
+    certificate = _certificate(_battery())
+    assert len(certificate.result.checks) == 9
+    assert {check.name for check in certificate.result.checks} == set(
+        OBJECTIVE_CERTIFICATE_CHECKS
+    )
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_an_objective_certificate_short_of_its_battery_is_refused() -> None:
+    """FR-MODEL-126: a short battery is a failure of the run, not a smaller certificate.
+
+    Before 2026-08-24 this passed. `CertificateResult` carried `min_length=1` and nothing
+    above it counted, so a certificate of one check was a well-formed artifact an approver
+    would read as §4.7's nine.
+    """
+    with pytest.raises(pydantic.ValidationError, match="missing"):
+        _certificate(_battery(("finiteness",)))
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_nine_checks_with_one_name_wrong_is_refused() -> None:
+    """The count is right and the evidence is not — which is why the *names* are asserted.
+
+    `branch_discontinuity` is dropped and `finiteness` run twice: nine rows, and FR-MODEL-69's
+    discontinuity scan never ran.
+    """
+    names = tuple(
+        "finiteness" if name == "branch_discontinuity" else name
+        for name in OBJECTIVE_CERTIFICATE_CHECKS
+    )
+    assert len(names) == 9
+    with pytest.raises(pydantic.ValidationError) as raised:
+        _certificate(_battery(names))
+    assert "branch_discontinuity" in str(raised.value)
+    assert "duplicated ['finiteness']" in str(raised.value)
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_a_check_name_outside_the_battery_is_refused() -> None:
+    """A misspelling is not a tenth check; nine names is a closed set."""
+    names = (*OBJECTIVE_CERTIFICATE_CHECKS[:8], "smoke_fitt")
+    with pytest.raises(pydantic.ValidationError, match=r"unexpected \['smoke_fitt'\]"):
+        _certificate(_battery(names))

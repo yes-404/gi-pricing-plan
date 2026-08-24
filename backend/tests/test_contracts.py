@@ -1084,31 +1084,14 @@ def _constraint_map(
 #: exempted silently, and `test_the_escalated_constraint_disagreements_are_still_unresolved`
 #: is what notices when a decision lands and this entry should go.
 #:
-#: TODO — UNRESOLVED, raised 2026-08-22 (W32-1) as **OQ-MODEL-30**, owner: maintainer.
-#: Options and a recommendation are in `docs/open-questions.md`; `02` §10 mirrors it. The
-#: carve-out dies with the question — `test_the_escalated_constraint_disagreements_are_still_
-#: unresolved` goes red the moment either side moves.
-#: `objective-certificate` / `result.checks` / `minItems`: model 1, contract 8. **Neither
-#: number is the specification's.** `02` §4.7's dated 2026-08-18 amendment says *"All nine
-#: checks are emitted for every template, always"* and names them; the authored contract's
-#: own `$comment` from that same amendment calls `branch_discontinuity` a *ninth* named
-#: check and adds it to the `name` enum while leaving `minItems` at 8 — so the 8 is the
-#: pre-amendment count of named checks and nothing has justified it since.
-#:
-#: The model's 1 is loose but **not simply raisable**: `CertificateResult` is shared, by
-#: `ObjectiveCertificate` and by `MetricCertificate` (`metrics.py`), and FR-MODEL-105 gives
-#: a metric certificate **four** checks — `finiteness`, `direction_holds`,
-#: `scale_behaviour`, `smoke_evaluation` — sharing §4.7's vocabulary unchanged. A `min_length`
-#: of 9 on the shared type would refuse every metric certificate the spec requires.
-#:
-#: So resolving it is a design decision, not a bound: an obligation carried per artifact
-#: (an `ObjectiveCertificate` validator asserting §4.7's nine named checks, with the
-#: contract's `minItems` moved 8 → 9 beside it) rather than on `CertificateResult`. That is
-#: `CLAUDE.md` §0 territory with a new requirement attached, which is the maintainer's call
-#: and not this guard's.
-UNRESOLVED_CONSTRAINT_DISAGREEMENTS: Final[dict[str, frozenset[tuple[str, str]]]] = {
-    "objective-certificate": frozenset({("result.checks", "minItems")}),
-}
+#: **Empty since 2026-08-24 (W32-11).** Its one entry —
+#: `objective-certificate` / `result.checks` / `minItems`, model 1 against contract 8 — was
+#: OQ-MODEL-30, decided as FR-MODEL-126: the shared `CertificateResult` stays unbounded and
+#: each certificate type enforces its own battery, so the pair no longer disagrees and the
+#: carve-out died with the question, in the same commit. The dict is kept rather than
+#: deleted: it is the mechanism for the next escalation, and its companion test collects
+#: zero cases while it is empty.
+UNRESOLVED_CONSTRAINT_DISAGREEMENTS: Final[dict[str, frozenset[tuple[str, str]]]] = {}
 
 
 @pytest.mark.req("FR-PLAT-48")
@@ -1124,8 +1107,11 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     intent, and `test_an_artifact_shape_carries_exactly_what_its_contract_declares` is
     where intent is arbitrated.
 
-    One pair is scoped out — see `UNRESOLVED_CONSTRAINT_DISAGREEMENTS`, which says which and
-    why it is a question rather than a fix.
+    A pair may be scoped out through `UNRESOLVED_CONSTRAINT_DISAGREEMENTS` when the
+    disagreement is a question for the maintainer rather than a fix. **That dict is empty**
+    — its one entry was OQ-MODEL-30, settled 2026-08-24 — so nothing is skipped here today,
+    and `test_the_escalated_constraint_disagreements_are_still_unresolved` is what notices
+    if a future entry outlives its question.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")

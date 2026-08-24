@@ -29,11 +29,13 @@ from model_schema.objectives import (
     CertificateResult,
     ObjectiveKind,
     ObjectiveTemplate,
+    battery_is_exactly,
 )
 from model_schema.refs import Slug
 
 __all__ = [
     "FITTABLE_METRIC_STATUSES",
+    "METRIC_CERTIFICATE_CHECKS",
     "TERMINAL_METRIC_STATUSES",
     "VALID_METRIC_TRANSITIONS",
     "CustomMetric",
@@ -200,6 +202,19 @@ class CustomMetric(BaseModel):
         return self
 
 
+#: FR-MODEL-105's four metric checks, sharing §4.7's vocabulary unchanged and in the order
+#: `pricing_core.modelling.metrics.certify_metric` emits them. Four, not §4.7's nine: a
+#: metric is never differentiated, so the two derivative checks, convexity, the branch scan
+#: and the shape pair have nothing to run against — which is why FR-MODEL-126 puts the count
+#: on the artifact rather than on the shared `CertificateResult`.
+METRIC_CERTIFICATE_CHECKS: Final[tuple[str, ...]] = (
+    "finiteness",
+    "direction_holds",
+    "scale_behaviour",
+    "smoke_evaluation",
+)
+
+
 class MetricCertificate(BaseModel):
     """The identity around `CertificateResult` — the ADR-0001 split §4.7 already uses."""
 
@@ -211,3 +226,16 @@ class MetricCertificate(BaseModel):
     certified_at: _datetime.datetime
     job_id: UUID | None = None
     result: CertificateResult
+
+    @model_validator(mode="after")
+    def _the_battery_is_all_four_named_checks(self) -> Self:
+        """FR-MODEL-105's four, enforced here for FR-MODEL-126's reason.
+
+        The names are asserted rather than the count: `direction_holds` is the check that
+        catches a `direction` declared backwards, and a certificate missing it while
+        carrying `finiteness` twice is four checks long and proves nothing about direction.
+        """
+        battery_is_exactly(
+            self.result.checks, METRIC_CERTIFICATE_CHECKS, artifact="metric certificate"
+        )
+        return self

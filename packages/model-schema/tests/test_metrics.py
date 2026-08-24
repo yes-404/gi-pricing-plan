@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from model_schema.metrics import (
     FITTABLE_METRIC_STATUSES,
+    METRIC_CERTIFICATE_CHECKS,
     VALID_METRIC_TRANSITIONS,
     CustomMetric,
     MetricCertificate,
@@ -163,22 +164,79 @@ def test_the_lifecycle_has_no_edge_out_of_deprecated() -> None:
     assert MetricStatus.DRAFT not in VALID_METRIC_TRANSITIONS[MetricStatus.REVIEW]
 
 
-@pytest.mark.req("FR-MODEL-105")
-def test_a_metric_certificate_round_trips_a_certificate_result() -> None:
-    """`certified_at` is a real timestamp — Task 5 persists this object as a database row."""
-    certificate = MetricCertificate(
+def _battery(names: tuple[str, ...] = METRIC_CERTIFICATE_CHECKS) -> tuple[CertificateCheck, ...]:
+    """A passing check per name — FR-MODEL-105's four unless a test asks otherwise."""
+    return tuple(
+        CertificateCheck(name=name, status=CheckStatus.PASS, detail=f"{name} ran")
+        for name in names
+    )
+
+
+def _certificate(checks: tuple[CertificateCheck, ...]) -> MetricCertificate:
+    return MetricCertificate(
         id=uuid.uuid4(),
         custom_metric_id=uuid.uuid4(),
         metric_version=2,
         certified_at=_datetime.datetime(2026, 8, 19, tzinfo=_datetime.UTC),
         result=CertificateResult(
-            checks=(
-                CertificateCheck(name="finiteness", status=CheckStatus.PASS, detail="no NaN"),
-            ),
+            checks=checks,
             sampling=SAMPLING,
-            overall=CertificateOutcome.CERTIFIED,
+            overall=CertificateResult.outcome_of(checks),
         ),
     )
+
+
+@pytest.mark.req("FR-MODEL-105")
+def test_a_metric_certificate_round_trips_a_certificate_result() -> None:
+    """`certified_at` is a real timestamp — Task 5 persists this object as a database row."""
+    certificate = _certificate(_battery())
     assert certificate.metric_version == 2
     assert certificate.certified_at == _datetime.datetime(2026, 8, 19, tzinfo=_datetime.UTC)
     assert certificate.result.overall is CertificateOutcome.CERTIFIED
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_the_full_four_check_battery_is_accepted() -> None:
+    """The positive control for the two refusals below — four names, each once."""
+    certificate = _certificate(_battery())
+    assert {check.name for check in certificate.result.checks} == set(METRIC_CERTIFICATE_CHECKS)
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_a_metric_certificate_short_of_its_battery_is_refused() -> None:
+    """FR-MODEL-105's four are the artifact's obligation (FR-MODEL-126).
+
+    Before 2026-08-24 the certificate above — one `finiteness` check — was accepted, which
+    is how a metric could reach `certified` on evidence that never ran `direction_holds`.
+    """
+    with pytest.raises(ValidationError, match="missing"):
+        _certificate(_battery(("finiteness",)))
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_four_checks_with_direction_holds_replaced_is_refused() -> None:
+    """Right length, wrong evidence: `direction_holds` gone and `finiteness` run twice.
+
+    That is the check catching a `direction` declared backwards, and a count-only floor
+    admits a certificate without it.
+    """
+    names = tuple(
+        "finiteness" if name == "direction_holds" else name for name in METRIC_CERTIFICATE_CHECKS
+    )
+    assert len(names) == 4
+    with pytest.raises(ValidationError) as raised:
+        _certificate(_battery(names))
+    assert "direction_holds" in str(raised.value)
+    assert "duplicated ['finiteness']" in str(raised.value)
+
+
+@pytest.mark.req("FR-MODEL-126")
+def test_an_objective_check_name_does_not_belong_in_a_metric_battery() -> None:
+    """The two batteries share §4.7's vocabulary and are not interchangeable.
+
+    `smoke_fit` is the objective's; a metric runs `smoke_evaluation`, which evaluates rather
+    than fits. Four checks, one of them from the wrong artifact.
+    """
+    names = (*METRIC_CERTIFICATE_CHECKS[:3], "smoke_fit")
+    with pytest.raises(ValidationError, match=r"unexpected \['smoke_fit'\]"):
+        _certificate(_battery(names))

@@ -928,7 +928,6 @@
             "items": {
               "$ref": "#/components/schemas/CertificateCheck"
             },
-            "minItems": 1,
             "title": "Checks",
             "type": "array"
           },
