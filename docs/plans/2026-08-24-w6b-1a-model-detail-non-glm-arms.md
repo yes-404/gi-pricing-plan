@@ -50,6 +50,52 @@ Two consequences bind the rest of this document:
 
 ---
 
+## 0.1 Provenance — who concluded what, and when
+
+This plan had two authors and the order matters, so it is recorded rather than smoothed over.
+
+**Sections 1–7 below were drafted by a general-purpose subagent** under the W6b work lead's
+dispatch, committed as `2768e44` on 2026-08-24. **The slice planner reviewed them** and is the
+plan's owner. Authorship was settled by artifact, not by assertion: branch `w6b-1a-plan` was
+created at `15:51:18`, the planner's process started at `15:52:30`, and
+`.git/worktrees/w6b-1a-plan/locked` was written at `16:16:00` — a lock records **who holds a
+worktree**, never who wrote what is in it. Two sessions read that lock as authorship, in
+opposite directions, before the reflog settled it.
+
+**Why this section exists.** The lead commissioned an independent second read of the same
+slice. That independence is only worth something if it can be shown to predate the draft, so
+the reviewer's conclusions are split into the two halves below. A finding that merely agrees
+with a draft one has already read is not corroboration.
+
+**Derived before reading the draft**, from `docs/contracts/openapi/generated.json` alone:
+
+| # | Finding | How the draft stands against it |
+|---|---|---|
+| F1 | `Model.fit_result`'s discriminator maps **four** `model_type` values onto **three** schemas — `lightgbm` and `xgboost` both resolve to `GbmFitResult`. An arm switch keyed on the tag has four cases | Independently reached. Task 1 narrows on both values, and Task 1 Step 5 mutates it to `xgboost` alone as the broken-input proof |
+| F2 | `Uncertainty` is reachable only from `PredictedRow`, `Prediction`, `UncertaintyBasis` and `UncertaintyKind`. No `/models` read returns it, so model detail can say a model *is* a bound and cannot render the interval pair | Independently reached, as §6 E2 |
+| F3 | `QuantileCrossing` hangs off `GbmDiagnostics`, read by `GET /{slug}/diagnostics` — the diagnostics slice, which is blocked. Anything here sourced from it inherits that block | Confirmed clean. No task imports a diagnostics type, names `QuantileCrossing`, or calls that read |
+| F4 | `EbmFitResult.bins` is an array, positional against `feature_order`; `EbmTerm.term_features` is an array of integers. Both differ from what `02` §4.8 prints | Independently reached, as §6 E3 — which this plan now resolves rather than leaves open |
+
+**Concluded after reading the draft**, and owned by the reviewer:
+
+- **§6 E3 is resolved, and Task 7 carries the resolution.** The draft correctly identified the
+  disagreement and correctly declined to resolve it mid-task; leaving it open was not an option
+  ([`../../CLAUDE.md`](../../CLAUDE.md) §0).
+- **Every requirement this plan cites was re-checked against its own row** — all sixteen. The
+  result and its method are in §7, including what the check does *not* cover.
+- **One escalation was raised against Task 1 and withdrawn.** `boundCentral`'s `Produces:` line
+  promises a `slug` that `IntervalFor` does not carry, which reads as a shape invented to fill
+  a gap. It is not: the implementation three steps later reads `model.model_family_slug`, and
+  its docstring gives the reason. The interface block was read without the code beneath it —
+  the same error, in miniature, that this section exists to record.
+- **E6 and Task 8 came from the W6b work lead, not from this review or the draft.** The lead
+  named `intervalWidth`'s docstring-versus-body disagreement in a status request. The four
+  grounds for resolving it toward the body were derived here and are checkable in Task 8; the
+  *finding* is the lead's and is attributed rather than absorbed. This section's whole purpose
+  is that a plan should say which of its conclusions it reached and which it received.
+
+---
+
 ## Global Constraints
 
 Copied from [`../../CLAUDE.md`](../../CLAUDE.md) §2–§3 and
@@ -133,9 +179,12 @@ is booked to another slice** (§0).
   claiming them here is the widening this plan is written to avoid. Recorded in §6 as unowned.
 - **Listing a central model's bounds on the central model's own page.** There is no read that
   answers it — see §6, E2.
-- **Any change to `docs/specs/`.** One spec-versus-code disagreement was found while writing
-  this plan; §6, E3 reports it and this plan does not resolve it in either direction
-  ([`../../CLAUDE.md`](../../CLAUDE.md) §0).
+- **Any change to `docs/specs/` other than the one Task 7 makes.** The draft excluded spec
+  changes outright, on the ground that E3's spec-versus-code disagreement was unresolved. It
+  is resolved at review — the specification is the wrong side — and
+  [`../../CLAUDE.md`](../../CLAUDE.md) §0 requires that a disagreement be *resolved*, not
+  carried. Task 7 corrects `02` §4.8's EBM example and nothing else in `docs/specs/`; no
+  requirement row, no ID, no section number is touched.
 - **Any change to `packages/model-schema`.** Every shape this slice needs already exists in
   the generated contract; the plan verified each one before assuming it.
 
@@ -1124,14 +1173,273 @@ git commit -m "feat(w6b-1a): the transparency artifact and the surrogate relatio
 
 ---
 
+### Task 7: Correct `02` §4.8's EBM example, which is not a valid instance of its own type
+
+This is the only task that touches `docs/`. It exists because §6 E3 is a
+[`../../CLAUDE.md`](../../CLAUDE.md) §0 disagreement, §0 forbids resolving one silently in
+either direction, and §0's table gives a code slice *"any spec change it proves necessary"*.
+**Do this task first if you are working the plan in order** — Task 5's implementer is the
+reader the broken example misleads.
+
+**Read [`../../.claude/skills/spec-change/SKILL.md`](../../.claude/skills/spec-change/SKILL.md)
+before editing.** No requirement ID changes, no section is renumbered, and no requirement text
+is touched: this is a §4 example block that disagrees with the type it illustrates.
+
+**Files:**
+- Modify: `docs/specs/02-modelling.md` (the EBM `fit_result` example in §4.8)
+
+**Interfaces:**
+- Consumes: nothing. Produces: nothing any task imports. It is a documentation correction, and
+  it is a task rather than a footnote because it must be reviewable on its own.
+
+- [ ] **Step 1: Re-derive the defect rather than trusting this plan**
+
+```bash
+python3 -c "import json;s=json.load(open('docs/contracts/openapi/generated.json'))['components']['schemas'];print('bins:',s['EbmFitResult']['properties']['bins']['type']);print('term_features items:',s['EbmTerm']['properties']['term_features']['items'])"
+sed -n '/^`fit_result` for an EBM carries/,/^```$/p' docs/specs/02-modelling.md
+```
+
+Expected: `bins: array` and `term_features items: {'type': 'integer'}`, against a printed
+example whose `bins` is a JSON object and whose `term_features` holds strings. If the first
+command disagrees with this plan, **stop** — the contract moved and E3 needs re-deriving.
+
+- [ ] **Step 2: Replace the example block**
+
+Replace the fenced JSON block that follows *"`fit_result` for an EBM carries the shape
+functions themselves:"* with exactly this:
+
+```json
+{
+  "model_type": "ebm",
+  "objective": "rmse",
+  "link": "identity",
+  "intercept": -2.4181,
+  "feature_order": ["driver_age_banded", "vehicle_group_rated", "annual_mileage"],
+  "bins": [
+    {"kind": "categorical", "levels": ["0-1", "2-4", "5-9", "10-49", "50-99"]},
+    {"kind": "categorical", "levels": ["1-9", "10-19", "20-29", "30-39", "40-50"]},
+    {"kind": "numeric", "cuts": [0, 5000, 10000, 20000]}
+  ],
+  "terms": [
+    {"term_name": "driver_age_banded", "term_features": [0],
+     "scores": [0.0, 0.112, 0.054, -0.021, 0.083, 0.041, 0.0],
+     "standard_deviations": [0.0, 0.008, 0.006, 0.005, 0.007, 0.005, 0.0],
+     "bin_weights": [0.0, 38214.4, 52110.8, 60452.1, 33489.0, 42117.6, 0.0]}
+  ],
+  "best_iteration": 412,
+  "rows": 480000,
+  "fit_seconds": 92.4,
+  "library_versions": {"interpret-core": "0.7.8", "polars": "1.x"}
+}
+```
+
+Four changes, each with its reason:
+
+| Change | Why |
+|---|---|
+| `bins` object → array | The type declares an array positional against `feature_order`; `_bins_align_with_the_feature_order` refuses a length mismatch |
+| A third bins entry, for `vehicle_group_rated` | `feature_order` names three features and the old object defined two. Positional, that is a refused fit — the old shape hid the gap because a map does not have to be total |
+| `term_features: ["driver_age_banded"]` → `[0]` | The type declares integer indices into `feature_order` |
+| `kind` printed on each bin | `bins` is a `oneOf` discriminated on `kind`. It defaults, so omitting it was *valid*; printing it is what makes an array of a discriminated union readable positionally. This is the one change that fixes no defect |
+
+`scores`, `standard_deviations` and `bin_weights` keep their seven entries and are **not**
+touched: `_the_lookup_shapes_match_the_bins` derives the expected length as `len(levels) + 2`
+for a categorical, and the first feature has five levels. 5 + 2 = 7, so the arrays were already
+correct and only the container around them was wrong.
+
+- [ ] **Step 3: Add the dated correction note**
+
+The convention in this section is that a corrected or added example says so with its date —
+the GBM example beside it carries *"added 2026-08-22 (W5, the audit-remediation slice)"*.
+Immediately after the replaced block, add:
+
+> *Corrected 2026-08-24 (W6b-1a). As printed since 2026-08-21 this example was not a valid
+> `EbmFitResult`: `bins` was an object keyed by feature name where the type declares an array
+> positional against `feature_order`, and `term_features` held feature names where the type
+> declares indices into it. `EbmFitResult` forbids extra fields, so a fixture copied from this
+> page was rejected outright — the defect surfaced when a frontend slice went to build one. The
+> type was the correct side and the example was behind it (`CLAUDE.md` §0): the positional join
+> is enforced by a named validator that states its own reason, and `model-schema` is the
+> generated contract's source while this block was checked by nothing.*
+
+- [ ] **Step 4: Prove the corrected example actually validates**
+
+Asserting a fix is not §13 evidence. Validate the block you just wrote against the built type:
+
+```bash
+uv run python -c "
+import json, re, pathlib
+from model_schema.modelling import EbmFitResult
+spec = pathlib.Path('docs/specs/02-modelling.md').read_text()
+block = re.search(r'\`\`\`json\n(\{\n  \"model_type\": \"ebm\".*?\n\})\n\`\`\`', spec, re.S).group(1)
+EbmFitResult.model_validate(json.loads(block))
+print('the printed EBM example is a valid EbmFitResult')
+"
+```
+
+Expected: the success line. A `ValidationError` here means the replacement was mistyped —
+read what it names before changing anything else.
+
+- [ ] **Step 5: Prove the check can fail**
+
+[`../../CLAUDE.md`](../../CLAUDE.md) §13: a check that has never printed a failure has not been
+tested. Re-run Step 4 with `"term_features": [0]` changed back to `["driver_age_banded"]`.
+Expected: a `ValidationError` naming `term_features`. Revert it. **Vary the input along the
+requirement's own predicate** — mistyping an unrelated field would prove only that pydantic
+validates something.
+
+- [ ] **Step 6: Run the docs gate and commit**
+
+```bash
+python3 scripts/audit-docs.py && uv run python scripts/req-coverage.py
+git add docs/specs/02-modelling.md
+git commit -m "docs(02): the EBM fit_result example was not a valid instance of its type"
+```
+
+`audit-docs.py` is not optional on a `docs/` change ([`../../CLAUDE.md`](../../CLAUDE.md) §0).
+It will not catch this defect — nothing validates a printed example against a built type, which
+is why the example drifted for three days — so **Step 4 is the check that matters** and Step 6
+only proves nothing else broke.
+
+---
+
+### Task 8: Correct `intervalWidth`'s docstring, which names a statistic it does not compute
+
+**Raised by the W6b work lead at review, not by the draft.** It is in this plan because Task 1
+modifies exactly the two files it touches, and leaving it means Task 1's implementer edits
+`models.ts` alongside a docstring that misdescribes its neighbour.
+
+**The disagreement.** `frontend/src/api/models.ts:22-32` opens *"How wide an interval is, **as a
+fraction of the estimate**"* and returns `high - low`, which is an absolute width. On the
+`ci_95: [0.3, 0.7]`, `estimate: 0.5` fixture the two differ: `0.4` against `0.8`.
+
+**Which side is the requirement — the body.** Four grounds, in the order they were checked:
+
+1. **The specification requires neither form.** R5 (`02` line 52) says coefficients carry
+   standard errors and predictions carry an interval or a stated reason. It does not name a
+   width statistic at all, and neither does any FR — `grep -n "interval width\|fraction of the
+   estimate" docs/specs/02-modelling.md docs/specs/00-overview.md` returns nothing. So the
+   docstring's *"as a fraction of the estimate"* is not a requirement being quoted; it is prose.
+2. **A test already pins the body**, and it discriminates. `models.test.ts:14` asserts
+   `toBeCloseTo(0.4, 10)`; the fractional form returns `0.8` on that same fixture and fails it.
+3. **The docstring is the one artifact nothing checks** — the same shape as E3, where the
+   spec's EBM example was wrong precisely because no validator read it. Between a sentence
+   nothing verifies and a body a test verifies, the sentence is the side that drifted.
+4. **No caller depends on either reading.** `intervalWidth` is exported and tested and imported
+   by nothing: `ModelDetailView.vue` imports `relativityInterval` and `spansZero` and not this.
+   So nothing renders wrong today, and changing the body would alter a tested behaviour to
+   satisfy prose — the more destructive of the two repairs, chosen on the weaker evidence.
+
+**Deletion was considered and rejected.** An exported function with no caller invites YAGNI,
+but it is deliberate API surface with its own test, it sits on the **GLM** arm this slice does
+not claim, and removing it is a scope call for whoever owns that arm. Correcting one sentence
+is the change this slice can justify; recorded so the next reader knows the question was asked.
+
+**Files:**
+- Modify: `frontend/src/api/models.ts:22-32` (the docstring only — the body is unchanged)
+- Test: `frontend/src/api/__tests__/models.test.ts` (comment only — no assertion changes)
+
+**Interfaces:**
+- Consumes: nothing. Produces: nothing. `intervalWidth`'s signature and return value are
+  untouched, which is the point of the task.
+
+- [ ] **Step 1: Re-derive the defect rather than trusting this plan**
+
+```bash
+sed -n '22,32p' frontend/src/api/models.ts
+grep -rn "intervalWidth" frontend/src --include=*.ts --include=*.vue
+```
+
+Expected: the docstring says *"as a fraction of the estimate"*, the body returns `high - low`,
+and the only hits are the definition, the barrel-free import in the test, and the assertion at
+`models.test.ts:14`. **If a caller has appeared in `frontend/src/views/` or
+`frontend/src/components/` since this plan was written, stop** — a caller changes ground 4 and
+the choice has to be re-made rather than executed.
+
+- [ ] **Step 2: Prove the existing test discriminates the two readings**
+
+Temporarily make the body compute the fraction the docstring claims:
+
+```ts
+export function intervalWidth(coefficient: Coefficient): number {
+  const [low, high] = coefficient.ci_95;
+  return (high - low) / coefficient.estimate;
+}
+```
+
+Run: `pnpm --dir frontend test -- models.test.ts`
+
+Expected: **FAIL**, `measures an interval's width`, expected `0.4` received `0.8`. This is the
+broken-input proof ([`../../CLAUDE.md`](../../CLAUDE.md) §13): without it, "a test pins the
+body" is an assertion about a test that has never printed a failure. Restore the body to
+`return high - low;` before continuing, and re-run to confirm PASS.
+
+- [ ] **Step 3: Correct the docstring**
+
+```ts
+/**
+ * How wide an interval is, in the units of the coefficient — `high - low` on the 95% interval,
+ * not a fraction of the estimate.
+ *
+ * `02` R5 makes uncertainty part of what an estimate *is*, and a table of point estimates
+ * invites exactly the reading it exists to prevent: that a relativity of 1.72 on 40 rows
+ * and one on 400 000 mean the same thing. R5 requires that the uncertainty be carried and
+ * does not name a width statistic, so the absolute width is a choice this helper makes
+ * rather than one the spec dictates; a caller wanting a scale-free measure divides by
+ * `estimate` itself.
+ */
+```
+
+The first line is the correction; the second paragraph keeps the original rationale, which was
+never the wrong part, and adds the sentence that stops the next reader re-opening the question.
+
+- [ ] **Step 4: Name which width the test pins**
+
+In `frontend/src/api/__tests__/models.test.ts`, replace the bare title line of the first case
+so the discrimination is legible rather than accidental:
+
+```ts
+  it("measures an interval's width in the coefficient's own units", () => {
+    // 0.7 - 0.3, not (0.7 - 0.3) / 0.5. The fixture's estimate is 0.5 precisely so that an
+    // absolute width and a fraction-of-estimate width differ; a fractional reading returns
+    // 0.8 and fails here. See docs/plans/2026-08-24-w6b-1a-model-detail-non-glm-arms.md Task 8.
+    expect(intervalWidth(coefficient())).toBeCloseTo(0.4, 10);
+  });
+```
+
+- [ ] **Step 5: Run the frontend half of the gate**
+
+```bash
+pnpm --dir frontend lint && pnpm --dir frontend type-check && pnpm --dir frontend test
+```
+
+Expected: all three pass. No behaviour changed, so a failure here is a failure in the edit, not
+in the reasoning.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add frontend/src/api/models.ts frontend/src/api/__tests__/models.test.ts
+git commit -m "docs(w6b-1a): intervalWidth returns an absolute width, and now says so"
+```
+
+---
+
 ## 5. Counts, with the arithmetic beside them
 
-**Six tasks.** The derivation, stated here rather than in another section, because separating a
-count from its derivation is how a count survives the change that falsifies it:
+**Eight tasks.** The derivation, stated here rather than in another section, because separating
+a count from its derivation is how a count survives the change that falsifies it:
 
 > 1 (the type seam) + 1 (the arm switch) + 4 (the four subjects §1's table takes from the map's
 > row — GBM, quantile intervals, the surrogate link, EBM — with the surrogate link riding in
-> the same task as the transparency artifact that carries it) = **6**
+> the same task as the transparency artifact that carries it) + 1 (the §4.8 correction §6 E3
+> resolves) + 1 (the `intervalWidth` docstring, E6) = **8**
+
+**Tasks 7 and 8 were added at review and the six above them were re-derived, not adjusted** —
+twice, once per addition. A count that is incremented rather than recomputed is how a stale
+total survives the change that should have exposed it, and this total has now survived two
+additions, which is exactly when an incremented count starts to look reliable. The
+re-derivation command below is the check, and it reads this file rather than this sentence.
 
 Re-derive from this file rather than trusting the sentence:
 
@@ -1147,6 +1455,17 @@ Count that table's rows; do not add to a remembered total.
 `api/models.ts` and `ModelDetailView.vue` are the two modifications; `GbmFitPanel`,
 `QuantileBoundNotice`, `EbmShapePanel` and `TransparencyPanel` are the four creations. Test
 files are not counted here; each task's Files block lists its own.
+
+**Task 7's file is deliberately not in that table.** §3 maps the code this slice builds, and
+`docs/specs/02-modelling.md` is not code — folding a spec correction into a component
+inventory would make the table answer two questions at once. It is the one file this slice
+touches outside `frontend/`, which is why §7's boundary paragraph names it explicitly rather
+than letting the old "no task edits `docs/specs/`" sentence stand.
+
+**Task 8 adds no row either, and for the opposite reason:** it modifies `api/models.ts`, which
+is already row one of that table as Task 1's file. Two tasks touching one file is not two files.
+The table counts files; §5's first count counts tasks; they are different numbers and neither
+is derived from the other.
 
 **Zero charts**, which is the exclusion §2 rests on and the only one that can be checked
 mechanically. Once the branch exists:
@@ -1194,9 +1513,10 @@ and record it.** Having the client list every model in the family and filter for
 be a screen deriving a relationship the API declines to answer. **Unowned pending a work-lead
 line.**
 
-**E3 — spec and code disagree, and this plan resolves neither** ([`../../CLAUDE.md`](../../CLAUDE.md)
-§0). `02` §4.8's EBM `fit_result` example is **not a valid instance of `EbmFitResult`**. Two
-failures, both found by validating the printed example against the built type:
+**E3 — spec and code disagree; the specification is the wrong side, and Task 7 fixes it**
+([`../../CLAUDE.md`](../../CLAUDE.md) §0). `02` §4.8's EBM `fit_result` example is **not a
+valid instance of `EbmFitResult`**. Two failures, both found by validating the printed example
+against the built type:
 
 - `bins` is printed as an object keyed by feature name. The type declares a tuple, positional
   against `feature_order`, with a validator refusing a length mismatch.
@@ -1205,11 +1525,43 @@ failures, both found by validating the printed example against the built type:
 
 `EbmFitResult` forbids extra fields, so a fixture copied from the page is rejected outright.
 This is the same class of defect the GBM example's own note describes: that example is stated
-to have been validated against the type rather than hand-written, and this one was not. Which
-side is wrong is a real question and not this plan's to answer, so **the plan builds every EBM
-fixture from the generated TypeScript and changes no specification text.** Task 5's slot
-arithmetic follows the type and the bin-class docstrings, which agree with each other and with
-`02` §4.8's prose; only the JSON example disagrees.
+to have been validated against the type rather than hand-written, and this one was not.
+
+**Which side is wrong is a real question, and it is answered here rather than routed around**
+([`../../CLAUDE.md`](../../CLAUDE.md) §0 — resolving it silently in either direction is the
+one thing forbidden). **The type is right and the printed example is wrong**, on four grounds
+that were checked rather than assumed:
+
+1. **The validator is deliberate, named, and states its own reason.**
+   `EbmFitResult._bins_align_with_the_feature_order`
+   (`packages/model-schema/src/model_schema/modelling.py:1795`) refuses
+   `len(bins) != len(feature_order)` with *"The bins are positional; a mismatch…"*. A
+   positional join is a decision someone wrote down, not an accident of serialisation.
+2. **`model-schema` is the single source of truth and the example is not.** ADR-0002 generates
+   `docs/contracts/` from it and CI fails on drift (FR-PLAT-48). A hand-typed JSON block in a
+   spec is checked by nothing, which is exactly how it drifted.
+3. **§4.8's own prose agrees with the type.** *"`feature_order` is the order the features were
+   handed to `interpret`; a term with two `term_features` is an interaction"* — `feature_order`
+   has no work to do for `bins` unless `bins` indexes into it.
+4. **The example beside it sets the standard this one fails.** The GBM `fit_result` example
+   records that it was *"validated against `GbmFitResult` rather than hand-written"*. The EBM
+   example predates that practice.
+
+Two consequences, and they are different obligations:
+
+- **Task 5 is unaffected.** Its slot arithmetic already follows the type and the bin-class
+  docstrings, which agree with each other and with §4.8's prose; only the JSON example
+  disagrees. Every EBM fixture is built from the generated TypeScript.
+- **Task 7 corrects the example**, because §0's table gives a code slice *"any spec change it
+  proves necessary"* and this slice proves it: Task 5's implementer is precisely the reader who
+  would copy that block, and the annotated-fixture rule in Global Constraints would then fail
+  their type-check with an error naming `bins` rather than naming the spec.
+
+**A third defect was looked for and not found.** The bin objects print no `kind` discriminator,
+which reads like a violation of a `oneOf` mapping — but `kind` carries a `const` **and a
+default** on both `EbmNumericBins` and `EbmCategoricalBins`, so `{"levels": […]}` is valid as
+printed. Recorded because a review that reports only what it found does not say how hard it
+looked.
 
 **E4 — building a transparency artifact is excluded, and the exclusion needs an owner.**
 Creating one is a 202-plus-Job flow, and §2 excludes it as not being model detail. No slice in
@@ -1224,6 +1576,20 @@ here so the omission is recorded rather than discovered at closure. Whether the 
 belongs with the lineage graph the map proposes elsewhere is a question for whoever owns that
 row. **Unowned pending a work-lead line.**
 
+**E6 — `intervalWidth`'s docstring names a statistic its body does not compute.** Raised by the
+W6b work lead at review. *"As a fraction of the estimate"* against a body returning `high - low`;
+on the test fixture, `0.8` against `0.4`. **Resolved rather than escalated, and Task 8 carries
+the resolution and its four grounds** — the specification names no width statistic, an existing
+test already pins and discriminates the body, the docstring is the artifact nothing checks, and
+no caller depends on either reading. Recorded here rather than only in the task because §6 is
+where a reader looks for what was contested, and an item that was contested and then settled is
+more useful in that list than absent from it.
+
+The general shape, which is E3's shape and worth naming once: **a prose sentence and an
+executable artifact disagreed, and the prose was wrong both times.** In E3 the prose was a JSON
+example no validator read; here it is a docstring no test reads. Neither is a coincidence — an
+artifact nothing executes has no mechanism by which it could have been kept true.
+
 ---
 
 ## 7. Self-review
@@ -1231,6 +1597,14 @@ row. **Unowned pending a work-lead line.**
 **Spec coverage.** Every subject in §1's table maps to a task: 1 to Task 3, 2 to Task 4, 3 to
 Task 6, 4 to Task 5, 5 to Task 6 — with Tasks 1 and 2 the seam and the dispatch all four need.
 The Contents-cell items with no task are E5, named rather than silently absent.
+
+**Tasks 7 and 8 map to no subject in §1's table, deliberately.** Neither builds any part of the
+model-detail non-GLM arms; each corrects an artifact this slice's implementers would otherwise
+read as true — a spec example Task 5's implementer would copy, and a docstring Task 1's
+implementer edits beside. They are in scope under §0's *"plus any spec change it proves
+necessary"* and under the same reasoning for code, not under §1. Reading §1's table as the
+plan's task inventory would therefore under-count by two; §5 counts tasks and §1 counts
+subjects, and the two are not the same list.
 
 **Placeholder scan.** No step says "add error handling", "handle edge cases", or "similar to
 Task N". Every code step carries its code.
@@ -1241,11 +1615,43 @@ Component props are `spec` and `fit`, except `QuantileBoundNotice` (`model`) and
 `TransparencyPanel` (`artifact`, `state`), which take what they actually read.
 
 **Every enforcement step is proven on deliberately broken input** — Task 1 step 5, Task 3
-step 6, Task 5 step 5. A check that has never printed a failure has not been tested, and each
-of those three is a silent-failure mode: a narrowing that renders an empty page, a positional
-join that mis-aligns, an off-by-one that renders a plausible shape function.
+step 6, Task 5 step 5, Task 7 step 5, Task 8 step 2. A check that has never printed a failure
+has not been tested, and each of those five is a silent-failure mode: a narrowing that renders
+an empty page, a positional join that mis-aligns, an off-by-one that renders a plausible shape
+function, an example that validates only because nothing validated it, and a test whose power
+to discriminate two readings is assumed rather than shown.
 
-**The boundary.** No task touches a view other than `ModelDetailView.vue`; no task calls the
-diagnostics read; no task imports a charting library; no task edits `docs/specs/` or
-`packages/model-schema`. Each of those is checkable from the diff rather than from this
-sentence.
+**The boundary, restated after review.** No task touches a view other than
+`ModelDetailView.vue`; no task calls the diagnostics read; no task imports a charting library;
+no task edits `packages/model-schema`. **Task 7 edits `docs/specs/02-modelling.md`, and it is
+the only task that leaves `frontend/`.** The draft's boundary sentence claimed no task edits
+`docs/specs/` at all; that was true of the draft and is false of this plan, and the sentence is
+corrected here rather than left standing as the sort of claim a closure audit reads as
+evidence. Each of these is checkable from the diff rather than from this sentence.
+
+**Every requirement this plan cites was re-checked against its own row.** The draft's author
+mis-attached three requirements to predicates they do not state, caught it by reading each row
+in full, rewrote all three, and asked that someone check for a fourth. That check ran over all
+sixteen distinct IDs the plan cites — FR-OVR-6, FR-OVR-7, FR-MODEL-27, 30, 31, 33, 34, 50, 67,
+78, 84, 94, 96, 100, 111, 128 and NFR-OVR-10 — **and found no fourth mis-attribution.** Two are
+worth recording because they were the near-misses:
+
+- **`MODEL_INTERVAL_PAIR_INVALID` survived the sharpest version of the test.** Task 1's
+  `boundCentral` docstring says the platform refuses a bound/central mismatch *"compared on
+  family slug, dataset version, split ref and the factor set"*, while FR-MODEL-100(iv) attaches
+  that same error code to a **different** predicate — a second bound on one side. Both are
+  true: `_refuse_mismatched_interval_model`
+  (`backend/src/app/platform/modelling.py:579-589`) compares exactly
+  `model_family_slug, dataset_version_id, split_ref, factors`, and a separate raise site
+  further down enforces one-per-side. One code, several checks. **The docstring was verified
+  against the code, not against the requirement that shares its error name.**
+- **FR-MODEL-111's amendment is overtaken, not wrong.** It states that §4.8 *"has never carried
+  one for a GBM"*. §4.8 now does, added 2026-08-22 — after that amendment was written. A dated
+  amendment is a frozen record of what was true on its date, so this is not a defect and
+  nothing is edited. Recorded because the sentence reads as a present-tense claim about the
+  spec and will be re-encountered by whoever greps for a GBM example next.
+
+**What this check does not cover.** It verifies that each cited requirement *says what the plan
+says it says*. It does not verify that the plan cites every requirement it *should* — an
+omitted citation has no locator to check, and §13's scope-from-specification rule is the
+instrument for that, run at closure against `02` rather than against this file.
