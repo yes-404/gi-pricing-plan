@@ -715,6 +715,82 @@ def test_a_caller_without_model_read_is_refused_at_the_edge(
     assert refused.status_code == 403
 
 
+@pytest.mark.req("FR-MODEL-124")
+@pytest.mark.req("FR-MODEL-37")
+@pytest.mark.req("FR-MODEL-62")
+async def test_an_ebm_scores_over_http(
+    api_client: TestClient, database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-124 for the EBM arm at the edge, which nothing asserts today.
+
+    The route's own tests prove it is published and that it refuses without the
+    permission. Neither would notice if the EBM branch returned the GLM's numbers, the
+    intercept for every row, or a 500 — the whole of scoring over HTTP is inferred from a
+    service test plus the fact that the router calls the service.
+
+    Asserted against the **service's own** output rather than a literal: a hard-coded
+    number would pin this to one interpret/EBM version and would say nothing about whether
+    the route and the service agree, which is the only thing HTTP adds here.
+    """
+    actor, model_id = await _fitted_ebm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        expected = await service.predict_rows(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            model_id=model_id,
+            rows=ROWS,
+            blob_store=blob_store,
+        )
+
+    response = api_client.post(
+        f"/api/v1/models/{model_id}/predict",
+        json={"rows": ROWS},
+        headers=_headers(actor.id, workspace_id),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    assert body["model_type"] == "ebm"
+    assert len(body["rows"]) == len(ROWS)
+    assert [row["expected"] for row in body["rows"]] == [
+        pytest.approx(row.expected, rel=1e-9) for row in expected.rows
+    ]
+    # The two areas must still price apart at the edge: a route returning the intercept
+    # for every row would satisfy every assertion above if the service did too.
+    assert body["rows"][0]["expected"] != body["rows"][1]["expected"]
+
+
+@pytest.mark.req("FR-MODEL-124")
+@pytest.mark.req("FR-MODEL-62")
+async def test_the_ebm_refusal_reaches_the_client_by_name(
+    api_client: TestClient, database, blob_store, workspace_id
+) -> None:
+    """Three nulls and a named refusal are indistinguishable to a client that only sees
+    `lower`/`upper`, and they mean different things: one is "no interval for this model
+    type", the other could be a fit that failed to produce one. The service distinguishes
+    them; this proves the wire does too.
+    """
+    actor, model_id = await _fitted_ebm(database, blob_store, workspace_id)
+
+    response = api_client.post(
+        f"/api/v1/models/{model_id}/predict",
+        json={"rows": ROWS},
+        headers=_headers(actor.id, workspace_id),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    uncertainty = body["uncertainty"]
+
+    # `.value` rather than a literal: these are the strings `model-schema` publishes into
+    # the OpenAPI enum, so asserting them keeps the wire spelling tied to its one source.
+    assert uncertainty["kind"] == UncertaintyKind.UNAVAILABLE.value
+    assert uncertainty["reason"] == UnavailableReason.MODEL_TYPE_HAS_NO_INTERVAL.value
+    assert uncertainty["level"] is None
+    assert all(row["lower"] is None and row["upper"] is None for row in body["rows"])
+
+
 @pytest.mark.req("FR-MODEL-99")
 async def test_a_penalised_fits_interval_says_which_matrix_it_came_from(
     database, blob_store, workspace_id

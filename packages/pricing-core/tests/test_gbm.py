@@ -603,6 +603,7 @@ def _diagnose(  # type: ignore[no-untyped-def]
     data: pl.DataFrame | None = None,
     bandings: dict[Any, Banding] | None = None,
     groupings: dict[Any, Grouping] | None = None,
+    **over: object,
 ):
     """The established diagnostics driver.
 
@@ -610,6 +611,10 @@ def _diagnose(  # type: ignore[no-untyped-def]
     random draws cannot pin down an exposure profile, and the tests below assert on the
     exact share the sweep reports — so a caller checking arithmetic passes the frame it
     constructed rather than trusting a second draw to resemble the first.
+
+    Any further keywords pass through to `compute_gbm_diagnostics`, which is what lets a
+    caller supply both its own frame and a diagnostics option — the combination neither
+    this helper nor `_diagnose_wide` offered on its own.
     """
     from pricing_core.modelling import compute_gbm_diagnostics
 
@@ -624,6 +629,7 @@ def _diagnose(  # type: ignore[no-untyped-def]
         fit.result, fit.booster_bytes, spec, use,
         train=train, holdout=holdout, eval_curve=fit.eval_curve,
         bandings=bandings, groupings=groupings,
+        **over,  # type: ignore[arg-type]
     )
 
 
@@ -1824,6 +1830,45 @@ def _diagnose_wide(backend: str, **over: object):  # type: ignore[no-untyped-def
     )
 
 
+def _capped_book() -> pl.DataFrame:
+    """Three levels whose exposure ranking and row-count ranking disagree.
+
+    Built so that `exposure_share` reports a different number under each definition of
+    "share": exposure keeps the two heavy levels and drops the 400 light rows (4.0/404.0),
+    while row counts keep the light level and drop one heavy (2/404). One omitted level
+    either way, so the count cannot tell them apart and the share is the whole test.
+
+    | level          | rows | exposure each | total exposure |
+    |----------------|------|---------------|----------------|
+    | `heavy_a`      |    2 |         100.0 |          200.0 |
+    | `heavy_b`      |    2 |         100.0 |          200.0 |
+    | `common_light` |  400 |          0.01 |            4.0 |
+
+    The exposure lands in `exposure_years` because that is the column `_spec` declares as
+    its offset, and `_weights` reads the offset column first — putting it anywhere else
+    returns a vector of ones, at which point exposure ranking *is* row ranking and the
+    fixture stops discriminating while still looking correct.
+
+    Fixed values rather than a draw: the test asserts an exact share.
+    """
+    levels = ["heavy_a"] * 2 + ["heavy_b"] * 2 + ["common_light"] * 400
+    exposure = [100.0] * 4 + [0.01] * 400
+    # A constant rate of 0.1 claims per exposure year, rounded to whole claims: the heavy
+    # rows carry 10 each and the light rows none. The fit is incidental here — the omission
+    # is computed from the frame, not the booster — but a response that ignored exposure
+    # would make the fixture read as if the offset did not matter.
+    claims = [10.0] * 4 + [0.0] * 400
+    ages = [40.0 + (i % 30) for i in range(len(levels))]
+    return pl.DataFrame(
+        {
+            "exposure_years": exposure,
+            "vehicle_group": levels,
+            "driv_age": ages,
+            "claim_count": claims,
+        }
+    )
+
+
 @pytest.mark.req("FR-MODEL-118")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_categorical_grid_is_capped_and_says_what_it_dropped(backend: str) -> None:
@@ -1849,6 +1894,48 @@ def test_a_categorical_grid_is_capped_and_says_what_it_dropped(backend: str) -> 
     # A numeric factor is ten quantile points and was never the problem: it must not
     # acquire an omission it does not have.
     assert curves["driv_age"].omitted is None
+
+
+
+@pytest.mark.req("FR-MODEL-118")
+@pytest.mark.req("FR-MODEL-125")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_the_omitted_share_is_exposure_and_not_row_count(backend: str) -> None:
+    """FR-MODEL-125: the share is **exposure**, which the existing assertion cannot check.
+
+    `0.0 < share < 0.5` above passes under both definitions, so W32-5's change is untested
+    — the fixture there has no disagreement between the two rankings for it to detect. This
+    one does: exposure drops the 400 light rows (4.0/404.0 = 0.0099) while row counts would
+    drop one heavy level (2/404 = 0.0050). One level omitted either way, so the share is the
+    only thing that separates them.
+
+    An exposure share is what the sentence under the chart means. A curve omitting levels
+    holding 1% of the book is a footnote; one omitting levels holding 40% is a warning, and
+    row counts answer neither question in a book where exposure is the unit of risk.
+    """
+    from pricing_core.modelling.diagnostics import _weights
+
+    frame = _capped_book()
+    factor = _factor("vehicle_group", "vehicle_group")
+    # The three failure modes the arithmetic can take — wrong column, wrong values, no
+    # declared offset at all — all show up here as a total that is not 404.0.
+    assert _weights(_spec(backend, factors=(factor.id,)), frame).sum() == pytest.approx(404.0)
+
+    _, diagnostics = _diagnose(
+        backend,
+        [factor],
+        data=frame,
+        max_partial_dependence_levels=2,
+    )
+    assert diagnostics.gbm is not None
+    curve = _curve_for(diagnostics, "vehicle_group")
+    assert curve.omitted is not None
+    assert curve.omitted.levels == 1, "one level omitted under either definition — see docstring"
+    assert curve.omitted.exposure_share == pytest.approx(4.0 / 404.0, rel=1e-6)
+    # Redundant arithmetic, deliberately kept: it states in the test what the docstring
+    # argues, so a future reader changing the fixture sees that the two numbers must stay
+    # apart.
+    assert curve.omitted.exposure_share != pytest.approx(2 / 404, rel=1e-6)
 
 
 @pytest.mark.req("FR-MODEL-118")
