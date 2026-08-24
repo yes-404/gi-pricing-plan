@@ -69,9 +69,9 @@ export const routes: RouteRecordRaw[] = [
     // `/models/compare` does — the ranking question above does not arise here.
     //
     // Function-mode props, not `props: true`: the boolean form maps `route.params` only, and
-    // `?version=` is a query. The `/models/:slug` entry below declares `props: true` while
-    // its view reads `props.version`, which is the bug Task 12 fixes; this entry does not
-    // copy it.
+    // `?version=` is a query. Every route whose view takes a version is in this form; the
+    // `/models/:slug` entry below was the one that was not, and its `version` prop was
+    // permanently `undefined` for it.
     path: "/models/:slug/diagnostics",
     name: "model-diagnostics",
     component: () => import("@/views/DiagnosticsView.vue"),
@@ -87,7 +87,15 @@ export const routes: RouteRecordRaw[] = [
     path: "/models/:slug",
     name: "model-detail",
     component: () => import("@/views/ModelDetailView.vue"),
-    props: true,
+    // Function mode, not `props: true`: the boolean form maps `route.params` only, and
+    // `?version=` is a query, so this view's `version` prop was permanently `undefined` and
+    // every load fetched the latest model. `02` §5.3 promises the selector works, and
+    // `QuantileBoundNotice` builds a link carrying it, labelled `slug@version` — so the link
+    // named one version and the page showed whichever was latest.
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: typeof route.query.version === "string" ? route.query.version : undefined,
+    }),
   },
   {
     // `02` §5.3 and `00` §5.6, both of which name this path exactly. Routed on the version

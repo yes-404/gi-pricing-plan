@@ -1,5 +1,8 @@
 import { render, screen, within } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded } from "vue-router";
+
+import { routes } from "@/router";
 
 import ModelDetailView from "../ModelDetailView.vue";
 import { ARTIFACT, boundOf, EBM_MODEL, GBM_MODEL } from "./fixtures";
@@ -273,5 +276,54 @@ describe("the model detail view, on a model that is not a GLM", () => {
     render(ModelDetailView, { props, ...mounted });
     await screen.findByRole("table", { name: "Coefficients" });
     expect(screen.queryByText(/approximation of model/i)).toBeNull();
+  });
+});
+
+/**
+ * The router, not the view. Every test above hands `ModelDetailView` its props directly, so
+ * all of them stayed green while the route delivered `version` to nothing — `props: true` maps
+ * `route.params` only, and `?version=` is a query. `02` §5.3 promises "`?version=` selects one;
+ * the latest by default", and `QuantileBoundNotice` builds a link with that query and labels it
+ * `slug@version`, so the link named one version and the page showed whichever was latest.
+ */
+describe("the model-detail route", () => {
+  function propsFor(route: RouteLocationNormalizedLoaded): Record<string, unknown> {
+    const record = route.matched[0];
+    const toProps = record?.props?.default;
+    return typeof toProps === "function"
+      ? (toProps(route) as Record<string, unknown>)
+      : route.params;
+  }
+
+  it("passes ?version= to the view, which is what selects a version", async () => {
+    const router = createRouter({ history: createWebHistory(), routes });
+    await router.push("/models/motor-frequency?version=3");
+    expect(router.currentRoute.value.name).toBe("model-detail");
+    expect(propsFor(router.currentRoute.value)).toEqual({ slug: "motor-frequency", version: "3" });
+  });
+
+  it("passes no version when none was asked for, so the latest is fetched", async () => {
+    const router = createRouter({ history: createWebHistory(), routes });
+    await router.push("/models/motor-frequency");
+    expect(propsFor(router.currentRoute.value)).toEqual({
+      slug: "motor-frequency",
+      version: undefined,
+    });
+  });
+
+  /**
+   * Mine, not the plan's. `route.query.version` is `string | string[] | null`, and a repeated
+   * key is what produces the array — reachable from a hand-edited or hand-shared URL. The
+   * `typeof` guard is the whole reason the prop is not `String(route.query.version)`: that
+   * would hand the view `"3,4"`, `Number` would make it `NaN`, and the request would go out
+   * with a version nobody asked for. Ambiguous means unanswered, so it falls back to latest.
+   */
+  it("ignores a repeated ?version= rather than fetching the pair as one number", async () => {
+    const router = createRouter({ history: createWebHistory(), routes });
+    await router.push("/models/motor-frequency?version=3&version=4");
+    expect(propsFor(router.currentRoute.value)).toEqual({
+      slug: "motor-frequency",
+      version: undefined,
+    });
   });
 });
