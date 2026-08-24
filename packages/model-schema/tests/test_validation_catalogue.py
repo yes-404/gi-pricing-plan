@@ -135,3 +135,14 @@ def test_a_catalogue_id_that_names_no_catalogue_entry_is_refused() -> None:
             severity=Severity.WARN,
             catalogue_id="VR-DST-99",
         )
+
+
+@pytest.mark.req("FR-DATA-54")
+def test_a_catalogue_entry_carries_its_default_params() -> None:
+    """FR-DATA-54: a built-in's default thresholds belong in its catalogue entry.
+
+    Empty for a rule whose check reads no defaulted parameter — that is not a gap, it is
+    the accurate statement that the check has nothing to configure.
+    """
+    assert BUILTIN_RULES["VR-STR-1"].params == {}
+    assert builtin_rule("VR-DST-1").params == {"warn_above": 0.10}
