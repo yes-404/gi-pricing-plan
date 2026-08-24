@@ -165,16 +165,65 @@ loses that form outright: `2` and `a` are both word characters, so there is no b
 must not move — and the failure is silent in the direction that matters. Name the two roles.
 This generalises past regexes to any validator with a permissive and a restrictive half.
 
+`W32\b.*` **is** that simplification — the obvious tightening of the permissive form, and
+one that reads as strictly safer than `[a-z]?`. It fires on `W32-7` and `W32-11`. It was
+proposed, defended and nearly adopted here across four sessions before a fixture run settled
+it. *Who* proposed it went through three reversals while that verdict never moved once,
+which is the argument for writing a design note about what a check **does** rather than
+about where it came from.
+
+**Say also what the check cannot see at all.** Fail-open and fail-closed both describe cases
+the check *reaches*; the more expensive defects are outside its field of view entirely. Every
+instrument defect in this thread was a blind spot rather than a wrong answer — a search
+reading an inert file, a fixture that drifted from the tree under test, a bold-coupled
+anchor, a conflated clause. A design note that lists only match and non-match implies the
+field of view is the world.
+
 ### Do not re-derive a metric a script already computes — run the script
 
 Auditing `req-coverage.py` by reimplementing its walk returned **261** against the script's
-**266**: `testpaths` carries a repository-level root beyond `backend/` and `packages/`, and
-the hand-rolled version missed it. A 2 % reimplementation error — larger than most defects
-such an audit is looking for, and indistinguishable from a real finding.
+**266**: `testpaths` carries **two** repository-level roots beyond `backend/` and
+`packages/` — `tests` and `examples/fremtpl2` — and both contribute markers, 11 and 7. The
+hand-rolled walk missed both. A 2 % reimplementation error — larger than most defects such
+an audit is looking for, and indistinguishable from a real finding.
 
 A second implementation of a metric is a **second thing to be wrong**, not a check on the
 first. If the script's *definition* is what is in doubt, read its source and say so; if the
 *number* is what is wanted, run it and cite the SHA it was run at.
+
+**Where you must count the repository yourself, count it with `git grep`, not `grep -r`.**
+The index holds tracked files only, so generated and ignored output is excluded *by
+construction* rather than by remembering to exclude it. Two sessions measured the same
+population here and got 143 against 32; the larger number had swept
+`frontend/src/api/generated`, which `.gitignore:38` excludes and which `git grep` therefore
+never sees. A rule that says *state your exclusions* relies on discipline at the moment
+discipline is scarcest; choosing the tool whose default is right does not.
+
+### Verify a retraction against the artifact it retracts
+
+Review pressure falls off along a chain. **Original text gets a reader. A correction gets
+less, because it arrives labelled as a fix and so reads as already-checked. A retraction
+gets least of all, because the party best placed to check it is the party it absolves.**
+
+That last step is the dangerous one, and it produced three inversions in a single day here.
+A correct charge against this repository's closure gate was withdrawn after the accused
+tested a pattern *nobody had proposed* — a substitution neither party caught, because the
+one who could have was the one being cleared. The retraction then licensed a **strike
+order** against the skill text you are reading: delete anything certifying `W32\b.*` safe.
+No such text existed. It was stopped only because a third session opened the file.
+
+Two rules, both cheap:
+
+- **Check a retraction against the thing retracted, never against the retractor's account
+  of it.** An exoneration is the one correction its recipient has no incentive to check.
+- **"Strike anything that says X" is a check when the sender has read the document and a
+  guess in imperative grammar when they have not.** Against a green, mergeable PR the two
+  are indistinguishable from the receiving end — so open the file before acting, and say in
+  the instruction which one you are issuing.
+
+The corollary is the reassuring half: across all three reversals **not one regex verdict
+moved**. Every reversal was about attribution. Notes that record behaviour survived the
+entire dispute untouched; notes that recorded provenance did not.
 
 ### A generated artifact matching its source proves neither is correct
 
@@ -262,6 +311,12 @@ mapping.
 ```
 
 ## Verified
+
+2026-08-24 — the four §3 subsections on instruments were added from the W32 closure gate's
+own defects and each is verified from an artifact, not from an account of one: the four
+regex verdicts re-run on a constructed fixture, `testpaths` read from `pyproject.toml:89`,
+the `git grep` rule reproduced against `.gitignore:38`, and the retraction chain checked
+against the diff it concerned.
 
 2026-08-23 — the three scope-audit axes, the demo-guide derivation check and the
 both-halves gate note moved here from `CLAUDE.md` §13 when that section was cut to its
