@@ -366,6 +366,8 @@ class UserRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    # Stamped on every bearer request, not at login — see `auth.service._upsert_user`.
+    # It records last-seen, and nothing reads it yet.
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
