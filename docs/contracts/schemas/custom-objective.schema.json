@@ -3,13 +3,14 @@
   "$id": "https://contracts.gi-pricing.dev/custom-objective.schema.json",
   "title": "CustomObjective",
   "description": "Named, versioned, approvable loss definition. See 02-modelling.md §4.5 and §4.6.",
-  "$comment": "Amended 2026-08-18 (W5, custom objectives), when this contract first met a generated counterpart. Two resolutions, both the code's (CLAUDE.md §0): the template block is `params`, not `template_params` — §4.5 names a Params column and no field, the API body has always been `params`, and `kind: template` already says whose they are; and `hessian_strategy`/`hessian_min` are top-level rather than expression-only, because a template objective has a hessian to floor exactly as a user-written one does (a `quantile` loss has a zero second derivative everywhere, and `clip_to_min` is what makes it fittable at all). `description` and `approval_request_id` are named here for the first time: the second is the trail from an approved objective to the decision behind it, and a contract that omits it describes an artifact a reviewer cannot get back from.",
+  "$comment": "Amended 2026-08-18 (W5, custom objectives), when this contract first met a generated counterpart. Two resolutions, both the code's (CLAUDE.md §0): the template block is `params`, not `template_params` — §4.5 names a Params column and no field, the API body has always been `params`, and `kind: template` already says whose they are; and `hessian_strategy`/`hessian_min` are top-level rather than expression-only, because a template objective has a hessian to floor exactly as a user-written one does (a `quantile` loss has a zero second derivative everywhere, and `clip_to_min` is what makes it fittable at all). `description` and `approval_request_id` are named here for the first time: the second is the trail from an approved objective to the decision behind it, and a contract that omits it describes an artifact a reviewer cannot get back from. Amended 2026-08-24 (W32-8, the artifact library list routes): `usage_count` is added, the count of Model Specs referencing this objective version that FR-MODEL-127 puts on a library row. It is nullable because null means *not asked* — only the list route populates it, and a hard 0 would make nothing-references-this indistinguishable from nobody-counted.",
   "type": "object",
   "required": ["kind", "applicability"],
   "properties": {
     "kind": {"enum": ["template", "expression"]},
     "status": {"enum": ["draft", "certified", "review", "approved", "deprecated"]},
     "description": {"type": ["string", "null"]},
+    "usage_count": {"type": ["integer", "null"], "minimum": 0},
     "hessian_strategy": {"enum": ["none", "clip_to_min", "abs", "gauss_newton"]},
     "hessian_min": {"type": "number", "exclusiveMinimum": 0},
     "applicability": {
