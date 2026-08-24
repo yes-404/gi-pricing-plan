@@ -62,6 +62,45 @@ Four conventions, each of them a check that will otherwise fail:
 
 Run `python3 scripts/audit-docs.py` before handing a plan off.
 
+## The conventions the audit cannot check
+
+The four above are enforced; these three are not. The gate reads documents and never the
+Python a document quotes, so every literal in a plan is taken on trust by an executor who
+has no context to check it against.
+
+1. **Verify every repository literal against the shipped source before it enters sample
+   code** — enum members, fixture and factory names, route paths, status codes, model field
+   names. Grep each one. They are facts about the repository rather than choices the plan is
+   making, which is exactly the class a fresh executor cannot sanity-check. The W6b-13b plan
+   posted `"layer": "distribution"` where `ValidationLayer` defines `"distributional"`,
+   because the literal was written from memory.
+
+2. **State a predicted failure by its cause, not its status.** "Expected: FAIL with 422" is
+   not a test. A status code is a many-to-one projection of causes, so a second fault the
+   plan introduced can satisfy the prediction and buy confidence for it — and the test then
+   keeps failing after the implementation is correct, pointing at the executor. The same
+   step predicted a 422 from `extra="forbid"` and got one, with a second error beside it
+   that the status hid. Write the discriminator in: name the mode, and say that a matching
+   status with a differing reason is a plan defect.
+
+3. **Run rule 1 against the shipped source, not the plan's own prose.** A plan that quotes
+   itself agrees with itself — a literal repeated across two tasks is self-consistent
+   whether or not it is right, and re-reading the plan cannot separate the two. Where you
+   cannot verify, name the authority instead of supplying a sample: "mirror the neighbouring
+   test rather than the sample; do not reinvent the module's fixtures" caught a second
+   W6b-13b mismatch the plan's own text could not.
+
+**A missing neighbour is a scope finding.** Rule 3's fallback assumes there is something to
+mirror. Before writing sample tests for a module, grep its test file for the verb under
+test; a zero means that path has no coverage at all, which is larger than a formatting
+detail and belongs in the plan's scope section rather than in its samples.
+
+The gate does reach one of these, from the document side. `audit-docs.py` rejected a
+threshold copied byte-for-byte out of `pricing-core`, because FR-OVR-7 makes money integer
+minor units and the source writes that fallback as a float. Copying exactly was the right
+general rule and wrong on that row, and only the gate knew. Run it early enough that its
+answer can still change the plan.
+
 ## Live plan state is *not* here
 
 `planning-with-files` keeps an agent's working memory — `task_plan.md`, `findings.md`,
