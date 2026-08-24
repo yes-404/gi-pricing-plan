@@ -1,19 +1,19 @@
-# NT-0005 — Six deferred items with no durable custody
+# NT-0005 — Seven deferred items with no durable custody
 
 | | |
 |---|---|
-| **Raised** | 2026-08-24, Claude — during W6b, from six items that were found, agreed to be real, and then held only in a session's working memory |
-| **Status** | `open` — six backlog items, each needing a maintainer decision on *where* it lands. Raised and assessed, not agreed: nothing is built on them |
-| **Deliverable** | Mixed, and stated per item below. Four are **no code and no spec change** (a convention, two one-line script fixes, a plan-freeze consequence); one is a **new audit check**; one is an **`OQ-` entry**. None is a requirement |
+| **Raised** | 2026-08-24, Claude — during W6b, from seven items that were found, agreed to be real, and then held only in a session's working memory |
+| **Status** | `open` — seven backlog items, each needing a maintainer decision on *where* it lands. Raised and assessed, not agreed: nothing is built on them |
+| **Deliverable** | Mixed, and stated per item below. Five are **no code and no spec change** (a convention, two one-line script fixes, a plan-freeze consequence, eight roadmap gate placements); one is a **new audit check**; one is an **`OQ-` entry**. None is a requirement |
 | **Owner** | Claude records · maintainer accepts, per item |
 | **Lands in** | Per item: [`scripts/audit-docs.py`](../../scripts/audit-docs.py), [`docs/open-questions.md`](../../docs/open-questions.md), [`docs/roadmap.md`](../../docs/roadmap.md), [`docs/specs/00-overview.md`](../../docs/specs/00-overview.md) |
-| **Sequencing** | Items (a), (d) and (e) are workable now. Item (b) is blocked on (e). Item (c) is workable now and expires when `W6b-1b` is sequenced. Item (f) is a `W6b` close item |
+| **Sequencing** | Items (a), (d), (e) and (g) are workable now. Item (b) is blocked on (e). Item (c) is workable now and expires when `W6b-1b` is sequenced. Item (f) is a `W6b` close item |
 
 ---
 
 ## Why this note exists at all
 
-Each of the six was found during W6b, checked against the repository, and agreed by more
+Each of the seven was found during W6b, checked against the repository, and agreed by more
 than one session to be real. None of them belonged to the slice being worked at the time, so
 each was "noted for later" — and *later* was, in every case, a session's own context, which
 is discarded when the session ends.
@@ -27,7 +27,7 @@ records for references — a claim that is true when written and unreadable afte
 **This note is custody, not a decision.** Per the directory standard, nothing here is
 settled; each row names where it would land if accepted.
 
-## The six items
+## The seven items
 
 | | Item | Deliverable per `CLAUDE.md` §0 | Status |
 |---|---|---|---|
@@ -37,6 +37,7 @@ settled; each row names where it would land if accepted.
 | **(d)** | `audit-docs.py:383` and `:514` append a clean summary line on runs where their own check failed | No code, no spec change — two one-line script fixes | `open` |
 | **(e)** | Which of §5.6's two columns is authoritative — the convention (b) needs before it can be written | No code, no spec change — a convention, recorded in `00` §5.6 | `open` |
 | **(f)** | Nothing checks that an `FR-` id cited by a workflow step *contains* what the step claims | `OQ-` entry | `open` |
+| **(g)** | Eight open questions are on no decision gate at all, and `docs/roadmap.md` §10 is the table that says which phase each must be answered before | No code, no spec change — eight roadmap gate placements | `open` |
 
 ---
 
@@ -52,7 +53,7 @@ scanning the file and taking the next integer, which is correct exactly until tw
 do it in the same hour. During W6b three `OQ-` drafts were prepared concurrently and the
 next-free ids had to be re-derived by hand each time.
 
-**Claude's assessment.** This is the cheapest of the six and the one most likely to be
+**Claude's assessment.** This is the cheapest of the seven and the one most likely to be
 skipped, because the manual derivation *works* — it is only unsafe under concurrency, which
 is the condition this project now runs in permanently. The marker is one line, and the
 mechanical half is already written for `FR-` ids.
@@ -125,10 +126,23 @@ its comment states the principle:
 verdict = "all declared" if not undeclared else f"**{undeclared} undeclared**"
 ```
 
+**It was then observed live rather than inferred from the source.** Filing `OQ-DATA-14` in
+the register on 2026-08-24 before writing its `01` §10 mirror produced exactly the predicted
+run — a real failure and a contradicting summary in the same output:
+
+```
+FAILED (1): OQ-DATA-14 listed in open-questions.md but raised in no spec
+  96 open questions, all mirrored
+```
+
+That is the broken input `CLAUDE.md` §13 asks for, arrived at by accident rather than by
+construction, and it removes the remaining doubt about whether the two lines behave as the
+source reading says. What still has to be done at fix time is the other half of the same
+standard — re-run it after the change and confirm the summary line now disagrees with itself
+no longer.
+
 **Claude's assessment.** Two lines, one established pattern, no design question — the only
-reason it is not already done is that it was found while working on something else. The fix
-must be proven on deliberately broken input (`CLAUDE.md` §13): add an unmirrored `OQ-` id,
-confirm the summary line changes, restore.
+reason it is not already done is that it was found while working on something else.
 
 ### (e) Which of §5.6's two columns is authoritative
 
@@ -158,7 +172,7 @@ named double lift as a `compute_diagnostics()` output and cited `FR-MODEL-50/51/
 `FR-MODEL-56`. The citation was correct; the content it vouched for was not. It survived a
 week of reading for exactly that reason, and was corrected on 2026-08-24 (`OQ-OVR-10`'s PR).
 
-**Claude's assessment.** This is the one item of the six that is genuinely open rather than
+**Claude's assessment.** This is the one item of the seven that is genuinely open rather than
 merely unfiled, which is why its deliverable is an `OQ-` entry and not a check. A mechanical
 content check is not obviously constructible — requirement text is prose — and the honest
 options are a narrower structural check (an amendment that says *"X is removed"* should fail
@@ -166,20 +180,55 @@ any journey cell citing that id and naming X), a review obligation at each works
 or accepting the gap and recording it. It should be filed as an open question against `00`,
 which owns `FR-OVR-17` and therefore owns the citation audit.
 
+### (g) Eight open questions are on no decision gate
+
+`docs/roadmap.md` §10 opens by saying what it is for — *"Which open questions must be
+answered before which phase. Answer them in this order and you never block on a decision you
+have not reached."* Sixteen questions in `docs/open-questions.md` carry an `open` status cell.
+Eight of them appear in no row of that table:
+
+```
+OQ-OVR-10   OQ-DATA-12   OQ-DATA-13
+OQ-PLAT-10  OQ-PLAT-11   OQ-PLAT-12   OQ-PLAT-13   OQ-PLAT-14
+```
+
+The `OPT` and `MON` questions are not in this list because the Phase 4 row writes them as
+ranges — `OQ-OPT-1..6, OQ-MON-1..5` — which covers them. These eight are absent outright.
+
+**The table already records this as a defect, six times, in its own prose.** The Phase 1b row
+says of `OQ-DATA-9` that it was *"raised in W5 and never placed on this table until it was
+decided, so the gate it belonged to had already closed"*, and of `OQ-MODEL-29`/`OQ-MODEL-30`
+that they were *"never placed on this table at all — the fifth time a question has been
+decided without appearing here, and the reason the count below is a recount rather than an
+increment."* Each of those was written after the fact, about a question that had already been
+answered. These eight are still open, so this is the first time the same defect can be
+recorded while it is still fixable.
+
+**Claude's assessment.** Real, cheap in mechanism and not mine to execute: the deliverable is
+eight placements, and a placement is a claim about which phase blocks on the answer. Five of
+the eight (`OQ-PLAT-10`, `-11`, `-13`, `OQ-DATA-12`, `-13`) are W32's dispositions, listed in
+the *Dispositioned, not delivered* sub-table with owners — that sub-table is a **closure
+record for W32**, not a gate, and reading it as one is how they came to be filed without a
+phase. The remaining three arose in W6b. A mechanical check is constructible here and worth
+considering alongside the placements: every `OQ-` id whose register status is `open` should
+appear in at least one §10 gate row, which is a set difference over two tables the audit
+already parses.
+
 ## Acceptance criteria
 
 Each item is discharged when it has a home outside a session's context: a marker line, a
 roadmap row, a script change with its broken-input proof, a written convention, or an `OQ-`
-id. **This note is `landed` only when all six have one**, and it records where each went.
+id. **This note is `landed` only when all seven have one**, and it records where each went.
 
 ## Next step
 
 Maintainer decides per item. (a), (d) and (e) are small enough to land in one PR; (c) wants a
-roadmap row before `W6b-1b` is sequenced; (b) follows (e); (f) is a `W6b` close item.
+roadmap row before `W6b-1b` is sequenced; (b) follows (e); (f) is a `W6b` close item; (g)
+wants eight phase judgements, five of which belong with whoever owns W32's dispositions.
 
 ## Original wording
 
-There is none — no maintainer request produced this note. It is Claude's own record of six
+There is none — no maintainer request produced this note. It is Claude's own record of seven
 findings that arose during W6b and had nowhere to go, filed under
 [`.claude/notes/README.md`](README.md)'s standard so they are not lost between sessions. The
 assessments above are Claude's throughout and are marked as such.
