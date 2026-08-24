@@ -6152,6 +6152,15 @@
           "workspace_id": {
             "title": "Workspace Id",
             "type": "string"
+          },
+          "workspaces": {
+            "default": [],
+            "description": "Every workspace this principal is a member of, each named. A principal with more than one names its choice in the `Workspace-Id` header (FR-PLAT-65); this is the list that choice is made from.",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceMembership"
+            },
+            "title": "Workspaces",
+            "type": "array"
           }
         },
         "required": [
@@ -10973,6 +10982,31 @@
           "reason"
         ],
         "title": "Withdraw",
+        "type": "object"
+      },
+      "WorkspaceMembership": {
+        "additionalProperties": false,
+        "description": "One workspace this principal may act in, named (FR-PLAT-62, FR-PLAT-63).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "slug",
+          "name"
+        ],
+        "title": "WorkspaceMembership",
         "type": "object"
       },
       "WorstRegion": {

@@ -18,7 +18,12 @@ from sqlalchemy import select
 
 from app.api.deps import Caller, require_caller
 from app.api.responses import problems
-from app.db.models import RoleAssignmentRow, RoleRow
+from app.db.models import (
+    RoleAssignmentRow,
+    RoleRow,
+    WorkspaceMemberRow,
+    WorkspaceRow,
+)
 from app.db.session import Database
 from app.platform import rbac
 from model_schema import ActorKind, Permission
@@ -48,6 +53,16 @@ class RoleAssignmentView(BaseModel):
     expires_at: str | None = None
 
 
+class WorkspaceMembership(BaseModel):
+    """One workspace this principal may act in, named (FR-PLAT-62, FR-PLAT-63)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    workspace_id: str
+    slug: str
+    name: str
+
+
 class Me(BaseModel):
     """The current principal, its roles, and its effective permissions."""
 
@@ -63,6 +78,12 @@ class Me(BaseModel):
         description="Workspace-wide effective permissions. Scoped assignments appear under "
         "`roles`; a permission held only on one artifact is not listed here, because a "
         "control enabled by it would be wrong on every other artifact.",
+    )
+    workspaces: tuple[WorkspaceMembership, ...] = Field(
+        default=(),
+        description="Every workspace this principal is a member of, each named. A principal "
+        "with more than one names its choice in the `Workspace-Id` header (FR-PLAT-65); this "
+        "is the list that choice is made from.",
     )
 
 
@@ -90,6 +111,26 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
             )
         ).all()
 
+        # A Service Account has no `workspace_members` row — its workspace comes from the
+        # account itself — so this list is empty for one. That is correct rather than a
+        # gap: FR-PLAT-65 says a Service Account never sends the header, because it has
+        # exactly one workspace by construction and nothing to choose between.
+        memberships = (
+            (
+                await session.execute(
+                    select(WorkspaceRow)
+                    .join(
+                        WorkspaceMemberRow,
+                        WorkspaceMemberRow.workspace_id == WorkspaceRow.id,
+                    )
+                    .where(WorkspaceMemberRow.user_id == caller.principal.id)
+                    .order_by(WorkspaceRow.name)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
     return Me(
         principal_kind=caller.principal.kind,
         principal_id=str(caller.principal.id),
@@ -101,11 +142,13 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
                 scope_type=assignment.scope_type,
                 scope_id=str(assignment.scope_id) if assignment.scope_id else None,
                 break_glass=assignment.break_glass,
-                expires_at=(
-                    assignment.expires_at.isoformat() if assignment.expires_at else None
-                ),
+                expires_at=(assignment.expires_at.isoformat() if assignment.expires_at else None),
             )
             for assignment, role in rows
         ),
         permissions=tuple(sorted(permissions)),
+        workspaces=tuple(
+            WorkspaceMembership(workspace_id=str(w.id), slug=w.slug, name=w.name)
+            for w in memberships
+        ),
     )

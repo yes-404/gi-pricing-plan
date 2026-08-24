@@ -114,3 +114,46 @@ async def test_break_glass_is_visible_on_me(
     assert len(elevated) == 1
     assert elevated[0]["role"] == "approver"
     assert elevated[0]["expires_at"] is not None
+
+
+@pytest.mark.req("FR-PLAT-63")
+async def test_me_lists_every_membership_with_its_name(
+    client: TestClient, database, workspace_id, principal, grant
+) -> None:
+    """A switcher cannot offer a choice the identity endpoint does not describe.
+
+    Two memberships, and the response must name both — not only the one the caller is
+    acting in, which is what `workspace_id` already says.
+    """
+    from app.db.models import WorkspaceMemberRow
+    from app.platform import workspaces
+    from model_schema import new_uuid7
+
+    other = new_uuid7()
+    async with database.unit_of_work() as session:
+        # Named *before* `grant`, deliberately. `grant` calls `ensure_workspace` with no
+        # name, and `ensure_workspace` returns an existing row untouched — so naming
+        # afterwards would silently do nothing and this assertion would read
+        # "Workspace xxxxxxxx". Creating both named up front also exercises that
+        # idempotency: `grant`'s later call must find these rows and leave them alone.
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id, name="Motor")
+        await workspaces.ensure_workspace(session, workspace_id=other, name="Household")
+        # Both memberships are written here. `grant` assigns a *role*, which is a different
+        # fact from membership and does not imply one — a caller can hold a role assignment
+        # in a workspace it has no `workspace_members` row for, which is exactly why this
+        # endpoint reads memberships rather than inferring them from roles.
+        session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=workspace_id))
+        session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+
+    await grant("pricing_actuary")
+
+    response = client.get(
+        "/api/v1/me",
+        headers={
+            DEV_PRINCIPAL_HEADER: str(principal.id),
+            DEV_WORKSPACE_HEADER: str(workspace_id),
+        },
+    )
+    assert response.status_code == 200, response.text
+    named = {w["workspace_id"]: w["name"] for w in response.json()["workspaces"]}
+    assert named == {str(workspace_id): "Motor", str(other): "Household"}
