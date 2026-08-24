@@ -1957,6 +1957,18 @@
               }
             ]
           },
+          "usage_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Count"
+          },
           "version": {
             "minimum": 1.0,
             "title": "Version",
@@ -2066,6 +2078,18 @@
                 "type": "null"
               }
             ]
+          },
+          "usage_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Count"
           },
           "version": {
             "minimum": 1.0,
@@ -7051,6 +7075,78 @@
         "title": "Page[AuditEventView]",
         "type": "object"
       },
+      "Page_CustomMetric_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomMetric"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[CustomMetric]",
+        "type": "object"
+      },
+      "Page_CustomObjective_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomObjective"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[CustomObjective]",
+        "type": "object"
+      },
       "Page_DatasetVersion_": {
         "additionalProperties": false,
         "properties": {
@@ -7229,6 +7325,42 @@
           "total_estimate"
         ],
         "title": "Page[Model]",
+        "type": "object"
+      },
+      "Page_PerilStructure_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PerilStructure"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[PerilStructure]",
         "type": "object"
       },
       "Page_ValidationRule_": {
@@ -12620,6 +12752,156 @@
       }
     },
     "/api/v1/custom-metrics": {
+      "get": {
+        "description": "The library `02` §5.3 renders (FR-MODEL-127), cursor-paginated, newest first.\n\nNamed `list_custom_metrics` rather than `list_metrics`: the platform function this\ncalls is `metrics.list_metrics`, and two different things sharing one name in one\nmodule is an import the reader has to disambiguate.\n\n**400 in, 404 out.** A filter matching nothing is an empty 200 — the artifact the\ncaller named may simply not exist yet, which is a result, not an error. Only a cursor\nthis API did not issue is a 400.\n\n`usage_count` is **one grouped aggregate over the page's refs**, never one query per\nrow: FR-MODEL-127 makes that budget part of the requirement rather than an\noptimisation. `metrics.usage_counts` expands `eval_metrics` laterally, so a model\nnaming three metrics counts once against each, and it counts exactly what\n`GET /{id}/usage` counts — a row and the page opened from it cannot disagree.",
+        "operationId": "list_custom_metrics_api_v1_custom_metrics_get",
+        "parameters": [
+          {
+            "description": "Restrict to metrics in this lifecycle state.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/MetricStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to metrics in this lifecycle state.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Metric slug, matched exactly.",
+            "in": "query",
+            "name": "slug",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Metric slug, matched exactly.",
+              "title": "Slug"
+            }
+          },
+          {
+            "description": "Opaque; pass back the previous page's `next_cursor`.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque; pass back the previous page's `next_cursor`.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_CustomMetric_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List the workspace's Custom Metrics",
+        "tags": [
+          "modelling"
+        ]
+      },
       "post": {
         "description": "**201** with the metric, as a `draft` (FR-MODEL-45, 103).\n\n201 rather than 202, `custom_objectives.create_custom_objective`'s reason: authoring is\nnot work, and the parameters are checked against §4.5's ranges by the contract at write\ntime. The *certification* — §4.13's checks — is the work, and it is a separate call.",
         "operationId": "create_custom_metric_api_v1_custom_metrics_post",
@@ -13237,6 +13519,156 @@
       }
     },
     "/api/v1/custom-objectives": {
+      "get": {
+        "description": "The library `02` §5.3 renders (FR-MODEL-127), cursor-paginated, newest first.\n\nUntil this route the module had create, detail, certify, submit and usage and nothing\nthat lists, so §5.3 asked for a screen no endpoint could supply and a `slug@version`\naddress had no way to reach a UUID-only detail route.\n\n**400 in, 404 out.** A filter matching nothing is an empty 200 — the artifact the\ncaller named may simply not exist yet, which is a result, not an error. Only a cursor\nthis API did not issue is a 400.\n\n`usage_count` is **one grouped aggregate over the page's refs**, never one query per\nrow: FR-MODEL-127 makes that budget part of the requirement rather than an\noptimisation, because the query reads an unindexed JSONB column and an N+1 here would\nbe indistinguishable from this until a workspace held a few hundred artifacts. It\ncounts exactly what `GET /{id}/usage` counts, so a row and the page opened from it\ncannot disagree.",
+        "operationId": "list_custom_objectives_api_v1_custom_objectives_get",
+        "parameters": [
+          {
+            "description": "Restrict to objectives in this lifecycle state.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ObjectiveStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to objectives in this lifecycle state.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Objective slug, matched exactly.",
+            "in": "query",
+            "name": "slug",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Objective slug, matched exactly.",
+              "title": "Slug"
+            }
+          },
+          {
+            "description": "Opaque; pass back the previous page's `next_cursor`.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque; pass back the previous page's `next_cursor`.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_CustomObjective_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List the workspace's Custom Objectives",
+        "tags": [
+          "modelling"
+        ]
+      },
       "post": {
         "description": "**201** with the objective, as a `draft` (`wf-05` A1, FR-MODEL-38).\n\n201 rather than 202: authoring is not work. The parameters are checked against §4.5's\nranges and the applicability against the template's, both by the contract, and what is\nwritten is a declaration. The *certification* is the work, and it is a separate call for\nexactly that reason — FR-MODEL-42 makes it the evidence, not a side effect of authoring.",
         "operationId": "create_custom_objective_api_v1_custom_objectives_post",
@@ -19319,6 +19751,156 @@
       }
     },
     "/api/v1/peril-structures": {
+      "get": {
+        "description": "One page of the library (FR-MODEL-127), newest first.\n\n**No `usage_count`, deliberately.** `02` §5.1:1712 asks this row for pagination and the\ntwo filters and stops, where :1697 and :1705 name the count for objectives and metrics —\nand FR-MODEL-127's prose says \"`usage_count` is on the row\" without saying which rows.\nThis route builds the endpoint table's reading and `test_the_row_carries_no_usage_count`\nasserts the absence, so the field cannot appear here by accident. The disagreement\nbetween the table and the prose is raised as an open question in `open-questions.md` and\nmirrored in `02` §10 rather than settled here: whether a Peril Structure has a blast\nradius worth counting depends on how a Model Spec names one, which is a question about\nthe reference direction and not about this route.\n\nNamed `list_peril_structures_route` because `service.list_peril_structures` is the query\nbehind it; two different things sharing one name in one module is an import the reader\nhas to disambiguate.",
+        "operationId": "list_peril_structures_route_api_v1_peril_structures_get",
+        "parameters": [
+          {
+            "description": "Restrict to structures in this lifecycle state.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PerilStructureStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to structures in this lifecycle state.",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Structure slug, matched exactly.",
+            "in": "query",
+            "name": "slug",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Structure slug, matched exactly.",
+              "title": "Slug"
+            }
+          },
+          {
+            "description": "Opaque; pass back the previous page's `next_cursor`.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque; pass back the previous page's `next_cursor`.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PerilStructure_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "List the workspace's Peril Structures",
+        "tags": [
+          "modelling"
+        ]
+      },
       "post": {
         "description": "**201** with the structure (`wf-01` E4, FR-MODEL-58).\n\n201 rather than 202: composing is not work. The models are already fitted, and what this\nwrites is the declaration of how they combine. The *reconciliation* is the work, and it\nis a separate call for exactly that reason.\n\nEvery referenced model is resolved here, before the row exists — a structure citing a\nmodel that does not resolve, or one that was never fitted, is a composition that cannot\nbe priced, and it is cheaper to say so now than at reconcile time.",
         "operationId": "create_peril_structure_api_v1_peril_structures_post",

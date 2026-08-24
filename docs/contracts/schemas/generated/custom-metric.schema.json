@@ -262,6 +262,19 @@
       ],
       "default": null
     },
+    "usage_count": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Usage Count"
+    },
     "version": {
       "minimum": 1,
       "title": "Version",
