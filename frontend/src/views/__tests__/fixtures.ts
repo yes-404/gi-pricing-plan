@@ -1,3 +1,4 @@
+import type { Diagnostics } from "@/api/diagnostics";
 import type { ModelComparison } from "@/api/comparisons";
 import { gbmSpec, type Model, type TransparencyArtifact } from "@/api/models";
 
@@ -258,6 +259,138 @@ export const COMPARISON: ModelComparison = {
         ],
         max_abs_difference: 0.184,
       },
+    ],
+  },
+};
+
+/**
+ * A `Diagnostics` artifact with every arm populated — the GBM case, because it is the only
+ * one that exercises both partitioned surfaces (`universal`, and `eval_curve` inside `gbm`).
+ * Tests that need an arm absent set it to `null` on a spread of this constant rather than
+ * declaring a second fixture, so there is one place where the shape is written down.
+ *
+ * The numbers are small and made up. They are not a fit of anything; the only property any
+ * test relies on is that train and holdout differ, so a chart plotting one twice fails.
+ */
+export const DIAGNOSTICS: Diagnostics = {
+  id: "33333333-3333-4333-8333-333333333333",
+  model_id: GBM_MODEL.id,
+  computed_at: "2026-08-24T09:00:00Z",
+  job_id: "44444444-4444-4444-8444-444444444444",
+  universal: {
+    train: {
+      weighting: "exposure",
+      rows: 407_530,
+      ae_overall: 1.002,
+      ae_by_factor: [
+        { factor: "vehicle_age", level: "0-3", actual: 0.061, expected: 0.059, ae: 1.034,
+          exposure_years: "12034.5" },
+        { factor: "vehicle_age", level: "4-9", actual: 0.048, expected: 0.05, ae: 0.96,
+          exposure_years: "20115.25" },
+      ],
+      lift: [
+        { bin: 1, rows: 40_753, predicted: 0.021, actual: 0.023, exposure_years: "3210.5" },
+        { bin: 2, rows: 40_753, predicted: 0.049, actual: 0.047, exposure_years: "3199.0" },
+      ],
+      gini: 0.312,
+      gini_normalised: 0.418,
+      calibration: [
+        { bin: 1, rows: 40_753, predicted: 0.021, actual: 0.023 },
+        { bin: 2, rows: 40_753, predicted: 0.049, actual: 0.047 },
+      ],
+      residual_summary: {
+        mean: 0.0004, std: 0.212, minimum: -1.88, maximum: 9.42, p01: -0.55, p99: 0.71,
+      },
+    },
+    holdout: {
+      weighting: "exposure",
+      rows: 169_503,
+      ae_overall: 0.987,
+      ae_by_factor: [
+        { factor: "vehicle_age", level: "0-3", actual: 0.063, expected: 0.059, ae: 1.068,
+          exposure_years: "5010.75" },
+        { factor: "vehicle_age", level: "4-9", actual: 0.046, expected: 0.05, ae: 0.92,
+          exposure_years: "8402.0" },
+      ],
+      lift: [
+        { bin: 1, rows: 16_950, predicted: 0.022, actual: 0.025, exposure_years: "1340.5" },
+        { bin: 2, rows: 16_950, predicted: 0.05, actual: 0.046, exposure_years: "1333.25" },
+      ],
+      gini: 0.289,
+      gini_normalised: 0.391,
+      calibration: [
+        { bin: 1, rows: 16_950, predicted: 0.022, actual: 0.025 },
+        { bin: 2, rows: 16_950, predicted: 0.05, actual: 0.046 },
+      ],
+      residual_summary: {
+        mean: -0.0011, std: 0.244, minimum: -2.03, maximum: 11.07, p01: -0.63, p99: 0.82,
+      },
+    },
+  },
+  complexity: {
+    factor_count: 8,
+    parameter_count: 214,
+    exposure_per_parameter: 1903.4,
+    claims_per_parameter: 94.2,
+    max_factor_count: null,
+    min_exposure_per_parameter: 1000,
+  },
+  glm: null,
+  gbm: {
+    eval_curve: [
+      { iteration: 0, metric: "poisson-nloglik", train: 0.512, holdout: 0.518 },
+      { iteration: 1, metric: "poisson-nloglik", train: 0.487, holdout: 0.499 },
+      { iteration: 2, metric: "poisson-nloglik", train: 0.471, holdout: 0.498 },
+    ],
+    importances: [
+      { feature: "vehicle_age", gain: 412.5, cover: 88.1, frequency: 0.34 },
+      { feature: "driver_age", gain: 260.2, cover: null, frequency: 0.29 },
+    ],
+    permutation_importances: [
+      { feature: "vehicle_age", baseline: 0.498, permuted: 0.552, degradation: 0.054,
+        repeats: 5, seed: 20260824 },
+      { feature: "driver_age", baseline: 0.498, permuted: 0.521, degradation: 0.023,
+        repeats: 5, seed: 20260824 },
+    ],
+    partial_dependence: [
+      {
+        factor: "vehicle_age",
+        points: [
+          { value: "0-3", mean_prediction: 0.062, exposure_share: 0.31 },
+          { value: "4-9", mean_prediction: 0.047, exposure_share: 0.44 },
+        ],
+        omitted: null,
+      },
+      {
+        factor: "region_x_vehicle_age",
+        points: [],
+        omitted: { reason: "no_source_column", levels: null, exposure_share: null },
+      },
+    ],
+    monotonicity: [
+      { factor: "vehicle_age", declared: "decreasing", holds: true, worst_violation: 0 },
+      { factor: "driver_age", declared: "decreasing", holds: false, worst_violation: 0.0031 },
+    ],
+    tree_count: 300,
+    max_depth: 6,
+    mean_depth: 4.7,
+    quantile_crossing: null,
+  },
+  cross_validation: {
+    method: "random",
+    seed: 20260824,
+    folds: 5,
+    metric: "poisson-nloglik",
+    selected_alpha: 0.01,
+    path: [
+      { alpha: 0, mean_score: 0.505, std_score: 0.004 },
+      { alpha: 0.01, mean_score: 0.498, std_score: 0.003 },
+      { alpha: 0.1, mean_score: 0.511, std_score: 0.006 },
+    ],
+    fold_metrics: [
+      { fold: 0, rows: 81_506, score: 0.494 },
+      { fold: 1, rows: 81_506, score: 0.502 },
+      { fold: 2, rows: 81_506, score: 0.497 },
     ],
   },
 };
