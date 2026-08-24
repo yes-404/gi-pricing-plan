@@ -42,7 +42,7 @@ none carries `Edit` or `Write`.
 
 | Agent | Runs | Returns |
 |---|---|---|
-| [`gate-runner`](gate-runner.md) | §11's full gate, **both halves** — ruff, mypy, lint-imports, pytest, audit-docs, req-coverage, contract drift; then pnpm install/generate/lint/type-check/test/build | Per-command exit-code table + the failing excerpt only, ~60 lines |
+| [`gate-runner`](gate-runner.md) | §11's full gate, **both halves** — ruff, mypy, lint-imports, pytest, audit-docs, req-coverage, contract drift; then pnpm install/generate/lint/type-check/test/build. **Reports the `pwd` and SHA it ran in** and reconciles its pytest total against `--collect-only` — a gate run against the wrong tree, or a partially collected one, reads identical to a clean pass | Per-command exit-code table + the tree it ran in + the failing excerpt only, ~60 lines |
 | [`evidence-collector`](evidence-collector.md) | `scope-audit.py` across **all three axes** (requirements, `--endpoints`, `--catalogue`) plus `req-coverage.py`, then one bounded grep per unevidenced id | Axis totals, the unevidenced list with what each grep found, and any disagreement with the roadmap's claimed count |
 | [`ci-watcher`](ci-watcher.md) | Bounded foreground polling of `gh pr view --json mergeStateStatus` to a terminal state, disambiguated through `gh run list --json status,conclusion` (the token reads the run list; it cannot read check details, and `UNSTABLE` while runs are in-flight is not a failure) | The terminal state once every expected run is `completed`, which workflows the diff *should* have fired, and a pointer to `gate-runner` for the cause |
 
