@@ -25,6 +25,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.test_api_datasets import _headers
+from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_model_jobs_gbm import _gbm_spec
 from fastapi.testclient import TestClient
 
@@ -460,3 +461,27 @@ def test_the_page_is_cursor_paginated(
         {row["id"] for row in page_one["items"]}
         & {row["id"] for row in second.json()["items"]}
     )
+
+
+# -- the published contract ----------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-127")
+@pytest.mark.req("FR-MODEL-108")
+def test_every_custom_metric_route_is_in_the_published_contract() -> None:
+    """The sibling guard `test_custom_objectives.py` and `test_peril_structures.py` already
+    carry. It is the one assertion that fails when a route ships but the contract is not
+    regenerated — the drift `generate-contracts.py --check` catches in CI, proven here
+    against the committed artifact so the failure names the route rather than the file.
+    """
+    paths = _load(OPENAPI)["paths"]
+    for method, path in (
+        ("post", "/api/v1/custom-metrics"),
+        ("get", "/api/v1/custom-metrics"),
+        ("get", "/api/v1/custom-metrics/{metric_id}"),
+        ("post", "/api/v1/custom-metrics/{metric_id}/certify"),
+        ("get", "/api/v1/custom-metrics/{metric_id}/certificate"),
+        ("post", "/api/v1/custom-metrics/{metric_id}/submit"),
+        ("get", "/api/v1/custom-metrics/{metric_id}/usage"),
+    ):
+        assert method in paths.get(path, {}), f"{method.upper()} {path} is unpublished"
