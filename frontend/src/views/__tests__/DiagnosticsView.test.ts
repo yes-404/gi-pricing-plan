@@ -150,6 +150,18 @@ describe("DiagnosticsView", () => {
     expect(within(tails).getAllByRole("cell")[1]).toHaveTextContent("0.82");
   });
 
+  /**
+   * `glm` is null on this fixture, which is a GBM. The arm is guarded rather than always
+   * mounted: `GlmDiagnostics` is not partitioned and has no empty form, so a panel rendered
+   * for a model that has none would be a section of em dashes claiming a GLM was fitted.
+   */
+  it("does not show the GLM arm for a model that is not a GLM", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: /headline metrics/i });
+    expect(screen.queryByRole("table", { name: /GLM fit statistics/i })).not.toBeInTheDocument();
+  });
+
   it("does not call an unset complexity threshold a pass", async () => {
     stubBoth();
     render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });

@@ -7,6 +7,7 @@ import { ProblemError } from "@/api/problem";
 import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
 import ComplexityTable from "@/components/ComplexityTable.vue";
+import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
@@ -216,6 +217,19 @@ onMounted(async () => {
           Complexity
         </h2>
         <ComplexityTable :complexity="diagnostics.complexity" />
+      </section>
+
+      <!-- Guarded, not always mounted. `GlmDiagnostics` has no empty form, so a panel rendered
+           for a model that has none would be a section of em dashes claiming a GLM was
+           fitted — and in practice it throws before anything on the page renders at all. -->
+      <section
+        v-if="diagnostics.glm"
+        class="mt-8"
+      >
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          GLM
+        </h2>
+        <GlmDiagnosticsPanel :glm="diagnostics.glm" />
       </section>
     </template>
   </section>
