@@ -3,6 +3,7 @@
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/peril-structures` | **201** Create or version a Peril Structure (FR-MODEL-58) |
+| `GET` | `/peril-structures` | One page of the workspace's structures (FR-MODEL-127) |
 | `GET` | `/peril-structures/{id}` | The structure and its reconciliation (FR-MODEL-90) |
 | `POST` | `/peril-structures/{id}/reconcile` | **202** Reconcile → Job (FR-MODEL-60) |
 | `POST` | `/peril-structures/{id}/submit` | Submit for approval (FR-MODEL-61) |
@@ -24,11 +25,19 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
 from app.api.deps import Caller, job_identity
+from app.api.pagination import (
+    COUNT_CAP,
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    Page,
+    decode_cursor,
+    encode_cursor,
+)
 from app.api.responses import problems
 from app.db.session import Database
 from app.platform import jobs as job_service
@@ -41,6 +50,7 @@ from model_schema import (
     JobQueue,
     PerilComponent,
     PerilStructure,
+    PerilStructureStatus,
     Slug,
 )
 from model_schema import Permission as Perm
@@ -119,6 +129,34 @@ class SubmitPerilStructure(BaseModel):
     change_summary: str = Field(min_length=1)
 
 
+class PerilStructureFilter(BaseModel):
+    """`GET /peril-structures`'s query string — `02` §5.1:1712's two filters, and no more.
+
+    `extra="forbid"` for `ObjectiveFilter`'s reason: a mistyped `?stauts=archived` that is
+    silently ignored returns the unfiltered library, and the caller reads it as the answer
+    to the question they meant to ask.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: PerilStructureStatus | None = Field(
+        default=None, description="Restrict to structures in this lifecycle state."
+    )
+    slug: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="Structure slug, matched exactly.",
+    )
+    cursor: str | None = Field(
+        default=None, description="Opaque; pass back the previous page's `next_cursor`."
+    )
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+
+
+PerilStructureFilterDep = Annotated[PerilStructureFilter, Query()]
+
+
 @router.post(
     "/peril-structures",
     summary="Create or version a Peril Structure",
@@ -148,6 +186,56 @@ async def create_peril_structure(
             excluded_perils=[e.model_dump(mode="json") for e in body.excluded_perils],
         )
         return service.to_structure(row)
+
+
+@router.get(
+    "/peril-structures",
+    summary="List the workspace's Peril Structures",
+    responses=problems(400, 401, 403, 422),
+)
+async def list_peril_structures_route(
+    caller: ReadModels,
+    database: DatabaseDep,
+    filters: PerilStructureFilterDep,
+) -> Page[PerilStructure]:
+    """One page of the library (FR-MODEL-127), newest first.
+
+    **No `usage_count`, deliberately.** `02` §5.1:1712 asks this row for pagination and the
+    two filters and stops, where :1697 and :1705 name the count for objectives and metrics —
+    and FR-MODEL-127's prose says "`usage_count` is on the row" without saying which rows.
+    This route builds the endpoint table's reading and `test_the_row_carries_no_usage_count`
+    asserts the absence, so the field cannot appear here by accident. The disagreement
+    between the table and the prose is raised as an open question in `open-questions.md` and
+    mirrored in `02` §10 rather than settled here: whether a Peril Structure has a blast
+    radius worth counting depends on how a Model Spec names one, which is a question about
+    the reference direction and not about this route.
+
+    Named `list_peril_structures_route` because `service.list_peril_structures` is the query
+    behind it; two different things sharing one name in one module is an import the reader
+    has to disambiguate.
+    """
+    after = decode_cursor(filters.cursor)
+
+    async with database.session() as session:
+        rows, total = await service.list_peril_structures(
+            session,
+            workspace_id=caller.workspace_id,
+            limit=filters.limit,
+            count_cap=COUNT_CAP,
+            status=filters.status,
+            slug=filters.slug,
+            after=after,
+        )
+
+    # The extra row exists only to answer "is there another page?" and is not returned.
+    has_more = len(rows) > filters.limit
+    page_rows = list(rows[: filters.limit])
+
+    return Page[PerilStructure](
+        items=[service.to_structure(row) for row in page_rows],
+        next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
+        total_estimate=total,
+    )
 
 
 @router.get(
