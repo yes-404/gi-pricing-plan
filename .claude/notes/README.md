@@ -38,6 +38,7 @@ must say where it went.
 | [NT-0001](0001-phase-boundary-plan-review.md) | Plan review at each phase boundary — completion, omission, skills, drift, shape | 2026-08-15 | `landed` | Standard → `CLAUDE.md` §14; trigger → `roadmap.md` |
 | [NT-0002](0002-demo-entrance-and-guide.md) | Demo entrance, with a guide to what is testable | 2026-08-15 | `landed` | Spec first (FR-PLAT-53/54), then the code as **W7b** — `scripts/demo.py`, `/demo`, and a guide derived on every request |
 | [NT-0003](0003-duplicated-status-goes-stale.md) | Duplicated status in `CLAUDE.md` goes stale — the phase line, the counts, the roadmap restatement, the second skill list | 2026-08-23 | `landed` | Rules → `CLAUDE.md` §0, §2, §9; **no code, no spec change** |
+| [NT-0004](0004-a-reference-that-resolves-only-for-the-writer.md) | A reference that resolves only in the writer’s context — ten instances in one day, and one mechanical rule | 2026-08-24 | `open` | Proposed rule → `CLAUDE.md` §13, as a fourth bullet; **no code, no spec change** |
 
 ## What a note must contain
 

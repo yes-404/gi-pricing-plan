@@ -4377,6 +4377,69 @@ half a human maintains — the asymmetry `CLAUDE.md` §13 rule 4 is pointing at.
 one of the uncompared shapes W32-1b's skill count tracks.
 
 
+#### W32-7 slice — workspace identity and selection, 2026-08-24
+
+**Merged.** FR-PLAT-63 and FR-PLAT-65: a principal who belongs to several workspaces can now
+say which one it is acting in, and the platform **verifies the answer instead of trusting it**.
+`require_caller` declares a `Workspace-Id` header and `_select_workspace` checks it against the
+memberships the platform already holds — a workspace the principal does not belong to is
+`403 WORKSPACE_SCOPE_DENIED`, and several memberships with no selection remain refused with
+`403 WORKSPACE_SELECTION_REQUIRED`. The refusal is the permanent rule and the header is a way to
+satisfy it, never a claim that widens scope; **nothing defaults a multi-membership principal
+into one workspace.** The header is published on **108 of the 112 operations** — the four
+without it are `/healthz`, `/readyz`, `/version` and `/metrics`, exactly the unauthenticated
+surface — and that count is asserted by a test rather than assumed, because the reason for
+declaring the header on the dependency instead of reading the raw request is that a generated
+client should carry it. Full record in
+[the ledger](plans/2026-08-23-w32-7-workspace-identity-and-selection-ledger.md); the plan is
+frozen at its date. Four commits, of which three carry the code — the workspace row and
+its backfill migration, `GET /me`, then the header check with the switch recorder — for
+21 files and +2883/−77, or 20 files and +819/−49 once the regenerated
+`openapi/generated.json` is set aside, that one file being most of the total.
+
+**FR-PLAT-63 has four obligations and this slice delivered three.** The fourth — auditing a
+switch — got its **mechanism** but not its trigger. `platform.workspace_switch.record_switch`
+writes one event in the workspace left and one in the workspace entered, because `06` FR-GOV-24
+chains audit events *per workspace* and a single event is invisible from the chain an auditor is
+usually reading; the two writes are ordered by id so two principals switching in opposite
+directions cannot take the same pair of advisory locks in opposite orders. What is missing is
+the call site, and not for want of effort: **`require_caller` runs once per request and holds no
+memory of the previous one, so "the selection changed" is not a fact it can observe.** The
+§13 verdict is therefore *deferred with an owner* rather than delivered — a green suite here
+would otherwise imply an obligation that is not met. **Owner: `W6b-11`**, the workstream with
+the workspace switcher in front of it. Options are OQ-PLAT-12, which recommends storing the
+previous selection reached through an explicit endpoint and names *auditing every selection*
+as the option to refuse out loud: it needs no schema change, so it is the one a later reader
+reaches for, and it turns the FR-GOV-24 chain into a request log.
+
+**A measurement replaced the question the plan asked.** The plan's Task 5 recommended adding
+`workspace` to `ARTIFACT_TYPES` so a switch event's `entity_ref` would parse. Checked before
+diverging: of the **39 `entity_ref` spellings the backend writes, only 19 parse** — 13 types
+besides `workspace` are already absent from the frozenset (`actor`, `job`, `principal`, `role`,
+`service_account` and eight more), and 5 more name a listed type with **no `@version`**, so
+`dataset:{slug}` records which dataset was touched but not which version of it. "The audit
+chain holds `ArtifactRef`s" was never true, and admitting one more type would fix 1 case in 20
+while redefining the frozenset as "things that appear in `entity_ref`" rather than "things that
+are artifacts". OQ-PLAT-14 records the measurement and recommends declaring what the column
+actually is — *the subject of the event* — with a validator that admits both shapes. The plan
+is left unedited (§2: a filed plan is frozen at its date); the correction is in `38d2c22`'s
+message and the ledger.
+
+**Declaring one header re-broke a defect a whole module exists to prevent.** FastAPI injects a
+`422` typed as its own `HTTPValidationError` into every operation that has a parameter and does
+not already declare one. Giving `require_caller` a header handed **112 operations a parameter in
+a single edit**, and the five that had never had one began publishing a second error shape — the
+exact FR-PLAT-48 finding `api/responses.py` was written to remove, arriving through a dependency
+rather than through a route. A per-route convention cannot catch a change made in a dependency,
+so `without_fastapi_validation_error` now strips it from the assembled document, applied in
+`create_app` so the served document and the committed contract stay the same bytes. The five
+are **not** given `problems(422)` instead: they cannot return one — the header is optional and
+`api.deps` answers a malformed value with `403`, not `422` — and advertising an error a route
+never produces is precisely what `problems` exists to stop. The 103 routes that genuinely can
+fail validation declare their own `422` and are untouched. Caught by the full suite, not by
+`generate-contracts.py --check`, which passed throughout: the contract faithfully described the
+code and both were wrong together, which is the asymmetry `CLAUDE.md` §13 rule 4 points at.
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency
