@@ -1,18 +1,24 @@
-"""Custom Metrics over HTTP (`02` §5.1, FR-MODEL-45, 103, 104, 105, 108).
+"""Custom Metrics over HTTP (`02` §5.1, FR-MODEL-45, 103, 104, 105, 108, 127).
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/custom-metrics` | **201** Create or version a metric → `draft` (FR-MODEL-45, 103) |
+| `GET` | `/custom-metrics` | The library: paginated, filtered, counted (FR-MODEL-127) |
 | `GET` | `/custom-metrics/{id}` | The metric and its lifecycle (FR-MODEL-108) |
 | `POST` | `/custom-metrics/{id}/certify` | **202** Run §4.13's checks → Job (FR-MODEL-105) |
 | `GET` | `/custom-metrics/{id}/certificate` | The latest certificate (FR-MODEL-108) |
 | `POST` | `/custom-metrics/{id}/submit` | Submit for approval (FR-MODEL-45's lifecycle) |
 | `GET` | `/custom-metrics/{id}/usage` | Blast radius (FR-MODEL-108) |
 
-Six routes, not `custom_objectives.py`'s seven: a metric has no `expression` path to refuse
-— FR-MODEL-103 admits `kind: template` only, the same as an objective in Phase 1, but
-`/derive` is `custom-objectives`' own declared refusal (FR-MODEL-75) and §5.1's table
+Seven routes, not `custom_objectives.py`'s eight: a metric has no `expression` path to
+refuse — FR-MODEL-103 admits `kind: template` only, the same as an objective in Phase 1,
+but `/derive` is `custom-objectives`' own declared refusal (FR-MODEL-75) and §5.1's table
 carries no `/custom-metrics/{id}/derive` row to parallel it.
+
+**The collection `GET` is the newest of them** (FR-MODEL-127, 2026-08-23). Until it, this
+module had create, detail, certify, certificate, submit and usage and nothing that lists,
+so `02` §5.3's library screen had no endpoint to draw from and a `custom_metric:<slug>@<n>`
+address had nothing to resolve against a UUID-only detail route.
 """
 
 from __future__ import annotations
@@ -20,11 +26,19 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
 from app.api.deps import Caller, job_identity
+from app.api.pagination import (
+    COUNT_CAP,
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    Page,
+    decode_cursor,
+    encode_cursor,
+)
 from app.api.responses import problems
 from app.db.session import Database
 from app.errors import PlatformError
@@ -39,6 +53,7 @@ from model_schema import (
     JobQueue,
     MetricCertificate,
     MetricDirection,
+    MetricStatus,
     ObjectiveKind,
     ObjectiveTemplate,
     Slug,
@@ -111,6 +126,104 @@ class SubmitCustomMetric(BaseModel):
 #: A shared default instance rather than a call in the route's own default (B008): the
 #: model has no mutable state, so one instance answers every bodyless submit the same way.
 _EMPTY_SUBMIT = SubmitCustomMetric()
+
+
+class MetricFilter(BaseModel):
+    """`GET /custom-metrics`' filters and cursor page (`00` §5.2, FR-MODEL-127).
+
+    `extra="forbid"` for `ModelFilter`'s reason: a misspelled query parameter that is
+    silently ignored returns a full library where the caller asked for one artifact.
+
+    `slug` is an **exact** match. FR-MODEL-127 makes this filter what resolves §5.3's
+    `slug@version` addresses against UUID-only detail routes, so a prefix or substring
+    match would answer `capped-gamma` with `capped-gamma-tail` too — a wrong artifact
+    rather than a wide result.
+
+    A sibling of `custom_objectives.ObjectiveFilter` rather than a shared base: the two
+    differ in the one field that matters (`MetricStatus` against `ObjectiveStatus`), and a
+    generic parameterised over the enum would be read by everyone and understood by nobody.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: MetricStatus | None = Field(
+        default=None, description="Restrict to metrics in this lifecycle state."
+    )
+    slug: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="Metric slug, matched exactly.",
+    )
+    cursor: str | None = Field(
+        default=None, description="Opaque; pass back the previous page's `next_cursor`."
+    )
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+
+
+MetricFilterDep = Annotated[MetricFilter, Query()]
+
+
+@router.get(
+    "/custom-metrics",
+    summary="List the workspace's Custom Metrics",
+    responses=problems(400, 401, 403, 422),
+)
+async def list_custom_metrics(
+    caller: ReadModels,
+    database: DatabaseDep,
+    filters: MetricFilterDep,
+) -> Page[CustomMetric]:
+    """The library `02` §5.3 renders (FR-MODEL-127), cursor-paginated, newest first.
+
+    Named `list_custom_metrics` rather than `list_metrics`: the platform function this
+    calls is `metrics.list_metrics`, and two different things sharing one name in one
+    module is an import the reader has to disambiguate.
+
+    **400 in, 404 out.** A filter matching nothing is an empty 200 — the artifact the
+    caller named may simply not exist yet, which is a result, not an error. Only a cursor
+    this API did not issue is a 400.
+
+    `usage_count` is **one grouped aggregate over the page's refs**, never one query per
+    row: FR-MODEL-127 makes that budget part of the requirement rather than an
+    optimisation. `metrics.usage_counts` expands `eval_metrics` laterally, so a model
+    naming three metrics counts once against each, and it counts exactly what
+    `GET /{id}/usage` counts — a row and the page opened from it cannot disagree.
+    """
+    after = decode_cursor(filters.cursor)
+
+    async with database.session() as session:
+        rows, total = await service.list_metrics(
+            session,
+            workspace_id=caller.workspace_id,
+            limit=filters.limit,
+            count_cap=COUNT_CAP,
+            status=filters.status,
+            slug=filters.slug,
+            after=after,
+        )
+
+        # The extra row exists only to answer "is there another page?" and is not returned.
+        has_more = len(rows) > filters.limit
+        page_rows = list(rows[: filters.limit])
+
+        counts = await service.usage_counts(
+            session,
+            workspace_id=caller.workspace_id,
+            refs=[f"custom_metric:{row.slug}@{row.version}" for row in page_rows],
+        )
+
+    return Page[CustomMetric](
+        items=[
+            service.to_metric(
+                row,
+                usage_count=counts.get(f"custom_metric:{row.slug}@{row.version}", 0),
+            )
+            for row in page_rows
+        ],
+        next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
+        total_estimate=total,
+    )
 
 
 @router.post(

@@ -69,6 +69,7 @@ __all__ = [
     "apply_approval_decision",
     "certifiable_or_refuse",
     "create",
+    "list_metrics",
     "load_certificate",
     "load_metric",
     "record_certificate",
@@ -118,11 +119,19 @@ class MetricUsage(BaseModel):
     models: tuple[MetricUsageModel, ...] = ()
 
 
-def to_metric(row: CustomMetricRow) -> CustomMetric:
+def to_metric(row: CustomMetricRow, *, usage_count: int | None = None) -> CustomMetric:
     """The stored artifact, re-validated on the way out — `objectives.to_objective`'s
-    reason: the definition columns are JSONB behind a trigger, not behind the contract."""
+    reason: the definition columns are JSONB behind a trigger, not behind the contract.
+
+    `usage_count` is a keyword for `to_objective`'s reason: a per-request aggregate the
+    *caller* computed once for a whole page, passed in rather than queried here, because a
+    query here would be one round trip per row — the N+1 FR-MODEL-127 names as part of its
+    requirement. Defaulted to `None`, so every route that does not count says *not asked*
+    rather than *nothing uses this*.
+    """
     return CustomMetric.model_validate(
         {
+            "usage_count": usage_count,
             "id": str(row.id),
             "slug": row.slug,
             "version": row.version,
@@ -262,6 +271,71 @@ async def load_metric(
     return to_metric(
         await _get_or_404(session, workspace_id=workspace_id, metric_id=metric_id)
     )
+
+
+async def list_metrics(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    limit: int,
+    count_cap: int,
+    status: MetricStatus | None = None,
+    slug: str | None = None,
+    after: UUID | None = None,
+) -> tuple[Sequence[CustomMetricRow], int]:
+    """One page of the workspace's metrics, newest first (FR-MODEL-127).
+
+    Here rather than in the router, `objectives.list_objectives`' reason: none of the three
+    artifact modules' routers imports SQLAlchemy at all, and a router that reached for it
+    only here would leave the next person two patterns and no rule.
+
+    **Not factored into a shared generic with `list_objectives`.** The two are fifteen lines
+    each over different tables with different status enums, and the abstraction that unified
+    them would be harder to read than both.
+
+    `ix_custom_metrics_slug_status` covers `(workspace_id, slug, status)`, so both filters
+    are index-served and no migration accompanies this route. `slug` is an **equality**:
+    FR-MODEL-127 makes this filter what resolves §5.3's `slug@version` addresses against
+    UUID-only detail routes, and a prefix match would resolve `capped-gamma` to
+    `capped-gamma-tail` as well — a wrong artifact, not a wide result.
+
+    Ids are UUIDv7 and therefore time-ordered, so one column is both the sort and the
+    cursor. `limit + 1` rows are fetched: the extra one answers "is there another page?"
+    and the caller drops it.
+
+    Returns the rows and the capped total; the router builds the `Page`. No RBAC check —
+    unlike `usage`, which is reachable from a Job. Every caller of this arrives through
+    `requires(MODEL_READ)`, and a second check on the same request would be a second round
+    trip for an answer already given.
+
+    `limit` and `count_cap` are parameters rather than imports because `DEFAULT_LIMIT` and
+    `COUNT_CAP` live in `app.api.pagination`, and no module under `app/platform/` imports
+    from `app/api/`. Reading them here would invert that direction to save two arguments.
+    """
+    conditions = [CustomMetricRow.workspace_id == workspace_id]
+    if status is not None:
+        conditions.append(CustomMetricRow.status == status.value)
+    if slug is not None:
+        conditions.append(CustomMetricRow.slug == slug)
+
+    query = (
+        select(CustomMetricRow)
+        .where(*conditions)
+        .order_by(CustomMetricRow.id.desc())
+        .limit(limit + 1)
+    )
+    if after is not None:
+        query = query.where(CustomMetricRow.id < after)
+
+    rows = (await session.execute(query)).scalars().all()
+    total = (
+        await session.execute(
+            select(func.count()).select_from(
+                select(CustomMetricRow.id).where(*conditions).limit(count_cap).subquery()
+            )
+        )
+    ).scalar_one()
+    return rows, int(total)
 
 
 async def load_certificate(

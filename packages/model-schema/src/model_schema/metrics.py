@@ -96,6 +96,17 @@ class CustomMetric(BaseModel):
     certificate_id: UUID | None = None
     approval_request_id: UUID | None = None
 
+    #: How many Model Specs reference this metric version (FR-MODEL-127) — the library
+    #: row's count, and `CustomObjective.usage_count`'s field exactly: **derived per request
+    #: and stored on no row**. A stored counter would be a second answer to FR-MODEL-108's
+    #: blast radius, free to disagree with the query that derives it.
+    #:
+    #: `None` and `0` are different facts and are reported differently. The list route
+    #: computes one aggregate per page and supplies `0` for a metric nothing references;
+    #: every other route leaves this `None`, meaning *not asked*, because a `0` there would
+    #: read as "nothing uses this" on a page that never counted.
+    usage_count: int | None = Field(default=None, ge=0)
+
     @model_validator(mode="after")
     def _only_templates_are_built(self) -> Self:
         """FR-MODEL-75's rule, at the type — the second door behind the API's refusal."""
