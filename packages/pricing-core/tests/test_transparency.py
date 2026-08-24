@@ -13,6 +13,7 @@ import json
 import numpy as np
 import polars as pl
 import pytest
+from pydantic import ValidationError
 from test_ebm import BANDINGS, _book
 from test_ebm import FACTORS as EBM_FACTORS
 from test_ebm import _spec as _ebm_spec
@@ -25,6 +26,7 @@ from model_schema import (
     EbmNumericBins,
     EbmTerm,
     MonotonicDirection,
+    ShapInteraction,
     TransparencyArtifact,
     TransparencyKind,
     new_uuid7,
@@ -99,6 +101,43 @@ def test_the_worst_regions_name_a_cell_and_its_share_of_the_book(backend: str) -
     # Sorted worst-first, or "the worst region" names whichever came out of the loop first.
     percentages = [region.mean_abs_error_pct for region in approximation.worst_regions]
     assert percentages == sorted(percentages, reverse=True)
+
+
+@pytest.mark.req("FR-MODEL-36")
+def test_worst_region_shares_are_exposure_and_not_row_counts() -> None:
+    """A frame where the two definitions give opposite orderings.
+
+    `common` has 400 rows carrying 4.0 years between them; `rare` has 20 rows carrying 200.0.
+    A row-count share makes `common` the larger region and an exposure share makes `rare` the
+    larger one, so this test can only pass under one of the two definitions — which the
+    existing `0.0 < share <= 1.0` assertion could not distinguish, and did not.
+    """
+    from pricing_core.modelling.transparency import _worst_regions
+
+    n_common, n_rare = 400, 20
+    frame = pl.DataFrame(
+        {
+            "exposure_years": [0.01] * n_common + [10.0] * n_rare,
+            "area": ["common"] * n_common + ["rare"] * n_rare,
+            "driv_age": [40.0] * (n_common + n_rare),
+            "claim_count": [1.0] * (n_common + n_rare),
+        }
+    )
+    spec = _spec("xgboost")
+    target = np.ones(n_common + n_rare)
+    approximated = np.full(n_common + n_rare, 1.5)
+
+    regions = _worst_regions(
+        frame, FACTORS, target, approximated,
+        spec=spec, bandings=None, groupings=None,
+    )
+    share = {region.description: region.exposure_share for region in regions}
+
+    # Exposure: rare 200.0/204.0 = 0.980, common 4.0/204.0 = 0.0196.
+    # Row counts would be rare 20/420 = 0.048 and common 400/420 = 0.952 — reversed.
+    assert share["area = rare"] > share["area = common"]
+    assert share["area = rare"] == pytest.approx(200.0 / 204.0, abs=1e-6)
+    assert share["area = common"] == pytest.approx(4.0 / 204.0, abs=1e-6)
 
 
 @pytest.mark.req("FR-MODEL-35")
@@ -177,6 +216,21 @@ def test_lightgbm_says_it_cannot_compute_interactions_rather_than_finding_none()
     assert summary.top_interactions == ()
 
 
+@pytest.mark.req("FR-MODEL-79")
+def test_an_interaction_candidate_carries_no_exposure_share() -> None:
+    """The field was `1.0` at its construction site and `1.0` as a default on its type.
+
+    It could not have been anything else — a pair spans the whole frame, and
+    `_interaction_candidates` receives neither a spec nor a weight vector — so publishing it
+    told an actuary nothing while looking like a measurement. OQ-MODEL-31 withdrew it on
+    2026-08-23; `strength` alone is what the artifact truthfully carries until FR-MODEL-128's
+    holdout strength ratio lands.
+    """
+    assert "exposure_share" not in ShapInteraction.model_fields
+    with pytest.raises(ValidationError):
+        ShapInteraction(pair=("a", "b"), strength=0.1, exposure_share=1.0)
+
+
 @pytest.mark.req("FR-MODEL-36")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str) -> None:
@@ -197,6 +251,11 @@ def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str)
     statement = fidelity_statement(approximation.artifact_block(new_uuid7()), summary)
     assert "%" in statement
     assert "Divergence concentrates in area = " in statement
+    # The noun matters: the number beside it is a share of exposure (FR-MODEL-36), and `02`
+    # §4.9's own example sentence says so. Naming it "of rows" describes a quantity the
+    # artifact no longer carries.
+    assert "% of exposure" in statement
+    assert "% of rows" not in statement
     if backend == "lightgbm":
         assert "not SHAP interaction values" in statement
 

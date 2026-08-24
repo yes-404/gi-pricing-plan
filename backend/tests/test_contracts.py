@@ -1272,7 +1272,6 @@ REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
             "glm_approximation.family",
             "shap_summary.dependence_blob.sha256",
             "shap_summary.interactions_available",
-            "shap_summary.top_interactions.[].exposure_share",
         }
     ),
     "peril-structure": frozenset(
