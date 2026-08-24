@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ModelDetailView from "../ModelDetailView.vue";
+import { GBM_MODEL } from "./fixtures";
 
 const MODEL = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -128,5 +129,25 @@ describe("the model detail view", () => {
     expect(within(table).getByText(/1.2000/)).toBeInTheDocument();
     expect(within(table).getAllByText(/on the link scale/).length).toBeGreaterThan(0);
     expect(within(table).queryByText("1.000")).toBeNull();
+  });
+});
+
+describe("the model detail view, on a model that is not a GLM", () => {
+  const gbmProps = { slug: "motor-ad-frequency" };
+
+  it("does not call a fitted booster unfitted", async () => {
+    // The empty state is about `fit_result`, not about the GLM narrowing. Read off the
+    // narrowed ref it fires for every GBM and EBM ever fitted, and the page then states in
+    // prose that a model which took forty seconds to fit was never fitted.
+    stub(GBM_MODEL);
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    await screen.findByText(/lightgbm/i);
+    expect(screen.queryByText(/reserved but not yet fitted/i)).toBeNull();
+  });
+
+  it("still says so when a model really is reserved and unfitted", async () => {
+    stub({ ...GBM_MODEL, status: "draft", fit_result: null });
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    expect(await screen.findByText(/reserved but not yet fitted/i)).toBeInTheDocument();
   });
 });

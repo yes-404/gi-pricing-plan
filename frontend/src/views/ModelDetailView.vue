@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
 import {
+  ebmSpec,
+  gbmSpec,
   getModel,
   relativityInterval,
   spansZero,
@@ -36,6 +38,17 @@ const fit = computed(() => {
   const result = model.value?.fit_result ?? null;
   return result?.model_type === "glm" ? result : null;
 });
+const gbm = computed(() => (model.value ? gbmSpec(model.value) : null));
+const ebm = computed(() => (model.value ? ebmSpec(model.value) : null));
+
+/**
+ * Fitted is a property of the Model, not of the arm the reader happens to be looking at.
+ * `fit` above is the GLM narrowing and is null for every booster ever fitted; asking it
+ * whether a model is fitted made the page assert the opposite of the truth for two arms of
+ * the three.
+ */
+const fitted = computed(() => model.value?.fit_result != null);
+
 const coefficients = computed<Coefficient[]>(() => fit.value?.coefficients ?? []);
 const relativities = computed(() => Object.entries(fit.value?.relativities ?? {}));
 const libraries = computed(() =>
@@ -87,6 +100,13 @@ onMounted(async () => {
         <template v-if="glmSpec">
           {{ glmSpec.family }} / {{ glmSpec.link }} link
         </template>
+        <template v-else-if="gbm">
+          {{ gbm.model_type }} ·
+          {{ gbm.objective.kind === "builtin" ? gbm.objective.name : gbm.objective.ref }}
+        </template>
+        <template v-else-if="ebm">
+          ebm · {{ ebm.objective }} · identity link
+        </template>
         <template v-else>
           {{ model.spec.model_type }}
         </template> ·
@@ -119,14 +139,14 @@ onMounted(async () => {
 
     <template v-else-if="model">
       <p
-        v-if="!fit"
+        v-if="!fitted"
         class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
       >
         This model is reserved but not yet fitted. The fit runs as a Job; its coefficients
         appear here when it finishes.
       </p>
 
-      <template v-else>
+      <template v-else-if="fit">
         <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div class="rounded-md border border-slate-200 p-3">
             <dt class="text-xs uppercase tracking-wide text-slate-500">
