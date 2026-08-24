@@ -4,6 +4,9 @@ import { computed, onMounted, ref } from "vue";
 import { getDiagnostics, partitions, weightingLabel, type Diagnostics } from "@/api/diagnostics";
 import { getModel, type Model } from "@/api/models";
 import { ProblemError } from "@/api/problem";
+import AeByFactorChart from "@/components/AeByFactorChart.vue";
+import CalibrationChart from "@/components/CalibrationChart.vue";
+import LiftChart from "@/components/LiftChart.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
@@ -162,6 +165,10 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+
+        <AeByFactorChart :partitions="universal" />
+        <LiftChart :partitions="universal" />
+        <CalibrationChart :partitions="universal" />
       </section>
     </template>
   </section>
