@@ -22,11 +22,15 @@ const bins = computed(() => props.series.bins);
 const labels = computed(() => bins.value.map((b) => String(b.bin)));
 
 /**
- * `exposure_years` is a `DecimalStr` — exact decimal, carried as a string, so a float never
- * silently rounds it (FR-OVR-7's rule about the rating path; here it is a diagnostic read and
- * the conversion is safe). It is also nullable, and a bar chart with holes in it reads as
- * zero exposure rather than as unknown exposure, so the whole series is omitted unless every
- * bin has one.
+ * `exposure_years` is a `DecimalStr` — exact decimal carried as a string, so a float never
+ * silently rounds it. Converting it here is safe because **exposure-years denominates
+ * exposure and not money**, which is FR-OVR-7's own test as amended 2026-08-24: "what a
+ * quantity denominates, not how it was computed". Being a diagnostic read is not what makes
+ * it safe — the same amendment says a quantity that denominates money stays integer minor
+ * units "wherever it appears: inside a diagnostic payload" included.
+ *
+ * It is also nullable, and a bar chart with holes in it reads as zero exposure rather than as
+ * unknown exposure, so the whole series is omitted unless every bin has one.
  */
 const exposure = computed(() => {
   const raw = bins.value.map((b) => b.exposure_years);
