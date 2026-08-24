@@ -14,6 +14,7 @@ import {
 } from "@/api/models";
 import { ProblemError } from "@/api/problem";
 import GbmFitPanel from "@/components/GbmFitPanel.vue";
+import QuantileBoundNotice from "@/components/QuantileBoundNotice.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
 
@@ -141,6 +142,10 @@ onMounted(async () => {
     </div>
 
     <template v-else-if="model">
+      <!-- Above the arm panels, not inside one: the notice is about what this whole page
+           *is*, and it applies whether or not the bound has finished fitting. -->
+      <QuantileBoundNotice :model="model" />
+
       <p
         v-if="!fitted"
         class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"

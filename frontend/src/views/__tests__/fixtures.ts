@@ -1,4 +1,4 @@
-import type { Model } from "@/api/models";
+import { gbmSpec, type Model } from "@/api/models";
 
 /**
  * A fitted LightGBM, annotated rather than cast.
@@ -51,3 +51,27 @@ export const GBM_MODEL: Model = {
   },
   flags: [],
 };
+
+/**
+ * The same family refitted as a quantile bound of version 7 (FR-MODEL-78).
+ *
+ * Built through `gbmSpec` rather than by spreading `GBM_MODEL.spec`: that field is the
+ * three-arm union, and spreading a union member produces a value assignable to none of the
+ * arms under `exactOptionalPropertyTypes`. Going through the narrower keeps the annotation
+ * doing its job instead of reaching for a cast to silence it.
+ */
+export function boundOf(alpha: number): Model {
+  return {
+    ...GBM_MODEL,
+    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    version: 8,
+    spec: {
+      ...gbmSpec(GBM_MODEL)!,
+      interval_for: {
+        model_id: GBM_MODEL.id,
+        model_version: GBM_MODEL.version,
+        alpha,
+      },
+    },
+  };
+}

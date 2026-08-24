@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ModelDetailView from "../ModelDetailView.vue";
-import { GBM_MODEL } from "./fixtures";
+import { boundOf, GBM_MODEL } from "./fixtures";
 
 const MODEL = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -155,6 +155,24 @@ describe("the model detail view, on a model that is not a GLM", () => {
     render(ModelDetailView, { props: gbmProps, ...mounted });
     const table = await screen.findByRole("table", { name: "Features and constraints" });
     expect(within(table).getByText("driver_age_banded")).toBeInTheDocument();
+  });
+
+  it("says on the page itself that a bound is a bound, and links to what it bounds", async () => {
+    // FR-MODEL-78. Nothing else on this page distinguishes a bound from the central estimate:
+    // same family, same dataset version, same factors, same metadata block. The link text is
+    // asserted rather than the anchor because `stubs: { RouterLink: true }` discards the slot,
+    // and the assertion would then pass against an empty <a>.
+    stub(boundOf(0.05));
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    expect(await screen.findByText(/lower bound/i)).toBeInTheDocument();
+    expect(screen.getByText("motor-ad-frequency@7")).toBeInTheDocument();
+  });
+
+  it("says nothing about bounds on a model that is not one", async () => {
+    stub(GBM_MODEL);
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    await screen.findByRole("table", { name: "Features and constraints" });
+    expect(screen.queryByText(/bound/i)).toBeNull();
   });
 
   it("still says so when a model really is reserved and unfitted", async () => {
