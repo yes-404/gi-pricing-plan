@@ -1076,8 +1076,8 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     `fit_result.model_type` and `fit_result.bins.[].kind`, none of which a root reading
     sees. Measured 2026-08-24 — expanding onto the root arm set took this slug from 125
     compared paths to 11 while still passing, which is the silent-guard failure the reach
-    controls below exist to catch. Built from the maps, the count is unchanged at 556
-    across the thirteen slugs.
+    controls below exist to catch. Built from the maps, the count is unchanged at 606
+    across the fifteen slugs.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
@@ -1320,8 +1320,8 @@ def _closure_map(
 
     The `|` union stays and now unions *within* an arm, exactly as `_type_map`'s does, and
     the value type is unchanged — `frozenset[str]` — so `_expand` is reused rather than
-    reimplemented. Re-keying costs no reach: 17 dotted paths are declared on both sides
-    across the thirteen compared slugs before it and 17 after, which `_paths` keeps
+    reimplemented. Re-keying costs no reach: 19 dotted paths are declared on both sides
+    across the fifteen compared slugs before it and 19 after, which `_paths` keeps
     checkable in one line.
     """
     found: dict[tuple[Arm, str], frozenset[str]] = {}
@@ -1379,9 +1379,9 @@ def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> N
     arm set before the intersection, exactly as the scalar-type comparison is. The arm set
     is built from the constraints **both walked maps** carry, never from `_arms` over a
     document root: measured 2026-08-24, deriving it from the generated root instead takes
-    the suite from 115 compared `(arm, path)` keys to 10 while still passing, and `model`
+    the suite from 117 compared `(arm, path)` keys to 12 while still passing, and `model`
     alone from 104 to 0 — its union is nested under `spec` and `fit_result`, where a root
-    reading never looks. The seventeen dotted paths declared on both sides are unchanged by
+    reading never looks. The nineteen dotted paths declared on both sides are unchanged by
     the re-keying; `test_each_new_walker_reaches_a_nested_path_it_is_supposed_to` holds the
     depth.
     """
@@ -1440,7 +1440,7 @@ def _conjoin(into: dict[str, Any], declared: dict[str, Any], where: tuple[Arm, s
 
     What it does take is the obligation not to take it *silently*. `.update` stays, and a
     collision raises with the arm, the path and both values instead of dropping one on walk
-    order. Measured 2026-08-24 it refuses nothing: zero collisions across the thirteen
+    order. Measured 2026-08-24 it refuses nothing: zero collisions across the fifteen
     slugs on both sides, at the walk and at the expansion alike — so this is a live tripwire
     over an empty gap rather than a comment nobody re-reads.
     `test_two_variants_bounding_one_path_differently_are_refused` is the proof it fires,
@@ -1478,18 +1478,22 @@ def _constraint_map(
     `set(...) & set(...)` over the keywords within a shared key — so a one-sided bound is
     dropped by the intersection before anything can look at it, and this module's other
     readers of this walker — the escalation test, the reach control and the two drift tests
-    below — each ask a different question. Measured 2026-08-24: **54** dotted paths across
-    the thirteen compared slugs carry a compared keyword on exactly one side, **13** of
-    them at paths where the *field* exists on both sides — `banding.slug` and
+    below — each ask a different question. Measured 2026-08-24: **70** dotted paths across
+    the fifteen compared slugs carry a compared keyword on exactly one side, **18** of
+    them at paths where the *field* exists on both sides — among them `banding.slug` and
     `grouping.slug` (`pattern`, contract only), `model.spec_hash` (`pattern`, contract
-    only), `job.error.code` and `job.result.kind` (`pattern`, model only).
+    only), `job.error.code` and `job.result.kind` (`pattern`, model only), and four more
+    under `validation-report` alone, three of them on `results.[]`.
     `test_an_artifact_shape_carries_exactly_what_its_contract_declares` cannot see those
     either: it compares field *names*, and the names agree.
 
     The prose is corrected rather than the comparison widened. Which of the two a
     one-sided bound is — drift, or a difference of intent the shape comparison arbitrates —
-    decides how 54 findings land across ten slugs, and `CLAUDE.md` §0 forbids picking one
-    silently inside a test-infrastructure fix. It is raised for decision, not settled here.
+    decides how 70 findings land across thirteen slugs, and `CLAUDE.md` §0 forbids picking
+    one silently inside a test-infrastructure fix. It is raised for decision, not settled
+    here: **`OQ-PLAT-10`** carries it, and names this comparison's double intersection —
+    paths, then keywords within a shared path — as one instance of a scope every layer of
+    the guard shares.
 
     **Keyed by `(arm, path)` since arm attribution (W32-1b).** A bound declared inside one
     conditional arm bounds that arm only, and the merged namespace resolved two arms with
@@ -1503,10 +1507,10 @@ def _constraint_map(
     `test_two_arms_declaring_different_bounds_are_both_kept` and
     `test_a_bound_moved_between_arms_is_drift` hold both cases.
 
-    Re-keying costs no reach and buys a great deal: 189 dotted paths are constrained on
-    both sides across the thirteen slugs before it and 189 after — `_flatten_constraints`
-    keeps that checkable in one line — while the compared `(arm, path)` keys go 189 → 760
-    and the compared `(arm, path, keyword)` triples 217 → 839.
+    Re-keying costs no reach and buys a great deal: 196 dotted paths are constrained on
+    both sides across the fifteen slugs before it and 196 after — `_flatten_constraints`
+    keeps that checkable in one line — while the compared `(arm, path)` keys go 196 → 767
+    and the compared `(arm, path, keyword)` triples 224 → 846.
     """
     if _depth > _MAX_COMPOSITION_DEPTH:
         raise AssertionError(
@@ -1556,7 +1560,7 @@ def _expand_constraints(
     refuses to resolve a collision silently. Two entries with different constraint sets can
     admit the same complete arm — an unconditional bound and an arm-specific one at the
     same path — and that merge is the second place last-writer-wins could reappear after
-    the walk was fixed. Measured 2026-08-24, it happens zero times across the thirteen
+    the walk was fixed. Measured 2026-08-24, it happens zero times across the fifteen
     slugs on either side.
 
     An entry constrained by a discriminator no complete arm mentions is **dropped**, for
@@ -1643,7 +1647,7 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     `test_an_artifact_shape_carries_exactly_what_its_contract_declares` arbitrates the
     one-sided case, and that test compares field *names*. Where a field exists on both
     sides and only one side bounds it, the names agree and it sees nothing — measured
-    2026-08-24, 13 of the 54 one-sided bounds in the suite are of exactly that shape.
+    2026-08-24, 18 of the 70 one-sided bounds in the suite are of exactly that shape.
     `_constraint_map`'s docstring carries the measurement and the reason the prose was
     corrected instead of the intersection widened.
 
@@ -1652,7 +1656,7 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     intersection, exactly as the two comparisons above are. The arm set is built from the
     constraints **both walked maps** carry, never from `_arms` over a document root:
     measured 2026-08-24, deriving it from the generated root instead takes the suite from
-    760 compared `(arm, path)` keys to 177 while still passing, and `model` alone from 584
+    767 compared `(arm, path)` keys to 184 while still passing, and `model` alone from 584
     to 1 — its union is nested under `spec` and `fit_result`, where a root reading never
     looks.
 
@@ -1821,7 +1825,7 @@ def test_both_sides_declare_the_same_complete_arms() -> None:
 
 @pytest.mark.req("FR-PLAT-48")
 def test_a_document_with_no_union_has_one_unconditional_arm() -> None:
-    """Most of the thirteen compared slugs have no union at all.
+    """Twelve of the fifteen compared slugs have no union at all.
 
     They must keep behaving exactly as they did, which per-arm keying achieves by making
     their single arm the empty constraint set rather than by special-casing them.
