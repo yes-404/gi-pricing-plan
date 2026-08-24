@@ -73,6 +73,7 @@ __all__ = [
     "certifiable_or_refuse",
     "create_objective",
     "default_sampling",
+    "list_objectives",
     "load_certificate",
     "load_objective",
     "record_certificate",
@@ -97,16 +98,25 @@ _PROBABILITY_RESPONSES = frozenset({ResponseKind.CONVERSION, ResponseKind.RETENT
 _COUNT_RESPONSES = frozenset({ResponseKind.CLAIM_COUNT})
 
 
-def to_objective(row: CustomObjectiveRow) -> CustomObjective:
+def to_objective(
+    row: CustomObjectiveRow, *, usage_count: int | None = None
+) -> CustomObjective:
     """The stored artifact, re-validated on the way out.
 
     Re-validated rather than trusted, for `to_structure`'s reason: the definition columns
     are JSONB behind a trigger, and every invariant the contract enforces — the template's
     parameters, an applicability inside §4.5's — is one a `SET session_replication_role`
     could have walked past.
+
+    `usage_count` is a keyword the way `datasets.to_schema` takes `latest_version`: a
+    per-request aggregate the *caller* computed once for a whole page, passed in rather
+    than queried here, because a query here would be one round trip per row — the N+1
+    FR-MODEL-127 names as part of its requirement. Defaulted to `None`, so every route
+    that does not count says *not asked* rather than *nothing uses this*.
     """
     return CustomObjective.model_validate(
         {
+            "usage_count": usage_count,
             "id": str(row.id),
             "slug": row.slug,
             "version": row.version,
@@ -292,6 +302,67 @@ async def load_objective(
     return to_objective(
         await _get_or_404(session, workspace_id=workspace_id, objective_id=objective_id)
     )
+
+
+async def list_objectives(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    limit: int,
+    count_cap: int,
+    status: ObjectiveStatus | None = None,
+    slug: str | None = None,
+    after: UUID | None = None,
+) -> tuple[Sequence[CustomObjectiveRow], int]:
+    """One page of the workspace's objectives, newest first (FR-MODEL-127).
+
+    Here rather than in the router, which is where `GET /models` keeps its query: none of
+    the three artifact modules' routers imports SQLAlchemy at all, and a router that
+    reached for it only here would leave the next person two patterns and no rule.
+
+    `ix_custom_objectives_slug_status` covers `(workspace_id, slug, status)`, so both
+    filters are index-served and no migration accompanies this route. `slug` is an
+    **equality**: FR-MODEL-127 makes this filter what resolves §5.3's `slug@version`
+    addresses against UUID-only detail routes, and a prefix match would resolve
+    `motor-ad` to `motor-ad-severity` as well — a wrong artifact, not a wide result.
+
+    Ids are UUIDv7 and therefore time-ordered, so one column is both the sort and the
+    cursor. `limit + 1` rows are fetched: the extra one answers "is there another page?"
+    and the caller drops it.
+
+    Returns the rows and the capped total; the router builds the `Page`. No RBAC check —
+    unlike `usage`, which is reachable from a Job. Every caller of this arrives through
+    `requires(MODEL_READ)`, and a second check on the same request would be a second
+    round trip for an answer already given.
+
+    `limit` and `count_cap` are parameters rather than imports because `DEFAULT_LIMIT` and
+    `COUNT_CAP` live in `app.api.pagination`, and no module under `app/platform/` imports
+    from `app/api/`. Reading them here would invert that direction to save two arguments.
+    """
+    conditions = [CustomObjectiveRow.workspace_id == workspace_id]
+    if status is not None:
+        conditions.append(CustomObjectiveRow.status == status.value)
+    if slug is not None:
+        conditions.append(CustomObjectiveRow.slug == slug)
+
+    query = (
+        select(CustomObjectiveRow)
+        .where(*conditions)
+        .order_by(CustomObjectiveRow.id.desc())
+        .limit(limit + 1)
+    )
+    if after is not None:
+        query = query.where(CustomObjectiveRow.id < after)
+
+    rows = (await session.execute(query)).scalars().all()
+    total = (
+        await session.execute(
+            select(func.count()).select_from(
+                select(CustomObjectiveRow.id).where(*conditions).limit(count_cap).subquery()
+            )
+        )
+    ).scalar_one()
+    return rows, int(total)
 
 
 async def load_certificate(

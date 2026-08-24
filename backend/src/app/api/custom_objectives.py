@@ -1,8 +1,9 @@
-"""Custom Objectives over HTTP (`02` §5.1, FR-MODEL-38..47, 75).
+"""Custom Objectives over HTTP (`02` §5.1, FR-MODEL-38..47, 75, 127).
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/custom-objectives` | **201** Create or version an objective → `draft` (FR-MODEL-38) |
+| `GET` | `/custom-objectives` | The library: paginated, filtered, counted (FR-MODEL-127) |
 | `GET` | `/custom-objectives/{id}` | The objective and its lifecycle (FR-MODEL-95) |
 | `POST` | `/custom-objectives/{id}/derive` | Refused: `expression` is Phase 2 (FR-MODEL-40, 75) |
 | `POST` | `/custom-objectives/{id}/certify` | **202** Run §4.7's checks → Job (FR-MODEL-42) |
@@ -16,6 +17,12 @@ endpoint returns. The same omission FR-MODEL-90 repaired for the Peril Structure
 invisible to the endpoint audit for the same reason: it compares the spec against the
 contract, and an endpoint missing from both is in neither. FR-MODEL-95 declares them.
 
+**The collection `GET` is the eighth route and the latest of those additions**
+(FR-MODEL-127, 2026-08-23). For five days this module was seven routes none of which
+listed, which FR-MODEL-95's amendment recorded as an observation and cured nothing: `02`
+§5.3 asked for a library screen no endpoint could supply, and a `slug@version` address had
+nothing to resolve against a UUID-only detail route.
+
 `/derive` **is** built, as a refusal. FR-MODEL-75 names it explicitly as one of the two
 paths that answer `OBJECTIVE_KIND_NOT_ENABLED`, and a declared endpoint that 404s says
 "this platform has no such concept" where the truth is "not until Phase 2".
@@ -26,11 +33,19 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
 from app.api.deps import Caller, SettingsDep, job_identity
+from app.api.pagination import (
+    COUNT_CAP,
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    Page,
+    decode_cursor,
+    encode_cursor,
+)
 from app.api.responses import problems
 from app.db.session import Database
 from app.errors import PlatformError
@@ -45,6 +60,7 @@ from model_schema import (
     JobQueue,
     ObjectiveCertificate,
     ObjectiveKind,
+    ObjectiveStatus,
     ObjectiveTemplate,
     ObjectiveUsage,
     SamplingSpec,
@@ -113,6 +129,101 @@ class SubmitCustomObjective(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     change_summary: str = Field(min_length=1)
+
+
+class ObjectiveFilter(BaseModel):
+    """`GET /custom-objectives`' filters and cursor page (`00` §5.2, FR-MODEL-127).
+
+    `extra="forbid"` for `ModelFilter`'s reason: a misspelled query parameter that is
+    silently ignored returns a full library where the caller asked for one artifact.
+
+    `slug` is an **exact** match. FR-MODEL-127 makes this filter what resolves §5.3's
+    `slug@version` addresses against UUID-only detail routes, so a prefix or substring
+    match would answer `motor-ad` with `motor-ad-severity` too — a wrong artifact rather
+    than a wide result.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status: ObjectiveStatus | None = Field(
+        default=None, description="Restrict to objectives in this lifecycle state."
+    )
+    slug: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description="Objective slug, matched exactly.",
+    )
+    cursor: str | None = Field(
+        default=None, description="Opaque; pass back the previous page's `next_cursor`."
+    )
+    limit: int = Field(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT)
+
+
+ObjectiveFilterDep = Annotated[ObjectiveFilter, Query()]
+
+
+@router.get(
+    "/custom-objectives",
+    summary="List the workspace's Custom Objectives",
+    responses=problems(400, 401, 403, 422),
+)
+async def list_custom_objectives(
+    caller: ReadModels,
+    database: DatabaseDep,
+    filters: ObjectiveFilterDep,
+) -> Page[CustomObjective]:
+    """The library `02` §5.3 renders (FR-MODEL-127), cursor-paginated, newest first.
+
+    Until this route the module had create, detail, certify, submit and usage and nothing
+    that lists, so §5.3 asked for a screen no endpoint could supply and a `slug@version`
+    address had no way to reach a UUID-only detail route.
+
+    **400 in, 404 out.** A filter matching nothing is an empty 200 — the artifact the
+    caller named may simply not exist yet, which is a result, not an error. Only a cursor
+    this API did not issue is a 400.
+
+    `usage_count` is **one grouped aggregate over the page's refs**, never one query per
+    row: FR-MODEL-127 makes that budget part of the requirement rather than an
+    optimisation, because the query reads an unindexed JSONB column and an N+1 here would
+    be indistinguishable from this until a workspace held a few hundred artifacts. It
+    counts exactly what `GET /{id}/usage` counts, so a row and the page opened from it
+    cannot disagree.
+    """
+    after = decode_cursor(filters.cursor)
+
+    async with database.session() as session:
+        rows, total = await service.list_objectives(
+            session,
+            workspace_id=caller.workspace_id,
+            limit=filters.limit,
+            count_cap=COUNT_CAP,
+            status=filters.status,
+            slug=filters.slug,
+            after=after,
+        )
+
+        # The extra row exists only to answer "is there another page?" and is not returned.
+        has_more = len(rows) > filters.limit
+        page_rows = list(rows[: filters.limit])
+
+        counts = await service.usage_counts(
+            session,
+            workspace_id=caller.workspace_id,
+            refs=[f"custom_objective:{row.slug}@{row.version}" for row in page_rows],
+        )
+
+    return Page[CustomObjective](
+        items=[
+            service.to_objective(
+                row,
+                usage_count=counts.get(f"custom_objective:{row.slug}@{row.version}", 0),
+            )
+            for row in page_rows
+        ],
+        next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
+        total_estimate=total,
+    )
 
 
 @router.post(
