@@ -543,6 +543,690 @@ over five proposals leaves no way to tell later which of them anyone actually re
 - **The two "no change" answers stand**, and needed no acceptance: the Phase 1b workstream
   rows are not re-cut, and no requirement is superseded beyond `transparency_artifact_id`.
 
+### Plan review 4 — at W32's close, 2026-08-24
+
+`CLAUDE.md` §14 requires a plan review at **each workstream close**. This is the fourth; the
+procedure is `.claude/skills/phase-review`. **The output is a proposal, never a change** —
+every recommendation below needs a dated maintainer acceptance line before it binds. Findings
+about Phase 2 or later are **spec changes only** (§0's table).
+
+**1. Completion — not re-derived, because a fresh audit already covers it.**
+The W32 closure record immediately below is hours old and derived its scope from the
+specification before opening a source file: **27 requirement ids across 12 slices**, of which
+**26 are delivered with a marker** and **1 carries a §13 verdict** (NFR-MODEL-14, *delivered
+but untested*). The full gate ran clean at `60f6e46` — thirteen commands, all exit 0. The
+skill is explicit that re-deriving the same numbers from the same sources *"would have looked
+like work and confirmed nothing"*, and review 2 set that precedent. **No change proposed.**
+
+**2. Omission — the workstream boundary was drawn by subject matter, and remainders are now
+booked by screen.** The W32 row describes the workstream as *"everything in Phase 1b that is
+not a browser"*. Each later slice booked what it could not finish onto the row that owns the
+**screen**, because that is the row a reader looking for "thresholds" would search. **`W6b-13`
+— a W6b slice titled "Rule set threshold editing" — now carries four booked items, three of
+them backend.** No single booking was wrong; the sentence aged into a false partition, the
+same mechanism as a frozen dependency column ageing into a false *ready*. **The sentence and
+the 27-id table disagree in both directions** — `W6b-13` is work the sentence disclaims and a
+W6b row owns, and the modelling PII guard is work the sentence claims and the table does not.
+Neither is a safe restatement of the other. **Proposed:** the W32 row is *not* amended in that
+respect — it records what the split intended on 2026-08-22 and rewriting it destroys that —
+but the phase plan should state that **the slice map determines slices and the scope sentence
+only describes them**. Separately, **W30 owns four requirements while its scope row describes
+one capability**; W30 is Phase 2, so that is a **spec change only**.
+
+**3. Skills and research — the gap analysis re-run; both indexes complete.** All 43 skill
+directories have a README row and all 7 agent files are named; the two README names with no
+directory are §12's required refusal records, not defects. Three gaps were found, and per §12
+a known-wrong or missing skill is fixed in the same session — precedent set by review 3's own
+Q3, and §14's "proposal, never a change" governs **the plan**, not the skills.
+
+| Gap | State |
+|---|---|
+| (a) Validating a gate whose passing state is **empty output** — stated nowhere; the nearest cousin was `contract-guard`'s two-empty-maps case | **Fixed in this commit** — `close-workstream` gains the control-script procedure and its four rules, verified against the run that gated this record |
+| (b) *"A delegated gate must report the tree it ran in"* existed as a **finding** and never as a **procedure** | **Fixed earlier** (`caa5bee`) — `gate-runner` now carries it |
+| (c) The shared git stash stack, stated only in a *domain* skill and contradicted by a vendored one | **Fixed earlier** — `git-hygiene` now carries it. The vendored `testing-strategy` is **not** edited: it is not wrong upstream, only wrong in this repository's conditions, so §12 makes it a recorded caveat |
+
+**Two further candidates, booked rather than fixed**, because fixing them at a close is the
+scope creep the standard warns against: concurrent slices needing a database each, absent from
+`python-test`, `dev-commands` and `reproducing-ci-locally`; and *a slice that moves a measured
+figure owes a re-read to every skill quoting it*, stated inside the one skill it protects and
+nowhere general.
+
+**4. An accepted proposal that was never built — and the reason it drifted is question 5.**
+**`scope-audit.py --params` was accepted 2026-08-22 and does not exist.** Review 3's own words
+were that *"a wrong parameter is invisible to all three axes — that is not an oversight in this
+audit, it is a hole in the instrument, and it is the single change most likely to prevent a
+repeat"*, and it was accepted per-line the same day. Verified at this close: the argument
+parser declares `module`, `--sections`, `--extra`, `--endpoints`, `--catalogue`, and
+**`grep -c params scripts/scope-audit.py` returns 0**. **Proposed:** give it an owner. The
+change review 3 called the single most valuable one was accepted into no row at all.
+
+**5. Shape — an acceptance is not an assignment, and that is the recurrence.**
+Review 3 had five accepted proposals; **W32-1 delivered three of them in one commit, all three
+assigned to W6b**, verified by file-addition and `-S` history rather than recollection. Read
+one way that is a slice being helpful. Read as a pattern it is the same defect as (4): **an
+accepted proposal with no owning row is executed by whoever happens to touch the area next, or
+by nobody, and both outcomes look identical in the plan.** One produced three early
+deliveries; the other produced `--params`. **Proposed:** every accepted §14 proposal gets an
+owning row in the same edit that accepts it, or is explicitly marked unowned.
+
+**Three instrument findings from the same review, each verified against an artifact:**
+
+- **Corrections are unreviewed writes.** A correction reads as already-checked and receives
+  *less* scrutiny than the text it replaces; one commit here fixed three rows and broke a
+  fourth. The sharpest form: **an exoneration is the one correction its recipient has no
+  incentive to check**, and two of the eight instances in the closure record below are
+  corrections of corrections.
+- **The §0 correction convention manufactures its own false positives.** Dated correction
+  prose accumulates inside rows that later readers grep as current assertions, and a struck
+  sentence keeps living in any code comment that quoted it verbatim. Raised as an instrument
+  question, **not** a request to stop recording corrections.
+- **An accidental gap in a permanent-id sequence is a collision invitation, and §5 does not
+  forbid it.** `9ab14d6` filed `OQ-PLAT-10`, `-11` and `-13`, skipping **12** with no
+  reservation and no note; §5 forbids renumbering and says nothing about holes. **This one is
+  mine.** It closed harmlessly — W32-7 filed `OQ-PLAT-12` and no duplicate exists in history —
+  but by luck, not by rule. **It survived only because the FR-PLAT-63 verdict rule refused to
+  pin a number**, requiring *"a new `OQ-PLAT` question, whatever its number"*: an unnumbered
+  condition tolerated a sequence defect that a numbered one would have turned into a false
+  failure on a correct slice.
+
+**No change** is proposed to the phase boundaries, to Phase 1b's exit criterion, or to
+Phases 2–4. Nothing this review found argues for re-cutting them; every finding is an
+ownership or instrument defect inside the existing shape.
+
+**Maintainer acceptance:** _pending — no recommendation above binds until this line carries a
+date and a decision._
+
+### W32 — the backend of Phase 1b: closed 2026-08-24
+
+<!-- GATE — DISCHARGED 2026-08-24 at 60f6e46, when this heading was written.
+     Preserved rather than deleted: the pattern's design rationale outlives the gate it
+     guarded, and the next person to write a workstream-closure tripwire needs it. What
+     follows described the check while it was armed; it is now a record of how it was built.
+     Check, two parts (validated on deliberately broken input, 2026-08-24 at c024f3e;
+     re-validated 2026-08-24 on an 11-line fixture: 4 intended positives all fire, 7
+     negatives all hold; re-run at 60f6e46 immediately before this record was written —
+     live 0, positive control 1, negative control 0).
+     BOTH PARTS READ origin/main, NOT THE WORKING TREE. The claim being made is about
+     main; a grep of `docs/roadmap.md` reads whatever tree it happens to run in, and
+     parallel sessions here run in worktrees that are routinely a commit apart. That
+     exact confusion misread the W32-2 attribution line on 2026-08-24. Pin the source,
+     not just the command.
+     PIPES ARE AT LINE ENDS, NOT LINE STARTS, AND MUST STAY THERE. audit-docs.py's
+     table check does NOT skip HTML comments: a continuation line beginning `|` is
+     parsed as a table row, and `| grep ... \` reads as a 0-cell row under a 1-cell
+     header. It failed exactly that way when this record was first written.
+     PART 1 - TRIPWIRE, loose and fail-safe, fires on ANY W32 heading:
+       git show origin/main:docs/roadmap.md |
+         grep -nE '^#+ W32[a-z]?([ :—]|$)' |
+         grep -vF "the closure proposal's decisions"
+       EMPTY     => gate holds, W32 not closed.
+       NON-EMPTY => READ THE LINE. It does NOT mean closed: it fires on
+                    "### W32 - the workspace slice *(in progress, not closed)*" just as
+                    readily. It is a summons to read, never a verdict.
+     PART 2 - AFFIRMATIVE, strict and date-anchored, only after Part 1 fires:
+       git show origin/main:docs/roadmap.md |
+         grep -nE '^#+ W32[a-z]?([ —].*)?: closed [0-9]{4}-[0-9]{2}-[0-9]{2}'
+     Both empty at c024f3e and at 6cb9297; Part 2 fires on this heading, as intended.
+     WHY [a-z]? RATHER THAN \b, and why the reason matters. `W32a` is how a split
+     remainder would be named - split-then-letter is exactly how W32 came out of W6b -
+     and \b MISSES `### W32a - split remainder: closed ...`, a false NEGATIVE on the
+     case the pattern exists to catch. \b ALSO produces a false POSITIVE: the
+     proposed form was `^#+ W32\b.*: closed <date>` - PERMISSIVE body - and on the
+     fixture it fires on W32-7, W32-11 and W32-1b. CORRECTION, 2026-08-24: this
+     paragraph previously recorded the opposite, that the false-positive charge did not
+     reproduce. That test substituted the CONSTRAINED body `^#+ W32\b([ —].*)?: closed`
+     into the proposal - a pattern nobody put forward - and the constrained separator,
+     not \b, is what excluded the slices. The original charge was correct; the
+     retraction was the defective write, and it was checked by the party it absolved.
+     Both faults of \b therefore stand: it misses W32a AND, in the form actually
+     proposed, admits every slice. Recorded because a gate whose rationale is false
+     teaches the next reader something untrue even while it works.
+     WHAT IS ACTUALLY LOAD-BEARING - DO NOT SIMPLIFY ([ —].*)? TO .*
+     The separator group is the ONLY thing excluding slice headings. The letter class
+     does none of that work: `^#+ W32[a-z]?.*: closed …` fires on W32-7 AND W32-11 AND
+     W32a, exactly as `^#+ W32\b.*: closed …` fires on W32-7 and W32-11. Both letter
+     classes are safe ONLY in company with the constrained separator. The final control
+     run at 60f6e46 measured exactly this: the permissive form scores 2 on an input the
+     real pattern scores 0 on, so the separator's necessity is a number, not an argument.
+     So the two pieces do different jobs and neither substitutes for the other:
+       ([ —].*)?  excludes slices   - SAFETY. Relaxing it opens the gate.
+       [a-z]?     admits W32a       - COVERAGE. Dropping it makes the gate go quiet.
+     A future reader trimming the separator to `.*` as over-engineering would believe
+     [a-z]? still keeps slices out. It does not, and the gate would then report the
+     workstream closed when a slice closed - releasing the whole W6b chain.
+     WHY IT IS SHAPED THIS WAY. Hash depth is not stable in this file and cannot be keyed on:
+     W5's slice records are ### while W32's are ####, so depth varies by WORKSTREAM, not by
+     kind of record. And a keyword filter is worse than useless - `grep -i closed` over W5
+     returns 11 hits of which exactly ONE (:546) is a real closure, because ten slice records
+     carry the literal string "(in progress, not closed)".
+     THE HEADING USED, matching all five prior closure records (:546 W5, :801 W7b, :988 W6a,
+     :1093 W7a, :1146 W4) - three hashes, em-dash, ": closed YYYY-MM-DD".
+     The filter on :3685 is a LITERAL string; rewording that heading makes Part 1 fire on it.
+     That is the safe direction, and whoever rewords it owns the filter. -->
+
+**Every `:NNNN` citation in this record is against this file at `60f6e46`, the closing SHA.**
+
+**And the delta rule this record states is applied to itself — by refusing to state a
+resulting line number at all.** Writing this record inserts several hundred lines above
+`:546`, so in any tree containing it every citation below `:546` is offset by that insertion
+and every citation above is unchanged. **The offset is deliberately not written down.** Two
+attempts to write it were made and both were wrong within one edit: the first measured the
+insertion before the paragraph recording it existed, and the correction was falsified the
+same way by its own five lines. **A number that changes when you write it down cannot be
+written down** — it is a fixed point, not a fact, and the two failed attempts are left
+recorded because the shape is worth more than the number. Re-derive instead:
+
+```
+git show 60f6e46:docs/roadmap.md | grep -n '<the phrase>'   # the cited tree
+grep -n '<the phrase>' docs/roadmap.md                       # the tree you are in
+```
+
+The difference must equal `git show --stat` for the commit that added this record. If it
+does not, you have found a real disagreement rather than drift — which is the entire reason
+the rule is stated instead of the offset.
+Stated once rather than repeated, because this record's own method finding is that a locator
+without a tree is not a citation — W32-7 moved the rows below `:4380` by 63 lines while this
+record was being drafted, and several draft citations were stale by the time it was written.
+
+**Preconditions, all four discharged at `60f6e46`:**
+
+| # | Precondition | Discharge |
+|---|---|---|
+| 1 | W32-7 merged | ✔ `60f6e46` (#164), all three workflows green |
+| 2 | Every merged slice has a `#### W32-` record | ✔ **12** slice headings — W32-1 … W32-11 plus W32-1b (#159, back-filled separately) |
+| 3 | Counts re-taken after the last dependent merge, SHA cited | ✔ every count below taken at `60f6e46` |
+| 4 | Full gate run locally, both halves | ✔ see the gate table at the foot of this record |
+
+**Scope**, derived from spec/roadmap/plan assignment rather than from the build log
+(§13 rule 1): **27 requirements across 12 slices** — W32-1 … W32-11, plus W32-1b.
+
+W32-1b adds no requirement id (its plan's Global Constraints: "No new requirement ids and
+no spec change"), independently confirmed by the executing session. It moved evidence under
+FR-PLAT-48; it did not move membership.
+
+**This is a strict subset of five modules and is not a module-wide figure.** A module-wide
+coverage table was produced during this audit and is deliberately excluded: it answers a
+different question, and presenting it as W32's coverage would report scope W32 never had.
+
+#### The 26 delivered and evidenced by a marker
+
+FR-PLAT-48 · FR-MODEL-15 · FR-OVR-6 · FR-DATA-53 · FR-DATA-50 · FR-DATA-51 · FR-MODEL-37 ·
+FR-MODEL-124 · FR-MODEL-87 · FR-MODEL-52 · FR-MODEL-118 · FR-MODEL-125 · FR-MODEL-57 ·
+FR-MODEL-92 · FR-MODEL-95 · FR-MODEL-75 · FR-OVR-1 · FR-MODEL-127 · FR-MODEL-36 ·
+FR-MODEL-79 · FR-MODEL-62 · FR-MODEL-126 · FR-MODEL-105 · FR-PLAT-62 · FR-PLAT-63 ·
+FR-PLAT-65
+
+**The last three moved into this list when W32-7 merged, and the count moved with them.**
+Before `60f6e46` all three were *not started* with owner W32-7, and this record was drafted
+that way. Marker counts at `60f6e46`: FR-PLAT-62 **2**, FR-PLAT-63 **5**, FR-PLAT-65 **3**,
+alongside FR-GOV-24's **8**. Three carry a qualification already on the record, stated here
+so the count is not read as uniform:
+
+- **FR-MODEL-125's marker predates the evidence that bears on it** (W32-10's slice record).
+- **FR-OVR-1's three marker files do not include `test_artifact_immutability.py`**, the file
+  W32-6 actually changed. Its W32-6 evidence is the `artifact_append_only` triggers and the
+  narrowed `SELECT, INSERT` grant — a **database constraint, not a marker**. The closure
+  skill's §0a is explicit that evidence is not only markers; this is that case.
+- **FR-PLAT-63 has five markers and one of its four obligations is undischarged.** A marker
+  count is not a completeness proof, and this is the case in this workstream that shows it
+  most sharply. Its own subsection is below.
+
+#### The 1 accountable without a marker — with its §13 verdict
+
+| ID | Verdict | Owner |
+|---|---|---|
+| **NFR-MODEL-14** | **Delivered but untested** | booked forward |
+
+**NFR-MODEL-14 — delivered and measured; the marker is what is missing.** W32-5's slice
+record (`:3970`) lists it under that slice's evidenced requirements, but W32-5 produced no
+measurement. The measurement it rests on is a **W5** bench added 2026-08-22 under
+OQ-MODEL-24, *before W32-5 existed*: `diagnostics.py:814` records 0.0480 fits per pass
+against a ≤ 0.06 budget, **met at 1.25×**. W32-5 changed how `exposure_share` is computed at
+each partial-dependence grid point (summed exposure, not a row count): per-pass arithmetic
+that does not change the ~625 scoring passes the budget is set against, so the bound
+plausibly still holds. **Plausibly is not measured**, and §13 rule 3 does not accept an
+asserted NFR. Re-running a 75 000 × 60 × 500 GBM bench is out of scope for a closure record
+and W32-5 is merged, so this is **booked forward with an owner rather than held against the
+close**.
+
+**A delegated report claimed this requirement had "no mention found anywhere in the tracked
+tree". That is false and was not adopted.** Verified directly: `02-modelling.md` **7** hits,
+plus `diagnostics.py`, `packages/pricing-core/tests/test_gbm.py` and `scripts/bench-model.py`
+(4), plus its origin at `open-questions.md:79`/`:81`. The same report was also internally
+inconsistent — it gave a marker total that could not be reconciled with its own unmarked
+list. **Both halves were discarded and every count in this record was re-taken in the main
+thread.** This is `CLAUDE.md` §12 doing work rather than being quoted: evidence is delegated,
+verdicts are not, and **a delegated *count* is evidence like any other**.
+
+**One caution for whoever discharges it.** `test_gbm.py:1879` mentions NFR-MODEL-14, and it
+is a **docstring line, not a `@pytest.mark.req` marker**. A grep for the id finds it and it
+does not bind a test to the requirement. That is the same shape as the method finding below,
+met while checking the very requirement the finding was being written around.
+
+#### FR-PLAT-63 — the fourth obligation: *deferred with an owner*, owner `W6b-11`
+
+`:3705` wrote this verdict as **a rule with both branches stated in advance**, to be
+instantiated against fact at close rather than written ahead of it. Stated in the spec's own
+words (`07-platform.md:79`), obligation 4 is *"a switch is audited into both chains"*; the
+roadmap's shorthand "the request-path trigger" names the **residual**, not the obligation,
+and this record uses the spec's wording. **Both branches, as `:3705` set them:**
+
+> If W32-7 ships **`record_switch`**, **the both-chains audit**, *and* files the trigger
+> question as a **new `OQ-PLAT` question, whatever its number** — then obligation 4 is
+> **deferred with an owner**, owner W6b-11, and the other three are delivered.
+> **If either half is missing, all four obligations are *not started*, owner W32-7.**
+> Two of three is not three-quarters delivered.
+
+**The first branch fires; the second is spent and is recorded as spent.** W32-7 ships
+`platform/workspace_switch.py`, which writes one audit event into each workspace's chain, and
+files the trigger question as **OQ-PLAT-12**. The second branch would have left an owner
+clause naming W32-7, and **no owner clause may name a slice of a closed workstream** — that
+branch is discharged here rather than left for a later reader to find pointing at nothing.
+
+**Stated as a rule, not as a symptom**, per the convention adopted below: the rule *"a switch
+is audited into both chains"* is **delivered as a mechanism and tested, and unenforced on the
+request path**. The cause, which is more useful than the symptom: **`require_caller` runs once
+per request and cannot observe that a selection *changed***. No component in the request path
+observes a change of selection, so there is nothing for the mechanism to hang off. One
+*visible symptom* is that `record_switch` has no call site outside its own module and its two
+tests — but a record stating only the symptom **would go green the moment anyone added any
+call site at all**, which is the failure mode this record exists to avoid.
+
+**`60f6e46` must not read as this obligation met.** The slice says so itself in three places
+rather than letting a green suite imply otherwise, and `OQ-PLAT-12` carries the three options.
+
+**Adjacency worth stating, because the two are easy to merge:** FR-PLAT-65 (out of OQ-PLAT-9)
+settles the **transport** — the verified `Workspace-Id` header. FR-PLAT-63 obligation 4 is
+the **audit into both chains**. Adjacent, not identical; delivering one is not evidence for
+the other.
+
+**A decision W32-7 took, recorded with its reason rather than as a non-action.** The slice
+plan told it to add `workspace` to the `ARTIFACT_TYPES` frozenset so `entity_ref` would
+parse. It measured first — **20 of the 39 `entity_ref` spellings the backend writes already
+fail to parse, 13 of them on a type outside the frozenset** — and declined, on the grounds
+that fixing one case in twenty makes the other nineteen harder to see. The measurement and
+the three options are **`OQ-PLAT-14`**. Widening the frozenset to admit one string is the
+option that row exists to refuse.
+
+#### §5 — the retrofit-impossible foundations: **preserved, not delivered**
+
+These landed in Phase 1a. W32's obligation to them is *non-regression*: `CLAUDE.md` §9 —
+"invariants to preserve, not work to schedule: regressing one is the same rewrite that
+deferring it would have been." Framing them as delivered by W32 would claim credit for
+Phase 1a's work; omitting them would leave the most important section of the roadmap
+unaddressed at a close.
+
+| Foundation | W32's relationship | Status |
+|---|---|---|
+| Append-only audit log, in the caller's transaction | W32-6 hardened it at the database; W32-7 chains a switch into two logs at once | preserved, strengthened |
+| Artifact immutability + versioning + `parent_id` | W32-6: `artifact_append_only` triggers, narrowed `SELECT, INSERT` grant | preserved, strengthened |
+| `model-schema` as the single source of truth | **W32's central axis** — FR-PLAT-48, the contract guards, W32-1/-1b/-11 | preserved, materially strengthened |
+| The Job model with progress and cancellation | untouched | **preserved** (verified) |
+| Decimal money discipline | untouched | **preserved** (verified) |
+| `trace_id` propagation API → worker → core | untouched | **preserved** (verified), with a pre-existing gap below |
+| RBAC checks in the backend from the first endpoint | **W32-7's territory** — `deps.py`'s `_single_workspace` replaced by a verified selection | preserved, strengthened |
+| Content-addressed blob store | untouched | **preserved** (verified) |
+
+**How the four "untouched" rows were verified, 2026-08-24 at `c024f3e`.** Not asserted: for
+each, the enforcing mechanism was located and checked to be something that would *fail*, and
+then every W32 commit was tested against the files that mechanism lives in.
+
+- **Job model** — `JobRow` at `backend/src/app/db/models.py:89`, with three DB `CheckConstraint`s
+  at `:147-159`; cancellation is a live code path, not a column (`worker/progress.py:209` polls
+  `cancellation_requested_at`, `:117`/`:124` raise `JobCancelled`).
+- **Decimal money** — two independent arms: `model_schema/money.py:68-80` `_reject_float`, and
+  `scripts/audit-docs.py:546-553` check 12. `test_money.py:28` proves it rejects `250.0` as
+  firmly as `361.20`. Worth recording: **there are no money columns in the backend ORM at all**
+  — money crosses only as model-schema types inside JSONB.
+- **`trace_id`** — edge at `observability/middleware.py:41-42,61,65`, hand-off at
+  `platform/jobs.py:123,156`, plus a DB `CheckConstraint` on the W3C hex shape at
+  `models.py:156-159`.
+- **Blob store** — the address is computed and never supplied: `platform/blobs.py:148`
+  `hashlib.sha256(body).hexdigest()`, key at `:63-70`, dedup at `:147-164`; `test_blobs.py:62`
+  asserts identical content stores exactly one row.
+
+**Only two W32 commits touched any of those files** as of that verification, both in
+`db/models.py`, and both pure additions far from `JobRow`: `225a8b9` (W32-3) adds five lines
+inside `DatasetRow`, `a23e16b` (W32-2) adds to `ValidationRuleRow`. `JobRow` spans `:89-159`.
+**No W32 commit touches `money.py`, `blobs.py`, `worker/progress.py` or `observability/` at
+all.** Non-regression is therefore evidenced by the change set, not by inspection alone.
+**Re-checked after `60f6e46`:** W32-7 adds a `workspaces` table and touches `db/models.py`,
+`deps.py`, `me.py`, `responses.py`, `errors.py` and `main.py` — none of the four mechanisms
+above — so the finding stands at the closing SHA and not merely at `c024f3e`.
+
+#### Two findings from that verification — both pre-date W32, both booked forward
+
+Recorded because §13 rule 2 does not accept silence, and because a closure record that
+reported only the clean result would hide what the verification actually found.
+
+1. **R4's API→worker leg is delivered but untested, and its "→ core" clause is implicit.**
+   `worker/tasks.py:266,275,289` binds and resets the id, but `grep -c trace_id
+   backend/tests/test_worker.py` returns **0** — no test asserts the worker binds the payload's
+   `trace_id`. And `grep -rn trace_id packages/pricing-core/src` returns nothing: `pricing-core`
+   never references the id, inheriting it only via ContextVar. The edge and the DB constraint
+   are well tested; the middle leg is asserted. **Not a W32 regression** — no W32 commit touches
+   either file — so it is booked with an owner rather than held against the close.
+2. **FR-PLAT-64's code delta is outstanding and is not W32's.** The partial unique index at
+   `models.py:135-143` has not gained the `status <> 'failed'` term the requirement specifies.
+   `07-platform.md:102` names the owner in the requirement itself — **"Owner: whichever
+   workstream builds FR-PLAT-61"** — so this is neither a W32 obligation nor a W32 omission.
+   Noted only so that a later reader does not discover it and assume W32 passed over it. The
+   other half of that decision, removing the unreferenced `idempotency_window_hours` setting,
+   *was* done, at `b019070` — a decisions commit, not a slice.
+
+#### Unassigned, not reassigned
+
+**NFR-DATA-1 and NFR-DATA-2** are out of W32-2's and W32-3's scope (their slice records at
+`:3887` and `:3914`), and `:1029` names **no owner at all**. That is *genuinely unassigned*,
+which is not one of §13's four verdicts and is not the same as reassigned. Booked forward
+with an owner in the residual rather than left silent, because silence is precisely what
+rule 2 refuses.
+
+#### The open questions W32 booked forward
+
+`OQ-PLAT-10`, `OQ-PLAT-11`, `OQ-PLAT-13`, `OQ-DATA-12`, `OQ-DATA-13` (`:4149-4153`) from
+W32-11, and **`OQ-PLAT-12`** and **`OQ-PLAT-14`** from W32-7 — **seven**. None carries a
+requirement id, so none can appear in the table above. `:4145` states that **none of them
+holds W32 open**, and this record quotes that rather than paraphrasing it.
+
+**The drift guard's arm-level reach must be stated at the right granularity.** W32-1b
+delivers arm-level **type and bound disagreement on paths shared *within* an arm**; arm-level
+**existence** is `OQ-PLAT-10` and remains open. **FR-PLAT-48 is therefore not fully
+discharged by W32-1b and this record does not claim it is.** The worked instance is in that
+row, measured at `7e09eb4` and reproducible against it: moving `family` between arms of the
+authored `model-spec` takes the comparison from **146 `(arm, path)` keys to 145, with
+disagreements 0 before and 0 after** — the path does not disagree, *it stops being compared*,
+and every check stays green. One key out of 146, which is also why a threshold expressed as a
+fraction of the walker's own output can never catch this class: the denominator moves with
+the numerator.
+
+#### A convention adopted during this close
+
+**Every verdict resting on a symptom states the rule and derives the symptom from it.**
+Raised by the W6b lead. The form is *"the rule X is unenforced; one visible symptom is Y"*,
+and it costs a clause. Without it, a verdict phrased as a symptom **goes green on its own
+repair**: whoever fixes the symptom satisfies the record while the rule stays false, and the
+probe that found it no longer fires.
+
+**The stronger form, also adopted, because a test outlives a record:** *a regression test must
+assert the rule, not reproduce the symptom the finding was reported as.* Applied here,
+FR-PLAT-63's eventual test must assert *"a workspace switch is audited into both chains"* and
+not *"`record_switch` has a call site"* — otherwise the first call site anyone adds turns the
+guarantee green.
+
+**The exhibit originally offered for this convention was falsified during this audit** (see
+the corrections below) and is cited here as a **narrowing**, not as a disarming. A convention
+propped up by an example its own author has since disproved does not belong in a governed
+record; the convention is adopted on its merits, and the weakened exhibit is the honest one.
+
+#### Verified corrections made during this audit
+
+Recorded because each is a case where the obvious reading was wrong, and a closure record
+that reported only conclusions would hide the corrections that produced them.
+
+1. **FR-PLAT-58 is owned.** Reported as naming no owning workstream, against a roadmap block
+   claiming every backlog item names one. `07-platform.md:81` ends **"Owned by W6b."** The
+   search had covered only `docs/roadmap.md`. **An owner is named in the requirement, not in
+   the plan.**
+2. **FR-DATA-41 / FR-DATA-42 do not contradict.** Reported as a conflict between `:245`
+   ("delivered 2026-08-15") and the W6b row's naming them as open work. Both are true of
+   different things: `01-data-management.md:97` and `:105` each end **"Delivered
+   2026-08-15"**, and the W6b row carries stale *ownership* text overtaken the same day by
+   the exit-gate decision and never restruck. **"Delivered" and "owned by" are different
+   predicates; a stale owner is not a delivery dispute.** Routed to W6b as a docs defect, not
+   held as a W32 blocker.
+3. **A module-wide coverage table is not W32's coverage.** Excluded, per the scope note above.
+4. **A correction of mine that was itself wrong, recorded because a retraction gets the least
+   review.** I told a peer session that `plans/2026-08-22-w6b-slice-map.md` contained no
+   reference to FR-PLAT-62/63/65. It does — **line 192**, and in `origin/main`, so concurrency
+   was not available as an excuse; that was checked first. The error sat in the *second* half
+   of a message whose first half was a correct retraction, which is the worst place for one:
+   the correct half buys credibility for the wrong one. It was caught because the recipient
+   re-opened an exoneration instead of accepting it.
+5. **A finding of mine withdrawn before it entered this record.** I claimed that FR-DATA-41's
+   regression test in `backend/tests/test_ingestion.py` "encodes the proxy" — that it asserted
+   a caller count rather than the rule. Reading the test whole rather than its docstring's
+   third line falsifies it: it is named
+   `test_a_direct_identifier_column_is_refused_at_ingestion`, opens *"FR-DATA-13's other
+   half, which nothing enforced until now"*, and asserts the error **code**, the offending
+   column name, and that **refusal precedes the version row**. It is a good test, and better
+   than either party credited — the ordering assertion is the part that would silently
+   regress first. I had quoted a docstring line and inferred the assertion from it: a grep
+   hit treated as a reading, which is the same defect as the method finding below, committed
+   by its author while writing it.
+6. **And the claim that rested on it, corrected.** `:245` — the Phase 1a **exit gate** —
+   reads *"FR-DATA-41 (**ingestion refuses** a `direct_identifier` column) … ✔ delivered
+   2026-08-15 — five injections, five caught."* **The gate names its own boundary, its
+   closure is true, and its enforcement was proven on deliberately broken input** — §13
+   rule 3 satisfied properly. Nothing was falsified by its own fix. **Struck: the claim that
+   "the disarming happened twice, at two layers."** It happened once, in the record.
+7. **What survives, restated correctly, and it is not W32's to resolve: FR-DATA-13 was a
+   two-boundary rule closed by a one-boundary requirement, and the remainder was never given
+   an id or an owner.** `:1253` diagnosed "FR-DATA-13's refusal" — the whole rule — and closed
+   it as FR-DATA-41, which covers ingestion only. The test's own phrase *"FR-DATA-13's other
+   half"* presupposes a first half that nothing tracks, and that presupposition is the
+   evidence. **A narrowing without a recorded remainder** — not a disarming, and not a false
+   closure. Same practical consequence; an entirely different claim about W4, and only one of
+   them is true. Had `:1253` stated the rule — *"a modelling-forbidden column is not
+   fittable"* — the narrowing would have been **visibly one boundary of two at the moment of
+   closure**. The symptom framing did not disarm a detector; **it made the narrowing
+   invisible.** The finding belongs to the W6b lead, who carries it as a §14 proposal with its
+   own id and owner; it is recorded here only as the correction that produced this record's
+   convention, and it did not hold this close open.
+
+#### The method finding — worth more than any individual fix
+
+**Eight instances in one week, all one shape: an ordinal, a pronoun, or a locator standing in
+for the thing itself inside an enumeration.**
+
+1. The W32-2 attribution — "W32-2 closed the first" inverted it; `validation-rule` is third.
+   **Mine**, and since corrected in place.
+2. The W32 scope row's dependency clause — "are blocked on it": two W6b sessions reached
+   opposite readings of "it".
+3. A filename-suppressing grep flag let two hits be confidently attributed to the wrong file.
+4. A 400-character read of that same clause that stopped on the half agreeing with the reader.
+5. FR-DATA-41/42 above — two predicates read as one.
+6. The gate condition itself: "no W32 closure record heading" resolves correctly for a human
+   and **wrongly for a grep**, because `:3685` is `#### W32 — the closure proposal's
+   decisions` and differs from a closure heading by one `#` and one word.
+7. **A line number cited without its tree.** The W32 scope row is `:4392` on the pre-merge
+   `main` and `:4455` here, because W32-7 adds exactly 63 lines above it — `4392 + 63 = 4455`.
+   Two sessions cited it correctly and read each other as disagreeing. The proposed
+   explanation, *"the line number drifts depending on where you anchor"*, was **wrong in a
+   checkable way**: the shift is deterministic and equals the diffstat. **That explanation is
+   the dangerous artifact, not the discrepancy** — it would talk a future reader out of
+   looking at a difference that *is* a disagreement. The exactness is itself the proof that
+   all 63 added lines fall above the row; had any fallen below, the offset would have been
+   smaller than the diffstat, and **that mismatch is the signal**. This record was itself
+   caught by the rule while being written: several of its draft `:NNNN` citations had gone
+   stale in the same merge, and were re-derived rather than carried.
+8. **A docstring line read as an assertion** (correction 5 above). **Mine.**
+
+**The rule, adopted with the W6b sessions:** *a citation must come from output that names its
+own file, and a grep hit is a candidate until the whole row is read.* Its corollary, from
+(6): a gate is a literal command with its expected output, not a sentence. Its corollary from
+(7), which generalises the same shape past line numbers: **reproduce the citation against a
+named tree, then check the delta against the diffstat** — it passes or it does not, and when
+it does not you have a disagreement rather than a shrug. Its corollary from (8), the sharpest
+because the check that missed it *was* performed: **a citation supporting a claim about what
+a test asserts has to be read to the asserts.** One session quoted a docstring line; the other
+ran `sed` over the same five lines, saw the quote was verbatim, and wrote "verified" — it
+**verified the citation and not the claim it was cited for**, and the check could not tell
+those apart because it stopped at the same line. A wrong locator fails when someone opens the
+file; **this one passes when someone opens the file, as long as they open it to the same
+line.** Nothing shorter than reading to the asserts is a check.
+
+**And the pairing that matters more.** The W32-2 attribution was findable **only** because
+`contract-guard/SKILL.md` states the same fact independently and disagreed with it. *A fact
+written once is a fact nothing can contradict.* Every one of the eight was caught by a second
+reader or a second statement — **none by the author re-reading their own work, mine included.**
+Two of the eight are corrections of corrections, which is the case for reading a retraction
+as carefully as the claim it retracts: **an exoneration is the one correction its recipient
+has no incentive to check.**
+
+**Wrong and superseded take opposite treatments, and only a timestamp separates them.** The
+W32-2 attribution was wrong when written and was corrected. `:3704` booked two slugs as *not
+started* and W32-11 then delivered them — but that verdict was **accurate when taken**, hours
+before the merge, so it received a dated discharge line and was left standing. Editing it
+would have destroyed the record of what was believed when the owner was assigned, which
+`CLAUDE.md` §0 exists to prevent.
+
+#### `docs/plans/` is frozen at its date, and its gate rows age by design
+
+`CLAUDE.md` §2 binds: a filed plan is frozen, and **the W6b slice map was not corrected by
+this close**. Two of its gate rows were accurate when written and are false now that W32-7 has
+merged — **line 192** most consequentially, because it tells `W6b-11` it *"waits only on W32
+building the header half"*, which misleads the one session it gates rather than merely a
+reader.
+
+**The reason is §0's.** An edit that makes a filed plan more accurate destroys the record of
+what was believed at its date, and does so *invisibly*, because the improved text reads as
+though it was always right. **The live correction lands on the W32 row at `:4455`**, which is
+a living document. Stated explicitly so that no reader treats the frozen map as current.
+
+#### Findings booked forward rather than held against the close
+
+Per the maintainer's standing instruction: findings this workstream cannot resolve are booked
+into later work with an owner, never held against W32's closing.
+
+- **The modelling PII guard is unenforced.** Its own section is below — it is the most
+  consequential finding of this close and is deliberately not buried in this list.
+- NFR-MODEL-14's unmeasured budget (above).
+- NFR-DATA-1 / NFR-DATA-2, unassigned (above).
+- The seven open questions (above).
+- **`.claude/skills/secret-hygiene` states the shared-stash hazard as a secrets concern, not
+  as a hazard about the stash stack itself.** The stack is shared across every worktree and
+  the main checkout, so a bare restore can pick up another session's work. Booked, not fixed
+  — a skill edit is not W32's to make at its close.
+- **`test_auth_users.py` asserted only a status code**, so it could not detect the change it
+  existed to guard. **Discharged in W32-7 and verified at merge**: it now asserts
+  `exc.value.code == "WORKSPACE_SELECTION_REQUIRED"`, with a comment recording that an
+  assertion on the status alone would go on passing if it regressed.
+
+#### The modelling PII guard is unenforced — found during this close, and outside W32's scope
+
+Verified at `f902e3a` and unchanged at `60f6e46`. `modelling_forbidden_columns`
+(`packages/model-schema/src/model_schema/datasets.py:195`) has **exactly one runtime caller**,
+`backend/src/app/data/ingestion.py:498`. `Factor.prohibited`
+(`packages/model-schema/src/model_schema/modelling.py:148`) is an **author-set** boolean,
+default `False`, refused without a reason at `:266` and enforced at
+`pricing_core/modelling/factors.py:150`, `platform/model_specs.py:202` and
+`platform/modelling.py:470` (FR-MODEL-5). **Nothing derives `prohibited` from the column
+classification.** So a column classified `direct_identifier` **is fittable today**.
+
+**Severity, held at its true weight.** Not a raw-PII breach: ingestion still refuses, and
+`pseudonymise` tokenises the values. It is (a) the platform breaking its own stated rule while
+the column still carries the classification that states it, and (b) **per-customer leakage,
+because a stable token is a perfect-fit feature**. In a pricing platform that is a modelling
+defect, not only a governance one.
+
+**A design point for whoever builds it**, so it is not scoped as a one-line boolean:
+`prohibited` requires a non-empty `prohibited_reason`, so the derivation must *synthesise* the
+sentence an actuary reads when the refusal arrives.
+
+**Why this is not a §13 verdict.** It sits on FR-DATA-13 / FR-MODEL-5, and **neither is among
+W32's 27 ids** — a grep for those ids across all twenty-one W32 plan files returns nothing.
+§13's four verdicts are instruments for the population rule 1 establishes; **a requirement
+outside that population is not a §13 silence, it is simply not in the audit.** Two sessions
+proposed booking it as *reassigned*. That would assert W32 held it and passed it on. **W32
+never held it** — a false statement about custody, dressed as procedure, of the tidy kind that
+is never challenged.
+
+**Proposed disposition, requiring a maintainer acceptance line (§14): a new unit with its own
+id and owner.** Routing work to a workstream that never scoped it is a plan change, and a
+review proposes, never changes.
+
+#### For the §14 phase review, triggered by this close
+
+Not part of this record — §14's output is a proposal, never a change. **The review itself is
+`Plan review 4`, immediately above this record**; what follows is the list this close handed
+it, kept here because the evidence for each item is in this record and not in the review.
+
+- **The workstream boundary was drawn by subject matter; remainders have since been booked by
+  screen, and the two no longer coincide.** `:4455` describes W32 as *"everything in Phase 1b
+  that is not a browser"*. Each later slice discharged what it could and booked its remainder
+  onto the row that owns the **screen**, because that is the row a reader looking for
+  "thresholds" finds. **`W6b-13` — a W6b slice titled "Rule set threshold editing" — now
+  carries four booked items of which three are backend**: FR-DATA-53's dropped `catalogue_id`
+  (`01-data-management.md:166`), FR-DATA-54's catalogue thresholds and the `params: {}` seed
+  (`:118`), and §5.1's three lineage defects (`:844`). Only `:1029`'s hard-coded PSI bands is
+  a browser. **No single booking was wrong.** The mechanism is the one named above running in
+  its other direction: a frozen dependency column ages into a false *ready*; **a scope
+  sentence ages into a false *partition***. Both are a line drawn once and read later as
+  though it still described the world. The generalisation: **`:4455` describes the workstream;
+  the slice map determines the slices — description is not constraint.** **The W32 row is not
+  amended in that respect**: it accurately records what the split intended on 2026-08-22, and
+  rewriting it destroys that. **The PII finding above is a third instance, arriving from the
+  opposite side** — work the scope *sentence* claims and the 27-id *table* does not, where
+  `W6b-13` is work the sentence *disclaims* and a W6b row nonetheless owns. **The sentence and
+  the table disagree in both directions**, which is stronger than either instance alone:
+  neither is a safe restatement of the other, and a reader who checks one and infers the other
+  is wrong either way round.
+- **An accidental gap in a permanent-id sequence is a collision invitation, and §5 does not
+  forbid it.** `9ab14d6` filed OQ-PLAT-10, -11 and -13, skipping **12** with no reservation and
+  no note. §5 forbids renumbering; it says nothing about holes. **Mine.** The gap was closed
+  harmlessly — W32-7 filed OQ-PLAT-12 for the FR-PLAT-63 trigger, and no second OQ-PLAT-12
+  exists anywhere in history — but it was closed by luck rather than by any rule. **It survived
+  only because the verdict rule at `:3705` refused to pin a number**, requiring instead *"a new
+  `OQ-PLAT` question, whatever its number"*. An unnumbered condition tolerated a sequence defect
+  that a numbered one would have converted into a false failure — **a second instance of the
+  deliberately-unnumbered gate condition, arguing the opposite way from the first**, which
+  makes it worth more than a confirmation would have been.
+- **FR-MODEL-121 / FR-MODEL-122 are orphaned between W30's rows and W30's scope.** Lead with
+  the 2026-08-22 date collision; carry FR-MODEL-119 as a candidate with a caveat. **W30 is
+  Phase 2, so any finding here is a spec change only** (§0's table).
+- **`diagnostics.py` contradicts itself 103 lines apart** about who owns FR-MODEL-121 —
+  `:861` "W30 owns the slice" against `:964` "owned by W6b". **Deliberately left unfixed: it
+  is the exhibit.** A review that quietly repairs the artifact it cites has destroyed its own
+  evidence.
+- **The ownerless backend lineage slice** — a workstream name without a row, in its third
+  form. Declined for W32: adding work while writing a closure record reports scope the
+  workstream never had.
+- **`CLAUDE.md` §2's `docs/contracts/` sentence** — proposal with an acceptance line only. A
+  peer's ask is not authority to edit the governed contract.
+- **The §0 correction convention manufactures its own false positives.** Dated correction
+  prose accumulates inside rows that later readers grep as though they were current
+  assertions, and a struck sentence keeps living in any code comment that quoted it verbatim.
+  Raised as an instrument question, not a request to stop recording corrections.
+
+#### The gate, run in full at `60f6e46` — both halves
+
+`CLAUDE.md` §11's rule is that the gate has two halves and both must pass locally before
+pushing; a Python-only "gate" has been green here while the frontend was red. Delegated to
+`gate-runner` and reported per-command, with the tree it ran in named — the rule that exists
+because a delegated gate once reported a total from the wrong worktree.
+
+| Half | Command | Exit |
+|---|---|---|
+| Python | `ruff check .` | 0 |
+| Python | `mypy` | 0 |
+| Python | `lint-imports` | 0 |
+| Python | `pytest -q` | 0 |
+| Docs | `scripts/audit-docs.py` | 0 |
+| Docs | `scripts/req-coverage.py` | 0 |
+| Contracts | `scripts/generate-contracts.py --check` | 0 |
+| Frontend | `pnpm install --frozen-lockfile` | 0 |
+| Frontend | `pnpm generate:api` | 0 |
+| Frontend | `pnpm lint` | 0 |
+| Frontend | `pnpm type-check` | 0 |
+| Frontend | `pnpm test` | 0 |
+| Frontend | `pnpm build` | 0 |
+
+**Figures, with the reconciliation that makes the pytest total believable:** **1925 collected**
+= **1923 passed + 1 skipped + 1 xfailed**, which balances — the check exists because a
+delegated run can silently collect a different tree than the one under audit, and a bare
+"all passed" cannot be told apart from that. `req-coverage.py`: **523 requirements specified,
+269 marked** — repo-wide, and **not** W32's figure; that script cannot see the frontend, so an
+unmarked id is not by itself an unevidenced requirement. `generate-contracts.py --check`: **26
+contracts match**, which proves the generated artifacts agree with `model-schema` and proves
+nothing about whether either is correct (§13 rule 3). Frontend: **21 test files, 131 tests**,
+production build clean.
+
+**What this table is not.** Every command exiting 0 is the *precondition* for closing, never
+the argument for it. The one requirement in this workstream without a marker, and the one
+obligation of FR-PLAT-63 that is unenforced on the request path, are both invisible to all
+thirteen commands — a green gate is exactly what an unenforced rule looks like.
+
 ### W5 — Modelling: closed 2026-08-22
 
 **Scope, derived from `02` with `scope-audit.py` before opening any source file:
@@ -3702,7 +4386,7 @@ because it turns on a fact that does not exist yet.
 |---|---|---|
 | **FR-MODEL-126** — the escalated constraint disagreements | **Reassigned** | To **W32-11**, below. The proposal's cell did not discharge the verdict: OQ-MODEL-30 already names the owner as **W32**, so "reassigned" is only meaningful if a *different* owner is named — reassigning it to the workstream that is closing is the same as leaving it. OQ-MODEL-30's own pairing points at W6b-7, and that is **refused**: W6b-7 is a frontend slice and this is a `model-schema` narrowing, an authored-contract `minItems` 8 → 9, a regeneration and a carve-out removal, with no browser in it. Nothing of FR-MODEL-126 is built — the three sides still disagree exactly as OQ-MODEL-30 described |
 | `dataset-version` and `validation-report` having no generated side | **Not started**, owner **W32-11** | *Not started* is straightforwardly right — neither slug is generated, neither is in `COMPARED_SLUGS`, and no commit claims otherwise. What the proposal's cell omitted is that it was also **unowned**: the slice map handed these to "W32-1's successor", and that successor — W32-1b — declines them in writing, so the ownership chain terminated. A closure record saying *not started* without naming a new owner would reproduce the exact gap §13 rule 2 exists to close, which is why the verdict carries one. *(Discharged 2026-08-24: **W32-11 delivered both** — `9ab14d6` (#158) gives each slug a generated side and `COMPARED_SLUGS` goes 13 → 15. This verdict was accurate when taken, hours before that merge, and is left standing rather than restated: the closure record takes **delivered**, while this row keeps the record of what was believed at the moment the owner was assigned. Routed by `w6b-executor` via `w6b-lead`, which is the two-independent-readers check working.)* |
-| **FR-PLAT-63**, the fourth obligation — the request-path *trigger* that records a switch | **Settled at close, not here** | The proposal offers *deferred with an owner*, and that is defensible **only** once W32-7 has shipped `record_switch` and the both-chains audit, so that the mechanism exists and only the trigger is missing. On the repository as it stands, `record_switch` appears nowhere outside a plan file, there is no `workspaces` table, and `deps.py`'s `_single_workspace` still refuses a multi-membership caller outright — so **all four** obligations are *not started*, not just the fourth. Writing *deferred* today would report a mechanism the repository does not have. **The rule is decided here and the verdict is instantiated against fact at close**: if W32-7 ships the mechanism *and* files the trigger question as **a new `OQ-PLAT` question, whatever its number**, the fourth obligation is *deferred with an owner*, owner **W6b-11**. *(The number is deliberately not named. `OQ-PLAT-9` is the highest in use, so the next free is 10, but ids are allocated sequentially at execution and W32-7's plan specifies the question as behaviour without numbering it — a rule pinned to `10` would fail a correct W32-7 on a numbering accident if any other slice files an `OQ-PLAT` first. The verdict is taken against the merged tree.)* — the switcher is the first caller that knows a switch occurred. If either half is missing, all four are *not started*, owner **W32-7** |
+| **FR-PLAT-63**, the fourth obligation — the request-path *trigger* that records a switch | **Settled at close, not here** | The proposal offers *deferred with an owner*, and that is defensible **only** once W32-7 has shipped `record_switch` and the both-chains audit, so that the mechanism exists and only the trigger is missing. On the repository as it stands, `record_switch` appears nowhere outside a plan file, there is no `workspaces` table, and `deps.py`'s `_single_workspace` still refuses a multi-membership caller outright — so **all four** obligations are *not started*, not just the fourth. Writing *deferred* today would report a mechanism the repository does not have. **The rule is decided here and the verdict is instantiated against fact at close**: if W32-7 ships the mechanism *and* files the trigger question as **a new `OQ-PLAT` question, whatever its number**, the fourth obligation is *deferred with an owner*, owner **W6b-11**. *(The number is deliberately not named. `OQ-PLAT-9` is the highest in use, so the next free is 10, but ids are allocated sequentially at execution and W32-7's plan specifies the question as behaviour without numbering it — a rule pinned to `10` would fail a correct W32-7 on a numbering accident if any other slice files an `OQ-PLAT` first. The verdict is taken against the merged tree.)* — the switcher is the first caller that knows a switch occurred. If either half is missing, all four are *not started*, owner **W32-7** *(**Discharged 2026-08-24 at `60f6e46`, when W32 closed. The first branch fired.** W32-7 shipped `record_switch` and the both-chains audit in `platform/workspace_switch.py`, and filed the trigger question as **`OQ-PLAT-12`** — so obligation 4 is **deferred with an owner, owner W6b-11**, and the other three are **delivered**. **The second branch is spent, and is recorded as spent rather than deleted**: it would have left an owner clause naming **W32-7**, and no owner clause may name a slice of a closed workstream, so it is discharged here instead of being left to point at nothing. **The rule above is not rewritten** — §0 keeps the record of what was believed when the owner was assigned, and the rule's refusal to name an OQ number is why a numbering accident did not fail a correct W32-7.)* |
 
 **W32-11 — the contract guard's two remaining gaps.** An eleventh slice is allocated here
 rather than the two items being scattered, because they are the same work: both are backend
@@ -4452,7 +5136,7 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 |---|---|---|---|
 | ~~**W5**~~ ✔ | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | **Closed 2026-08-22** — 110 built · 10 declared-and-refused-by-name · 16 unevidenced with a verdict, of 136; 41/41 endpoints. See the closure record above. Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them, and per plan review 3's question 5 (accepted 2026-08-22) that is now the only place a reader should take a count from. **Started 2026-08-15**: ~~twenty-two~~ **twenty-eight** slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, the GLM approximation as a Model (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer), and **custom metrics** (FR-MODEL-45/103/105/106/107/108 — a Custom Metric reaches `approved` on the same lifecycle and grammar as a Custom Objective, `GbmSpec.eval_metrics` is now honoured rather than merely declared, and MODEL's endpoint axis closed at **40 of 40**, the first module in this repository to publish every declared endpoint), **regularisation and cross-validation** (FR-MODEL-20/53), **Tweedie power by profile likelihood** (FR-MODEL-22), **offset from another model** (FR-MODEL-24), **EBM via interpret-core** (FR-MODEL-37) and **GBM declared weights with the dropped eval metric record** (FR-MODEL-19/111), and **the audit-remediation slice** (2026-08-22, this one); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* *(It went stale the same way again and is corrected 2026-08-22 by the audit-remediation slice: five slices — regularisation/CV (#124), Tweedie (#125), offset (#126), EBM (#129) and GBM weights (#130) — landed between 08-21 and 08-22 with the count left at twenty-two, while this file's own newest record already called itself "the twenty-seventh slice". Both stale values are kept. **The mechanism is the same both times and is worth naming rather than re-fixing:** a slice's PR strikes its row in the outstanding-work table and stops there, and this count is a second place nothing reconciles against that table — #116 did it, then #124 and #125 did it again. The same mechanism left the buildable-slice counter at one when every row beneath it was struck, and left six verdicts stale in the diagnostics slice's table. **A slice updates the row that describes itself; every other place that counts slices is unowned.** The count is of **numbered** slices, so the three decision-only records of 2026-08-18 (PRs #106, #107, #108) have records and no number and have never been in it.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys. **The closure slice (2026-08-22) is the last, and the count above is deliberately not incremented to twenty-nine**: plan review 3's question 5 was accepted the same day, and adding a fourth hand-written count to the file whose staleness prompted the proposal would be the clearest possible way to ignore it. The slice records below are the list; `scope-audit.py` is the count |
 | **W6b** | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, the workspace selector's **shell control only**, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one. **Corrected 2026-08-23 (W6b slice-map backlog item 2): that clause read as a citation and was a forecast — §3.1 had never contained the requirement.** It does now, as FR-PLAT-62 (a Workspace becomes a named entity; there was no `workspaces` table, so a selector had nothing to render) and FR-PLAT-63 (the selection, verified against membership). **Both are W32's, not W6b's** — a table, a migration and an API — and the transport is OQ-PLAT-9. W6b keeps the shell control and stays blocked until the backend half lands. |
-| **W32** | Everything in Phase 1b that is not a browser — the contract guards, `model-schema` shapes, a migration, backend defects, endpoint tests and one skill | W5 | **Added 2026-08-24** (`plans/2026-08-23-w32-closure-proposal.md` Part B1, accepted by the maintainer that day). **Split from W6b 2026-08-22** and accepted the same day (`plans/2026-08-22-w6b-slice-map.md` §1, acceptance table row 1) — but the split created a workstream name without creating a row, so for two days work merged under a name this plan did not contain, and the coverage figure under Phase 1b described a scope that excluded it. **Eleven slices**, W32-1 … W32-11 — ten as scoped on 2026-08-22, plus **W32-11** allocated 2026-08-24 by the closure proposal's Part C decisions, which W32's close waits on. **W32-11 is the terminal slice**, picked up 2026-08-24 by the closure-execution session and confirmed by the maintainer the same day; findings it cannot resolve are booked forward with an owner rather than held against the close — see the decision record above; **W6b-1 and W6b-5 depend on W32-1, W6b-13 on W32-2, and W6b-3 on W32-3** — all three merged, so **those four W6b slices** wait on nothing but this workstream's close. **`W6b-11` is not among them and does wait on unbuilt W32 code**: FR-PLAT-62 and FR-PLAT-63 are **W32-7's**, and W32-7 is unstarted — there is no `workspaces` table (only `workspace_members` and `workspace_settings`), `record_switch` appears nowhere in `backend`, `packages` or `frontend`, no migration mentions a workspace, and `deps.py`'s `_single_workspace` still refuses a multi-membership caller outright. *(Corrected 2026-08-24: this clause read "W6b-1, -3, -5 and -13 are blocked on it", and two W6b sessions reached opposite readings of "it" — W32-11, the nearest noun, versus W32, the row's subject. Arbitrated against `plans/2026-08-22-w6b-slice-map.md` §5's slice table: those four are **exactly** the W6b rows whose dep column names a W32 slice, the other nine naming a W6b row or nothing. A dependency discovered after 2026-08-22 would have no reason to fall on precisely that pre-existing subset, so the clause compressed the column rather than recording something new. The frozen map needs no amendment.)* *(Corrected again 2026-08-24, hours later — the clause above was itself correction text, and the correction introduced this defect. It ended "all three merged, **so no W6b slice waits on unbuilt W32 code**; what they wait on is this workstream's close." The compression to the frozen dependency column is sound and is left standing; the trailing clause **generalised from the four slices that column names to all thirteen**, and that universal is false. `W6b-11`'s dependency on W32 was created **2026-08-23** by FR-PLAT-62/63 — *after* `plans/2026-08-22-w6b-slice-map.md` §5's table was frozen — so it is invisible in the very column the compression is derived from, and the **W6b row immediately above already said the opposite**: "W6b keeps the shell control and stays blocked until the backend half lands." Two consecutive rows of one table asserted contradictory things for as long as the clause stood. Found by `w6b-decision-maker`, routed via `w6b-lead`, verified here against five independent sources, one of them the code. **The mechanism is that a frozen dependency column ages into a false "ready"**: every dep it names merges, the row reads unblocked, and a dependency discovered later is nowhere in it to say otherwise. **A claim derived from a frozen column describes the column, never the world** — the compression was legitimate up to the em-dash and became a forecast after it. **The clause is in fact refutable on its own text, with the W6b row unread**: the justification licensing it — "a dependency discovered after 2026-08-22 would have no reason to fall on precisely that pre-existing subset" — is exactly the assertion that **the subset is not the population**. The premise that makes the narrow claim sound is the one that refutes the broad one. Diagnosed against the neighbouring row you fix a sentence; diagnosed against the quantifier you fix the class, which is why it is written this way round. Cost had it stood: a W6b session builds a workspace selector against a table that does not exist.)* Slice records are above — W32-1 … W32-5 back-filled 2026-08-24, which is the same omission in its second form |
+| ~~**W32**~~ ✔ | Everything in Phase 1b that is not a browser — the contract guards, `model-schema` shapes, a migration, backend defects, endpoint tests and one skill | W5 | **Added 2026-08-24** (`plans/2026-08-23-w32-closure-proposal.md` Part B1, accepted by the maintainer that day). **Split from W6b 2026-08-22** and accepted the same day (`plans/2026-08-22-w6b-slice-map.md` §1, acceptance table row 1) — but the split created a workstream name without creating a row, so for two days work merged under a name this plan did not contain, and the coverage figure under Phase 1b described a scope that excluded it. **Eleven slices**, W32-1 … W32-11 — ten as scoped on 2026-08-22, plus **W32-11** allocated 2026-08-24 by the closure proposal's Part C decisions, which W32's close waits on. **W32-11 is the terminal slice**, picked up 2026-08-24 by the closure-execution session and confirmed by the maintainer the same day; findings it cannot resolve are booked forward with an owner rather than held against the close — see the decision record above; **W6b-1 and W6b-5 depend on W32-1, W6b-13 on W32-2, and W6b-3 on W32-3** — all three merged, so **those four W6b slices** wait on nothing but this workstream's close. **`W6b-11` is not among them and does wait on unbuilt W32 code**: FR-PLAT-62 and FR-PLAT-63 are **W32-7's**, and W32-7 is unstarted — there is no `workspaces` table (only `workspace_members` and `workspace_settings`), `record_switch` appears nowhere in `backend`, `packages` or `frontend`, no migration mentions a workspace, and `deps.py`'s `_single_workspace` still refuses a multi-membership caller outright. *(Corrected 2026-08-24: this clause read "W6b-1, -3, -5 and -13 are blocked on it", and two W6b sessions reached opposite readings of "it" — W32-11, the nearest noun, versus W32, the row's subject. Arbitrated against `plans/2026-08-22-w6b-slice-map.md` §5's slice table: those four are **exactly** the W6b rows whose dep column names a W32 slice, the other nine naming a W6b row or nothing. A dependency discovered after 2026-08-22 would have no reason to fall on precisely that pre-existing subset, so the clause compressed the column rather than recording something new. The frozen map needs no amendment.)* *(Corrected again 2026-08-24, hours later — the clause above was itself correction text, and the correction introduced this defect. It ended "all three merged, **so no W6b slice waits on unbuilt W32 code**; what they wait on is this workstream's close." The compression to the frozen dependency column is sound and is left standing; the trailing clause **generalised from the four slices that column names to all thirteen**, and that universal is false. `W6b-11`'s dependency on W32 was created **2026-08-23** by FR-PLAT-62/63 — *after* `plans/2026-08-22-w6b-slice-map.md` §5's table was frozen — so it is invisible in the very column the compression is derived from, and the **W6b row immediately above already said the opposite**: "W6b keeps the shell control and stays blocked until the backend half lands." Two consecutive rows of one table asserted contradictory things for as long as the clause stood. Found by `w6b-decision-maker`, routed via `w6b-lead`, verified here against five independent sources, one of them the code. **The mechanism is that a frozen dependency column ages into a false "ready"**: every dep it names merges, the row reads unblocked, and a dependency discovered later is nowhere in it to say otherwise. **A claim derived from a frozen column describes the column, never the world** — the compression was legitimate up to the em-dash and became a forecast after it. **The clause is in fact refutable on its own text, with the W6b row unread**: the justification licensing it — "a dependency discovered after 2026-08-22 would have no reason to fall on precisely that pre-existing subset" — is exactly the assertion that **the subset is not the population**. The premise that makes the narrow claim sound is the one that refutes the broad one. Diagnosed against the neighbouring row you fix a sentence; diagnosed against the quantifier you fix the class, which is why it is written this way round. Cost had it stood: a W6b session builds a workspace selector against a table that does not exist.)* *(Corrected 2026-08-24 at `60f6e46`, W32's closing SHA: **the `W6b-11` clause above is now false in every particular, and is left standing because it was true when written.** W32-7 merged (#164) and ships the `workspaces` table, its migration, `record_switch` in `platform/workspace_switch.py`, and a `deps.py` that resolves a verified `Workspace-Id` header instead of refusing a multi-membership caller outright. **`W6b-11` no longer waits on unbuilt W32 code**; what it waits on is this workstream's close, recorded above. **One residual remains and it is not a build dependency**: FR-PLAT-63's fourth obligation — a switch audited into both chains — is delivered as a mechanism and tested, and **unenforced on the request path**, because `require_caller` runs once per request and cannot observe that a selection *changed*. Deferred with an owner, **owner W6b-11**, tracked as **`OQ-PLAT-12`**. A W6b session building the selector will find the table and the header; it will not find a request-path trigger, and it owns writing one. **And `plans/2026-08-22-w6b-slice-map.md` is frozen at its date and was not corrected by this close** — `CLAUDE.md` §2 freezes a filed plan, and editing one destroys the record of what was believed at its date while reading as though it had always been right. Its **line 192** still tells `W6b-11` it waits only on W32 building the header half, which was accurate when written and now misleads the one session it gates. **This clause is the live correction; that map is not current.**)* Slice records are above — W32-1 … W32-5 back-filled 2026-08-24, which is the same omission in its second form, and the workstream's closure record is in §6 above |
 | **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).
