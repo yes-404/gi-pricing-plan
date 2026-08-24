@@ -1429,51 +1429,176 @@ _COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
 )
 
 
+def _conjoin(into: dict[str, Any], declared: dict[str, Any], where: tuple[Arm, str]) -> None:
+    """Merge one variant's bounds into an arm's, refusing to resolve a collision silently.
+
+    `.update` is last-writer-wins per keyword. Across arms that was the defect W32-1b
+    removes; **within** one arm two variants can still legitimately name one keyword —
+    `allOf` conjunction is the case — and the right answer is per-keyword: `max` for a
+    lower bound, `min` for an upper, and nothing obvious at all for `pattern`. That is a
+    decision rather than a fix, and this slice does not take it.
+
+    What it does take is the obligation not to take it *silently*. `.update` stays, and a
+    collision raises with the arm, the path and both values instead of dropping one on walk
+    order. Measured 2026-08-24 it refuses nothing: zero collisions across the thirteen
+    slugs on both sides, at the walk and at the expansion alike — so this is a live tripwire
+    over an empty gap rather than a comment nobody re-reads.
+    `test_two_variants_bounding_one_path_differently_are_refused` is the proof it fires,
+    on a document built to collide (`CLAUDE.md` §13: enforcement proven on broken input).
+    """
+    arm, path = where
+    for keyword, value in declared.items():
+        held = into.get(keyword, value)
+        assert held == value, (
+            f"{_arm_name(arm)} {path} bounds {keyword} twice, as {held!r} and {value!r} — "
+            "`.update` drops one on walk order, so the within-arm merge has to be decided "
+            "(max for a lower bound, min for an upper) before this schema can be compared"
+        )
+    into.update(declared)
+
+
 def _constraint_map(
     document: dict[str, Any],
     node: dict[str, Any],
     base: pathlib.Path,
     path: str = "",
     *,
+    arm: Arm = frozenset(),
     _depth: int = 0,
-) -> dict[str, dict[str, Any]]:
-    """Flatten a schema to `dotted.path -> the constraint keywords declared there`.
+) -> dict[tuple[Arm, str], dict[str, Any]]:
+    """Flatten a schema to `(arm, dotted.path) -> the constraint keywords declared there`.
 
     Only keywords in `_COMPARED_CONSTRAINTS`, and only where a side declares one: a path
-    constrained on neither side is not a disagreement, and a path constrained on one side
-    only is reported by the comparison rather than by this walker.
+    constrained on neither side is not a disagreement.
+
+    **A path constrained on one side only is reported by nothing, and this docstring said
+    otherwise until 2026-08-24.** It claimed the comparison reported that case. It does
+    not and never did: `test_generated_and_authored_agree_on_scalar_constraints`
+    intersects twice — `set(produced) & set(declared)` over the keys, then
+    `set(...) & set(...)` over the keywords within a shared key — so a one-sided bound is
+    dropped by the intersection before anything can look at it, and this module's other
+    readers of this walker — the escalation test, the reach control and the two drift tests
+    below — each ask a different question. Measured 2026-08-24: **54** dotted paths across
+    the thirteen compared slugs carry a compared keyword on exactly one side, **13** of
+    them at paths where the *field* exists on both sides — `banding.slug` and
+    `grouping.slug` (`pattern`, contract only), `model.spec_hash` (`pattern`, contract
+    only), `job.error.code` and `job.result.kind` (`pattern`, model only).
+    `test_an_artifact_shape_carries_exactly_what_its_contract_declares` cannot see those
+    either: it compares field *names*, and the names agree.
+
+    The prose is corrected rather than the comparison widened. Which of the two a
+    one-sided bound is — drift, or a difference of intent the shape comparison arbitrates —
+    decides how 54 findings land across ten slugs, and `CLAUDE.md` §0 forbids picking one
+    silently inside a test-infrastructure fix. It is raised for decision, not settled here.
+
+    **Keyed by `(arm, path)` since arm attribution (W32-1b).** A bound declared inside one
+    conditional arm bounds that arm only, and the merged namespace resolved two arms with
+    `.update` — last-writer-wins **per keyword**, which is worse than the other two
+    walkers' union because nothing survives to compare. Measured 2026-08-24 on a two-arm
+    document bounding one path at `minimum: 0` and `minimum: 1`, the pre-attribution
+    walker returned `{"alpha": {"minimum": 1}}`: one bound, no trace of the other. On the
+    repository's own `model-spec.schema.json`, moving `max_bins` — the ebm arm's
+    `16 ≤ n ≤ 32768` — into the glm arm left this walker returning maps that compared
+    **equal**, 21 keys each, and the comparison reporting zero disagreements either way.
+    `test_two_arms_declaring_different_bounds_are_both_kept` and
+    `test_a_bound_moved_between_arms_is_drift` hold both cases.
+
+    Re-keying costs no reach and buys a great deal: 189 dotted paths are constrained on
+    both sides across the thirteen slugs before it and 189 after — `_flatten_constraints`
+    keeps that checkable in one line — while the compared `(arm, path)` keys go 189 → 760
+    and the compared `(arm, path, keyword)` triples 217 → 839.
     """
     if _depth > _MAX_COMPOSITION_DEPTH:
         raise AssertionError(
             f"more than {_MAX_COMPOSITION_DEPTH} composition levels — the document nests "
             "without bottoming out"
         )
-    found: dict[str, dict[str, Any]] = {}
-    properties: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
-    elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
-
-    for owner, variant, _arm in _variants(document, node, base):
+    found: dict[tuple[Arm, str], dict[str, Any]] = {}
+    for owner, variant, found_in in _variants(document, node, base, path=path, arm=arm):
         declared = {k: v for k, v in variant.items() if k in _COMPARED_CONSTRAINTS}
         if declared:
-            found.setdefault(path or _ROOT_PATH, {}).update(declared)
+            here = (found_in, path or _ROOT_PATH)
+            _conjoin(found.setdefault(here, {}), declared, here)
         for name, child in variant.get("properties", {}).items():
-            properties.setdefault(name, []).append((owner, child))
-        if "items" in variant:
-            elements.append((owner, variant["items"]))
-        elements.extend((owner, entry) for entry in variant.get("prefixItems", ()))
-
-    for name in sorted(properties):
-        for owner, child in properties[name]:
-            for key, declared in _constraint_map(
-                owner, child, base, f"{path}.{name}".lstrip("."), _depth=_depth + 1
+            for key, bounds in _constraint_map(
+                owner,
+                child,
+                base,
+                f"{path}.{name}".lstrip("."),
+                arm=found_in,
+                _depth=_depth + 1,
             ).items():
-                found.setdefault(key, {}).update(declared)
-    for owner, child in elements:
-        for key, declared in _constraint_map(
-            owner, child, base, f"{path}.[]".lstrip("."), _depth=_depth + 1
-        ).items():
-            found.setdefault(key, {}).update(declared)
+                _conjoin(found.setdefault(key, {}), bounds, key)
+        elements = list(variant.get("prefixItems", ()))
+        if "items" in variant:
+            elements.append(variant["items"])
+        for child in elements:
+            for key, bounds in _constraint_map(
+                owner, child, base, f"{path}.[]".lstrip("."), arm=found_in, _depth=_depth + 1
+            ).items():
+                _conjoin(found.setdefault(key, {}), bounds, key)
     return found
+
+
+def _expand_constraints(
+    by_arm: dict[tuple[Arm, str], dict[str, Any]], arms: frozenset[Arm]
+) -> dict[tuple[Arm, str], dict[str, Any]]:
+    """`_expand` for bounds — re-key each entry onto every complete arm it admits.
+
+    A separate function rather than a reuse, and the difference is the whole point.
+    `_expand` merges with `|`, which is correct for the `frozenset[str]` both other
+    walkers return. Here the value is a `dict[str, Any]`, where `dict | dict` is a
+    *dict-merge* — valid Python 3.12, type-checks clean, and silently last-writer-wins per
+    keyword: the exact defect arm-keying exists to remove, reintroduced at the expansion
+    instead of the walk.
+
+    **Within one arm the merge goes through `_conjoin`**, which keeps `.update` and
+    refuses to resolve a collision silently. Two entries with different constraint sets can
+    admit the same complete arm — an unconditional bound and an arm-specific one at the
+    same path — and that merge is the second place last-writer-wins could reappear after
+    the walk was fixed. Measured 2026-08-24, it happens zero times across the thirteen
+    slugs on either side.
+
+    An entry constrained by a discriminator no complete arm mentions is **dropped**, for
+    the reason `_expand` records: spreading it would restore the cross-arm merge.
+    """
+    expanded: dict[tuple[Arm, str], dict[str, Any]] = {}
+    for (constraints, path), declared in by_arm.items():
+        for arm in arms:
+            if _admits(constraints, arm):
+                expanded_into = expanded.setdefault((arm, path), {})
+                _conjoin(expanded_into, declared, (arm, path))
+    return expanded
+
+
+def _flatten_constraints(
+    by_arm: dict[tuple[Arm, str], dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """The arm-flattened view: exactly what `_constraint_map` returned before attribution.
+
+    `_paths` is the same idea for the two `frozenset[str]` walkers and cannot be reused for
+    the same reason `_expand` cannot — it merges with `|`, and this value type is a dict.
+    Flattening merges with `.update`, which *is* the pre-attribution behaviour, and that is
+    what makes it the right instrument for the two questions asked of it: does the walker
+    still reach this dotted path, and is a given drift still invisible to the walker that
+    merged arms.
+    """
+    flat: dict[str, dict[str, Any]] = {}
+    for (_, path), declared in by_arm.items():
+        flat.setdefault(path, {}).update(declared)
+    return flat
+
+
+def _constraint_paths(
+    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+) -> dict[str, dict[str, Any]]:
+    """`_constraint_map` flattened back onto dotted paths, for the reach control below.
+
+    A named adapter rather than a lambda in the parametrize, for the reason
+    `_closure_paths` records: the assertion message prints `walker.__name__`, and
+    `<lambda>` names nothing.
+    """
+    return _flatten_constraints(_constraint_map(document, node, base))
 
 
 #: Constraint disagreements this slice found and deliberately did **not** resolve, keyed by
@@ -1510,39 +1635,66 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     The type comparison above answers "may this be a string?" and stops. It says nothing
     about a `minLength: 1` the model enforces and the contract omits — under which a client
     posts the empty string the contract permitted and meets a 422 naming a rule it was
-    never told. Only keywords declared on **both** sides are compared, for the same reason
-    the type comparison intersects paths: a constraint on one side alone is a difference of
-    intent, and `test_an_artifact_shape_carries_exactly_what_its_contract_declares` is
-    where intent is arbitrated.
+    never told.
+
+    **Only keywords declared on both sides are compared, and a one-sided bound is reported
+    by nothing.** The scope line is the same one the type comparison takes, but the
+    sentence that used to follow it here was wrong: it said
+    `test_an_artifact_shape_carries_exactly_what_its_contract_declares` arbitrates the
+    one-sided case, and that test compares field *names*. Where a field exists on both
+    sides and only one side bounds it, the names agree and it sees nothing — measured
+    2026-08-24, 13 of the 54 one-sided bounds in the suite are of exactly that shape.
+    `_constraint_map`'s docstring carries the measurement and the reason the prose was
+    corrected instead of the intersection widened.
+
+    **Compared arm by arm since 2026-08-24 (W32-1b).** A bound inside a conditional arm
+    bounds that arm alone, so both maps are expanded onto one complete arm set before the
+    intersection, exactly as the two comparisons above are. The arm set is built from the
+    constraints **both walked maps** carry, never from `_arms` over a document root:
+    measured 2026-08-24, deriving it from the generated root instead takes the suite from
+    760 compared `(arm, path)` keys to 177 while still passing, and `model` alone from 584
+    to 1 — its union is nested under `spec` and `fit_result`, where a root reading never
+    looks.
 
     A pair may be scoped out through `UNRESOLVED_CONSTRAINT_DISAGREEMENTS` when the
     disagreement is a question for the maintainer rather than a fix. **That dict is empty**
     — its one entry was OQ-MODEL-30, settled 2026-08-24 — so nothing is skipped here today,
     and `test_the_escalated_constraint_disagreements_are_still_unresolved` is what notices
     if a future entry outlives its question.
+
+    A future entry's key is a bare `(path, keyword)` and must stay one: the arm is stripped
+    before the match, exactly as the type pin above is matched on its bare path. A carve-out
+    naming an arm would silently stop matching the day its schema grew one — it would skip
+    nothing, the comparison would go red, and the entry would look like the innocent party.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
 
-    produced = _constraint_map(generated, generated, GENERATED)
-    declared = _constraint_map(authored, authored, AUTHORED)
+    walked_produced = _constraint_map(generated, generated, GENERATED)
+    walked_declared = _constraint_map(authored, authored, AUTHORED)
+    arms = _complete_arms(
+        constraints for constraints, _ in set(walked_produced) | set(walked_declared)
+    )
+    produced = _expand_constraints(walked_produced, arms)
+    declared = _expand_constraints(walked_declared, arms)
     unresolved = UNRESOLVED_CONSTRAINT_DISAGREEMENTS.get(slug, frozenset())
 
-    disagreed: dict[str, dict[str, tuple[Any, Any]]] = {}
-    for path in sorted(set(produced) & set(declared)):
-        for keyword in sorted(set(produced[path]) & set(declared[path])):
-            if (path, keyword) in unresolved:
+    disagreed: dict[tuple[Arm, str], dict[str, tuple[Any, Any]]] = {}
+    for key in sorted(set(produced) & set(declared), key=lambda k: (k[1], _arm_name(k[0]))):
+        for keyword in sorted(set(produced[key]) & set(declared[key])):
+            if (key[1], keyword) in unresolved:
                 continue
-            if produced[path][keyword] != declared[path][keyword]:
-                disagreed.setdefault(path, {})[keyword] = (
-                    produced[path][keyword],
-                    declared[path][keyword],
+            if produced[key][keyword] != declared[key][keyword]:
+                disagreed.setdefault(key, {})[keyword] = (
+                    produced[key][keyword],
+                    declared[key][keyword],
                 )
     assert not disagreed, (
         "the model and the contract disagree on a bound at "
         + "; ".join(
-            f"{p}: " + ", ".join(f"{k} model={g} contract={a}" for k, (g, a) in d.items())
-            for p, d in disagreed.items()
+            f"{_arm_name(arm)} {path}: "
+            + ", ".join(f"{k} model={g} contract={a}" for k, (g, a) in d.items())
+            for (arm, path), d in disagreed.items()
         )
     )
 
@@ -1557,17 +1709,32 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
     disagreement is settled, and nothing else in this file would say so — the comparison
     just keeps skipping a pair that now agrees. So this asserts the exemption is still
     earning its place, and goes red with instructions when it stops.
+
+    **Read arm by arm since 2026-08-24 (W32-1b)**, matching the comparison it guards: the
+    pair is settled only when every arm that carries it on both sides agrees. Re-measured
+    after the re-keying, `objective-certificate`'s `result.checks` `minItems` still
+    disagrees — model 1, contract 8, in the single unconditional arm — so the entry is
+    unchanged and still earning its place.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
 
-    produced = _constraint_map(generated, generated, GENERATED)
-    declared = _constraint_map(authored, authored, AUTHORED)
+    walked_produced = _constraint_map(generated, generated, GENERATED)
+    walked_declared = _constraint_map(authored, authored, AUTHORED)
+    arms = _complete_arms(
+        constraints for constraints, _ in set(walked_produced) | set(walked_declared)
+    )
+    produced = _expand_constraints(walked_produced, arms)
+    declared = _expand_constraints(walked_declared, arms)
 
     settled = [
         (path, keyword)
         for path, keyword in sorted(UNRESOLVED_CONSTRAINT_DISAGREEMENTS[slug])
-        if produced.get(path, {}).get(keyword) == declared.get(path, {}).get(keyword)
+        if not any(
+            produced.get((arm, path), {}).get(keyword)
+            != declared.get((arm, path), {}).get(keyword)
+            for arm in arms
+        )
     ]
     assert not settled, (
         f"{slug} no longer disagrees at "
@@ -1584,7 +1751,7 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
         (_required_map, "grouping", "evidence.source_level_stats.[]"),
         (_required_map, "model", "fit_result.bins.[]"),
         (_closure_paths, "model-spec", "family_params"),
-        (_constraint_map, "grouping", "evidence.source_level_stats.[].claim_count"),
+        (_constraint_paths, "grouping", "evidence.source_level_stats.[].claim_count"),
     ],
 )
 def test_each_new_walker_reaches_a_nested_path_it_is_supposed_to(
@@ -1798,6 +1965,124 @@ def test_an_arm_specific_type_is_not_unioned_across_arms() -> None:
             assert types != frozenset({"null", "object", "string"}), (
                 f"{sorted(arm)} still carries the cross-arm union"
             )
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_two_arms_declaring_different_bounds_are_both_kept() -> None:
+    """**Last-writer-wins, per keyword** — the sharpest form of this defect.
+
+    Two arms bounding the same path differently do not produce a conflict, a union or a
+    failure: one silently replaces the other, and the guard then compares a bound only one
+    arm declares against a contract where both do.
+
+    Measured 2026-08-24 against the pre-attribution walker on exactly this document: it
+    returned `{"alpha": {"minimum": 1}}` — one entry, the glm arm's `minimum: 0` gone with
+    no trace, no diagnostic and no second key to compare it against.
+
+    The flattened half is asserted too, and is what makes this a defect rather than a
+    curiosity: flattening still keeps one bound, so the loss is not an artefact of the
+    test's own reading — it is what every consumer of the merged map saw.
+    """
+    document = {
+        "type": "object",
+        "properties": {"model_type": {"enum": ["glm", "ebm"]}},
+        "allOf": [
+            {
+                "if": {"properties": {"model_type": {"const": "glm"}}},
+                "then": {"properties": {"alpha": {"type": "number", "minimum": 0}}},
+            },
+            {
+                "if": {"properties": {"model_type": {"const": "ebm"}}},
+                "then": {"properties": {"alpha": {"type": "number", "minimum": 1}}},
+            },
+        ],
+    }
+
+    walked = _constraint_map(document, document, AUTHORED)
+    bounds = {
+        _arm_name(arm): declared["minimum"]
+        for (arm, path), declared in walked.items()
+        if path == "alpha"
+    }
+    assert bounds == {"model_type=glm:": 0, "model_type=ebm:": 1}, (
+        f"one arm's bound replaced the other's — kept {bounds}"
+    )
+
+    flattened = _constraint_paths(document, document, AUTHORED)
+    assert flattened["alpha"] == {"minimum": 1}, (
+        "the flattened view no longer loses a bound, so this document is no longer the "
+        "case the merged walker was blind to"
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_a_bound_moved_between_arms_is_drift() -> None:
+    """**The constraint defect, on a case measured in the repository's own contract.**
+
+    A bound is per-arm: `max_bins` is `16 ≤ n ≤ 32768` in the ebm arm and undeclared
+    everywhere else, because only an EBM bins on a dyadic grid. Moving that declaration to
+    the glm arm changes which documents the contract accepts in both arms — an EBM with
+    `max_bins: 4` becomes valid, a GLM carrying one at all becomes bounded — while leaving
+    the *set* of declarations untouched.
+
+    Measured 2026-08-24 on `model-spec.schema.json` with the pre-attribution walker: the
+    clean and drifted maps compared **equal**, 21 keys each, both carrying
+    `max_bins: {"minimum": 16, "maximum": 32768}`, and
+    `test_generated_and_authored_agree_on_scalar_constraints` reported zero disagreements
+    over the same shared paths in both states.
+
+    Both halves are asserted, because only the pair is evidence: the flattened views must
+    still be identical — that *is* the pre-attribution map, so the case stays the invisible
+    one — while the arm-keyed views must differ.
+    """
+    authored = _load(AUTHORED / "model-spec.schema.json")
+    moved = _move_property_between_arms(authored, "max_bins", source="ebm", target="glm")
+    generated = _load(GENERATED / "model-spec.schema.json")
+
+    produced = _constraint_map(generated, generated, GENERATED)
+    clean = _constraint_map(authored, authored, AUTHORED)
+    drifted = _constraint_map(moved, moved, AUTHORED)
+
+    assert _flatten_constraints(clean) == _flatten_constraints(drifted), (
+        "the arm-flattened constraint views already differ, so this is no longer the case "
+        "a merged walker is blind to and the assertion below proves less than it claims"
+    )
+
+    arms = _complete_arms(
+        constraints for constraints, _ in set(produced) | set(clean) | set(drifted)
+    )
+    assert _expand_constraints(clean, arms) != _expand_constraints(drifted, arms), (
+        "moving a bound between arms produced an identical constraint map — the walker is "
+        "still merging arms into one namespace"
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_two_variants_bounding_one_path_differently_are_refused() -> None:
+    """The within-arm merge is the gap this slice left open, and `_conjoin` holds it open.
+
+    Two `allOf` variants bounding one path in the *same* arm is the legitimate conjunction
+    case — `minimum: 0` and `minimum: 2` conjoin to 2 — and resolving it correctly is a
+    per-keyword decision (`max` for a lower bound, `min` for an upper, nothing obvious for
+    `pattern`) that W32-1b deliberately does not take. `.update` therefore still stands,
+    and would drop one bound on walk order.
+
+    This is what stops that being silent, and it is the proof the tripwire fires: measured
+    2026-08-24 the suite collides zero times, so without a document built to collide the
+    refusal would be a check that has never printed a failure (`CLAUDE.md` §13 rule 3).
+    The document below is that input, and the walker raises on it rather than returning the
+    single merged bound the pre-attribution walker returned.
+    """
+    document = {
+        "type": "object",
+        "allOf": [
+            {"properties": {"alpha": {"type": "number", "minimum": 0}}},
+            {"properties": {"alpha": {"type": "number", "minimum": 2}}},
+        ],
+    }
+    with pytest.raises(AssertionError, match="alpha bounds minimum twice"):
+        _constraint_map(document, document, AUTHORED)
+
 
 
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
