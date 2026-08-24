@@ -17,8 +17,9 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
-- Plans here are **committed and audited**. `docs/plans/README.md` carries the four
-  conventions that keep one passing `scripts/audit-docs.py` — read it before writing.
+- Plans here are **committed and audited**. `docs/plans/README.md` carries the conventions
+  that keep one passing `scripts/audit-docs.py`, and the three the gate cannot check — read
+  it before writing.
 
 ## Scope Check
 

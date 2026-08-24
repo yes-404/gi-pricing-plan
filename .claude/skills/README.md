@@ -132,9 +132,11 @@ The directory is load-bearing rather than a preference. `docs/plans/` sits insid
 `scripts/audit-docs.py`'s scope, so a filed plan's links, requirement citations and tables
 are checked like every other document in the suite — the 20 plans filed on 2026-08-22 cite
 116 distinct requirements between them, and three real defects surfaced the moment they
-moved in. `writing-plans` also gained a two-line pointer to `docs/plans/README.md`, which
-carries the conventions. Nothing else in the four skills changed; neither `.superpowers/sdd/`
-nor `.planning/` moved, both still hold live scratch and both stay git-ignored.
+moved in. `writing-plans` also gained a three-line pointer to `docs/plans/README.md`, which
+carries the conventions — widened on 2026-08-24, when that file gained a section for the
+three conventions the audit cannot check. Nothing else in the four skills changed; neither
+`.superpowers/sdd/` nor `.planning/` moved, both still hold live scratch and both stay
+git-ignored.
 
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a
