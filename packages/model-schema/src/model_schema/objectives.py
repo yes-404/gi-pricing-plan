@@ -462,6 +462,17 @@ class CustomObjective(BaseModel):
     #: afterwards — the trail from an approved objective to the decision behind it.
     approval_request_id: UUID | None = None
 
+    #: How many Model Specs reference this objective version (FR-MODEL-127) — the library
+    #: row's count, and `Dataset.latest_version_status`'s kind of field: **derived per
+    #: request and stored on no row**. A stored counter would be a second answer to
+    #: FR-MODEL-47's blast radius, free to disagree with the query that derives it.
+    #:
+    #: `None` and `0` are different facts and are reported differently. The list route
+    #: computes one aggregate per page and supplies `0` for an artifact nothing references;
+    #: every other route leaves this `None`, meaning *not asked*, because a `0` there would
+    #: read as "nothing uses this" on a page that never counted.
+    usage_count: int | None = Field(default=None, ge=0)
+
     @model_validator(mode="after")
     def _only_templates_are_built(self) -> Self:
         """FR-MODEL-75, at the type.

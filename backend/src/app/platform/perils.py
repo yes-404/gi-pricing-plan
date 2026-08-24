@@ -21,11 +21,12 @@ may fit them is the role that may compose them. Recorded in `02` §5.1 with this
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ApprovalRequestRow, ModelRow, PerilStructureRow
@@ -49,6 +50,7 @@ from model_schema import (
 
 __all__ = [
     "create_structure",
+    "list_peril_structures",
     "load_structure",
     "reconcile_payload",
     "record_reconciliation",
@@ -361,6 +363,69 @@ async def load_structure(
     return to_structure(
         await _get_or_404(session, workspace_id=workspace_id, structure_id=structure_id)
     )
+
+
+async def list_peril_structures(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    limit: int,
+    count_cap: int,
+    status: PerilStructureStatus | None = None,
+    slug: str | None = None,
+    after: UUID | None = None,
+) -> tuple[Sequence[PerilStructureRow], int]:
+    """One page of the workspace's peril structures, newest first (FR-MODEL-127).
+
+    `metrics.list_metrics` and `objectives.list_objectives` are the same fifteen lines over
+    their own tables, and the three are deliberately **not** factored into a shared generic:
+    the tables carry different status enums and the abstraction that unified them would be
+    harder to read than all three.
+
+    **This one returns no usage count, and its two siblings do.** `02` §5.1 asks the metric
+    and objective rows for a blast radius and asks nothing of this row, and the reason is
+    that there is no query to write: a Model Spec references an objective and a metric by
+    `custom_objective:`/`custom_metric:` ref, and nothing in Phase 1b references a peril
+    structure at all — FR-MODEL-61's Rating Version, which will, is Phase 2. A count here
+    would be a column of zeroes that reads as "nothing uses this" when the truth is "nothing
+    can yet". Raised as an open question with this slice rather than answered by building
+    one.
+
+    `ix_peril_structures_slug_status` covers `(workspace_id, slug, status)`, so both filters
+    are index-served and no migration accompanies this route. `slug` is an **equality** for
+    `list_metrics`'s reason: a prefix match resolves `motor-gb` to `motor-gb-fleet` too,
+    which is a wrong artifact rather than a wide result.
+
+    Ids are UUIDv7 and therefore time-ordered, so one column is both the sort and the
+    cursor; `limit + 1` rows are fetched and the caller drops the extra one. No RBAC check —
+    every caller arrives through `requires(MODEL_READ)`. `limit` and `count_cap` are
+    parameters because `DEFAULT_LIMIT` and `COUNT_CAP` live in `app.api.pagination` and no
+    module under `app/platform/` imports from `app/api/`.
+    """
+    conditions = [PerilStructureRow.workspace_id == workspace_id]
+    if status is not None:
+        conditions.append(PerilStructureRow.status == status.value)
+    if slug is not None:
+        conditions.append(PerilStructureRow.slug == slug)
+
+    query = (
+        select(PerilStructureRow)
+        .where(*conditions)
+        .order_by(PerilStructureRow.id.desc())
+        .limit(limit + 1)
+    )
+    if after is not None:
+        query = query.where(PerilStructureRow.id < after)
+
+    rows = (await session.execute(query)).scalars().all()
+    total = (
+        await session.execute(
+            select(func.count()).select_from(
+                select(PerilStructureRow.id).where(*conditions).limit(count_cap).subquery()
+            )
+        )
+    ).scalar_one()
+    return rows, int(total)
 
 
 async def resolve_artifact_ref(

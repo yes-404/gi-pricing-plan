@@ -8,7 +8,7 @@ only the platform can be wrong about:
   set the precedent and the reason;
 * **a reconciled composition cannot be edited**, at the privilege layer rather than only in
   the service. The reconciliation measured *that* set of models;
-* **all four routes are in the published contract** — including the two `02` §5.1 did not
+* **all five routes are in the published contract** — including the two `02` §5.1 did not
   declare, which is the gap the endpoint audit is structurally unable to see;
 * **the whole path runs**: compose, reconcile through the real Job, submit for approval.
 
@@ -610,7 +610,7 @@ async def test_a_reconciled_structure_reaches_review_with_an_approval_request(
 
 
 @pytest.mark.req("FR-MODEL-90")
-def test_all_four_routes_are_published() -> None:
+def test_all_five_routes_are_published() -> None:
     """`02` §5.1 declared the create and the reconcile. A create whose artifact nothing can
     fetch, and an approvable artifact with no way to submit it, are the omission FR-MODEL-84
     repaired for transparency — and one the endpoint audit cannot see, because it compares
@@ -618,6 +618,7 @@ def test_all_four_routes_are_published() -> None:
     """
     paths = _load(OPENAPI)["paths"]
     assert "post" in paths["/api/v1/peril-structures"]
+    assert "get" in paths["/api/v1/peril-structures"]
     assert "get" in paths["/api/v1/peril-structures/{structure_id}"]
     assert "post" in paths["/api/v1/peril-structures/{structure_id}/reconcile"]
     assert "post" in paths["/api/v1/peril-structures/{structure_id}/submit"]

@@ -4169,6 +4169,56 @@ is what makes it hard to see. The rule: a delegated gate must be told to run in 
 report the `pwd` it ran in, and its pytest total must be reconciled against `--collect-only` before
 it is believed.
 
+#### W32-8 slice — the artifact library list routes, 2026-08-24
+
+**Merged.** `GET /custom-objectives`, `GET /custom-metrics` and `GET /peril-structures`, each
+cursor-paginated and filterable by `status` and `slug`, behind one shared per-page usage
+aggregate. FR-MODEL-127's own budget — *one aggregate per page, never one per row* — is
+**measured rather than asserted**: `test_one_page_of_refs_costs_one_query` counts the queries a
+page issues, because an N+1 implementation passes every other test in the slice. Nine commits,
+21 files, +2625/−81. Full record in
+[the ledger](plans/2026-08-23-w32-8-artifact-library-list-routes-ledger.md); the plan is frozen
+at its date.
+
+**Two spec-versus-spec disagreements were raised, and both were answered upstream on the
+same date.** `CLAUDE.md` §0 forbids a slice picking a side when both sides are specification,
+so the slice raised them rather than editing either side. Before the branch merged, the W32
+closure proposal's Part D amendment to FR-MODEL-127 (#156) decided both — each the way the
+slice had recommended, and reached from the specification side without sight of that analysis.
+Both are filed **born-`decided`**, because the register's four status values exist so that an
+answered question keeps its alternatives and its guard rails where the next reader will look.
+
+* **OQ-MODEL-32 — does §5.3 render one artifact library or three?** FR-MODEL-127 opens *"the three artifact
+  libraries §5.3 renders are listable"*, and when the slice was built §5.3 rendered **one**
+  (`Custom objective library`, `/objectives`), plus a peril structure *detail* view and no
+  custom-metric view at all. Part D item 3 added the two missing §5.3 rows — `Custom metric
+  library` at `/metrics` and `Peril structure library` at `/peril-structures` — against routes
+  §5.1 already declared, so the opening sentence now describes §5.3 as it stands.
+* **OQ-MODEL-33 — which artifact rows carry `usage_count`?** The same requirement's prose was unqualified,
+  while §5.1 puts the field on objectives and metrics and **omits it from peril structures**.
+  The slice built §5.1's reading and **asserted the absence** rather than leaving it implicit.
+  Part D item 4 qualified the prose to the two libraries, on the ground the slice had given:
+  the quantity is undefinable on a peril row, because `PerilComponent` holds model
+  `ArtifactRef`s so the reference runs PerilStructure → Model, and `ModelSpec.peril` is a plain
+  `str` label — *"the count of Model Specs referencing that artifact"* is **`0` by construction,
+  forever**, the same defect class W32-9 deleted from `ShapInteraction.exposure_share`. The
+  holding deliberately does **not** rest on perils having no `/usage` route: FR-RATE-22 pins a
+  peril structure per `model_call`, so it has a real blast radius.
+
+**FR-MODEL-95's point *(a)* went false in this slice** — *"there is no list route — seven routes
+and none of them lists"* — and carries a dated correction rather than a rewrite (§5). The
+sentence records what was true on 2026-08-23 and is the reason FR-MODEL-127 exists; deleting it
+would erase the evidence for the requirement that cured it.
+
+**The gate caught a gap three test runs had not.** Twelve of thirteen commands were green and
+`generate-contracts.py --check` passed, but `test_contracts.py` failed on `custom-objective`:
+the model produced `usage_count` while the **authored** contract did not declare it. The
+generated side agreeing with the model proves nothing about the authored side, which is the
+half a human maintains — the asymmetry `CLAUDE.md` §13 rule 4 is pointing at. Fixed in
+`8c72c38`. `custom-metric` did not fail because it has no authored counterpart at all, which is
+one of the uncompared shapes W32-1b's skill count tracks.
+
+
 ### Phase 1b — Modelling Workbench
 
 **Goal:** factors, bandings, groupings, GLM and GBM fitting, diagnostics, transparency

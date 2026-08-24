@@ -1,20 +1,22 @@
-"""The seven Custom Objective routes over HTTP (`02` §5.1, FR-MODEL-95).
+"""The eight Custom Objective routes over HTTP (`02` §5.1, FR-MODEL-95, FR-MODEL-127).
 
 `test_custom_objectives.py` covers the platform layer. This file covers the routes: who may
 call each one, what comes back, the workspace boundary, and the conflicts a route can report
 as a 500 without any platform test noticing.
 
-The prior route evidence was one OpenAPI-presence assertion — the seven paths are spelled
+The prior route evidence was one OpenAPI-presence assertion — the paths are spelled
 correctly in the published contract. A route returning 500 on every call would have kept it
 green.
 
 **Three things the plan for this file expected are not what the code does**, found by reading
 the raising sites rather than trusting the plan, and recorded in `02` §5.1 with this slice:
 
-- **There is no list route.** Seven routes, and none of them lists. The workspace boundary is
-  therefore proved on `GET /{id}` *and* on `GET /{id}/usage` — `usage` is the route that
-  answers "what does this reach", so a lost workspace fold there leaks another workspace's
-  models rather than one objective.
+- **There was no list route** — seven routes and none of them listed, which is the
+  observation FR-MODEL-127 was raised from and which `GET /custom-objectives` cured on
+  2026-08-23 (W32-8). There are now eight, and the library screen `02` §5.3 specifies has an
+  endpoint to draw from. The workspace boundary is still proved on `GET /{id}` *and* on
+  `GET /{id}/usage` — and now on the list too, which is the one that would leak a whole
+  workspace at once rather than a single artifact.
 - **Re-certifying an objective that is already `certified` does not conflict.**
   `certifiable_or_refuse` admits `{draft, certified}` on purpose: re-certification after a
   library upgrade is how a finding is found. The conflict is `review` and past — where a
@@ -38,16 +40,18 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.test_api_datasets import _headers
+from backend.tests.test_model_jobs_gbm import _gbm_spec
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.db.models import ApprovalPolicyRow, CustomObjectiveRow
+from app.db.models import ApprovalPolicyRow, CustomObjectiveRow, ModelRow
 from app.db.session import Database
 from app.platform.objectives import default_sampling
 from model_schema import (
     DEFAULT_POLICY,
     ApprovalPolicy,
     CustomObjective,
+    GbmFunctionRef,
     ObjectiveStatus,
     new_uuid7,
 )
@@ -167,6 +171,45 @@ def _copy_into(workspace_id: UUID, objective: dict[str, Any]) -> UUID:
                 applicability=objective["applicability"],
                 hessian_strategy=objective["hessian_strategy"],
                 hessian_min=objective["hessian_min"],
+            )
+            session.add(row)
+            await session.flush()
+            return row.id
+
+    return _run(_insert)
+
+
+def _seed_model_referencing(
+    workspace_id: UUID, objective: dict[str, Any], *, status: str = "draft"
+) -> UUID:
+    """One Model whose Spec names this objective version — what `usage_count` counts.
+
+    A direct insert for `_copy_into`'s reason and one more: fitting a model is a Job, and
+    the aggregate reads the `spec` column rather than the fit. The spec is built through
+    `model-schema`'s `GbmSpec` (`CLAUDE.md` §2), so the ref this test seeds is the ref a
+    real fit would write. `status` is a parameter because the count must not depend on it:
+    `usage` filters on nothing but the workspace, so neither may this.
+    """
+    ref = f"custom_objective:{objective['slug']}@{objective['version']}"
+    spec = _gbm_spec(
+        new_uuid7(),
+        (new_uuid7(),),
+        objective=GbmFunctionRef(kind="custom", ref=ref),
+    ).model_dump(mode="json")
+    beyond_draft = status not in ("draft", "archived")
+
+    async def _insert(database: Database) -> UUID:
+        async with database.unit_of_work() as session:
+            row = ModelRow(
+                workspace_id=workspace_id,
+                model_family_slug=str(spec["model_family_slug"]),
+                version=1,
+                status=status,
+                dataset_version_id=UUID(str(spec["dataset_version_id"])),
+                spec=spec,
+                spec_hash=f"v3:sha256:{new_uuid7().hex}{new_uuid7().hex}",
+                fit_result={"fitted": True} if beyond_draft else None,
+                diagnostics_id=new_uuid7() if beyond_draft else None,
             )
             session.add(row)
             await session.flush()
@@ -363,9 +406,11 @@ def test_usage_of_an_objective_in_another_workspace_is_not_found(
 ) -> None:
     """The same boundary on the route that answers "what does this reach".
 
-    Tested separately from the get because there is **no list route** — this is the one
-    endpoint whose leak would be a set of another workspace's models rather than a single
-    artifact, and it reaches the objective through its own call to `_get_or_404`.
+    Tested separately from the get because a leak here is a set of another workspace's
+    *models* rather than a single artifact, and it reaches the objective through its own
+    call to `_get_or_404`. Written when there was **no list route** and kept now that
+    there is one: `test_the_library_stops_at_the_workspace_boundary` covers the eighth
+    route's fold, and this one still covers a different query.
     """
     elsewhere = _copy_into(new_uuid7(), _create(client, author))
     response = client.get(f"/api/v1/custom-objectives/{elsewhere}/usage", headers=author)
@@ -538,3 +583,151 @@ def test_creating_an_expression_objective_is_refused_by_name(
     )
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
+
+
+# -- The library list ------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_the_library_lists_the_workspace_objectives(
+    client: TestClient, author: dict[str, str]
+) -> None:
+    """The screen `02` §5.3 specifies had no endpoint to draw from until this route."""
+    first, second = _create(client, author), _create(client, author)
+    response = client.get("/api/v1/custom-objectives", headers=author)
+    assert response.status_code == 200, response.text
+    ids = {row["id"] for row in response.json()["items"]}
+    assert {first["id"], second["id"]} <= ids
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_the_slug_filter_is_an_exact_match(
+    client: TestClient, author: dict[str, str]
+) -> None:
+    """**Exact**, not a prefix.
+
+    FR-MODEL-127 makes this filter the thing that resolves §5.3's `slug@version` addresses
+    against UUID-only detail routes. A prefix match would resolve `motor-ad` to `motor-ad`
+    and `motor-ad-severity` alike, which is a wrong artifact rather than a wide result.
+    """
+    target = _create(client, author)
+    _create(client, author, slug=f"{target['slug']}-extended")
+    response = client.get(
+        f"/api/v1/custom-objectives?slug={target['slug']}", headers=author
+    )
+    assert response.status_code == 200, response.text
+    assert [row["id"] for row in response.json()["items"]] == [target["id"]]
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_the_status_filter_selects_one_lifecycle_state(
+    client: TestClient, author: dict[str, str]
+) -> None:
+    draft = _create(client, author)
+    moved = _create(client, author)
+    _advance(UUID(moved["id"]), status=ObjectiveStatus.REVIEW)
+    response = client.get("/api/v1/custom-objectives?status=review", headers=author)
+    assert response.status_code == 200, response.text
+    ids = {row["id"] for row in response.json()["items"]}
+    assert moved["id"] in ids
+    assert draft["id"] not in ids
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_each_row_carries_its_usage_count(
+    client: TestClient, author: dict[str, str], workspace_id: UUID
+) -> None:
+    """§5.1's list row carries the count; an unreferenced objective reads zero.
+
+    Zero on the list and **null** on `GET /{id}`: the list asked the question and the
+    detail route did not, so the two absences are different facts and are reported
+    differently.
+    """
+    used, unused = _create(client, author), _create(client, author)
+    _seed_model_referencing(workspace_id, used)
+    response = client.get("/api/v1/custom-objectives", headers=author)
+    assert response.status_code == 200, response.text
+    rows = {row["id"]: row for row in response.json()["items"]}
+    assert rows[used["id"]]["usage_count"] == 1
+    assert rows[unused["id"]]["usage_count"] == 0
+
+    detail = client.get(f"/api/v1/custom-objectives/{used['id']}", headers=author)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["usage_count"] is None
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_the_row_count_agrees_with_the_detail_blast_radius(
+    client: TestClient, author: dict[str, str], workspace_id: UUID
+) -> None:
+    """The row and `GET /{id}/usage` answer the same question about the same artifact.
+
+    FR-MODEL-127's count is the library's summary of FR-MODEL-47's blast radius. Were the
+    aggregate to filter on model status where `usage` does not, the row would quietly
+    disagree with the page an actuary opens from it — which is worse than either absent.
+    """
+    objective = _create(client, author)
+    for row_status in ("draft", "fitted", "archived"):
+        _seed_model_referencing(workspace_id, objective, status=row_status)
+
+    listed = client.get(
+        f"/api/v1/custom-objectives?slug={objective['slug']}", headers=author
+    )
+    assert listed.status_code == 200, listed.text
+    detail = client.get(
+        f"/api/v1/custom-objectives/{objective['id']}/usage", headers=author
+    )
+    assert detail.status_code == 200, detail.text
+    assert listed.json()["items"][0]["usage_count"] == len(detail.json()["models"]) == 3
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_the_library_stops_at_the_workspace_boundary(
+    client: TestClient, author: dict[str, str]
+) -> None:
+    """**Negative.** A list route is the easiest place to leak a whole workspace at once."""
+    mine = _create(client, author)
+    elsewhere = _copy_into(new_uuid7(), mine)
+    response = client.get("/api/v1/custom-objectives", headers=author)
+    assert response.status_code == 200, response.text
+    ids = {row["id"] for row in response.json()["items"]}
+    assert mine["id"] in ids
+    assert str(elsewhere) not in ids
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_listing_without_model_read_is_refused(
+    client: TestClient, author: dict[str, str], stranger: dict[str, str]
+) -> None:
+    """**Negative.** The refusal idiom above, on the list route.
+
+    `stranger` is authenticated into this workspace and holds nothing, so the 403 is the
+    permission answering rather than an empty page that happens to look the same.
+    """
+    _create(client, author)
+    response = client.get("/api/v1/custom-objectives", headers=stranger)
+    assert response.status_code == 403, response.text
+    assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-MODEL-127")
+def test_the_page_is_cursor_paginated(
+    client: TestClient, author: dict[str, str]
+) -> None:
+    """Two pages, no overlap, and the cursor is opaque — the `GET /models` contract."""
+    for _ in range(3):
+        _create(client, author)
+    first = client.get("/api/v1/custom-objectives?limit=2", headers=author)
+    assert first.status_code == 200, first.text
+    page_one = first.json()
+    assert len(page_one["items"]) == 2
+    assert page_one["next_cursor"]
+    second = client.get(
+        f"/api/v1/custom-objectives?limit=2&cursor={page_one['next_cursor']}",
+        headers=author,
+    )
+    assert second.status_code == 200, second.text
+    assert not (
+        {row["id"] for row in page_one["items"]}
+        & {row["id"] for row in second.json()["items"]}
+    )

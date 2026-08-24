@@ -26,11 +26,12 @@ different callers making different decisions with the answer.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import cast, select
+from sqlalchemy import cast, column, func, select, true
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,6 +69,7 @@ __all__ = [
     "apply_approval_decision",
     "certifiable_or_refuse",
     "create",
+    "list_metrics",
     "load_certificate",
     "load_metric",
     "record_certificate",
@@ -76,6 +78,7 @@ __all__ = [
     "to_certificate",
     "to_metric",
     "usage",
+    "usage_counts",
 ]
 
 #: The seed every certification uses unless a future revision names another — matching
@@ -116,11 +119,19 @@ class MetricUsage(BaseModel):
     models: tuple[MetricUsageModel, ...] = ()
 
 
-def to_metric(row: CustomMetricRow) -> CustomMetric:
+def to_metric(row: CustomMetricRow, *, usage_count: int | None = None) -> CustomMetric:
     """The stored artifact, re-validated on the way out — `objectives.to_objective`'s
-    reason: the definition columns are JSONB behind a trigger, not behind the contract."""
+    reason: the definition columns are JSONB behind a trigger, not behind the contract.
+
+    `usage_count` is a keyword for `to_objective`'s reason: a per-request aggregate the
+    *caller* computed once for a whole page, passed in rather than queried here, because a
+    query here would be one round trip per row — the N+1 FR-MODEL-127 names as part of its
+    requirement. Defaulted to `None`, so every route that does not count says *not asked*
+    rather than *nothing uses this*.
+    """
     return CustomMetric.model_validate(
         {
+            "usage_count": usage_count,
             "id": str(row.id),
             "slug": row.slug,
             "version": row.version,
@@ -260,6 +271,71 @@ async def load_metric(
     return to_metric(
         await _get_or_404(session, workspace_id=workspace_id, metric_id=metric_id)
     )
+
+
+async def list_metrics(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    limit: int,
+    count_cap: int,
+    status: MetricStatus | None = None,
+    slug: str | None = None,
+    after: UUID | None = None,
+) -> tuple[Sequence[CustomMetricRow], int]:
+    """One page of the workspace's metrics, newest first (FR-MODEL-127).
+
+    Here rather than in the router, `objectives.list_objectives`' reason: none of the three
+    artifact modules' routers imports SQLAlchemy at all, and a router that reached for it
+    only here would leave the next person two patterns and no rule.
+
+    **Not factored into a shared generic with `list_objectives`.** The two are fifteen lines
+    each over different tables with different status enums, and the abstraction that unified
+    them would be harder to read than both.
+
+    `ix_custom_metrics_slug_status` covers `(workspace_id, slug, status)`, so both filters
+    are index-served and no migration accompanies this route. `slug` is an **equality**:
+    FR-MODEL-127 makes this filter what resolves §5.3's `slug@version` addresses against
+    UUID-only detail routes, and a prefix match would resolve `capped-gamma` to
+    `capped-gamma-tail` as well — a wrong artifact, not a wide result.
+
+    Ids are UUIDv7 and therefore time-ordered, so one column is both the sort and the
+    cursor. `limit + 1` rows are fetched: the extra one answers "is there another page?"
+    and the caller drops it.
+
+    Returns the rows and the capped total; the router builds the `Page`. No RBAC check —
+    unlike `usage`, which is reachable from a Job. Every caller of this arrives through
+    `requires(MODEL_READ)`, and a second check on the same request would be a second round
+    trip for an answer already given.
+
+    `limit` and `count_cap` are parameters rather than imports because `DEFAULT_LIMIT` and
+    `COUNT_CAP` live in `app.api.pagination`, and no module under `app/platform/` imports
+    from `app/api/`. Reading them here would invert that direction to save two arguments.
+    """
+    conditions = [CustomMetricRow.workspace_id == workspace_id]
+    if status is not None:
+        conditions.append(CustomMetricRow.status == status.value)
+    if slug is not None:
+        conditions.append(CustomMetricRow.slug == slug)
+
+    query = (
+        select(CustomMetricRow)
+        .where(*conditions)
+        .order_by(CustomMetricRow.id.desc())
+        .limit(limit + 1)
+    )
+    if after is not None:
+        query = query.where(CustomMetricRow.id < after)
+
+    rows = (await session.execute(query)).scalars().all()
+    total = (
+        await session.execute(
+            select(func.count()).select_from(
+                select(CustomMetricRow.id).where(*conditions).limit(count_cap).subquery()
+            )
+        )
+    ).scalar_one()
+    return rows, int(total)
 
 
 async def load_certificate(
@@ -594,6 +670,53 @@ async def usage(
             for model in models
         ),
     )
+
+
+async def usage_counts(
+    session: AsyncSession, *, workspace_id: UUID, refs: Sequence[str]
+) -> dict[str, int]:
+    """Count the Model Specs referencing each metric ref, in one query (FR-MODEL-127).
+
+    `eval_metrics` is a JSONB **array**, not a scalar, so a model may name several metrics
+    and must be counted once against each. The single-artifact query above uses containment
+    (`spec["eval_metrics"] @> [{"ref": …}]`), which is right for one ref and cannot be
+    grouped across a page — containment answers "does this model use it", and the page needs
+    "which of these does each model use". Hence the lateral expansion.
+
+    It matches `usage`'s reach for the reason `objectives.usage_counts` does: scoped by
+    `workspace_id`, and **no status filter on the Model**, so the row and `GET /{id}/usage`
+    cannot answer differently about the same metric.
+
+    **A row without the key is safe, and the absence of a `coalesce` is what keeps it
+    honest.** `eval_metrics` is declared on `GbmSpec` only, so a `GlmSpec` or `EbmSpec` row
+    has no `eval_metrics` key at all, and every workspace holding a GLM has such rows.
+    There, the JSONB index expression is SQL `NULL`, and `jsonb_array_elements` is strict —
+    it yields no rows rather than raising, so the model drops out of the lateral join,
+    which is the wanted answer since it references no metric. Verified against
+    PostgreSQL 16: expanding a missing key returns zero rows.
+
+    A `coalesce(..., '[]'::jsonb)` guard was considered and rejected as guarding nothing.
+    The one input that *does* raise is a JSON `null` **value** ("cannot extract elements
+    from a scalar"), and `coalesce` cannot catch it: JSONB `null` is not SQL `NULL`, so
+    `coalesce` hands it straight through. `GbmSpec.eval_metrics` defaults to `()` and is
+    never `None`, so no row the contract can produce reaches that case either way.
+    """
+    if not refs:
+        return {}
+    element = (
+        func.jsonb_array_elements(ModelRow.spec["eval_metrics"])
+        .table_valued(column("value", JSONB))
+        .lateral()
+    )
+    ref_column = element.c.value["ref"].astext
+    rows = await session.execute(
+        select(ref_column, func.count())
+        .select_from(ModelRow)
+        .join(element, true())
+        .where(ModelRow.workspace_id == workspace_id, ref_column.in_(list(refs)))
+        .group_by(ref_column)
+    )
+    return {ref: count for ref, count in rows.all()}
 
 
 # -- internals -----------------------------------------------------------------------------

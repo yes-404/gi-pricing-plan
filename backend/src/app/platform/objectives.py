@@ -28,10 +28,11 @@ Three things about this service are worth reading before using it.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from typing import Any, NoReturn
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,6 +73,7 @@ __all__ = [
     "certifiable_or_refuse",
     "create_objective",
     "default_sampling",
+    "list_objectives",
     "load_certificate",
     "load_objective",
     "record_certificate",
@@ -81,6 +83,7 @@ __all__ = [
     "to_certificate",
     "to_objective",
     "usage",
+    "usage_counts",
 ]
 
 #: The seed every certification uses unless the caller names another. Fixed rather than
@@ -95,16 +98,25 @@ _PROBABILITY_RESPONSES = frozenset({ResponseKind.CONVERSION, ResponseKind.RETENT
 _COUNT_RESPONSES = frozenset({ResponseKind.CLAIM_COUNT})
 
 
-def to_objective(row: CustomObjectiveRow) -> CustomObjective:
+def to_objective(
+    row: CustomObjectiveRow, *, usage_count: int | None = None
+) -> CustomObjective:
     """The stored artifact, re-validated on the way out.
 
     Re-validated rather than trusted, for `to_structure`'s reason: the definition columns
     are JSONB behind a trigger, and every invariant the contract enforces — the template's
     parameters, an applicability inside §4.5's — is one a `SET session_replication_role`
     could have walked past.
+
+    `usage_count` is a keyword the way `datasets.to_schema` takes `latest_version`: a
+    per-request aggregate the *caller* computed once for a whole page, passed in rather
+    than queried here, because a query here would be one round trip per row — the N+1
+    FR-MODEL-127 names as part of its requirement. Defaulted to `None`, so every route
+    that does not count says *not asked* rather than *nothing uses this*.
     """
     return CustomObjective.model_validate(
         {
+            "usage_count": usage_count,
             "id": str(row.id),
             "slug": row.slug,
             "version": row.version,
@@ -290,6 +302,67 @@ async def load_objective(
     return to_objective(
         await _get_or_404(session, workspace_id=workspace_id, objective_id=objective_id)
     )
+
+
+async def list_objectives(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    limit: int,
+    count_cap: int,
+    status: ObjectiveStatus | None = None,
+    slug: str | None = None,
+    after: UUID | None = None,
+) -> tuple[Sequence[CustomObjectiveRow], int]:
+    """One page of the workspace's objectives, newest first (FR-MODEL-127).
+
+    Here rather than in the router, which is where `GET /models` keeps its query: none of
+    the three artifact modules' routers imports SQLAlchemy at all, and a router that
+    reached for it only here would leave the next person two patterns and no rule.
+
+    `ix_custom_objectives_slug_status` covers `(workspace_id, slug, status)`, so both
+    filters are index-served and no migration accompanies this route. `slug` is an
+    **equality**: FR-MODEL-127 makes this filter what resolves §5.3's `slug@version`
+    addresses against UUID-only detail routes, and a prefix match would resolve
+    `motor-ad` to `motor-ad-severity` as well — a wrong artifact, not a wide result.
+
+    Ids are UUIDv7 and therefore time-ordered, so one column is both the sort and the
+    cursor. `limit + 1` rows are fetched: the extra one answers "is there another page?"
+    and the caller drops it.
+
+    Returns the rows and the capped total; the router builds the `Page`. No RBAC check —
+    unlike `usage`, which is reachable from a Job. Every caller of this arrives through
+    `requires(MODEL_READ)`, and a second check on the same request would be a second
+    round trip for an answer already given.
+
+    `limit` and `count_cap` are parameters rather than imports because `DEFAULT_LIMIT` and
+    `COUNT_CAP` live in `app.api.pagination`, and no module under `app/platform/` imports
+    from `app/api/`. Reading them here would invert that direction to save two arguments.
+    """
+    conditions = [CustomObjectiveRow.workspace_id == workspace_id]
+    if status is not None:
+        conditions.append(CustomObjectiveRow.status == status.value)
+    if slug is not None:
+        conditions.append(CustomObjectiveRow.slug == slug)
+
+    query = (
+        select(CustomObjectiveRow)
+        .where(*conditions)
+        .order_by(CustomObjectiveRow.id.desc())
+        .limit(limit + 1)
+    )
+    if after is not None:
+        query = query.where(CustomObjectiveRow.id < after)
+
+    rows = (await session.execute(query)).scalars().all()
+    total = (
+        await session.execute(
+            select(func.count()).select_from(
+                select(CustomObjectiveRow.id).where(*conditions).limit(count_cap).subquery()
+            )
+        )
+    ).scalar_one()
+    return rows, int(total)
 
 
 async def load_certificate(
@@ -668,6 +741,46 @@ async def usage(
             for model in models
         ),
     )
+
+
+async def usage_counts(
+    session: AsyncSession, *, workspace_id: UUID, refs: Sequence[str]
+) -> dict[str, int]:
+    """Count the Model Specs referencing each of `refs`, in **one** query (FR-MODEL-127).
+
+    The library row's count, not the detail route's blast radius: same question, page-sized
+    answer. `usage` above answers it for one artifact and is deliberately not reused here —
+    calling it per row is the N+1 FR-MODEL-127 names as part of the requirement, and it
+    would be indistinguishable from this until a workspace held a few hundred artifacts.
+
+    **It counts exactly what `usage` counts**, because a row and its own detail route
+    disagreeing about one artifact is worse than either being absent:
+
+    * scoped by `workspace_id` and nothing else, as `usage`'s query is;
+    * **no status filter on the Model** — `usage` counts a `draft` and an `archived` model
+      alongside a `fitted` one, so this does too. "Referencing" is a property of the spec,
+      not of where the model got to.
+
+    A ref no model references is **absent** from the result rather than zero: the caller
+    supplies the zero, so a bug that drops a ref cannot present as a genuine zero.
+
+    `spec` is one JSONB column and `objective.ref` is a top-level scalar inside it, so this
+    is an equality on an extracted text value. There is no index on `models.spec` today; at
+    Phase 1b's scale the sequential scan is well inside budget, and the note is here so the
+    next person reads a decision rather than an oversight.
+
+    An empty page asks the database nothing — the caller's first screen of an empty
+    workspace should not cost a round trip.
+    """
+    if not refs:
+        return {}
+    ref_column = ModelRow.spec["objective"]["ref"].astext
+    rows = await session.execute(
+        select(ref_column, func.count())
+        .where(ModelRow.workspace_id == workspace_id, ref_column.in_(list(refs)))
+        .group_by(ref_column)
+    )
+    return {ref: count for ref, count in rows.all()}
 
 
 # -- internals -----------------------------------------------------------------------------

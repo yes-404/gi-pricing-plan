@@ -599,6 +599,7 @@ def test_every_custom_objective_route_is_in_the_published_contract() -> None:
     paths = _load(OPENAPI)["paths"]
     for method, path in (
         ("post", "/api/v1/custom-objectives"),
+        ("get", "/api/v1/custom-objectives"),
         ("get", "/api/v1/custom-objectives/{objective_id}"),
         ("post", "/api/v1/custom-objectives/{objective_id}/derive"),
         ("post", "/api/v1/custom-objectives/{objective_id}/certify"),
