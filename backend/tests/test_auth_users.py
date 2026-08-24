@@ -90,10 +90,10 @@ async def test_a_user_with_no_membership_reaches_no_workspace(database: Database
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
     assert identity.workspaces == frozenset()
 
-    from app.api.deps import _single_workspace
+    from app.api.deps import _select_workspace
 
     with pytest.raises(PlatformError) as exc:
-        _single_workspace(identity)
+        _select_workspace(identity, None)
     assert exc.value.status_code == 403
     assert "never the default" in (exc.value.detail or "")
 
@@ -114,9 +114,9 @@ async def test_membership_grants_exactly_one_workspace(
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
 
-    from app.api.deps import _single_workspace
+    from app.api.deps import _select_workspace
 
-    caller = _single_workspace(identity)
+    caller = _select_workspace(identity, None)
     assert caller.workspace_id == workspace_id
 
 
@@ -131,18 +131,20 @@ async def test_membership_of_several_workspaces_requires_a_choice(
         for _ in range(2):
             other = new_uuid7()
             await workspaces.ensure_workspace(session, workspace_id=other)
-            session.add(
-                WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=other)
-            )
+            session.add(WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=other))
 
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
 
-    from app.api.deps import _single_workspace
+    from app.api.deps import _select_workspace
 
     with pytest.raises(PlatformError) as exc:
-        _single_workspace(identity)
+        _select_workspace(identity, None)
     assert exc.value.status_code == 403
+    # The code, not only the status. This refusal used to be `UNAUTHENTICATED` because the
+    # API could not read a selection; FR-PLAT-65 gave it one of its own, and an assertion
+    # on the status alone would go on passing if it regressed.
+    assert exc.value.code == "WORKSPACE_SELECTION_REQUIRED"
 
 
 @pytest.mark.req("FR-PLAT-1")

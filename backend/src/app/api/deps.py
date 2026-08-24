@@ -17,9 +17,11 @@ scope a claim rather than a fact.
 That is what stays refused, and it is narrower than it reads. OQ-PLAT-9, decided
 2026-08-23 (`07` FR-PLAT-65), settled that a principal with several memberships names one
 in a `Workspace-Id` header and the platform checks it against the memberships it already
-holds: a choice among facts is not a claim. Until W32 builds that check, the multi-
-membership caller below is refused rather than defaulted — which is the same rule, not a
-placeholder for it.
+holds: a choice among facts is not a claim. That check is built (W32-7): `require_caller`
+declares the header and `_select_workspace` verifies it against the memberships the
+platform holds, denying a workspace the principal does not belong to. What has not changed
+is the rule the header serves — an *unverified* scope is still refused, and a caller with
+several memberships and no selection is still refused rather than defaulted into one.
 
 A workspace is *not* the tenant boundary — ADR-0006 makes that the deployment, and one
 deployment serves one tenant. What this scoping buys is that a home-pricing team cannot
@@ -34,7 +36,7 @@ from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 
 from app.auth.oidc import OidcVerifier
 from app.auth.service import AuthenticatedIdentity, authenticate_api_key, authenticate_bearer
@@ -43,7 +45,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from model_schema import ActorKind, Principal
 
-__all__ = ["Caller", "require_caller"]
+__all__ = ["WORKSPACE_ID_DESCRIPTION", "Caller", "require_caller"]
 
 #: Development-only headers. Named so they cannot be mistaken for a supported mechanism.
 DEV_PRINCIPAL_HEADER = "x-dev-principal-id"
@@ -67,9 +69,40 @@ def _settings(request: Request) -> Settings:
 
 SettingsDep = Annotated[Settings, Depends(_settings)]
 
+#: Reused as the header's OpenAPI description on every operation, so the published contract
+#: says the same thing in each place. A generated client is written against this text.
+WORKSPACE_ID_DESCRIPTION = (
+    "The workspace to act in, as a UUID. Required when the principal is a member of more "
+    "than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send "
+    "nothing. Checked against the principal's own memberships: a workspace it does not "
+    "belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several "
+    "memberships yields `403 WORKSPACE_SELECTION_REQUIRED`."
+)
 
-async def require_caller(request: Request, settings: SettingsDep) -> Caller:
+
+async def require_caller(
+    request: Request,
+    settings: SettingsDep,
+    workspace_id: Annotated[
+        str | None, Header(alias="Workspace-Id", description=WORKSPACE_ID_DESCRIPTION)
+    ] = None,
+) -> Caller:
     """Resolve the caller, or refuse."""
+    # Taken as `str | None` and parsed here rather than annotated `UUID | None`: FastAPI
+    # would answer a malformed UUID with a bare `422` outside the platform error
+    # catalogue, and FR-PLAT-65 requires the refusal to be a typed platform error.
+    selected: UUID | None = None
+    if workspace_id is not None:
+        try:
+            selected = UUID(workspace_id)
+        except ValueError as exc:
+            raise PlatformError(
+                "WORKSPACE_SCOPE_DENIED",
+                "Workspace scope denied",
+                403,
+                "The Workspace-Id header must be a UUID.",
+            ) from exc
+
     authorization = request.headers.get("authorization", "")
     scheme, _, credential = authorization.partition(" ")
     scheme = scheme.lower()
@@ -80,29 +113,38 @@ async def require_caller(request: Request, settings: SettingsDep) -> Caller:
         verifier: OidcVerifier = request.app.state.oidc_verifier
         async with database.unit_of_work() as session:
             identity = await authenticate_bearer(session, verifier, credential)
-        return _single_workspace(identity)
+        return _select_workspace(identity, selected)
 
     api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
     if api_key:
         async with database.unit_of_work() as session:
             identity = await authenticate_api_key(session, api_key)
-        return _single_workspace(identity)
+        return _select_workspace(identity, selected)
 
+    # The selection does not apply here: `_development_caller` reads
+    # `x-dev-workspace-id`, a different header for a different purpose, and FR-PLAT-65
+    # says so in as many words. The omission is a decision, not an oversight.
     return _development_caller(request, settings)
 
 
-def _single_workspace(identity: AuthenticatedIdentity) -> Caller:
+def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) -> Caller:
     """Collapse an authenticated identity to the one workspace it is acting in.
 
-    A user may belong to several. Until the API carries the verified `Workspace-Id` header
-    OQ-PLAT-9 decided on — `07` FR-PLAT-65, owner W32 — a caller with more than one must
-    choose, and the platform must not choose for them. Refusing is the permanent rule; the
-    header only gives the caller a way to satisfy it.
-    """
-    from app.auth.service import AuthenticatedIdentity
+    Takes the header's **value**, not the `Request`. `require_caller` declares `Workspace-Id`
+    as a parameter so that it appears in the published contract a client generates from, and
+    a helper that then went behind the dependency's back to read the raw request would leave
+    that declared parameter unused — which is how a documented header stops being the one the
+    server actually reads.
 
-    assert isinstance(identity, AuthenticatedIdentity)
+    The selection is **checked, never trusted** (FR-PLAT-63, FR-PLAT-65). The invariant this
+    module has carried since W2 — that a header-supplied workspace would make the scope a
+    claim rather than a fact — refuses *trusting* the caller. A choice among memberships the
+    platform already holds is not a claim; defaulting would be, which is why an absent
+    selection is refused rather than resolved.
+    """
     if not identity.workspaces:
+        # FR-PLAT-4 owns this branch and FR-PLAT-63 does not touch it: no membership is a
+        # different fact from an unmade choice, and it keeps its original code.
         raise PlatformError(
             "UNAUTHENTICATED",
             "No workspace access",
@@ -110,18 +152,31 @@ def _single_workspace(identity: AuthenticatedIdentity) -> Caller:
             "This principal is authenticated but is a member of no workspace. Access is "
             "granted explicitly (FR-PLAT-4); it is never the default.",
         )
-    if len(identity.workspaces) > 1:
+    if selected is not None:
+        if selected not in identity.workspaces:
+            raise PlatformError(
+                "WORKSPACE_SCOPE_DENIED",
+                "Workspace scope denied",
+                403,
+                "The Workspace-Id header names a workspace this principal is not a member "
+                "of. The selection is checked against the memberships the platform holds "
+                "(07 FR-PLAT-65); it is never taken on trust.",
+            )
+        chosen = selected
+    elif len(identity.workspaces) > 1:
         raise PlatformError(
-            "UNAUTHENTICATED",
+            "WORKSPACE_SELECTION_REQUIRED",
             "Workspace selection required",
             403,
-            "This principal belongs to more than one workspace and the API cannot yet "
-            "read the selection. Send a verified Workspace-Id header once W32 has built "
-            "it (07 FR-PLAT-65); the platform will not choose a workspace for you.",
+            "This principal belongs to more than one workspace. Name one in the "
+            "Workspace-Id header (07 FR-PLAT-65); the platform will not choose for you.",
         )
+    else:
+        chosen = next(iter(identity.workspaces))
+
     return Caller(
         principal=identity.principal,
-        workspace_id=next(iter(identity.workspaces)),
+        workspace_id=chosen,
         environments=identity.environments,
         permissions=identity.permissions,
     )

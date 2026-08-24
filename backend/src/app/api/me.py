@@ -142,7 +142,9 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
                 scope_type=assignment.scope_type,
                 scope_id=str(assignment.scope_id) if assignment.scope_id else None,
                 break_glass=assignment.break_glass,
-                expires_at=(assignment.expires_at.isoformat() if assignment.expires_at else None),
+                expires_at=(
+                    assignment.expires_at.isoformat() if assignment.expires_at else None
+                ),
             )
             for assignment, role in rows
         ),

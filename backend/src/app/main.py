@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 
@@ -33,6 +34,7 @@ from app.api import (
     validation,
 )
 from app.api import settings as settings_api
+from app.api.responses import without_fastapi_validation_error
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
 from app.db.session import Database, database_probe
@@ -84,6 +86,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url="/openapi.json",
         docs_url="/docs",
     )
+
+    # The document FastAPI assembles, minus the `422` it injects into any operation that
+    # has a parameter — a shape this API replaced and never emits (FR-PLAT-48). Applied
+    # here rather than in `scripts/generate-contracts.py` so the served document and the
+    # committed contract are the same bytes; the script reads this same method.
+    _assemble = app.openapi
+
+    def _openapi() -> dict[str, Any]:
+        if app.openapi_schema is None:
+            app.openapi_schema = without_fastapi_validation_error(_assemble())
+        return app.openapi_schema
+
+    app.openapi = _openapi  # type: ignore[method-assign]
 
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)

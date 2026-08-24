@@ -18,7 +18,7 @@ from typing import Any, Final
 
 from model_schema import ProblemDetail
 
-__all__ = ["PROBLEM_MEDIA_TYPE", "problems"]
+__all__ = ["PROBLEM_MEDIA_TYPE", "problems", "without_fastapi_validation_error"]
 
 PROBLEM_MEDIA_TYPE: Final = "application/problem+json"
 
@@ -73,3 +73,58 @@ def problems(*statuses: int) -> dict[int | str, dict[str, Any]]:
         }
         for status in statuses
     }
+
+
+#: The methods an OpenAPI path item may carry. A path item also holds keys that are not
+#: operations (`parameters`, `summary`), so the values cannot simply be iterated.
+_METHODS: Final = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
+
+
+def _is_injected_validation_error(response: dict[str, Any]) -> bool:
+    """FastAPI's own `422`, told apart from ours by its media type and its schema."""
+    schema = response.get("content", {}).get("application/json", {}).get("schema", {})
+    ref = schema.get("$ref", "") if isinstance(schema, dict) else ""
+    return bool(ref.endswith("/HTTPValidationError"))
+
+
+def without_fastapi_validation_error(document: dict[str, Any]) -> dict[str, Any]:
+    """Delete the `422` FastAPI injects on its own, and the two schemas it drags in.
+
+    FastAPI adds a `422` — typed as its `HTTPValidationError` — to every operation that has
+    any parameter and does not already declare one. This platform replaced that shape:
+    `errors.install_error_handlers` answers a `RequestValidationError` with an RFC 9457
+    problem, so the injected response documents a body the API never sends, and a client
+    generated from the document carries a second error type to branch on. That is the
+    FR-PLAT-48 finding this module was written for, arriving by a route the module did not
+    anticipate.
+
+    Until W32-7 the per-route convention was enough, because an operation with no
+    parameters got no injected `422` and so never needed to opt out. Declaring
+    `Workspace-Id` on `require_caller` gave 112 operations a parameter in one edit, and
+    five that had never had one began publishing `HTTPValidationError`. A convention every
+    route author must remember cannot catch a change made in a dependency, which is why
+    this runs over the assembled document instead.
+
+    A route that can genuinely fail validation declares `problems(422)` and is untouched:
+    ours is `application/problem+json` and refs `ProblemDetail`, so it never matches. The
+    five are not given `problems(422)` instead, because they cannot return one — the
+    header is optional and unparsed by FastAPI, and `api.deps` answers a malformed
+    `Workspace-Id` with `403 WORKSPACE_SCOPE_DENIED`. Declaring it would advertise an
+    error they never produce, which is the thing `problems` exists to stop.
+    """
+    for path_item in document.get("paths", {}).values():
+        for method, operation in path_item.items():
+            if method not in _METHODS:
+                continue
+            responses = operation.get("responses", {})
+            response = responses.get("422")
+            if response is not None and _is_injected_validation_error(response):
+                del responses["422"]
+
+    # Unreferenced once the injected responses are gone. Dropped by name rather than by
+    # reachability: the platform emits neither shape from anywhere, so their presence in
+    # the published contract is a defect however they arrived.
+    schemas = document.get("components", {}).get("schemas", {})
+    for name in ("HTTPValidationError", "ValidationError"):
+        schemas.pop(name, None)
+    return document

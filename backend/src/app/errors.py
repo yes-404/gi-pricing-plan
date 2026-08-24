@@ -45,11 +45,8 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "API_KEY_EXPIRED",
         "ENVIRONMENT_SCOPE_DENIED",
         # FR-PLAT-63's workspace selection, and FR-PLAT-65 (OQ-PLAT-9, 2026-08-23) the
-        # verified `Workspace-Id` header that carries it. Catalogued by the spec on
-        # 2026-08-23 and unregistered here for that day, which left this module and
-        # `07` §5.1 disagreeing and the registry test red. Registered ahead of the code
-        # that raises them — W32 builds the header check; `_single_workspace` still
-        # refuses a multi-membership caller as `UNAUTHENTICATED` until it does.
+        # verified `Workspace-Id` header that carries it. Raised by
+        # `api.deps._select_workspace`.
         "WORKSPACE_SCOPE_DENIED",
         "WORKSPACE_SELECTION_REQUIRED",
         "JOB_NOT_CANCELLABLE",

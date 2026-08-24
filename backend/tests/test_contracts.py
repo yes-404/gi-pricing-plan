@@ -23,6 +23,8 @@ from typing import Any, Final
 
 import pytest
 
+from app.api.responses import without_fastapi_validation_error
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 GENERATED = ROOT / "docs" / "contracts" / "schemas" / "generated"
 AUTHORED = ROOT / "docs" / "contracts" / "schemas"
@@ -2419,6 +2421,57 @@ def test_the_contract_publishes_the_problem_shape() -> None:
     assert "FieldError" in schemas
     assert "HTTPValidationError" not in schemas
     assert "ValidationError" not in schemas
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_the_injected_validation_error_is_stripped_and_ours_is_kept() -> None:
+    """The rule above, exercised on a document that breaks it.
+
+    `test_the_contract_publishes_the_problem_shape` reads the committed file, so it passes
+    whenever the file happens to be clean and says nothing about *why* it is. This drives
+    the function that keeps it clean, on input carrying both shapes: FastAPI's injected
+    `422` on one operation and the platform's declared `422` on another. Removing the
+    wrong one would publish a `ProblemDetail`-free error on 103 operations, and removing
+    neither is the regression W32-7 introduced.
+    """
+    injected = {
+        "content": {
+            "application/json": {
+                "schema": {"$ref": "#/components/schemas/HTTPValidationError"}
+            }
+        }
+    }
+    declared = {
+        "content": {
+            "application/problem+json": {
+                "schema": {"$ref": "#/components/schemas/ProblemDetail"}
+            }
+        }
+    }
+    document = {
+        "paths": {
+            "/injected": {"get": {"responses": {"200": {}, "422": injected}}},
+            "/declared": {"post": {"responses": {"200": {}, "422": declared}}},
+            # Not an operation. A path item may carry shared parameters, and treating one
+            # as an operation is an `AttributeError` at generation time.
+            "/shared": {"parameters": [], "get": {"responses": {"200": {}}}},
+        },
+        "components": {
+            "schemas": {
+                "HTTPValidationError": {},
+                "ValidationError": {},
+                "ProblemDetail": {},
+            }
+        },
+    }
+
+    result = without_fastapi_validation_error(document)
+
+    assert "422" not in result["paths"]["/injected"]["get"]["responses"]
+    assert result["paths"]["/declared"]["post"]["responses"]["422"] == declared, (
+        "a route that can genuinely fail validation declares its own 422 and keeps it"
+    )
+    assert set(result["components"]["schemas"]) == {"ProblemDetail"}
 
 
 @pytest.mark.req("FR-PLAT-47")
