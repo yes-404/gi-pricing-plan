@@ -63,8 +63,6 @@ async def test_publisher_puts_a_readable_message_on_the_named_queue(
     assert envelope["properties"]["delivery_info"]["routing_key"] == JobQueue.COMPUTE.value
 
 
-@pytest.mark.req("FR-PLAT-51")
-
 async def _drain(database: Database, celery_app: object) -> None:
     """Publish any pending intents left by other work before measuring this test's effect.
 
@@ -93,6 +91,7 @@ async def _drain(database: Database, celery_app: object) -> None:
     while await outbox.relay_once(database, CeleryPublisher(celery_app)):
         pass
 
+@pytest.mark.req("FR-PLAT-51")
 async def test_relay_publishes_a_committed_job_and_marks_it(
     database: Database, celery_app, settings: Settings, workspace_id, principal
 ) -> None:
