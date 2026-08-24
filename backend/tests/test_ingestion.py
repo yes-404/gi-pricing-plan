@@ -381,8 +381,21 @@ PII_CSV = (
 )
 
 
-async def _dataset_with_pii_dictionary(database: Database, workspace_id, actor):
-    """A dataset whose dictionary classifies `customer_email` a direct identifier."""
+async def _dataset_with_pii_dictionary(
+    database: Database,
+    workspace_id,
+    actor,
+    pii_class: PiiClass = PiiClass.DIRECT_IDENTIFIER,
+):
+    """A dataset whose dictionary classifies `customer_email` at `pii_class`.
+
+    The class is a parameter because the rule under test is *which* classes are refused,
+    not whether a classified column is refused. A caller passing a *permitted* class is
+    the only input that distinguishes a `forbidden` derived from `pii_class` from one
+    derived from dictionary membership — with no dictionary both are empty and the
+    refusal returns at its empty-`forbidden` guard, so a test built that way cannot
+    tell the two derivations apart.
+    """
     async with database.unit_of_work() as session:
         row = await datasets.create_dataset(
             session, workspace_id=workspace_id, actor=actor, slug=f"ds-{new_uuid7().hex[-8:]}"
@@ -395,7 +408,7 @@ async def _dataset_with_pii_dictionary(database: Database, workspace_id, actor):
             entries={
                 "customer_email": DataDictionaryEntry(
                     description="The policyholder's email address",
-                    pii_class=PiiClass.DIRECT_IDENTIFIER,
+                    pii_class=pii_class,
                 )
             },
         )
@@ -469,9 +482,24 @@ async def test_pseudonymising_the_column_lets_the_upload_through(
 async def test_a_column_the_dictionary_does_not_forbid_is_not_refused(
     database: Database, blob_store, workspace_id
 ) -> None:
-    """The negative of the rule: without it, the check could refuse everything and pass."""
+    """The negative of the rule: the refused set is a class, not the dictionary.
+
+    `customer_email` is classified `quasi_identifier` — in the dictionary, and permitted.
+    That is the only input that distinguishes a `forbidden` derived from `pii_class` from
+    one derived from dictionary membership. **In unmutated code this test still returns at
+    the empty-`forbidden` guard**, because `quasi_identifier` is outside
+    `MODELLING_FORBIDDEN_PII` and `modelling_forbidden_columns` therefore yields nothing —
+    so do not read it as covering the per-column filter, the pseudonymise carve-out or the
+    error construction below that guard. What it covers is the *derivation*: a control
+    built with no dictionary passes against a check refusing every classified column
+    (verified 2026-08-24 by mutating `forbidden` to `set(dataset.data_dictionary)` — the
+    whole module stayed green at 17 passed), and this one fails it. Keep the
+    classification here.
+    """
     actor = await _analyst(database, workspace_id)
-    dataset_id = await _dataset(database, workspace_id, actor)
+    dataset_id = await _dataset_with_pii_dictionary(
+        database, workspace_id, actor, pii_class=PiiClass.QUASI_IDENTIFIER
+    )
 
     async with database.unit_of_work() as session:
         outcome = await ingest_upload(
