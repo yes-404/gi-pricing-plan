@@ -25,8 +25,17 @@ than quoting.
 
 **The Phase-1a gap named in `contract-guard` is closed.** It listed `dataset-version`,
 `validation-report` and `validation-rule` as shapes describing artifacts Phase 1a built that
-nothing compared; W32-2 closed the first and this slice closed the other two. That set is now
-empty and the sentence naming it is retired rather than reworded.
+nothing compared; **W32-2 closed `validation-rule`** (`a23e16b`) and **this slice closed
+`dataset-version` and `validation-report`** (`9ab14d6`). That set is now empty and the sentence
+naming it is retired rather than reworded.
+
+*(Corrected 2026-08-24, after this ledger was filed and merged. It first read "W32-2 closed the
+first and this slice closed the other two" — `validation-rule` is third in the list above, not
+first, so the attribution was inverted in both this file and `docs/roadmap.md`. The closed set
+was right in both, so nothing downstream was wrong. Corrected in place rather than appended,
+because a reader who reaches only this sentence would otherwise still take the wrong slice.
+`.claude/skills/contract-guard/SKILL.md` had it right throughout and is what surfaced the
+disagreement; the file-addition history of each generated schema settled it.)*
 
 ---
 
