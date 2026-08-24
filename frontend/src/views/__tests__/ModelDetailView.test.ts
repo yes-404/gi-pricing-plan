@@ -141,8 +141,20 @@ describe("the model detail view, on a model that is not a GLM", () => {
     // prose that a model which took forty seconds to fit was never fitted.
     stub(GBM_MODEL);
     render(ModelDetailView, { props: gbmProps, ...mounted });
-    await screen.findByText(/lightgbm/i);
+    // `findAllByText`, not `findByText`: once the GBM panel mounts, `lightgbm` appears as the
+    // header's backend, as `lightgbm_text`, and as a library version. Waiting on the singular
+    // matcher would fail on the arm rendering *more*, which is the opposite of the point.
+    expect((await screen.findAllByText(/lightgbm/i)).length).toBeGreaterThan(0);
     expect(screen.queryByText(/reserved but not yet fitted/i)).toBeNull();
+  });
+
+  it("renders the booster's features and constraints on the page", async () => {
+    // Wait for the content, not the container: this view loads in one step but renders the
+    // header before the panel exists, and asserting on the section would pass either way.
+    stub(GBM_MODEL);
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    const table = await screen.findByRole("table", { name: "Features and constraints" });
+    expect(within(table).getByText("driver_age_banded")).toBeInTheDocument();
   });
 
   it("still says so when a model really is reserved and unfitted", async () => {

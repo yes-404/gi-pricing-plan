@@ -4,6 +4,7 @@ import { RouterLink } from "vue-router";
 
 import {
   ebmSpec,
+  gbmFit,
   gbmSpec,
   getModel,
   relativityInterval,
@@ -12,6 +13,7 @@ import {
   type Model,
 } from "@/api/models";
 import { ProblemError } from "@/api/problem";
+import GbmFitPanel from "@/components/GbmFitPanel.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
 
@@ -40,6 +42,7 @@ const fit = computed(() => {
 });
 const gbm = computed(() => (model.value ? gbmSpec(model.value) : null));
 const ebm = computed(() => (model.value ? ebmSpec(model.value) : null));
+const gbmResult = computed(() => (model.value ? gbmFit(model.value) : null));
 
 /**
  * Fitted is a property of the Model, not of the arm the reader happens to be looking at.
@@ -346,6 +349,13 @@ onMounted(async () => {
           A Model is immutable once fitted (`02` R2): refitting produces a new version, never
           new coefficients on this one.
         </p>
+      </template>
+
+      <template v-else-if="gbm && gbmResult">
+        <GbmFitPanel
+          :spec="gbm"
+          :fit="gbmResult"
+        />
       </template>
     </template>
   </section>
