@@ -88,6 +88,10 @@ class RuleCreate(BaseModel):
     severity: Severity
     target: dict[str, Any] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
+    #: The `01` §4.4 entry this rule derives from (FR-DATA-53). A workspace authoring
+    #: its own version of a built-in records the lineage here; a rule that derives from
+    #: nothing leaves it unset.
+    catalogue_id: str | None = None
     message: str = ""
     rationale: str = ""
 
@@ -281,6 +285,7 @@ async def create_rule(
             severity=body.severity,
             target=body.target,
             params=body.params,
+            catalogue_id=body.catalogue_id,
             message=body.message,
             rationale=body.rationale,
             settings=request.app.state.settings,

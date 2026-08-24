@@ -205,9 +205,12 @@ class BuiltinRule(BaseModel):
     workspace. Keeping them apart is what stops the catalogue needing a fabricated UUID at
     import time.
 
-    Thresholds are deliberately absent. `01` §4.4 — "Thresholds are Rule Set configuration,
-    not code. Every threshold shown is a default." — and a catalogue that carried them
-    would be a second place a threshold is written.
+    Thresholds live here (FR-DATA-54). `01` §4.4's 2026-08-23 correction struck the claim
+    that they are Rule Set configuration rather than code: before this field, every
+    threshold in force was a literal inside `pricing_core.data.validate` that no caller
+    could read, which left the frontend re-deriving bands it should be served. The literals
+    stay as the fallback for a workspace-authored rule that supplies no params; for a
+    built-in, this is the value the seed writes.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -221,6 +224,11 @@ class BuiltinRule(BaseModel):
     #: `01` §4.4's third column, trimmed to one line. The spec's own wording, so that a
     #: reader comparing the two can see they are the same rule.
     summary: str
+    #: Default thresholds for the parameters this rule's check reads, keyed exactly as the
+    #: check reads them. Empty when the check reads none. `dict[str, Any]` rather than a
+    #: narrower type because a param may be an int (`immature_months`) or a float, and
+    #: `ValidationRule.params` — the field this is written into — is already `dict[str, Any]`.
+    params: dict[str, Any] = Field(default_factory=dict)
 
     @property
     def layer(self) -> ValidationLayer:
@@ -228,10 +236,20 @@ class BuiltinRule(BaseModel):
 
 
 def _rule(
-    catalogue_id: str, slug: str, check: str, severity: Severity, summary: str
+    catalogue_id: str,
+    slug: str,
+    check: str,
+    severity: Severity,
+    summary: str,
+    params: dict[str, Any] | None = None,
 ) -> BuiltinRule:
     return BuiltinRule(
-        catalogue_id=catalogue_id, slug=slug, check=check, severity=severity, summary=summary
+        catalogue_id=catalogue_id,
+        slug=slug,
+        check=check,
+        severity=severity,
+        summary=summary,
+        params=params or {},
     )
 
 
@@ -282,6 +300,7 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
             _rule(
                 "VR-STR-9", "reject-rate", "reject_rate", _F,
                 "Quarantined rows <= threshold (default 0.1 % of rows read) - FR-DATA-7",
+                params={"max_reject_rate": 0.001},
             ),
             _rule(
                 "VR-REF-1", "reference-resolve", "reference_lookup", _F,
@@ -292,6 +311,7 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
                 "VR-REF-2", "reference-coverage", "reference_coverage", _W,
                 "At least X % of reference table keys are exercised by the data (catches a "
                 "stale or wrong reference version)",
+                params={"min_coverage": 0.5},
             ),
             _rule(
                 "VR-REF-3", "effective-date-in-range", "effective_date_in_range", _F,
@@ -345,32 +365,38 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
                 "VR-ACT-9", "claim-amount-sign", "claim_amount_sign", _W,
                 "Negative incurred amounts exist only where recoveries/reversals are "
                 "expected; flagged with counts",
+                params={"max_negative_share": 0.01},
             ),
             _rule(
                 "VR-ACT-10", "severity-outlier", "severity_outlier", _W,
                 "Claims above a configurable threshold (absolute, or a percentile of the "
                 "peril's own distribution) are flagged for large-loss treatment - never "
                 "auto-removed",
+                params={"percentile": 0.995},
             ),
             _rule(
                 "VR-ACT-11", "frequency-plausible", "frequency_plausible", _W,
                 "Portfolio and per-peril frequency within a configured band (e.g. motor AD "
                 "0.02-0.25)",
+                params={"min_frequency": 0.0, "max_frequency": 1.0},
             ),
             _rule(
                 "VR-ACT-12", "severity-plausible", "severity_plausible", _W,
                 "Portfolio and per-peril mean severity within a configured band",
+                params={"min_severity_minor": 0, "max_severity_minor": 1_000_000_000_000},
             ),
             _rule(
                 "VR-ACT-13", "zero-claim-cohort", "zero_claim_cohort", _W,
                 "No factor level with material exposure (> 1 % of total) has exactly zero "
                 "claims where the prior version had claims",
+                params={"min_exposure_share": 0.01},
             ),
             _rule(
                 "VR-ACT-14", "development-maturity", "development_maturity", _W,
                 "The most recent N months of experience are flagged as immature (IBNR risk) "
                 "with the configured development pattern; modelling on them without an "
                 "adjustment is a warning",
+                params={"immature_months": 3, "max_immature_exposure_share": 0.05},
             ),
             _rule(
                 "VR-ACT-15", "currency-consistency", "currency_consistency", _F,
@@ -392,6 +418,7 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
                 "VR-DST-1", "psi-column", "psi_column", _W,
                 "Per-column PSI against the reference version, for categorical, ordinal and "
                 "boolean columns only",
+                params={"warn_above": 0.10},
             ),
             _rule(
                 "VR-DST-2", "new-level", "new_level", _W,
@@ -400,29 +427,35 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
             _rule(
                 "VR-DST-3", "vanished-level", "vanished_level", _W,
                 "Levels with material reference exposure now absent",
+                params={"min_exposure_share": 0.01},
             ),
             _rule(
                 "VR-DST-4", "null-rate-shift", "null_rate_shift", _W,
                 "Null rate moved by more than X percentage points (a broken feed's clearest "
                 "signal)",
+                params={"max_shift_pp": 5.0},
             ),
             _rule(
                 "VR-DST-5", "volume-shift", "volume_shift", _W,
                 "Row count against the reference version's row count",
+                params={"max_shift_fraction": 0.2},
             ),
             _rule(
                 "VR-DST-6", "mean-shift", "mean_shift", _W,
                 "Numeric column mean moved more than N reference standard errors",
+                params={"max_standard_errors": 5.0},
             ),
             _rule(
                 "VR-DST-7", "target-rate-shift", "target_rate_shift", _W,
                 "Observed frequency / severity / burning cost moved more than X % vs "
                 "reference",
+                params={"max_shift_fraction": 0.15},
             ),
             _rule(
                 "VR-DST-8", "mix-shift-exposure", "mix_shift_exposure", _W,
                 "Exposure distribution across a declared key factor moved (PSI on the "
                 "exposure weights, not the row counts)",
+                params={"warn_above": 0.10},
             ),
         )
     }
