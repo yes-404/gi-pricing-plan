@@ -169,6 +169,55 @@ describe("DiagnosticsView", () => {
     const row = within(table).getByRole("row", { name: /factor count/i });
     expect(within(row).getAllByRole("cell")[1]).toHaveTextContent(/none set/i);
   });
+
+  it("shows the two depth numbers, not just the mean", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const table = await screen.findByRole("table", { name: /tree summary/i });
+    expect(within(table).getByRole("row", { name: /max depth/i })).toHaveTextContent("6");
+    expect(within(table).getByRole("row", { name: /mean depth/i })).toHaveTextContent("4.7");
+  });
+
+  /**
+   * FR-MODEL-78 sets `quantile_crossing` on the **second bound of a pair and nowhere else** —
+   * including the first bound, which had nothing to cross. So `null` means "not a paired
+   * quantile model", not "checked and clean", and a block reading `0 of 0 rows crossed` would
+   * report a comparison that never happened. The same failure the complexity table's unset
+   * threshold avoids.
+   */
+  it("says nothing about quantile crossing for a model that has no counterpart bound", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: /tree summary/i });
+    expect(screen.queryByText(/quantile crossing/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/crossed the counterpart bound/i)).not.toBeInTheDocument();
+  });
+
+  it("reports the crossing count, the population and the worst gap together", async () => {
+    stubByUrl({
+      "/diagnostics": {
+        body: {
+          ...DIAGNOSTICS,
+          gbm: {
+            ...DIAGNOSTICS.gbm,
+            quantile_crossing: {
+              counterpart_model_id: "3f7c1d90-0000-4000-8000-000000000001",
+              rows_checked: 120_000,
+              rows_crossing: 41,
+              worst_gap: 18.62,
+            },
+          },
+        },
+      },
+      "/models/motor-frequency": { body: GBM_MODEL },
+    });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    // All three numbers in one sentence: 41 rows crossing by a hair and 41 crossing by a
+    // factor of ten are different findings, and a count alone describes them identically.
+    expect(await screen.findByText(/41 of\s+120000 checked rows/i)).toBeInTheDocument();
+    expect(screen.getByText(/worst gap\s+18\.62/i)).toBeInTheDocument();
+    expect(screen.getByText(/3f7c1d90-0000-4000-8000-000000000001/)).toBeInTheDocument();
+  });
 });
 
 /**

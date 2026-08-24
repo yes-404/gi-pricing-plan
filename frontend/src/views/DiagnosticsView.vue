@@ -7,6 +7,7 @@ import { ProblemError } from "@/api/problem";
 import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
 import ComplexityTable from "@/components/ComplexityTable.vue";
+import GbmEvalCurveChart from "@/components/GbmEvalCurveChart.vue";
 import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
@@ -230,6 +231,100 @@ onMounted(async () => {
           GLM
         </h2>
         <GlmDiagnosticsPanel :glm="diagnostics.glm" />
+      </section>
+
+      <section
+        v-if="diagnostics.gbm"
+        class="mt-8"
+      >
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          GBM
+        </h2>
+
+        <GbmEvalCurveChart :eval-curve="diagnostics.gbm.eval_curve" />
+
+        <table
+          aria-label="Tree summary"
+          class="mt-6 w-full text-left text-sm"
+        >
+          <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th
+                scope="col"
+                class="py-2 font-medium"
+              >
+                Measure
+              </th>
+              <th
+                scope="col"
+                class="py-2 font-medium"
+              >
+                Value
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-slate-100">
+              <th
+                scope="row"
+                class="py-1 font-normal"
+              >
+                Trees
+              </th>
+              <td class="py-1 tabular-nums">
+                {{ diagnostics.gbm.tree_count }}
+              </td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <th
+                scope="row"
+                class="py-1 font-normal"
+              >
+                Max depth
+              </th>
+              <td class="py-1 tabular-nums">
+                {{ diagnostics.gbm.max_depth }}
+              </td>
+            </tr>
+            <tr class="border-b border-slate-100">
+              <th
+                scope="row"
+                class="py-1 font-normal"
+              >
+                Mean depth
+              </th>
+              <td class="py-1 tabular-nums">
+                {{ diagnostics.gbm.mean_depth }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- FR-MODEL-78. Present only on the second bound of a quantile pair, and a scalar
+             record rather than a series: how often this model's prediction crossed its
+             counterpart's, and by how much at worst. `QuantileBoundNotice` on the model page
+             reads the spec's `interval_for` and says nothing about crossing; this is the
+             measurement. Crossing is reported and never repaired (OQ-MODEL-2). -->
+        <div
+          v-if="diagnostics.gbm.quantile_crossing"
+          class="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm"
+        >
+          <h3 class="font-semibold text-slate-700">
+            Quantile crossing
+          </h3>
+          <p class="mt-1">
+            {{ diagnostics.gbm.quantile_crossing.rows_crossing }} of
+            {{ diagnostics.gbm.quantile_crossing.rows_checked }} checked rows crossed the
+            counterpart bound, worst gap
+            {{ diagnostics.gbm.quantile_crossing.worst_gap }}.
+          </p>
+          <p class="mt-1 text-xs text-slate-500">
+            Counterpart model
+            <span class="font-mono">{{
+              diagnostics.gbm.quantile_crossing.counterpart_model_id
+            }}</span>.
+          </p>
+        </div>
       </section>
     </template>
   </section>
