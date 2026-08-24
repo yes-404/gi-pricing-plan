@@ -11,6 +11,20 @@ import { routes } from "@/router";
 import DiagnosticsView from "../DiagnosticsView.vue";
 import { DIAGNOSTICS, GBM_MODEL } from "./fixtures";
 
+/**
+ * The three charts this view mounts are ECharts, and ECharts paints to a canvas jsdom does
+ * not provide — every render leaks an unhandled `clearRect` on null out of the animation
+ * loop. Vitest counts those as errors and exits 1 while still printing every test as passed,
+ * so the file was red from the commit that mounted the charts and read as green.
+ *
+ * Stubbed rather than fixed with a canvas shim: each chart asserts its own `option` object in
+ * its own file (`HistogramChart.test.ts:9-15` is the precedent), and what this file tests is
+ * the tables and the fetches.
+ */
+vi.mock("vue-echarts", () => ({
+  default: { name: "VChart", props: ["option"], template: "<div data-testid='chart' />" },
+}));
+
 const NOT_FOUND = {
   type: "about:blank",
   title: "Not Found",
@@ -113,6 +127,35 @@ describe("DiagnosticsView", () => {
     render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
     await screen.findByRole("table", { name: /headline metrics/i });
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Every field `ResidualSummary` declares, named one by one rather than counted.
+   *
+   * The plan this slice was written from lists four — mean, std, minimum, maximum — and
+   * `diagnostics.py:124-134` declares six. A row count would pass against the wrong six as
+   * easily as the right ones, so the tails are asserted by name: `p01` and `p99` are what a
+   * reviewer reads to see whether the fit misses at the extremes, and a residual table
+   * showing only mean and std reports a narrower distribution than the fit recorded.
+   */
+  it("shows every field of the residual summary, tails included", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const table = await screen.findByRole("table", { name: /residual summary/i });
+    expect(within(table).getAllByRole("rowheader").map((cell) => cell.textContent?.trim())).toEqual(
+      ["Mean", "Std dev", "Minimum", "Maximum", "P01", "P99"],
+    );
+    const tails = within(table).getByRole("row", { name: /p99/i });
+    expect(within(tails).getAllByRole("cell")[0]).toHaveTextContent("0.71");
+    expect(within(tails).getAllByRole("cell")[1]).toHaveTextContent("0.82");
+  });
+
+  it("does not call an unset complexity threshold a pass", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const table = await screen.findByRole("table", { name: /complexity/i });
+    const row = within(table).getByRole("row", { name: /factor count/i });
+    expect(within(row).getAllByRole("cell")[1]).toHaveTextContent(/none set/i);
   });
 });
 

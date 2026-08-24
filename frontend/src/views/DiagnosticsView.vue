@@ -6,7 +6,9 @@ import { getModel, type Model } from "@/api/models";
 import { ProblemError } from "@/api/problem";
 import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
+import ComplexityTable from "@/components/ComplexityTable.vue";
 import LiftChart from "@/components/LiftChart.vue";
+import PartitionTable from "@/components/PartitionTable.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
@@ -40,6 +42,36 @@ const headline = computed(() => {
     { name: "Gini", train: train.gini, holdout: holdout.gini },
     { name: "Normalised Gini", train: train.gini_normalised, holdout: holdout.gini_normalised },
   ];
+});
+
+/**
+ * The residual distribution per partition (FR-MODEL-50).
+ *
+ * All six fields `ResidualSummary` declares, not four. The plan's own list stopped at
+ * mean/std/minimum/maximum; `diagnostics.py:124-134` also declares `p01` and `p99`, and
+ * those two are the tails — the part of a residual distribution a reviewer reads first.
+ * Dropping them would have shown a narrower distribution than the fit recorded.
+ *
+ * A table and not a chart: this artifact carries no per-row residual series to plot.
+ */
+const RESIDUAL_FIELDS = ["mean", "std", "minimum", "maximum", "p01", "p99"] as const;
+
+const RESIDUAL_LABELS: Record<(typeof RESIDUAL_FIELDS)[number], string> = {
+  mean: "Mean",
+  std: "Std dev",
+  minimum: "Minimum",
+  maximum: "Maximum",
+  p01: "P01",
+  p99: "P99",
+};
+
+const residuals = computed(() => {
+  const summaries = universal.value.map(([, partition]) => partition.residual_summary ?? null);
+  if (summaries.every((summary) => summary === null)) return [];
+  return RESIDUAL_FIELDS.map((field) => ({
+    name: RESIDUAL_LABELS[field],
+    values: summaries.map((summary) => summary?.[field] ?? null),
+  }));
 });
 
 /**
@@ -169,6 +201,21 @@ onMounted(async () => {
         <AeByFactorChart :partitions="universal" />
         <LiftChart :partitions="universal" />
         <CalibrationChart :partitions="universal" />
+
+        <PartitionTable
+          v-if="residuals.length"
+          title="Residual summary"
+          caption="Six summary statistics per partition. The per-row residual series is not carried by this artifact."
+          :columns="universal.map(([label]) => label)"
+          :rows="residuals"
+        />
+      </section>
+
+      <section class="mt-8">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Complexity
+        </h2>
+        <ComplexityTable :complexity="diagnostics.complexity" />
       </section>
     </template>
   </section>
