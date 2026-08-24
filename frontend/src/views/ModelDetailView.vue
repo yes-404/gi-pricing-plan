@@ -8,15 +8,18 @@ import {
   gbmFit,
   gbmSpec,
   getModel,
+  getTransparency,
   relativityInterval,
   spansZero,
   type Coefficient,
   type Model,
+  type TransparencyArtifact,
 } from "@/api/models";
-import { ProblemError } from "@/api/problem";
+import { isProblem, ProblemError } from "@/api/problem";
 import EbmShapePanel from "@/components/EbmShapePanel.vue";
 import GbmFitPanel from "@/components/GbmFitPanel.vue";
 import QuantileBoundNotice from "@/components/QuantileBoundNotice.vue";
+import TransparencyPanel from "@/components/TransparencyPanel.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
 
@@ -73,6 +76,33 @@ function formatInterval([low, high]: [number, number]): string {
   return `${low.toFixed(3)} – ${high.toFixed(3)}`;
 }
 
+const artifact = ref<TransparencyArtifact | null>(null);
+const transparencyState = ref<"loading" | "ready" | "absent">("loading");
+
+/**
+ * FR-MODEL-33 makes the transparency artifact an obligation for a non-GLM Model, so this is
+ * not asked for a GLM — including a GLM surrogate, which is a GLM. A missing artifact is a
+ * state and not a failure: the model simply has none built yet, and this is the only call on
+ * the page allowed to fail without reaching the error banner.
+ *
+ * Branched on the code and not the status, as `ProblemError` requires: several codes share a
+ * status, and a status branch here would swallow any future 404-shaped refusal as "no
+ * artifact yet". The endpoint raises `NOT_FOUND` for the one case this handles.
+ */
+async function loadTransparency(loaded: Model): Promise<void> {
+  if (loaded.spec.model_type === "glm") {
+    transparencyState.value = "absent";
+    return;
+  }
+  try {
+    artifact.value = await getTransparency(loaded.id);
+    transparencyState.value = "ready";
+  } catch (error) {
+    if (isProblem(error, "NOT_FOUND")) transparencyState.value = "absent";
+    else throw error;
+  }
+}
+
 onMounted(async () => {
   try {
     model.value = await getModel(props.slug, props.version ? Number(props.version) : undefined);
@@ -82,6 +112,9 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+  // After the model resolves and after `loading` clears: the page renders the model between
+  // the two fetches rather than holding a spinner until both land.
+  if (model.value) await loadTransparency(model.value);
 });
 </script>
 
@@ -118,6 +151,20 @@ onMounted(async () => {
           {{ model.spec.model_type }}
         </template> ·
         response <span class="font-mono">{{ model.spec.response_column }}</span>
+      </p>
+
+      <!-- FR-MODEL-96/102. A surrogate is a GLM in every visible respect — family, link,
+           coefficients, relativities — so nothing else on this page distinguishes one, and
+           its R² and residuals are read as fit to experience unless the page says otherwise.
+           No link: the id is not resolvable to a slug from this response (§6, E1). -->
+      <p
+        v-if="glmSpec?.approximates_model_id"
+        class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      >
+        This model is a GLM approximation of model
+        <span class="font-mono text-xs">{{ glmSpec.approximates_model_id }}</span>. Its
+        diagnostics are measured against that model's predictions, not against observed
+        claims.
       </p>
     </header>
 
@@ -372,6 +419,14 @@ onMounted(async () => {
           :fit="ebmResult"
         />
       </template>
+
+      <!-- Not for a GLM: FR-MODEL-33 makes the artifact an obligation for the non-GLM arms,
+           and a GLM surrogate is a GLM. -->
+      <TransparencyPanel
+        v-if="model.spec.model_type !== 'glm'"
+        :artifact="artifact"
+        :state="transparencyState"
+      />
     </template>
   </section>
 </template>

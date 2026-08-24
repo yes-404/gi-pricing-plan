@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ModelDetailView from "../ModelDetailView.vue";
-import { boundOf, EBM_MODEL, GBM_MODEL } from "./fixtures";
+import { ARTIFACT, boundOf, EBM_MODEL, GBM_MODEL } from "./fixtures";
 
 const MODEL = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -50,6 +50,36 @@ function stub(body: unknown = MODEL, status = 200): void {
       }),
     ),
   );
+}
+
+/**
+ * A fetch stub that answers by URL, and 404s a transparency path it has no entry for.
+ *
+ * `stub()` above returns one body for every call, so it cannot express a page that fetches
+ * twice: it would hand the Model back as the transparency artifact and the panel would
+ * render whatever happened to match. The 404 body carries `code: "NOT_FOUND"` because the
+ * view branches on the code and not on the status (`api/problem.ts`) — a stub that returned
+ * a bare 404 would exercise a path the platform never produces.
+ */
+function stubByUrl(routes: Record<string, unknown>): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn(async (input: unknown) => {
+    const url = String(input);
+    const match = Object.keys(routes).find((path) => url.includes(path));
+    if (match !== undefined) {
+      return new Response(JSON.stringify(routes[match]), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+    }
+    const problem = {
+      type: "about:blank", title: "Not found", status: 404, code: "NOT_FOUND",
+      detail: `No route stubbed for ${url}`, errors: [],
+    };
+    return new Response(JSON.stringify(problem), {
+      status: 404, headers: { "Content-Type": "application/json" },
+    });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 beforeEach(() => stub());
@@ -189,5 +219,59 @@ describe("the model detail view, on a model that is not a GLM", () => {
     stub({ ...GBM_MODEL, status: "draft", fit_result: null });
     render(ModelDetailView, { props: gbmProps, ...mounted });
     expect(await screen.findByText(/reserved but not yet fitted/i)).toBeInTheDocument();
+  });
+
+  it("asks for a transparency artifact for a booster, and not for a GLM", async () => {
+    // FR-MODEL-33 makes the artifact an obligation for a non-GLM Model and says nothing
+    // about a GLM. Fetching it anyway would 404 on every GLM page on the platform, which
+    // reads as an outage in every log that counts 404s.
+    const fetchMock = stubByUrl({
+      "/api/v1/models/motor-ad-frequency": GBM_MODEL,
+      [`/api/v1/models/${GBM_MODEL.id}/transparency`]: ARTIFACT,
+      "/api/v1/models/motor-frequency": MODEL,
+    });
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    await screen.findByText(/under-price/i);
+
+    fetchMock.mockClear();
+    render(ModelDetailView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: "Coefficients" });
+    expect(fetchMock.mock.calls.map(String).join(" ")).not.toContain("transparency");
+  });
+
+  it("reads a model with no artifact built as a state, not as the error banner", async () => {
+    // The one call on this page allowed to 404 without the page becoming an error. Routed
+    // into `problem`, a booster whose artifact Job has not run yet renders a red banner
+    // instead of the model.
+    stubByUrl({ "/api/v1/models/motor-ad-frequency": GBM_MODEL });
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    expect(await screen.findByText(/no transparency artifact/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("table", { name: "Features and constraints" })).toBeInTheDocument();
+  });
+
+  it("says a GLM surrogate is a surrogate, and what its diagnostics are against", async () => {
+    // FR-MODEL-96: a surrogate's diagnostics are against the source model's predictions,
+    // never against observed claims. A page that omits it shows a fit statistic the reader
+    // takes for fit to experience — and a surrogate is a GLM in every other visible respect,
+    // so nothing else on the page distinguishes one.
+    stub({
+      ...MODEL,
+      spec: {
+        ...MODEL.spec,
+        // Both halves, per FR-MODEL-102: the response column is what makes the id legal.
+        response_column: "__gbm_prediction__",
+        approximates_model_id: GBM_MODEL.id,
+      },
+    });
+    render(ModelDetailView, { props: { slug: "motor-ad-frequency-approx" }, ...mounted });
+    expect(await screen.findByText(/approximation of model/i)).toBeInTheDocument();
+    expect(screen.getByText(/not against observed claims/i)).toBeInTheDocument();
+  });
+
+  it("says nothing about a surrogate on a GLM fitted to claims", async () => {
+    render(ModelDetailView, { props, ...mounted });
+    await screen.findByRole("table", { name: "Coefficients" });
+    expect(screen.queryByText(/approximation of model/i)).toBeNull();
   });
 });

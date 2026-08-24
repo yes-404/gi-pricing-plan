@@ -1,4 +1,4 @@
-import { gbmSpec, type Model } from "@/api/models";
+import { gbmSpec, type Model, type TransparencyArtifact } from "@/api/models";
 
 /**
  * A fitted LightGBM, annotated rather than cast.
@@ -50,6 +50,57 @@ export const GBM_MODEL: Model = {
     library_versions: { lightgbm: "4.5.0", polars: "1.35.0" },
   },
   flags: [],
+};
+
+/**
+ * A transparency artifact for `GBM_MODEL` (FR-MODEL-33, FR-MODEL-34).
+ *
+ * Carries the GLM-approximation and SHAP blocks but not `ebm_shape_functions`: the three are
+ * independently optional, and a fixture with all three present would let a panel that renders
+ * a block unconditionally pass.
+ */
+export const ARTIFACT: TransparencyArtifact = {
+  id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  model_id: GBM_MODEL.id,
+  created_at: "2026-08-20T09:14:00Z",
+  fidelity_statement:
+    "The GLM approximation reproduces the booster to within 3 % of predicted frequency over " +
+    "96 % of exposure. It will under-price young drivers on high-value vehicles, where the " +
+    "booster's interaction is not representable in the additive table.",
+  monotonicity_verified: true,
+  glm_approximation: {
+    target: "gbm_prediction",
+    family: "gamma",
+    link: "log",
+    r_squared: 0.964,
+    deviance_explained: 0.951,
+    approximating_model_id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+    coefficients: [],
+    relativities: {},
+    worst_regions: [
+      {
+        description: "driver_age_banded = 17–21 and vehicle_group_rated ≥ 40",
+        exposure_share: 0.008,
+        mean_abs_error_pct: 11.4,
+      },
+      {
+        description: "annual_mileage ≥ 25000",
+        exposure_share: 0.031,
+        mean_abs_error_pct: 6.2,
+      },
+    ],
+  },
+  shap_summary: {
+    algorithm: "tree_shap",
+    sample_rows: 20000,
+    seed: 7,
+    interactions_available: true,
+    mean_abs_contribution: [
+      { factor: "driver_age_banded", value: 0.148 },
+      { factor: "vehicle_group_rated", value: 0.092 },
+    ],
+    top_interactions: [{ pair: ["driver_age_banded", "vehicle_group_rated"], strength: 0.031 }],
+  },
 };
 
 /**
