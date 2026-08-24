@@ -93,6 +93,14 @@ with a draft one has already read is not corroboration.
   grounds for resolving it toward the body were derived here and are checkable in Task 8; the
   *finding* is the lead's and is attributed rather than absorbed. This section's whole purpose
   is that a plan should say which of its conclusions it reached and which it received.
+- **E5's conditionality clause and its `Spec summary` check were also the work lead's**, and
+  the second was a genuine near-miss. Asked whether `Spec summary` had been checked or whether
+  the list had merely stopped at a comma, the honest answer was the latter: it was verified
+  only after the question. It came back present, so E5 gains no fourth item — but the plan
+  records that it was unchecked when filed rather than presenting the corrected list as the
+  original one. **A correction absorbed silently reads afterwards as though it was never
+  needed**, which is the failure mode this section exists to prevent, and it is easiest to
+  commit on the item that turned out fine.
 
 ---
 
@@ -173,10 +181,13 @@ is booked to another slice** (§0).
   idempotency key, job polling, a status stream — and none of that is model *detail*. Where a
   non-GLM model has no artifact the view says so and names the endpoint in prose; it does not
   offer the button. Recorded in §6 as unowned.
-- **The Contents-cell items the common arm still owes** — confidence-interval *bars* (the view
-  renders intervals as numbers), the lineage strip, and `flags`. `02` §5.3's Model detail cell
-  names all three and none is built. They belong to the arm this slice does not claim, and
-  claiming them here is the widening this plan is written to avoid. Recorded in §6 as unowned.
+- **Three Contents-cell items the common arm does not render** — confidence-interval *bars*
+  (the view renders intervals as numbers), the lineage strip, and `flags`. `02` §5.3's Model
+  detail row names all three and none is built. They belong to the arm this slice does not
+  claim, and claiming them here is the widening this plan is written to avoid. Recorded in §6
+  as E5, **where the count carries its condition**: the three omissions are observed against
+  the code, but whether three is the *complete* count depends on `OQ-OVR-10`, which is open on
+  whether that cell enumerates or summarises. Do not quote "three" as a total from this bullet.
 - **Listing a central model's bounds on the central model's own page.** There is no read that
   answers it — see §6, E2.
 - **Any change to `docs/specs/` other than the one Task 7 makes.** The draft excluded spec
@@ -1567,14 +1578,55 @@ looked.
 Creating one is a 202-plus-Job flow, and §2 excludes it as not being model detail. No slice in
 the map's §3 names it. **Unowned pending a work-lead line.**
 
-**E5 — the Model detail Contents cell is still owed three items.** `02` §5.3 names
-coefficient and relativity tables *with confidence-interval bars*, fit metadata, a *lineage
-strip*, and *flags*. The view renders intervals as numbers rather than bars, renders no lineage
-strip, and renders no flags — though `ModelFlag` exists and a dataset-invalidated flag gates
-approval (FR-MODEL-67). All three belong to the common arm this slice does not claim. Flagged
-here so the omission is recorded rather than discovered at closure. Whether the lineage strip
-belongs with the lineage graph the map proposes elsewhere is a question for whoever owns that
-row. **Unowned pending a work-lead line.**
+**E5 — three items the Model detail Contents cell names are not rendered.** `02` §5.3's Model
+detail row names *Spec summary, coefficient/relativity tables with CI bars, fit metadata,
+lineage strip, flags*. Three of those five are not on the screen: the view renders intervals as
+**numbers rather than bars**, renders **no lineage strip**, and renders **no flags** — though
+`ModelFlag` exists and a dataset-invalidated flag gates approval (FR-MODEL-67). All three belong
+to the common arm this slice does not claim. Flagged so the omission is recorded rather than
+discovered at closure. Whether the lineage strip belongs with the lineage graph the map proposes
+elsewhere is a question for whoever owns that row. **Unowned pending a work-lead line.**
+
+**The three omissions are observations about the code and stand on their own. "Three" is not
+a derived total, and must not be quoted as one.** Each was checked against
+`ModelDetailView.vue` individually; what is *not* checked, and cannot be from here, is whether
+that Contents cell is an **exhaustive enumeration** or a category-noun summary of a longer
+list. That is exactly the question `OQ-OVR-10` is open on (PR #167), and this cell is one of
+the two it names. **So: the three omissions are unconditional; the claim that three is the
+complete count is conditional on `OQ-OVR-10` and vacated if it resolves toward "summary".**
+Written this way so the item survives that question resolving either way — a filed plan is
+frozen at its date (`docs/plans/README.md`), and a sentence that silently assumes an
+enumeration would still be here, being quoted as a total, long after the assumption was
+settled against it.
+
+**The two items not in that list were checked, not skipped — and one of them only after the
+work lead asked.** *Fit metadata* is rendered: the `<dl>` at `ModelDetailView.vue:130-160`
+gives rows fitted, terms, converged and fit time. *Spec summary* is rendered too, in the header
+paragraph at `:82-94` — version, status, family and link, and the response column, all read off
+`model.spec`.
+
+**How that second answer was reached is worth recording, because the honest version is not the
+flattering one.** It was not verified before this plan was filed; the list came from the draft,
+and this reviewer re-read the cell without checking that item against the view. It was checked
+only when the W6b work lead asked whether it had been. The answer came back benign — `Spec
+summary` is present, so it is not a fourth omission — but **a list that happens to be right is
+not a list that was checked**, and the distinction is the whole subject of §0.1. Recorded here
+rather than quietly fixed, because a plan that silently absorbs a correction reads afterwards
+as though it never needed one.
+
+**The check also found something this slice already fixes**, which is the reason the near-miss
+was survivable. The header's spec summary has two branches, and the non-GLM one renders `{{
+model.spec.model_type }}` — a bare `"gbm"` — where the GLM branch renders family and link. So
+for precisely the arms this slice builds, the spec summary is present but degraded. **Task 2
+step 3 replaces that fallback with a per-arm summary**, which is why the item needs no entry of
+its own here. Had the plan not already covered it, this would have been a scope gap found by a
+question rather than by the review.
+
+**The trap underneath, since it has now caught at least three readers at three different
+commas: a comma-list reads as complete at whichever comma the reader stops at.** This one cell
+has been truncated at `flags` (dropping the `?version=` clause, which produced a belief in a
+route mismatch that does not exist) and truncated before `Spec summary` (here). When quoting a
+Contents cell, quote the **whole row** including its trailing clauses, or quote none of it.
 
 **E6 — `intervalWidth`'s docstring names a statistic its body does not compute.** Raised by the
 W6b work lead at review. *"As a fraction of the estimate"* against a body returning `high - low`;
