@@ -1,3 +1,4 @@
+import type { ModelComparison } from "@/api/comparisons";
 import { gbmSpec, type Model, type TransparencyArtifact } from "@/api/models";
 
 /**
@@ -189,3 +190,74 @@ export function boundOf(alpha: number): Model {
     },
   };
 }
+
+/**
+ * `02` §4.11's own example, transcribed. The spec writes the large integers with numeric
+ * separators (`169_503`); they are written plainly here because the two forms are equal in
+ * TypeScript and a reader diffing this against the spec should not have to check that.
+ */
+export const COMPARISON: ModelComparison = {
+  id: "5c1b0e6a-7777-4888-8999-aaaabbbbcccc",
+  computed_at: "2026-08-17T15:20:11Z",
+  job_id: "1a2b3c4d-5555-4666-8777-888899990000",
+  summary: {
+    model_refs: ["model:motor-ad-frequency@7", "model:motor-ad-frequency-gbm@2"],
+    baseline_ref: "model:motor-ad-frequency@7",
+    split_ref: {
+      split_artifact_id: "9f8e7d6c-1111-4222-8333-444455556666",
+      train_part: "train",
+      holdout_part: "test",
+    },
+    holdout_rows: 169503,
+    metrics: [
+      {
+        metric: "gini_normalised",
+        weighting: "exposure",
+        direction: "higher_is_better",
+        values: [
+          { model_ref: "model:motor-ad-frequency@7", value: 0.412 },
+          { model_ref: "model:motor-ad-frequency-gbm@2", value: 0.43 },
+        ],
+        leader: "model:motor-ad-frequency-gbm@2",
+      },
+      {
+        metric: "ae_overall",
+        weighting: "exposure",
+        direction: "closer_to_one_is_better",
+        values: [
+          { model_ref: "model:motor-ad-frequency@7", value: 1.001 },
+          { model_ref: "model:motor-ad-frequency-gbm@2", value: 0.994 },
+        ],
+        leader: "model:motor-ad-frequency@7",
+      },
+    ],
+    double_lift: [
+      {
+        baseline_ref: "model:motor-ad-frequency@7",
+        challenger_ref: "model:motor-ad-frequency-gbm@2",
+        weighting: "exposure",
+        bins: [
+          {
+            bin: 1,
+            rows: 16950,
+            actual: 0.0491,
+            baseline_predicted: 0.0523,
+            challenger_predicted: 0.0447,
+            exposure_years: "14203.400000",
+          },
+        ],
+      },
+    ],
+    relativity_differences: [
+      {
+        factor: "driver_age_banded",
+        level: "17-20",
+        values: [
+          { model_ref: "model:motor-ad-frequency@7", value: 1.718 },
+          { model_ref: "model:motor-ad-frequency-gbm@2", value: 1.902 },
+        ],
+        max_abs_difference: 0.184,
+      },
+    ],
+  },
+};
