@@ -91,6 +91,7 @@ async def _drain(database: Database, celery_app: object) -> None:
     while await outbox.relay_once(database, CeleryPublisher(celery_app)):
         pass
 
+
 @pytest.mark.req("FR-PLAT-51")
 async def test_relay_publishes_a_committed_job_and_marks_it(
     database: Database, celery_app, settings: Settings, workspace_id, principal
