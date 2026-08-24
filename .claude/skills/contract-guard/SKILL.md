@@ -35,10 +35,24 @@ combinators on 2026-08-22 — before that, every field in every conditional arm 
 and `model-spec` produced its 12 flat properties and nothing from either arm: no `family`, no
 `link`, no `objective`, no `early_stopping`.
 
-New map walkers take `(document, node, base, path="")` and return a dict keyed by dotted path,
-matching `_type_map` **exactly**, so a path in one map is a path in another and two maps can be
-read against each other. Carry `*, _depth=0` only if the walker recurses through combinators
-itself rather than delegating that to `_variants`.
+New map walkers take `(document, node, base, path="", *, arm=frozenset())` and return a dict
+keyed by `(arm, dotted.path)`, matching `_type_map` **exactly**, so a key in one map is a key in
+another and two maps can be read against each other. Carry `*, _depth=0` only if the walker
+recurses through combinators itself rather than delegating that to `_variants`.
+
+**The arm half of that key is not decoration.** Two maps are only comparable after both are
+expanded onto one *complete* arm set — `_complete_arms` over the constraint sets **both walked
+maps** carry, never `_arms` over a document root. A root reading misses any union nested below
+the root, and `model`'s is nested under `spec` and `fit_result`: measured 2026-08-24, deriving
+the arm set from the root takes the scalar-constraint comparison from 767 compared keys to 184
+suite-wide, and `model` alone from 584 to 1 — **while still passing**. That is the silent-guard
+failure this skill's "never count what a walker reached" section exists to catch, so a new
+walker owes a reach control naming a path, not a count.
+
+To read a map back as bare dotted paths — for a coverage question, or a pin that names a path
+rather than an arm — go through `_paths` / `_flatten_constraints` rather than the raw keys. A
+membership test against the arm-keyed map finds every bare path absent on both sides and reports
+the reverse of what it was asked.
 
 ## Adding a comparison — the order that works
 
@@ -50,15 +64,27 @@ itself rather than delegating that to `_variants`.
    switch-on-able.
 2. **Write the walker and the test, with the measured expectation stated.** "Expect 11 passed,
    1 failed, naming `fit_result.terms.[]`" is checkable; "expect it to fail" is not.
-3. **Intersect paths.** A path present on one side only is a difference of *intent*, arbitrated
-   by `test_an_artifact_shape_carries_exactly_what_its_contract_declares`, not by a type or
-   bound comparison.
+3. **Intersect keys, and know what the intersection drops.** A path present on one side only is
+   outside the comparison by construction. **This step used to say that case is "arbitrated by
+   `test_an_artifact_shape_carries_exactly_what_its_contract_declares`", and that was false** —
+   corrected 2026-08-24 (W32-1b), in the same breath as the identical claim in the test's own
+   docstring. That test compares field *names*; where a field exists on both sides and only one
+   side bounds it, the names agree and it sees nothing. Measured 2026-08-24: 70 dotted paths
+   carry a compared keyword on exactly one side, **18 of them at paths where the field exists on
+   both sides**. Nothing reports those. `OQ-PLAT-10` owns the general question — every layer of
+   the guard is scoped to the intersection of its two sides — so a new comparison should state
+   which half of its axis it can and cannot see rather than inherit this sentence's old promise.
 4. **Resolve every disagreement it finds** before the slice ends. A red guard at the end of a
    slice is the same artifact as no guard.
 5. **Prove it fails on deliberately broken input** (`CLAUDE.md` §13 rule 4) — break the
    *contract* with a one-line `python3 -c`, watch the named failure, `git checkout` the file.
-   When the proof breaks the **walker** instead, `git stash` rather than `git checkout`, and do
-   it last: `git checkout` on a file you are mid-edit in destroys more than the injected defect.
+   When the proof breaks the **walker** instead, copy the file aside first (`cp f f.bak`),
+   inject, watch it fail, then restore from that copy — and do it last: `git checkout` on a file
+   you are mid-edit in destroys more than the injected defect. **Not `git stash`**, which this
+   step recommended until 2026-08-24: the stash stack is shared across every worktree of the
+   repository and concurrent sessions push and pop it, so a bare `stash`/`stash pop` here can
+   restore someone else's work over yours or hand yours to them. A private backup file has
+   neither failure mode.
 6. **Add its meta-guard** in the same commit (below).
 
 ## Never count what a walker reached — name a path
@@ -237,10 +263,21 @@ true of the same tree: the guard compares 15 of 15 shapes it defines as in scope
 unaccounted for; and 21 of the 36 distinct shapes in the corpus are out of scope by
 construction (11 authored-only, 10 generated-only).
 
-**Arm-level attribution is not built** (`W32-1b`, owned by W32). `_type_map` unions every arm's
-contribution onto one dotted path, so a GLM-only field declared on the GBM arm still passes.
-Fixing it means threading arm identity through `_variants`' return type and every caller, which
-is its own slice rather than a widening of an existing one.
+**Arm-level attribution is built** (`W32-1b`, 2026-08-24) — the paragraph here previously said it
+was not. All three walkers key on `(arm, path)` and all three comparisons expand onto a complete
+arm set before intersecting, so a bound or a type declared inside one conditional arm is compared
+against that arm alone. What that closed, measured on the repository's own `model-spec`: moving
+`max_bins` — the ebm arm's `16 ≤ n ≤ 32768` — into the glm arm left the old walker returning maps
+that compared **equal**, 21 keys each, zero disagreements reported either way. The same move is
+now drift. `test_two_arms_declaring_different_bounds_are_both_kept`,
+`test_a_bound_moved_between_arms_is_drift` and `test_a_closed_map_moved_between_arms_is_drift`
+hold the cases.
+
+**What arm attribution did *not* close is arm-level *existence*.** W32-1b delivers type and bound
+disagreement on paths shared by both sides *within an arm*; a field that leaves the shared set
+entirely — moved between arms so that no arm holds it on both sides — is still reported by
+nothing, because every layer intersects. That is `OQ-PLAT-10`, which names the boundary
+explicitly, and it is open.
 
 ## Verified
 
@@ -268,3 +305,17 @@ the same one this file already learned, applied one level up: a guard's *scope* 
 any other, and "every eligible schema is compared" is only as strong as the definition of
 eligible — which here is the intersection, so the completeness check cannot see the gap it
 would need to report.
+
+2026-08-24 — W32-1b, which keyed all three walkers on `(arm, path)` and taught all three
+comparisons to expand onto a complete arm set before intersecting. Two corrections to this file
+came out of it, both of the same kind: **a sentence here asserted a coverage this repository did
+not have.** Step 3 of "Adding a comparison" said the field-name test arbitrates a one-sided
+bound — it does not, and 18 of the 70 one-sided bounds in the suite sit at paths where the field
+exists on both sides and nothing reports them. "What the guard does not reach" said arm
+attribution was unbuilt on the day it was being built. Neither was caught by a test, because
+neither is the sort of claim a test is pointed at; both were caught by measuring the thing the
+sentence asserted. The lesson to carry: **this file's prose is unversioned evidence, and the
+reach controls only guard the numbers that live in code.** A slice that changes what the guard
+reaches owes this file a re-read, not just an appended entry — and the corpus figures quoted in
+`test_contracts.py` docstrings move whenever `COMPARED_SLUGS` does, as all nine of them did when
+W32-11 took it from thirteen slugs to fifteen.
