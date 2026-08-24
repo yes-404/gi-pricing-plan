@@ -388,7 +388,7 @@ def _declared_fields(
     of types.
     """
     names: set[str] = set()
-    for _owner, variant in _variants(document, node, base):
+    for _owner, variant, _arm in _variants(document, node, base):
         names.update(variant.get("properties", {}))
     return names
 
@@ -546,13 +546,57 @@ def _deref(document: dict[str, Any], node: dict[str, Any], base: pathlib.Path) -
 _MAX_COMPOSITION_DEPTH: Final = 40
 
 
+#: The discriminator constraints in force at a node: `(dotted path of the discriminator
+#: property, the values that reach here)`. The empty set is the unconditional arm — the node
+#: is reached whatever the discriminator says — and it is what every union-free document
+#: produces, so those documents keep behaving exactly as they did.
+Arm = frozenset[tuple[str, frozenset[str]]]
+
+
+def _discriminated_branches(node: dict[str, Any]) -> dict[str, frozenset[str]]:
+    """`$ref` -> the discriminator values that select it, from an OpenAPI discriminator.
+
+    The generated side's spelling. `discriminator.mapping` is value -> `$ref`, and this
+    inverts it, which is what collapses `xgboost` and `lightgbm` onto the single `GbmSpec`
+    branch they share.
+    """
+    discriminator = node.get("discriminator")
+    if not isinstance(discriminator, dict):
+        return {}
+    inverted: dict[str, set[str]] = {}
+    for value, ref in discriminator.get("mapping", {}).items():
+        inverted.setdefault(ref, set()).add(value)
+    return {ref: frozenset(values) for ref, values in inverted.items()}
+
+
+def _condition_values(test: dict[str, Any]) -> tuple[str, frozenset[str]] | None:
+    """The authored side's spelling: `{"if": {"properties": {"<name>": {"const"|"enum"}}}}`.
+
+    Returns the constraint the sibling `then` is guarded by, or `None` when the `if` tests
+    something this walker cannot express as a discriminator — a `required` test, or two
+    properties at once. Returning `None` degrades that branch to unconditional, which is
+    what the walker did for **every** branch before this change: strictly no worse.
+    """
+    properties = test.get("properties", {})
+    if len(properties) != 1:
+        return None
+    ((name, constraint),) = properties.items()
+    if "const" in constraint:
+        return name, frozenset({constraint["const"]})
+    if "enum" in constraint:
+        return name, frozenset(constraint["enum"])
+    return None
+
+
 def _variants(
     document: dict[str, Any],
     node: dict[str, Any],
     base: pathlib.Path,
     *,
+    path: str = "",
+    arm: Arm = frozenset(),
     _depth: int = 0,
-) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+) -> list[tuple[dict[str, Any], dict[str, Any], Arm]]:
     """The node itself plus every composed subschema beneath it, dereferenced.
 
     An optional field is `anyOf: [{...}, {"type": "null"}]` when generated and a bare type
@@ -572,6 +616,12 @@ def _variants(
     `if` is deliberately **not** followed. It is the discriminator test, not a description
     of the artifact: reading it would fold `{"const": "glm"}` into `model_type`'s admitted
     types as though the contract declared a second field there.
+
+    **The sibling `if` is now read for the arm *tag*, and still not for the description.**
+    Each variant carries the discriminator constraints in force where it was found, so a
+    caller can key on `(arm, path)` and stop a field moving between arms from reading as no
+    change at all. What comes back as a *description* of the node is exactly what it was:
+    the `if` contributes a tag, never a type, a closure or a constraint.
     """
     if _depth > _MAX_COMPOSITION_DEPTH:
         raise AssertionError(
@@ -579,15 +629,69 @@ def _variants(
             "without bottoming out"
         )
     node, document = _deref(document, node, base)
-    found = [(document, node)]
+    found = [(document, node, arm)]
+    branch_tags = _discriminated_branches(node)
     for keyword in ("anyOf", "oneOf", "allOf"):
         for branch in node.get(keyword, []):
-            found.extend(_variants(document, branch, base, _depth=_depth + 1))
+            values = branch_tags.get(branch.get("$ref", ""))
+            child = (
+                arm | {(f"{path}.{node['discriminator']['propertyName']}".lstrip("."), values)}
+                if values
+                else arm
+            )
+            found.extend(
+                _variants(document, branch, base, path=path, arm=child, _depth=_depth + 1)
+            )
+    # `else` stays unconditional. Its true constraint is the complement of the `if`, which a
+    # set of admitted values cannot express, and inventing one would be worse than the honest
+    # under-constraint: an `else` field lands in every arm, so a comparison can produce a
+    # false pass there but never a false failure. Considered, not overlooked.
+    condition = node.get("if")
+    guard = _condition_values(condition) if isinstance(condition, dict) else None
     for keyword in ("then", "else"):
         branch = node.get(keyword)
-        if branch is not None:
-            found.extend(_variants(document, branch, base, _depth=_depth + 1))
+        if not isinstance(branch, dict):
+            continue
+        child = arm
+        if guard is not None and keyword == "then":
+            name, guard_values = guard
+            child = arm | {(f"{path}.{name}".lstrip("."), guard_values)}
+        found.extend(
+            _variants(document, branch, base, path=path, arm=child, _depth=_depth + 1)
+        )
     return found
+
+
+def _arms(document: dict[str, Any], node: dict[str, Any], base: pathlib.Path) -> frozenset[Arm]:
+    """Every **complete, single-valued** arm this document declares.
+
+    A variant's own tag may name several values at once — the shared `GbmSpec` branch is
+    tagged `{xgboost, lightgbm}` — so the tags are not themselves the arms. Splitting them
+    to one value each gives the coordinate system both sides are expanded onto, and it is
+    the same set whether it was built from a `discriminator.mapping` or from four `if`s.
+
+    A document with no union yields `{frozenset()}`: one unconditional arm, which is what
+    keeps the union-free majority of `COMPARED_SLUGS` comparing exactly as before.
+
+    The cartesian product across independent discriminators is deliberate and worth
+    watching: two unions of four values each give sixteen arms. Three unions at Phase 1b's
+    sizes is fine; if a fourth appears and the suite slows, the fix is to key on the
+    constraint set rather than expand, not to drop arm attribution.
+    """
+    by_property: dict[str, set[str]] = {}
+    for _, _, arm in _variants(document, node, base):
+        for name, values in arm:
+            by_property.setdefault(name, set()).update(values)
+    if not by_property:
+        return frozenset({frozenset()})
+    combinations: list[Arm] = [frozenset()]
+    for name in sorted(by_property):
+        combinations = [
+            existing | {(name, frozenset({value}))}
+            for existing in combinations
+            for value in sorted(by_property[name])
+        ]
+    return frozenset(combinations)
 
 
 #: Slugs whose nullability is compared as well as their types (`keep_null` below).
@@ -668,7 +772,7 @@ def _scalar_types(
     `object` against a model admitting `object | string`.
     """
     admitted: set[str] = set()
-    for owner, variant in _variants(document, node, base):
+    for owner, variant, _arm in _variants(document, node, base):
         declared = variant.get("type")
         if isinstance(declared, str):
             admitted.add(declared)
@@ -718,7 +822,7 @@ def _type_map(
     found: dict[str, frozenset[str]] = {}
     properties: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
     elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
-    for owner, variant in _variants(document, node, base):
+    for owner, variant, _arm in _variants(document, node, base):
         for name, child in variant.get("properties", {}).items():
             properties.setdefault(name, []).append((owner, child))
         if "items" in variant:
@@ -964,7 +1068,7 @@ def _required_map(
     if required:
         found[path or _ROOT_PATH] = required
 
-    for owner, variant in _variants(document, node, base):
+    for owner, variant, _arm in _variants(document, node, base):
         for name, child in variant.get("properties", {}).items():
             subtree = _required_map(owner, child, base, f"{path}.{name}".lstrip("."))
             for key, keys in subtree.items():
@@ -1050,7 +1154,7 @@ def _closure_map(
     which measured **one** across the whole compared suite.
     """
     found: dict[str, frozenset[str]] = {}
-    for owner, variant in _variants(document, node, base):
+    for owner, variant, _arm in _variants(document, node, base):
         extra = variant.get("additionalProperties")
         if extra is not None:
             key = path or _ROOT_PATH
@@ -1146,7 +1250,7 @@ def _constraint_map(
     properties: dict[str, list[tuple[dict[str, Any], dict[str, Any]]]] = {}
     elements: list[tuple[dict[str, Any], dict[str, Any]]] = []
 
-    for owner, variant in _variants(document, node, base):
+    for owner, variant, _arm in _variants(document, node, base):
         declared = {k: v for k, v in variant.items() if k in _COMPARED_CONSTRAINTS}
         if declared:
             found.setdefault(path or _ROOT_PATH, {}).update(declared)
@@ -1299,6 +1403,62 @@ def test_each_new_walker_reaches_a_nested_path_it_is_supposed_to(
         f"{walker.__name__} no longer reaches {path} in {slug} — the comparison built on "
         "it is now silent about everything beneath that point"
     )
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_a_generated_union_branch_is_tagged_with_its_discriminator_values() -> None:
+    """The generated side spells an arm as a `$ref` and a `discriminator.mapping` entry.
+
+    `xgboost` and `lightgbm` share one `GbmSpec`, so **four discriminator values map onto
+    three branches** and a tag must be a set of values rather than one value. That asymmetry
+    is the reason this is not a dictionary lookup.
+    """
+    document = _load(GENERATED / "model-spec.schema.json")
+    tags = {arm for _, _, arm in _variants(document, document, GENERATED) if arm}
+    values = {v for arm in tags for _, v in arm}
+    assert frozenset({"xgboost", "lightgbm"}) in values
+    assert frozenset({"glm"}) in values
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_an_authored_conditional_arm_is_tagged_from_its_sibling_if() -> None:
+    """The authored side spells the same arm as `{"if": ..., "then": ...}`.
+
+    `if` is read for the **tag** and never for the types — folding `{"const": "glm"}` into
+    `model_type`'s admitted types would invent a field declaration, which is what
+    `_variants` has always refused and still refuses.
+    """
+    document = _load(AUTHORED / "model-spec.schema.json")
+    values = {
+        v
+        for _, _, arm in _variants(document, document, AUTHORED)
+        for _, v in arm
+    }
+    assert frozenset({"glm"}) in values
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_both_sides_declare_the_same_complete_arms() -> None:
+    """The comparison is only meaningful if the two arm sets are the same set.
+
+    If they differ, the drift is in the union's shape itself and every later per-arm
+    comparison would be comparing arms that do not correspond — a failure worth its own
+    message rather than forty confusing ones.
+    """
+    generated = _load(GENERATED / "model-spec.schema.json")
+    authored = _load(AUTHORED / "model-spec.schema.json")
+    assert _arms(generated, generated, GENERATED) == _arms(authored, authored, AUTHORED)
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_a_document_with_no_union_has_one_unconditional_arm() -> None:
+    """Most of the thirteen compared slugs have no union at all.
+
+    They must keep behaving exactly as they did, which per-arm keying achieves by making
+    their single arm the empty constraint set rather than by special-casing them.
+    """
+    document = _load(AUTHORED / "audit-event.schema.json")
+    assert _arms(document, document, AUTHORED) == frozenset({frozenset()})
 
 
 #: Nested fields this slice added to the `02`-owned contracts, named so their removal is
