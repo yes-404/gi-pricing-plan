@@ -7,6 +7,7 @@ import { ProblemError } from "@/api/problem";
 import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
 import ComplexityTable from "@/components/ComplexityTable.vue";
+import CrossValidationPanel from "@/components/CrossValidationPanel.vue";
 import GbmEvalCurveChart from "@/components/GbmEvalCurveChart.vue";
 import GbmImportanceCharts from "@/components/GbmImportanceCharts.vue";
 import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
@@ -338,6 +339,19 @@ onMounted(async () => {
             }}</span>.
           </p>
         </div>
+      </section>
+
+      <!-- Populated only when the fit's `GlmSpec.select_by == "cv"`, so guarded: `None` here
+           is the honest "this fit was not cross-validated" rather than an empty path standing
+           in for one. -->
+      <section
+        v-if="diagnostics.cross_validation"
+        class="mt-8"
+      >
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Cross-validation
+        </h2>
+        <CrossValidationPanel :cross-validation="diagnostics.cross_validation" />
       </section>
     </template>
   </section>

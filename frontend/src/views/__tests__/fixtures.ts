@@ -376,6 +376,13 @@ export const DIAGNOSTICS: Diagnostics = {
     mean_depth: 4.7,
     quantile_crossing: null,
   },
+  // Note, for a reader taking this fixture as a model of a real artifact: it is not one here.
+  // `Diagnostics` documents `cross_validation` as populated *iff* the fit's
+  // `GlmSpec.select_by == "cv"`, so a GBM — which `gbm` above makes this — was never
+  // cross-validated and would carry `null`. No validator enforces that (the artifact does not
+  // carry the spec it was fitted from, so it cannot check), which is why this passes. It is
+  // one fixture exercising every branch, deliberately, and the combination it depicts is one
+  // the platform does not produce.
   cross_validation: {
     method: "random",
     seed: 20260824,
@@ -387,10 +394,19 @@ export const DIAGNOSTICS: Diagnostics = {
       { alpha: 0.01, mean_score: 0.498, std_score: 0.003 },
       { alpha: 0.1, mean_score: 0.511, std_score: 0.006 },
     ],
+    // All five folds, because `folds: 5` says there are five. `CrossValidationDiagnostics`
+    // rejects a shorter list — "a fold's dispersion cannot include a fold that was never
+    // scored" — so the plan's three-entry version depicted an artifact the backend cannot
+    // construct. The scores also reproduce the path point they summarise: their mean is
+    // exactly the 0.498 at `selected_alpha`, and their dispersion rounds to that point's
+    // 0.003 under both the population and the sample convention, which is what `CvFoldMetric`
+    // means by the two reporting "one fact two ways rather than two facts that could drift".
     fold_metrics: [
       { fold: 0, rows: 81_506, score: 0.494 },
       { fold: 1, rows: 81_506, score: 0.502 },
       { fold: 2, rows: 81_506, score: 0.497 },
+      { fold: 3, rows: 81_506, score: 0.499 },
+      { fold: 4, rows: 81_506, score: 0.498 },
     ],
   },
 };

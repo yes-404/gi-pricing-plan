@@ -218,6 +218,32 @@ describe("DiagnosticsView", () => {
     expect(screen.getByText(/worst gap\s+18\.62/i)).toBeInTheDocument();
     expect(screen.getByText(/3f7c1d90-0000-4000-8000-000000000001/)).toBeInTheDocument();
   });
+
+  it("mounts the cross-validation panel when the artifact carries a path", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    expect(await screen.findByRole("table", { name: /regularisation path/i })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: /fold dispersion/i })).toBeInTheDocument();
+  });
+
+  /**
+   * The guard, proven the only way it can be. `CrossValidationDiagnostics` has no empty form —
+   * `path` and `fold_metrics` are required and `folds` is `ge=2` — so a panel rendered for a
+   * fit that was not cross-validated would not show an empty path, it would dereference
+   * `null` and take the whole page down. `null` here is the artifact saying "this fit was
+   * never cross-validated", which is a different claim from "it was, and scored nothing".
+   */
+  it("says nothing about cross-validation for a fit that was not cross-validated", async () => {
+    stubByUrl({
+      "/diagnostics": { body: { ...DIAGNOSTICS, cross_validation: null } },
+      "/models/motor-frequency": { body: GBM_MODEL },
+    });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: /tree summary/i });
+    expect(screen.queryByRole("table", { name: /regularisation path/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: /fold dispersion/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/selected alpha/i)).not.toBeInTheDocument();
+  });
 });
 
 /**
