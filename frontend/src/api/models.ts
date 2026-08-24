@@ -20,12 +20,15 @@ export function listFactors(datasetId?: string): Promise<Factor[]> {
 }
 
 /**
- * How wide an interval is, as a fraction of the estimate — the number that says whether a
- * coefficient is worth reading.
+ * How wide an interval is, in the units of the coefficient — `high - low` on the 95%
+ * interval, not a fraction of the estimate.
  *
  * `02` R5 makes uncertainty part of what an estimate *is*, and a table of point estimates
  * invites exactly the reading it exists to prevent: that a relativity of 1.72 on 40 rows
- * and one on 400 000 mean the same thing.
+ * and one on 400 000 mean the same thing. R5 requires that the uncertainty be carried and
+ * does not name a width statistic, so the absolute width is a choice this helper makes
+ * rather than one the spec dictates; a caller wanting a scale-free measure divides by
+ * `estimate` itself.
  */
 export function intervalWidth(coefficient: Coefficient): number {
   const [low, high] = coefficient.ci_95;

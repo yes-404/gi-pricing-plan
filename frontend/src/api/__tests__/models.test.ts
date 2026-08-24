@@ -20,7 +20,10 @@ function coefficient(over: Partial<Coefficient> = {}): Coefficient {
 }
 
 describe("reading a coefficient", () => {
-  it("measures an interval's width", () => {
+  it("measures an interval's width in the coefficient's own units", () => {
+    // 0.7 - 0.3, not (0.7 - 0.3) / 0.5. The fixture's estimate is 0.5 precisely so that an
+    // absolute width and a fraction-of-estimate width differ; a fractional reading returns
+    // 0.8 and fails here. See docs/plans/2026-08-24-w6b-1a-model-detail-non-glm-arms.md Task 8.
     expect(intervalWidth(coefficient())).toBeCloseTo(0.4, 10);
   });
 
