@@ -138,10 +138,21 @@ B1–B3 are independent of all five and can be settled today.
 
 | Item | Accepted |
 |---|---|
-| The verdict: W32 cannot be closed | *pending* |
-| **B1** — the proposed Phase 1b `W32` row | *pending* |
-| **B2** — the slice boundaries, and the five new ids `W32-7`, `-8`, `-9`, `-1b`, `-10` | *pending* |
-| **B3** — back-filling five slice records | *pending* |
-| Part C's three verdicts, and their owners | *pending* |
-| Part D's five entries, and which side is wrong in each of the four real ones | *pending* |
-| The recommended sequence | *pending* |
+| The verdict: W32 cannot be closed | **2026-08-24** — accepted, and it now rests on a second ground the proposal did not have: **W32-11**, allocated by Part C's decisions, is unbuilt |
+| **B1** — the proposed Phase 1b `W32` row | **2026-08-24** — accepted as recommended; the row is at `../roadmap.md`, after W6b. *(The proposal cited `:3773`; the table had moved to `:3926` by the time the row was written — the W32-9 and W32-10 records landed between.)* |
+| **B2** — the slice boundaries, and the five new ids `W32-7`, `-8`, `-9`, `-1b`, `-10` | **2026-08-24** — accepted, no boundary amended: §3's cuts are accepted as executed for W32-1 … W32-6 and as scoped for the five new ids. Mirrored into the slice map's own acceptance table, whose row 2 was the *pending* this depended on |
+| **B3** — back-filling five slice records | **2026-08-24** — accepted; the five are written, from each slice's ledger and merge commit rather than from the diffs, and each says in its own text that it was written late |
+| Part C's three verdicts, and their owners | **2026-08-24** — the verdicts accepted, **two of the three owners amended**. FR-MODEL-126 and the two uncompared schemas both go to a newly allocated **W32-11** — which had **no executor assigned** when this row was signed, leaving W32 un-closeable by design until the maintainer assigned one, and which **acquired one the same day**: the closure-execution session surfaced the inference and the maintainer confirmed it, adding that W32-11 is the **terminal** slice and that findings it cannot resolve are booked forward with an owner rather than held against the close. Both states are kept — the gap was real when signed: the proposal reassigned FR-MODEL-126 without naming a successor, and OQ-MODEL-30 already owns it to *W32*, so that was not a reassignment; and the schema row said *not started* without recording that it was also **unowned** after W32-1b declined it in writing. **FR-PLAT-63's verdict is not accepted today**: it is *deferred with an owner* only once W32-7 has shipped the mechanism, and until then all four obligations are *not started*. Instantiated against fact at close |
+| Part D's five entries, and which side is wrong in each of the four real ones | **2026-08-24** — accepted; **the spec was the wrong side in all four**, and each is amended in place with a dated note rather than rewritten. Item 2 needed no decision — W32-9 merged as `faff060` and settled it in code. One refinement: item 4's conclusion must **not** rest on the peril side's absent `/usage` route, which is a separate question; it rests on the count being undefinable in the direction §4.10 declares |
+| The recommended sequence | **2026-08-24** — accepted as amended, and already partly spent: W32-10 (`0e44db9`) and W32-9 (`faff060`) merged before this decision was written. The amendment is the tail — **W32-11 is appended and W32 does not close until it lands** |
+
+**Who accepted, and on what authority — added 2026-08-24, after this plan was filed on
+2026-08-23, and forming no part of the document as filed.** *(It sits with the acceptance table
+because it is the acceptance record, which `docs/plans/README.md` exempts from the freeze;
+Parts A through D above are unaltered, and a reader comparing against the filing-date document
+should expect this paragraph and the seven dated rows to be the whole of the difference.)*
+The maintainer directed this session on 2026-08-24 to decide Parts B, C and D of this proposal; these acceptances are that instruction discharged,
+and the provenance is stated rather than assumed because `CLAUDE.md` §14 makes a review's
+output a proposal and never a change. **Anything the instruction did not reach stays
+*pending*** — the slice map's rows 3, 4 and 5 are the visible cases, and they go back to the
+maintainer rather than being signed here on the strength of being adjacent.
