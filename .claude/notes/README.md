@@ -39,6 +39,8 @@ must say where it went.
 | [NT-0002](0002-demo-entrance-and-guide.md) | Demo entrance, with a guide to what is testable | 2026-08-15 | `landed` | Spec first (FR-PLAT-53/54), then the code as **W7b** — `scripts/demo.py`, `/demo`, and a guide derived on every request |
 | [NT-0003](0003-duplicated-status-goes-stale.md) | Duplicated status in `CLAUDE.md` goes stale — the phase line, the counts, the roadmap restatement, the second skill list | 2026-08-23 | `landed` | Rules → `CLAUDE.md` §0, §2, §9; **no code, no spec change** |
 | [NT-0004](0004-a-reference-that-resolves-only-for-the-writer.md) | A reference that resolves only in the writer’s context — ten instances in one day, and one mechanical rule | 2026-08-24 | `open` | Proposed rule → `CLAUDE.md` §13, as a fourth bullet; **no code, no spec change** |
+| [NT-0005](0005-deferred-items-with-no-durable-custody.md) | Seven deferred items with no durable custody — found during W6b, held only in a session's working memory | 2026-08-24 | `open` | Mixed, per item: a marker line, a roadmap row, eight gate placements, two one-line `audit-docs.py` fixes, a convention, a new check, and one `OQ-` entry |
+| [NT-0006](0006-two-rules-for-reading-an-artifact.md) | Two rules for reading an artifact — the tip commit that is not the change set, and the citation that is right about the wrong content | 2026-08-24 | `open` | Proposed rules → `CLAUDE.md` §13; **no code, no spec change** |
 
 ## What a note must contain
 
