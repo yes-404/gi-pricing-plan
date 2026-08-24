@@ -1294,8 +1294,10 @@ def _closure_map(
     node: dict[str, Any],
     base: pathlib.Path,
     path: str = "",
-) -> dict[str, frozenset[str]]:
-    """Flatten a schema to `dotted.path -> what `additionalProperties` says there`.
+    *,
+    arm: Arm = frozenset(),
+) -> dict[tuple[Arm, str], frozenset[str]]:
+    """Flatten a schema to `(arm, dotted.path) -> what `additionalProperties` says there`.
 
     Both spellings land in one vocabulary so they cannot be silently compared against each
     other: the boolean form becomes `{"CLOSED"}` or `{"OPEN"}`, the schema form becomes the
@@ -1306,12 +1308,27 @@ def _closure_map(
     JSON Schema's default is open, but a hand-authored contract that says nothing is silent
     rather than deliberate, and reporting every silence would bury the real disagreements —
     which measured **one** across the whole compared suite.
+
+    **Keyed by `(arm, path)` since arm attribution (W32-1b).** A declaration made inside one
+    conditional arm describes that arm only, and merging the arms into one namespace made an
+    arm that constrains a map indistinguishable from one that leaves it unconstrained.
+    Measured 2026-08-24 on the authored `model-spec`: moving `family_params` — the glm arm's
+    open map — into the ebm arm left this walker returning the identical three paths with
+    identical values, and the comparison below reported zero disagreements over the same
+    three shared paths either way. `test_a_closed_map_moved_between_arms_is_drift` holds
+    that case.
+
+    The `|` union stays and now unions *within* an arm, exactly as `_type_map`'s does, and
+    the value type is unchanged — `frozenset[str]` — so `_expand` is reused rather than
+    reimplemented. Re-keying costs no reach: 17 dotted paths are declared on both sides
+    across the thirteen compared slugs before it and 17 after, which `_paths` keeps
+    checkable in one line.
     """
-    found: dict[str, frozenset[str]] = {}
-    for owner, variant, _arm in _variants(document, node, base):
+    found: dict[tuple[Arm, str], frozenset[str]] = {}
+    for owner, variant, found_in in _variants(document, node, base, path=path, arm=arm):
         extra = variant.get("additionalProperties")
         if extra is not None:
-            key = path or _ROOT_PATH
+            key = (found_in, path or _ROOT_PATH)
             if isinstance(extra, bool):
                 says = frozenset({"OPEN" if extra else "CLOSED"})
             else:
@@ -1319,7 +1336,7 @@ def _closure_map(
             found[key] = found.get(key, frozenset()) | says
         for name, child in variant.get("properties", {}).items():
             for key, says in _closure_map(
-                owner, child, base, f"{path}.{name}".lstrip(".")
+                owner, child, base, f"{path}.{name}".lstrip("."), arm=found_in
             ).items():
                 found[key] = found.get(key, frozenset()) | says
         elements = list(variant.get("prefixItems", ()))
@@ -1327,10 +1344,22 @@ def _closure_map(
             elements.append(variant["items"])
         for child in elements:
             for key, says in _closure_map(
-                owner, child, base, f"{path}.[]".lstrip(".")
+                owner, child, base, f"{path}.[]".lstrip("."), arm=found_in
             ).items():
                 found[key] = found.get(key, frozenset()) | says
     return found
+
+
+def _closure_paths(
+    document: dict[str, Any], node: dict[str, Any], base: pathlib.Path
+) -> dict[str, frozenset[str]]:
+    """`_closure_map` flattened back onto dotted paths, for the reach control below.
+
+    That control asks a coverage question — does the walker still descend this far — and
+    `_paths` is the answer to it. A named adapter rather than a lambda in the parametrize
+    because the assertion message prints `walker.__name__`, and `<lambda>` names nothing.
+    """
+    return _paths(_closure_map(document, node, base))
 
 
 @pytest.mark.req("FR-PLAT-48")
@@ -1344,6 +1373,17 @@ def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> N
     with a whole number — a period, a count, a cap in whole units — is a document the
     published contract rejects and the platform accepts. That is the direction that wastes
     an author's afternoon, because the thing refusing them is their own validator.
+
+    **Compared arm by arm since 2026-08-24 (W32-1b).** An `additionalProperties` inside a
+    conditional arm describes that arm alone, so both maps are expanded onto one complete
+    arm set before the intersection, exactly as the scalar-type comparison is. The arm set
+    is built from the constraints **both walked maps** carry, never from `_arms` over a
+    document root: measured 2026-08-24, deriving it from the generated root instead takes
+    the suite from 115 compared `(arm, path)` keys to 10 while still passing, and `model`
+    alone from 104 to 0 — its union is nested under `spec` and `fit_result`, where a root
+    reading never looks. The seventeen dotted paths declared on both sides are unchanged by
+    the re-keying; `test_each_new_walker_reaches_a_nested_path_it_is_supposed_to` holds the
+    depth.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(AUTHORED / f"{slug}.schema.json")
@@ -1351,14 +1391,22 @@ def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> N
     produced = _closure_map(generated, generated, GENERATED)
     declared = _closure_map(authored, authored, AUTHORED)
 
+    arms = _complete_arms(constraints for constraints, _ in set(produced) | set(declared))
+    produced = _expand(produced, arms)
+    declared = _expand(declared, arms)
+
+    compared = set(produced) & set(declared)
     disagreed = {
-        path: (sorted(produced[path]), sorted(declared[path]))
-        for path in sorted(set(produced) & set(declared))
-        if produced[path] != declared[path]
+        key: (sorted(produced[key]), sorted(declared[key]))
+        for key in sorted(compared, key=lambda k: (k[1], _arm_name(k[0])))
+        if produced[key] != declared[key]
     }
     assert not disagreed, (
         "the model and the contract disagree on what extra properties are admitted at "
-        + ", ".join(f"{p} (model {g}, contract {a})" for p, (g, a) in disagreed.items())
+        + ", ".join(
+            f"{_arm_name(arm)} {path} (model {g}, contract {a})"
+            for (arm, path), (g, a) in disagreed.items()
+        )
     )
 
 
@@ -1535,7 +1583,7 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
     [
         (_required_map, "grouping", "evidence.source_level_stats.[]"),
         (_required_map, "model", "fit_result.bins.[]"),
-        (_closure_map, "model-spec", "family_params"),
+        (_closure_paths, "model-spec", "family_params"),
         (_constraint_map, "grouping", "evidence.source_level_stats.[].claim_count"),
     ],
 )
@@ -1668,6 +1716,57 @@ def test_a_field_moved_between_arms_is_drift() -> None:
     assert before != after, (
         "moving a property between arms produced an identical map — the walker is still "
         "merging arms into one namespace"
+    )
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_a_closed_map_moved_between_arms_is_drift() -> None:
+    """**The closure defect, on the case it was measured on.**
+
+    An *open map* here is a `additionalProperties` declaration: the contract says what a
+    caller may put in a map beside the named properties, and a client validates against it.
+    A contract that admits `{"type": "number"}` in the glm arm and says nothing in the ebm
+    arm admits different documents per arm, so the declaration belongs to the arm that
+    makes it, not to the document.
+
+    `family_params` is the glm arm's open map. Moving it to the ebm arm changes which
+    documents the contract accepts in both arms and leaves the *set* of declarations
+    untouched — so a walker with one namespace per document sees nothing. Measured
+    2026-08-24 on `model-spec.schema.json`: `_closure_map` returned the same three paths
+    with the same values, `{family_params: number, hyperparameters: integer|number,
+    monotone_constraints: integer}`, before and after the move, and
+    `test_generated_and_authored_agree_on_what_an_open_map_admits` reported zero
+    disagreements over the same three shared paths in both states.
+
+    Both halves are asserted, because only the pair is evidence: the flattened views must
+    still be identical — that *is* the pre-attribution map, so the case stays the invisible
+    one — while the arm-keyed views must differ.
+
+    The arm set is built from all three walked maps rather than from `_arms` over a root,
+    for the reason `_complete_arms` records: the coordinate system has to contain both
+    sides' constraints or the expansion drops the very keys the difference lives in.
+    """
+    authored = _load(AUTHORED / "model-spec.schema.json")
+    moved = _move_property_between_arms(
+        authored, "family_params", source="glm", target="ebm"
+    )
+    generated = _load(GENERATED / "model-spec.schema.json")
+
+    produced = _closure_map(generated, generated, GENERATED)
+    clean = _closure_map(authored, authored, AUTHORED)
+    drifted = _closure_map(moved, moved, AUTHORED)
+
+    assert _paths(clean) == _paths(drifted), (
+        "the arm-flattened closure views already differ, so this is no longer the case a "
+        "merged walker is blind to and the assertion below proves less than it claims"
+    )
+
+    arms = _complete_arms(
+        constraints for constraints, _ in set(produced) | set(clean) | set(drifted)
+    )
+    assert _expand(clean, arms) != _expand(drifted, arms), (
+        "moving an open map between arms produced an identical closure map — the walker "
+        "is still merging arms into one namespace"
     )
 
 
