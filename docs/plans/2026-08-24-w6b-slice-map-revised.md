@@ -120,9 +120,26 @@ identical dict**. The filter has never filtered anything.
 
 ## 3. The slices
 
-**Sixteen.** Thirteen from the frozen map, plus one for the `W6b-1` split, one for the
-`W6b-13` split, and one for `W6b-14`. The lineage reassignment moves work between existing
-slices and adds none.
+**Seventeen**, and the arithmetic is stated here rather than in §1 so that it sits beside the
+number it produces — separating a count from its derivation is exactly how the first version
+of this line was wrong:
+
+> 13 from the frozen map **+1** (`W6b-1` splits) **+1** (`W6b-11` splits) **+1** (`W6b-13`
+> splits) **+1** (`W6b-14`, new) = **17**
+
+The lineage reassignment moves work between existing slices and adds none. **Re-derive this
+from the table below rather than trusting the sentence** — count the rows, do not add to a
+remembered total:
+
+```
+grep -cE '^\| \*\*W6b-[0-9]+[a-z]?\*\*' docs/plans/2026-08-24-w6b-slice-map-revised.md
+```
+
+*Corrected 2026-08-24, before filing. The first draft said sixteen and enumerated only three
+additions, omitting the `W6b-11` split — so `13 + 3 = 16` was internally consistent and simply
+counted a slice that the same page had already introduced. A filed plan freezes; a wrong
+self-count in one becomes the next §1 line 192, a frozen sentence a later reader has no way to
+know was false. The fix is recorded rather than tidied away for that reason.*
 
 **No slice depends on anything outside W6b.** The `Depends on` column is now internal only.
 
@@ -246,12 +263,13 @@ the cell reads **unowned** in that word.
 | # | Proposal | Proposed owner | Accepted |
 |---|---|---|---|
 | **P1** | **Decide `OQ-PLAT-12`** — what tells the API a workspace selection *changed*. Its recommendation is **(b) reached through (c)'s surface**: store the previous selection *and* add an explicit `POST /api/v1/me/workspace`. That is a schema change plus a new endpoint. **Neither this map nor the work lead may pick it** (§10) | maintainer; then `W6b-11b`, **or a W32 successor** if decided as recommended, since the recommended shape is not browser work | *pending* |
-| **P2** | **The slice re-cut in §3** — the `W6b-1` and `W6b-13` splits, the lineage reassignment, and `W6b-14`. Authorised in principle by review 4's *"the slice map determines the slices"*; recorded here for a signature rather than assumed | this map | *pending* |
+| **P2** | **The slice re-cut in §3** — the `W6b-1` and `W6b-13` splits, the lineage reassignment, and `W6b-14`. **The `W6b-11` split is deliberately not in this row; it is P8**, because it can be rejected on its own. Authorised in principle by review 4's *"the slice map determines the slices"*; recorded here for a signature rather than assumed | this map | *pending* |
 | **P3** | **Amend `01:844` in the same commit as the reassignment.** The row says *"Three code defects go with it, owner `W6b-13`"* about work §3 gives `W6b-12`. Map-only would leave spec and plan disagreeing, which §0 forbids resolving silently. **The amendment appends a dated note; it does not rewrite the clause** — an owner clause names the remainder *at the time*, and overwriting it destroys what was believed on 2026-08-23. The same note should record that `DatasetLineage` is spec-only and that typing the handler is `W6b-12`'s primary work, not a fourth defect | `W6b-12` | *pending* |
 | **P4** | **The modelling PII guard is not W6b's and must not be absorbed into it.** A column classified `direct_identifier` is fittable today: `modelling_forbidden_columns` has one runtime caller (ingestion), and nothing derives `Factor.prohibited` from the column classification. It sits on `FR-DATA-13` and `FR-MODEL-5`, **outside W32's 27 ids**, so booking it *reassigned* would assert a custody W32 never had. It needs a new id and a new unit. Not a raw-PII breach — ingestion still refuses and values are tokenised — but **a stable token is a perfect-fit per-customer feature**, so it is a modelling defect and not only a governance one | **unowned** — pending a maintainer line | *pending* |
 | **P5** | **`W6b-13`'s title is wrong and should be restated as rule versioning**, since `FR-DATA-54` forbids the set-level editing the title names | `W6b-13` | *pending* |
 | **P6** | **Give `scope-audit.py --params` a row.** Accepted 2026-08-22; `grep -c params scripts/scope-audit.py` returns 0. Carried forward because review 4 proposed only *"give it an owner"* and named none | **unowned** | *pending* |
 | **P7** | **`W18` owns `FR-GOV-16`**, corrected with a dated note. Carried unchanged from the frozen map's §2; the roadmap already reads this way at `:2556` | `W18`, Phase 3 | *pending* |
+| **P8** | **The `W6b-11` split** into the selector shell and `W6b-11b`, the switch audit. Separated from **P2** rather than folded into it, because it is the one split whose justification is **expected to expire**: the other three are cut on artifact boundaries that do not move, while this one is cut on `OQ-PLAT-12` being undecided. If **P1** resolves such that the audit work is not browser work at all, this split does not merely become unnecessary — `W6b-11b` **vacates**, and its obligation moves with the decision. A reviewer must therefore be able to accept the re-cut and still keep `W6b-11` whole, which a single P2 signature cannot express | `W6b-11` | *pending* |
 
 **Highest ids in use**, verified 2026-08-24 at `e2ae7c6` by scanning [`../specs/`](../specs/) —
 a maximum, not the last id read, because the tables are not in numeric order. For whoever
@@ -295,7 +313,8 @@ restated here and is not superseded by this one; where the two overlap, that fil
 
 | Proposal | Accepted |
 |---|---|
-| The sixteen-slice decomposition in §3 (**P2**) | *pending* |
+| The seventeen-slice decomposition in §3 (**P2**) | *pending* |
+| **P8** the `W6b-11` split — separable from P2, and **vacates** if P1 goes the other way | *pending* |
 | The sequencing in §3, and `W6b-1a` first | *pending* |
 | **P1** `OQ-PLAT-12` — and it may not be decided by a session | *pending* |
 | **P3** the `01:844` amendment, landing in the same commit as the reassignment | *pending* |
