@@ -146,6 +146,36 @@ two of them expanded from a single `VR-ACT-1/2/8` comment, and the honest count 
 Before trusting an injection, ask **which claim it falsifies**. If the check says "this rule
 is implemented", break the *implementation* — not a comment that happens to name it.
 
+### A check's design note must say which part fails open and which fails closed
+
+Proving a check fires is not enough if the note beside it misattributes *why*. The W32
+closure tripwire is `^#+ W32[a-z]?([ —].*)?: closed <date>`, and its design note credited
+`[a-z]?` with keeping slice headings out. It does not. `^#+ W32[a-z]?.*: closed …` fires on
+`W32-7` and `W32-11` — **the whole exclusion lives in the constrained separator group**,
+`([ —].*)?`, and the letter class only buys coverage of a split-then-letter `W32a` (`\b`
+loses that form outright: `2` and `a` are both word characters, so there is no boundary).
+
+| Token | Job | If weakened |
+|---|---|---|
+| `([ —].*)?` | **Safety** — excludes slices | Reports the *workstream* closed when a *slice* closed |
+| `[a-z]?` | **Coverage** — admits `W32a` | Goes silent on the split-then-letter form |
+
+**The safety token is always the one that looks over-engineered**, so a note saying only
+*what* the pattern matches invites the next maintainer to simplify exactly the half that
+must not move — and the failure is silent in the direction that matters. Name the two roles.
+This generalises past regexes to any validator with a permissive and a restrictive half.
+
+### Do not re-derive a metric a script already computes — run the script
+
+Auditing `req-coverage.py` by reimplementing its walk returned **261** against the script's
+**266**: `testpaths` carries a repository-level root beyond `backend/` and `packages/`, and
+the hand-rolled version missed it. A 2 % reimplementation error — larger than most defects
+such an audit is looking for, and indistinguishable from a real finding.
+
+A second implementation of a metric is a **second thing to be wrong**, not a check on the
+first. If the script's *definition* is what is in doubt, read its source and say so; if the
+*number* is what is wanted, run it and cite the SHA it was run at.
+
 ### A generated artifact matching its source proves neither is correct
 
 W2's contract drift check passed while the published OpenAPI advertised an error model the
