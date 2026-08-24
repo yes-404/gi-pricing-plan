@@ -11,6 +11,7 @@ import GbmEvalCurveChart from "@/components/GbmEvalCurveChart.vue";
 import GbmImportanceCharts from "@/components/GbmImportanceCharts.vue";
 import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
 import LiftChart from "@/components/LiftChart.vue";
+import PartialDependencePanel from "@/components/PartialDependencePanel.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
 
@@ -249,6 +250,11 @@ onMounted(async () => {
           :permutation-importances="diagnostics.gbm.permutation_importances"
           :monotonicity="diagnostics.gbm.monotonicity"
         />
+
+        <h3 class="mt-8 text-sm font-semibold text-slate-700">
+          Partial dependence
+        </h3>
+        <PartialDependencePanel :partial-dependence="diagnostics.gbm.partial_dependence" />
 
         <table
           aria-label="Tree summary"
