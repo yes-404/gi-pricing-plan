@@ -39,10 +39,10 @@ contract, not a default behaviour a general skill is entitled to replace.
 
 | Skill | Purpose | Source | Last verified |
 |---|---|---|---|
-| [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup — both `git branch -d` and `ExitWorktree`, which refuse for the same ancestry reason and say different things about it — how a squash title and body are composed, the merge-order trap that strands work, and how a stacked PR survives the merge below it | self-written | 2026-08-22 |
+| [`git-hygiene`](git-hygiene/SKILL.md) | Branch and PR flow, `.gitignore` rules (including what must **not** be ignored), squash-merge cleanup — both `git branch -d` and `ExitWorktree`, which refuse for the same ancestry reason and say different things about it — how a squash title and body are composed, the merge-order trap that strands work, how a stacked PR survives the merge below it, and **why bare `git stash` is unsafe here** — one stash stack is shared by every worktree | self-written | 2026-08-24 |
 | [`spec-change`](spec-change/SKILL.md) | Add or modify a requirement, section, or open question in `docs/specs/` — append-only IDs, ten-section standard, both-direction cross-referencing, what recording a *decision* touches, and the four things a spec introducing a custom objective must say | self-written | 2026-08-23 |
 | [`docs-audit`](docs-audit/SKILL.md) | Verify suite integrity before a commit or PR — 22 checks (8 bookkeeping, 8 structural, 5 over the `.claude/notes/` working notes, 1 over the journeys' interface citations) plus the decision-gate invariant the script does not cover | self-written | 2026-08-18 |
-| [`close-workstream`](close-workstream/SKILL.md) | Audit a workstream against `CLAUDE.md` §13 before writing "closed" into the roadmap — **scope derived from the specs first**, then evidence; gate run locally, new checks proven non-trivial, NFRs measured, every gap given a verdict | self-written | 2026-08-14 |
+| [`close-workstream`](close-workstream/SKILL.md) | Audit a workstream against `CLAUDE.md` §13 before writing "closed" into the roadmap — **scope derived from the specs first**, then evidence; gate run locally, new checks proven non-trivial, NFRs measured, every gap given a verdict. Also: a check's design note must say which half **fails open**, which **fails closed** and **what it cannot see at all**; a metric a script computes is **run, never re-derived**, and a repository population is counted with **`git grep`**, whose index excludes ignored output by construction; and a **retraction is verified against the artifact it retracts**, never against the retractor's account of it | self-written | 2026-08-24 |
 | [`phase-review`](phase-review/SKILL.md) | Run `CLAUDE.md` §14's plan review — five questions in order, each answered including "no change"; proposals with a maintainer acceptance line, never edits. Written after the procedure had run twice, as §14 requires | self-written | 2026-08-15 |
 | [`adr-write`](adr-write/SKILL.md) | Create, supersede, or annotate an architecture decision record — including the addendum-versus-edit rule that keeps accepted ADRs immutable | self-written | 2026-08-14 |
 | [`contract-schema`](contract-schema/SKILL.md) | Add or modify a JSON Schema contract in `docs/contracts/` — money conventions, `invariants` annotation, duplicate-key and `$ref` traps, why hand-authored schemas are patched as text, and registering a new schema's slug so the type comparison actually reads it | self-written | 2026-08-19 |
@@ -188,6 +188,14 @@ catches it is a human one.
 
 Vendored files are kept **as upstream wrote them** and are excluded from `ruff` — linting
 someone else's code to our rules produces churn and breaks that promise.
+
+**Recorded deviations** — where a vendored skill is hazardous *in this repository's conditions*
+without being wrong upstream. §12 requires these written here rather than edited into the
+vendored file.
+
+| Skill | What it says | Why it does not hold here | Follow instead |
+|---|---|---|---|
+| `testing-strategy` | The "prove the guard fails" recipe reverts a fix with `git stash` | This repo runs parallel sessions in `.claude/worktrees/*`, and **the stash stack is shared by every worktree**. A bare `stash`/`stash pop` can pop a peer's entry into your tree. Upstream assumes one worktree, where the advice is sound | `git-hygiene`'s stash section — a WIP commit, or `stash push -m <tag>` and `apply <sha>`. The same sentence's *hand-edit* branch is also safe |
 
 Not installed, worth revisiting when the phase needs them: `github-actions` (CI cost and
 trigger hygiene), `performance` (Phase 2, NFR-RATE-1), `api-design` and

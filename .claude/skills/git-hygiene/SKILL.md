@@ -66,6 +66,41 @@ unchanged — silently, so a following `gh pr view` is the only way to notice. T
 above works where the `gh` subcommand does not, which generalises: when `gh` fails on a
 field it did not need, reach for `gh api`.
 
+## The stash stack is shared by every worktree — never use bare `git stash`
+
+**There is one stash stack per repository, not one per worktree.** Every parallel session in
+this repo — the main checkout and every `.claude/worktrees/*` — pushes onto and pops off the
+same stack. A bare `git stash` followed by `git stash pop` therefore has no guarantee it
+restores your own work: a peer that stashed in between is what you pop, into *your* tree, and
+your changes stay buried under theirs.
+
+**Prefer a throwaway WIP commit.** It is per-branch, so it cannot collide:
+
+```bash
+git commit -am "wip"                          # set aside
+git reset --soft HEAD~1                       # bring back
+```
+
+If you must stash, never pop and never index by position:
+
+```bash
+git stash push -u -m "w32-11-certfloors"      # unique tag, -u keeps untracked files
+git stash list --format='%H %gs'              # capture YOUR entry's SHA immediately
+git stash apply <sha>                         # apply by SHA, not stash@{0}
+git stash drop "$(git stash list --format='%gd %gs' | grep w32-11-certfloors | cut -d' ' -f1)"
+```
+
+`stash@{n}` is a position in a stack other sessions are mutating, so it means something
+different by the time you use it — the same failure mode as any positional reference into a
+list you do not own.
+
+**One skill still teaches the retired advice.** `testing-strategy`'s "prove the guard fails"
+recipe says *"revert the fix (git stash, or hand-edit the guard back to its broken form)"*.
+That skill is **vendored** and is not edited (`CLAUDE.md` §12), and it is not wrong upstream —
+`git stash` is safe in a single-worktree repo. It is wrong **in this repository's conditions**.
+Take the hand-edit branch of that sentence, or a WIP commit. The deviation is recorded in
+`.claude/skills/README.md` rather than made silently in the vendored file.
+
 ## Rebasing a branch another worktree has checked out
 
 A stale branch is often checked out **in another worktree with uncommitted work on top** —
