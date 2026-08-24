@@ -668,7 +668,10 @@ def _arms(document: dict[str, Any], node: dict[str, Any], base: pathlib.Path) ->
     A variant's own tag may name several values at once — the shared `GbmSpec` branch is
     tagged `{xgboost, lightgbm}` — so the tags are not themselves the arms. Splitting them
     to one value each gives the coordinate system both sides are expanded onto, and it is
-    the same set whether it was built from a `discriminator.mapping` or from four `if`s.
+    the same set however each side spells it. `model-spec` is the worked example: the
+    generated side declares four `discriminator.mapping` entries, the authored side three
+    `if`s (`glm`, `{xgboost, lightgbm}`, `ebm`). Different branch counts, one arm set — which
+    is the whole reason arms are the coordinate system and branches are not.
 
     A document with no union yields `{frozenset()}`: one unconditional arm, which is what
     keeps the union-free majority of `COMPARED_SLUGS` comparing exactly as before.
