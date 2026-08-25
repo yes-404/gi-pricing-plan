@@ -135,7 +135,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | D3 | Pricing Actuary | `GET /custom-objectives/{id}/usage` — `@1` is used by 4 Models, 2 Peril Structures, and 1 live Rating Version. | `02` FR-MODEL-47 |
 | D4 | Pricing Actuary | Understands that adopting `@2` means refitting those models and a new Rating Version. Existing models keep `@1` pinned and keep working. | FR-OVR-1 |
 | D5 | Pricing Actuary | Certifies and approves `@2`; refits one model with it and compares against the `@1` model on the shared holdout. | `02` FR-MODEL-56 |
-| D6 | Admin | Marks `@1` `deprecated`: existing pinned uses continue, new specs cannot select it. | `02` FR-MODEL-46 |
+| D6 | Admin | Marks `@1` `deprecated`: existing pinned uses continue (FR-OVR-1's immutability — nothing is hard-deleted), and whether new specs may select a deprecated version is **OQ-MODEL-42**, open. | `02` FR-MODEL-46, OQ-MODEL-42 |
 
 ---
 

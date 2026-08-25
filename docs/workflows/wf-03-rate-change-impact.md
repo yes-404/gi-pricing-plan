@@ -82,7 +82,7 @@
 | # | Actor | Action | Refs |
 |---|---|---|---|
 | F1 | Pricing Actuary | Submits the Rating Version with the optimisation run, GIPP check, and dislocation attached. | `06` FR-GOV-10 |
-| F2 | Approver | Reviews the *binding constraints* alongside the headline numbers — the platform makes that unavoidable rather than optional. | `04` FR-OPT-12 |
+| F2 | Approver | Reviews the *binding constraints* alongside the headline numbers — `04` FR-OPT-12 reports each constraint's binding state and shadow price in the run result. | `04` FR-OPT-12 |
 | F3 | Approver | Approves, or requests changes, or the committee decides not to proceed. | `06` FR-GOV-9/13 |
 | F4 | Backend | Records the decision either way. **A decision not to change prices is recorded with its evidence**, which matters when the same question is asked next quarter. | `06` FR-GOV-20 |
 
