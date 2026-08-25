@@ -92,6 +92,21 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `02` §5.3. Three segments, so it cannot collide with `/models/:slug` — the ranking
+    // question recorded at the `/models/compare` entry does not arise here, and
+    // `/models/:slug/diagnostics` above is the precedent for exactly this shape.
+    //
+    // Function-mode props, not `props: true`: the boolean form maps `route.params` only, and
+    // `?version=` is a query.
+    path: "/models/:slug/predict",
+    name: "model-predict",
+    component: () => import("@/views/PredictionView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: typeof route.query.version === "string" ? route.query.version : undefined,
+    }),
+  },
+  {
     // `02` §5.3's Model spec builder.
     //
     // Declared above `/models/:slug` for readability, **not** because order decides the

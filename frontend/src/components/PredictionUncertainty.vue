@@ -84,8 +84,7 @@ const percent = computed(() =>
         {{ row.lower }} &ndash; {{ row.upper }}
       </p>
       <p class="text-xs text-slate-600">
-        <template v-if="percent">{{ percent }} interval for </template>
-        <template v-else>Interval for </template>{{ claim }}.
+        {{ percent === null ? "Interval" : `${percent} interval` }} for {{ claim }}.
       </p>
       <p
         v-if="showBasis"
