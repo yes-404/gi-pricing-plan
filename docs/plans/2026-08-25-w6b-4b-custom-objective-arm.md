@@ -14,10 +14,36 @@ the lead's and is not touched here.
 
 ---
 
+## Prerequisites
+
+**The validator must stop refusing every custom objective before this picker is built.**
+`_objective_problems` returned `OBJECTIVE_UNSUPPORTED` for every `kind: "custom"` spec, on
+the stated ground that FR-MODEL-38 "no slice has built". `02` §5.3 puts live validation on
+the very view this slice extends, so the picker would have composed specs its own screen
+immediately refused.
+
+That refusal was **stale, and the spec had said so in advance**: `02` §5.1:1933 authorised
+it conditionally — "a Custom Objective **while FR-MODEL-38 is unbuilt**" — and FR-MODEL-38
+ships end to end. Retiring it is a §0 resolution, not a capability: it landed as its own
+change, mirroring `pricing_core.modelling.gbm`'s checks and stopping there, with the test
+that forbade custom objectives rewritten to permit a `certified` one.
+
+Named by content rather than by number, because a plan is frozen at its date and a PR
+number is a fact about one repository's sequence, not about what this slice needs.
+
+**The boundary that change does not move.** W6b may discharge an expired condition in
+behaviour the spec has already fixed. W6b may **not** author new capability on a backend or
+`model-schema` surface. `OQ-MODEL-37`(a) and (b) and `OQ-MODEL-35`(c) therefore keep **no
+owner** — they need a maintainer's design decision, not permission for W6b to touch Python.
+
+---
+
 ## Global Constraints
 
 - **No backend change**, and no `model-schema` change. Both of this slice's structural
-  findings want one and neither may have it here.
+  findings want one and neither may have it here. The prerequisite above is a separate
+  change for exactly this reason: it keeps this line literally true, and with it the
+  interim-guard reasoning of F1 and F2 and OQ-MODEL-37's no-owner disposition.
 - **`docs/roadmap.md` is not edited.**
 - **Nothing hand-writes a shape `model-schema` declares** — and this slice exists partly
   because 4a broke that rule in one place (F1).
@@ -87,8 +113,23 @@ a description string that ends "…" and says "Not an enum".
 unions, derivable as `GlmSpec["family"]`, `GlmSpec["link"]` and
 `NonNullable<ModelSpec["response"]>`. Lower stakes than F1 — a stale copy here renders a
 missing option rather than a wrong claim about what the platform supports — but the same
-class. Fixed in passing, and pinned with a `.test-d.ts` the way `SpecProblemKind` is, so a
-member added to the contract fails at type-check rather than silently narrowing a picker.
+class. Fixed in passing.
+
+**Two corrections to how, both from arbitration.**
+
+`satisfies readonly GlmSpec["family"][]` catches a **wrong** member, not a **missing** one:
+a subset satisfies the constraint, so a member the contract *adds* narrows the picker
+silently — which is the direction F2 said it wanted to catch. The pin is therefore
+`expectTypeOf<GlmSpec["family"]>().toEqualTypeOf<typeof FAMILIES[number]>()`, the
+`SpecProblemList.test-d.ts` precedent, with `satisfies` kept for the other direction.
+
+And the scope widens to **`ModelSpecBuilderView.vue`:69-71**, where `family` and `link` are
+written a **third** time as `ref<"poisson" | …>` annotations. Deriving the arrays while
+leaving those would fix the copy that *lists* the vocabulary and leave the copy that *types
+the state* — which is the one a wrong value flows out of.
+
+The lists move to `@/api/modelSpecs` so the type test can import them: a list the test
+cannot see is a list the pin does not cover.
 
 ---
 
@@ -131,25 +172,37 @@ are `frontend/**` and the workflow file. `python.yml` by contrast puts `docs/con
 cost is nil and PR-only coverage depends on the never-push-to-main policy holding. The
 pre-existing asymmetry on the openapi entry is **not** changed here — noticed, not fixed.
 
-### Decision 2 — which objective statuses the picker offers
+### Decision 2 — which objective statuses the picker offers — **DECIDED: all three**
 
-Carried from 4a's plan, unresolved. `02` §5.3's Contents cell says "builtin or **approved**
-custom"; the cell is prose under FR-OVR-21. The binding rule is **R4** (`02`:49): "A Model
-using a Custom Objective can only reach `approved` if that objective is itself `approved`" —
-a constraint on the **Model reaching approved**, not on what a draft spec may reference.
+**The set already exists and I should not have been recommending one.**
+`FITTABLE_OBJECTIVE_STATUSES` (`model_schema/objectives.py`:174) is
+`{certified, review, approved}`, exported, and enforced at `gbm.py`:532. Its own comment
+answers the R4 reasoning I had been building on, verbatim: *"Not the same set as the one R4
+requires for the model to reach `approved` — that is `approved` alone."*
 
-`ObjectiveStatus` is `draft | certified | review | approved | deprecated` (FR-MODEL-46).
+This plan first recommended `approved` + `certified`, which **omits `review`** and would
+have made the picker **stricter than the fit** — an actuary unable to select an objective
+the platform would accept, with nothing on screen to say why. All three are reachable
+through the product's own routes (`certify`, `submit`, the approval mapping at
+`platform/objectives.py`:873), so hiding `review` hides objectives the platform creates.
 
-**Recommendation: `approved` and `certified`, with `certified` marked**, as in the 4a plan.
-Under R4 a spec referencing a `certified` objective is authorable and fittable; it simply
-cannot carry the resulting Model to `approved` until the objective gets there. `certified` is
-the state an objective sits in while its approval is in flight, and excluding it makes the
-picker useless during exactly the window when a new objective is interesting. The mark is the
-disclosure — the difference between "this will fit" and "this will fit and then stop at
-approval", which the analyst should learn at build time rather than at submission.
+**The picker derives its set from `FITTABLE_OBJECTIVE_STATUSES` and does not spell it out.**
+Spelling it would have been the **fourth** hand-written list in this file after F1's and
+F2's three. My standing check from F1 did not fire because it grepped `pricing_core` only;
+it now greps `model_schema` too.
 
-`draft` and `deprecated` are excluded under every option: `draft` has not passed FR-MODEL-42's
-certificate checks, `deprecated` is withdrawn from use.
+`ObjectiveStatus` *is* a generated schema, so the **type** derives cleanly. The **subset**
+does not: it reaches no contract, which is OQ-MODEL-37's defect one surface over — hence the
+widening in §2. The divergence test extends to read both files.
+
+`draft` and `deprecated` are outside the set: `draft` has no certificate, so FR-MODEL-42 is
+unsatisfied and its derivatives are unproven; `deprecated` has been withdrawn.
+
+**Labelling is a live question, not a settled one.** `model_schema/objectives.py`:160-161
+pins the transitions — `REVIEW → {APPROVED, CERTIFIED}`, and neither `DRAFT` nor `CERTIFIED`
+may jump straight to `APPROVED` (pinned at `test_objectives.py`:226-227). So "in review" is
+not simply a step before "approved"; a label implying a linear ladder would misdescribe the
+lifecycle. Read the transitions before writing any label.
 
 ### Decision 3 — applicability filtering across pages (OQ-MODEL-35(a))
 
@@ -163,10 +216,14 @@ so offering an inapplicable objective manufactures the error the requirement pre
 implementation that quietly stops paging reproduces the defect the question exists to fix — a
 picker that cannot distinguish "none applicable" from "none seen".
 
-**Design: fetch at most 5 pages at `limit=200`** (1000 objectives; `MAX_LIMIT` is 200), and
-**when `next_cursor` is still non-null at the cap, the picker says so** rather than presenting
-a filtered list as complete. Both branches tested, including the disclosure — a truncation
-nobody can see is the thing being guarded against.
+**DECIDED: fetch at most 5 pages at `limit=200`** (1000 objectives; `MAX_LIMIT` verified 200),
+and **when `next_cursor` is still non-null at the cap, the picker says so** rather than
+presenting a filtered list as complete. Both branches tested, including the disclosure — a
+truncation nobody can see is the thing being guarded against.
+
+**The cap is a named constant citing OQ-MODEL-35**, not a bare `5` in a loop. A magic number
+here would send the next reader looking for a rationale that lives in an open question they
+have no reason to know exists; the name is what carries them to it.
 
 ---
 
