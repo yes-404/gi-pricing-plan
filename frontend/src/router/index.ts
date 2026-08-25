@@ -136,6 +136,14 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/MetricLibraryView.vue"),
   },
   {
+    // `02` §5.3:2595. Static, and `/peril-structures/:id` below is dynamic — a static segment
+    // outranks a dynamic one from either position, so the tests assert resolution rather than
+    // declaration order.
+    path: "/peril-structures",
+    name: "peril-structure-library",
+    component: () => import("@/views/PerilStructureLibraryView.vue"),
+  },
+  {
     // `02` §5.3's Model spec builder.
     //
     // Declared above `/models/:slug` for readability, **not** because order decides the

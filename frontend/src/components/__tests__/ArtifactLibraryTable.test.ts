@@ -63,12 +63,18 @@ describe("the column set", () => {
   // A Peril Structure has no `applicability` — FR-MODEL-44's objective/metric concept — and
   // FR-MODEL-127 forbids it a usage count.
   const PERIL_COLUMNS = ["slug", "version", "status"] as const;
+  // **These rows deliberately CARRY `usageCount` and `applicability`.** With them absent, "no
+  // usage column" is satisfied by the value being missing — exactly what a value-driven
+  // component would also produce — so the test could not tell the two apart. Carrying values
+  // the column set excludes is what proves rendering is driven by `columns`.
   const PERIL_ROWS = [
     {
       id: "p1",
       slug: "motor-2026",
       version: 3,
       status: "reconciled" as const,
+      applicability: ["claim_count"],
+      usageCount: 7,
       href: "/peril-structures/p1",
     },
   ];
@@ -111,5 +117,14 @@ describe("the column set", () => {
     );
     expect(headers.some((h) => h.includes("used by"))).toBe(true);
     expect(headers.some((h) => h.includes("applicab"))).toBe(true);
+  });
+
+  it("renders no usage value even when the row carries one", () => {
+    // The behaviour half of the assertion above: not just a missing header, but the value
+    // itself nowhere on the page. FR-MODEL-127 gives a Peril Structure no usage count, so a
+    // row that somehow carries one must not surface it.
+    const { container } = perilTable();
+    expect(container.textContent ?? "").not.toContain("7");
+    expect(container.textContent ?? "").not.toContain("claim_count");
   });
 });

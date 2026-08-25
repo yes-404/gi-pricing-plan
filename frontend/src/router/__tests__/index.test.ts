@@ -100,6 +100,13 @@ describe("the /models routes", () => {
     expect(resolved.params.id).toBe("a1");
   });
 
+  it("resolves the peril structure library", () => {
+    // The detail route lands with its view. Asserted by resolution, like its neighbours.
+    expect(router().resolve("/peril-structures").matched.map((r) => r.name)).toContain(
+      "peril-structure-library",
+    );
+  });
+
   it("resolves the two library routes", () => {
     expect(router().resolve("/objectives").matched.map((r) => r.name)).toContain(
       "objective-library",
