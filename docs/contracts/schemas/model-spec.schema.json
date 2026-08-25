@@ -76,7 +76,7 @@
           },
           "custom_objective_ref": {
             "type": ["string", "null"],
-            "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner Phase 1b). `GlmSpec` carries no such field; `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend nothing reaches yet."
+            "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner W30 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `Model` twin). `GlmSpec` carries no such field; `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend nothing reaches yet."
           }
         }
       }
