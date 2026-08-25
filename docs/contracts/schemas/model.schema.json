@@ -161,11 +161,11 @@
     "diagnostics_id": {"type": ["string", "null"], "format": "uuid"},
     "transparency_artifact_id": {
       "type": ["string", "null"], "format": "uuid",
-      "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner W5). `Model` carries no such field. FR-MODEL-96 (built 2026-08-19) made the reference run the other way — `TransparencyArtifact.model_id` — and R3 is enforced by query at model submission, so whether this back-pointer is still wanted is an open question rather than a gap to fill."
+      "description": "DECLARED AND UNBUILT — SUPERSEDED, NOT OWED (FR-MODEL-87, amended 2026-08-22). `Model` carries no such field and none is coming: the open question this description used to pose was answered on that date, and W5 no longer owns it. FR-MODEL-96 (built 2026-08-19) made the reference run the other way — `TransparencyArtifact.model_id` — and `ix_transparency_model` is not unique, so a single id here could name only one of the artifacts a model accumulates as it is re-derived. R3 is enforced by query at model submission (FR-MODEL-89). The property is kept rather than dropped because external consumers have read it since Phase 0."
     },
     "custom_objective_ref": {
       "type": ["string", "null"],
-      "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner Phase 1b). A custom objective on the GLM arm needs `GlmSpec.custom_objective_ref`, which is absent entirely; a GBM names its objective through `spec.objective` instead."
+      "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner W30 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `GlmSpec` twin, not the `Model` one alone). A custom objective on the GLM arm needs `GlmSpec.custom_objective_ref`, which is absent entirely; a GBM names its objective through `spec.objective` instead, and R4 is enforced off that ref rather than this one. This field would record what the GLM arm cannot yet declare, so it cannot be built before its twin."
     },
     "parent_model_id": {"type": ["string", "null"], "format": "uuid"},
     "change_reason": {

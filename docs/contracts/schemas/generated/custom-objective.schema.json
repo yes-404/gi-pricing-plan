@@ -53,7 +53,7 @@
       "type": "string"
     },
     "ObjectiveBackend": {
-      "description": "FR-MODEL-44's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-MODEL-87 records as absent entirely and\nowned by Phase 1b. The member exists because FR-MODEL-44 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
+      "description": "FR-MODEL-44's backend vocabulary.\n\n`glm` is declared and no shipped template names it: a custom objective on the GLM arm\nneeds `GlmSpec.custom_objective_ref`, which FR-MODEL-87 records as absent entirely\nand owned by W30 — Phase 2, not this one. The owner was reassigned on 2026-08-22 and\nconfirmed on 2026-08-25 to cover this field as well as its `Model` twin, which\nrecords what it declares. The member exists because FR-MODEL-44 names it and an author\nnarrowing applicability should not be able to name a backend the enum has never heard\nof — not because anything reaches it today.",
       "enum": [
         "xgboost",
         "lightgbm",

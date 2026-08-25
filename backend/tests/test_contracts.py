@@ -344,15 +344,26 @@ MODEL_ONLY_UNRECONCILED: Final[dict[str, frozenset[str]]] = {
 #: reader of the contract meets the same fact as a reader of this list:
 #:
 #: * `model.custom_objective_ref` / `model-spec`'s `custom_objective_ref` — FR-MODEL-87,
-#:   *"absent entirely … owned by Phase 1b"*. `ObjectiveBackend.glm` exists so an author can
-#:   narrow applicability to a backend nothing reaches yet (`objectives.py:101-114`).
-#: * `model-spec.filter` — FR-MODEL-87, same verdict, same owner.
-#: * `model.transparency_artifact_id` — FR-MODEL-87, *"declared and unbuilt, as §4.8 already
-#:   says of them … owned by W5"*. **Open question for the maintainer:** FR-MODEL-96 was
-#:   built on 2026-08-19 and made the reference run the other way — `TransparencyArtifact`
-#:   carries `model_id`, and R3 is enforced by query at
-#:   `backend/src/app/platform/modelling.py:1147`, not by a column on `Model`. Whether the
-#:   back-pointer is still wanted is a `CLAUDE.md` §0 question, not a test's to settle.
+#:   which gives the two *different* verdicts: the `GlmSpec` field is *"absent entirely"*
+#:   and the `Model` one *"declared and unbuilt"*. **Both are owned by W30** — Phase 2,
+#:   reassigned 2026-08-22 and confirmed 2026-08-25 to reach the pair rather than the
+#:   `Model` half alone. They cannot be split: `Model.custom_objective_ref` would record
+#:   what `GlmSpec.custom_objective_ref` declares, and a GBM names its objective through
+#:   `spec.objective` instead, which is what `02` R4 is enforced off.
+#:   `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend
+#:   nothing reaches yet (`objectives.py`, `ObjectiveBackend`).
+#: * `model-spec.filter` — FR-MODEL-87, *"absent entirely … owned by Phase 1b"*. **Still
+#:   Phase 1b**: the 2026-08-22 reassignment moved its list-mates and not it, so this entry
+#:   is the control showing that correction was not a blanket one.
+#: * `model.transparency_artifact_id` — FR-MODEL-87, and no longer *"declared and unbuilt …
+#:   owned by W5"*: the 2026-08-22 amendment **struck it from the residual list as
+#:   superseded rather than owed**, which answers the open question this note used to pose.
+#:   FR-MODEL-96 was built on 2026-08-19 and made the reference run the other way —
+#:   `TransparencyArtifact` carries `model_id`, and R3 is enforced by query in
+#:   `backend/src/app/platform/modelling.py` (`EVIDENCE_INCOMPLETE`), not by a column on
+#:   `Model`. The deciding fact is cardinality: `ix_transparency_model` is not unique, so a
+#:   single id here could name only one of the artifacts a model accumulates. It stays in
+#:   the contract as a documented dead property, never as a gap to fill.
 #: * `custom-objective`'s `if kind == "expression"` branch — `loss`, `derived`,
 #:   `bound_symbols`, `parameters`. `ObjectiveKind.EXPRESSION` is Phase 2 behind
 #:   `expression_objectives_enabled` (`objectives.py:75-81`) and `CustomObjective` **refuses
