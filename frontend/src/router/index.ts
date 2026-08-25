@@ -115,6 +115,15 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/ObjectiveLibraryView.vue"),
   },
   {
+    // `02` §5.3. `{id}`, not `:slug@:version` — the 2026-08-18 note's string was retired by
+    // this slice's amendment: all eight `/api/v1/custom-objectives` routes take an id, and an
+    // `@` in a path percent-encodes into every log line.
+    path: "/objectives/:id/certificate",
+    name: "objective-certificate",
+    component: () => import("@/views/ObjectiveCertificateView.vue"),
+    props: (route) => ({ id: String(route.params.id) }),
+  },
+  {
     // `02` §5.3's mirror of the objective library. **Name collision, latent and deliberate.**
     // The API serves an unauthenticated Prometheus endpoint at `/metrics`
     // (`backend/src/app/api/health.py`, FR-PLAT-40). Nothing collides today: the API is
