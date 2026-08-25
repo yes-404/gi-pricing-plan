@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 
 import { listDatasets, type Dataset } from "@/api/datasets";
 import { ProblemError } from "@/api/problem";
+import StatusBadge from "@/components/StatusBadge.vue";
 
 const datasets = ref<Dataset[]>([]);
 const totalEstimate = ref(0);
@@ -24,6 +25,35 @@ async function load(cursor?: string): Promise<void> {
   } finally {
     loading.value = false;
   }
+}
+
+/**
+ * When this Dataset was last usable, and — only where it matters — which version that was.
+ *
+ * FR-DATA-50 scopes the badge and this date differently on purpose. The badge answers *what
+ * state is the newest version in*; this answers *when was this Dataset last usable*, read off
+ * "the most recently `validated` version, which **need not be the latest one**". A Dataset
+ * whose v12 is a fresh `draft` above a `validated` v11 would otherwise render as never
+ * validated.
+ *
+ * The requirement then adds the clause this function exists for: "**where the two refer to
+ * different versions the list states which**, so the pair cannot be read as one fact." Named
+ * only on disagreement, which is the requirement's own predicate — where they agree they *are*
+ * one fact, and a version number in every row to disambiguate a case that is not present is
+ * noise, not honesty.
+ *
+ * No branch handles a date without its version. `model_schema.datasets` raises when
+ * `(last_validated_at is None) != (last_validated_version is None)` — "one fact (FR-DATA-50)"
+ * — so the half-populated state cannot reach here, and a defensive branch would be dead code
+ * asserting that a state exists which the contract forbids.
+ */
+function lastValidated(dataset: Dataset): string | null {
+  if (dataset.last_validated_at == null) return null;
+
+  const on = new Date(dataset.last_validated_at).toLocaleDateString();
+  return dataset.last_validated_version === dataset.latest_version
+    ? on
+    : `v${dataset.last_validated_version} · ${on}`;
 }
 
 onMounted(() => void load());
@@ -123,6 +153,24 @@ onMounted(() => void load());
           >
             Latest version
           </th>
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
+            Status
+          </th>
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
+            Last validated
+          </th>
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
+            Owner
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -147,6 +195,34 @@ onMounted(() => void load());
           <td class="py-3 text-right tabular-nums text-slate-600">
             {{ dataset.latest_version === null || dataset.latest_version === undefined
               ? "—" : `v${dataset.latest_version}` }}
+          </td>
+          <td class="py-3">
+            <StatusBadge
+              v-if="dataset.latest_version_status"
+              :status="dataset.latest_version_status"
+            />
+            <span
+              v-else
+              class="text-slate-500"
+            >—</span>
+          </td>
+          <td class="py-3 text-slate-600">
+            {{ lastValidated(dataset) ?? "—" }}
+          </td>
+          <!--
+            The whole `owner_id`, not a slice of it. An opaque id's only utility is exact copy
+            and exact search, and `String.slice` destroys both; narrowing is presentational, so
+            CSS does it. The value must also never live only in a `title`: a native tooltip is
+            not dismissable, hoverable or persistent, and is unreachable by keyboard and touch
+            — WCAG 2.2 SC 1.4.13, which NFR-OVR-10 binds this SPA to at AA.
+
+            It names nobody, and that is the honest rendering: no endpoint resolves a principal
+            id to a person (`/api/v1/me` answers for the caller alone), which is OQ-OVR-15.
+          -->
+          <td class="py-3">
+            <span
+              class="block max-w-[12ch] truncate font-mono text-xs text-slate-500"
+            >{{ dataset.owner_id }}</span>
           </td>
         </tr>
       </tbody>
