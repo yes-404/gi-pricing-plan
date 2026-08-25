@@ -130,6 +130,19 @@ describe("the rule set view", () => {
     expect(within(table).getByText("overridden")).toBeInTheDocument();
   });
 
+  it("offers the next version of a rule rather than a threshold edit (FR-DATA-54)", async () => {
+    render(RuleSetView, { props, ...mounted });
+    const row = (await screen.findByText("driv-age-range")).closest("tr")!;
+
+    await userEvent.click(within(row).getByRole("button", { name: /new version/i }));
+
+    // The builder opens carrying this rule, so the thresholds are already in the box. The
+    // set is untouched: a threshold is not a set-level override, and `FR-DATA-54` gives an
+    // entry exactly `enabled` and `severity_override`.
+    expect(await screen.findByDisplayValue("driv-age-range")).toBeInTheDocument();
+    expect(putBodies).toHaveLength(0);
+  });
+
   it("reads a refusal to self-approve as separation of duties, not missing access", async () => {
     stub(ruleSet({ entries: [{ rule: rule({ status: "review" }), enabled: true, severity_override: null }] }),
       200, 409,
