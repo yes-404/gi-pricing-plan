@@ -1,8 +1,9 @@
 # W6b-9 — The Chart/Table Retrofit Implementation Plan
 
-**Status:** proposed, 2026-08-25. Awaiting the lead's arbitration on the two decisions in
-[§Decisions for arbitration](#decisions-for-arbitration). **No code is written until that
-line is signed.**
+**Status:** **approved 2026-08-25 by `w6b-lead`**, arbitrating in the maintainer's stead
+because `w6b-planner` is unreachable. Decision 1 → **(c)**, Decision 2 → **(a)**, each with a
+condition recorded at the decision itself. Two interactions the proposed plan did not name
+were added by the same review and are [§Interactions](#interactions-this-slice-touches-but-does-not-resolve).
 
 **Author:** `w6b-executor`, planning rather than building because `w6b-planner` is no longer
 reachable and only the maintainer can restart it.
@@ -111,6 +112,18 @@ A retrofit is precisely where this bites, because a retrofit's whole job is to h
 `ChartFigure` a `columns`/`rows` pair transcribed from a chart option that is already
 correct. Three transcriptions, each of which the suite would accept scrambled.
 
+**A partial control does exist, found by the lead's review and narrowing what the helper
+adds.** `PartitionTable.test.ts:16` and `DiagnosticsView.test.ts:108` both pin an exact
+header sequence with `toEqual`, so a reorder of a **`columns` prop** is caught at those two
+call sites. That is not the same predicate as the claim above and does not refute it: those
+assertions compare headers to headers. The permutation this slice risks is of a **row's
+values** against unchanged headers, which a header-sequence assertion cannot see — the very
+next test in `PartitionTable.test.ts` reads its cell as `getAllByRole("cell")[0]`, positional
+like the other thirty-nine. So the existing control covers one of the two halves, at two of
+the call sites, and the helper is what covers the half that a transcription actually gets
+wrong. Stated because a reader who finds those two `toEqual`s later would otherwise read F2
+as overstated.
+
 ### F3 — untouched
 
 The slice map's "eight charts" against the contract's nine, with different membership. Filed
@@ -149,6 +162,17 @@ because it rewrites seven working call sites from #194 to fix a defect none of t
 `CLAUDE.md` §10 asks for the smallest sufficient change; raising it because "unrepresentable"
 beats "checked" when the cost is not this high.)*
 
+> **Arbitrated 2026-08-25 — (c), on the disjoint-inputs reasoning.**
+>
+> **Condition: the `columns`-keyed row type is *deferred with an owner*, not dropped.** §13's
+> four verdicts do not include silence, and "rejected as the default" is not one of them
+> either — what was argued above is that its cost is not worth paying *today*, at seven call
+> sites. That cost grows with every `ChartFigure` call site added, and the guard chosen
+> instead detects rather than prevents, so the trade re-opens on its own. **Owner: the next
+> chart-adding slice, which revisits it before adding its charts — not "someday".** Task 2
+> files it in `docs/open-questions.md` with that trigger, so the deferral is addressable
+> rather than a sentence in a frozen plan.
+
 ### Decision 2 — what becomes of `ProfileView`'s hand-written one-way table
 
 **(a) Move it into `OneWayChart` via `ChartFigure`, as a superset, and delete the view's.**
@@ -171,14 +195,81 @@ real cost and is stated rather than hidden; note in passing that `ProfileView` d
 `currency` to `"GBP"` when its prop is absent, which is a money-correctness question this
 slice observes and does not touch.
 
+> **Arbitrated 2026-08-25 — (a).**
+>
+> **Condition: taking (a) changes `ChartFigure`'s documented contract, and that cannot be
+> silent.** Its docstring says the component renders the chart *and the table saying the same
+> thing*. A superset does not say the same thing — it says that and more. Under `CLAUDE.md`
+> §0 a code/spec disagreement is resolved rather than quietly reconciled, so **the docstring
+> is amended in the same commit as the first superset call site** (§2: one change, one
+> commit), stating that a caller may add columns the chart does not plot **and why** — a
+> chart's series are chosen for what a reader can see at a glance, and the levels a table
+> also has room for are not a second figure. Amending it afterwards, or leaving the old
+> sentence standing next to a superset, is the divergence this repository keeps finding in
+> code comments that quote struck spec text.
+>
+> The "note in passing" above is **promoted to its own line item** by the same review, with
+> the router evidence that turns it from an observation into a finding: see [§Interactions
+> ](#interactions-this-slice-touches-but-does-not-resolve), item 2.
+
+---
+
+## Interactions this slice touches but does not resolve
+
+Both were found by the lead's review of the proposed plan, which is where they belong: they
+are consequences of Decision 2 that the decision itself does not make visible.
+
+### 1. Moving the one-way table relocates code governed by the open OQ-OVR-12
+
+`ProfileView`'s money cells carry a comment stating that `mean_severity` and
+`mean_burning_cost` are *"**float ratios**, not amounts"*, which is why they are rendered as
+statistics rather than through `formatMinor`, and why the `/ 100` scaling stays. That is a
+position on **exactly** the question `OQ-OVR-12` leaves open — whether burning cost is an
+amount or a statistic — where the same quantity is `MoneyMinor` in `perils.py` and
+`float | None` in `profiles.py`, and the row is `open`, owned by the maintainer.
+
+**So the comment moves verbatim with the code and is not re-argued.** Rewriting it while
+relocating it would decide an open question in a commit about accessibility tables, which is
+the silent pick `CLAUDE.md` §10 forbids, and it would do so on the side the OQ's own
+recommendation calls the *non*-divergent one. The rendering is unchanged: same fields, same
+`/ 100`, same "—" for null. This plan notes the relocation so that whoever decides OQ-OVR-12
+can find this call site, and does nothing else with it.
+
+### 2. Every profile renders non-GBP money with a GBP symbol — and it is two views, not one
+
+`ProfileView.vue:22` declares `currency?: string` and `:40` resolves it as
+`props.currency ?? "GBP"`. `ProfileView`'s only mount is `router/index.ts:43`, and the router
+supplies no `currency` to any route — `git grep currency -- frontend/src/router/index.ts`
+returns nothing. So the optional prop has no caller anywhere, the fallback is not a fallback
+but the only path, and `formatMinor(row.claim_amount_minor, currency)` prints `£` for a
+dataset denominated in anything else.
+
+**Wider than reported to me:** `VersionDetailView.vue:15,25` is the identical pattern with
+the identical absent caller, and formats `detail.totals.claim_amount_minor` the same way. Two
+views, not one.
+
+**And the right value exists.** `dataset.currency` is already carried on the dataset and
+rendered as text by `DatasetListView.vue:145` and `DatasetDetailView.vue:111`. Nothing needs
+to be added to a contract; the value simply is not threaded to the two views that format
+money with it.
+
+**Line item, and a constraint on this slice.** The fix is its own change — it spans a view
+this slice does not otherwise touch, and a money defect should not arrive inside an
+accessibility commit where a reviewer is looking at table markup. Task 5 files it and does
+not fix it. What Task 5 **must** do is not propagate it: **`OneWayChart`'s new `currency`
+prop is required, not `currency?: string` with a `"GBP"` default.** A required prop makes the
+missing value a `vue-tsc` error at the call site the day someone threads it properly; an
+optional one with the same default silently reproduces the bug one component deeper, and
+gives it a second home to be fixed in.
+
 ---
 
 ## File Structure
 
 ```
 frontend/src/components/
-  ChartFigure.vue                     MODIFIED  arity guard (Decision 1a)
-  OneWayChart.vue                     MODIFIED  ChartFigure + CI column + currency prop
+  ChartFigure.vue                     MODIFIED  arity guard, + docstring contract amended
+  OneWayChart.vue                     MODIFIED  ChartFigure + CI column + required currency
   HistogramChart.vue                  MODIFIED  ChartFigure
   DoubleLiftChart.vue                 MODIFIED  ChartFigure
   __tests__/
@@ -191,7 +282,16 @@ frontend/src/test/
 frontend/src/views/
   ProfileView.vue                     MODIFIED  hand table deleted (Decision 2a)
   __tests__/ProfileView.test.ts       MODIFIED  stop stubbing OneWayChart, or assert in kind
+docs/
+  open-questions.md                   MODIFIED  the deferred keyed-row type (Decision 1's
+                                                condition), mirrored into its spec §10
+  specs/00-overview.md                MODIFIED  the same OQ's mirrored body
+.claude/notes/                        NEW       the currency finding, if it lands as a note
 ```
+
+Nothing under `packages/` or `backend/` is touched: no contract changes, so
+`generate-contracts --check` should report the same 26 matching and `req-coverage` the same
+counts. A diff reaching either is a sign the slice has grown past its scope.
 
 ---
 
@@ -226,6 +326,17 @@ the guard's test and the third fails a `cellUnder` assertion — which is the de
 that the two catch disjoint classes. If the third case passes everything, (c) has not been
 built.
 
+**Also files the deferral** (Decision 1's condition). A new row in
+`docs/open-questions.md`, and mirrored into its spec's §10 as every OQ is: the
+`columns`-keyed row type, why it was not taken now — seven working call sites, none of which
+has the defect — and the trigger that re-opens it, namely that the guard detects where a
+keyed type would prevent, and the cost of converting grows with each call site added. **Owner:
+the next chart-adding slice, before it adds its charts.** Mirror both bodies identically; an
+OQ amended on one side only is a divergence this repository has already had.
+
+Take the next free `OQ-OVR-` id from the file rather than assuming one — `OQ-OVR-12` is the
+highest in use as of `dbb4ea0`, and `audit-docs.py` rejects an undefined id.
+
 ### Task 3 — Retrofit `HistogramChart`
 
 Smallest and least coupled: no view owns any part of its table. Columns `Bin`, `Rows`,
@@ -248,6 +359,17 @@ Under (a): `OneWayChart` takes `currency`, renders the superset table through `C
 and `ProfileView`'s hand-written table is deleted in the same commit — never left in place
 "until the next slice", which would put two tables under one heading in a shipped build.
 
+**Three conditions from the arbitration, each of which fails the task if skipped:**
+
+1. **`ChartFigure`'s docstring is amended in this same commit** to say a caller may carry
+   columns the chart does not plot, and why. Its current sentence — the table "says the same
+   thing" — stops being true at this call site, and §0 does not permit leaving it standing.
+2. **`currency` is a required prop**, not `currency?: string` with a `"GBP"` default. See
+   [§Interactions](#interactions-this-slice-touches-but-does-not-resolve) item 2: the default
+   is the defect, and reproducing it one component deeper gives it a second home.
+3. **The `mean_severity` / `mean_burning_cost` comment moves verbatim.** It states a position
+   on the open `OQ-OVR-12`; relocating is not the place to re-argue or resolve it.
+
 The CI column carries the interval as `low – high` in one cell, formatted to the same
 precision as the frequency it qualifies, and `—` where `frequency_ci` is null. A frequency
 with no interval must read as *no interval*, not as a zero-width one.
@@ -256,6 +378,15 @@ with no interval must read as *no interval*, not as a zero-width one.
 un-stub it for the one test that checks the table reaches the page, or assert the equivalent
 in `OneWayChart.test.ts` and say in the commit why the stub stays. The stub is what let F1
 survive from #53 to now, so leaving it wholly unexamined is not an option.
+
+**Files the currency finding, and does not fix it** — the second interaction, covering both
+`ProfileView` and `VersionDetailView`, with the router evidence and the note that
+`dataset.currency` already exists and simply is not threaded. It goes where an unfixed
+money-correctness defect is addressable rather than into this plan's prose: a working note
+under `.claude/notes/`, or `docs/open-questions.md` if the maintainer must choose between
+threading the prop and reading the dataset inside the view. Not fixed here, because it spans
+a view this slice does not otherwise touch and because a money defect arriving inside an
+accessibility commit gets reviewed by someone looking at table markup.
 
 ### Task 6 — The gate, both halves, and the close
 
