@@ -7,6 +7,7 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { DoubleLift } from "@/api/comparisons";
+import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -30,12 +31,17 @@ const labels = computed(() => bins.value.map((b) => String(b.bin)));
  * units "wherever it appears: inside a diagnostic payload" included.
  *
  * It is also nullable, and a bar chart with holes in it reads as zero exposure rather than as
- * unknown exposure, so the whole series is omitted unless every bin has one.
+ * unknown exposure, so the whole series is omitted unless every bin has one. The table below
+ * obeys the same all-or-nothing rule, which is why the predicate is written once here and
+ * both readings derive from it: a chart that plotted exposure while the table dropped the
+ * column would be two different claims about the same artifact.
  */
-const exposure = computed(() => {
+const exposureText = computed(() => {
   const raw = bins.value.map((b) => b.exposure_years);
-  return raw.every((v) => typeof v === "string") ? raw.map((v) => Number(v)) : null;
+  return raw.every((v) => typeof v === "string") ? raw : null;
 });
+
+const exposure = computed(() => exposureText.value?.map((v) => Number(v)) ?? null);
 
 const option = computed(() => ({
   tooltip: { trigger: "axis" as const },
@@ -100,14 +106,57 @@ const option = computed(() => ({
     },
   ],
 }));
+
+/**
+ * The chart's accessible equivalent (NFR-OVR-10). Each plotted series gets its own column,
+ * named exactly as the legend names it, so a reader moving between the two is not asked to
+ * match "Baseline predicted" against some shortened heading.
+ *
+ * `rows` is carried by the artifact and plotted by nothing, and it is tabled anyway. The
+ * chart can leave volume implicit because a reader sees where the exposure bars are tall;
+ * the table cannot, and `exposure_years` is all-or-nothing, so when it is absent a
+ * `rows`-less table would say nothing at all about how much of the book each bin holds —
+ * which is what decides whether a divergence between the two models matters. This is the
+ * superset the retrofit is licensed to table, not a smaller thing than the chart shows.
+ */
+const columns = computed(() => [
+  "Bin (by prediction ratio)",
+  "Rows",
+  ...(exposureText.value ? ["Exposure"] : []),
+  "Actual",
+  "Baseline predicted",
+  "Challenger predicted",
+]);
+
+/**
+ * Exposure reaches the table as the exact decimal **string** it was recorded as (FR-OVR-7).
+ * The chart widens it because a coordinate is a float64 either way and nothing computes with
+ * it; a table cell has no such excuse, and a trailing zero lost there is a value the reader
+ * cannot tell apart from a rounded one. `AeByFactorChart` set this precedent.
+ */
+const rows = computed(() =>
+  bins.value.map((b, i) => [
+    String(b.bin),
+    b.rows,
+    ...(exposureText.value ? [exposureText.value[i] ?? null] : []),
+    b.actual,
+    b.baseline_predicted,
+    b.challenger_predicted,
+  ]),
+);
 </script>
 
 <template>
-  <div>
+  <ChartFigure
+    :title="`Double lift: baseline against ${series.challenger_ref}`"
+    :caption="`${series.weighting}-weighted, binned by the ratio of the two predictions.`"
+    :columns="columns"
+    :rows="rows"
+  >
     <VChart
       class="h-80 w-full"
       :option="option"
       autoresize
     />
-  </div>
+  </ChartFigure>
 </template>
