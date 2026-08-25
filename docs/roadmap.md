@@ -4321,6 +4321,63 @@ admits as evidence where a test is the wrong instrument — and says so with the
   intent through the UI at all, which is also why the supersession's blast radius is as small as
   FR-MODEL-116 states. And `rateable()` is exported from `pricing-core` and absent from §5.2's
   signature table, in the code→spec direction. Owner: W6b.
+- **`02` §5.3's Prediction Contents cell claims a batch input the built view will not have**, a
+  §14 question-4 finding, not fixed here because §14's output is a proposal rather than an edit.
+  The cell (registered 2026-08-23) reads "input row **or uploaded batch**", and "batch"/"upload"
+  appear **once** in all of `02` — in that cell — so no FR carries the capability. The divergence
+  is in the UI only: `PredictRows.rows` is required with no default, so the wire shape is always
+  a batch, capped at `MAX_PREDICT_ROWS`, and the schema's own description sends a portfolio
+  re-rate to `03`'s batch scoring. What is absent is a surface that uploads one. W6b-6b ships the
+  single-row generated form ruled 2026-08-25, which is the whole of what the requirement set
+  binds — and FR-OVR-21 makes a §5.3 Contents cell prose that binds nothing outside its seven
+  named carve-outs, of which Prediction is not one. Closing this is therefore a **spec change
+  first** (`CLAUDE.md` §0's table), not a slice pickup: either an FR states batch scoring on this
+  endpoint, or §5.3 drops the clause. **Owner: maintainer**, as the spec decision — W6b closes
+  without building it.
+- **FR-MODEL-99's bootstrap owner clause cannot be executed as written**, a §14 question-4
+  finding, not fixed here because §14's output is a proposal rather than an edit. The clause
+  reads *"Owner: the slice that builds the first of them"* — "them" being the two trigger
+  conditions, a surface rendering coefficient intervals on a penalised fit, or an approval
+  citing them. `ModelDetailView.vue` was added **2026-08-15** (W5, `#71`, `ed3a733`), three days
+  *before* the FR was written on 2026-08-18 (`f97bdaf`), and it renders `std_error` and `ci_95`
+  for every coefficient with no branch on `alpha`. **Two readings, and the clause fails under
+  both.** Read literally — the surface exists, so the trigger has fired — the owner is a slice
+  shipped inside **W5, closed 2026-08-22**: an owner that can never act, the orphan shape of
+  W32-7 and of the batch finding above. Read as reachability — the FR's own ground is
+  a conjunction — *"Neither exists today: regularisation has no UI and nothing in §4.11's
+  comparison reads the intervals"* — and nothing under `frontend/src` authors `alpha` or `select_by`
+  today, so the trigger is unfired — the clause still names a condition that was **already
+  satisfied when it was written**, so it cannot be read literally at all. Neither reading is
+  adopted here. The finding is that the trigger does not distinguish a surface that *would*
+  render a penalised fit's intervals from one that *does*, and a penalised fit at `alpha = 25.0`
+  is exercised deliberately (`backend/tests/test_prediction.py:810`,
+  `packages/model-schema/tests/test_uncertainty_basis.py:59,112`), so the distinction is not
+  academic. Deciding it is a spec change (`CLAUDE.md` §0's table). **Owner: maintainer.**
+  *(The `alpha = 25.0` fact is often attributed to `02` §4.8. It is not there — §4.8 is the
+  `Model` data contract and carries no fit. That attribution is OQ-MODEL-14's own wording at
+  `open-questions.md:70`, and re-deriving it from §4.8 will return nothing.)*
+  - **Addendum, from the W5 slice record at `docs/roadmap.md`'s "regularisation and
+    cross-validation, 2026-08-21" heading.** That slice (`#124`, `7d4d1b9`) landed after the FR
+    and did **not** falsify its ground: it is backend-only — `GlmSpec.select_by`, `_fit_cv_path`,
+    `assign_folds`, `Diagnostics.cross_validation` — and touches no file under `frontend/`. It
+    did two other things that bear on this finding. It **widened what "penalised" means**,
+    pinning `alpha` to `0.0` under `select_by == "cv"` so the basis cannot be read off alpha at
+    all, resolved by a dated amendment to FR-MODEL-99 itself — the blockquote directly below
+    that FR's row in `02`'s requirements table. (`02` records decisions as dated prose *below* a
+    row, not inside it, so a row-scoped search reports the amendment absent; the same slice's
+    other amendment, below FR-MODEL-57's row, has the identical shape.) And it made that amendment **without
+    re-deriving the trigger's ground**, one day before W5 closed on 2026-08-22 — so the last
+    slice positioned to notice the stale *"Neither exists today"* was the one editing the
+    requirement containing it. Then on **2026-08-25**, W6b-1b (`#194`, `dbb4ea0`) mounted
+    `CrossValidationPanel` in `DiagnosticsView.vue`. **The ground is a conjunction, and only its
+    first limb falls.** Under a display reading, *"regularisation has no UI"* is now **false**,
+    and falsified by an open W6b slice rather than a closed W5 one; the second limb — *"nothing
+    in §4.11's comparison reads the intervals"* — is untouched by that panel and not assessed
+    here. This does **not** fire the trigger — the panel renders the alpha path, the selected
+    alpha and its dispersion, and carries no `std_error` or `ci_95` — but it removes half the
+    FR's stated ground from use as evidence that the trigger is unfired, and a conjunction with
+    one false limb is false. The reachability reading above survives only by narrowing
+    *"no UI"* to *"no **authoring** UI"*, which the FR does not say.
 - **`02` §4.6 diverges from the parser in three ways**, the third being that the implemented
   grammar is *wider* in operators and *narrower* in functions, and `where` — the one construct
   §4.6 singles out by name — **does not exist**. Recorded, not resolved: W30 owns that grammar.
