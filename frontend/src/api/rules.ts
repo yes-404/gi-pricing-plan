@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
+import { pageThrough, type Paged } from "./paging";
 
 export type ValidationRuleSet = components["schemas"]["ValidationRuleSet"];
 export type ValidationRule = components["schemas"]["ValidationRule"];
@@ -91,6 +92,34 @@ export function submitRule(ruleId: string): Promise<ValidationRule> {
  */
 export function approveRule(ruleId: string): Promise<ValidationRule> {
   return request<ValidationRule>(`/validation-rules/${ruleId}/approve`, { method: "POST" });
+}
+
+/**
+ * Five pages of 200. The built-in catalogue is 38 rules (`01` §4.4) and workspace-authored
+ * rules are hand-governed artifacts, so a thousand is far beyond any plausible set — and
+ * `truncated` in the return type still tells a caller the sweep stopped early, rather than
+ * letting a truncated page read as the whole population.
+ */
+export const RULES_PAGE_CAP = 5;
+
+/**
+ * The workspace's rules (`01` §5.1, `GET /api/v1/validation-rules`), cursor-paginated.
+ * `builtin: true` returns §4.4's shipped catalogue only, which is the population the PSI
+ * banding reads VR-DST-1's `warn_above` from.
+ */
+export async function listRules(
+  options: { builtin?: boolean | null } = {},
+): Promise<Paged<ValidationRule>> {
+  return pageThrough<ValidationRule>(
+    "/validation-rules",
+    {
+      builtin:
+        options.builtin === undefined || options.builtin === null
+          ? undefined
+          : String(options.builtin),
+    },
+    RULES_PAGE_CAP,
+  );
 }
 
 /** Group a rule set's entries by layer, keeping `01`'s order and every layer present. */
