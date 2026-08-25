@@ -81,6 +81,28 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `02` §5.3's Model spec builder.
+    //
+    // Declared above `/models/:slug` for readability, **not** because order decides the
+    // match. W6b-4a's plan asserted a `/models/new` record placed after the parameterised
+    // one would be captured by `:slug`. That is false, and it is now measured twice on
+    // **vue-router 5.2.0**, on two different collisions:
+    //
+    //   - W6b-2, 2026-08-24 — `/models/compare` vs `/models/:slug`, recorded at the
+    //     `/models/compare` entry twelve lines above `/models/:slug`.
+    //   - W6b-4a, 2026-08-25 — this entry, with a positive control: two *equal-rank*
+    //     dynamic routes, where only declaration order can break the tie, do flip. So the
+    //     probe can detect order mattering, and reports that here it does not.
+    //
+    // A static segment outranks a dynamic one from either position. The tests in
+    // `__tests__/index.test.ts` therefore assert **resolution**, which is the property
+    // that matters and survives reordering. Nothing here is a warning against moving the
+    // record; a future route that makes ordering load-bearing needs its own evidence.
+    path: "/models/new",
+    name: "model-spec-builder",
+    component: () => import("@/views/ModelSpecBuilderView.vue"),
+  },
+  {
     // `02` §5.3. `?version=` selects one; the latest by default. Not `@version` in the
     // path: an `@` must be percent-encoded by every client, and `family@7` then reads as
     // `family%407` in every log and support conversation.
