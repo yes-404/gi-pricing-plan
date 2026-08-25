@@ -354,6 +354,18 @@ describe("the profile view", () => {
     expect(screen.getByText(/unbanded/)).toBeInTheDocument();
   });
 
+  it("renders unbanded when the rules arrive but hold nothing bandable", async () => {
+    // The third limb: a **successful** rules list with no approved VR-DST-1 (here: empty)
+    // is not the same as a failed fetch, and it must not fall back to a literal either —
+    // `W6b-13` removes the 0.1 in every limb, not just the failing one.
+    stub(200, ONE_WAY, {}, {}, { body: { items: [], next_cursor: null } });
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-slate-500");
+    expect(screen.getByText(/unbanded/)).toBeInTheDocument();
+  });
+
   it("shows a top-level chip's level and count", async () => {
     // FR-DATA-49: top_levels is now a named object array, not an unnamed [level, count]
     // pair — the chip reads `.level`/`.count`, not tuple positions.

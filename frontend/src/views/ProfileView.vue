@@ -137,7 +137,7 @@ async function load(): Promise<void> {
     const approved = page.items
       .filter((rule) => rule.catalogue_id === "VR-DST-1" && rule.status === "approved")
       .sort((a, b) => b.version - a.version);
-    const threshold = approved[0]?.params.warn_above;
+    const threshold = approved[0]?.params?.warn_above;
     warnAbove.value = typeof threshold === "number" ? threshold : null;
   } catch (error) {
     // Auxiliary, like the versions list: a failing rules list degrades to "unbanded"
