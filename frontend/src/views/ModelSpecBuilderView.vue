@@ -23,11 +23,11 @@ import { computed, onMounted, ref, watch } from "vue";
 import { listDatasets, listVersions, type Dataset } from "@/api/datasets";
 import { listFactors, type Factor } from "@/api/models";
 import {
-  BUILTIN_GBM_OBJECTIVES,
   FAMILIES,
   LINKS,
   RESPONSES,
   validateSpec,
+  type GbmFunctionRef,
   type GlmFamily,
   type GlmLink,
   type ModelSpec,
@@ -36,6 +36,7 @@ import {
 import { ProblemError } from "@/api/problem";
 import { listSplits, type DatasetSplit } from "@/api/versions";
 import FormField from "@/components/FormField.vue";
+import ObjectivePicker from "@/components/ObjectivePicker.vue";
 import SpecProblemList from "@/components/SpecProblemList.vue";
 
 type ModelArm = "glm" | "gbm" | "ebm";
@@ -79,8 +80,12 @@ const family = ref<GlmFamily>("poisson");
 const link = ref<GlmLink>("log");
 const tweediePower = ref(1.5);
 const gbmBackend = ref<"xgboost" | "lightgbm">("xgboost");
-/** FR-MODEL-26's builtin set. `reg:tweedie` alone carries a dependent parameter. */
-const gbmObjective = ref("count:poisson");
+/**
+ * The whole `GbmFunctionRef`, not just a name — `ObjectivePicker` owns both arms, and the
+ * type's validator makes them mutually exclusive: a builtin carries `name` and no `ref`,
+ * a custom one `ref` and no `name`.
+ */
+const gbmObjective = ref<GbmFunctionRef>({ kind: "builtin", name: "count:poisson" });
 const ebmObjective = ref<"rmse" | "mae">("rmse");
 
 // The option lists live in `@/api/modelSpecs` and are imported above: a list the type test
@@ -140,7 +145,7 @@ const spec = computed<ModelSpec | null>(() => {
     return {
       ...common.value,
       model_type: gbmBackend.value,
-      objective: { kind: "builtin", name: gbmObjective.value },
+      objective: gbmObjective.value,
     } as unknown as ModelSpec;
   }
   return {
@@ -536,21 +541,13 @@ onMounted(async () => {
       <FormField
         field-id="gbm-objective"
         label="Objective"
-        help="Built-in objectives only in this slice; approved custom objectives follow."
+        help="A built-in loss, or a Custom Objective this workspace has certified."
       >
-        <select
-          id="gbm-objective"
+        <ObjectivePicker
           v-model="gbmObjective"
-          class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-        >
-          <option
-            v-for="o in BUILTIN_GBM_OBJECTIVES"
-            :key="o"
-            :value="o"
-          >
-            {{ o }}
-          </option>
-        </select>
+          :response="response"
+          :backend="gbmBackend"
+        />
       </FormField>
     </template>
 
