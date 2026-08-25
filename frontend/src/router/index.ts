@@ -107,6 +107,35 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `02` §5.3. List only — FR-MODEL-127. The cell's editor is Phase 2 (FR-MODEL-75 gates
+    // `expression` authoring off throughout Phase 1), and under FR-OVR-21 the cell binds
+    // nothing, so the editor is not a shortfall here.
+    path: "/objectives",
+    name: "objective-library",
+    component: () => import("@/views/ObjectiveLibraryView.vue"),
+  },
+  {
+    // `02` §5.3. `{id}`, not `:slug@:version` — the 2026-08-18 note's string was retired by
+    // this slice's amendment: all eight `/api/v1/custom-objectives` routes take an id, and an
+    // `@` in a path percent-encodes into every log line.
+    path: "/objectives/:id/certificate",
+    name: "objective-certificate",
+    component: () => import("@/views/ObjectiveCertificateView.vue"),
+    props: (route) => ({ id: String(route.params.id) }),
+  },
+  {
+    // `02` §5.3's mirror of the objective library. **Name collision, latent and deliberate.**
+    // The API serves an unauthenticated Prometheus endpoint at `/metrics`
+    // (`backend/src/app/api/health.py`, FR-PLAT-40). Nothing collides today: the API is
+    // mounted under `/api/v1` and the SPA is served separately, so the two `/metrics` never
+    // share an origin. Under same-origin serving they would, and the scrape path is the one
+    // with an external consumer. Recorded here rather than renamed — renaming a scrape path
+    // to pre-empt a deployment that does not exist breaks a live config to fix nothing.
+    path: "/metrics",
+    name: "metric-library",
+    component: () => import("@/views/MetricLibraryView.vue"),
+  },
+  {
     // `02` §5.3's Model spec builder.
     //
     // Declared above `/models/:slug` for readability, **not** because order decides the

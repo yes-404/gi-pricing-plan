@@ -1,3 +1,4 @@
+import { request } from "./client";
 import { pageThrough, type Paged } from "./paging";
 import type { components } from "./generated/schema";
 
@@ -49,5 +50,28 @@ export async function listObjectives(
 ): Promise<ObjectiveList> {
   return pageThrough<CustomObjective>(
     "/custom-objectives", { status: options.status }, OBJECTIVE_PAGE_CAP,
+  );
+}
+
+export type ObjectiveCertificate = components["schemas"]["ObjectiveCertificate"];
+
+/**
+ * FR-MODEL-95's first read: status, certificate **outcome** and `approval_request_id` — not the
+ * certificate itself, which is the second read below.
+ */
+export async function getObjective(id: string): Promise<CustomObjective> {
+  return request<CustomObjective>(`/custom-objectives/${encodeURIComponent(id)}`);
+}
+
+/**
+ * FR-MODEL-95's second read: the latest `ObjectiveCertificate` for this version.
+ *
+ * **404 is a normal state, not an error.** A `draft` objective has not been certified, and
+ * FR-MODEL-95 specifies a 404 naming it. The caller branches on `ProblemError.code`, never on
+ * the status — several codes share 404.
+ */
+export async function getObjectiveCertificate(id: string): Promise<ObjectiveCertificate> {
+  return request<ObjectiveCertificate>(
+    `/custom-objectives/${encodeURIComponent(id)}/certificate`,
   );
 }

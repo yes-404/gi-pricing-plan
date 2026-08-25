@@ -87,4 +87,23 @@ describe("the /models routes", () => {
       router().resolve("/models/motor-ad-frequency/predict").matched.map((r) => r.name),
     ).toContain("model-predict");
   });
+
+  // Static, single-segment, and asserted by resolution like every other route here. `/metrics`
+  // is deliberately the same string as the API's Prometheus scrape path — the two never share
+  // an origin today, and the router record carries the note.
+  it("resolves an objective certificate by id, not by slug@version", () => {
+    // The 2026-08-23 addressing correction, and this slice's amendment retiring the prose
+    // note that outlived it: the route the platform serves takes an id.
+    const resolved = router().resolve("/objectives/a1/certificate");
+
+    expect(resolved.matched.map((r) => r.name)).toContain("objective-certificate");
+    expect(resolved.params.id).toBe("a1");
+  });
+
+  it("resolves the two library routes", () => {
+    expect(router().resolve("/objectives").matched.map((r) => r.name)).toContain(
+      "objective-library",
+    );
+    expect(router().resolve("/metrics").matched.map((r) => r.name)).toContain("metric-library");
+  });
 });
