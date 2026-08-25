@@ -6,13 +6,13 @@ import { CanvasRenderer } from "echarts/renderers";
 import { computed } from "vue";
 import VChart from "vue-echarts";
 
-import type { PartitionDiagnostics, PartitionLabel } from "@/api/diagnostics";
+import type { PartitionCaption, PartitionDiagnostics } from "@/api/diagnostics";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 const props = defineProps<{
-  partitions: readonly (readonly [PartitionLabel, PartitionDiagnostics])[];
+  partitions: readonly (readonly [PartitionCaption, PartitionDiagnostics])[];
 }>();
 
 /**
