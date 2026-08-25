@@ -87,4 +87,14 @@ describe("the /models routes", () => {
       router().resolve("/models/motor-ad-frequency/predict").matched.map((r) => r.name),
     ).toContain("model-predict");
   });
+
+  // Static, single-segment, and asserted by resolution like every other route here. `/metrics`
+  // is deliberately the same string as the API's Prometheus scrape path — the two never share
+  // an origin today, and the router record carries the note.
+  it("resolves the two library routes", () => {
+    expect(router().resolve("/objectives").matched.map((r) => r.name)).toContain(
+      "objective-library",
+    );
+    expect(router().resolve("/metrics").matched.map((r) => r.name)).toContain("metric-library");
+  });
 });
