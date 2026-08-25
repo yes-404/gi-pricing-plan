@@ -27,16 +27,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings
 from app.db.models import DatasetSplitRow, DatasetVersionRow, FactorRow, ProfileRow
 from app.errors import PlatformError
-from app.platform import audit
+from app.platform import audit, objectives
 from app.platform import settings as settings_service
 from app.platform.modelling import resolve_offset_model, to_factor
 from model_schema import (
+    FITTABLE_OBJECTIVE_STATUSES,
     DatasetStatus,
     Factor,
     GbmSpec,
     GlmSpec,
     JobSource,
     ModelSpec,
+    ObjectiveBackend,
     Principal,
     Profile,
     SpecProblem,
@@ -275,7 +277,7 @@ async def validate_spec(
                 )
             )
 
-    problems.extend(_objective_problems(spec))
+    problems.extend(await _objective_problems(session, workspace_id, spec))
     problems.extend(await _split_problems(session, workspace_id, spec))
 
     profile = await _profile(session, workspace_id, spec.dataset_version_id)
@@ -320,10 +322,85 @@ async def validate_spec(
     )
 
 
-def _objective_problems(spec: ModelSpec) -> list[SpecProblem]:
+def _unsupported(subject: str, message: str) -> list[SpecProblem]:
+    return [
+        SpecProblem(
+            kind=SpecProblemKind.OBJECTIVE_UNSUPPORTED, subject=subject, message=message
+        )
+    ]
+
+
+async def _custom_objective_problems(
+    session: AsyncSession, workspace_id: UUID, spec: GbmSpec
+) -> list[SpecProblem]:
+    """Every reason `fit_gbm` would refuse a Custom Objective, asked before a Job exists.
+
+    **These mirror `pricing_core.modelling.gbm`'s checks deliberately and must stay in step
+    with them.** That is the division this module's own docstring already states: the
+    validator answers "may this be fitted?" and the fit is the backstop for a spec that was
+    valid when it was validated. A check the fit makes and this does not is a spec that
+    validates and then fails — the thing `wf-01` D2 exists to prevent.
+
+    Not mirrored: `fit_gbm`'s ref-mismatch guard. It compares the artifact handed to the fit
+    against the ref the spec names, and exists because `pricing-core` cannot read the store
+    (ADR-0001). Here the artifact is fetched *by* that ref, so the two cannot disagree.
+
+    A ref that resolves to nothing is a **problem, not a 404** — the same treatment
+    `_offset_problems` gives an unresolvable offset model twenty lines above, and the same
+    reason: `02` §5.1 reserves 404 for a spec naming a *dataset version* that does not
+    exist, and a spec that merely cannot be fitted "is not a bad request".
+    """
+    ref = str(spec.objective.ref)
+    try:
+        objective = await objectives.resolve_ref(
+            session, workspace_id=workspace_id, ref=ref
+        )
+    except PlatformError as exc:
+        return _unsupported(ref, f"the Custom Objective cannot be used: {exc.detail}")
+
+    if objective.status not in FITTABLE_OBJECTIVE_STATUSES:
+        fittable = ", ".join(sorted(s.value for s in FITTABLE_OBJECTIVE_STATUSES))
+        return _unsupported(
+            ref,
+            f"Custom Objective {ref} is {objective.status.value} (`02` R4, FR-MODEL-46). "
+            f"A fit may use one that is {fittable}.",
+        )
+
+    if spec.response is None:
+        return _unsupported(
+            ref,
+            "the spec names a Custom Objective and declares no `response` "
+            "(FR-MODEL-44). A builtin objective names its own family; a custom one does "
+            "not, so the response is what the applicability check and the diagnostics "
+            "deviance are both read from, and neither may be guessed.",
+        )
+
+    if spec.response not in objective.applicability.responses:
+        allowed = ", ".join(sorted(r.value for r in objective.applicability.responses))
+        return _unsupported(
+            ref,
+            f"Custom Objective {ref} declares applicability to {allowed} and the spec "
+            f"models {spec.response.value} (FR-MODEL-44).",
+        )
+
+    backend = ObjectiveBackend(spec.model_type)
+    if backend not in objective.applicability.backends:
+        allowed = ", ".join(sorted(b.value for b in objective.applicability.backends))
+        return _unsupported(
+            ref,
+            f"Custom Objective {ref} declares applicability to {allowed} and the spec "
+            f"fits with {backend.value} (FR-MODEL-44).",
+        )
+
+    return []
+
+
+async def _objective_problems(
+    session: AsyncSession, workspace_id: UUID, spec: ModelSpec
+) -> list[SpecProblem]:
     """FR-MODEL-44's *objective applicability* half, for the GBM arm.
 
-    `fit_gbm` refuses both of these too, and that is not a duplicate rule: this answers
+    `fit_gbm` refuses these too, and that is not a duplicate rule: this answers
     "may this be fitted?" before a Job exists, which is what `wf-01` D2 asks for and what
     `02` §5.3's live validation renders. The fit-time refusal is the backstop for a spec
     that was valid when it was validated and reached the worker anyway.
@@ -334,17 +411,7 @@ def _objective_problems(spec: ModelSpec) -> list[SpecProblem]:
     if not isinstance(spec, GbmSpec):
         return []
     if spec.objective.kind == "custom":
-        return [
-            SpecProblem(
-                kind=SpecProblemKind.OBJECTIVE_UNSUPPORTED,
-                subject=str(spec.objective.ref),
-                message=(
-                    "the spec names a Custom Objective (FR-MODEL-38), which no slice has "
-                    "built. `02` R4 would also require it to be approved before a model "
-                    "using it could be."
-                ),
-            )
-        ]
+        return await _custom_objective_problems(session, workspace_id, spec)
     if str(spec.objective.name) not in SUPPORTED_GBM_OBJECTIVES:
         return [
             SpecProblem(
