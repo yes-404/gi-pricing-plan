@@ -6,10 +6,20 @@ name: frontend
 # **If branch protection is ever enabled, do not mark this a required check.** A required
 # check that does not run on a given PR blocks it for ever; add an always-running
 # aggregator job instead.
+# Both triggers carry the same cross-component paths, as `python.yml` does. They diverged
+# here until 2026-08-25: `docs/contracts/openapi/**` was on `pull_request` only. That was a
+# consistency wart rather than a hole — the change was still checked, just not on `main` —
+# but it left main's recorded frontend status stale for a contract-only change, and two
+# cross-component paths treated differently for no stated reason is a thing the next reader
+# re-derives. Fixed in the same commit that added the second one.
 on:
   push:
     branches: [main]
-    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+      - "docs/contracts/openapi/**"
+      - "packages/pricing-core/src/pricing_core/modelling/**"
   pull_request:
     paths:
       - "frontend/**"
@@ -17,6 +27,19 @@ on:
       # The generated client is derived from the contract, so a contract change can break
       # the frontend without touching a file under frontend/.
       - "docs/contracts/openapi/**"
+      # Same argument, one layer further out. `SUPPORTED_GBM_OBJECTIVES` in
+      # `pricing_core/modelling/gbm.py` is the authoritative set of builtin GBM objectives
+      # and reaches no contract — `model-schema` depends on pydantic alone and cannot
+      # import it (OQ-MODEL-37). `builtinObjectives.test.ts` therefore reads that file as
+      # text and fails when the two lists disagree, which makes a `pricing-core` edit able
+      # to break a frontend test without touching a file under `frontend/`.
+      #
+      # `python.yml` has been bitten by the mirror image of this three times — `scripts/**`,
+      # `examples/**` and `tests/**`, the last commented "for the third time this has
+      # bitten … a check that cannot run is not enforcement". This is the first on the
+      # frontend side, and the guard is worthless without it: `python.yml` carries no
+      # `frontend/**`, so nothing would run when someone edits the TypeScript half.
+      - "packages/pricing-core/src/pricing_core/modelling/**"
 
 defaults:
   run:

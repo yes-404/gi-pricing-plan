@@ -8,6 +8,24 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
+  // `builtinObjectives.test.ts` reads `pricing_core/modelling/gbm.py` through Vite's
+  // `?raw`, and that file is outside `frontend/`, which Vite denies by default. The
+  // allow-list is **narrowed to that one directory** rather than opened to the repository
+  // root: the guard needs one file, and a test suite that can read anything on disk is a
+  // different thing from one that can read a named module's source.
+  //
+  // Listing `allow` at all replaces Vite's default, so the frontend root is named here
+  // too — without it every ordinary import under `src/` would be denied.
+  server: {
+    fs: {
+      allow: [
+        fileURLToPath(new URL("./", import.meta.url)),
+        fileURLToPath(
+          new URL("../packages/pricing-core/src/pricing_core/modelling", import.meta.url),
+        ),
+      ],
+    },
+  },
   test: {
     environment: "happy-dom",
     globals: true,
