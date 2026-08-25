@@ -829,15 +829,21 @@ def test_the_spec_example_is_a_valid_instance_now_that_the_field_exists() -> Non
     §4.9's words, "a fixture copied from it would be rejected". This is what makes the
     amendment to that note a checked fact rather than a claim.
     """
+    # Copied from `02` §4.9, not paraphrased. `driver_age_banded` and `ncd` are the
+    # example's own slugs; an earlier version of this test invented plausible ones and the
+    # docstring above still claimed they were the example's, which made a governed
+    # amendment assert a verification that had not happened.
     instance = ShapInteraction.model_validate(
         {
-            "pair": ["driv_age", "vehicle_age"],
-            "strength": 0.042,
-            "holdout_strength_ratio": 0.87,
+            "pair": ["driver_age_banded", "ncd"],
+            "strength": 0.041,
+            "holdout_strength_ratio": 0.83,
         }
     )
 
-    assert instance.holdout_strength_ratio == pytest.approx(0.87)
+    assert instance.pair == ("driver_age_banded", "ncd")
+    assert instance.strength == pytest.approx(0.041)
+    assert instance.holdout_strength_ratio == pytest.approx(0.83)
 
 
 @pytest.mark.req("FR-MODEL-128")
