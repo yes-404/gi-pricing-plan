@@ -392,7 +392,10 @@ onMounted(() => void load());
                 <dd>{{ column.minimum }} – {{ column.maximum }}</dd>
               </template>
             </dl>
-            <ColumnDrift :drift="driftFor(column.name)" :warn-above="warnAbove" />
+            <ColumnDrift
+              :drift="driftFor(column.name)"
+              :warn-above="warnAbove"
+            />
             <!-- FR-DATA-48. Only continuous columns carry one, so the card shows it only
                  when the profile computed one. -->
             <HistogramChart
