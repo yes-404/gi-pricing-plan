@@ -126,5 +126,13 @@ describe("the column set", () => {
     const { container } = perilTable();
     expect(container.textContent ?? "").not.toContain("7");
     expect(container.textContent ?? "").not.toContain("claim_count");
+
+    // And not as a defaulted zero. The house idiom is `usage_count ?? 0`, so a count that is
+    // absent renders as a literal `0` — which "does not contain 7" passes, because 0 is not
+    // 7. A zero usage count is a claim about usage; no column is the absence of the claim.
+    const cells = Array.from(container.querySelectorAll("tbody td")).map((c) =>
+      (c.textContent ?? "").trim(),
+    );
+    expect(cells).not.toContain("0");
   });
 });

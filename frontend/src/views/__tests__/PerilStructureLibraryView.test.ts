@@ -42,6 +42,14 @@ describe("PerilStructureLibraryView", () => {
     expect(headers.some((h) => h.includes("usage") || h.includes("used by"))).toBe(false);
     expect(headers.some((h) => h.includes("applicab"))).toBe(false);
     expect(headers).toEqual(["slug", "version", "status"]);
+
+    // Not a defaulted zero either: `usage_count ?? 0` is the idiom the other two libraries
+    // use, and copied here it would render `0` in a column FR-MODEL-127 says cannot exist.
+    const cells = Array.from(container.querySelectorAll("tbody td")).map((c) =>
+      (c.textContent ?? "").trim(),
+    );
+    expect(cells).toHaveLength(3);
+    expect(cells).not.toContain("0");
   });
 
   it("links each row into the detail view", async () => {

@@ -100,11 +100,16 @@ describe("the /models routes", () => {
     expect(resolved.params.id).toBe("a1");
   });
 
-  it("resolves the peril structure library", () => {
-    // The detail route lands with its view. Asserted by resolution, like its neighbours.
+  it("resolves the library and the detail route", () => {
+    // A static segment outranks a dynamic one from either position, so these assert
+    // resolution rather than declaration order — the property that survives a reorder.
     expect(router().resolve("/peril-structures").matched.map((r) => r.name)).toContain(
       "peril-structure-library",
     );
+
+    const detail = router().resolve("/peril-structures/abc");
+    expect(detail.matched.map((r) => r.name)).toContain("peril-structure-detail");
+    expect(detail.params.id).toBe("abc");
   });
 
   it("resolves the two library routes", () => {
