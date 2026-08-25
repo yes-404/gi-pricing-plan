@@ -41,6 +41,8 @@ from pricing_core.modelling import (
 )
 from pricing_core.modelling.transparency import (
     EBM_SHAPE_BLOB_VERSION,
+    _interaction_candidates,
+    _ratio,
     build_ebm_shape_functions,
     ebm_fidelity_statement,
     ebm_monotonicity_verified,
@@ -151,7 +153,7 @@ def test_the_shap_summary_persists_the_sample_it_was_computed_on(backend: str) -
     """
     data, spec, factors, fit = _fit(backend)
     summary = build_shap_summary(
-        fit.result, fit.booster_bytes, spec, factors, data, sample=2_000, seed=99
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=2_000, seed=99
     )
     assert summary.sample_rows == 2_000
     assert summary.seed == 99
@@ -171,10 +173,10 @@ def test_the_same_seed_reproduces_the_same_summary(backend: str) -> None:
     """"Reproducible" is a claim, and this is the test that makes it one."""
     data, spec, factors, fit = _fit(backend)
     first = build_shap_summary(
-        fit.result, fit.booster_bytes, spec, factors, data, sample=1_500, seed=7
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_500, seed=7
     )
     second = build_shap_summary(
-        fit.result, fit.booster_bytes, spec, factors, data, sample=1_500, seed=7
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_500, seed=7
     )
     assert [c.value for c in first.mean_abs_contribution] == pytest.approx(
         [c.value for c in second.mean_abs_contribution]
@@ -190,7 +192,7 @@ def test_interaction_candidates_are_reported_where_the_backend_can_compute_them(
     """
     data, spec, factors, fit = _fit("xgboost")
     summary = build_shap_summary(
-        fit.result, fit.booster_bytes, spec, factors, data, sample=1_000
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_000
     )
     assert summary.interactions_available is True
     assert summary.top_interactions
@@ -210,7 +212,7 @@ def test_lightgbm_says_it_cannot_compute_interactions_rather_than_finding_none()
     """
     data, spec, factors, fit = _fit("lightgbm")
     summary = build_shap_summary(
-        fit.result, fit.booster_bytes, spec, factors, data, sample=1_000
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_000
     )
     assert summary.interactions_available is False
     assert summary.top_interactions == ()
@@ -246,7 +248,7 @@ def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str)
         holdout=data, source_model_id=new_uuid7(),
     )
     summary = build_shap_summary(
-        fit.result, fit.booster_bytes, spec, factors, data, sample=1_000
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_000
     )
     statement = fidelity_statement(approximation.artifact_block(new_uuid7()), summary)
     assert "%" in statement
@@ -696,3 +698,191 @@ def test_a_constraint_on_a_feature_the_tables_do_not_contain_is_refused() -> Non
             grid, _ebm_spec(monotone_constraints={"no_such_feature": 1})
         )
     assert error.value.code == "EBM_MONOTONE_CONSTRAINT_UNKNOWN"
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_an_identical_holdout_gives_a_ratio_of_exactly_one() -> None:
+    """The sharpest available check that the two passes are comparable.
+
+    If the holdout frame *is* the training frame, every difference between numerator and
+    denominator has been removed — same rows, same seed, same cap, same encoding — so any
+    departure from exactly `1.0` is a difference the two code paths introduced. FR-MODEL-128
+    requires them to be one path run twice, and this is what makes that a fact rather than a
+    claim about two blocks that look alike.
+    """
+    data, spec, factors, fit = _fit("xgboost")
+    summary = build_shap_summary(
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_000
+    )
+
+    assert summary.top_interactions
+    for pair in summary.top_interactions:
+        assert pair.holdout_strength_ratio == pytest.approx(1.0)
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_a_weaker_holdout_gives_a_ratio_below_one() -> None:
+    """A pair whose structure does not survive shows as a collapse, which is the point.
+
+    The holdout here is a different draw, so the ratio is a real measurement rather than the
+    identity above. Asserted as a bounded positive rather than an exact value: the quantity
+    is a mean of absolute SHAP interaction values on a finite sample, and pinning a number
+    would be pinning this fixture's noise.
+    """
+    data, spec, factors, fit = _fit("xgboost")
+    other = _frequency_data(n=6_000)
+
+    summary = build_shap_summary(
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=other, sample=1_000
+    )
+
+    for pair in summary.top_interactions:
+        assert pair.holdout_strength_ratio is not None
+        assert pair.holdout_strength_ratio > 0.0
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_the_ratio_is_the_quotient_of_the_two_strengths() -> None:
+    """The arithmetic, checked against a strength this test measures itself.
+
+    `strength` is the published in-sample value, so recomputing the holdout pass here and
+    dividing must reproduce the field. Without this, "the holdout value over the in-sample
+    one" is only asserted by the docstring.
+    """
+    data, spec, factors, fit = _fit("xgboost")
+    other = _frequency_data(n=6_000)
+
+    summary = build_shap_summary(
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=other, sample=1_000
+    )
+    same = build_shap_summary(
+        fit.result, fit.booster_bytes, spec, factors, other, holdout=other, sample=1_000
+    )
+    holdout_strength = {p.pair: p.strength for p in same.top_interactions}
+
+    for pair in summary.top_interactions:
+        if pair.pair in holdout_strength:
+            assert pair.holdout_strength_ratio == pytest.approx(
+                holdout_strength[pair.pair] / pair.strength
+            )
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_lightgbm_carries_no_ratio_because_it_carries_no_candidates() -> None:
+    """XGBoost-only, and for a reason that is not about this requirement.
+
+    LightGBM computes SHAP values and not SHAP interaction values, so there is no candidate
+    to carry a ratio. `interactions_available` reports that as a capability rather than as
+    an empty list — "no interactions found" is a finding, and it is not one this backend can
+    make.
+    """
+    data, spec, factors, fit = _fit("lightgbm")
+
+    summary = build_shap_summary(
+        fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_000
+    )
+
+    assert summary.interactions_available is False
+    assert summary.top_interactions == ()
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_an_absent_ratio_serialises_as_null_rather_than_a_missing_key() -> None:
+    """"Absent rather than defaulted" does not pin an encoding, so this pins it.
+
+    A producer emitting `null` and one omitting the key both satisfy the prose and are
+    different artifacts on the wire. This platform emits the key: omission would need
+    `exclude_none` at every serialisation site, and a per-site setting holds at one and not
+    another. `null` is one shape everywhere and still honours "not defaulted", because it
+    cannot be read as a number.
+
+    Asserted on the **serialised** artifact, not the Python object — the object's attribute
+    is `None` either way, so testing it would not distinguish the two encodings.
+    """
+    interaction = ShapInteraction(pair=("a", "b"), strength=0.0)
+
+    payload = json.loads(interaction.model_dump_json())
+
+    assert "holdout_strength_ratio" in payload
+    assert payload["holdout_strength_ratio"] is None
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_a_zero_in_sample_strength_publishes_no_ratio() -> None:
+    """No quotient exists, and neither `0.0` nor `1.0` may stand in for one.
+
+    `0.0` reads as a total out-of-sample collapse and `1.0` as perfect survival; the truth
+    is that there was no structure in sample either, which is a third thing. Reachable only
+    when the booster found no interaction at all, since the published five are the largest.
+    """
+    assert _ratio(0.0, {("a", "b"): 0.5}, ("a", "b")) is None
+    assert _ratio(0.5, None, ("a", "b")) is None
+    assert _ratio(0.5, {("a", "b"): 0.25}, ("a", "b")) == pytest.approx(0.5)
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_the_spec_example_is_a_valid_instance_now_that_the_field_exists() -> None:
+    """`02` §4.9's printed example, constructed exactly as printed.
+
+    Until this slice, `ShapInteraction` set `extra="forbid"` while the example showed
+    `holdout_strength_ratio`, so the spec's own example was **not** a valid instance and, in
+    §4.9's words, "a fixture copied from it would be rejected". This is what makes the
+    amendment to that note a checked fact rather than a claim.
+    """
+    instance = ShapInteraction.model_validate(
+        {
+            "pair": ["driv_age", "vehicle_age"],
+            "strength": 0.042,
+            "holdout_strength_ratio": 0.87,
+        }
+    )
+
+    assert instance.holdout_strength_ratio == pytest.approx(0.87)
+
+
+@pytest.mark.req("FR-MODEL-128")
+def test_the_holdout_is_looked_up_on_the_pairs_the_in_sample_pass_selected() -> None:
+    """The ranking is by **in-sample** strength, and the holdout is a lookup on those pairs.
+
+    Tested on `_interaction_candidates` directly because the shared fixture has two factors
+    and therefore exactly **one** pair — there is no ranking there to get wrong, and a §13
+    mutation that made the holdout pass take its own top five passed every other test in
+    this file. A pair ranking third in-sample and last out of sample is precisely the
+    collapse the ratio exists to surface; selecting per-partition would drop it while
+    comparing two different pairs' numbers.
+    """
+    in_sample = {
+        ("a", "b"): 0.9,
+        ("a", "c"): 0.5,
+        ("b", "c"): 0.1,
+    }
+    # Deliberately the reverse ranking: if selection followed the holdout, the published
+    # order would invert and ("b", "c") would lead.
+    holdout = {
+        ("a", "b"): 0.45,
+        ("a", "c"): 0.5,
+        ("b", "c"): 0.8,
+    }
+
+    candidates = _interaction_candidates(in_sample, holdout)
+
+    assert [c.pair for c in candidates] == [("a", "b"), ("a", "c"), ("b", "c")]
+    assert [c.strength for c in candidates] == [0.9, 0.5, 0.1]
+    # Each ratio is that pair's holdout value over its own in-sample value — not the
+    # holdout's rank-matched neighbour.
+    assert candidates[0].holdout_strength_ratio == pytest.approx(0.5)
+    assert candidates[1].holdout_strength_ratio == pytest.approx(1.0)
+    assert candidates[2].holdout_strength_ratio == pytest.approx(8.0)
+
+
+@pytest.mark.req("FR-MODEL-79")
+def test_only_the_top_five_candidates_are_published() -> None:
+    """FR-MODEL-79 publishes a ranked few, and the cut is by in-sample strength."""
+    in_sample = {("f", str(i)): float(i) for i in range(9)}
+
+    candidates = _interaction_candidates(in_sample, None)
+
+    assert len(candidates) == 5
+    assert [c.strength for c in candidates] == [8.0, 7.0, 6.0, 5.0, 4.0]
+    # No holdout, so no ratio — absent rather than invented.
+    assert all(c.holdout_strength_ratio is None for c in candidates)
