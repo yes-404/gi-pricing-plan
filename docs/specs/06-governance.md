@@ -429,6 +429,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/api/v1/me` | Current principal, roles, effective permissions |
+| `GET` | `/api/v1/me/workspaces` | The principal's own memberships, unscoped — the list first selection chooses from (FR-PLAT-63) |
+| `POST` | `/api/v1/me/workspace` | Audits a switch into both chains; an absent `Workspace-Id` is `left=None`, the first selection (FR-PLAT-63) |
 | `GET`/`POST` | `/api/v1/roles` | List / create roles (FR-GOV-3) |
 | `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-GOV-4) |
 | `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-GOV-8) |
