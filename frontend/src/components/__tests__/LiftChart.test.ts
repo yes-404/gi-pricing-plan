@@ -50,4 +50,27 @@ describe("LiftChart", () => {
       "0.025",
     ]);
   });
+
+  // FR-MODEL-57: a caption may not assert a relationship the artifact does not carry. This
+  // instrument is shared with the backtest view, and a hardcoded "train and holdout" said
+  // so beneath a column correctly captioned "Backtest". Both arities are asserted because
+  // the two-partition wording is the one a reader would not notice losing.
+  it("names the partitions it was given, and the fit's two read exactly as before", () => {
+    render(LiftChart, { props: { partitions: partitions(DIAGNOSTICS.universal) } });
+    expect(
+      screen.getByText(
+        "Predicted and actual response in each predicted decile, train and holdout.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("asserts no split at one partition, where there is no contrast to name", () => {
+    render(LiftChart, {
+      props: { partitions: [["Backtest", DIAGNOSTICS.universal.train]] as const },
+    });
+    expect(
+      screen.getByText("Predicted and actual response in each predicted decile."),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/holdout|\btrain\b/i);
+  });
 });

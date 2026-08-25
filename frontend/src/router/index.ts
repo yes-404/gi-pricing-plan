@@ -81,6 +81,17 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `02` §5.3's Backtest view. Addressed by backtest id, not by model — a model has many
+    // (FR-MODEL-92) — so `:slug` here is for the breadcrumb and the link back to the fit.
+    path: "/models/:slug/backtests/:backtestId",
+    name: "model-backtest",
+    component: () => import("@/views/BacktestView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      backtestId: String(route.params.backtestId),
+    }),
+  },
+  {
     // `02` §5.3's Model spec builder.
     //
     // Declared above `/models/:slug` for readability, **not** because order decides the
