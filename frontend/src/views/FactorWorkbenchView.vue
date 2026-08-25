@@ -36,6 +36,7 @@ import {
   type GroupingMethod,
 } from "@/api/transformations";
 import { formatDecimalString, getVersionById } from "@/api/versions";
+import ColumnOneWays from "@/components/ColumnOneWays.vue";
 
 const props = defineProps<{ datasetVersionId: string }>();
 
@@ -296,6 +297,16 @@ defineExpose({ isProblem });
     </div>
 
     <template v-else>
+      <!--
+        `02` §5.3's first named item, and the one this view had only as select options: the
+        candidate columns with the one-ways the Profile already carries. Read, never
+        recomputed — FR-DATA-26 computes them once, in the profiling pass.
+      -->
+      <ColumnOneWays
+        class="mb-6"
+        :one-ways="profile?.one_ways ?? []"
+      />
+
       <div
         class="mb-5 flex gap-2 border-b border-slate-200"
         role="tablist"
