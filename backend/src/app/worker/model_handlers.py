@@ -1061,6 +1061,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     progress.update(0.62, "tree shap")
     summary = build_shap_summary(
         result, booster, spec, factors, frame,
+        holdout=holdout,
         sample=sample,
         bandings=transformations.bandings,
         groupings=transformations.groupings,

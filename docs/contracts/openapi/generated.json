@@ -9611,6 +9611,18 @@
         "additionalProperties": false,
         "description": "One candidate interaction pair, and what it is worth (FR-MODEL-79).\n\nA **suggestion**, never an addition. The platform never writes a Factor into a Model\nSpec: an interaction becomes rateable only as an explicit `interaction` Factor carrying\nan intent and a written rationale, and the model document names it as an authored\ndecision. Auto-detected structure entering a rating basis unreviewed is the overfitting\nroute FR-MODEL-79 refuses.",
         "properties": {
+          "holdout_strength_ratio": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holdout Strength Ratio"
+          },
           "pair": {
             "maxItems": 2,
             "minItems": 2,

@@ -299,6 +299,7 @@ def build_shap_summary(
     factors: Sequence[Factor],
     data: pl.DataFrame,
     *,
+    holdout: pl.DataFrame,
     sample: int = 200_000,
     seed: int | None = None,
     bandings: Mapping[UUID, Banding] | None = None,
@@ -312,9 +313,15 @@ def build_shap_summary(
     side in a model document would look like a change in the model.
 
     `top_interactions` are FR-MODEL-79 **suggestions**: the platform never writes a Factor into
-    a Model Spec. Each carries its interaction `strength` alone — a per-pair exposure share was
-    `1.0` by construction and was withdrawn by OQ-MODEL-31 on 2026-08-23, and the out-of-sample
-    evidence that replaces it is FR-MODEL-128's holdout strength ratio, which is not built here.
+    a Model Spec. Each carries its interaction `strength` and FR-MODEL-128's
+    `holdout_strength_ratio` — a per-pair exposure share was `1.0` by construction and was
+    withdrawn by OQ-MODEL-31 on 2026-08-23, and this ratio is the out-of-sample evidence that
+    replaces it.
+
+    `holdout` is **required, with no default**, matching `02` §5.2's declared signature and
+    the sibling `build_glm_approximation`. Optional would make a forgotten argument produce
+    exactly the pre-ratio artifact — silently, and indistinguishable from the legitimate
+    absence a `None` ratio records.
     """
     report = progress or NullProgress()
     report.update(0.05, "sampling")
@@ -324,16 +331,12 @@ def build_shap_summary(
         raise ModellingError(
             "SHAP_SAMPLE_EMPTY", "a SHAP summary needs at least one row"
         )
-    frame = (
-        data
-        if rows == data.height
-        else data.sample(n=rows, seed=chosen_seed, shuffle=True)
+    x, order = _encoded_matrix(
+        data, result, spec, factors,
+        sample=sample, seed=chosen_seed, bandings=bandings, groupings=groupings,
     )
+    from pricing_core.modelling.gbm import _native_categoricals
 
-    matrix = resolve_factors(frame, factors, bandings=bandings, groupings=groupings)
-    from pricing_core.modelling.gbm import _encode, _native_categoricals
-
-    x, order, *_ = _encode(matrix, factors, maps=result.categorical_maps)
     native = _native_categoricals(result)
     report.update(0.35, "tree shap")
 
@@ -369,7 +372,23 @@ def build_shap_summary(
     report.update(0.75, "interaction candidates")
     pairs: tuple[ShapInteraction, ...] = ()
     if interactions_available:
-        pairs = _interaction_candidates(loaded, x, order, result)
+        in_sample = _pair_strengths(loaded, x, order, result)
+        # FR-MODEL-128's second pass. `_encoded_matrix` is the same function that produced
+        # `x` above, called with the same seed, the same row cap and the same
+        # `categorical_maps` — one code path run twice, which is what makes the numerator
+        # and the denominator comparable rather than merely adjacent.
+        holdout_x, holdout_order = _encoded_matrix(
+            holdout, result, spec, factors,
+            sample=sample, seed=chosen_seed, bandings=bandings, groupings=groupings,
+        )
+        assert holdout_order == order, (
+            "the two passes encoded to different column orders, so a pair's strengths are "
+            "not the same quantity. Both encode with `result.categorical_maps`, so this is "
+            "unreachable unless the maps stopped being the shared source (FR-MODEL-128)."
+        )
+        pairs = _interaction_candidates(
+            in_sample, _pair_strengths(loaded, holdout_x, holdout_order, result)
+        )
 
     report.update(1.0, "shap summary complete")
     return ShapSummary(
@@ -383,14 +402,67 @@ def build_shap_summary(
     )
 
 
-def _interaction_candidates(
-    loaded: object, x: np.ndarray, order: Sequence[str], result: GbmFitResult
-) -> tuple[ShapInteraction, ...]:
-    """FR-MODEL-79's ranked pairs, from XGBoost's SHAP interaction values.
+def _encoded_matrix(
+    frame: pl.DataFrame,
+    result: GbmFitResult,
+    spec: GbmSpec,
+    factors: Sequence[Factor],
+    *,
+    sample: int,
+    seed: int,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> tuple[np.ndarray, Sequence[str]]:
+    """Sample, resolve and encode one partition — the path both passes share.
 
-    Capped at a small sample: the array is `(rows, features+1, features+1)` and a full book
-    at sixty factors would be tens of gigabytes for a ranking whose order settles in a few
-    thousand rows.
+    Extracted so FR-MODEL-128's "one code path run twice" is a fact about the code rather
+    than a claim about two similar blocks. The seed, the sample size, the factor resolution
+    and `result.categorical_maps` all arrive from the caller, so the two calls differ in the
+    frame and in nothing else.
+
+    A partition smaller than `sample` contributes all its rows rather than being padded;
+    `OQ-MODEL-38` records that equal caps therefore give unequal N.
+    """
+    rows = min(sample, frame.height)
+    sampled = (
+        frame
+        if rows == frame.height
+        else frame.sample(n=rows, seed=seed, shuffle=True)
+    )
+    matrix = resolve_factors(sampled, factors, bandings=bandings, groupings=groupings)
+    from pricing_core.modelling.gbm import _encode
+
+    x, order, *_ = _encode(matrix, factors, maps=result.categorical_maps)
+    return x, order
+
+
+#: How many rows either pass measures interaction values on. The array is
+#: `(rows, features+1, features+1)` and a full book at sixty factors would be tens of
+#: gigabytes for a ranking whose order settles in a few thousand rows.
+#:
+#: **This is a cap, not a count**, and FR-MODEL-128 names "the same row cap" among the three
+#: sames it draws comparability from. A partition smaller than the cap contributes all its
+#: rows, so equal caps give unequal N — recorded as `OQ-MODEL-38`, not remedied here.
+_INTERACTION_ROW_CAP = 5_000
+
+#: How many ranked candidates FR-MODEL-79 publishes.
+_TOP_CANDIDATES = 5
+
+
+def _pair_strengths(
+    loaded: object, x: np.ndarray, order: Sequence[str], result: GbmFitResult
+) -> dict[tuple[str, str], float]:
+    """Every pair's interaction strength on one encoded matrix, unranked.
+
+    **This is the code path FR-MODEL-128 requires be run twice**, and returning the whole
+    map rather than the ranked top five is what makes running it twice useful. The holdout
+    pass needs a strength for *the pairs the in-sample pass selected* — a pair ranking fourth
+    in-sample and eleventh out of sample is precisely the collapse the ratio exists to
+    surface, and taking each partition's own top five would drop it silently while comparing
+    two different pairs' numbers.
+
+    So: same sampling, same `resolve_factors`, same `_encode` with the same
+    `categorical_maps`, same cap, same off-diagonal sum. Only the frame differs.
     """
     import xgboost as xgb
 
@@ -398,7 +470,7 @@ def _interaction_candidates(
 
     assert isinstance(loaded, xgb.Booster)
     native = _native_categoricals(result)
-    capped = x[: min(x.shape[0], 5_000)]
+    capped = x[: min(x.shape[0], _INTERACTION_ROW_CAP)]
     frame = xgb.DMatrix(
         capped, feature_names=list(order),
         feature_types=["c" if slug in native else "q" for slug in order],
@@ -406,17 +478,55 @@ def _interaction_candidates(
     )
     values = np.asarray(loaded.predict(frame, pred_interactions=True))
     features = len(order)
-    strengths: list[ShapInteraction] = []
+    strengths: dict[tuple[str, str], float] = {}
     for i in range(features):
         for j in range(i + 1, features):
             # Off-diagonal entries appear twice, once each way; the pair's strength is the
             # sum, which is what the interaction contributes to the score.
-            strength = float(np.mean(np.abs(values[:, i, j] + values[:, j, i])))
-            strengths.append(
-                ShapInteraction(pair=(order[i], order[j]), strength=strength)
+            strengths[(order[i], order[j])] = float(
+                np.mean(np.abs(values[:, i, j] + values[:, j, i]))
             )
-    strengths.sort(key=lambda pair: pair.strength, reverse=True)
-    return tuple(strengths[:5])
+    return strengths
+
+
+def _interaction_candidates(
+    in_sample: Mapping[tuple[str, str], float],
+    holdout: Mapping[tuple[str, str], float] | None,
+) -> tuple[ShapInteraction, ...]:
+    """FR-MODEL-79's ranked pairs, with FR-MODEL-128's ratio where one is defined.
+
+    The ranking is **by in-sample strength**, and the holdout is a lookup on the pairs that
+    ranking chose. `OQ-MODEL-38` records the consequence: the denominator is a selected
+    maximum and the numerator an independent re-measurement, so the expected ratio sits
+    below `1` even where the structure is identical — which is not what the requirement's
+    "near 1 says it survives" sentence assumes, and is not remedied here.
+    """
+    ranked = sorted(in_sample.items(), key=lambda item: item[1], reverse=True)
+    return tuple(
+        ShapInteraction(
+            pair=pair,
+            strength=strength,
+            holdout_strength_ratio=_ratio(strength, holdout, pair),
+        )
+        for pair, strength in ranked[:_TOP_CANDIDATES]
+    )
+
+
+def _ratio(
+    strength: float,
+    holdout: Mapping[tuple[str, str], float] | None,
+    pair: tuple[str, str],
+) -> float | None:
+    """The holdout value over the in-sample one, or `None` where there is no quotient.
+
+    `None` rather than `0.0` or `1.0`: both are readable as findings — a total collapse and
+    a perfect survival — and neither would be one. A zero denominator arises only when the
+    booster found no interaction structure at all, and "there was nothing in sample either"
+    is not the same claim as "it did not survive".
+    """
+    if holdout is None or strength == 0.0:
+        return None
+    return holdout[pair] / strength
 
 
 def fidelity_statement(

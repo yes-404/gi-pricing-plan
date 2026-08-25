@@ -143,6 +143,23 @@ class ShapInteraction(BaseModel):
 
     pair: tuple[str, str]
     strength: float = Field(ge=0.0)
+    #: FR-MODEL-128 — `strength` recomputed on the holdout partition, over the in-sample
+    #: value. Near `1` the structure survives out of sample; a collapse toward `0` says the
+    #: pair is a fitting artefact, which is the one thing an actuary needs before spending a
+    #: Factor on it.
+    #:
+    #: `None` where no ratio is defined, never `0.0` or `1.0` — both of those are readable
+    #: as findings and neither would be one. Two cases reach it: a spec with no `split_ref`,
+    #: so there is no holdout partition to measure on; and an in-sample `strength` of `0.0`,
+    #: which has no quotient and arises only when the booster found no interaction structure
+    #: at all. The key is emitted carrying `null` rather than omitted — see the field's note
+    #: in `02` §4.9 — because omission would need `exclude_none` at every serialisation site
+    #: and a per-site setting holds at one and not another.
+    #:
+    #: **Not a threshold.** The requirement is explicit that this is ranked evidence and
+    #: never an admission test, so FR-MODEL-79's refusal to write a Factor is untouched by
+    #: it. `OQ-MODEL-38` records why `1` is not the unbiased null it reads as.
+    holdout_strength_ratio: float | None = Field(default=None, ge=0.0)
 
 
 class ShapSummary(BaseModel):
