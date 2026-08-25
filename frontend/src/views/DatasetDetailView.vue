@@ -12,6 +12,7 @@ import {
 } from "@/api/datasets";
 import { ProblemError } from "@/api/problem";
 import type { DatasetVersion } from "@/api/versions";
+import StatusBadge from "@/components/StatusBadge.vue";
 
 const props = defineProps<{ slug: string }>();
 
@@ -30,13 +31,6 @@ const columns = computed(() => Object.keys(dataset.value?.data_dictionary ?? {})
 const forbidden = computed(() =>
   columns.value.filter((c) => forbidsModelling(dataset.value?.data_dictionary?.[c])),
 );
-
-const STATUS_TONE: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-700",
-  validating: "bg-amber-100 text-amber-900",
-  validated: "bg-emerald-100 text-emerald-900",
-  archived: "bg-slate-200 text-slate-600",
-};
 
 async function load(cursor?: string): Promise<void> {
   loading.value = true;
@@ -212,10 +206,7 @@ onMounted(() => void load());
                 </RouterLink>
               </td>
               <td class="py-2">
-                <span
-                  :class="['rounded px-2 py-0.5 text-xs font-medium',
-                           STATUS_TONE[row.status] ?? 'bg-slate-100']"
-                >{{ row.status }}</span>
+                <StatusBadge :status="row.status" />
               </td>
               <td class="py-2 text-right tabular-nums text-slate-600">
                 {{ row.totals?.exposure_years ?? "—" }}
