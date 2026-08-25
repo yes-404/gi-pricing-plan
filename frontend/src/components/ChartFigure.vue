@@ -1,6 +1,18 @@
 <script setup lang="ts">
 /**
- * A chart and the table that says the same thing (NFR-OVR-10).
+ * A chart and a table that says at least what the chart says (NFR-OVR-10).
+ *
+ * The contract is a **superset**, not a transcription, and it was widened deliberately once
+ * three charts had been wrapped. "The table that says the same thing" is the floor: every
+ * plotted series must appear as a column. It is not the ceiling, because the canvas and the
+ * table are read differently and a faithful transcription is not an equivalent one. A
+ * sighted reader takes volume from the height of the exposure bars, so `DoubleLiftChart`
+ * plots no row counts and its table carries them; a whisker on `OneWayChart` has no legend
+ * entry and no tooltip, so the interval it draws is unreadable except as a column. Holding
+ * callers to an exact transcription would have made both of those a violation.
+ *
+ * What the widening does not license is a table that omits a series, or one that shows a
+ * *different* number from the one plotted. Both are what the tests here check.
  *
  * WCAG 2.2 AA requires every chart to have an accessible tabular equivalent, and an ECharts
  * canvas offers a screen reader nothing at all. Two answers already exist in this repo and
@@ -14,7 +26,9 @@
  * `<details>` element would keep it out of the accessibility tree until opened, which is the
  * failure this component exists to avoid.
  */
-defineProps<{
+import { computed } from "vue";
+
+const props = defineProps<{
   /** Names the figure and labels the table. Two figures on a page must not share one. */
   title: string;
   /** Optional sentence under the heading — the place to say what a partition or a unit is. */
@@ -23,6 +37,39 @@ defineProps<{
   /** Row-major, one array per row, in the same order as `columns`. */
   rows: readonly (readonly (string | number | null)[])[];
 }>();
+
+/**
+ * The rows, refused if any of them does not fit the headers.
+ *
+ * "In the same order as `columns`" was a docstring and nothing more: `columns` and `rows`
+ * are independent props, so a short row rendered fewer cells, a long row rendered cells
+ * sitting under no header at all, and neither warned. Every caller is transcribing a chart
+ * option into this pair by hand, which is the one activity that produces exactly this
+ * mistake.
+ *
+ * The check is on the render path rather than in a `watchEffect` so that it also fires when
+ * a caller's columns change reactively — `HistogramChart` drops its Exposure column when
+ * the histogram carries no weights — and it is stripped from the production bundle, because
+ * a mis-shaped table is worth failing a test over and never worth blanking a page over.
+ *
+ * It cannot see a row of the right length whose **values** are permuted. That is the other
+ * half of the same defect and belongs to the test helper (`src/test-tables.ts`), which reads
+ * cells by their header; the two catch disjoint classes, which is why this repository has
+ * both.
+ */
+const checkedRows = computed(() => {
+  if (import.meta.env.DEV) {
+    const width = props.columns.length;
+    const index = props.rows.findIndex((row) => row.length !== width);
+    if (index !== -1) {
+      throw new Error(
+        `ChartFigure "${props.title}": row ${index} has ${props.rows[index]?.length} cells ` +
+          `but there are ${width} columns (${props.columns.join(" | ")}).`,
+      );
+    }
+  }
+  return props.rows;
+});
 </script>
 
 <template>
@@ -59,7 +106,7 @@ defineProps<{
       </thead>
       <tbody>
         <tr
-          v-for="(row, index) in rows"
+          v-for="(row, index) in checkedRows"
           :key="index"
           class="border-b border-slate-100"
         >

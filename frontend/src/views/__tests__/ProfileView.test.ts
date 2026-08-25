@@ -20,7 +20,14 @@ vi.mock("vue-router", async (importOriginal) => ({
 vi.mock("@/components/OneWayChart.vue", () => ({
   // ECharts needs a real canvas. The chart's own behaviour is tested separately; here it
   // would only prove happy-dom cannot measure a container.
-  default: { name: "OneWayChart", props: ["summary"], template: "<div data-testid='chart' />" },
+  default: {
+    name: "OneWayChart",
+    props: ["summary", "currency"],
+    // The props are echoed into the DOM because they are now the whole of this view's
+    // contribution to the one-way table: the table itself moved into the component, and
+    // what remains here is whether the right summary and the right currency reach it.
+    template: "<div data-testid='chart' :data-currency='currency'>{{ summary.column }}</div>",
+  },
 }));
 
 vi.mock("@/components/HistogramChart.vue", () => ({
@@ -189,24 +196,17 @@ describe("the profile view", () => {
     expect(options).toEqual(["veh_brand", "region"]);
   });
 
-  it("shows incurred as currency and the two ratios as statistics", async () => {
+  it("hands the chart the stored one-way and the workspace currency", async () => {
+    // The table these two facts fed is `OneWayChart`'s now, and is tested there against the
+    // rendered cells. What is left for this view is the wiring, and it is not incidental:
+    // `claim_amount_minor` is minor units *of the workspace currency*, so a view that
+    // dropped the prop would publish euro amounts under a pound sign. `currency` being a
+    // required prop makes that a type error rather than a wrong number; this asserts the
+    // value arriving is the workspace's own and not a placeholder.
     render(ProfileView, { props, ...mounted });
-    const table = await screen.findByRole("table");
-
-    // `claim_amount_minor` is the one exact amount on the row: 26 758 000 cents.
-    expect(within(table).getByText(/267,580\.00/)).toBeInTheDocument();
-    // `mean_severity` and `mean_burning_cost` are float **ratios** — amount ÷ claims and
-    // amount ÷ exposure. Rendering them as currency would imply an exactness they do not
-    // have, so they appear as plain statistics.
-    expect(within(table).getByText("707.88")).toBeInTheDocument();
-    expect(within(table).getByText("98.29")).toBeInTheDocument();
-    expect(within(table).queryByText(/€707\.88/)).not.toBeInTheDocument();
-  });
-
-  it("shows exposure exactly as stored, without parsing it", async () => {
-    render(ProfileView, { props, ...mounted });
-    const table = await screen.findByRole("table");
-    expect(within(table).getByText("2,722.24")).toBeInTheDocument();
+    const chart = await screen.findByTestId("chart");
+    expect(chart).toHaveTextContent("veh_brand");
+    expect(chart).toHaveAttribute("data-currency", "EUR");
   });
 
   it("treats a column with no stored one-way as an answer", async () => {

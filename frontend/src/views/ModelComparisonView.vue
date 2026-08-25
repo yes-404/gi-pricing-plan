@@ -161,16 +161,11 @@ onMounted(async () => {
         <h2 class="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Double lift
         </h2>
-        <div
+        <DoubleLiftChart
           v-for="series in comparison.summary.double_lift"
           :key="series.challenger_ref"
-        >
-          <p class="mt-3 text-sm text-slate-500">
-            Baseline against {{ series.challenger_ref }}, {{ series.weighting }}-weighted, binned by
-            the ratio of the two predictions
-          </p>
-          <DoubleLiftChart :series="series" />
-        </div>
+          :series="series"
+        />
       </template>
 
       <template v-if="comparison.summary.relativity_differences.length">

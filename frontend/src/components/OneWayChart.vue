@@ -12,11 +12,23 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { OneWaySummary } from "@/api/profiles";
+import { formatDecimalString, formatMinor } from "@/api/versions";
+import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, LineChart, CustomChart, GridComponent, TooltipComponent, LegendComponent,
      DataZoomComponent, CanvasRenderer]);
 
-const props = defineProps<{ summary: OneWaySummary }>();
+const props = defineProps<{
+  summary: OneWaySummary;
+  /**
+   * The workspace currency the incurred amounts are denominated in. Required, with no
+   * default: `claim_amount_minor` is minor units *of the workspace currency*, and a
+   * component that guessed "GBP" would render euro amounts with a pound sign — a wrong
+   * number that looks like a right one. A caller that does not know the currency has no
+   * business formatting the amount, so the type says so.
+   */
+  currency: string;
+}>();
 
 const rows = computed(() => props.summary.rows ?? []);
 const levels = computed(() => rows.value.map((row) => row.level));
@@ -102,21 +114,88 @@ function renderInterval(params: unknown, api: unknown): unknown {
     ],
   };
 }
+
+/**
+ * The chart's accessible equivalent (NFR-OVR-10), and until now the only chart on the
+ * Profile page that had one — hand-written in `ProfileView`, beside the chart rather than
+ * bound to it, and therefore attached to that one call site instead of to the component
+ * that draws the canvas. It moves here so that any view rendering a one-way gets the table
+ * with it.
+ *
+ * It carries two columns the canvas does not draw as a series, which is what makes it a
+ * superset rather than a transcription:
+ *
+ * - **Frequency CI** *is* plotted, as the whiskers `renderInterval` draws, and a whisker is
+ *   the least transcribable mark on the chart: it has no legend entry and no tooltip. It is
+ *   in the table for exactly the reason the series comment gives — a frequency without its
+ *   interval invites a decision the claim count cannot support.
+ * - **Severity CI** is plotted by nothing and is tabled anyway. Tabling the frequency's
+ *   interval and withholding the severity's would tell the reader that the frequency needs
+ *   one and the mean severity does not, which is not what FR-DATA-26 says; severity from
+ *   nine claims is the less stable of the two, not the more.
+ */
+const columns = [
+  "Level",
+  "Exposure",
+  "Claims",
+  "Incurred",
+  "Frequency",
+  "Frequency CI",
+  "Severity",
+  "Severity CI",
+  "Burning cost",
+];
+
+/** An interval as one cell. `—` when it is absent, which below two claims it always is. */
+function interval(ci: readonly [number, number] | null | undefined, digits: number, scale = 1) {
+  if (ci == null) return null;
+  return `${(ci[0] / scale).toFixed(digits)}–${(ci[1] / scale).toFixed(digits)}`;
+}
+
+/**
+ * `mean_severity`, `mean_burning_cost` and `severity_ci` are **float ratios**, not amounts:
+ * amount ÷ claims and amount ÷ exposure. Formatting them as currency would imply an
+ * exactness they do not have, so they are shown as the statistics they are. Still expressed
+ * in minor units — only the name changed (FR-DATA-46) — so the `/ 100` scaling stays.
+ *
+ * `severity_ci` shares that scale because it is computed from the same `claim_amount_minor`
+ * sum `mean_severity` is (`pricing_core.data.profile._one_way_row`), so it is divided the
+ * same way rather than on the assumption that an interval matches its statistic.
+ */
+const tableRows = computed(() =>
+  rows.value.map((row) => [
+    row.level,
+    formatDecimalString(row.exposure_years),
+    row.claim_count.toLocaleString(),
+    formatMinor(row.claim_amount_minor, props.currency),
+    row.frequency?.toFixed(4) ?? null,
+    interval(row.frequency_ci, 4),
+    row.mean_severity == null ? null : (row.mean_severity / 100).toFixed(2),
+    interval(row.severity_ci, 2, 100),
+    row.mean_burning_cost == null ? null : (row.mean_burning_cost / 100).toFixed(2),
+  ]),
+);
 </script>
 
 <template>
-  <div>
+  <ChartFigure
+    v-if="rows.length"
+    :title="`One-way: ${summary.column}`"
+    caption="Exposure and claim frequency by level, with intervals on the frequency and the
+             mean severity."
+    :columns="columns"
+    :rows="tableRows"
+  >
     <VChart
-      v-if="rows.length"
       class="h-80 w-full"
       :option="option"
       autoresize
     />
-    <p
-      v-else
-      class="text-sm text-slate-500"
-    >
-      This column has no stored one-way.
-    </p>
-  </div>
+  </ChartFigure>
+  <p
+    v-else
+    class="text-sm text-slate-500"
+  >
+    This column has no stored one-way.
+  </p>
 </template>
