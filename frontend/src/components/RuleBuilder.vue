@@ -68,6 +68,10 @@ async function author(): Promise<void> {
       target: { table: form.value.table, column: form.value.column },
       params,
       rationale: form.value.rationale,
+      // The generated `RuleCreate` requires `message` (the backend defaults it to ""), and
+      // the form carries no message input, so this is the value the platform would store
+      // anyway. Sent explicitly rather than widening the generated type at the call site.
+      message: "",
     });
 
     stage.value = "running";

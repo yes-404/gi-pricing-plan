@@ -7,6 +7,7 @@ export type RuleSetEntry = components["schemas"]["RuleSetEntry"];
 export type ValidationLayer = components["schemas"]["ValidationLayer"];
 export type RuleSetMemberWrite = components["schemas"]["RuleSetMemberWrite"];
 export type Severity = components["schemas"]["Severity"];
+export type RuleCreate = components["schemas"]["RuleCreate"];
 
 /** The four layers, in the order `01` §3.3 and §4.4 present them. */
 export const LAYERS: readonly ValidationLayer[] = [
@@ -55,16 +56,16 @@ export function membersOf(ruleSet: ValidationRuleSet): RuleSetMemberWrite[] {
   }));
 }
 
-/** FR-DATA-21 step 1: authored → `draft`. */
-export function createRule(body: {
-  slug: string;
-  layer: ValidationLayer;
-  check: string;
-  severity: Severity;
-  target: Record<string, unknown>;
-  params: Record<string, unknown>;
-  rationale?: string;
-}): Promise<ValidationRule> {
+/**
+ * Step 1 of `FR-DATA-21`'s chain. The body is the **generated** `RuleCreate` and is never
+ * restated here: it carries `catalogue_id`, which is what records that a workspace rule
+ * descends from a built-in (`FR-DATA-53`), and a hand-written copy of this shape is exactly
+ * how that field failed to reach the browser once already.
+ *
+ * Re-using an existing rule's `slug` is not an error — the platform allocates the next
+ * version, which is `FR-DATA-54`'s path for a threshold change.
+ */
+export function createRule(body: RuleCreate): Promise<ValidationRule> {
   return request<ValidationRule>("/validation-rules", { method: "POST", body });
 }
 
