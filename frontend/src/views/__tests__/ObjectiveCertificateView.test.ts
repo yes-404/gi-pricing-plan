@@ -15,9 +15,18 @@ const CERTIFICATE = {
   certified_at: "2026-08-25T00:00:00Z",
   job_id: "j1",
   result: {
+    // Deliberately ordered so that EVERY plausible sort reorders it, and the violated check
+    // sits in the middle rather than first. Found by mutation: with `violated` first,
+    // "group the findings to the top" reproduced this order exactly and the order assertion
+    // passed while the property it names was gone.
+    //   violated to top    -> convexity, finiteness, boundedness
+    //   violated to bottom -> finiteness, boundedness, convexity
+    //   alphabetical       -> boundedness, convexity, finiteness
+    // None of those is the artifact order below.
     checks: [
-      { name: "convexity", status: "violated", detail: "hessian negative on 4% of sampled points" },
       { name: "finiteness", status: "pass", detail: "finite throughout" },
+      { name: "convexity", status: "violated", detail: "hessian negative on 4% of sampled points" },
+      { name: "boundedness", status: "pass", detail: "bounded on the sampled domain" },
     ],
     sampling: { n_points: 1000, seed: 7, y_range: [0, 10], f_range: [-5, 5], w_range: [1, 1] },
     overall: "certified_with_findings",
@@ -93,7 +102,7 @@ describe("ObjectiveCertificateView", () => {
     const { container } = mountView();
 
     await screen.findByText("Certified with findings", { selector: "strong" });
-    expect((container.textContent ?? "").toLowerCase()).toContain("2 of the 9");
+    expect((container.textContent ?? "").toLowerCase()).toContain("3 of the 9");
   });
 
   it("treats a missing certificate as a normal state, not an error", async () => {
@@ -133,5 +142,26 @@ describe("ObjectiveCertificateView", () => {
 
     await screen.findByText(/model:read required/i);
     expect((container.textContent ?? "").toLowerCase()).not.toContain("has not been certified yet");
+  });
+
+  it("renders the checks in the artifact's order, never grouped or sorted by status", () => {
+    // The **group** and **order** limbs of the amended FR-MODEL-43. The other two limbs are
+    // covered by the tone and label assertions; these two hold only because the template
+    // iterates `checks` directly, and "enforced by construction" is not enforced — a `sort`
+    // added later would pass every other test in this file.
+    //
+    // Sorting findings to the top or bottom is the subtler failure: it never labels anything
+    // a failure, but it segregates the `violated` row into a block a reader parses as the
+    // problems, which is the "group … as a failure" the amendment names.
+    vi.spyOn(api, "getObjectiveCertificate").mockResolvedValue(CERTIFICATE);
+    vi.spyOn(api, "getObjective").mockResolvedValue(OBJECTIVE);
+    const { container } = mountView();
+
+    return screen.findByText("Certified with findings", { selector: "strong" }).then(() => {
+      const rendered = Array.from(container.querySelectorAll("tbody tr td:first-child")).map(
+        (cell) => (cell.textContent ?? "").trim(),
+      );
+      expect(rendered).toEqual(["finiteness", "convexity", "boundedness"]);
+    });
   });
 });
