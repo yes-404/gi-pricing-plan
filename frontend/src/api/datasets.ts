@@ -2,6 +2,7 @@ import { request } from "./client";
 import type { components } from "./generated/schema";
 
 export type Dataset = components["schemas"]["Dataset"];
+export type DatasetStatus = components["schemas"]["DatasetStatus"];
 export type DatasetPage = components["schemas"]["Page_Dataset_"];
 export type VersionPage = components["schemas"]["Page_DatasetVersion_"];
 export type DataDictionaryEntry = components["schemas"]["DataDictionaryEntry"];
