@@ -36,8 +36,11 @@ GENERATOR = ROOT / "scripts" / "generate-contracts.py"
 #: is_compared` is what stops the list going quietly stale, which is how `peril-structure`
 #: sat outside it declaring three exact decimals as JSON numbers (`OQ-OVR-8`, 2026-08-19).
 COMPARED_SLUGS: Final[tuple[str, ...]] = (
+    "artifact-envelope",
+    "artifact-ref",
     "audit-event",
     "banding",
+    "blob-ref",
     "custom-objective",
     "dataset-version",
     "diagnostics",
@@ -56,6 +59,35 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
 
 def _load(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _authored(slug: str) -> pathlib.Path | None:
+    """The hand-authored side of `slug`, wherever it sits under `schemas/`.
+
+    Every authored path in this file used to be built as `AUTHORED / (slug + ".schema.json")`
+    — flat, directly under `schemas/`. `common/` was reachable only by hand-writing it, and
+    four call sites do. The consequence was not a broken read but a **silent narrowing of
+    the guard**: `test_every_eligible_schema_is_compared` asked `(AUTHORED / path.name)
+    .exists()`, so the three schemas authored in `common/` with a generated side —
+    `artifact-envelope`, `artifact-ref`, `blob-ref` — were never eligible, never compared,
+    and the eligibility test that exists to notice exactly this went green over them.
+
+    Note the subtree exclusion, which is the whole reason this is not a one-line `rglob`:
+    `GENERATED` is a *child* of `AUTHORED`, so a plain recursive search matches every
+    generated schema against itself and would report all 25 as having an authored side.
+    """
+    hits = sorted(
+        p for p in AUTHORED.rglob(f"{slug}.schema.json") if GENERATED not in p.parents
+    )
+    assert len(hits) <= 1, f"two authored schemas claim the slug {slug!r}: {hits}"
+    return hits[0] if hits else None
+
+
+def _authored_schema(slug: str) -> pathlib.Path:
+    """`_authored` for the call sites that already know the slug has an authored side."""
+    path = _authored(slug)
+    assert path is not None, f"no authored schema for {slug!r}"
+    return path
 
 
 def _resolve(document: dict, node: dict) -> dict:
@@ -270,7 +302,7 @@ def test_authored_pattern_accepts_exactly_what_the_parser_accepts(
 def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
     """The two descriptions of one shape must not drift apart silently."""
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
     assert set(generated["properties"]) == set(authored["properties"])
 
 
@@ -446,7 +478,7 @@ def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str)
     a mispricing.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     declared = _declared_fields(authored, authored, AUTHORED)
     produced = _declared_fields(generated, generated, GENERATED)
@@ -753,6 +785,7 @@ def _complete_arms(tags: Iterable[Arm]) -> frozenset[Arm]:
 #: nullability` holds it to the six.
 NULLABILITY_COMPARED_SLUGS: Final[frozenset[str]] = frozenset(
     {
+        "artifact-envelope",
         "model",
         "model-spec",
         "diagnostics",
@@ -945,8 +978,30 @@ def _type_map(
 #: contract fix, and out of scope for a slice about certificate floors and two generated
 #: sides. So it is recorded with an owner and this comparison stays silent on that one path,
 #: on the `ENVELOPE_GAP_IS_RECORDED_NOT_FIXED` precedent above.
+#:
+#: `OQ-OVR-16` (opened 2026-08-25, W6b). `artifact-envelope` types `updated_at` non-null in
+#: the hand-authored contract under `common/` and nullable-with-`default: null` in the
+#: generated one, with identical `required` lists on both sides — found on the branch that
+#: made this pair compare at all, since `_authored` resolved flat and a schema authored in
+#: `common/` was never eligible. **Neither side is the tested one, which is what makes it a
+#: question.** `ArtifactEnvelope` has no producer — a definition, a re-export,
+#: `generate-contracts.py:44`, and one construction in `packages/model-schema/tests/
+#: test_refs.py` — so the Pydantic default is a declaration nothing exercises; while the
+#: authored schema is `allOf`-composed by twelve artifact schemas, which makes it the form
+#: external readers were actually given. `00-overview.md` §4.3 sides with the authored form
+#: by its own convention, writing `"updated_at": "timestamptz"` where `archived_at`,
+#: `parent_id` and `description` in the same block each carry a null arm. And nothing settles
+#: it from behaviour: `updated_at` exists on exactly two backend tables, `WorkspaceSettingRow`
+#: and `ApprovalPolicyRow`, both non-null — and neither is an artifact, neither composes the
+#: envelope, and not one of the twelve composers carries the column at all. The field is
+#: specified-and-unbuilt. Widening the authored side would delete a published specification on
+#: the authority of an unexercised default, which `CLAUDE.md` §0 names as the thing not to do;
+#: narrowing the model would settle a contract against no producer. So it is recorded with an
+#: owner and this comparison stays silent on that one path, on the `OQ-DATA-12` precedent
+#: above. The condition to remove it is concrete: the first artifact that persists an envelope.
 UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {
     "validation-report": frozenset({"results.[].offending_sample.[]"}),
+    "artifact-envelope": frozenset({"updated_at"}),
 }
 def _admits(constraints: Arm, arm: Arm) -> bool:
     """Does a complete `arm` satisfy every constraint in `constraints`?
@@ -1093,7 +1148,7 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     across the fifteen slugs.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     keep_null = slug in NULLABILITY_COMPARED_SLUGS
     produced = _type_map(generated, generated, GENERATED, keep_null=keep_null)
@@ -1144,7 +1199,7 @@ def test_the_escalated_type_disagreements_are_still_unresolved(slug: str) -> Non
     membership test comes before the value test, and absence is reported as absence.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     keep_null = slug in NULLABILITY_COMPARED_SLUGS
     # Read through `_paths`: the pin names a dotted path, not an arm, and this asks whether
@@ -1166,7 +1221,8 @@ def test_the_escalated_type_disagreements_are_still_unresolved(slug: str) -> Non
         f"{slug} no longer needs its type pin at "
         + ", ".join(stale)
         + " — delete the entry from UNRESOLVED_TYPE_DISAGREEMENTS rather than leaving the "
-        "comparison blind there, and close OQ-DATA-12 if that is what settled it"
+        "comparison blind there, and close the question named beside the entry if that "
+        "is what settled it"
     )
 
 
@@ -1281,7 +1337,7 @@ def test_the_contract_never_marks_optional_what_the_model_requires(slug: str) ->
     the same finding, and re-reporting it here would be a second account of one fact.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     produced = _required_map(generated, generated, GENERATED)
     declared = _required_map(authored, authored, AUTHORED)
@@ -1399,7 +1455,7 @@ def test_generated_and_authored_agree_on_what_an_open_map_admits(slug: str) -> N
     depth.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     produced = _closure_map(generated, generated, GENERATED)
     declared = _closure_map(authored, authored, AUTHORED)
@@ -1685,7 +1741,7 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
     nothing, the comparison would go red, and the entry would look like the innocent party.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     walked_produced = _constraint_map(generated, generated, GENERATED)
     walked_declared = _constraint_map(authored, authored, AUTHORED)
@@ -1734,7 +1790,7 @@ def test_the_escalated_constraint_disagreements_are_still_unresolved(slug: str) 
     unchanged and still earning its place.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
 
     walked_produced = _constraint_map(generated, generated, GENERATED)
     walked_declared = _constraint_map(authored, authored, AUTHORED)
@@ -1783,7 +1839,7 @@ def test_each_new_walker_reaches_a_nested_path_it_is_supposed_to(
     one nested at least two levels down and each chosen because a plausible refactor of the
     walker would lose it.
     """
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
     reached = walker(authored, authored, AUTHORED)
     assert path in reached, (
         f"{walker.__name__} no longer reaches {path} in {slug} — the comparison built on "
@@ -2200,7 +2256,7 @@ def test_the_comparison_reaches_the_nested_fields_this_slice_added(slug: str) ->
     still reaches them.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
     keep_null = slug in NULLABILITY_COMPARED_SLUGS
     compared = set(
         _paths(_type_map(generated, generated, GENERATED, keep_null=keep_null))
@@ -2294,9 +2350,9 @@ def test_every_eligible_schema_is_compared() -> None:
     contract that had been wrong since Phase 0 precisely because nothing enforced this.
     """
     eligible = {
-        path.name.split(".")[0]
-        for path in GENERATED.glob("*.schema.json")
-        if (AUTHORED / path.name).exists()
+        slug
+        for slug in (p.name.split(".")[0] for p in GENERATED.glob("*.schema.json"))
+        if _authored(slug) is not None
     }
     unaccounted = eligible - set(COMPARED_SLUGS)
     assert not unaccounted, (
@@ -2325,7 +2381,7 @@ def test_the_type_comparison_reaches_the_one_way_row(slug: str, row: str) -> Non
     the comparison passed with the interval bounds deliberately typed as integers.
     """
     generated = _load(GENERATED / f"{slug}.schema.json")
-    authored = _load(AUTHORED / f"{slug}.schema.json")
+    authored = _load(_authored_schema(slug))
     compared = set(_paths(_type_map(generated, generated, GENERATED))) & set(
         _paths(_type_map(authored, authored, AUTHORED))
     )
