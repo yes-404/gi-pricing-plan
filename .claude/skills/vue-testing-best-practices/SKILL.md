@@ -19,6 +19,7 @@ Vue.js testing best practices, patterns, and common gotchas.
 - Choosing end-to-end testing framework for Vue apps → See [testing-e2e-playwright-recommended](reference/testing-e2e-playwright-recommended.md)
 - Tests need to verify computed styles or real DOM events → See [testing-browser-vs-node-runners](reference/testing-browser-vs-node-runners.md)
 - Testing components created with defineAsyncComponent fails → See [async-component-testing](reference/async-component-testing.md)
+- A test asserting something is **absent** passes while the component is still loading → See [async-component-testing](reference/async-component-testing.md#a-waitfor-on-synchronously-rendered-content-is-not-waiting)
 - Teleported modal content can't be found in wrapper queries → See [teleport-testing-complexity](reference/teleport-testing-complexity.md)
 
 ## Reference

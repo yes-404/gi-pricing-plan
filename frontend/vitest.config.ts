@@ -23,6 +23,12 @@ export default defineConfig({
         fileURLToPath(
           new URL("../packages/pricing-core/src/pricing_core/modelling", import.meta.url),
         ),
+        // OQ-MODEL-37's second surface: `FITTABLE_OBJECTIVE_STATUSES` is a *subset* of a
+        // generated enum, which no field type can express, so the divergence test is the
+        // whole of the interim rather than a stopgap beside a better fix.
+        fileURLToPath(
+          new URL("../packages/model-schema/src/model_schema", import.meta.url),
+        ),
       ],
     },
   },

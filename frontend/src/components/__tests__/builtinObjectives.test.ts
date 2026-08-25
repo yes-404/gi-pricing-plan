@@ -6,8 +6,10 @@ import { describe, expect, it } from "vitest";
 // `vite/client` itself. It also resolves at build time, so a path that stops existing is
 // a build failure rather than a runtime throw inside one test.
 import gbmSource from "../../../../packages/pricing-core/src/pricing_core/modelling/gbm.py?raw";
+import objectivesSource from "../../../../packages/model-schema/src/model_schema/objectives.py?raw";
 
 import { BUILTIN_GBM_OBJECTIVES } from "@/api/modelSpecs";
+import { FITTABLE_OBJECTIVE_STATUSES } from "@/api/objectives";
 
 /**
  * The divergence guard for OQ-MODEL-37, and the only part of it this slice can build.
@@ -54,6 +56,55 @@ function objectivesDeclaredInPricingCore(): string[] {
   }
   return Array.from(table[1].matchAll(/^\s*"([^"]+)":/gm), (match) => match[1] as string);
 }
+
+/**
+ * OQ-MODEL-37's **second surface**, added by W6b-4b.
+ *
+ * `FITTABLE_OBJECTIVE_STATUSES` is `{certified, review, approved}` — the statuses a fit
+ * accepts, and deliberately *not* R4's `approved`-alone rule for a model reaching
+ * approval. `ObjectiveStatus` is a generated schema so the **type** reaches every client,
+ * but the **subset** reaches none: `ObjectivePicker` must hand-write it.
+ *
+ * Option (a) — narrowing a field's type — cannot express this one, because a subset of an
+ * enum's members is not a field type. So the divergence test is the whole of the interim
+ * here, not a stopgap alongside a better fix.
+ */
+function fittableStatusesDeclaredInModelSchema(): string[] {
+  // Anchored on the **assignment**, at line start. The bare name matches its `__all__`
+  // entry ninety lines earlier, and a lazy scan from there reaches the *transitions*
+  // table's first `frozenset` instead — which returned `{certified, deprecated}`, a
+  // plausible-looking set that is not this one. Caught by the equality assertion below and
+  // not by the "found something" control, which is the limit of that kind of control.
+  const table =
+    /^FITTABLE_OBJECTIVE_STATUSES\s*:[^=]*=\s*frozenset\(\s*\{([\s\S]*?)\}\s*\)/m.exec(
+      objectivesSource,
+    );
+  if (table?.[1] === undefined) {
+    throw new Error(
+      "Could not find FITTABLE_OBJECTIVE_STATUSES in model_schema/objectives.py. If it " +
+        "was restructured, update this guard — do not delete it (OQ-MODEL-37).",
+    );
+  }
+  return Array.from(
+    table[1].matchAll(/ObjectiveStatus\.([A-Z_]+)/g),
+    (match) => (match[1] as string).toLowerCase(),
+  );
+}
+
+describe("the fittable objective statuses against model-schema", () => {
+  it("finds the set it is scraping", () => {
+    expect(fittableStatusesDeclaredInModelSchema().length).toBeGreaterThan(0);
+  });
+
+  it("offers exactly the statuses a fit accepts", () => {
+    // A subset would make the picker stricter than the fit — an actuary unable to select
+    // an objective the platform accepts, which is the mistake this slice's own plan made
+    // before arbitration. A superset would offer one the fit refuses.
+    expect([...FITTABLE_OBJECTIVE_STATUSES].sort()).toEqual(
+      fittableStatusesDeclaredInModelSchema().sort(),
+    );
+  });
+});
 
 describe("the builtin GBM objective list against pricing-core", () => {
   it("finds the table it is scraping", () => {

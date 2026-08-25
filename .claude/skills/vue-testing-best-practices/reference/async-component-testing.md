@@ -129,6 +129,57 @@ test('shows error component on load failure', async () => {
 })
 ```
 
+## A `waitFor` on synchronously-rendered content is not waiting
+
+**Impact: HIGH — this one is silent.** It produces tests that pass, look like coverage, and
+assert nothing.
+
+A component that renders *some* content synchronously and fetches the rest in `onMounted`
+has two populations on screen at different times. A `waitFor` gated on the synchronous half
+resolves on the **first** check, before the fetch has settled — so every assertion after it
+runs against a DOM the async data has not reached.
+
+That is harmless for a presence assertion, which simply waits again. It is fatal for an
+**absence** assertion, which is satisfied by the data not having arrived yet:
+
+```ts
+// WRONG. The four builtin <option>s render synchronously, so this waitFor resolves
+// immediately and the absence below is true of a list that is still loading.
+await waitFor(() => expect(options()).toContain("count:poisson"))
+expect(options().join(" ")).not.toContain("excluded-item")   // vacuous
+```
+
+Found in W6b-4b, where it hid three of a component's four filtering rules: mutations that
+deleted the status filter, the response filter and the backend filter **all passed**. The
+suite was green and three properties were untested.
+
+**Gate on something that can only appear after the fetch** — a control item in the same
+fixture that the filter under test must let through:
+
+```ts
+// RIGHT. `visible-control` cannot render until the fetch resolves, so reaching the next
+// line proves the async data is on screen and the absence means what it says.
+listObjectives.mockResolvedValue({ items: [control(), excludedItem()] })
+await waitFor(() => expect(options().join(" ")).toContain("visible-control"))
+expect(options().join(" ")).not.toContain("excluded-item")
+```
+
+Where no control is possible — a case where *nothing* async may render — synchronise on the
+mock having been called and settled, then assert:
+
+```ts
+await waitFor(() => expect(listObjectives).toHaveBeenCalled())
+await Promise.resolve()
+```
+
+**Rule of thumb:** an absence assertion needs a presence assertion before it, and that
+presence must be something the async path alone can produce. Waiting for something that was
+already on screen is not waiting.
+
+The general lesson is that this class of bug is invisible to a passing suite — it is only
+detectable by breaking the code and checking the test notices. Run the mutation before
+trusting the coverage.
+
 ## Utilities Reference
 
 | Utility | Purpose |
