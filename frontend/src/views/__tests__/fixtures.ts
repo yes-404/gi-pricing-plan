@@ -1,7 +1,9 @@
 import type { Backtest } from "@/api/backtests";
 import type { Diagnostics } from "@/api/diagnostics";
 import type { ModelComparison } from "@/api/comparisons";
-import { gbmSpec, type Model, type TransparencyArtifact } from "@/api/models";
+import type { Prediction } from "@/api/predictions";
+import type { DatasetVersion } from "@/api/versions";
+import { gbmSpec, type Factor, type Model, type TransparencyArtifact } from "@/api/models";
 
 /**
  * A fitted LightGBM, annotated rather than cast.
@@ -435,4 +437,76 @@ export const BACKTEST: Backtest = {
     period_to: "2025-12-31",
     partition: DIAGNOSTICS.universal.train,
   },
+};
+
+/**
+ * The Dataset Version `GLM_MODEL` was fitted on.
+ *
+ * Present because a Model carries **only** `dataset_version_id` while `listFactors` filters
+ * by `dataset_id`, and a Dataset Version is not a Dataset (`CLAUDE.md` §7). The view resolves
+ * one to the other, so a test that never answers this route is testing a view that could not
+ * load.
+ */
+export const GLM_DATASET_VERSION = {
+  id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  dataset_id: "dddddddd-1111-4222-8333-444455556666",
+  version: 4,
+  status: "validated",
+} as unknown as DatasetVersion;
+
+/** A minimal fitted GLM. `GBM_MODEL` above is the boosted counterpart. */
+export const GLM_MODEL: Model = {
+  id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  model_family_slug: "motor-ad-frequency",
+  version: 3,
+  status: "fitted",
+  spec_hash: "v10:sha256:def",
+  dataset_version_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  spec: {
+    model_type: "glm",
+    model_family_slug: "motor-ad-frequency",
+    dataset_version_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    response_column: "ad_claim_count",
+    family: "poisson",
+    link: "log",
+    factors: ["f1"],
+    offset: { kind: "log_column", column: "exposure_years" },
+    weight: { kind: "none" },
+    loss_treatment: { kind: "none" },
+    seed: 0,
+  },
+} as unknown as Model;
+
+export const DRIVER_AGE_FACTOR: Factor = {
+  id: "f1",
+  slug: "driver_age",
+  dataset_id: "dddddddd-1111-4222-8333-444455556666",
+  version: 1,
+  type: "identity",
+  source_columns: ["driver_age_years"],
+  operand_factor_ids: [],
+  base_level_method: "largest_exposure",
+  base_level: null,
+  banding_id: null,
+  grouping_id: null,
+  intent: "risk",
+  monotonic_direction: "none",
+  monotonic_rationale: null,
+  prohibited: false,
+  prohibited_reason: null,
+} as Factor;
+
+export const PREDICTION: Prediction = {
+  model_id: GLM_MODEL.id,
+  model_family_slug: GLM_MODEL.model_family_slug,
+  version: GLM_MODEL.version,
+  model_type: "glm",
+  uncertainty: {
+    kind: "confidence_interval_mean",
+    basis: "information_matrix",
+    level: 0.95,
+    reason: null,
+    interval_models: null,
+  },
+  rows: [{ expected: 0.1342, lower: 0.1201, upper: 0.1489 }],
 };

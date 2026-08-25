@@ -71,4 +71,20 @@ describe("the /models routes", () => {
     expect(resolved.params.slug).toBe("motor-frequency");
     expect(resolved.params.backtestId).toBe("0e3f7a1c-1111-4222-8333-444455556666");
   });
+
+  // The version is a query, not a param, so `props: true` would drop it — the defect the
+  // `/models/:slug` entry carries a note about. Asserted by resolution, like its neighbours.
+  it("resolves the prediction view, version carried as a query", () => {
+    const resolved = router().resolve("/models/motor-ad-frequency/predict?version=3");
+
+    expect(resolved.matched.map((r) => r.name)).toContain("model-predict");
+    expect(resolved.params.slug).toBe("motor-ad-frequency");
+    expect(resolved.query.version).toBe("3");
+  });
+
+  it("does not let /models/:slug capture the predict path", () => {
+    expect(
+      router().resolve("/models/motor-ad-frequency/predict").matched.map((r) => r.name),
+    ).toContain("model-predict");
+  });
 });

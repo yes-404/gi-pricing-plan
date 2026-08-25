@@ -163,6 +163,24 @@ on it is a compile error rather than the tuple's first member. Use
 `.test.ts` — is invisible to it, and `vue-tsc` (`pnpm type-check`, `pnpm build`) is the first
 thing that sees it. Both halves, every time.
 
+**A spread inside a cast object literal silences the excess/invalid-member check.** Measured in
+W6b-6b: two fixtures carried `intent: "rating"`, which is not a `FactorIntent` member (the arms
+are `risk`, `control`, `offset`, `diagnostic`). The one written as a plain literal with
+`as Factor` was rejected by `vue-tsc` — *"Type '\"rating\"' is not comparable"*. The one whose
+literal also contained `...extra` **compiled clean and its tests passed**, because the spread
+widens the inferred type enough for the assertion to be allowed.
+
+So `as SomeType` on an object built with a spread is close to no check at all. When a fixture
+must carry an enum value, **read the member list out of the generated contract** rather than
+writing it from the field's name:
+
+```bash
+python3 -c "import json;print(json.load(open('docs/contracts/openapi/generated.json'))['components']['schemas']['FactorIntent']['enum'])"
+```
+
+An invented literal is not a typo that surfaces later — a fixture asserting a value the platform
+cannot produce tests a system that does not exist.
+
 **A populated `node_modules` hides a missing dependency.** Rewriting `package.json`
 dropped `openapi-typescript` and `typescript` from `devDependencies`; every local command
 kept working because the packages were still installed, and CI failed on its first run with
@@ -451,3 +469,8 @@ importing `PartitionCaption` before that type existed ran three of four assertio
 never printed the `TS2305`; the tautology was found by making the change the assertion
 forbids — widening `PartitionLabel` in place — and watching it still pass. Both are recorded
 here rather than in `vue-testing-best-practices`, which is vendored (`CLAUDE.md` §12).
+
+2026-08-25 — W6b-6b. The spread-in-a-cast note is measured against two fixtures written in the
+same slice from the same wrong literal: the plain one failed `vue-tsc`, the one carrying
+`...extra` compiled and passed its five tests. Both said `intent: "rating"`, which
+`FactorIntent` has never had.
