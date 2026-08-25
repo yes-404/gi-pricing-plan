@@ -997,6 +997,26 @@ fold: overall banner → failing rules → warnings needing acknowledgement → 
 > with zero callers until then — and bands each column against `VR-DST-1`'s thresholds, so a
 > rule's verdict and the screen an actuary is reading cannot disagree about one number.
 >
+> **Corrected 2026-08-25 (W6b).** The sentence above justifies the banding by rule-agreement,
+> and the banding as built cannot deliver it. `VR-DST-1` carries **`warn_above` only**: the
+> 0.25 band belongs to a *second* rule, which the 2026-08-15 amendment on §4.4 created in
+> principle — *"two bands are two rules"* — and which is **not in the set** (FR-DATA-54's
+> build note says so in terms). So `psiBand`'s third band, `"broken"`, reports a `fail`
+> severity **no rule in the workspace can emit** — the disagreement this note forbids, in the
+> direction that *invents* severity rather than hiding it. The defect is quotable:
+> `frontend/src/api/profiles.ts:42` states the struck two-band form as though `VR-DST-1` still
+> said it, which is how a struck sentence goes on living.
+>
+> **Decided 2026-08-25: the screen collapses to two bands and reads its threshold from the
+> catalogue.** `list_rules` (FR-DATA-53) returns `ValidationRule.params`, generated onto the
+> frontend, so no PSI threshold is hard-coded there at all and FR-DATA-54's reviewed path
+> stays the only way one moves. Sourcing 0.10 while leaving 0.25 a literal was rejected as
+> worse than either alternative: it makes one band provably sourced and the other provably
+> invented, and the invented one is the severe one. The third band returns with the rule that
+> licenses it, owned by whoever mints that rule — **not W6b's to mint**, because a governance
+> rule minted to complete a colour scale inverts the amendment that split the bands, and
+> §4.3 keeps severity on the Rule Set entry precisely so a check cannot escalate itself.
+>
 > **Three things the build settled that this note had left open.** The reference lives in the
 > **route query** and not in a Pinia store (**OQ-DATA-11**): nothing required the selection to
 > outlive a route, and a URL is shareable where a store is not — `frontend/src/stores/` is
