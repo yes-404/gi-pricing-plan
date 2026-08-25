@@ -5,9 +5,16 @@ import { listVersions } from "@/api/datasets";
 import type { DatasetVersion } from "@/api/versions";
 import { waitForJob } from "@/api/jobs";
 import { ProblemError } from "@/api/problem";
-import { createRule, dryRun, LAYERS, submitRule, type ValidationLayer } from "@/api/rules";
+import {
+  createRule,
+  dryRun,
+  LAYERS,
+  submitRule,
+  type ValidationLayer,
+  type ValidationRule,
+} from "@/api/rules";
 
-const props = defineProps<{ slug: string }>();
+const props = defineProps<{ slug: string; seed?: ValidationRule | null }>();
 const emit = defineEmits<{ (event: "authored"): void }>();
 
 /**
@@ -19,15 +26,24 @@ const stage = ref<"idle" | "creating" | "running" | "submitting" | "done">("idle
 const error = ref<string | null>(null);
 const versions = ref<DatasetVersion[]>([]);
 
+/**
+ * `FR-DATA-54`: changing a threshold authors a new version, so the honest starting point
+ * for that edit is the current rule rather than an empty form. Reusing the slug is what
+ * makes the platform allocate the next version (`FR-DATA-21` step 4).
+ *
+ * `scope` and `tolerance` are not seeded because they cannot be authored at all —
+ * `create_rule` writes both as literal `{}` — so carrying them would imply a round-trip
+ * that does not exist.
+ */
 const form = ref({
-  slug: "",
-  layer: "actuarial_sanity" as ValidationLayer,
-  check: "range",
-  severity: "warn" as "warn" | "fail",
-  table: "policy_exposure",
-  column: "",
-  params: "{}",
-  rationale: "",
+  slug: props.seed?.slug ?? "",
+  layer: (props.seed?.layer ?? "actuarial_sanity") as ValidationLayer,
+  check: props.seed?.check ?? "range",
+  severity: (props.seed?.severity ?? "warn") as "warn" | "fail",
+  table: (props.seed?.target as { table?: string } | undefined)?.table ?? "policy_exposure",
+  column: (props.seed?.target as { column?: string } | undefined)?.column ?? "",
+  params: JSON.stringify(props.seed?.params ?? {}, null, 2),
+  rationale: props.seed?.rationale ?? "",
   versionId: "",
 });
 
@@ -68,10 +84,14 @@ async function author(): Promise<void> {
       target: { table: form.value.table, column: form.value.column },
       params,
       rationale: form.value.rationale,
+      // `FR-DATA-53`: what survives a workspace versioning a seeded rule. `null` for a
+      // rule authored from scratch — the backend refuses a `catalogue_id` naming no
+      // catalogue entry, so inventing one here is rejected on the way in.
+      catalogue_id: props.seed?.catalogue_id ?? null,
       // The generated `RuleCreate` requires `message` (the backend defaults it to ""), and
-      // the form carries no message input, so this is the value the platform would store
-      // anyway. Sent explicitly rather than widening the generated type at the call site.
-      message: "",
+      // the form carries no message input — so the versioned rule keeps the message it
+      // had, and a rule authored from scratch gets the platform's own default.
+      message: props.seed?.message ?? "",
     });
 
     stage.value = "running";
