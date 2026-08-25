@@ -430,11 +430,22 @@ async def test_an_unsupported_objective_is_a_spec_problem_not_a_failed_job(
 
 
 @pytest.mark.req("FR-MODEL-44")
-async def test_a_custom_objective_is_refused_before_a_job_exists(
+async def test_a_custom_objective_whose_ref_resolves_to_nothing_is_refused(
     database: Database, blob_store: BlobStore, workspace_id, settings
 ) -> None:
-    """`02` R4 makes an unapproved Custom Objective unusable, and FR-MODEL-38 has not been
-    built at all — so the spec is unfittable for two reasons and says so once."""
+    """**This test replaced one that refused every Custom Objective.**
+
+    It asserted the spec was unfittable because "FR-MODEL-38 has not been built at all",
+    which was true when it was written and is not now: the artifact type, the routes, the
+    certify and approval paths and the whole fit path all ship. `02` §5.1 authorised that
+    placeholder conditionally — "a Custom Objective **while FR-MODEL-38 is unbuilt**" —
+    and the condition has expired.
+
+    What survives is the narrow case the old assertion happened to exercise: this ref
+    resolves to no objective in the workspace. It is a **problem, not a 404**, the same
+    treatment an unresolvable offset model gets, because a spec that merely cannot be
+    fitted is not a bad request.
+    """
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
     version_id = await _validated_version(
@@ -446,7 +457,7 @@ async def test_a_custom_objective_is_refused_before_a_job_exists(
         validation = await spec_service.validate_spec(
             session, settings, workspace_id=workspace_id, actor=actor,
             spec=_gbm_spec(
-                version_id, (area,),
+                version_id, (area,), response=ResponseKind.CLAIM_COUNT,
                 objective=GbmFunctionRef(
                     kind="custom", ref="custom_objective:capped-gamma@2"
                 ),
@@ -454,9 +465,136 @@ async def test_a_custom_objective_is_refused_before_a_job_exists(
         )
 
     assert validation.ok is False
-    assert any(
-        p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED for p in validation.problems
+    problem = next(
+        p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
     )
+    assert problem.subject == "custom_objective:capped-gamma@2"
+
+
+@pytest.mark.req("FR-MODEL-44")
+async def test_a_certified_custom_objective_is_accepted_before_a_job_exists(
+    database: Database, blob_store: BlobStore, workspace_id, settings
+) -> None:
+    """The permission the placeholder was hiding, and the point of retiring it.
+
+    A `certified` objective is fittable — `FITTABLE_OBJECTIVE_STATUSES` is
+    `{certified, review, approved}`, and its own comment distinguishes that from R4's
+    `approved`-alone rule for a *model* reaching approval. So this spec validates, and the
+    builder that composes it is no longer offering something its own validator refuses.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    objective = await _certified_objective(database, blob_store, workspace_id, actor)
+
+    async with database.unit_of_work() as session:
+        validation = await spec_service.validate_spec(
+            session, settings, workspace_id=workspace_id, actor=actor,
+            spec=_gbm_spec(
+                version_id, (area,), response=ResponseKind.CLAIM_COUNT,
+                objective=GbmFunctionRef(
+                    kind="custom",
+                    ref=f"custom_objective:{objective.slug}@{objective.version}",
+                ),
+            ),
+        )
+
+    # Scoped to the objective. The fixture spec declares no split, so `validation.ok` is
+    # legitimately False for a reason this test is not about — asserting `ok is True` here
+    # would couple it to the fixture's split and hide what it is checking.
+    assert not [
+        p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
+    ]
+
+
+@pytest.mark.req("FR-MODEL-44")
+async def test_a_draft_custom_objective_is_refused_before_a_job_exists(
+    database: Database, blob_store: BlobStore, workspace_id, settings
+) -> None:
+    """A `draft` objective has no certificate, so FR-MODEL-42 is unsatisfied.
+
+    Written because a §13 mutation deleting the status gate broke **nothing**: every other
+    test here uses `_certified_objective`, so the gate was never exercised on a status it
+    must refuse. `FITTABLE_OBJECTIVE_STATUSES` is `{certified, review, approved}` and
+    `draft` is outside it — the one case the helper cannot produce.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+
+    # `create_objective` makes a `draft` (FR-MODEL-38, 46) — deliberately not certified.
+    async with database.unit_of_work() as session:
+        draft = await objective_service.create_objective(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            slug=f"draft-{new_uuid7().hex[-6:]}",
+            template=ObjectiveTemplate.POISSON,
+            params={},
+            applicability=None,
+            hessian_strategy=HessianStrategy.CLIP_TO_MIN,
+            hessian_min=1e-6,
+            description=None,
+        )
+        draft_ref = f"custom_objective:{draft.slug}@{draft.version}"
+
+    async with database.unit_of_work() as session:
+        validation = await spec_service.validate_spec(
+            session, settings, workspace_id=workspace_id, actor=actor,
+            spec=_gbm_spec(
+                version_id, (area,), response=ResponseKind.CLAIM_COUNT,
+                objective=GbmFunctionRef(kind="custom", ref=draft_ref),
+            ),
+        )
+
+    assert validation.ok is False
+    problem = next(
+        p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
+    )
+    assert "draft" in problem.message
+
+
+@pytest.mark.req("FR-MODEL-44")
+async def test_a_custom_objective_with_no_declared_response_is_refused(
+    database: Database, blob_store: BlobStore, workspace_id, settings
+) -> None:
+    """A builtin objective names its own family; a custom one does not.
+
+    `fit_gbm` raises `OBJECTIVE_RESPONSE_UNDECLARED` for this, and the validator now says
+    the same thing before a Job exists. Without `response` there is nothing to check
+    applicability against and nothing for the diagnostics deviance to read.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    objective = await _certified_objective(database, blob_store, workspace_id, actor)
+
+    async with database.unit_of_work() as session:
+        validation = await spec_service.validate_spec(
+            session, settings, workspace_id=workspace_id, actor=actor,
+            spec=_gbm_spec(
+                version_id, (area,),
+                objective=GbmFunctionRef(
+                    kind="custom",
+                    ref=f"custom_objective:{objective.slug}@{objective.version}",
+                ),
+            ),
+        )
+
+    assert validation.ok is False
+    problem = next(
+        p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
+    )
+    assert "declares no `response`" in problem.message
 
 
 @pytest.mark.req("FR-MODEL-30")
