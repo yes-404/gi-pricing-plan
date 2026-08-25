@@ -1,6 +1,6 @@
 ---
 name: git-hygiene
-description: Git and GitHub working discipline for this repo — what belongs in .gitignore and what must NOT be ignored, branch and PR flow, squash-merge and branch cleanup, how a squash commit's title and body are composed (including the `(#N)` the merge API will not add for you), and the merge-order trap that strands work. Use before committing, when creating a branch or PR, when merging one, when deleting branches, when adding a new tool that generates files, or when a push is rejected.
+description: Git and GitHub working discipline for this repo — what belongs in .gitignore and what must NOT be ignored, branch and PR flow, squash-merge and branch cleanup, how a squash commit's title and body are composed (including the `(#N)` the merge API will not add for you), and the merge-order trap that strands work. Use before committing, when creating a branch or PR, when merging one, when deleting branches, when adding a new tool that generates files, or when a push is rejected; and why an amend must name its delta
 ---
 
 # Git hygiene
@@ -291,7 +291,26 @@ fire. Add an always-running aggregator job and require *that* instead.
 *(Moved here from `CLAUDE.md` §2 on 2026-08-23: it is PR-flow procedure, conditional on
 something that has not happened, and an always-loaded file is the wrong place for both.)*
 
+## Amending after review: a new SHA inherits clearance it never earned
+
+CI re-runs on a re-push; nothing else does. Approvals, audit verdicts and
+verification reports cite the SHA that earned them, and an amend replaces it with a
+SHA nobody has read — while `gh pr view` keeps showing the PR as reviewed and green.
+The amended commit therefore **inherits its predecessor's clearance invisibly**.
+
+The rule: every amendment after review has started must **name its delta** — what
+changed and why the earlier clearance does not cover it. The reviewer re-checks the
+delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef8821 →
+9e01578` was covered by an auditor verdict that enumerated exactly the three residues
+it fixed; a silent amend would have carried the old verdict over the new code.
+
 ## Verified
+
+**2026-08-25 — the amend-clearance section above, learned live.** W6b-13's branch was
+amended between the auditor's first table and its delta verdict; the delta was named in
+the verdict, which is the only reason the new SHA's clearance was real. The
+counterfactual — a silent amend carrying the old verdict — is the trap the section
+records.
 
 **2026-08-22 — PR #139, where `ExitWorktree` said "discard this work permanently" about
 work that was already on `main`.** The `(#N)` rule below was followed and the landed subject
