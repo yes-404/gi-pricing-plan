@@ -55,6 +55,7 @@ from model_schema import (
     JobStatus,
     MetricDirection,
     ModelStatus,
+    ObjectiveBackend,
     ObjectiveTemplate,
     OffsetSpec,
     Principal,
@@ -177,7 +178,11 @@ async def _certified_objective(
             slug=over.get("slug") or f"obj-{new_uuid7().hex[-6:]}",  # type: ignore[arg-type]
             template=ObjectiveTemplate.POISSON,
             params={},
-            applicability=None,
+            # Threaded rather than hardcoded `None`: the applicability branches of spec
+            # validation can only be reached by an objective narrower than its template,
+            # and a helper that always builds the template's own applicability is why
+            # those two branches had no test.
+            applicability=over.get("applicability"),  # type: ignore[arg-type]
             hessian_strategy=HessianStrategy.CLIP_TO_MIN,
             hessian_min=1e-6,
             description=None,
@@ -558,6 +563,91 @@ async def test_a_draft_custom_objective_is_refused_before_a_job_exists(
         p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
     )
     assert "draft" in problem.message
+
+
+@pytest.mark.req("FR-MODEL-44")
+async def test_a_custom_objective_inapplicable_to_the_response_is_refused(
+    database: Database, blob_store: BlobStore, workspace_id, settings
+) -> None:
+    """FR-MODEL-44's applicability half, on the response axis.
+
+    The objective is Poisson-templated, so its applicability admits `claim_count` alone;
+    the spec models `claim_severity`. `fit_gbm` raises `OBJECTIVE_NOT_APPLICABLE` for this
+    and the validator now says it before a Job exists.
+
+    This and the backend case below were the two branches with **no** test — the two that
+    need an objective with *narrow* applicability, which no other test here builds. Found
+    in review after the status-gate hole, which is the same shape one branch over.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    objective = await _certified_objective(database, blob_store, workspace_id, actor)
+
+    async with database.unit_of_work() as session:
+        validation = await spec_service.validate_spec(
+            session, settings, workspace_id=workspace_id, actor=actor,
+            spec=_gbm_spec(
+                version_id, (area,), response=ResponseKind.CLAIM_SEVERITY,
+                objective=GbmFunctionRef(
+                    kind="custom",
+                    ref=f"custom_objective:{objective.slug}@{objective.version}",
+                ),
+            ),
+        )
+
+    assert validation.ok is False
+    problem = next(
+        p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
+    )
+    assert "claim_count" in problem.message
+    assert "models claim_severity" in problem.message
+
+
+@pytest.mark.req("FR-MODEL-44")
+async def test_a_custom_objective_inapplicable_to_the_backend_is_refused(
+    database: Database, blob_store: BlobStore, workspace_id, settings
+) -> None:
+    """FR-MODEL-44's applicability half, on the backend axis.
+
+    An objective narrowed to LightGBM against an XGBoost spec. The narrowing is legal —
+    `Applicability.is_within` refuses an author who *widened* the template's, not one who
+    narrowed it — and it is the only way to reach this branch, which is why no other test
+    here does.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    lightgbm_only = TEMPLATE_APPLICABILITY[ObjectiveTemplate.POISSON].model_copy(
+        update={"backends": frozenset({ObjectiveBackend.LIGHTGBM})}
+    )
+    objective = await _certified_objective(
+        database, blob_store, workspace_id, actor, applicability=lightgbm_only
+    )
+
+    async with database.unit_of_work() as session:
+        validation = await spec_service.validate_spec(
+            session, settings, workspace_id=workspace_id, actor=actor,
+            spec=_gbm_spec(
+                version_id, (area,), response=ResponseKind.CLAIM_COUNT,
+                objective=GbmFunctionRef(
+                    kind="custom",
+                    ref=f"custom_objective:{objective.slug}@{objective.version}",
+                ),
+            ),
+        )
+
+    assert validation.ok is False
+    problem = next(
+        p for p in validation.problems if p.kind is SpecProblemKind.OBJECTIVE_UNSUPPORTED
+    )
+    assert "fits with xgboost" in problem.message
 
 
 @pytest.mark.req("FR-MODEL-44")
