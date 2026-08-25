@@ -461,7 +461,7 @@ onMounted(() => void load());
             <HistogramChart
               v-if="column.histogram"
               :histogram="column.histogram"
-              class="mt-2"
+              :column="column.name"
             />
             <ul
               v-if="(column.top_levels ?? []).length"

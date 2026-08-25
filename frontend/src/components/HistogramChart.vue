@@ -7,10 +7,20 @@ import { computed } from "vue";
 import VChart from "vue-echarts";
 
 import type { Histogram } from "@/api/profiles";
+import ChartFigure from "@/components/ChartFigure.vue";
 
 use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
-const props = defineProps<{ histogram: Histogram }>();
+const props = defineProps<{
+  histogram: Histogram;
+  /**
+   * The column this histogram describes. Required, not optional with a fallback: the
+   * Profile page renders one of these per column, and `ChartFigure` names its table after
+   * its title, so a shared or absent name would leave a screen-reader user with a page of
+   * identically-named tables and no way to tell which column each belongs to.
+   */
+  column: string;
+}>();
 
 const edges = computed(() => props.histogram.edges ?? []);
 const counts = computed(() => props.histogram.counts ?? []);
@@ -69,12 +79,49 @@ const option = computed(() => ({
       : []),
   ],
 }));
+
+/**
+ * The chart's accessible equivalent (NFR-OVR-10).
+ *
+ * The Exposure column is dropped rather than dashed when the profile weighted nothing,
+ * matching the chart, which drops the series and the second axis in the same case. A column
+ * of em dashes would say the histogram has an exposure of nothing, which is a different
+ * claim from its having no exposure at all. This is the reactive case `ChartFigure`'s arity
+ * guard exists to cover: `columns` and `rows` both narrow, and they must narrow together.
+ */
+const columns = computed(() =>
+  exposure.value.length ? ["Bin", "Rows", "Exposure"] : ["Bin", "Rows"],
+);
+
+/**
+ * Exposure is passed through as the exact decimal **string** it is stored as (FR-OVR-7).
+ * The chart widens it to a float because a coordinate is one either way; the table has no
+ * such excuse, and `AeByFactorChart` set this precedent for the same reason.
+ */
+const rows = computed(() =>
+  labels.value.map((label, i) => [
+    label,
+    counts.value[i] ?? null,
+    ...(exposure.value.length ? [exposure.value[i] ?? null] : []),
+  ]),
+);
 </script>
 
 <template>
-  <VChart
-    class="h-40 w-full"
-    :option="option"
-    autoresize
-  />
+  <ChartFigure
+    :title="`Distribution of ${column}`"
+    :caption="
+      exposure.length
+        ? 'Rows falling in each bin, with the exposure years the profile weighted them by.'
+        : 'Rows falling in each bin.'
+    "
+    :columns="columns"
+    :rows="rows"
+  >
+    <VChart
+      class="h-40 w-full"
+      :option="option"
+      autoresize
+    />
+  </ChartFigure>
 </template>
