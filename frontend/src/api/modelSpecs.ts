@@ -16,6 +16,53 @@ export type SpecValidation = components["schemas"]["SpecValidation"];
 export type SpecProblem = components["schemas"]["SpecProblem"];
 export type SpecProblemKind = components["schemas"]["SpecProblemKind"];
 
+export type GlmFamily = GlmSpec["family"];
+export type GlmLink = GlmSpec["link"];
+export type ResponseKind = NonNullable<ModelSpec["response"]>;
+
+/**
+ * The builder's option lists, **derived from the generated unions and pinned to them**.
+ *
+ * `satisfies` catches a member the contract removed; `objectiveVocabulary.test-d.ts`'s
+ * `toEqualTypeOf` catches one it added, which `satisfies` cannot — a subset satisfies the
+ * constraint and the picker just stops offering something the platform accepts. The two
+ * together are what a generated enum would give for free.
+ *
+ * They live here rather than in the view so the type test can import them: a list the test
+ * cannot see is a list the pin does not cover.
+ */
+export const FAMILIES = ["poisson", "negative_binomial", "gamma", "inverse_gaussian",
+  "tweedie", "binomial", "gaussian"] as const satisfies readonly GlmFamily[];
+export const LINKS = ["log", "logit", "identity", "inverse"] as const satisfies readonly GlmLink[];
+export const RESPONSES = ["claim_count", "claim_severity", "burning_cost",
+  "conversion", "retention"] as const satisfies readonly ResponseKind[];
+
+/**
+ * FR-MODEL-26's builtin GBM objectives, in XGBoost's vocabulary.
+ *
+ * **This is a second hand-written copy of a set the platform owns elsewhere**, and the
+ * file that owns it says so: `SUPPORTED_GBM_OBJECTIVES` in
+ * `pricing_core/modelling/gbm.py` is the authority, and its comment warns that "two
+ * hand-written lists would eventually disagree about which objectives the platform
+ * supports, and the disagreement would show up as a spec that validated and then failed".
+ *
+ * It exists here because the set reaches no contract — `GbmFunctionRef.name` is
+ * deliberately open, since the same type carries `eval_metrics` whose vocabulary is the
+ * backend's own, and `model-schema` depends on pydantic alone so it cannot import the set.
+ * That is **OQ-MODEL-37**, whose option (a) removes this constant rather than policing it,
+ * and which has no owner because `W32` is closed.
+ *
+ * Until then `builtinObjectives.test.ts` reads `gbm.py` as text and fails when the two
+ * disagree, so the divergence the Python comment predicts is loud rather than silent.
+ * **Do not edit this list without editing that file, and do not delete the test.**
+ */
+export const BUILTIN_GBM_OBJECTIVES = [
+  "count:poisson",
+  "reg:gamma",
+  "reg:tweedie",
+  "binary:logistic",
+] as const;
+
 /**
  * "May this be fitted?", without fitting it (`02` §5.1, FR-MODEL-44, FR-MODEL-81).
  *

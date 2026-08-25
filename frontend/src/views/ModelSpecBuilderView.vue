@@ -23,7 +23,13 @@ import { computed, onMounted, ref, watch } from "vue";
 import { listDatasets, listVersions, type Dataset } from "@/api/datasets";
 import { listFactors, type Factor } from "@/api/models";
 import {
+  BUILTIN_GBM_OBJECTIVES,
+  FAMILIES,
+  LINKS,
+  RESPONSES,
   validateSpec,
+  type GlmFamily,
+  type GlmLink,
   type ModelSpec,
   type SpecValidation,
 } from "@/api/modelSpecs";
@@ -66,22 +72,20 @@ const arm = ref<ModelArm>("glm");
  * objective is a named loss in a `GbmFunctionRef`, an EBM's is a two-member literal.
  * Normalising them here would create a fourth shape the contract does not have.
  */
-const family = ref<"poisson" | "negative_binomial" | "gamma" | "inverse_gaussian"
-  | "tweedie" | "binomial" | "gaussian">("poisson");
-const link = ref<"log" | "logit" | "identity" | "inverse">("log");
+// Derived, not spelled. These annotations were a **third** copy of the two unions —
+// after the option arrays and the contract itself — and the copy that types the state is
+// the one a wrong value flows out of.
+const family = ref<GlmFamily>("poisson");
+const link = ref<GlmLink>("log");
 const tweediePower = ref(1.5);
 const gbmBackend = ref<"xgboost" | "lightgbm">("xgboost");
 /** FR-MODEL-26's builtin set. `reg:tweedie` alone carries a dependent parameter. */
 const gbmObjective = ref("count:poisson");
 const ebmObjective = ref<"rmse" | "mae">("rmse");
 
-const FAMILIES = ["poisson", "negative_binomial", "gamma", "inverse_gaussian",
-  "tweedie", "binomial", "gaussian"] as const;
-const LINKS = ["log", "logit", "identity", "inverse"] as const;
-const RESPONSES = ["claim_count", "claim_severity", "burning_cost",
-  "conversion", "retention"] as const;
-const BUILTIN_GBM_OBJECTIVES = ["count:poisson", "reg:gamma", "reg:tweedie",
-  "binary:logistic"] as const;
+// The option lists live in `@/api/modelSpecs` and are imported above: a list the type test
+// cannot see is a list the pin does not cover, and `objectiveVocabulary.test-d.ts` is what
+// catches a member the contract *adds*.
 
 const common = computed(() => ({
   model_family_slug: modelFamilySlug.value,
