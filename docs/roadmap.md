@@ -702,7 +702,13 @@ date and a decision._
      THE HEADING USED, matching all five prior closure records (:546 W5, :801 W7b, :988 W6a,
      :1093 W7a, :1146 W4) - three hashes, em-dash, ": closed YYYY-MM-DD".
      The filter on :3685 is a LITERAL string; rewording that heading makes Part 1 fire on it.
-     That is the safe direction, and whoever rewords it owns the filter. -->
+     That is the safe direction, and whoever rewords it owns the filter.
+
+     CORRECTION, 2026-08-25: the second validation point above cites `6cb9297`, which
+     is not an ancestor of origin/main — a pre-squash branch tip that never landed (it
+     resolves in no clone). `c024f3e` and the re-run point `60f6e46` are both on main,
+     and the two-part check was re-run at the latter immediately before this record
+     was written; the discharge rests on those two valid states. -->
 
 **Every `:NNNN` citation in this record is against this file at `60f6e46`, the closing SHA.**
 
