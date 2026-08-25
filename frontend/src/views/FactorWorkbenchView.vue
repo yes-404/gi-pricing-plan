@@ -37,6 +37,7 @@ import {
 } from "@/api/transformations";
 import { formatDecimalString, getVersionById } from "@/api/versions";
 import ColumnOneWays from "@/components/ColumnOneWays.vue";
+import FactorCreateForm from "@/components/FactorCreateForm.vue";
 
 const props = defineProps<{ datasetVersionId: string }>();
 
@@ -305,6 +306,17 @@ defineExpose({ isProblem });
       <ColumnOneWays
         class="mb-6"
         :one-ways="profile?.one_ways ?? []"
+      />
+
+      <!--
+        `02` §5.3's intent and monotonic-direction controls. On the **creation** path only:
+        a Factor is frozen and `/factors` has no PATCH, so intent is set once (FR-MODEL-7).
+      -->
+      <FactorCreateForm
+        v-if="datasetId"
+        class="mb-6"
+        :dataset-id="datasetId"
+        :columns="columns"
       />
 
       <div

@@ -19,6 +19,73 @@ export function listFactors(datasetId?: string): Promise<Factor[]> {
   return request<Factor[]>("/factors", { query: { dataset_id: datasetId } });
 }
 
+export type FactorIntent = components["schemas"]["FactorIntent"];
+export type MonotonicDirection = components["schemas"]["MonotonicDirection"];
+
+/**
+ * Every intent the contract publishes, and what to call it.
+ *
+ * **A `Record` over the whole union on purpose.** The compiler then enumerates the arms, so
+ * a fifth added to `model-schema` is a **build error here** rather than an option that
+ * quietly never appears. That is the property a hand-written list of *permitted* intents
+ * would not have.
+ */
+export const FACTOR_INTENT_LABELS: Record<FactorIntent, string> = {
+  risk: "Risk — rated on",
+  control: "Control — fitted, never rated on",
+  offset: "Offset",
+  diagnostic: "Diagnostic",
+};
+
+/**
+ * The intents the platform will not honour, and **the only fact hand-written here**.
+ *
+ * `offset` is superseded by FR-MODEL-116 and `diagnostic` by FR-MODEL-120, both on a layer
+ * argument: offsetness and diagnosis are properties of *one fit*, while `Factor.intent`
+ * belongs to a Factor defined against a Dataset and reused by every Model Spec naming it.
+ * **Both keep their arm in the published contract deliberately**, for artifacts already
+ * carrying them — so the union will never narrow to match, and a picker waiting for the
+ * type to say which arms are live would wait for ever.
+ *
+ * Hand-written because no permitted-subset constant exists in the platform. But the
+ * *complement* does, machine-readable and shared: `REFUSED_FACTOR_INTENTS` in
+ * `pricing-core/modelling/factors.py`. `factorIntents.test.ts` reads that file and fails if
+ * the two disagree — which is why the refusal is the thing written down here rather than
+ * the permission. A hand-written permitted pair would have no executable authority to pin
+ * against, and a newly-live arm would vanish from the picker with nothing failing.
+ *
+ * **There is no backend fallback.** `POST /factors` accepts all four —
+ * `REFUSED_FACTOR_INTENTS` is referenced nowhere under `backend/` — and the only refusal is
+ * `resolve_factors`, on the fit path. A superseded intent is accepted, stored and audited,
+ * then detonates at fit. So this list is the guard, not a convenience.
+ */
+export const REFUSED_FACTOR_INTENTS = ["offset", "diagnostic"] as const satisfies
+  readonly FactorIntent[];
+
+/** What an actuary may choose: every published arm the platform still honours. */
+export const OFFERED_FACTOR_INTENTS = (
+  Object.keys(FACTOR_INTENT_LABELS) as FactorIntent[]
+).filter((intent) => !(REFUSED_FACTOR_INTENTS as readonly string[]).includes(intent));
+
+/** Same shape, same reason: a `Record` so a new direction is a build error. */
+export const MONOTONIC_DIRECTION_LABELS: Record<MonotonicDirection, string> = {
+  none: "None",
+  increasing: "Increasing",
+  decreasing: "Decreasing",
+};
+
+/** Create a Factor, or a new version of one (FR-MODEL-7 — a slug that exists versions). */
+export function createFactor(body: {
+  slug: string;
+  dataset_id: string;
+  source_columns: readonly string[];
+  intent: FactorIntent;
+  monotonic_direction: MonotonicDirection;
+  monotonic_rationale?: string | undefined;
+}): Promise<Factor> {
+  return request<Factor>("/factors", { method: "POST", body });
+}
+
 /**
  * How wide an interval is, in the units of the coefficient — `high - low` on the 95%
  * interval, not a fraction of the estimate.
