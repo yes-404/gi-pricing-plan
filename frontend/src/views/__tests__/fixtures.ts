@@ -1,3 +1,4 @@
+import type { Backtest } from "@/api/backtests";
 import type { Diagnostics } from "@/api/diagnostics";
 import type { ModelComparison } from "@/api/comparisons";
 import { gbmSpec, type Model, type TransparencyArtifact } from "@/api/models";
@@ -408,5 +409,30 @@ export const DIAGNOSTICS: Diagnostics = {
       { fold: 3, rows: 81_506, score: 0.499 },
       { fold: 4, rows: 81_506, score: 0.498 },
     ],
+  },
+};
+
+/**
+ * One stored backtest (FR-MODEL-92). The partition is borrowed from `DIAGNOSTICS` rather than
+ * written out: a `PartitionDiagnostics` is the same shape wherever it appears, and a second
+ * hand-built copy is a second thing to keep true.
+ *
+ * `dataset_version_ref` and `fitted_on_ref` **must differ** — `backtests.py`'s
+ * `_a_backtest_is_not_run_on_the_data_it_learned_on` validator rejects a summary where they
+ * match, so an equal pair here would be a fixture the backend could never have produced.
+ */
+export const BACKTEST: Backtest = {
+  id: "0e3f7a1c-1111-4222-8333-444455556666",
+  model_id: "1a2b3c4d-5555-4666-8777-888899990000",
+  dataset_version_id: "2b3c4d5e-6666-4777-8888-999900001111",
+  computed_at: "2026-07-01T09:30:00Z",
+  job_id: null,
+  summary: {
+    model_ref: "model:motor-frequency@3",
+    dataset_version_ref: "dataset_version:motor@9",
+    fitted_on_ref: "dataset_version:motor@4",
+    period_from: "2025-01-01",
+    period_to: "2025-12-31",
+    partition: DIAGNOSTICS.universal.train,
   },
 };

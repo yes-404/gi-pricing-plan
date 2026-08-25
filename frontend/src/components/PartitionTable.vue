@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PartitionLabel } from "@/api/diagnostics";
+import type { PartitionCaption } from "@/api/diagnostics";
 
 /**
  * Scalar metrics with one column per partition (FR-MODEL-54).
@@ -11,7 +11,7 @@ import type { PartitionLabel } from "@/api/diagnostics";
 defineProps<{
   title: string;
   caption?: string;
-  columns: readonly PartitionLabel[];
+  columns: readonly PartitionCaption[];
   rows: readonly { name: string; values: readonly (string | number | null)[] }[];
 }>();
 </script>

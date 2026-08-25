@@ -40,6 +40,19 @@ export function getDiagnostics(slug: string, version?: number): Promise<Diagnost
 export type PartitionLabel = "Train" | "Holdout";
 
 /**
+ * What a shared instrument may caption a column.
+ *
+ * `PartitionLabel` is the *fit's* two partitions and keeps that exact meaning — a backtest's
+ * single partition is neither of them (FR-MODEL-57), and the instruments interpolate whatever
+ * they are given straight into a heading. Widening `PartitionLabel` itself would make
+ * `partitions()` advertise a member it can never produce.
+ *
+ * Closed rather than `string`: FR-MODEL-57 forbids a caption that "asserts a relationship the
+ * artifact does not carry", so a new member is a spec question, not a type change.
+ */
+export type PartitionCaption = PartitionLabel | "Backtest";
+
+/**
  * The two partitions, in the order they are read.
  *
  * FR-MODEL-54: `UniversalDiagnostics` requires `train` and `holdout` as separate

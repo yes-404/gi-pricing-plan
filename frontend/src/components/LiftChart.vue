@@ -6,13 +6,13 @@ import { CanvasRenderer } from "echarts/renderers";
 import { computed } from "vue";
 import VChart from "vue-echarts";
 
-import type { PartitionDiagnostics, PartitionLabel } from "@/api/diagnostics";
+import type { PartitionCaption, PartitionDiagnostics } from "@/api/diagnostics";
 import ChartFigure from "@/components/ChartFigure.vue";
 
 use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 const props = defineProps<{
-  partitions: readonly (readonly [PartitionLabel, PartitionDiagnostics])[];
+  partitions: readonly (readonly [PartitionCaption, PartitionDiagnostics])[];
 }>();
 
 /**
@@ -23,6 +23,24 @@ const props = defineProps<{
  * a calibration. The train pair and the holdout pair are then read against each other, which
  * is what FR-MODEL-54 asks for.
  */
+/**
+ * The caption names the partitions actually plotted, never the fit's two by assumption.
+ *
+ * This instrument is shared with the backtest view, whose single partition is neither Train
+ * nor Holdout. A hardcoded "train and holdout" made the chart assert a split the artifact
+ * does not carry — exactly what FR-MODEL-57 forbids a caption from doing — and it did so
+ * below a column correctly captioned "Backtest".
+ *
+ * The list exists to say which partitions are read *against each other*. At one partition
+ * there is no contrast to name, so the clause is dropped rather than made singular.
+ */
+const caption = computed(() => {
+  const base = "Predicted and actual response in each predicted decile";
+  const names = props.partitions.map(([label]) => label.toLowerCase());
+  if (names.length < 2) return `${base}.`;
+  return `${base}, ${names.slice(0, -1).join(", ")} and ${names.slice(-1).join("")}.`;
+});
+
 const bins = computed(() => {
   const seen: number[] = [];
   for (const [, partition] of props.partitions) {
@@ -79,7 +97,7 @@ const rows = computed(() =>
 <template>
   <ChartFigure
     title="Lift by decile"
-    caption="Predicted and actual response in each predicted decile, train and holdout."
+    :caption="caption"
     :columns="columns"
     :rows="rows"
   >

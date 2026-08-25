@@ -58,4 +58,17 @@ describe("the /models routes", () => {
     expect(resolved.matched.map((r) => r.name)).toContain("model-detail");
     expect(resolved.params.slug).toBe("motor-ad-frequency");
   });
+
+  // Two params, and the backtest id is the one that addresses the read (FR-MODEL-92) — the
+  // slug is only the breadcrumb. Asserted by resolution rather than declaration order, which
+  // is the property that survives the list being reordered.
+  it("resolves a backtest to its own view, with both params", () => {
+    const resolved = router().resolve(
+      "/models/motor-frequency/backtests/0e3f7a1c-1111-4222-8333-444455556666",
+    );
+
+    expect(resolved.matched.map((r) => r.name)).toContain("model-backtest");
+    expect(resolved.params.slug).toBe("motor-frequency");
+    expect(resolved.params.backtestId).toBe("0e3f7a1c-1111-4222-8333-444455556666");
+  });
 });
