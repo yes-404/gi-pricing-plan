@@ -13,7 +13,7 @@
 |---|---|
 | A Dataset exists with a Data Dictionary and a Validation Rule Set | `01` FR-DATA-29, §4.1 |
 | The actor holds `dataset:create_version` and `model:fit` in scope | `06` FR-GOV-2/4 |
-| A Reference Dataset Version is pinned on the Rule Set for distributional checks | `01` §4.3 |
+| A Reference Dataset Version is pinned on the Rule Set for distributional checks | `01` FR-DATA-55 |
 | Reference Table Versions used by referential rules are `approved` | `01` FR-DATA-30 |
 
 ---

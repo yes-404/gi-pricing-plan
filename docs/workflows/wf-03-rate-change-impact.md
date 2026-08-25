@@ -13,7 +13,8 @@
 |---|---|
 | `approved` Demand Models for conversion and retention, each declaring its price term | `04` FR-OPT-1 |
 | A live Rating Version as the baseline | `03` FR-RATE-23 |
-| A portfolio Dataset Version and a renewal-population Dataset Version | `01` §7.2 |
+| A portfolio Dataset Version | `01` §7.2 |
+| A renewal-population Dataset Version, declared as such | `04` FR-OPT-18 |
 | The actor holds `optimisation:run` and `optimisation:materialise` | `06` FR-GOV-4 |
 
 ---

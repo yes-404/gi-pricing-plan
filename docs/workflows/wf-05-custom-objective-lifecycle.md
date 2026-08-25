@@ -161,7 +161,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | Division by a sub-expression that can be zero over the declared domain | Certification failure, not a runtime surprise | `02` §4.6 |
 | Certificate `failed` | Submission blocked entirely | `02` FR-MODEL-42 |
 | Convexity violated without a declared hessian strategy | Submission blocked | `02` FR-MODEL-43 |
-| Submitted with one approver when two are required | `EVIDENCE_INCOMPLETE` / policy escalation | `06` §4.2 |
+| Submitted with one approver when two are required | No error. The request stays `review` until `approvers_required` is met — an incomplete approval is the normal in-progress state, not a failure | `06` FR-GOV-12 |
 | Objective used with an inapplicable response | `OBJECTIVE_NOT_APPLICABLE` at spec validation, before compute | `02` FR-MODEL-44 |
 | Model with an unapproved objective submitted for approval | `OBJECTIVE_NOT_APPROVED` | `02` R4 |
 | NaN/inf gradient during fitting | Fit aborts with the round and input range named | `02` FR-MODEL-48 |
