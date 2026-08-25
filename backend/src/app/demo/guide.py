@@ -155,7 +155,12 @@ def _views(root: Path) -> tuple[DemoView, ...]:
                     name=name,
                     route=route,
                     contents=contents,
-                    implemented=route in routed,
+                    # A spec route cell carries the query the view reads — `?version=`,
+                    # `?ids=` — and a router path never does. Comparing the two raw rendered a
+                    # red "built" badge for two views that are built and routed: the same defect
+                    # as the `// TODO` green badge above, in the other direction, on the page
+                    # whose only job is saying what is worth clicking.
+                    implemented=route.split("?")[0] in routed,
                 )
             )
     return tuple(views)

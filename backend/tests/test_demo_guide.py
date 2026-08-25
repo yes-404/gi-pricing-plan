@@ -264,3 +264,30 @@ def test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks() 
     assert guide.unpublished_endpoints, "no module declares an unbuilt endpoint?"
     modules = {endpoint.module for endpoint in guide.unpublished_endpoints}
     assert {"RATE"} <= modules, modules
+
+
+@pytest.mark.req("FR-PLAT-54")
+def test_a_route_carrying_a_query_is_matched_on_its_path(tmp_path: Path) -> None:
+    """The query is the view's input, not part of where the view lives.
+
+    `02` §5.3 writes `/models/:slug/diagnostics?version=` because `?version=` is what that
+    view reads, and a router path never carries a query. Compared raw the two can never
+    match, so the guide rendered a red "built" badge for two views that are built and
+    routed — the commented-out-route defect below, in the other direction, on the one page
+    whose whole job is saying what is worth clicking.
+    """
+    root = _fixture_repo(tmp_path, routes=("/data", "/data/:slug/validation"))
+    (root / "docs" / "specs" / "01-data-management.md").write_text(
+        "### 5.3 Frontend views\n\n"
+        "| View | Route | Contents |\n"
+        "|---|---|---|\n"
+        "| Validation report | `/data/:slug/validation?tab=` | The banner |\n"
+        "| Profile | `/data/:slug/profile?column=` | One column |\n"
+        "\n## 6. Workflows\n",
+        encoding="utf-8",
+    )
+    by_route = {view.route: view for view in build_guide(root).views}
+    assert by_route["/data/:slug/validation?tab="].implemented is True
+    # Both directions, because stripping a suffix is exactly the change that could turn
+    # every badge green: a query on a route nobody declared stays not built.
+    assert by_route["/data/:slug/profile?column="].implemented is False
