@@ -46,7 +46,7 @@
 |---|---|---|---|
 | C1 | Deployer | `POST /environments/prod/deployments`. | `03` FR-RATE-50 |
 | C2 | Backend | Checks promotion order: a prior successful `uat` deployment is required, else `PROMOTION_ORDER_VIOLATION`. | `07` FR-PLAT-29 |
-| C3 | Backend | Checks the approval record is complete, including both required approvers. | `06` §3.3 |
+| C3 | Backend | Checks **the Rating Version's** approval record is complete, including both required approvers. | `06` §3.3 for the evidence, FR-GOV-12 for the count |
 | C4 | Backend | Pre-warms, switches atomically, emits the Audit Event and notification. Total elapsed under 30 s. | `03` NFR-RATE-6 |
 | C5 | Backend | **Auto-creates the template Monitors** for the new deployment, so the structure is never live and unmonitored. | `05` FR-MON-4 |
 | C6 | Consumer System | Live quoting proceeds against the new bundle. | `03` FR-RATE-34 |
