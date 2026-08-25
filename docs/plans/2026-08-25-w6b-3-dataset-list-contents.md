@@ -10,11 +10,18 @@ case that deposits new scope on the waiting slice; what W32-3 deposited is §2 b
 
 **Highest ids in use: `OQ-OVR-14`, `OQ-DATA-15`, `FR-DATA-56`. Next free: `OQ-OVR-15`.**
 
-**Arbitration folded in (2026-08-25).** Two rulings from the lead, both applied below rather
-than appended: **owner renders the uuid and name resolution is filed, not built** (Decision 1);
-and **the `GET /datasets` route row is the stale side of a §0 disagreement and is amended in
-this slice** (F5, Task 4). Independently verified before folding, per §2's evidence rule — the
-verification found the divergence is wider than the ruling described, which is F5.
+**Arbitration folded in (2026-08-25).** The lead's rulings are applied in place below rather
+than appended, so this document reads as the plan being executed and not as a plan plus a
+correction log. In order: **owner renders the uuid, and name resolution is filed rather than
+built** (Decision 1, *decided against this plan's first recommendation* — see there);
+**`StatusBadge` is extracted, keyed on the generated enum** (Decision 2); **the version is
+named only on disagreement** (Decision 3); **the two `01` §5.1 route rows are amended** (F5);
+and **`put_dictionary` is reassigned to the backend** (§Interactions 4).
+
+Every ruling was verified against the artifact before folding, per §2's evidence rule — not as
+distrust but because a dispatched citation is still a citation. Twice that mattered: the §0
+divergence turned out to span **two** rows rather than the one flagged (F5), and the tracking
+reference given for the reassigned backend defect **cannot be right** (§Interactions 4).
 
 ---
 
@@ -190,32 +197,46 @@ into its `dataset` ref (`:71`), but reads none of the four fields from it — I 
 `dataset.` access in the template. So nothing renders wrongly today. It becomes live the moment
 any view reads a derived field off a dictionary-save response.
 
-**Out of scope**: it is a backend fix in a frontend slice, and this plan's constraint is no
-backend change. Verdict per §13: **delivered but incorrect on one route** — recorded here and
-carried into OQ-OVR-15's evidence, so the next slice touching `platform/datasets.py` inherits a
-written finding rather than rediscovering it.
+**Out of scope, and now formally reassigned**: it is a backend fix in a frontend slice, and this
+plan's constraint is no backend change. Verdict per §13: **delivered but incorrect on one
+route**. The lead confirmed it and took it off this slice; the reassignment, the rule it breaks
+(already written down at `api/datasets.py`:436-437) and the unresolved tracking reference are
+in §Interactions 4.
 
 ---
 
 ## Decisions for arbitration
 
-### Decision 1 — how the uuid is presented (F1, inside the lead's ruling)
+### Decision 1 — how the uuid is presented — **DECIDED, against this plan's recommendation**
 
-The lead ruled **the column renders `owner_id`**. What remains is presentation, and I am
-flagging my pick rather than treating it as settled, because "renders the uuid" admits two
-readings and the cheaper one to veto is the one written down.
+This plan first recommended rendering the first 8 characters with the full value in a `title`
+attribute. **The lead ruled against it, and the reasoning is correct enough to record in full
+rather than summarise**, because the mistake is one any later slice rendering an id will be
+tempted into.
 
-| | Option | |
-|---|---|---|
-| **(a)** | Full uuid, monospace | Honest, unambiguous, and 36 characters wide in a table with five other columns. |
-| **(b)** | **First 8 chars, monospace, full value in a `title` attribute** | The full value is in the DOM and available on hover/inspection; the column stays readable. |
+**The ruling: the full `owner_id` is the cell's text.** Any narrowing is presentational —
+`max-width` plus `text-overflow: ellipsis` — never `String.slice`. A `title` may be added as a
+mouse convenience but **must never be the only home of the value**.
 
-**Recommendation: (b).** It displays `owner_id` — the whole value is present, not truncated
-away — while not letting one column dominate a list whose job is scanning. If the lead reads
-"renders the uuid" as strictly (a), that is a one-line change in Task 3.
+Two reasons, both of which defeat the original recommendation:
 
-**What neither option does** is pretend to name anybody. The column will be visibly a machine
-identifier, which is the accurate state of the platform's identity story and is what motivates
+- **`title` alone fails WCAG 2.2 SC 1.4.13** (Content on Hover or Focus), which requires such
+  content to be dismissable, hoverable and persistent. A browser-native tooltip is none of
+  those, and it is unreachable by keyboard and by touch entirely. `NFR-OVR-10` binds this SPA
+  to **AA**, and 1.4.13 is AA. Putting the only copy of a value in a `title` is not a
+  convenience with a fallback — it is the value being absent for a class of users.
+- **Slicing destroys the one property a raw id has.** An opaque identifier's entire utility is
+  exact copy and exact search. `3f2b9c14…` cannot be pasted into anything. The original
+  recommendation optimised for the column looking tidy, and traded away the only thing the
+  column was for — which is the sharper version of the mistake, since the tidiness was the
+  *stated* justification.
+
+CSS truncation keeps both: the full string is in the DOM, selectable, copyable, findable by
+the browser's own find, and exposed to assistive technology; only its painted width is
+constrained, and it degrades to the full value when the viewport allows.
+
+**What this does not do** is pretend to name anybody. The column is visibly a machine
+identifier — the accurate state of the platform's identity story, and what motivates
 OQ-OVR-15.
 
 ### Decision 2 — where the status badge lives, and whether F2 is fixed here
@@ -225,11 +246,24 @@ OQ-OVR-15.
 | **(a)** | Copy `STATUS_TONE` into `DatasetListView` | Ships F2's defect a second time. A shape defined twice diverges (§2). |
 | **(b)** | **Extract `StatusBadge.vue`** taking a `DatasetStatus`, used by both views, `failed` given its own tone | One small component, one map, F2 fixed at source. Touches `DatasetDetailView`, which this slice does not otherwise need. |
 
-**Recommendation: (b).** The map is not incidental duplication — it is *the* rendering of a
-contract enum, and the enum has five members the one existing copy does not cover. Extracting
-it makes the prop type `DatasetStatus` rather than `Record<string, string>`, which turns a
-missing member from a silent grey fallback into a compile error. Same move as W6b-9's required
-`currency` prop, and the reason (b) earns its extra file rather than being tidiness.
+**DECIDED: (b).** The map is not incidental duplication — it is *the* rendering of a contract
+enum, and the enum has five members the one existing copy does not cover. Extracting it makes
+the tone map `Record<DatasetStatus, string>` rather than `Record<string, string>`, which turns
+a missing member from a silent grey fallback into a compile error. Same move as W6b-9's
+required `currency` prop, and the reason (b) earns its extra file rather than being tidiness.
+
+The lead's ruling adds that this **is not scope creep**: adding a badge without extracting
+would author a second copy of a shape `model-schema` declares, which §2 forbids outright. The
+extraction is the only conforming way to build the column at all.
+
+Three conditions on it, all in Task 1:
+
+- keyed `Record<DatasetStatus, string>` **off the generated enum**, so the compiler enumerates
+  the members rather than a human doing it;
+- `failed` given its own tone, in the same commit;
+- the compile-error property **proven by mutation** — delete a member, show the type error,
+  restore — not merely asserted. A type-level guard nobody has watched fail is a guard nobody
+  has tested (§13).
 
 **Blast radius is one call site**, `DatasetDetailView.vue`:214-218, whose existing tests assert
 on rendered status *text*. F2's fix is a tone change, so no existing assertion changes meaning.
@@ -242,11 +276,16 @@ FR-DATA-50 requires disclosure only "where the two refer to different versions".
 - **Name it only on disagreement** — "3 Feb" when the last-validated version *is* the latest,
   "v11 · 3 Feb" when it is not.
 
-**Recommendation: name it only on disagreement**, which is what the requirement says. Always
-naming it is not more honest: it puts a version number in every row to disambiguate a case that
-is not present, and the requirement's concern is that "the pair cannot be read as one fact"
-*when they are two facts*. Where `last_validated_version === latest_version` they are one fact
-and the extra token is noise.
+**DECIDED: name it only on disagreement**, which is the requirement's own predicate — "**Where
+the two refer to different versions** the list states which". Always naming it is not more
+honest: it puts a version number in every row to disambiguate a case that is not present, and
+the requirement's concern is that "the pair cannot be read as one fact" *when they are two
+facts*. Where `last_validated_version === latest_version` they are one fact and the extra token
+is noise.
+
+**Both branches are tested.** A conditional exercised in one direction is a conditional whose
+other direction is untested, and the untested direction here is the one the requirement was
+written for. Agreement renders no version; disagreement names it.
 
 The comparison is safe: both fields are on the same object, and §2's validator guarantees
 `last_validated_version` is present whenever the date is.
@@ -262,7 +301,24 @@ The comparison is safe: both fields are on the same object, and §2's validator 
 2. **No chart is added**, so NFR-OVR-10's tabular-equivalent half is not engaged. The list is
    already a `<table>` with `scope="col"` headers.
 3. **Ownership change stays unbuilt**, with the §13 verdict in §1.
-4. **F6's `put_dictionary` gap stays unbuilt**, with the §13 verdict in F6.
+4. **F6's `put_dictionary` gap is reassigned to the backend — touched, not resolved.** The lead
+   confirmed the finding and took it off this slice: `api/datasets.py`:502 returns
+   `to_schema(row)` bare, so all four derived fields come back null however many versions
+   exist. It breaks a rule **the codebase had already written down** two routes away, at
+   `api/datasets.py`:436-437 — "a detail page that showed nothing where the list showed a date
+   would be its own defect (FR-DATA-50)" — which is the detail route explaining why it passes
+   both aggregates. `put_dictionary` is the third route and does not. Roughly four lines plus a
+   test, in the backend, by a backend owner. My reading that `create_dataset` doing the same is
+   *correct* (a dataset with no versions genuinely has all four null) was confirmed.
+
+   **The tracking reference is unresolved and is deliberately not written here.** It was given
+   as `#71`; that number cannot be a new filing, because issues and pull requests share one
+   number sequence in this repository and pull requests already reach #199 — `gh issue view 71`
+   resolves to the merged W5 pull request "feat(w5): the GLM spine". *Limit of my evidence:*
+   `gh issue list` is refused by this token ("Resource not accessible by personal access
+   token"), so I cannot enumerate issues to recover the correct number, and the lead can close
+   this in one line. A wrong pointer in a governed document is worse than a described finding
+   with none, so the finding is described in full above and the number is left for the lead.
 
 ---
 
@@ -302,7 +358,20 @@ lives or dies under `vue-tsc`. (Established the hard way in W6b-9.)
 
 ### Task 2 — the badge and last-validated columns (FR-DATA-50, Decision 3)
 
-Both columns, with the disagreement rule. Tests, each phrased as the claim it defends:
+**This task first migrates `DatasetListView.test.ts` to `cellUnder`, including the four
+assertions already there**, and does so *before* adding a column. `:44-47` asserts with a bare
+`screen.getByText("v2")`. That is safe only while exactly one version-shaped string exists in a
+row, and this slice is precisely what ends that: the disagreement branch of Decision 3 renders
+a *second* version number in the same row. A bare `getByText` then either matches the wrong
+cell or throws on multiple matches, and in neither case can it say which column it read.
+
+This is the hazard `cellUnder` was built for in W6b-9 and filed as OQ-OVR-13 — a positional
+`columns`/`rows` correspondence that a call site can silently get wrong. The migration comes
+first so that the four existing assertions are proven to still pass *before* the new columns
+change what is in the row; migrating afterwards would mean rewriting assertions and adding
+columns in one step, with nothing establishing which change moved them.
+
+Then both columns, with the disagreement rule. Tests, each phrased as the claim it defends:
 
 - names the version when the last validated one is not the latest — FR-DATA-50's own
   v12-draft-above-validated-v11 example as the fixture;
@@ -313,10 +382,17 @@ Both columns, with the disagreement rule. Tests, each phrased as the claim it de
 
 ### Task 3 — the owner column (FR-DATA-51, Decision 1)
 
-The uuid, per the ruling: first 8 characters, monospace, full value in `title`. No `/me` call,
-no resolution, no store. Tests: the cell shows the leading 8 characters; the full uuid is
-present in the DOM as the title, so nothing is lost; two datasets with different owners render
-differently (the guard against a hardcoded placeholder).
+The **full** `owner_id` as the cell's text, monospace, narrowed by `max-width` +
+`text-overflow: ellipsis`. No `String.slice`. No `/me` call, no resolution, no store.
+
+Tests, each defending the ruling's reasoning rather than the ruling's wording:
+
+- the cell's text **is** the whole uuid — the assertion reads the exact value, so a later
+  "tidy" truncation fails here rather than shipping;
+- two datasets with different owners render differently (the guard against a hardcoded
+  placeholder passing every single-row test);
+- if a `title` is added at all, a test asserts the value is present **without** it, so the
+  tooltip can never quietly become the only home (SC 1.4.13).
 
 ### Task 4 — the §5.1 amendment (F5) and OQ-OVR-15, both mirrors
 
@@ -357,14 +433,22 @@ cleanup, and a report to the lead.
    uuid column is not a step toward the requirement but a failure to meet it, and the slice is
    blocked on the backend work OQ-OVR-15 proposes rather than shipping. The lead has ruled the
    other way; OQ-OVR-15 is where the maintainer can overturn it.
-2. **If `failed` is unreachable at the *latest* version.** F2 assumes a Dataset can hold
-   `latest_version_status: "failed"`. The enum has the member and the backend projects
-   `DatasetVersion.status` through `DISTINCT ON`; if a transition rule makes it unreachable
-   there, F2 shrinks to a completeness fix and Decision 2 rests on consolidation alone — still
-   (b), less strongly.
+2. ~~**If `failed` is unreachable at the *latest* version.**~~ **Struck 2026-08-25, settled by
+   the lead and verified here.** `VALID_DATASET_TRANSITIONS` (`model-schema/datasets.py`:77-81)
+   maps `VALIDATING → {VALIDATED, FAILED, DRAFT}`, so a newest version that failed validation
+   projects `latest_version_status: "failed"` through the list's `DISTINCT ON`. F2 stands at
+   full strength and Decision 2 does not fall back to consolidation alone: a **failed** dataset
+   currently renders in draft's tone, in the view someone reads to decide whether data is fit
+   to model on.
 3. **If `01` §5.3's Contents cell is later declared exhaustive.** FR-OVR-21 lets a cell declare
    its own kind. This plan reads it as prose because it is not among the seven and declares
    nothing; a later declaration could add scope.
-4. **If F5's two rows are owned by a docs slice already in flight.** The amendment is small and
-   the §0 disagreement is real either way, but two sessions amending the same two rows is a
-   conflict the lead is better placed to see than I am.
+4. ~~**If F5's two rows are owned by a docs slice already in flight.**~~ **Struck 2026-08-25:**
+   the lead confirms no other session is building, so nothing else is in flight on `01` §5.1.
+   This was the one falsifier I could not check myself — a conflict is visible from the team's
+   position, not from inside a worktree.
+
+**Falsifiers 1 and 3 stand deliberately.** Both are the maintainer's to overturn rather than
+the lead's, and both are pointed at OQ-OVR-15, which is where an overturn would land. A
+falsifier a peer *could* strike is worth striking; one only the maintainer can settle is worth
+leaving visible.
