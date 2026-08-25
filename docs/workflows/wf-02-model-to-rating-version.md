@@ -79,7 +79,7 @@ committee and is normally the one nobody can answer.
 | # | Actor | Action | Refs |
 |---|---|---|---|
 | E1 | Pricing Actuary | Writes the change summary. It is drafted automatically from the structural and rate diffs and then edited — the actuary explains *why*, the platform states *what*. | `03` FR-RATE-27 |
-| E2 | Pricing Actuary | `POST /approval-requests`. Evidence completeness is checked at submission: structural diff, rate diffs, regression run, dislocation run, GIPP check, change summary. | `03` FR-RATE-40, `06` FR-GOV-10/19 |
+| E2 | Pricing Actuary | `POST /approval-requests`. Evidence completeness is checked at submission: structural diff, rate diffs, regression run, dislocation run, GIPP check where enabled, change summary. | `03` FR-RATE-40, `06` FR-GOV-10/19 |
 | E3 | Backend | Submission is rejected once — `EVIDENCE_INCOMPLETE`, the dislocation run predates the last rate table edit and is therefore stale. | `06` FR-GOV-14 |
 | E4 | Pricing Actuary | Re-runs dislocation, resubmits. | — |
 | E5 | Approver #1 | Reviews inline: structural diff, rate-table heat maps, dislocation histogram, attribution waterfall, GIPP distribution. Approves. | `06` FR-GOV-16 |

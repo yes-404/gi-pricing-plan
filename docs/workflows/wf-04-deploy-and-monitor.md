@@ -45,7 +45,7 @@
 | # | Actor | Action | Refs |
 |---|---|---|---|
 | C1 | Deployer | `POST /environments/prod/deployments`. | `03` FR-RATE-50 |
-| C2 | Backend | Checks promotion order: a prior successful `uat` deployment is required, else `PROMOTION_ORDER_VIOLATION`. | `07` FR-PLAT-29 |
+| C2 | Backend | Checks promotion order: a prior successful `uat` deployment is required, else `PROMOTION_ORDER_VIOLATION` — unless the workspace policy permits skipping with a recorded reason. | `07` FR-PLAT-29 |
 | C3 | Backend | Checks **the Rating Version's** approval record is complete, including both required approvers. | `06` §3.3 for the evidence, FR-GOV-12 for the count |
 | C4 | Backend | Pre-warms, switches atomically, emits the Audit Event and notification. Total elapsed under 30 s. | `03` NFR-RATE-6 |
 | C5 | Backend | **Auto-creates the template Monitors** for the new deployment, so the structure is never live and unmonitored. | `05` FR-MON-4 |
@@ -65,10 +65,10 @@
 
 | # | Actor | Action | Refs |
 |---|---|---|---|
-| E1 | Worker (scheduled) | Daily: input drift against the modelling baseline **and** against the prior period. | `05` FR-MON-6/8 |
-| E2 | Worker | Weekly: price and portfolio metrics, including **rate achieved vs rate intended**. | `05` FR-MON-20 |
-| E3 | Worker | Weekly: realised conversion and retention against the demand models and against the optimisation run's expectations. | `05` FR-MON-17, `04` FR-OPT-28 |
-| E4 | Worker | Monthly: A/E by peril, factor, and cohort — with maturity, never without. | `05` FR-MON-11/12, R4 |
+| E1 | Worker (scheduled) | Daily: input drift against the modelling baseline **and** against the prior period. | `05` FR-MON-6/8, OQ-MON-5 |
+| E2 | Worker | Weekly: price and portfolio metrics, including **rate achieved vs rate intended**. | `05` FR-MON-20, OQ-MON-5 |
+| E3 | Worker | Weekly: realised conversion and retention against the demand models and against the optimisation run's expectations. | `05` FR-MON-17, `04` FR-OPT-28, OQ-MON-5 |
+| E4 | Worker | Monthly: A/E by peril, factor, and cohort — with maturity, never without. | `05` FR-MON-11/12, R4, OQ-MON-5 |
 | E5 | Backend | Evaluates thresholds, including consecutive-breach logic so one noisy day pages nobody. | `05` FR-MON-32 |
 
 ### Phase F — Rate achieved vs intended (Pricing Actuary)
@@ -83,7 +83,7 @@
 
 | # | Actor | Action | Refs |
 |---|---|---|---|
-| G1 | Worker | Monthly A/E run: `AD × driver_age_band 17-20` is 1.312, CI [1.108, 1.554], second consecutive breach. Cohort maturity 7 months, above the 6-month floor. | `05` FR-MON-11..13 |
+| G1 | Worker | Monthly A/E run: `AD × driver_age_band 17-20` is 1.312, CI [1.108, 1.554], second consecutive breach. Cohort maturity 7 months, above the 6-month floor (`05` OQ-MON-5). | `05` FR-MON-11..13, OQ-MON-5 |
 | G2 | Backend | Raises an Alert with the trend [1.18, 1.24, 1.312], affected exposure 1.7 %, and links to the evidence. Routes to the in-app inbox and the team webhook. | `05` FR-MON-28..30 |
 | G3 | Pricing Actuary | Opens the alert, drills overall → peril → factor → level → individual policies → their traces. No hand-written query anywhere. | `05` FR-MON-15, R2 |
 | G4 | Pricing Actuary | Cross-checks drift: PSI 0.148 on `annual_mileage`, and that factor is third by importance in the AD frequency model — so the drift is material, not incidental. | `05` FR-MON-6/10 |
