@@ -41,6 +41,7 @@ must say where it went.
 | [NT-0004](0004-a-reference-that-resolves-only-for-the-writer.md) | A reference that resolves only in the writer’s context — ten instances in one day, and one mechanical rule | 2026-08-24 | `open` | Proposed rule → `CLAUDE.md` §13, as a fourth bullet; **no code, no spec change** |
 | [NT-0005](0005-deferred-items-with-no-durable-custody.md) | Seven deferred items with no durable custody — found during W6b, held only in a session's working memory | 2026-08-24 | `open` | Mixed, per item: a marker line, a roadmap row, eight gate placements, two one-line `audit-docs.py` fixes, a convention, a new check, and one `OQ-` entry |
 | [NT-0006](0006-two-rules-for-reading-an-artifact.md) | Two rules for reading an artifact — the tip commit that is not the change set, and the citation that is right about the wrong content | 2026-08-24 | `open` | Proposed rules → `CLAUDE.md` §13; **no code, no spec change** |
+| [NT-0007](0007-context-bound-measures-cap-not-discipline.md) | "Zero calls above 200k" measures the compaction cap, not discipline — a boundary metric reads as zero by construction | 2026-08-25 | `open` | Proposed rule → `CLAUDE.md` §10; **no code, no spec change** |
 
 ## What a note must contain
 
