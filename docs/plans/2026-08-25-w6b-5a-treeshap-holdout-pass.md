@@ -9,8 +9,9 @@ interaction candidate.
 own suffix convention and its own criterion — §1.
 
 **Highest ids in use: `FR-MODEL-128`, `OQ-MODEL-37`, `OQ-OVR-15`, `OQ-PLAT-16`.**
-This plan proposes no id. `OQ-MODEL-31` is already **decided (in spec)**; this slice builds
-what it decided and does not reopen it.
+This plan proposes **`OQ-MODEL-38`** (F4) and no requirement. Next free after it:
+`OQ-MODEL-39`. `OQ-MODEL-31` is already **decided (in spec)**; this slice builds what it
+decided and does not reopen it.
 
 ---
 
@@ -53,17 +54,29 @@ found.
 
 ## 2. What this slice must amend, and what it must not
 
-When `5a` lands, six present-tense statements in `02-modelling.md` become false. §2 requires
-them resolved in the same commit; leaving them is the §0 disagreement the repo exists to
-prevent.
+When `5a` lands, statements at **six sites** become false. §2 requires them resolved in the
+same commit; leaving them is the §0 disagreement the repo exists to prevent. Enumerated from
+the rows rather than counted from a summary:
 
-| Site | The claim that stops being true |
-|---|---|
-| **`:194`** (FR-MODEL-79's row) | "Until that lands the artifact publishes strength alone" **and** "FR-MODEL-128 remains unbuilt" — two clauses, one row. |
-| **`:232`** (FR-MODEL-128's own row) | "until it lands the artifact publishes `strength` alone and `holdout_strength_ratio` is absent rather than defaulted". |
-| **`:1396`** (§4.9's example note) | "No build produces it yet"; "the field is absent rather than defaulted until … lands"; and "the example as printed is **not** a valid instance of the shape that validates the artifact today". |
-| **`:2407-2410`** (§5.2's signature note) | "The built signature takes no `holdout`". |
-| **`open-questions.md`:94 + `02` §10's mirror** | OQ-MODEL-31 repeats the owner clause **verbatim**. Amend one and they diverge. |
+| # | Site | The claim that stops being true |
+|---|---|---|
+| 1 | **`02`:194** (FR-MODEL-79's row) | "Until that lands the artifact publishes strength alone" **and** "FR-MODEL-128 remains unbuilt" — two clauses, one row. |
+| 2 | **`02`:232** (FR-MODEL-128's own row) | "until it lands the artifact publishes `strength` alone and `holdout_strength_ratio` is absent rather than defaulted". **Also carries D3's record** — see below. |
+| 3 | **`02`:1396** (§4.9's example note) | "No build produces it yet"; "absent rather than defaulted until … lands"; and "the example as printed is **not** a valid instance of the shape that validates the artifact today". |
+| 4 | **`02`:2407-2416** (§5.2's signature note) | "The built signature takes no `holdout`" **and**, at `:2411`, "until that lands the function publishes `strength` alone". The note runs to **:2416**, not :2410 — an earlier draft of this plan stopped short and would have left the second clause standing. |
+| 5 | **`02`:3113** (§10's OQ-MODEL-31 row) | "Until the suggestion panel is built the artifact publishes strength alone." |
+| 6 | **`open-questions.md`:94** (OQ-MODEL-31) | "Owner: the slice that builds the factor workbench's suggestion panel; until it lands the artifact publishes `strength` alone and `holdout_strength_ratio` is absent rather than defaulted." |
+
+**Sites 5 and 6 are not verbatim copies of one another**, which both this plan's first draft
+and its review assumed. `:94` carries owner *and* status; `:3113` carries a condensed status
+claim and no owner. Both are falsified, both must be amended, and **the amendment text
+differs per mirror** — one text applied to both would introduce the divergence the mirroring
+rule exists to prevent.
+
+**`02`:2378-2383, the signature block itself, is *not* amended.** It already declares
+`*, holdout: pl.DataFrame` with no default — it is **spec ahead of code**, and 5a makes the
+code match it. Only its *note* at 4 above, which says the built signature lacks the keyword,
+stops being true.
 
 Three further mentions — `:193`, `:2583`, `:3086` — are references without a status claim
 and are **not** amended.
@@ -106,6 +119,9 @@ same sampling, the same `resolve_factors`, the same `_encode` with the same
 `categorical_maps`, the same 5 000-row cap, the same off-diagonal sum — differing only in
 which frame goes in.
 
+**Same cap is not the same N**, and F4 is why that matters. This finding delivers the
+requirement's letter; F4 records that its letter is not sufficient for its purpose.
+
 ### F2 — a zero in-sample strength has no ratio
 
 The ratio is "the holdout value over the in-sample one". A pair whose in-sample strength is
@@ -127,7 +143,32 @@ Adding the field closes the gap.
 comparing two blocks by eye. That test is the difference between the amendment at `:1396`
 being a claim and being a checked fact.
 
-### F4 — FR-MODEL-128's rebuild-reuse clause is not true of the SHAP summary today
+### F4 — the same cap does not mean the same N, and the ratio is measured across unequal samples
+
+**Confirmed in the code, not speculative.** `_interaction_candidates` caps with
+`capped = x[: min(x.shape[0], 5_000)]` (`transparency.py`:401), and that is applied **per
+call**. Run it on a 50 000-row training partition and it sees 5 000 rows; run it on a 3 000-row
+holdout and it sees 3 000.
+
+So an implementation that honours FR-MODEL-128 exactly — same seed, same cap, same encoding —
+still compares a strength measured on 5 000 rows against one measured on 3 000. Sampling
+noise in a mean of absolute values does not vanish between those, and it does not vanish
+symmetrically: the smaller sample is the noisier one, and it is always the holdout, so the
+bias has a direction. A ratio near `1` and a ratio near `0.8` are the difference between
+"survives" and "weakens", which is the judgment the field exists to support.
+
+**FR-MODEL-128 names the seed, the row cap and the encoding. It never says equal N** — and
+with a cap rather than a count, equal caps produce unequal N whenever either partition is
+smaller than the cap. A faithful build therefore produces a misleading ratio, which is
+precisely the class of defect a requirement's own comparability clause is meant to exclude.
+
+**Raised as `OQ-MODEL-38` and built as written** (§10). This slice does not invent a
+remedy — equalising N is a change to what the requirement says, and the candidates (cap both
+at the smaller partition's row count; require a minimum holdout; publish N alongside the
+ratio) trade accuracy against cost and against the requirement's own bounded-cost promise.
+That is a maintainer's call.
+
+### F5 — FR-MODEL-128's rebuild-reuse clause is not true of the SHAP summary today
 
 The requirement says the ratio "on a rebuild … is reused rather than recomputed, with the
 rest of the surrogate's stored numbers (FR-MODEL-110)". But `reusable_numbers()`
@@ -152,10 +193,19 @@ summary is built … this adds a second pass over a capped sample and no new dat
 **Verified rather than assumed**: `holdout` is assigned at `model_handlers.py`:878 from
 `_split_frames` and asserted non-None at `:953`, so it is in scope at the `:1062` call.
 
-**Recommendation: a `holdout: pl.DataFrame | None = None` keyword on `build_shap_summary`**,
-passed by the one caller. Optional because `pricing-core` is importable standalone and its
-own tests build summaries without a split; `None` means no holdout pass and the field is
-absent, which is the same shape the interim had.
+**DECIDED: `*, holdout: pl.DataFrame` — required, no default.** This plan first proposed an
+optional keyword and was overruled, for two reasons that are both better than the one I had.
+
+**The spec already declares it required.** `02` §5.2:2380 reads `*, holdout: pl.DataFrame`
+with no default, and the sibling `build_glm_approximation` takes it required too. An optional
+keyword would be a silent §0 divergence from a signature the spec has already published —
+this slice exists to make the code match that block, not to renegotiate it.
+
+**And optional makes the failure mode invisible.** A caller that forgets `holdout=` produces
+exactly the pre-5a artifact — `strength` alone, no ratio — silently and for ever, which is
+**indistinguishable from D2's legitimate absence**. Required makes the same mistake a
+`TypeError` at the call site. My standalone-import reasoning does not reach: a keyword
+argument adds no dependency, and `pricing-core`'s own tests can pass a frame.
 
 ### Decision 2 — what is published when the in-sample strength is zero (F2)
 
@@ -165,21 +215,43 @@ absent, which is the same shape the interim had.
 | **(b)** | `0.0` | Reads as a total out-of-sample collapse. It is the most alarming possible value for the least informative case. |
 | **(c)** | `1.0` | Reads as "survives perfectly". Worse than (b): it manufactures reassurance. |
 
-**Recommendation: (a).** The field is already `float | None`, so absence costs nothing and
-carries exactly the available information. FR-MODEL-128's own words for the interim — "absent
-rather than defaulted" — are the precedent for preferring absence to an invented number.
+**DECIDED: (a).** The field is already `float | None`, so absence costs nothing and carries
+exactly the available information. FR-MODEL-128's own words for the interim — "absent rather
+than defaulted" — are the precedent for preferring absence to an invented number.
 
-### Decision 3 — whether this slice makes the SHAP summary reusable on rebuild (F4)
+**One condition, and it is a real ambiguity the prose does not settle: "absent" must be
+pinned to an encoding.** A producer emitting `"holdout_strength_ratio": null` and a fixture
+asserting the key is missing entirely *both* satisfy "absent rather than defaulted", and they
+are different artifacts on the wire. Whichever is chosen must be **stated and tested**, not
+left to whatever `model_dump` happens to do.
 
-**Recommendation: no, and record why.** Read the clause as "the ratio needs no storage or
-recompute path of its own" — which this design satisfies, since it rides inside
-`ShapSummary` and is written by the same `store()`. Making `build_shap_summary` itself
-reusable is a change to when transparency is recomputed, affecting every field on the
-artifact and not only this one; it is FR-MODEL-110's territory, not FR-MODEL-128's, and it
-belongs in a slice where that is the headline.
+**This slice emits the key with `null`.** `ShapInteraction` is a frozen Pydantic model with
+`extra="forbid"` and the field is `float | None = None`, so the key is present in a plain
+dump and its absence would require `exclude_none` at every serialisation site — a per-site
+setting is exactly the kind of thing that holds at one and not another. `null` is one shape
+everywhere, and it still honours "not defaulted": `null` is not a number and cannot be read
+as one, which is the whole of what the requirement is protecting against. Tested on the
+serialised artifact, not on the Python object.
 
-If the maintainer reads the clause the other way, this becomes a second finding with an
-owner rather than something this slice absorbs.
+### Decision 3 — whether this slice makes the SHAP summary reusable on rebuild (F5)
+
+**DECIDED: 5a builds no reuse — and the reading is not available silently.**
+
+Making `build_shap_summary` reusable is a change to *when transparency is recomputed*,
+affecting every field on the artifact and not only this one. That is FR-MODEL-110's
+territory and belongs in a slice where it is the headline, not absorbed into a computation
+change.
+
+But my original framing — read the clause as satisfied and move on — was overruled, rightly.
+The clause is **false of the SHAP summary today**, verified twice: `reusable_numbers()`
+returns only the `GlmApproximation` block, and `build_shap_summary` runs unconditionally at
+`model_handlers.py`:1062, outside that branch. So the summary is recomputed on every rebuild,
+the ratio will be too, and **FR-MODEL-128's own cost argument leans on that clause**.
+
+So the dated append at site 2 **records the clause as unsatisfied, with an owner** — not as
+satisfied by a favourable reading, and not silently. A requirement whose cost argument rests
+on a behaviour nothing implements is a finding, and it gets written down where the next
+reader meets it.
 
 ---
 
@@ -242,10 +314,23 @@ sharpest available check that numerator and denominator are comparable.
 One argument at `model_handlers.py`:1062. A LightGBM summary carries no candidates and so no
 ratios; asserted.
 
-### Task 4 — the spec amendments (§2)
+### Task 4 — the spec amendments and `OQ-MODEL-38` (§2, F4)
 
-The four `02` sites and both OQ-MODEL-31 mirrors, by dated append. Includes the test from F3
-constructing §4.9's printed example, so `:1396`'s amendment is checked rather than asserted.
+**All six sites** by dated append, with **different text for sites 5 and 6** since the two
+OQ-MODEL-31 mirrors are not verbatim copies. Site 2 also records D3: FR-MODEL-128's
+rebuild-reuse clause unsatisfied, with an owner. The signature block at `:2378-2383` is not
+touched — only its note.
+
+Includes the test from F3 constructing §4.9's printed example, so `:1396`'s amendment is a
+checked fact rather than a claim, and the D2 test asserting the serialised encoding of an
+absent ratio.
+
+Then **`OQ-MODEL-38`** in both mirrors: equal caps produce unequal N whenever a partition is
+smaller than the cap, so a faithful build compares strengths measured on different row
+counts, with the noisier side always the holdout. Carries the evidence — `transparency.py`:401
+applying `min(x.shape[0], 5_000)` per call — the three candidate remedies, and the note that
+FR-MODEL-128 names seed, cap and encoding but never equal N. **No remedy is built here.**
+
 `audit-docs.py` runs here.
 
 ### Task 5 — the gate, both halves, and the close
@@ -261,14 +346,19 @@ a `packages/` path**, which is worth confirming rather than assuming — merge v
 
 ## 8. What would make this plan wrong
 
-1. **If FR-MODEL-128's rebuild clause requires reuse** (F4), Decision 3 is wrong and the
+1. **If FR-MODEL-128's rebuild clause requires reuse** (F5), Decision 3 is wrong and the
    slice grows into FR-MODEL-110's territory.
 2. **If the holdout partition can be empty or tiny.** The plan assumes a holdout frame worth
    sampling; a split whose holdout is a handful of rows produces a ratio with no stability,
    and nothing in FR-MODEL-128 sets a floor. If that is reachable it needs either a minimum
    or an explicit statement that none applies.
-3. **If `_interaction_candidates`' 5 000-row cap interacts with the outer sample.** Both
-   passes must cap identically; if the outer sample already reduces one partition below the
-   cap and not the other, the two passes see different row counts from the same nominal
-   settings, and the ratio is comparing unequal samples. Task 2's identical-frame test is the
-   guard, but the asymmetric case deserves its own check.
+3. ~~**If `_interaction_candidates`' 5 000-row cap interacts with the outer sample.**~~
+   **Struck — confirmed, not hypothetical, and promoted to F4 and `OQ-MODEL-38`.** The cap is
+   applied per call at `transparency.py`:401, so equal caps give unequal N whenever a
+   partition is smaller than the cap. It is no longer a thing that would make the plan wrong;
+   it is a thing the plan states, builds around, and files.
+4. **If the maintainer reads FR-MODEL-128's comparability clause as already requiring equal
+   N.** Then `OQ-MODEL-38` is not an open question but a defect in this build, and equalising
+   belongs here rather than after a decision. The plan reads "the same row cap" as naming the
+   cap because that is what it says — but a reader who takes "comparable rather than merely
+   adjacent" as the operative clause could hold that equal N is entailed.
