@@ -47,6 +47,15 @@ workbench is not among the seven carve-outs. Scope is the requirements; the cell
 records that §5.3 claims an intent control the built view does not have; `git grep intent --
 frontend/src` outside `generated/` returns zero.
 
+**The cell is not the whole of §5.3, and the rest of it does bind.** `02` §5.3 also carries
+an unnumbered **Interaction requirement** paragraph (`:2599-2603`): the banding and grouping
+editors must show an edit's consequence *before* it is saved. FR-OVR-21's rule is
+**cell-scoped**, so it does not reach a paragraph, and the seven carve-outs name `01`'s
+equivalent paragraph rather than `02`'s. So it binds — and it is **outside this slice**,
+because it governs the banding and grouping editors, which are built. Stated because "scope
+is the requirements; the cell indexes them" is right for 5b and a reader could take it as
+disposing of all of §5.3, which it does not.
+
 ---
 
 ## 2. Findings
@@ -162,6 +171,24 @@ work exists, and an actuary opening the workbench has usually just fitted someth
 belongs in the selector's labels — where it informs the choice — not in the default, where it
 would silently override a fresher artifact.
 
+**The mechanism is the route's ordering, not a field, and that is the fragile part.**
+`Model` has thirteen fields, is frozen with `extra="forbid"`, and carries **no timestamp of
+any kind** — `created_at` exists on `ModelRow` but does not reach the contract. What makes
+"most recent" available at all is that `list_models` orders by `ModelRow.id.desc()` and ids
+are UUIDv7, whose leading 48 bits are a millisecond timestamp, so the route returns
+newest-first.
+
+Nothing in the type system defends that. A client-side `sort`, a `Map` or `Set` round-trip,
+or fetching pages out of order silently loses the ordering and degrades the default to an
+arbitrary model — with no error anywhere. **So the client-side filter must be
+order-preserving, and a test pins it**: the assertion is that the filtered result's order
+matches the response's, not merely that it contains the right models.
+
+Two ids minted in the same millisecond order arbitrarily with respect to each other
+(`ids.py`:36-37), so at millisecond resolution the default is ambiguous. That is acceptable
+here for the reason that file gives — nothing derives ordering *within* a millisecond — and
+it is recorded so a later reader does not mistake the ambiguity for a defect.
+
 ### Decision 5 — what the panel says when every ratio is `null` (F3)
 
 **Wording true of both facts** — "not available for this artifact", never "no structure
@@ -182,17 +209,46 @@ plainly.
    distinction. One remedy space, so one question.
 3. **FR-MODEL-128's rebuild clause** stays unsatisfied with an owner, recorded in 5a.
 4. **The row cap is untested** — "delivered but untested" for the closure record.
+5. **§5.3's Interaction requirement paragraph cites FR-MODEL-15, which does not carry it —
+   but a numbered requirement does.** FR-MODEL-15's predicate is what a Grouping *stores*
+   (method, parameters, source and target Level statistics, change in fit) and says nothing
+   about showing a consequence before save. Review proposed that the obligation therefore
+   either needs a number or should be struck; **checked, and neither is so**. **FR-MODEL-83**
+   carries it explicitly — "§5.3's interaction requirement — that an edit's consequence is
+   visible *before* it is saved — is otherwise unmeetable" — and was added 2026-08-15 (W5)
+   for that purpose, giving Bandings and Groupings an evaluate-without-persisting route. The
+   paragraph's FR-MODEL-15 citation is narrow and correct as far as it goes: FR-MODEL-15 is
+   the source of the deviance/df evidence being shown, not of the obligation to show it. So
+   there is no gap and nothing to file. Recorded because the opposite reading is a plausible
+   one that a future sweep will reach again.
 
 ---
 
 ## 5. Tasks
 
-1. **Inline one-ways** on the column list (`01` FR-DATA-26), read from the Profile the view
-   already loads — never computed in the browser (FR-DATA-27).
+1. **Inline one-ways** on the column list, read from the Profile the view already loads and
+   never computed in the browser. The tighter authority is **FR-DATA-26**'s "are computed
+   once, here"; **FR-DATA-27** is cited alongside it but its predicate is recomputing *a
+   profile*, which is a wider claim than this one needs.
 2. **Intent and monotonic-direction controls** on the creation path (Decisions 1 and 2),
    with the refused-set divergence test against `factors.py`.
-3. **The model selector** (Decisions 3 and 4), reusing W6b-4b's bounded paging and its
-   visible truncation.
+3. **The model selector** (Decisions 3 and 4).
+
+   **What is reused is the pattern, not the function.** `listObjectives`
+   (`api/objectives.ts`) is not a generic composable: it hard-codes the `/custom-objectives`
+   route, the `ObjectivePage` response type, the `CustomObjective` item type and a single
+   `status` axis, and `OBJECTIVE_PAGE_CAP`'s name and doc bind it to objectives and to
+   OQ-MODEL-35's applicability problem. What transfers is the **discipline** — page to a
+   stated bound, and return truncation *in the return type* rather than logging it, so a
+   caller cannot fail to handle it.
+
+   So: **extract a generic paging helper both callers use** — preferred, since two callers
+   is where extraction pays and the shape is now known from a second instance — or, if that
+   proves not small, write a sibling with **its own cap constant**. Either way
+   `OBJECTIVE_PAGE_CAP` is **not** imported into a factor path: a constant whose name says
+   "objective" appearing in model paging reads as deliberate to whoever finds it next.
+
+   The selector's filter is order-preserving and tested as such (Decision 4).
 4. **The suggestion panel** — ranked by strength, ratio beside each, no threshold, and
    "add as an explicit Factor" as an authored action carrying intent and rationale
    (FR-MODEL-79). Decision 5's wording for the all-`null` case.
