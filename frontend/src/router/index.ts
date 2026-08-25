@@ -136,6 +136,23 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/MetricLibraryView.vue"),
   },
   {
+    // `02` §5.3:2595. Static, and `/peril-structures/:id` below is dynamic — a static segment
+    // outranks a dynamic one from either position, so the tests assert resolution rather than
+    // declaration order.
+    path: "/peril-structures",
+    name: "peril-structure-library",
+    component: () => import("@/views/PerilStructureLibraryView.vue"),
+  },
+  {
+    // `02` §5.3:2596. Addressed by id: `PerilStructure.ref` is a plain `@property` and not a
+    // `computed_field`, so the canonical `peril_structure:{slug}@{version}` never reaches the
+    // wire and cannot address a route.
+    path: "/peril-structures/:id",
+    name: "peril-structure-detail",
+    component: () => import("@/views/PerilStructureDetailView.vue"),
+    props: (route) => ({ id: String(route.params.id) }),
+  },
+  {
     // `02` §5.3's Model spec builder.
     //
     // Declared above `/models/:slug` for readability, **not** because order decides the
