@@ -13,6 +13,14 @@ import { onMounted, ref } from "vue";
 import { listObjectives, type CustomObjective } from "@/api/objectives";
 import ArtifactLibraryTable, { type ArtifactRow } from "@/components/ArtifactLibraryTable.vue";
 
+/**
+ * The columns this library declares. Both objective and metric libraries have all five;
+ * the peril-structure library declares three, because FR-MODEL-127 gives a Peril Structure no
+ * usage count and FR-MODEL-44's applicability is not its concept.
+ */
+const LIBRARY_COLUMNS = ["slug", "version", "status", "applicability", "usageCount"] as const;
+
+
 const rows = ref<ArtifactRow[]>([]);
 const truncated = ref(false);
 const failure = ref<string | undefined>(undefined);
@@ -63,6 +71,7 @@ onMounted(async () => {
     <ArtifactLibraryTable
       v-else
       :rows="rows"
+      :columns="LIBRARY_COLUMNS"
       :truncated="truncated"
       empty-label="No custom objectives in this workspace yet."
     />
