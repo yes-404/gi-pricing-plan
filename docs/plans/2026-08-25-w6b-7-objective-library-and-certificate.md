@@ -376,8 +376,14 @@ slice.
 > reinstates, in the only place a human reads it, exactly the outright refusal this requirement
 > exists to prevent. The rule is therefore extended to the surface rather than split across a
 > second id: **a view rendering a certificate must not style, label, group or order a `violated`
-> check as a failure.** A certificate reads as blocked only where its `overall` is `failed`
-> (FR-MODEL-42); `certified_with_findings` reads as certified. Where a check is `violated`, the
+> check as a failure.** A certificate reads as blocked only where its `overall` is `failed`;
+> `certified_with_findings` reads as certified. **That is this requirement's rule, and citing
+> FR-MODEL-42 for it inverts it** — read literally, 42's "must pass … hessian non-negativity
+> over the sampled domain" makes a `violated` check blocking, which is the tension this
+> requirement was written to resolve. 42 gates submission on a certificate; which outcomes
+> carry an objective past that gate is settled here, and in `platform/objectives.py`'s
+> `certify`, where `overall is FAILED` is the whole of the test and anything short of it
+> lands the objective in `certified`. Where a check is `violated`, the
 > clipping strategy this requirement already requires be declared is shown beside it — a finding
 > without the strategy is the half an Approver cannot act on. **The rule is on the status, not
 > on the check that emits it.** `violated` is convexity-only by implementation today, emitted at
