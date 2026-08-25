@@ -22,6 +22,13 @@ required, Vitest + `@vue/test-utils`, types generated from OpenAPI into
 **Spec:** [`docs/specs/02-modelling.md`](../specs/02-modelling.md) — §3.9 (FR-MODEL-58..61,
 74), §4.10 `PerilStructure`, §5.1:1736-1740, §5.3:2595-2596.
 
+**Precondition — W6b-8 executes after W6b-7.** Task 2 modifies
+`frontend/src/components/ArtifactLibraryTable.vue`, which W6b-7 creates and which does not
+exist on `main`. This is the correct cut rather than an inconvenience: `CLAUDE.md` §2 forbids
+defining a shape twice, and a second library table built to avoid the wait is precisely the
+divergence that rule names. The plan may be reviewed and merged before W6b-7 builds — a plan is
+the design step — but its execution is ordered. Trap 1 gives the executor the one-command check.
+
 ---
 
 ## Global Constraints
@@ -157,27 +164,65 @@ which genuinely have both columns.
 
 **This is a modification to a component another slice creates.** See Trap 1.
 
-### Finding 2 — the detail cell's three nouns under-enumerate a numbered requirement
+### Finding 2 — the cell's three nouns name six of the contract's twenty-five fields
 
-The manager's instruction was to derive `:2596`'s contents from `PerilStructure`'s shape and to
-treat a noun with no contract field as a finding. **All three nouns have contract fields** —
-*per-peril model pins* is `PerilComponent.{frequency_model, severity_model,
-burning_cost_model}`, all `ArtifactRef | None`; *large-loss treatment* is
-`PerilComponent.large_loss: LargeLossTreatment`; *reconciliation panel* is
-`PerilStructure.reconciliation: Reconciliation | None`.
+The instruction was to derive `:2596`'s contents from `PerilStructure`'s shape and to treat a
+noun with no contract field as a finding. **All three nouns have contract fields** — *per-peril
+model pins* is `PerilComponent.{frequency_model, severity_model, burning_cost_model}`;
+*large-loss treatment* is `PerilComponent.large_loss`; *reconciliation panel* is
+`PerilStructure.reconciliation`. The expected finding did not occur.
 
-**The finding runs the other way.** The contract carries a field no noun names, and it is
-backed by a numbered requirement: **`PerilStructure.excluded_perils`**, whose members carry a
-`reason` (§4.10:1426 — `{"peril": "COURTESY_CAR", "reason": "Bundled service cost, loaded flat
-in the rating algorithm."}`). **FR-MODEL-60 requires it**: *"every peril present in the dataset
-is either modelled or explicitly excluded with a reason."* A detail view that renders the three
-nouns and stops omits half of FR-MODEL-60's coherence claim — the half that says why a peril's
-cost is *not* in the total.
+**It runs the other way, and not in one field.** Sweeping the whole contract against the cell —
+because a finding reported as one symbol strands its list-mates:
 
-This is FR-OVR-21 working exactly as designed: the cell is prose, the requirement binds, and
-scope derived from the cell's nouns would have been short by one requirement-backed panel.
-`PerilStructure.status` (FR-MODEL-61's lifecycle) and the submit affordance (FR-MODEL-90) are
-likewise unnamed by the nouns; both are dispositioned in the §13 table.
+| Type | Field | Named by a noun? | Ground for showing it |
+|---|---|---|---|
+| `PerilStructure` | `slug`, `version` | no | The artifact's identity; `peril_structure:{slug}@{version}` (ID-3) |
+| | `perils` | partly | FR-MODEL-58 |
+| | `excluded_perils` | **no** | **FR-MODEL-60** — *"either modelled or explicitly excluded with a reason"* |
+| | `reconciliation` | yes | FR-MODEL-60 |
+| | `status` | **no** | **FR-MODEL-61** — the structure's own lifecycle |
+| | `created_at` | no | Ordinary provenance |
+| `PerilComponent` | `peril` | implied | FR-MODEL-58 |
+| | `method` | **no** | **FR-MODEL-58's two routes** — which one this peril takes |
+| | the three model refs | yes | FR-MODEL-58 |
+| | `large_loss` | yes | FR-MODEL-59 |
+| `LargeLossTreatment` | `kind` | yes | FR-MODEL-59 |
+| | `cap_minor`, `attachment_minor` | no | FR-MODEL-59's parameters — see Finding 3 |
+| | `restoration_loading` | **no** | **FR-MODEL-74** — the reconciliation compares *after* restoration, so this is what makes the ratio mean what it means |
+| | `excess_model`, `loading_factor` | no | FR-MODEL-59's parameters for the other two kinds |
+| | `evidence_blob` | no | FR-MODEL-59's calibration evidence — deferred, §13 |
+| `ExcludedPeril` | `peril`, `reason` | **no** | FR-MODEL-60 |
+| `Reconciliation` | `part` | **no** | **FR-MODEL-60 reconciles *on the holdout*** — `part` is what says whether this verdict is one |
+| | `tolerance` | no | FR-MODEL-60's *"declared tolerance"* |
+| | `ratio`, `status` | no | FR-MODEL-60's verdict — `computed_field`s, Trap 6 |
+| | `dataset_version_id`, `computed_at` | no | Which data, and when |
+| | the two `*_burning_cost_minor` | no | Deferred — Findings 3 and 4 |
+| | `perils[].modelled_burning_cost_minor` | no | As share of total — Finding 3 |
+
+*(`PerilStructure.ref` is a plain `@property`, not a `computed_field`, so it is **not** on the
+wire. Compose the canonical string in the view from `slug` and `version`, or do not show it.)*
+
+**Two independent grounds, and both must be named.**
+
+*The contract.* OQ-MODEL-15's decided rule of 2026-08-21 makes the generated contract the
+floor and the Contents cell prose that binds nothing. A field in `PerilStructure` and absent
+from the cell is therefore **in scope by the contract**, not optional because a noun omits it.
+**This slice is where that rule gets exercised for the first and only time.** FR-OVR-21
+(`00-overview.md:227`) closes: *"the contract-is-the-floor half is OQ-MODEL-15's decided rule
+of 2026-08-21; OQ-MODEL-15 says nothing about a cell being prose, and that half rests on the
+`02` §5.3 Peril structure library precedent alone."* The precedent is not being set on
+`excluded_perils`; it is being set on **the whole unnamed set above**, which is most of the
+contract. An executor who builds the three nouns and stops does not merely ship a thin view —
+they leave the sole support for half of FR-OVR-21 contradicted by the code written under it.
+
+*The requirements.* Independently of any of that, five of the unnamed fields are required by
+numbered requirements — `excluded_perils` and `part` by FR-MODEL-60, `status` by FR-MODEL-61,
+`method` by FR-MODEL-58, `restoration_loading` by FR-MODEL-74. These bind whatever one
+concludes about cells and contracts, and they would bind if FR-OVR-21 were repealed tomorrow.
+**Neither ground is a fallback for the other**: the contract ground reaches the whole set and
+the requirement ground reaches only five, so dropping the first would quietly re-narrow scope
+to those five while looking fully justified.
 
 ### Finding 3 — the reconciliation panel has no route to a currency, and it is OQ-OVR-14's fourth view
 
@@ -210,6 +255,29 @@ when OQ-OVR-14 is decided; this plan proposes adding the panel to that question'
 derived, not stored, per the module docstring. Read them; never recompute them client-side. A
 second computation of a persisted verdict is the "two statements of one fact disagree
 eventually" defect the contract was written to avoid.)*
+
+**The large-loss panel is a second instance, and the omission answer does not transfer.**
+Finding 2's sweep surfaced `LargeLossTreatment.cap_minor` and `.attachment_minor` — both
+`MoneyMinor`, both landing in the detail view, and both missed when this finding was written
+about the reconciliation panel alone. They differ from the burning-cost fields in two ways that
+change the answer:
+
+- **They are unambiguously money.** A cap on a loss and an attachment point are amounts, not
+  statistics, so OQ-OVR-12's classification question does not touch them. `validate.py:983-986`
+  is the standing example of the distinction — a threshold that genuinely *is* money, which
+  must not be swept along with the statistic beside it.
+- **Omitting them removes requirement content, where omitting the burning costs does not.**
+  FR-MODEL-60's verdict survives in `ratio`; FR-MODEL-59's treatment does not survive in `kind`.
+  A panel saying `capped` without saying capped *at what* has not recorded the treatment — it
+  has recorded that there is one.
+
+**Recommendation: render them as integer minor units, labelled by the contract's own field
+name, with no currency symbol.** `cap_minor 500000` states a contract fact and asserts no
+denomination; `£5,000.00` asserts one the view cannot source. This is the same refusal as the
+reconciliation panel's, reached by a different route because the cost of omission differs — and
+it is why OQ-OVR-14's fourth view is **two panels, only one of which can drop its amounts.**
+Bring that to the manager when the question is costed; it is the sort of asymmetry that a view
+count hides.
 
 ### Finding 4 — `OQ-OVR-12` is open on the very fields this view renders
 
@@ -256,6 +324,9 @@ rather than assumed.
 | Library: **no usage count** | **Delivered as an absence** — Task 2 | The column does not exist in the peril column set. Tested as an absence (Task 2 Step 1), because an untested negative is the one that regresses silently |
 | Library: `status`/`slug` **filtering** | **Delivered but untested at the UI** — Task 1 | The API module exposes both filters and they are unit-tested; no filter *control* is built. FR-MODEL-127 requires the endpoint be filterable, not that the view expose controls. Owner: the slice that needs one |
 | Detail: **per-peril model pins** | **Delivered** — Task 5 | `ArtifactRef` rendered as the canonical `model:slug@version`; FR-MODEL-58's pinning is visible or it is not pinned |
+| Detail: per-peril **method** (FR-MODEL-58) | **Delivered** — Task 5 | Unnamed by any cell noun; Finding 2. Which of the two routes this peril takes decides which model refs are even meaningful |
+| Detail: large-loss **parameters** — `cap_minor`, `attachment_minor`, `restoration_loading`, `loading_factor`, `excess_model` | **Delivered** — Task 5 | Unnamed by any noun. `restoration_loading` is FR-MODEL-74's; the two `*_minor` are rendered currency-free per Finding 3 |
+| Detail: reconciliation **`part`** (FR-MODEL-60) | **Delivered** — Task 4 | FR-MODEL-60 reconciles *on the holdout*; without `part` the reader cannot tell whether this verdict is one |
 | Detail: **large-loss treatment** | **Delivered** — Task 5 | All four `LargeLossKind` by name (Finding 5); `cap_minor`/`restoration_loading` shown where present |
 | Detail: large-loss **calibration evidence** (FR-MODEL-59) | **Deferred, owner: the maintainer** | `LargeLossTreatment.evidence_blob` is an opaque blob with no contract-declared shape. Rendering it needs a declared shape first — a new requirement under OQ-MODEL-15's floor rule, not a guess at a call site. Proposed to the roadmap |
 | Detail: **reconciliation panel** — ratio, tolerance, derived status | **Delivered** — Task 4 | FR-MODEL-60's verdict, read from the `computed_field`s |
@@ -593,6 +664,12 @@ it("shows FR-MODEL-60's verdict as it arrived, not as recomputed", () => {
   const panel = mount(ReconciliationPanel, { props: { reconciliation: RECONCILIATION } });
   expect(panel.text()).toContain("pass");
   expect(panel.text()).toContain("0.9804");
+  expect(panel.text()).toContain("0.05");     // the declared tolerance the verdict is against
+});
+
+it("says which part the verdict is over (FR-MODEL-60's holdout)", () => {
+  const panel = mount(ReconciliationPanel, { props: { reconciliation: RECONCILIATION } });
+  expect(panel.text()).toContain("holdout");
 });
 
 it("states each peril's treatment beside its share (FR-MODEL-74)", () => {
@@ -659,8 +736,21 @@ it("names every excluded peril and its reason (FR-MODEL-60)", async () => {
 });
 
 it("renders a large-loss kind the platform cannot compute (Finding 5)", async () => {
-  // perils[1].large_loss = { kind: "flat_loading", ... }
+  // perils[1].large_loss = { kind: "flat_loading", loading_factor: "1.15", evidence_blob: … }
   expect(wrapper.text()).toContain("flat_loading");
+  expect(wrapper.text()).toContain("1.15");
+});
+
+it("states the treatment's parameters, not just its kind (FR-MODEL-59, Finding 3)", async () => {
+  // perils[0].large_loss = { kind: "capped", cap_minor: 500000,
+  //                          restoration_loading: "1.08", evidence_blob: … }
+  expect(wrapper.text()).toContain("500000");   // integer minor units, no symbol
+  expect(wrapper.text()).toContain("1.08");     // FR-MODEL-74's restoration
+  expect(wrapper.text()).not.toMatch(/[£$€]/);
+});
+
+it("names each peril's method, which decides what its refs mean (FR-MODEL-58)", async () => {
+  expect(wrapper.text()).toContain("frequency_severity");
 });
 
 it("shows a draft structure as unreconciled rather than as an error", async () => {
@@ -673,9 +763,14 @@ it("shows a draft structure as unreconciled rather than as an error", async () =
 The second test is Finding 2 — the panel no cell noun asked for. The fourth is Trap 3.
 
 - [ ] **Step 2: Run and watch them fail.** Expected: FAIL — view does not resolve.
-- [ ] **Step 3: Write the view.** Four sections: composition (per-peril method and pinned
-  refs), large-loss treatment per peril, excluded perils with reasons, and
-  `<ReconciliationPanel>` gated on `status` rather than on `reconciliation === null`.
+- [ ] **Step 3: Write the view.** Four sections, and Finding 2's sweep table is the field list
+  — build from it, not from the cell's three nouns. Composition (per peril: `peril`, `method`,
+  and whichever model refs its method makes meaningful, as canonical strings); large-loss
+  treatment per peril (`kind` plus the parameters that kind requires — the contract's own
+  `_fields_match_the_kind` says which, and a parameter present for a kind that does not use it
+  is refused at the source, so the view never has to decide); excluded perils with reasons; and
+  `<ReconciliationPanel>` gated on `status` rather than on `reconciliation === null`. Header
+  carries `slug`, `version`, `status` and `created_at`.
 - [ ] **Step 4: Run the tests.** Expected: PASS.
 - [ ] **Step 5: Commit**
 
@@ -752,6 +847,16 @@ Task 4 test 2; FR-MODEL-90's read half → Task 1, its submit half booked; FR-MO
 **Placeholder scan.** No TBDs. One place names a check rather than pre-writing it — Trap 1's
 `ls` on W6b-7's component — because it is a verification against a moving tree, which a frozen
 plan cannot do for the executor.
+
+**The sweep, and why it was not done once.** Finding 2 began as a single reported field,
+`excluded_perils`. Reported that way it invites fixing that field — so the whole
+`PerilStructure` field set was swept against the cell afterwards, and the unnamed set turned
+out to be most of the contract, including `method`, `part` and `restoration_loading`, each
+backed by its own requirement. The sweep also caught a defect in **this plan's own Finding 3**:
+the currency problem was written up for the reconciliation panel while `cap_minor` and
+`attachment_minor` sat unnoticed in the large-loss panel, where the same question has a
+different answer. A finding reported as one symbol strands its list-mates, and that holds for
+the reporter as much as for the reader.
 
 **What this review caught.** `docs/plans/README.md`'s three unenforced conventions were run
 against the draft, and rule 1 fired twice. The API module called a `client.get` that does not
