@@ -3,7 +3,7 @@
 **Slice:** `W6b-5b` — `02` §5.3's factor workbench remainder: intent and monotonic-direction
 controls, interaction suggestions, inline one-ways.
 **Base:** `8d0dcf4` on `main` — W6b-5a (#209) merged, its example-test defect fixed (#210).
-**Owner:** `w6b-executor`, arbitrated by `w6b-lead` 2026-08-25.
+**Owner:** `w6b-executor`, arbitrated by `w6b-manager` 2026-08-25.
 **Map row:** [`2026-08-24-w6b-slice-map-revised.md`](2026-08-24-w6b-slice-map-revised.md):153
 (`W6b-5`), split into `5a`/`5b` at backend-versus-panel on 2026-08-25.
 
