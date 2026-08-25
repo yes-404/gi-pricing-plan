@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { OneWaySummary } from "@/api/profiles";
 
+import { cellUnder } from "@/test-tables";
+
 import OneWayChart from "../OneWayChart.vue";
 
 // ECharts needs a real canvas and happy-dom has none. The stub keeps the one thing worth
@@ -56,6 +58,7 @@ function summary(): OneWaySummary {
         frequency: 0.0729,
         frequency_ci: [0.0586, 0.0895],
         mean_severity: 5000,
+        severity_ci: [4100, 6050],
         mean_burning_cost: 364.5,
       },
       {
@@ -66,6 +69,7 @@ function summary(): OneWaySummary {
         frequency: 0.08,
         frequency_ci: null,
         mean_severity: 20_000,
+        severity_ci: null,
         mean_burning_cost: 1600,
       },
     ],
@@ -74,7 +78,7 @@ function summary(): OneWaySummary {
 
 describe("OneWayChart", () => {
   it("pairs exposure against frequency on two axes", () => {
-    render(OneWayChart, { props: { summary: summary() } });
+    render(OneWayChart, { props: { summary: summary(), currency: "GBP" } });
     const chart = option();
 
     // The pairing is the point of a one-way: a level with a high frequency and almost no
@@ -88,7 +92,7 @@ describe("OneWayChart", () => {
   });
 
   it("names each axis after what it carries, on the side it is drawn", () => {
-    render(OneWayChart, { props: { summary: summary() } });
+    render(OneWayChart, { props: { summary: summary(), currency: "GBP" } });
     const chart = option();
 
     expect(chart.yAxis.map((axis) => axis.name)).toEqual(["Exposure", "Frequency"]);
@@ -97,7 +101,7 @@ describe("OneWayChart", () => {
 
   it("plots the exact decimal exposure as a number without disturbing the stored string", () => {
     const fixture = summary();
-    render(OneWayChart, { props: { summary: fixture } });
+    render(OneWayChart, { props: { summary: fixture, currency: "GBP" } });
 
     // `exposure_years` is an exact decimal **string** (FR-OVR-7). A chart coordinate is a
     // float64 either way and nothing computes with it, so `Number()` is safe here — this
@@ -107,7 +111,7 @@ describe("OneWayChart", () => {
   });
 
   it("draws a whisker per level from the exact Poisson interval", () => {
-    render(OneWayChart, { props: { summary: summary() } });
+    render(OneWayChart, { props: { summary: summary(), currency: "GBP" } });
     const ci = option().series.find((s) => s.name === "Frequency CI");
 
     // FR-DATA-26's interval, encoded as [category index, low, high] against the frequency
@@ -118,7 +122,7 @@ describe("OneWayChart", () => {
   });
 
   it("says a level has no interval rather than drawing a zero-width one", () => {
-    render(OneWayChart, { props: { summary: summary() } });
+    render(OneWayChart, { props: { summary: summary(), currency: "GBP" } });
     const ci = option().series.find((s) => s.name === "Frequency CI");
 
     // The second level's `frequency_ci` is null. Dropping the row would misalign every
@@ -129,7 +133,7 @@ describe("OneWayChart", () => {
   });
 
   it("orders the category axis as the rows arrive", () => {
-    render(OneWayChart, { props: { summary: summary() } });
+    render(OneWayChart, { props: { summary: summary(), currency: "GBP" } });
 
     // Every series indexes into this axis positionally — the CI series literally encodes
     // the category as an integer — so a reordering here silently repairs to the wrong level.
@@ -137,9 +141,64 @@ describe("OneWayChart", () => {
   });
 
   it("says so plainly when the column has no stored one-way", () => {
-    render(OneWayChart, { props: { summary: { banding: "levels", column: "vin", rows: [] } } });
+    render(OneWayChart, { props: { summary: { banding: "levels", column: "vin", rows: [] }, currency: "GBP" } });
 
     expect(screen.queryByTestId("chart")).toBeNull();
     expect(screen.getByText("This column has no stored one-way.")).toBeInTheDocument();
+  });
+
+  describe("the table beside it (NFR-OVR-10)", () => {
+    function table(currency = "GBP"): HTMLElement {
+      render(OneWayChart, { props: { summary: summary(), currency } });
+      return screen.getByRole("table", { name: /one-way: vehicle_age/i });
+    }
+
+    // The Profile page picks one column at a time, but the table is named after the column
+    // regardless: `ChartFigure` labels the table from its title, and "One-way" alone would
+    // not tell a screen-reader user which factor they are reading.
+    it("names itself after the column it summarises", () => {
+      expect(table()).toBeInTheDocument();
+    });
+
+    it("says the same thing the chart plots, level for level", () => {
+      const t = table();
+      expect(cellUnder(t, /^0–3/, "Exposure")).toHaveTextContent("1,234.56");
+      expect(cellUnder(t, /^0–3/, "Frequency")).toHaveTextContent("0.0729");
+      expect(cellUnder(t, /^4\+/, "Frequency")).toHaveTextContent("0.08");
+      expect(option().xAxis.data).toEqual(["0–3", "4+"]);
+    });
+
+    // The whisker is the least transcribable mark on the canvas: no legend entry, no
+    // tooltip. Plotted and untabled, it was invisible to a table reader entirely.
+    it("tables the interval the whiskers draw", () => {
+      expect(cellUnder(table(), /^0–3/, "Frequency CI")).toHaveTextContent("0.0586–0.0895");
+      expect(option().series.find((s) => s.name === "Frequency CI")?.data[0]).toEqual([
+        0, 0.0586, 0.0895,
+      ]);
+    });
+
+    // Below two claims `gamma_severity_interval` returns nothing, and a missing interval is
+    // not a zero-width one — the same distinction the chart makes for `frequency_ci`.
+    it("tables the severity interval the chart plots nowhere, and its absence as absence", () => {
+      const t = table();
+      expect(cellUnder(t, /^0–3/, "Severity CI")).toHaveTextContent("41.00–60.50");
+      expect(cellUnder(t, /^4\+/, "Severity CI")).toHaveTextContent("—");
+    });
+
+    // FR-DATA-46: `mean_severity` and `mean_burning_cost` are float ratios in minor units,
+    // shown as statistics rather than as currency. `severity_ci` is computed from the same
+    // minor-units sum, so it is scaled the same way.
+    it("scales the minor-unit statistics without dressing them as currency", () => {
+      const t = table();
+      expect(cellUnder(t, /^0–3/, "Severity")).toHaveTextContent("50.00");
+      expect(cellUnder(t, /^0–3/, "Burning cost")).toHaveTextContent("3.65");
+      expect(cellUnder(t, /^0–3/, "Severity")).not.toHaveTextContent("£");
+    });
+
+    // The one exact amount on the row, and the reason `currency` is required rather than
+    // defaulted: a component guessing "GBP" renders euro amounts with a pound sign.
+    it("formats the incurred amount in the currency it was given", () => {
+      expect(cellUnder(table("EUR"), /^0–3/, "Incurred")).toHaveTextContent("€");
+    });
   });
 });

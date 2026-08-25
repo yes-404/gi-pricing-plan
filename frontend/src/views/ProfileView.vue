@@ -14,7 +14,7 @@ import {
   type Profile,
   type ProfileComparison,
 } from "@/api/profiles";
-import { formatDecimalString, formatMinor, getVersion, type DatasetVersion } from "@/api/versions";
+import { formatDecimalString, getVersion, type DatasetVersion } from "@/api/versions";
 import ColumnDrift from "@/components/ColumnDrift.vue";
 import HistogramChart from "@/components/HistogramChart.vue";
 import OneWayChart from "@/components/OneWayChart.vue";
@@ -327,92 +327,8 @@ onMounted(() => void load());
         <template v-else-if="oneWay">
           <OneWayChart
             :summary="oneWay"
-            class="mt-3"
+            :currency="currency"
           />
-          <table class="mt-3 w-full text-left text-sm">
-            <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th
-                  scope="col"
-                  class="py-2 font-medium"
-                >
-                  Level
-                </th>
-                <th
-                  scope="col"
-                  class="py-2 text-right font-medium"
-                >
-                  Exposure
-                </th>
-                <th
-                  scope="col"
-                  class="py-2 text-right font-medium"
-                >
-                  Claims
-                </th>
-                <th
-                  scope="col"
-                  class="py-2 text-right font-medium"
-                >
-                  Incurred
-                </th>
-                <th
-                  scope="col"
-                  class="py-2 text-right font-medium"
-                >
-                  Frequency
-                </th>
-                <th
-                  scope="col"
-                  class="py-2 text-right font-medium"
-                >
-                  Severity
-                </th>
-                <th
-                  scope="col"
-                  class="py-2 text-right font-medium"
-                >
-                  Burning cost
-                </th>
-              </tr>
-            </thead>
-            <tbody class="tabular-nums">
-              <tr
-                v-for="row in oneWay.rows"
-                :key="row.level"
-                class="border-b border-slate-100"
-              >
-                <td class="py-2 font-medium">
-                  {{ row.level }}
-                </td>
-                <!-- Exact decimal, formatted from the string and never parsed. -->
-                <td class="py-2 text-right">
-                  {{ formatDecimalString(row.exposure_years) }}
-                </td>
-                <td class="py-2 text-right">
-                  {{ row.claim_count.toLocaleString() }}
-                </td>
-                <!-- The one `_minor` field on this row that is an exact amount. -->
-                <td class="py-2 text-right">
-                  {{ formatMinor(row.claim_amount_minor, currency) }}
-                </td>
-                <td class="py-2 text-right">
-                  {{ row.frequency?.toFixed(4) ?? "—" }}
-                </td>
-                <!-- `mean_severity` and `mean_burning_cost` are **float ratios**, not
-                     amounts: amount ÷ claims and amount ÷ exposure. Formatting them as
-                     currency would imply an exactness they do not have, so they are shown
-                     as the statistics they are. Still expressed in minor units — only the
-                     name changed (FR-DATA-46) — so the `/ 100` scaling stays. -->
-                <td class="py-2 text-right">
-                  {{ row.mean_severity == null ? "—" : (row.mean_severity / 100).toFixed(2) }}
-                </td>
-                <td class="py-2 text-right">
-                  {{ row.mean_burning_cost == null ? "—" : (row.mean_burning_cost / 100).toFixed(2) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </template>
       </section>
 

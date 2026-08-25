@@ -1,6 +1,18 @@
 <script setup lang="ts">
 /**
- * A chart and the table that says the same thing (NFR-OVR-10).
+ * A chart and a table that says at least what the chart says (NFR-OVR-10).
+ *
+ * The contract is a **superset**, not a transcription, and it was widened deliberately once
+ * three charts had been wrapped. "The table that says the same thing" is the floor: every
+ * plotted series must appear as a column. It is not the ceiling, because the canvas and the
+ * table are read differently and a faithful transcription is not an equivalent one. A
+ * sighted reader takes volume from the height of the exposure bars, so `DoubleLiftChart`
+ * plots no row counts and its table carries them; a whisker on `OneWayChart` has no legend
+ * entry and no tooltip, so the interval it draws is unreadable except as a column. Holding
+ * callers to an exact transcription would have made both of those a violation.
+ *
+ * What the widening does not license is a table that omits a series, or one that shows a
+ * *different* number from the one plotted. Both are what the tests here check.
  *
  * WCAG 2.2 AA requires every chart to have an accessible tabular equivalent, and an ECharts
  * canvas offers a screen reader nothing at all. Two answers already exist in this repo and
