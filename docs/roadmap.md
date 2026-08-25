@@ -20,6 +20,8 @@ Three things this document deliberately does not do:
 - It does not resolve open questions. It says *which* ones block *what*, so you can answer
   them in the order that unblocks work, rather than all 46 at once.
 
+*SHA-citation convention, dated 2026-08-25 (W6b decision maker):* slice records cite commits by 7-hex abbreviation. A citation written before this date may name the **pre-squash worktree tip** — a commit that resolves only in the worktree where the slice was built, never in a fresh clone; **34 such citations stood at the time of this note**. Each cited commit was an ancestor of its slice's branch tip, and a squash merge preserves the tip's tree, so the cited change is present in the landed commit unless a later commit on the same branch reverted it. The landed commits, by slice: offset `e36e5d0` (#126), custom metrics `8cac13f` (#122), profile `667c8fe` (#113), top levels `9c30182` (#115), EBM `c2c54a6` (#129), W32-8 `946725f` (#157), W32-7 `60f6e46` (#164), the W32 closure record `c024f3e` (#161). Alembic revision ids (`9e4c7b21fa08`, `c9d0e1f2a3b4`, `a1b2c3d4e5f6`, `d0e1f2a3b4c5`, `c3d4e5f6a7b8`, `e1f2a3b4c5d6`, `82edffbe1dce`) are migration ids under `backend/migrations/versions/`, not git objects — they resolve in the migration history, not in git; a UUID fragment (`01a018f2`) is a test-assertion value. The class is enumerable: sweep this document for 7-40-hex tokens and test each with `git merge-base --is-ancestor` against `origin/main`.
+
 ---
 
 ## 2. Where the project is
