@@ -151,22 +151,39 @@ call**. Run it on a 50 000-row training partition and it sees 5 000 rows; run it
 holdout and it sees 3 000.
 
 So an implementation that honours FR-MODEL-128 exactly — same seed, same cap, same encoding —
-still compares a strength measured on 5 000 rows against one measured on 3 000. Sampling
-noise in a mean of absolute values does not vanish between those, and it does not vanish
-symmetrically: the smaller sample is the noisier one, and it is always the holdout, so the
-bias has a direction. A ratio near `1` and a ratio near `0.8` are the difference between
-"survives" and "weakens", which is the judgment the field exists to support.
+still compares a strength measured on 5 000 rows against one measured on 3 000.
 
-**FR-MODEL-128 names the seed, the row cap and the encoding. It never says equal N** — and
-with a cap rather than a count, equal caps produce unequal N whenever either partition is
-smaller than the cap. A faithful build therefore produces a misleading ratio, which is
-precisely the class of defect a requirement's own comparability clause is meant to exclude.
+**Unequal N makes the ratio noisier, not biased.** An earlier draft of this plan said the
+smaller sample gives the bias a direction; that was wrong. `mean(|·|)` is a sample mean and
+is unbiased at any N — a smaller holdout widens the ratio's spread and does not shift its
+centre.
 
-**Raised as `OQ-MODEL-38` and built as written** (§10). This slice does not invent a
-remedy — equalising N is a change to what the requirement says, and the candidates (cap both
-at the smaller partition's row count; require a minimum holdout; publish N alongside the
-ratio) trade accuracy against cost and against the requirement's own bounded-cost promise.
-That is a maintainer's call.
+**The ratio is nonetheless pushed below `1`, and by something equalising N cannot fix.** The
+five pairs are selected as the top five **by in-sample strength** (`sort(...)`, then `[:5]`,
+`transparency.py`:409-419), and the holdout is a *lookup on those same five*. So the
+denominator is a **selected maximum** — the largest of many noisy estimates, and therefore
+biased upward by the selection itself — while the numerator is an independent
+re-measurement of the same pair, and unbiased. Regression to the mean follows: the expected
+ratio is **below `1` even when the structure is identical in both partitions, and even at
+equal N**.
+
+That changes which remedies are candidates, which is why it belongs in the open question and
+not in a footnote. **Equalising N drops from cure to partial** — it narrows the spread and
+leaves the centre where it was. A debiased denominator, or a published null band saying what
+ratio to expect under no collapse, are the remedies that address the cause.
+
+It also reaches the requirement's own interpretive sentence: "a ratio near `1` says the
+structure survives out of sample; a collapse toward `0` says the pair is a fitting artefact"
+is written as though `1` were the unbiased null. Under selection it is not. **That sentence
+is not amended by this slice** — it is a maintainer's call, and it is recorded in the open
+question rather than acted on.
+
+**Raised as `OQ-MODEL-38` and built as written** (§10). No remedy is absorbable here: equalising
+by lowering the training cap changes `strength` itself, and `strength` is what selects the top
+five, so it would silently re-rank candidates in every future artifact; and computing a
+separate denominator at holdout-N contradicts "the holdout value over the in-sample one",
+where the in-sample one **is** the published `strength`. Both need a spec change, which is
+the §10 test.
 
 ### F5 — FR-MODEL-128's rebuild-reuse clause is not true of the SHAP summary today
 
@@ -357,8 +374,11 @@ a `packages/` path**, which is worth confirming rather than assuming — merge v
    applied per call at `transparency.py`:401, so equal caps give unequal N whenever a
    partition is smaller than the cap. It is no longer a thing that would make the plan wrong;
    it is a thing the plan states, builds around, and files.
-4. **If the maintainer reads FR-MODEL-128's comparability clause as already requiring equal
-   N.** Then `OQ-MODEL-38` is not an open question but a defect in this build, and equalising
-   belongs here rather than after a decision. The plan reads "the same row cap" as naming the
-   cap because that is what it says — but a reader who takes "comparable rather than merely
-   adjacent" as the operative clause could hold that equal N is entailed.
+4. ~~**If the maintainer reads FR-MODEL-128's comparability clause as already requiring equal
+   N.**~~ **Withdrawn.** The requirement's grammar settles it: "the same seed, the same row
+   cap and the same encoding on each partition — **so** the numerator and the denominator are
+   comparable" makes comparability the *conclusion drawn from* three enumerated sames, and
+   equal N is not among them. F4 shows the inference does not hold, which is a defect in the
+   requirement rather than in a build that follows it. And equalising would not deliver the
+   property anyway (F4's selection argument), so there is no reading under which it belongs
+   in 5a.
