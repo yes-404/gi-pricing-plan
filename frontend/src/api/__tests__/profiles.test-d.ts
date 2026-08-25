@@ -16,4 +16,10 @@ describe("psiBand's argument", () => {
   it("takes a number, not a nullable one", () => {
     expectTypeOf(psiBand).parameter(0).toEqualTypeOf<number>();
   });
+
+  it("takes the rule's warn_above, not a literal baked into the caller", () => {
+    // `W6b-13`: the second argument is required. A caller that omits it — or passes
+    // something nullable — must fail `type-check`, not silently band against nothing.
+    expectTypeOf(psiBand).parameter(1).toEqualTypeOf<number>();
+  });
 });

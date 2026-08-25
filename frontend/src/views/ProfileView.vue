@@ -14,6 +14,7 @@ import {
   type Profile,
   type ProfileComparison,
 } from "@/api/profiles";
+import { listRules } from "@/api/rules";
 import { formatDecimalString, getVersion, type DatasetVersion } from "@/api/versions";
 import ColumnDrift from "@/components/ColumnDrift.vue";
 import HistogramChart from "@/components/HistogramChart.vue";
@@ -33,6 +34,7 @@ const truncated = ref(false);
 const referenceId = ref<string | null>(null);
 const comparison = ref<ProfileComparison | null>(null);
 const referenceMissingProfile = ref(false);
+const warnAbove = ref<number | null>(null);
 
 const route = useRoute();
 const router = useRouter();
@@ -121,6 +123,25 @@ async function load(): Promise<void> {
   } catch (error) {
     // The picker is auxiliary: a failing versions list must degrade to "no comparison
     // available" rather than blank an already-loaded profile.
+    if (!(error instanceof ProblemError)) throw error;
+  }
+
+  try {
+    // The PSI band's threshold is VR-DST-1's `warn_above` (`W6b-13`), read from the
+    // workspace's own rule rather than restated: a workspace that versioned the rule to a
+    // tighter threshold gets its own answer. The newest **approved** version binds — a
+    // draft runs in no report, so banding against one would be a new disagreement. Seeds
+    // are created at workspace bootstrap, so VR-DST-1's v1 always sits in this id-ascending
+    // list's first page and any versions after it.
+    const page = await listRules();
+    const approved = page.items
+      .filter((rule) => rule.catalogue_id === "VR-DST-1" && rule.status === "approved")
+      .sort((a, b) => b.version - a.version);
+    const threshold = approved[0]?.params?.warn_above;
+    warnAbove.value = typeof threshold === "number" ? threshold : null;
+  } catch (error) {
+    // Auxiliary, like the versions list: a failing rules list degrades to "unbanded"
+    // rather than blanking an already-loaded profile.
     if (!(error instanceof ProblemError)) throw error;
   }
 }
@@ -371,7 +392,10 @@ onMounted(() => void load());
                 <dd>{{ column.minimum }} – {{ column.maximum }}</dd>
               </template>
             </dl>
-            <ColumnDrift :drift="driftFor(column.name)" />
+            <ColumnDrift
+              :drift="driftFor(column.name)"
+              :warn-above="warnAbove"
+            />
             <!-- FR-DATA-48. Only continuous columns carry one, so the card shows it only
                  when the profile computed one. -->
             <HistogramChart

@@ -26,6 +26,8 @@ const problem = ref<ProblemError | null>(null);
 const missing = ref<string | null>(null);
 const acting = ref<string | null>(null);
 const actionError = ref<string | null>(null);
+/** The rule whose next version is being authored, or `null`. */
+const versioning = ref<ValidationRule | null>(null);
 
 const layers = computed(() => byLayer(ruleSet.value));
 /**
@@ -188,7 +190,9 @@ onMounted(() => void load());
       <!-- The first rule has to be authorable from here: without this, a dataset with no
            rule set is a screen that states a problem and offers nothing to do about it. -->
       <RuleBuilder
+        :key="versioning?.id ?? 'new'"
         :slug="slug"
+        :seed="versioning"
         @authored="load"
       />
     </template>
@@ -345,10 +349,20 @@ onMounted(() => void load());
                   {{ entry.severity_override ? "Clear override" : "Raise to fail" }}
                 </button>
               </td>
-              <!-- Thresholds are Rule Set configuration, not code (`01` §4.4). Shown as
-                   stored so an actuary reads the number the engine will use. -->
+              <!-- A threshold belongs to the rule, not to the set (`01` §4.4, corrected
+                   2026-08-23). Read-only here by design: changing one authors a new rule
+                   version through `FR-DATA-21`'s reviewed path, which is what the button
+                   below starts. A Rule Set entry gets `enabled` and `severity_override`
+                   and no third override (`FR-DATA-54`). -->
               <td class="py-2 font-mono text-xs text-slate-600">
                 {{ thresholds(entry) || "—" }}
+                <button
+                  type="button"
+                  class="ml-2 rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
+                  @click="versioning = entry.rule"
+                >
+                  New version
+                </button>
               </td>
               <td class="py-2">
                 <span
@@ -388,7 +402,9 @@ onMounted(() => void load());
       </section>
 
       <RuleBuilder
+        :key="versioning?.id ?? 'new'"
         :slug="slug"
+        :seed="versioning"
         @authored="load"
       />
 

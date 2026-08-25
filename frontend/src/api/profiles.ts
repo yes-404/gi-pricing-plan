@@ -39,18 +39,21 @@ export function compareProfiles(
 }
 
 /**
- * PSI bands, as `01` §4.4's VR-DST-1 states them: warn above 0.10, fail above 0.25.
+ * PSI bands, read from VR-DST-1 rather than restated here.
  *
- * The same thresholds the validation rule uses, so a stable-looking column here and a
- * warning in the report cannot disagree about the same number.
+ * **Two bands, not three.** The removed `"broken"` band asserted a `fail` severity VR-DST-1
+ * cannot emit: the rule carries `warn_above` only, and the `fail_above` band is a second
+ * catalogue rule that does not exist yet (`FR-DATA-54`, built note 2026-08-24). Banding
+ * exists so the screen and the rule cannot disagree about one number (`01` §5.3, note of
+ * 2026-08-19) — inventing the severe band was that exact disagreement, in the direction that
+ * alarms an actuary about a verdict no report will ever carry.
  *
- * **Takes a `number`, not a nullable one.** `compare_profiles` returns `psi: null` for a
- * column it could not measure — every column with no non-null `top_levels`. An earlier
- * version answered `"stable"` for that, so an unmeasured column rendered as a calm band
- * rather than as no band at all; the caller now has to decide, and the type makes it.
+ * When the second rule lands, this gains a third band from *its* `fail_above`. It does not
+ * regain a literal.
+ *
+ * **Takes a `number`, not a nullable one** — `compare_profiles` returns `psi: null` for a
+ * column it could not measure, and the caller has to decide. Unchanged.
  */
-export function psiBand(psi: number): "stable" | "shifted" | "broken" {
-  if (psi > 0.25) return "broken";
-  if (psi > 0.1) return "shifted";
-  return "stable";
+export function psiBand(psi: number, warnAbove: number): "stable" | "shifted" {
+  return psi > warnAbove ? "shifted" : "stable";
 }

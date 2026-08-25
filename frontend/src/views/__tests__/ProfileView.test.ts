@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OneWaySummary, Profile, ProfileComparison } from "@/api/profiles";
+import type { ValidationRule } from "@/api/rules";
 
 import ProfileView from "../ProfileView.vue";
 
@@ -141,11 +142,65 @@ const COMPARISON: ProfileComparison = {
   ],
 };
 
+/** The workspace's rule list: VR-DST-1, seeded at bootstrap and approved by construction.
+ *  The PSI band reads `warn_above` from here — a stub returning anything else (or nothing)
+ *  changes what the screen bands with, which is what the "unbanded" test exploits. */
+const RULES: { items: ValidationRule[]; next_cursor: null } = {
+  items: [
+    {
+      id: "33333333-3333-4333-8333-333333333333",
+      slug: "psi-column",
+      version: 1,
+      layer: "distributional",
+      check: "psi_column",
+      severity: "warn",
+      message: "Per-column PSI against the reference version",
+      rationale: "",
+      status: "approved",
+      catalogue_id: "VR-DST-1",
+      params: { warn_above: 0.1 },
+    },
+    {
+      // The workspace versioned VR-DST-1 and approved a looser 0.4. The band must read
+      // THIS, not the seeded 0.1 — banding against the superseded version would disagree
+      // with every report the workspace produces now.
+      id: "44444444-4444-4444-8444-444444444444",
+      slug: "psi-column",
+      version: 2,
+      layer: "distributional",
+      check: "psi_column",
+      severity: "warn",
+      message: "Loosened, approved",
+      rationale: "",
+      status: "approved",
+      catalogue_id: "VR-DST-1",
+      params: { warn_above: 0.4 },
+    },
+    {
+      // A tighter 0.05, still in draft: it runs in no report, so it must not bind either —
+      // reading it would disagree with the reports in the other direction.
+      id: "55555555-5555-4555-8555-555555555555",
+      slug: "psi-column",
+      version: 3,
+      layer: "distributional",
+      check: "psi_column",
+      severity: "warn",
+      message: "Tightened draft",
+      rationale: "",
+      status: "draft",
+      catalogue_id: "VR-DST-1",
+      params: { warn_above: 0.05 },
+    },
+  ],
+  next_cursor: null,
+};
+
 function stub(
   oneWayStatus = 200,
   oneWayBody: unknown = ONE_WAY,
   compare: { status?: number; body?: unknown } = {},
   versions: { status?: number; body?: unknown } = {},
+  rules: { status?: number; body?: unknown } = {},
 ): void {
   vi.stubGlobal(
     "fetch",
@@ -159,6 +214,7 @@ function stub(
 
       if (url.includes("/one-ways")) return json(oneWayBody, oneWayStatus);
       if (url.includes("/compare")) return json(compare.body ?? COMPARISON, compare.status ?? 200);
+      if (url.includes("/validation-rules")) return json(rules.body ?? RULES, rules.status ?? 200);
       // The versions *list* is `/datasets/{slug}/versions[?query]` — nothing after
       // "versions" but a query string or the end. The single-version lookup
       // `/datasets/{slug}/versions/{number}` also contains "/versions" as a substring, so
@@ -256,8 +312,10 @@ describe("the profile view", () => {
     const select = await screen.findByLabelText("Compare against");
     await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
 
-    // veh_brand moved 0.31 — above VR-DST-1's 0.25 fail threshold.
-    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-red-700");
+    // veh_brand moved 0.31: above the seeded 0.10 but below the workspace's approved
+    // v2 at 0.4, so "stable" — the band reads the newest approved rule, not the catalogue
+    // literal, which is the sourcing this test pins (`W6b-13`).
+    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-emerald-700");
     // driv_age is continuous: no non-null top_levels, so no PSI and no band.
     expect(screen.getByText(/PSI not measured/)).toBeInTheDocument();
     // driv_age's mean_shift (1.35) is otherwise asserted nowhere: its unit, sign and
@@ -279,6 +337,33 @@ describe("the profile view", () => {
       `/api/v1/dataset-versions/${PROFILE.dataset_version_id}/compare`,
     );
     expect(compareUrl.searchParams.get("against")).toBe(VERSIONS.items[1]?.id);
+  });
+
+  it("renders unbanded rather than inventing a threshold when no rule arrives", async () => {
+    // `W6b-13`'s no-fallback rule: VR-DST-1 absent (a failing rules list, say) must read
+    // as "unbanded" — never as the 0.1 literal the screen used to own, which is how a
+    // screen band could disagree with a report.
+    stub(200, ONE_WAY, {}, {}, {
+      status: 404,
+      body: { title: "no rules", status: 404, code: "NOT_FOUND", errors: [] },
+    });
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-slate-500");
+    expect(screen.getByText(/unbanded/)).toBeInTheDocument();
+  });
+
+  it("renders unbanded when the rules arrive but hold nothing bandable", async () => {
+    // The third limb: a **successful** rules list with no approved VR-DST-1 (here: empty)
+    // is not the same as a failed fetch, and it must not fall back to a literal either —
+    // `W6b-13` removes the 0.1 in every limb, not just the failing one.
+    stub(200, ONE_WAY, {}, {}, { body: { items: [], next_cursor: null } });
+    render(ProfileView, { props, ...mounted });
+    const select = await screen.findByLabelText("Compare against");
+    await userEvent.selectOptions(select, VERSIONS.items[1]?.id ?? "");
+    expect(await screen.findByText(/PSI 0\.310/)).toHaveClass("text-slate-500");
+    expect(screen.getByText(/unbanded/)).toBeInTheDocument();
   });
 
   it("shows a top-level chip's level and count", async () => {

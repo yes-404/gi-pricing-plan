@@ -11,7 +11,17 @@ import { psiBand, type ColumnComparison } from "@/api/profiles";
  * column the reference profile does not have, so its absence says the column is new rather
  * than that it did not move.
  */
-const props = defineProps<{ drift: ColumnComparison | null | undefined }>();
+const props = defineProps<{
+  drift: ColumnComparison | null | undefined;
+  /**
+   * The banding threshold: VR-DST-1's `warn_above`, as the workspace's approved version
+   * of the rule states it — or `null` when no such rule is known (in flight, or absent
+   * from the workspace). `null` renders "unbanded": the screen must not invent the 0.1
+   * the rule owns, because a screen-side literal was exactly the disagreement with the
+   * report this prop removes.
+   */
+  warnAbove: number | null;
+}>();
 
 /**
  * The band, or `null` when there is nothing to band.
@@ -19,14 +29,18 @@ const props = defineProps<{ drift: ColumnComparison | null | undefined }>();
  * `psi` is null for any column whose `top_levels` carry no non-null level — every
  * continuous column in practice. `psiBand` refuses that argument outright, and this guard
  * is why: an unmeasured PSI must render as absent, never as the calm end of a scale
- * nobody computed.
+ * nobody computed. `warnAbove` null is the other refusal — a measured PSI with no rule to
+ * band it against is "unbanded", and falling back to a literal here would restore the
+ * number `W6b-13` removed.
  */
-const band = computed(() => (props.drift?.psi != null ? psiBand(props.drift.psi) : null));
+const band = computed(() => {
+  if (props.drift?.psi == null || props.warnAbove == null) return null;
+  return psiBand(props.drift.psi, props.warnAbove);
+});
 
 const TONE = {
   stable: "text-emerald-700",
   shifted: "text-amber-700",
-  broken: "text-red-700",
 } as const;
 </script>
 
@@ -50,6 +64,16 @@ const TONE = {
         :class="['font-medium', TONE[band]]"
       >
         PSI {{ drift.psi?.toFixed(3) }}
+      </dd>
+      <!-- Uncoloured on purpose: there is a measurement but no rule to band it against
+           (VR-DST-1 not yet loaded, or absent from this workspace). "Unbanded" is a
+           statement — the alternative is inventing a threshold, which is how the screen
+           used to disagree with the report. -->
+      <dd
+        v-else-if="drift.psi != null"
+        class="text-slate-500"
+      >
+        PSI {{ drift.psi.toFixed(3) }} unbanded
       </dd>
       <!-- Uncoloured on purpose: there is no band, because there was no measurement. -->
       <dd

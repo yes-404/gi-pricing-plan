@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
+import { pageThrough, type Paged } from "./paging";
 
 export type ValidationRuleSet = components["schemas"]["ValidationRuleSet"];
 export type ValidationRule = components["schemas"]["ValidationRule"];
@@ -7,6 +8,7 @@ export type RuleSetEntry = components["schemas"]["RuleSetEntry"];
 export type ValidationLayer = components["schemas"]["ValidationLayer"];
 export type RuleSetMemberWrite = components["schemas"]["RuleSetMemberWrite"];
 export type Severity = components["schemas"]["Severity"];
+export type RuleCreate = components["schemas"]["RuleCreate"];
 
 /** The four layers, in the order `01` §3.3 and §4.4 present them. */
 export const LAYERS: readonly ValidationLayer[] = [
@@ -55,16 +57,16 @@ export function membersOf(ruleSet: ValidationRuleSet): RuleSetMemberWrite[] {
   }));
 }
 
-/** FR-DATA-21 step 1: authored → `draft`. */
-export function createRule(body: {
-  slug: string;
-  layer: ValidationLayer;
-  check: string;
-  severity: Severity;
-  target: Record<string, unknown>;
-  params: Record<string, unknown>;
-  rationale?: string;
-}): Promise<ValidationRule> {
+/**
+ * Step 1 of `FR-DATA-21`'s chain. The body is the **generated** `RuleCreate` and is never
+ * restated here: it carries `catalogue_id`, which is what records that a workspace rule
+ * descends from a built-in (`FR-DATA-53`), and a hand-written copy of this shape is exactly
+ * how that field failed to reach the browser once already.
+ *
+ * Re-using an existing rule's `slug` is not an error — the platform allocates the next
+ * version, which is `FR-DATA-54`'s path for a threshold change.
+ */
+export function createRule(body: RuleCreate): Promise<ValidationRule> {
   return request<ValidationRule>("/validation-rules", { method: "POST", body });
 }
 
@@ -90,6 +92,34 @@ export function submitRule(ruleId: string): Promise<ValidationRule> {
  */
 export function approveRule(ruleId: string): Promise<ValidationRule> {
   return request<ValidationRule>(`/validation-rules/${ruleId}/approve`, { method: "POST" });
+}
+
+/**
+ * Five pages of 200. The built-in catalogue is 38 rules (`01` §4.4) and workspace-authored
+ * rules are hand-governed artifacts, so a thousand is far beyond any plausible set — and
+ * `truncated` in the return type still tells a caller the sweep stopped early, rather than
+ * letting a truncated page read as the whole population.
+ */
+export const RULES_PAGE_CAP = 5;
+
+/**
+ * The workspace's rules (`01` §5.1, `GET /api/v1/validation-rules`), cursor-paginated.
+ * `builtin: true` returns §4.4's shipped catalogue only, which is the population the PSI
+ * banding reads VR-DST-1's `warn_above` from.
+ */
+export async function listRules(
+  options: { builtin?: boolean | null } = {},
+): Promise<Paged<ValidationRule>> {
+  return pageThrough<ValidationRule>(
+    "/validation-rules",
+    {
+      builtin:
+        options.builtin === undefined || options.builtin === null
+          ? undefined
+          : String(options.builtin),
+    },
+    RULES_PAGE_CAP,
+  );
 }
 
 /** Group a rule set's entries by layer, keeping `01`'s order and every layer present. */

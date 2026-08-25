@@ -2,15 +2,37 @@ import { render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ValidationRule } from "@/api/rules";
+
 import RuleBuilder from "../RuleBuilder.vue";
 
 const VERSIONS = { items: [{ id: "aaaa", version: 3 }], next_cursor: null };
 const RULE = { id: "rule-1", slug: "driv-age", status: "draft" };
+/** A stored rule to version, shaped on `RuleSetView.test.ts`'s `rule()` factory. */
+const SEED: ValidationRule = {
+  id: "11111111-1111-4111-8111-111111111111",
+  slug: "driv-age-range",
+  version: 1,
+  layer: "actuarial_sanity",
+  check: "range",
+  severity: "warn",
+  target: { table: "policy_exposure", column: "driv_age" },
+  params: { key_columns: ["policy_id"], min_inclusive: 18 },
+  scope: {},
+  tolerance: {},
+  message: "",
+  rationale: "Under 18 cannot hold a policy.",
+  status: "approved",
+  catalogue_id: "VR-ACT-3",
+};
 
 let calls: string[] = [];
+/** POST bodies, in arrival order. Guarded on `init.body` because `submit` posts none. */
+let postedBodies: Record<string, unknown>[] = [];
 
 function stub(jobStatuses: string[] = ["succeeded"]): void {
   calls = [];
+  postedBodies = [];
   let poll = 0;
   vi.stubGlobal(
     "fetch",
@@ -18,6 +40,9 @@ function stub(jobStatuses: string[] = ["succeeded"]): void {
       const url = String(input);
       const method = init?.method ?? "GET";
       calls.push(`${method} ${url.replace(/^.*\/api\/v1/, "")}`);
+      if (method === "POST" && init?.body != null) {
+        postedBodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      }
       const json = (body: unknown, status = 200) =>
         new Response(JSON.stringify(body), {
           status,
@@ -110,5 +135,27 @@ describe("the rule builder", () => {
     render(RuleBuilder, { props: { slug: "fremtpl2" } });
     expect(await screen.findByText(/this dataset has none yet/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Author, dry-run and submit/ })).toBeDisabled();
+  });
+
+  it("opens populated when handed a rule to version", async () => {
+    render(RuleBuilder, { props: { slug: "fremtpl2", seed: SEED } });
+
+    // The slug is fixed, not merely defaulted: reusing it is what makes this the *next
+    // version* of that rule rather than a new one (`FR-DATA-54`).
+    expect(await screen.findByDisplayValue("driv-age-range")).toBeInTheDocument();
+    // The thresholds an actuary came here to change, already in the box.
+    expect(screen.getByDisplayValue(/"min_inclusive": 18/)).toBeInTheDocument();
+  });
+
+  it("carries catalogue_id, so a versioned built-in keeps its lineage", async () => {
+    // The defect this guards is invisible on screen: the form renders identically whether
+    // or not the field reaches the wire. Assert the posted body, never the rendering.
+    render(RuleBuilder, { props: { slug: "fremtpl2", seed: SEED } });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Author, dry-run and submit/ }),
+    );
+
+    expect(await screen.findByText(/Submitted for approval/)).toBeInTheDocument();
+    expect(postedBodies[0]).toMatchObject({ catalogue_id: "VR-ACT-3" });
   });
 });
