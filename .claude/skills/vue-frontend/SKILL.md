@@ -138,6 +138,31 @@ Type assertions go in `*.test-d.ts`, and `vitest.config.ts` needs:
 typecheck: { enabled: true, include: ["src/**/*.test-d.ts"], tsconfig: "./tsconfig.app.json" }
 ```
 
+**A `.test-d.ts` importing a type that does not exist reports no missing-export error, and
+its positive assertions pass.** Measured in W6b-6: a file importing `PartitionCaption` before
+that type was written ran **three of four assertions green**. `vitest` never printed the
+`TS2305`; the unresolved name resolves to the error type, everything `toExtend`s it, and only
+the *negated* assertions failed. So a red run here does not tell you the type exists, and a
+green `toExtend` does not tell you it is right. **Write the type, then re-run and watch the
+count change** — and never treat "the type test fails" as confirmation that it fails for the
+reason a plan predicted.
+
+**A type assertion written against an alias the implementation also uses is a tautology.**
+Same slice: `expectTypeOf<ReturnType<typeof partitions>[number][0]>().toEqualTypeOf<PartitionLabel>()`
+was written to prove `partitions()` had *not* gained a third member. But the helper's
+signature is declared in terms of `PartitionLabel`, so widening that alias — the one design
+the assertion existed to reject — moved both sides together and it still passed. **Assert
+against the literal union** (`"Train" | "Holdout"`), and prove it by making the change the
+test forbids.
+
+`noUncheckedIndexedAccess` also bites here: `SomeArray[number]` is `T | undefined`, so `[0]`
+on it is a compile error rather than the tuple's first member. Use
+`NonNullable<Arr[number]>[0]`.
+
+**`pnpm test` type-checks `*.test-d.ts` only.** A type error anywhere else — a `.vue` file, a
+`.test.ts` — is invisible to it, and `vue-tsc` (`pnpm type-check`, `pnpm build`) is the first
+thing that sees it. Both halves, every time.
+
 **A populated `node_modules` hides a missing dependency.** Rewriting `package.json`
 dropped `openapi-typescript` and `typescript` from `devDependencies`; every local command
 kept working because the packages were still installed, and CI failed on its first run with
@@ -420,3 +445,9 @@ generated shapes (above) found `weight_column` and `banding` missing from both. 
 Profile page shows two charts of the same column, so a colour means the same thing in both
 or it means nothing — exposure is `#cbd5e1` in `OneWayChart` and in `HistogramChart` alike,
 and it took a review to notice they had been inverted.
+
+2026-08-25 — W6b-6. The two `.test-d.ts` traps above are measured, not reasoned. A file
+importing `PartitionCaption` before that type existed ran three of four assertions green and
+never printed the `TS2305`; the tautology was found by making the change the assertion
+forbids — widening `PartitionLabel` in place — and watching it still pass. Both are recorded
+here rather than in `vue-testing-best-practices`, which is vendored (`CLAUDE.md` §12).
