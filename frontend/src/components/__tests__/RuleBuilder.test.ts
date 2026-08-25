@@ -2,12 +2,14 @@ import { render, screen } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ValidationRule } from "@/api/rules";
+
 import RuleBuilder from "../RuleBuilder.vue";
 
 const VERSIONS = { items: [{ id: "aaaa", version: 3 }], next_cursor: null };
 const RULE = { id: "rule-1", slug: "driv-age", status: "draft" };
 /** A stored rule to version, shaped on `RuleSetView.test.ts`'s `rule()` factory. */
-const SEED = {
+const SEED: ValidationRule = {
   id: "11111111-1111-4111-8111-111111111111",
   slug: "driv-age-range",
   version: 1,

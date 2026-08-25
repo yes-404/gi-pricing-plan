@@ -29,7 +29,7 @@ const versions = ref<DatasetVersion[]>([]);
 /**
  * `FR-DATA-54`: changing a threshold authors a new version, so the honest starting point
  * for that edit is the current rule rather than an empty form. Reusing the slug is what
- * makes the platform allocate the next version (`FR-DATA-21` step 4).
+ * makes the platform allocate the next version (`FR-DATA-54`).
  *
  * `scope` and `tolerance` are not seeded because they cannot be authored at all —
  * `create_rule` writes both as literal `{}` — so carrying them would imply a round-trip
