@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import FormField from "../FormField.vue";
 
-function field(props: Record<string, unknown>, control = '<input id="response" />') {
+function field(
+  props: { fieldId: string; label: string; help?: string },
+  control = '<input id="response" />',
+) {
   return render(FormField, { props, slots: { default: control } });
 }
 
