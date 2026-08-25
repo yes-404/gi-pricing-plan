@@ -12,7 +12,7 @@ describe("predict", () => {
   it("POSTs the row wrapped in `rows` and returns the body", async () => {
     const body = { model_id: MODEL_ID, rows: [{ expected: 0.13 }] };
     const fetchMock = vi.fn(
-      async () =>
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(JSON.stringify(body), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -32,7 +32,7 @@ describe("predict", () => {
 
   it("sends no Idempotency-Key: nothing is persisted, so there is nothing to deduplicate", async () => {
     const fetchMock = vi.fn(
-      async () =>
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(JSON.stringify({ rows: [] }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
