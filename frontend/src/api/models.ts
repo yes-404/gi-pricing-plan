@@ -1,4 +1,5 @@
 import { request } from "./client";
+import { pageThrough, type Paged } from "./paging";
 import type { components } from "./generated/schema";
 
 export type Model = components["schemas"]["Model"];
@@ -17,6 +18,51 @@ export function getModel(slug: string, version?: number): Promise<Model> {
 /** Factors defined against a dataset, newest version of each first. */
 export function listFactors(datasetId?: string): Promise<Factor[]> {
   return request<Factor[]>("/factors", { query: { dataset_id: datasetId } });
+}
+
+/**
+ * How many pages `listModels` walks before it stops and says so.
+ *
+ * **OQ-MODEL-40**, and the same shape as `OQ-MODEL-35` one route over: `GET /models`
+ * filters by `family`, `status`, `cursor` and `limit` — **not** by dataset version — so a
+ * view scoped to a Dataset Version must filter in the client, over a paginated list. A
+ * filter applied to one page renders "no models" while matches sit on a later page, and an
+ * empty selector is then indistinguishable from a dataset version with no models at all.
+ *
+ * Its own constant rather than `OBJECTIVE_PAGE_CAP`: the two cite different open questions,
+ * and one number in front of two questions is a number nobody can change safely.
+ */
+export const MODEL_PAGE_CAP = 5;
+
+/**
+ * The workspace's models, up to `MODEL_PAGE_CAP` pages, **in the order the route returned
+ * them**.
+ *
+ * Order matters and is not incidental. `Model` carries **no timestamp** — `created_at` is on
+ * the row and does not reach the contract — so "most recent" is available only because
+ * `list_models` orders by `ModelRow.id.desc()` over UUIDv7 ids, whose leading 48 bits are a
+ * millisecond timestamp. Nothing in the type system defends that: a `sort`, a `Map`
+ * round-trip or an out-of-order fetch would silently leave callers with an arbitrary model
+ * and no error. So this preserves order, and `modelsForVersion` below is tested on order
+ * rather than on membership.
+ */
+export function listModels(): Promise<Paged<Model>> {
+  return pageThrough<Model>("/models", {}, MODEL_PAGE_CAP);
+}
+
+/**
+ * The models fitted on one Dataset Version, newest first, filtered in the client.
+ *
+ * **`filter` preserves order**, which is the whole of why this is a `filter` and not a
+ * lookup: the caller's default is the first element, and that is only "most recent" while
+ * the route's ordering survives. Two ids minted in the same millisecond order arbitrarily
+ * (`ids.py`), so at that resolution the default is ambiguous — acceptable, because nothing
+ * derives ordering within a millisecond, and recorded so it is not later read as a defect.
+ *
+ * `flags` is **not** read here: `list_models` returns `flags: []` for every row by design.
+ */
+export function modelsForVersion(page: Paged<Model>, datasetVersionId: string): Model[] {
+  return page.items.filter((model) => model.dataset_version_id === datasetVersionId);
 }
 
 export type FactorIntent = components["schemas"]["FactorIntent"];

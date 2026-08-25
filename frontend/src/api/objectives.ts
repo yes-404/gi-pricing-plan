@@ -1,9 +1,8 @@
-import { request } from "./client";
+import { pageThrough, type Paged } from "./paging";
 import type { components } from "./generated/schema";
 
 export type CustomObjective = components["schemas"]["CustomObjective"];
 export type ObjectiveStatus = components["schemas"]["ObjectiveStatus"];
-export type ObjectivePage = components["schemas"]["Page_CustomObjective_"];
 
 /**
  * How many pages `listObjectives` will fetch before it stops and says so.
@@ -43,40 +42,12 @@ export const OBJECTIVE_PAGE_CAP = 5;
 type Fittable = readonly ObjectiveStatus[];
 export const FITTABLE_OBJECTIVE_STATUSES = ["certified", "review", "approved"] as const satisfies Fittable;
 
-/** `MAX_LIMIT` server-side. Fewer, larger pages is fewer round trips for the same set. */
-const PAGE_SIZE = 200;
+export type ObjectiveList = Paged<CustomObjective>;
 
-export interface ObjectiveList {
-  items: CustomObjective[];
-  /**
-   * `true` when the cap was reached with a cursor still outstanding — i.e. the platform
-   * holds objectives this list has **not seen**. The picker must say so; a filtered list
-   * presented as complete is the defect OQ-MODEL-35 describes.
-   */
-  truncated: boolean;
-}
-
-/**
- * The workspace's Custom Objectives, up to `OBJECTIVE_PAGE_CAP` pages.
- *
- * `status` is passed through to the server, which is the one axis it can filter on.
- * Applicability is the caller's to apply, because the route cannot (OQ-MODEL-35).
- */
 export async function listObjectives(
   options: { status?: ObjectiveStatus | undefined } = {},
 ): Promise<ObjectiveList> {
-  const items: CustomObjective[] = [];
-  let cursor: string | undefined;
-
-  for (let page = 0; page < OBJECTIVE_PAGE_CAP; page += 1) {
-    const result = await request<ObjectivePage>("/custom-objectives", {
-      query: { status: options.status, cursor, limit: PAGE_SIZE },
-    });
-    items.push(...result.items);
-    if (!result.next_cursor) return { items, truncated: false };
-    cursor = result.next_cursor;
-  }
-
-  // The cap was reached and a cursor is still outstanding.
-  return { items, truncated: true };
+  return pageThrough<CustomObjective>(
+    "/custom-objectives", { status: options.status }, OBJECTIVE_PAGE_CAP,
+  );
 }
