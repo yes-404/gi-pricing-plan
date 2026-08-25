@@ -167,6 +167,8 @@ export type GbmFitResult = components["schemas"]["GbmFitResult"];
 export type EbmFitResult = components["schemas"]["EbmFitResult"];
 export type EbmTerm = components["schemas"]["EbmTerm"];
 export type TransparencyArtifact = components["schemas"]["TransparencyArtifact"];
+export type ShapSummary = components["schemas"]["ShapSummary"];
+export type ShapInteraction = components["schemas"]["ShapInteraction"];
 
 /**
  * The GBM arm is two `model_type` values, not one.

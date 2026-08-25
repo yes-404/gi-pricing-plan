@@ -19,6 +19,7 @@ import { RouterLink } from "vue-router";
 
 import { ProblemError, isProblem } from "@/api/problem";
 import { getProfile, type Profile } from "@/api/profiles";
+import { getTransparency, type Model, type ShapSummary } from "@/api/models";
 import {
   createBanding,
   createGrouping,
@@ -37,6 +38,8 @@ import {
 } from "@/api/transformations";
 import { formatDecimalString, getVersionById } from "@/api/versions";
 import ColumnOneWays from "@/components/ColumnOneWays.vue";
+import InteractionSuggestions from "@/components/InteractionSuggestions.vue";
+import ModelSelector from "@/components/ModelSelector.vue";
 import FactorCreateForm from "@/components/FactorCreateForm.vue";
 
 const props = defineProps<{ datasetVersionId: string }>();
@@ -95,6 +98,30 @@ const VERDICT_TONE: Record<string, string> = {
 
 /** Columns the profile marked as candidate rating factors — `01` FR-DATA-26's one-ways. */
 const columns = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
+
+/**
+ * The selected model's interaction candidates.
+ *
+ * A per-**Model** artifact reached from a view addressed by Dataset Version — the selector
+ * bridges that (`OQ-MODEL-40`). A model with no transparency artifact 404s, which is a
+ * state rather than a failure: nothing has been built for it yet.
+ */
+const shapSummary = ref<ShapSummary | null>(null);
+const interactionsAvailable = ref(true);
+
+async function loadSuggestions(model: Model | null): Promise<void> {
+  shapSummary.value = null;
+  interactionsAvailable.value = true;
+  if (!model) return;
+  try {
+    const artifact = await getTransparency(model.id);
+    shapSummary.value = artifact.shap_summary ?? null;
+    interactionsAvailable.value = artifact.shap_summary?.interactions_available ?? true;
+  } catch (error) {
+    if (!(error instanceof ProblemError)) throw error;
+    // A model with no artifact is not an error in this view; the panel says so.
+  }
+}
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -317,6 +344,23 @@ defineExpose({ isProblem });
         class="mb-6"
         :dataset-id="datasetId"
         :columns="columns"
+      />
+
+      <!--
+        `02` §5.3's interaction suggestions. The panel this slice's owner clause names —
+        FR-MODEL-128 assigns the requirement to "the slice that builds the factor
+        workbench's suggestion panel", and W6b-5a built its backend half.
+      -->
+      <ModelSelector
+        class="mb-3"
+        :dataset-version-id="datasetVersionId"
+        @update:selected="loadSuggestions"
+      />
+
+      <InteractionSuggestions
+        class="mb-6"
+        :summary="shapSummary"
+        :interactions-available="interactionsAvailable"
       />
 
       <div
