@@ -1,5 +1,17 @@
 # W6b-6b — verified material for the prediction view
 
+> **Superseded 2026-08-25 by [`docs/plans/2026-08-25-w6b-6b-prediction-view.md`](../plans/2026-08-25-w6b-6b-prediction-view.md).**
+> That plan is the artifact to build from; this note is kept as the record of what was
+> verified before it, not as a second source of truth. Two things here are now wrong and are
+> corrected in the plan rather than silently here: the requirement set is **nine**, not six —
+> FR-MODEL-78, FR-MODEL-100 and FR-MODEL-101 were added on re-verification against
+> `origin/main` — and FR-MODEL-99 is **not** discharged whole by this slice. It splits: the
+> prediction path carries `Uncertainty.basis` and is evidenced, while the coefficient path has
+> nowhere to state a basis (`Coefficient` has no such field and forbids extras), so limb B is
+> structurally unevidenceable and goes to the closure record as not started, backend owner.
+> `CLAUDE.md` §2 freezes a filed plan at its date; it does not freeze research, so this note is
+> amended in place rather than left standing.
+
 **This is not a brief.** It is the prediction-side material verified at `origin/main`
 `8d0dcf4` while W6b-6 was still a two-view slice, parked here on the 2026-08-25 split so
 W6b-6b does not pay to re-derive it. **Re-verify against `origin/main` before writing the
@@ -10,7 +22,8 @@ brief** — this is a dated snapshot, not a live read, and the frontend moves.
 
 ## Requirements that moved here on the split
 
-Six, all with backend test evidence:
+Six, all with backend test evidence — **superseded: the set is nine.** See the banner above;
+FR-MODEL-78, FR-MODEL-100 and FR-MODEL-101 are absent from this table and are in the plan.
 
 | Requirement | Markers | Note |
 |---|---|---|
@@ -81,6 +94,9 @@ estimate warrants** — a caveat the view has to say, not just a label.
 
 ## Not in scope for W6b-6b
 
-- Any backend change — all six requirements are evidenced.
+- Any backend change — all six requirements are evidenced. **Superseded: nine, and the claim
+  does not carry to all of them.** FR-MODEL-99 needs no backend change on the prediction path
+  (limb A) but its coefficient path (limb B) cannot be evidenced at all without one; see the
+  banner above.
 - File/batch upload — see trap 4; portfolio re-rate is `03`'s batch scoring.
 - A second interval kind — FR-MODEL-98 admits one, and adding one needs a named consumer.
