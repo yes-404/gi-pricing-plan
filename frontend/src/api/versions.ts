@@ -2,6 +2,7 @@ import { request } from "./client";
 import type { components } from "./generated/schema";
 
 export type DatasetVersion = components["schemas"]["DatasetVersion"];
+export type DatasetSplit = components["schemas"]["DatasetSplit"];
 export type DatasetTable = components["schemas"]["DatasetTable"];
 export type VersionTotals = components["schemas"]["VersionTotals"];
 
@@ -25,6 +26,20 @@ export function getVersion(slug: string, version: number): Promise<DatasetVersio
  * factor workbench is exactly that: `/factors/:datasetVersionId`, needing the `dataset_id`
  * a Banding is keyed to.
  */
+/**
+ * The splits defined on a Dataset Version (`01` FR-DATA-36).
+ *
+ * The model spec builder's split picker reads these: `SplitRef` names a split artifact and
+ * two of its `parts`, and a version with no split is a version whose models have no
+ * holdout. Listed rather than derived — FR-DATA-36 records the split on the parent version
+ * precisely so "trained on the same split" is one artifact two models cite.
+ */
+export function listSplits(versionId: string): Promise<DatasetSplit[]> {
+  return request<DatasetSplit[]>(
+    `/dataset-versions/${encodeURIComponent(versionId)}/splits`,
+  );
+}
+
 export function getVersionById(versionId: string): Promise<DatasetVersion> {
   return request<DatasetVersion>(`/dataset-versions/${versionId}`);
 }
