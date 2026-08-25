@@ -4,7 +4,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
  * Routes follow `01` §5.3 exactly — the spec names them, and a route invented here would
  * be a second source of truth for where a thing lives.
  */
-const routes: RouteRecordRaw[] = [
+export const routes: RouteRecordRaw[] = [
   { path: "/", redirect: "/data" },
   {
     // FR-PLAT-53's entrance. Routed unconditionally; the API answers 404 where the demo is
@@ -65,13 +65,37 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/ModelComparisonView.vue"),
   },
   {
+    // `02` §5.3. Three segments, so it cannot collide with `/models/:slug` the way
+    // `/models/compare` does — the ranking question above does not arise here.
+    //
+    // Function-mode props, not `props: true`: the boolean form maps `route.params` only, and
+    // `?version=` is a query. Every route whose view takes a version is in this form; the
+    // `/models/:slug` entry below was the one that was not, and its `version` prop was
+    // permanently `undefined` for it.
+    path: "/models/:slug/diagnostics",
+    name: "model-diagnostics",
+    component: () => import("@/views/DiagnosticsView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: typeof route.query.version === "string" ? route.query.version : undefined,
+    }),
+  },
+  {
     // `02` §5.3. `?version=` selects one; the latest by default. Not `@version` in the
     // path: an `@` must be percent-encoded by every client, and `family@7` then reads as
     // `family%407` in every log and support conversation.
     path: "/models/:slug",
     name: "model-detail",
     component: () => import("@/views/ModelDetailView.vue"),
-    props: true,
+    // Function mode, not `props: true`: the boolean form maps `route.params` only, and
+    // `?version=` is a query, so this view's `version` prop was permanently `undefined` and
+    // every load fetched the latest model. `02` §5.3 promises the selector works, and
+    // `QuantileBoundNotice` builds a link carrying it, labelled `slug@version` — so the link
+    // named one version and the page showed whichever was latest.
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: typeof route.query.version === "string" ? route.query.version : undefined,
+    }),
   },
   {
     // `02` §5.3 and `00` §5.6, both of which name this path exactly. Routed on the version

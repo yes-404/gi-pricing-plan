@@ -62,6 +62,44 @@ here more than once. The same trap in other clothes: a `✓` echoed on `head`'s 
 than the command's, and a `\echo` in `psql` that printed unconditionally and read as success
 while the `ERROR` line above it proved the opposite.
 
+### vitest exits 1 while printing every test as passed
+
+The worst form of the trap above, because here the command's **own** exit code is the honest
+one and its **own** printed summary is the misleading one. An unhandled error thrown outside
+a test — from a timer, an animation frame, a promise nothing awaits — is counted separately
+from assertions:
+
+```
+ Test Files  39 passed (39)
+      Tests  231 passed (231)
+     Errors  80 errors          <- the only line that says anything is wrong
+```
+
+Exit code 1. Every test genuinely passed. A gate read by eye calls this green, and W6b-1b
+shipped two commits that were red this way before anyone noticed.
+
+**The cause here is ECharts.** `vue-echarts` paints to a canvas jsdom does not provide, so
+every render leaks `TypeError: Cannot read properties of null (reading 'clearRect')` out of
+zrender's animation loop — asynchronously, after the test that mounted the chart has already
+passed. Any component test that mounts a real chart does this.
+
+**The fix is to stub the renderer**, not to shim a canvas. Each chart asserts the `option`
+object it computes, which is the thing worth asserting anyway:
+
+```ts
+vi.mock("vue-echarts", () => ({
+  default: { name: "VChart", props: ["option"], template: "<div data-testid='chart' />" },
+}));
+```
+
+`HistogramChart.test.ts` is the precedent. A **view** test that mounts charts incidentally
+needs the same stub even though it asserts nothing about them.
+
+**To detect it:** `echo "exit=$?"` on its own line after the run — never `&&`, never piped —
+and treat a non-zero exit as failure even when the summary says otherwise. Grep the output
+for `Errors ` as well as `Tests `; the two are different counters and only one of them is
+in the line most readers stop at.
+
 ## Closure audit — expected scope first, then evidence
 
 ```bash
@@ -160,6 +198,11 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-24 — the vitest exit-code trap was found during W6b-1b, by running `echo "exit=$?"`
+after a suite whose summary read `231 passed`; the same run at the preceding commit
+reproduced it, which is what showed the redness predated the change rather than being caused
+by it.
 
 2026-08-23 — extracted from `CLAUDE.md` §11 verbatim when that section was cut to bare
 invocations. Every trap here was recorded in `CLAUDE.md` at the date its own line states;
