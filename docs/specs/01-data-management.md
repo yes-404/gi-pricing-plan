@@ -983,7 +983,7 @@ moved.
 | Version detail | `/data/:slug/v/:version` | Table inventory, row counts, totals, schema viewer, rejected-rows drawer |
 | **Validation report** | `/data/:slug/v/:version/validation` | Four layer sections, per-rule outcome rows, measured-vs-threshold, offending sample table, acknowledge dialog with mandatory justification, and a prominent blocked/unblocked banner |
 | Profile | `/data/:slug/v/:version/profile` | Per-column cards, histograms, one-way charts with CI bands (ECharts), PSI comparison selector |
-| Rule set editor | `/data/:slug/rules` | Rule list by layer, enable/disable, threshold editing, custom-rule builder with dry-run |
+| Rule set editor | `/data/:slug/rules` | Rule list by layer, enable/disable, severity override, rule versioning with pre-filled thresholds, custom-rule builder with dry-run. *(Corrected 2026-08-25, W6b-13: this cell read "threshold editing", which FR-DATA-54 forbade on 2026-08-23 — a Rule Set entry gains no third override. §4.4 was swept the same day and this cell was not, so the spec specified an operation the spec elsewhere prohibited. The capability is relocated, not withdrawn: a threshold is changed by authoring the rule's next version through FR-DATA-21's reviewed path, started from this screen.)* |
 | Reference tables | `/reference` | Table list, version timeline, effective-date viewer, lookup debugger |
 
 **Interaction requirement:** the validation view is the module's centrepiece. It must make
