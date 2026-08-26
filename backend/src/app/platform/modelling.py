@@ -373,8 +373,10 @@ async def reserve_model(
     )
     # Before the factor check too, and for the same reason: a surrogate naming the wrong
     # source model usually also fails factor resolution, and the factor error would send
-    # the caller to re-check factors that were never wrong (FR-MODEL-96).
-    await _refuse_mismatched_approximation(
+    # the caller to re-check factors that were never wrong (FR-MODEL-96). The guard also
+    # returns the source Model, so the surrogate's family slug can be derived from it
+    # below rather than fetched a second time.
+    source = await _refuse_mismatched_approximation(
         session, workspace_id=workspace_id, spec=spec
     )
     await _refuse_unusable_factors(
@@ -401,11 +403,32 @@ async def reserve_model(
         # caller queues another Job against the same row.
         return existing, existing.fit_result is None
 
+    # FR-MODEL-102: a surrogate's slug is derived from the source model's family slug,
+    # never the caller's. A spec may carry any slug; the row stores the one the
+    # requirement promises, and an over-long result is refused by name here — before
+    # the row is written — rather than as a column `DataError` at the end of the
+    # compute. The transparency Job's own derivation is identical, so its refusal is
+    # the belt to this one's braces.
+    family_slug = (
+        f"{source.model_family_slug}-approx"
+        if source is not None
+        else spec.model_family_slug
+    )
+    if source is not None and len(family_slug) > 64:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The approximating model's slug is too long",
+            422,
+            f"{source.model_family_slug!r} plus the '-approx' suffix is "
+            f"{len(family_slug)} characters, and a model family slug is 64. Rename the "
+            "model family, or the approximation FR-MODEL-96 requires cannot be stored.",
+        )
+
     version = 1 + (
         await session.execute(
             select(func.coalesce(func.max(ModelRow.version), 0)).where(
                 ModelRow.workspace_id == workspace_id,
-                ModelRow.model_family_slug == spec.model_family_slug,
+                ModelRow.model_family_slug == family_slug,
             )
         )
     ).scalar_one()
@@ -415,7 +438,7 @@ async def reserve_model(
             select(ModelRow.id)
             .where(
                 ModelRow.workspace_id == workspace_id,
-                ModelRow.model_family_slug == spec.model_family_slug,
+                ModelRow.model_family_slug == family_slug,
                 ModelRow.version == version - 1,
             )
         )
@@ -423,7 +446,7 @@ async def reserve_model(
 
     row = ModelRow(
         workspace_id=workspace_id,
-        model_family_slug=spec.model_family_slug,
+        model_family_slug=family_slug,
         version=version,
         status=ModelStatus.DRAFT.value,
         dataset_version_id=spec.dataset_version_id,
@@ -441,7 +464,7 @@ async def reserve_model(
         actor=actor,
         source=JobSource.API,
         action="model.reserved",
-        entity_ref=f"model:{spec.model_family_slug}@{version}",
+        entity_ref=f"model:{family_slug}@{version}",
         after={"version": version, "spec_hash": digest,
                "dataset_version_id": str(spec.dataset_version_id),
                "parent_model_id": str(parent) if parent else None},
@@ -622,7 +645,7 @@ async def _refuse_mismatched_interval_model(
 
 async def _refuse_mismatched_approximation(
     session: AsyncSession, *, workspace_id: UUID, spec: ModelSpec
-) -> None:
+) -> ModelRow | None:
     """FR-MODEL-96's rules for what a surrogate may approximate, before a Job exists.
 
     The type already refuses a spec that claims to be a surrogate while pointing at an
@@ -630,9 +653,12 @@ async def _refuse_mismatched_approximation(
     whether it exists, whether it has predictions to approximate, and whether it was fitted
     over the same population. An approximation of a model it does not describe fits without
     complaint and renders identically to a correct one.
+
+    Returns the source Model the spec approximates, or `None` when the spec is not a
+    surrogate — the caller derives the surrogate's family slug from it (FR-MODEL-102).
     """
     if not isinstance(spec, GlmSpec) or spec.approximates_model_id is None:
-        return
+        return None
 
     source = await session.get(ModelRow, spec.approximates_model_id)
     if source is None or source.workspace_id != workspace_id:
@@ -683,6 +709,8 @@ async def _refuse_mismatched_approximation(
             "approximation fitted over a different population or design describes a "
             "different model, and renders identically to a correct one.",
         )
+
+    return source
 
 
 async def _refuse_a_bound_that_is_not_a_quantile_fit(

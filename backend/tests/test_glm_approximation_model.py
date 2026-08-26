@@ -474,6 +474,104 @@ async def test_a_surrogate_on_a_different_dataset_version_is_refused(
     assert "dataset_version_id" in str(caught.value.detail)
 
 
+# -- FR-MODEL-102: the surrogate's slug is derived at reservation --------------------------
+
+
+@pytest.mark.req("FR-MODEL-102")
+async def test_an_over_long_source_slug_is_refused_by_name_at_reservation(
+    database, blob_store, workspace_id
+) -> None:
+    """OQ-MODEL-34 (c) moved the length refusal into `reserve_model`.
+
+    `models.model_family_slug` is a `String(64)` and the surrogate's is seven longer, so
+    without the refusal here an over-long *source* slug would reach the column at the end
+    of the compute as a driver `DataError` naming the column — the API path persisted a
+    caller-supplied slug verbatim, so it never hit the guard the transparency Job carries.
+    A short caller slug must not rescue the reservation: the refusal names the derived
+    slug, which the caller does not choose.
+    """
+    # 58 is the shortest slug that crosses: 58 + len("-approx") == 65, one past the column.
+    slug = "g" * 58
+    assert len(f"{slug}-approx") == 65
+    model_id, status = await _fitted_gbm(
+        database, blob_store, workspace_id, model_family_slug=slug
+    )
+    assert status is JobStatus.SUCCEEDED, "the source model itself still fits — 58 <= 64"
+    actor = await _actuary(database, workspace_id)
+    async with database.session() as session:
+        source = MODEL_SPEC_ADAPTER.validate_python(
+            (await model_service.load_model_by_id(
+                session, workspace_id=workspace_id, model_id=model_id)).spec
+        )
+    spec = approximation_spec(source, source_model_id=model_id).model_copy(
+        update={"model_family_slug": f"caller-chosen-{new_uuid7().hex[-6:]}"}
+    )
+
+    with pytest.raises(PlatformError) as caught:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor, spec=spec
+            )
+    assert caught.value.code == "VALIDATION_FAILED"
+    assert caught.value.status_code == 422
+    assert caught.value.detail is not None
+    assert slug in caught.value.detail, "the message names the source slug that overflows"
+    assert "65 characters" in caught.value.detail, "and the length that crosses the boundary"
+
+
+@pytest.mark.req("FR-MODEL-102")
+async def test_a_surrogate_reserved_with_a_mismatched_caller_slug_stores_the_derived_one(
+    database, blob_store, workspace_id
+) -> None:
+    """OQ-MODEL-34 (c): the derived slug is stored, not the caller's.
+
+    FR-MODEL-102 says the surrogate's `model_family_slug` is the source model's own family
+    slug with `-approx` appended, and the API path used to persist a caller-supplied slug
+    verbatim — so the sentence was true of only the surrogates the transparency Job built.
+    The row, its version slot and its audit event now all name the derived slug, whatever
+    the spec carried.
+    """
+    model_id, status = await _fitted_gbm(database, blob_store, workspace_id)
+    assert status is JobStatus.SUCCEEDED
+    actor = await _actuary(database, workspace_id)
+    async with database.session() as session:
+        source = MODEL_SPEC_ADAPTER.validate_python(
+            (await model_service.load_model_by_id(
+                session, workspace_id=workspace_id, model_id=model_id)).spec
+        )
+    assert isinstance(source, GbmSpec)
+    caller_slug = f"caller-chosen-{new_uuid7().hex[-6:]}"
+    spec = approximation_spec(source, source_model_id=model_id).model_copy(
+        update={"model_family_slug": caller_slug}
+    )
+
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=spec
+        )
+    assert should_fit is True
+    derived = f"{source.model_family_slug}-approx"
+
+    async with database.session() as session:
+        stored = await session.get(ModelRow, row.id)
+        reservations = (
+            await session.execute(
+                select(func.count())
+                .select_from(AuditEventRow)
+                .where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "model.reserved",
+                    AuditEventRow.entity_ref == f"model:{derived}@1",
+                )
+            )
+        ).scalar_one()
+    assert stored is not None
+    assert stored.model_family_slug == derived
+    assert stored.model_family_slug != caller_slug, "the caller's slug is replaced, not kept"
+    assert stored.version == 1
+    assert reservations == 1, "the audit event names the derived slug too"
+
+
 @pytest.mark.req("FR-MODEL-110")
 async def test_a_rebuild_does_not_refit_the_surrogate_it_reuses(
     database: Database,
