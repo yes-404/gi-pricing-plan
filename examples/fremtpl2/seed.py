@@ -370,8 +370,7 @@ async def run(rows: int | None) -> int:
         ),
         encoding="utf-8",
     )
-    print("  to open the frontend against this workspace:")
-    print(f"    export GIP_DEV_WORKSPACE_ID={workspace_id}")
+    print("  to open the frontend (it selects this workspace itself):")
     print("    pnpm --dir frontend dev\n")
 
     payload = build_csv(rows)
