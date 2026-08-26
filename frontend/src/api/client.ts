@@ -14,6 +14,18 @@ import { ProblemError, type ProblemDetail } from "./problem";
 
 const BASE = "/api/v1";
 
+let currentAccessToken: string | null = null;
+
+/** The bearer token subsequent requests carry (07 FR-PLAT-55). Set by the auth session;
+ *  null sends no Authorization header and lets the platform refuse (07 §3.7). */
+export function setAccessToken(token: string | null): void {
+  currentAccessToken = token;
+}
+
+export function clearAccessToken(): void {
+  currentAccessToken = null;
+}
+
 export interface RequestOptions {
   readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly body?: unknown;
@@ -36,6 +48,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  if (currentAccessToken) headers["Authorization"] = `Bearer ${currentAccessToken}`;
 
   // Spread rather than assign `undefined`: `exactOptionalPropertyTypes` distinguishes
   // "absent" from "present and undefined", and `RequestInit` accepts the first only.

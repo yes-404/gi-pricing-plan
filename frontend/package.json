@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "echarts": "^6.1.0",
+    "oidc-client-ts": "^3.5.0",
     "pinia": "^4.0.3",
     "vue": "^3.5.41",
     "vue-echarts": "^8.1.0",

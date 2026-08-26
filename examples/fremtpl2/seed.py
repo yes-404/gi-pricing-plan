@@ -371,7 +371,6 @@ async def run(rows: int | None) -> int:
         encoding="utf-8",
     )
     print("  to open the frontend against this workspace:")
-    print(f"    export GIP_DEV_PRINCIPAL_ID={analyst.id}")
     print(f"    export GIP_DEV_WORKSPACE_ID={workspace_id}")
     print("    pnpm --dir frontend dev\n")
 

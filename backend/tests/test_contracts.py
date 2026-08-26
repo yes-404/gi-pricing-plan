@@ -2549,7 +2549,10 @@ def test_every_operation_documents_the_problems_it_returns() -> None:
     # not principals, and are reachable only from inside the deployment — so these four
     # have no 401 to document. `/metrics` is here for that reason and not because it was
     # awkward: FR-PLAT-52 keeps identifiers out of its labels, so it discloses nothing.
-    exempt = {"/healthz", "/readyz", "/version", "/metrics"}
+    # `/api/v1/auth/config` is the same category by design (FR-PLAT-66): the browser
+    # needs the issuer and `client_id` to start a login, so the endpoint is unauthenticated
+    # and has no 401 to document — `/version` is the precedent the requirement cites.
+    exempt = {"/healthz", "/readyz", "/version", "/metrics", "/api/v1/auth/config"}
     for path, operations in paths.items():
         if path in exempt:
             continue

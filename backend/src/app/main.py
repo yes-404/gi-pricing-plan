@@ -18,6 +18,7 @@ from fastapi import FastAPI
 from app.api import (
     approvals,
     audit,
+    auth_config,
     blobs,
     custom_metrics,
     custom_objectives,
@@ -42,6 +43,7 @@ from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
+from model_schema import OidcAuthConfig
 
 __all__ = ["create_app"]
 
@@ -128,6 +130,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         tags=["platform"],
         summary="Service name, version and environment",
         response_model=health.VersionInfo,
+    )
+    # FR-PLAT-66: the browser login cannot start behind an auth gate, so this publishes
+    # unauthenticated — the issuer and the client_id are public by design, and the route
+    # is mounted with the prefix because the requirement names the full path.
+    app.add_api_route(
+        f"{API_PREFIX}/auth/config",
+        auth_config.auth_config_route(settings),
+        methods=["GET"],
+        tags=["platform"],
+        summary="The OIDC values the browser login needs",
+        response_model=OidcAuthConfig,
     )
 
     # FR-PLAT-35: migrations are an explicit pre-deploy step. Nothing here runs them.

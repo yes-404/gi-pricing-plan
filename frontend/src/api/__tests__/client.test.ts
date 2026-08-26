@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { request } from "../client";
+import { clearAccessToken, request, setAccessToken } from "../client";
 import { isProblem, ProblemError } from "../problem";
 
 function respond(status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -15,7 +15,10 @@ function respond(status: number, body: unknown, headers: Record<string, string> 
   );
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  clearAccessToken();
+});
 
 describe("the API client", () => {
   it("throws a ProblemError carrying the platform's code", async () => {
@@ -75,5 +78,28 @@ describe("the API client", () => {
     await request("/datasets");
     const [, init] = vi.mocked(fetch).mock.calls[0] as [unknown, RequestInit];
     expect("body" in init).toBe(false);
+  });
+
+  it("sends Authorization: Bearer once a session token exists", async () => {
+    setAccessToken("some-token");
+    respond(200, {});
+    await request("/anything");
+    const headers = new Headers(vi.mocked(fetch).mock.calls[0]?.[1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer some-token");
+  });
+
+  it("sends no Authorization header with no token, and clearAccessToken removes it", async () => {
+    respond(200, {});
+    await request("/anything");
+    expect(
+      new Headers(vi.mocked(fetch).mock.calls[0]?.[1]?.headers).has("Authorization"),
+    ).toBe(false);
+    setAccessToken("t");
+    clearAccessToken();
+    respond(200, {});
+    await request("/anything");
+    expect(
+      new Headers(vi.mocked(fetch).mock.calls[1]?.[1]?.headers).has("Authorization"),
+    ).toBe(false);
   });
 });

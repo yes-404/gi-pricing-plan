@@ -1,0 +1,25 @@
+{
+  "additionalProperties": false,
+  "description": "The unauthenticated `/api/v1/auth/config` payload — `07` §5.1.",
+  "properties": {
+    "client_id": {
+      "title": "Client Id",
+      "type": "string"
+    },
+    "dev_auth_enabled": {
+      "title": "Dev Auth Enabled",
+      "type": "boolean"
+    },
+    "issuer": {
+      "title": "Issuer",
+      "type": "string"
+    }
+  },
+  "required": [
+    "issuer",
+    "client_id",
+    "dev_auth_enabled"
+  ],
+  "title": "OidcAuthConfig",
+  "type": "object"
+}

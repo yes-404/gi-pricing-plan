@@ -22,6 +22,7 @@ from model_schema.audit import (
     canonical_payload,
     compute_event_hash,
 )
+from model_schema.auth import OidcAuthConfig
 from model_schema.backtests import Backtest, BacktestSummary
 from model_schema.comparison import (
     ComparisonMetric,
@@ -441,6 +442,7 @@ __all__ = [
     "ObjectiveUsage",
     "ObjectiveUsageModel",
     "OffsetSpec",
+    "OidcAuthConfig",
     "OneWayRow",
     "OneWaySummary",
     "OverallOutcome",

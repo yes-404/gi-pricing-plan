@@ -46,23 +46,23 @@ export default defineConfig({
         // tests passed. The tests stub `fetch`; nothing exercised the real transport.
         //
         // It belongs in the proxy because a browser must never be able to choose its own
-        // principal: putting these headers in `client.ts` would ship a credential the user
+        // workspace: putting these headers in `client.ts` would ship a credential the user
         // can edit in devtools, and the code path would then exist in the production
         // bundle. Here it lives in the dev server only, and the deployed build has no way
-        // to reach it. Real OIDC in the SPA is a later workstream's work.
+        // to reach it. Real OIDC in the SPA landed with W6b-10 — the browser authenticates
+        // through the real flow. This proxy injects only the workspace pin, which goes
+        // when W6b-11 lands the selector (removal never precedes replacement).
         configure(proxy) {
-          const principal = process.env.GIP_DEV_PRINCIPAL_ID;
           const workspace = process.env.GIP_DEV_WORKSPACE_ID;
-          if (!principal || !workspace) {
+          if (!workspace) {
             console.warn(
-              "\n  GIP_DEV_PRINCIPAL_ID / GIP_DEV_WORKSPACE_ID are unset — the API will"
+              "\n  GIP_DEV_WORKSPACE_ID is unset — the API will"
               + "\n  answer 401 to everything. `uv run python examples/fremtpl2/seed.py`"
-              + "\n  prints both.\n",
+              + "\n  prints it.\n",
             );
             return;
           }
           proxy.on("proxyReq", (request) => {
-            request.setHeader("x-dev-principal-id", principal);
             request.setHeader("x-dev-workspace-id", workspace);
           });
         },

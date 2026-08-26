@@ -22,7 +22,19 @@ from model_schema import new_uuid7
 #: Operational surfaces, deliberately open. `07` §5.1 publishes them for probes and
 #: scrapers that hold no identity: a liveness check that needed a credential could not run
 #: before authentication was working, which is when it matters most.
-OPEN_BY_DESIGN = {"/healthz", "/readyz", "/version", "/metrics", "/openapi.json", "/docs"}
+#:
+#: `07` §5.1 also publishes the OIDC bootstrap values unauthenticated (FR-PLAT-66): the
+#: browser cannot start the login it needs a credential for without first learning the
+#: issuer and `client_id` — the endpoint is the channel, not a second identity.
+OPEN_BY_DESIGN = {
+    "/healthz",
+    "/readyz",
+    "/version",
+    "/metrics",
+    "/openapi.json",
+    "/docs",
+    "/api/v1/auth/config",
+}
 
 #: Authenticated, but permission-free **on purpose**, each with the reason.
 #:

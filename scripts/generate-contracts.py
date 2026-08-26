@@ -133,6 +133,9 @@ GENERATED_SHAPES: dict[str, str] = {
     # contract corpus is a hand-authored promise no code is checked against.
     "dataset-version": "DatasetVersion",
     "validation-report": "ValidationReport",
+    # Added 2026-08-25 (W6b-10, browser auth). No hand-authored Phase-0 counterpart —
+    # FR-PLAT-66 names the shape's contents, so this is its first written form.
+    "oidc-auth-config": "OidcAuthConfig",
 }
 
 

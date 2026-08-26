@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from "vue-router";
+
+import AuthControl from "./components/AuthControl.vue";
 </script>
 
 <template>
@@ -33,6 +35,7 @@ import { RouterLink, RouterView } from "vue-router";
         >
           Reference
         </RouterLink>
+        <AuthControl class="ml-auto" />
       </nav>
     </header>
     <main class="mx-auto max-w-6xl px-6 py-8">

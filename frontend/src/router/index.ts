@@ -1,11 +1,27 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
+import { isSignedIn, signIn } from "../auth/session";
+
+declare module "vue-router" {
+  interface RouteMeta {
+    /** Set on every route the auth guard protects; absent means never guarded. */
+    requiresAuth?: boolean;
+  }
+}
+
 /**
  * Routes follow `01` §5.3 exactly — the spec names them, and a route invented here would
  * be a second source of truth for where a thing lives.
  */
 export const routes: RouteRecordRaw[] = [
-  { path: "/", redirect: "/data" },
+  {
+    // The redirect target `/data` carries the guard, so this record's meta is never the
+    // one read — it is declared here so the plan's "every route except /demo" holds
+    // literally and a sweep finds no unguarded page.
+    path: "/",
+    redirect: "/data",
+    meta: { requiresAuth: true },
+  },
   {
     // FR-PLAT-53's entrance. Routed unconditionally; the API answers 404 where the demo is
     // not enabled, and the view reads that as a state rather than a failure — so there is
@@ -17,35 +33,41 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/data",
     name: "datasets",
+    meta: { requiresAuth: true },
     component: () => import("@/views/DatasetListView.vue"),
   },
   {
     path: "/data/:slug",
     name: "dataset-detail",
+    meta: { requiresAuth: true },
     component: () => import("@/views/DatasetDetailView.vue"),
     props: true,
   },
   {
     path: "/data/:slug/rules",
     name: "rule-set",
+    meta: { requiresAuth: true },
     component: () => import("@/views/RuleSetView.vue"),
     props: true,
   },
   {
     path: "/data/:slug/v/:version",
     name: "version-detail",
+    meta: { requiresAuth: true },
     component: () => import("@/views/VersionDetailView.vue"),
     props: true,
   },
   {
     path: "/data/:slug/v/:version/profile",
     name: "profile",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ProfileView.vue"),
     props: true,
   },
   {
     path: "/data/:slug/v/:version/validation",
     name: "validation-report",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ValidationReportView.vue"),
     // `props: true` so the view takes its inputs as props rather than reaching into the
     // router — which is what makes it renderable in a test without a router at all.
@@ -62,6 +84,7 @@ export const routes: RouteRecordRaw[] = [
     // `/models/:slug` entry below is the precedent for a query-carried input.
     path: "/models/compare",
     name: "model-comparison",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ModelComparisonView.vue"),
   },
   {
@@ -74,6 +97,7 @@ export const routes: RouteRecordRaw[] = [
     // permanently `undefined` for it.
     path: "/models/:slug/diagnostics",
     name: "model-diagnostics",
+    meta: { requiresAuth: true },
     component: () => import("@/views/DiagnosticsView.vue"),
     props: (route) => ({
       slug: String(route.params.slug),
@@ -85,6 +109,7 @@ export const routes: RouteRecordRaw[] = [
     // (FR-MODEL-92) — so `:slug` here is for the breadcrumb and the link back to the fit.
     path: "/models/:slug/backtests/:backtestId",
     name: "model-backtest",
+    meta: { requiresAuth: true },
     component: () => import("@/views/BacktestView.vue"),
     props: (route) => ({
       slug: String(route.params.slug),
@@ -100,6 +125,7 @@ export const routes: RouteRecordRaw[] = [
     // `?version=` is a query.
     path: "/models/:slug/predict",
     name: "model-predict",
+    meta: { requiresAuth: true },
     component: () => import("@/views/PredictionView.vue"),
     props: (route) => ({
       slug: String(route.params.slug),
@@ -112,6 +138,7 @@ export const routes: RouteRecordRaw[] = [
     // nothing, so the editor is not a shortfall here.
     path: "/objectives",
     name: "objective-library",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ObjectiveLibraryView.vue"),
   },
   {
@@ -120,6 +147,7 @@ export const routes: RouteRecordRaw[] = [
     // `@` in a path percent-encodes into every log line.
     path: "/objectives/:id/certificate",
     name: "objective-certificate",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ObjectiveCertificateView.vue"),
     props: (route) => ({ id: String(route.params.id) }),
   },
@@ -133,6 +161,7 @@ export const routes: RouteRecordRaw[] = [
     // to pre-empt a deployment that does not exist breaks a live config to fix nothing.
     path: "/metrics",
     name: "metric-library",
+    meta: { requiresAuth: true },
     component: () => import("@/views/MetricLibraryView.vue"),
   },
   {
@@ -141,6 +170,7 @@ export const routes: RouteRecordRaw[] = [
     // declaration order.
     path: "/peril-structures",
     name: "peril-structure-library",
+    meta: { requiresAuth: true },
     component: () => import("@/views/PerilStructureLibraryView.vue"),
   },
   {
@@ -149,6 +179,7 @@ export const routes: RouteRecordRaw[] = [
     // wire and cannot address a route.
     path: "/peril-structures/:id",
     name: "peril-structure-detail",
+    meta: { requiresAuth: true },
     component: () => import("@/views/PerilStructureDetailView.vue"),
     props: (route) => ({ id: String(route.params.id) }),
   },
@@ -172,6 +203,7 @@ export const routes: RouteRecordRaw[] = [
     // record; a future route that makes ordering load-bearing needs its own evidence.
     path: "/models/new",
     name: "model-spec-builder",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ModelSpecBuilderView.vue"),
   },
   {
@@ -180,6 +212,7 @@ export const routes: RouteRecordRaw[] = [
     // `family%407` in every log and support conversation.
     path: "/models/:slug",
     name: "model-detail",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ModelDetailView.vue"),
     // Function mode, not `props: true`: the boolean form maps `route.params` only, and
     // `?version=` is a query, so this view's `version` prop was permanently `undefined` and
@@ -197,17 +230,45 @@ export const routes: RouteRecordRaw[] = [
     // version and the id is what every `/dataset-versions/{id}/…` route already takes.
     path: "/factors/:datasetVersionId",
     name: "factor-workbench",
+    meta: { requiresAuth: true },
     component: () => import("@/views/FactorWorkbenchView.vue"),
     props: true,
   },
   {
     path: "/reference",
     name: "reference",
+    meta: { requiresAuth: true },
     component: () => import("@/views/ReferenceView.vue"),
+  },
+  {
+    // The OIDC redirect target (Task 4's `redirect_uri`). Never guarded — the guard's
+    // refusal is what sent the browser out, and a guarded callback is an unclosable loop.
+    path: "/callback",
+    name: "auth-callback",
+    component: () => import("@/views/SigninCallback.vue"),
+  },
+  {
+    // The silent-renewal iframe target (Task 4's `silent_redirect_uri`). Never guarded —
+    // the iframe's `prompt=none` request must land on a page that only completes it.
+    path: "/silent-renew",
+    name: "silent-renew",
+    component: () => import("@/views/SilentRenew.vue"),
   },
 ];
 
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// FR-PLAT-55's guard: a guarded route refuses an anonymous visitor and sends the whole
+// page to the provider (`signIn` navigates via `window.location`, Task 4). `return false`
+// cancels the navigation — the provider round-trip lands back on `/callback`, which the
+// guard never protects (record above), so the loop cannot form.
+router.beforeEach((to) => {
+  if (to.meta.requiresAuth && !isSignedIn()) {
+    void signIn(); // redirects the whole page to the provider
+    return false;
+  }
+  return true;
 });
