@@ -621,8 +621,8 @@ async def test_wf01_dataset_to_approved_model(
     ]
     # FR-MODEL-58's sum, checked rather than assumed.
     assert (
-        sum(p.modelled_burning_cost_minor for p in reconciled.reconciliation.perils)
-        == reconciled.reconciliation.modelled_burning_cost_minor
+        sum(p.modelled_burning_cost for p in reconciled.reconciliation.perils)
+        == reconciled.reconciliation.modelled_burning_cost
     )
 
     # E6: submitted for approval. The evidence bundle is assembled and pinned here.
