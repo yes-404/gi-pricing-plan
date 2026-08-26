@@ -516,6 +516,6 @@ async def _refuse_direct_identifiers(
         "The upload carries a column the dictionary forbids for modelling",
         422,
         f"{classes}. FR-DATA-13 requires such a column to be dropped before upload or "
-        "pseudonymised by a recipe step; no version was created. Reclassifying the column "
-        "in the Data Dictionary is the other way through, and is an audited change.",
+        "pseudonymised by a recipe step; no version was created. For a join key, "
+        "the audited route is declaring it `pseudonymous_key`.",
     )
