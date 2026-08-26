@@ -420,6 +420,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 }
 ```
 
+*`entity_ref` names the subject of the event: an `ArtifactRef` when the subject is an artifact, a scoped `type:name` otherwise. *(Recorded 2026-08-26, OQ-PLAT-14.)*
+
 ---
 
 ## 5. Interfaces
