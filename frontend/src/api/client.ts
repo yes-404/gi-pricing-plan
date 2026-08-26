@@ -26,6 +26,14 @@ export function clearAccessToken(): void {
   currentAccessToken = null;
 }
 
+let currentWorkspaceId: string | null = null;
+
+/** The workspace subsequent requests act in (07 FR-PLAT-65). Set by the workspace store;
+ *  null sends no header and lets the platform refuse or default (07 FR-PLAT-63). */
+export function setWorkspaceId(id: string | null): void {
+  currentWorkspaceId = id;
+}
+
 export interface RequestOptions {
   readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly body?: unknown;
@@ -48,6 +56,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  if (currentWorkspaceId) headers["Workspace-Id"] = currentWorkspaceId;
   if (currentAccessToken) headers["Authorization"] = `Bearer ${currentAccessToken}`;
 
   // Spread rather than assign `undefined`: `exactOptionalPropertyTypes` distinguishes

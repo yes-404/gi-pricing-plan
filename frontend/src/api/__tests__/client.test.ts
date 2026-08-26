@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { clearAccessToken, request, setAccessToken } from "../client";
+import { clearAccessToken, request, setAccessToken, setWorkspaceId } from "../client";
 import { isProblem, ProblemError } from "../problem";
 
 function respond(status: number, body: unknown, headers: Record<string, string> = {}): void {
@@ -18,6 +18,7 @@ function respond(status: number, body: unknown, headers: Record<string, string> 
 afterEach(() => {
   vi.unstubAllGlobals();
   clearAccessToken();
+  setWorkspaceId(null);
 });
 
 describe("the API client", () => {
@@ -101,5 +102,20 @@ describe("the API client", () => {
     expect(
       new Headers(vi.mocked(fetch).mock.calls[1]?.[1]?.headers).has("Authorization"),
     ).toBe(false);
+  });
+
+  it("sends the Workspace-Id header once a selection exists", async () => {
+    setWorkspaceId("01a0048c-1111-7000-8000-222233334444");
+    respond(200, {});
+    await request("/anything");
+    const headers = new Headers(vi.mocked(fetch).mock.calls[0]?.[1]?.headers);
+    expect(headers.get("Workspace-Id")).toBe("01a0048c-1111-7000-8000-222233334444");
+  });
+
+  it("sends no Workspace-Id header with no selection", async () => {
+    respond(200, {});
+    await request("/anything");
+    const headers = new Headers(vi.mocked(fetch).mock.calls[0]?.[1]?.headers);
+    expect(headers.has("Workspace-Id")).toBe(false);
   });
 });
