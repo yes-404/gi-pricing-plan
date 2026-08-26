@@ -22,6 +22,7 @@ from model_schema.audit import (
     canonical_payload,
     compute_event_hash,
 )
+from model_schema.auth import OidcAuthConfig
 from model_schema.backtests import Backtest, BacktestSummary
 from model_schema.comparison import (
     ComparisonMetric,
@@ -82,7 +83,6 @@ from model_schema.diagnostics import (
     UniversalDiagnostics,
     Weighting,
 )
-from model_schema.auth import OidcAuthConfig
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
 from model_schema.jobs import (
