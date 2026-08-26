@@ -137,6 +137,77 @@ def check_open_question_columns() -> None:
             )
 
 
+def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
+    """23. Every spec §10 mirror row carries a status token matching the register's.
+
+    Check 4 proves every question is mirrored in both directions, but nothing looks at
+    what the mirror row *says*. A bare row — the question, no status, no consequence —
+    is audit-clean by construction, even when the register has long since decided the
+    question; OQ-OVR-7's two bodies had diverged so far they named different things
+    while every check passed. The register is the source of truth (check 15 constrains
+    its status vocabulary), so each mirror row must state its status in the register's
+    own words: a decided question's row must carry "decided" (or a mirror-side
+    synonym), an open one "open", a deferred one "deferred".
+
+    Scoped to each spec's §10: a requirement row citing an OQ id elsewhere in the spec
+    is a reference, not a mirror. Anchored to the row: the status token must follow the
+    id on the same row, so a neighbouring row's status never satisfies it.
+    """
+    register: dict[str, str] = {}
+    path = ROOT / "open-questions.md"
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"\| (?:~~)?\*\*(OQ-[A-Z]+-\d+)\*\*", line)
+        if not match:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        status = cells[-1].replace("*", "").replace("~", "").strip().lower()
+        register[match.group(1)] = status.split()[0] if status else ""
+
+    # The register's own vocabulary is check 15's {open, decided, deferred, superseded};
+    # mirrors have historically written a decided question as "resolved" or "determined".
+    groups = {
+        "open": {"open"},
+        "decided": {"decided", "resolved", "determined"},
+        "deferred": {"deferred"},
+        "superseded": {"superseded"},
+    }
+
+    checked = ok = 0
+    for f in specs:
+        lines = f.read_text(encoding="utf-8").splitlines()
+        start = next(
+            (i for i, ln in enumerate(lines) if re.match(r"^## 10\.", ln)), None
+        )
+        if start is None:
+            continue
+        for i in range(start + 1, len(lines)):
+            line = lines[i]
+            if line.startswith("## "):
+                break
+            m = re.search(r"\*\*(OQ-[A-Z]+-\d+)\*\*", line)
+            if not m:
+                continue
+            oq = m.group(1)
+            reg_status = register.get(oq)
+            if not reg_status:
+                continue  # the both-ways mirror itself is check 4's
+            checked += 1
+            after = line[m.end():]
+            if not any(
+                re.search(rf"\b{re.escape(word)}\b", after, re.IGNORECASE)
+                for word in groups.get(reg_status, {reg_status})
+            ):
+                fail(
+                    f"{f.name}:{i + 1}: {oq} mirror row carries no status token matching "
+                    f"the register's {reg_status!r} status"
+                )
+            else:
+                ok += 1
+    # The verdict belongs in the summary line, not just the failure list: a note reading
+    # "all carry" above a FAILED block is the shape this audit exists to catch.
+    notes.append(f"{ok} of {checked} §10 mirror rows carry their register status")
+
+
 def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
     """16-20. The working notes in .claude/notes/, against that directory's README.
 
@@ -679,6 +750,9 @@ def main() -> int:
 
     # 16-20. the working notes in .claude/notes/
     check_notes(set(defined), in_file, adrs)
+
+    # 23. every spec §10 mirror row carries the register's status for that question
+    check_open_question_mirror_status(specs)
 
     for note in notes:
         print(f"  {note}")
