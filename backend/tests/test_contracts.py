@@ -2222,7 +2222,7 @@ REACHED_NESTED_PATHS: Final[dict[str, frozenset[str]]] = {
     "peril-structure": frozenset(
         {
             "reconciliation.perils.[].peril",
-            "reconciliation.perils.[].modelled_burning_cost_minor",
+            "reconciliation.perils.[].modelled_burning_cost",
             "reconciliation.computed_at",
             "perils.[].large_loss.evidence_blob.sha256",
         }

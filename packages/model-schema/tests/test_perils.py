@@ -106,16 +106,16 @@ def _reconciliation(**overrides: object) -> Reconciliation:
             ReconciledPeril(
                 peril="AD",
                 large_loss_kind=LargeLossKind.NONE,
-                modelled_burning_cost_minor=15_000,
+                modelled_burning_cost=15_000,
             ),
             ReconciledPeril(
                 peril="WINDSCREEN",
                 large_loss_kind=LargeLossKind.NONE,
-                modelled_burning_cost_minor=3_337,
+                modelled_burning_cost=3_337,
             ),
         ),
-        "observed_burning_cost_minor": 18_412,
-        "modelled_burning_cost_minor": 18_337,
+        "observed_burning_cost": 18_412,
+        "modelled_burning_cost": 18_337,
         "tolerance": Decimal("0.02"),
         "computed_at": _datetime.datetime(2026, 8, 18, tzinfo=_datetime.UTC),
     }
@@ -307,17 +307,17 @@ def test_a_reconciliation_round_trips_through_its_own_serialised_form() -> None:
 @pytest.mark.req("FR-MODEL-60")
 def test_outside_the_declared_tolerance_is_a_fail() -> None:
     reconciliation = _reconciliation(
-        modelled_burning_cost_minor=15_000,
+        modelled_burning_cost=15_000,
         perils=(
             ReconciledPeril(
                 peril="AD",
                 large_loss_kind=LargeLossKind.NONE,
-                modelled_burning_cost_minor=12_000,
+                modelled_burning_cost=12_000,
             ),
             ReconciledPeril(
                 peril="WINDSCREEN",
                 large_loss_kind=LargeLossKind.NONE,
-                modelled_burning_cost_minor=3_000,
+                modelled_burning_cost=3_000,
             ),
         ),
     )
@@ -328,7 +328,7 @@ def test_outside_the_declared_tolerance_is_a_fail() -> None:
 def test_the_total_must_be_the_sum_of_the_perils() -> None:
     """FR-MODEL-58 sums over perils. A total that is not the sum is a third number."""
     with pytest.raises(pydantic.ValidationError, match="sum"):
-        _reconciliation(modelled_burning_cost_minor=99_999)
+        _reconciliation(modelled_burning_cost=99_999)
 
 
 @pytest.mark.req("FR-MODEL-60")
@@ -341,7 +341,7 @@ def test_a_non_positive_tolerance_is_refused() -> None:
 def test_reconciling_against_nothing_observed_is_refused() -> None:
     """A ratio needs a denominator; zero observed burning cost has none."""
     with pytest.raises(pydantic.ValidationError, match="observed"):
-        _reconciliation(observed_burning_cost_minor=0)
+        _reconciliation(observed_burning_cost=0)
 
 
 @pytest.mark.req("FR-MODEL-74")
@@ -353,12 +353,12 @@ def test_the_reconciliation_states_each_perils_loss_treatment() -> None:
             ReconciledPeril(
                 peril="AD",
                 large_loss_kind=LargeLossKind.CAPPED,
-                modelled_burning_cost_minor=15_000,
+                modelled_burning_cost=15_000,
             ),
             ReconciledPeril(
                 peril="WINDSCREEN",
                 large_loss_kind=LargeLossKind.NONE,
-                modelled_burning_cost_minor=3_337,
+                modelled_burning_cost=3_337,
             ),
         )
     )
@@ -369,7 +369,7 @@ def test_the_reconciliation_states_each_perils_loss_treatment() -> None:
 @pytest.mark.req("FR-MODEL-60")
 def test_money_stays_integer_minor_units() -> None:
     with pytest.raises(pydantic.ValidationError):
-        _reconciliation(observed_burning_cost_minor=18_412.5)
+        _reconciliation(observed_burning_cost=18_412.5)
 
 
 # -- the lifecycle -------------------------------------------------------------------------

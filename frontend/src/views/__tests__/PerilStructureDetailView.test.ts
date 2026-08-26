@@ -35,9 +35,9 @@ const STRUCTURE = {
   reconciliation: {
     dataset_version_id: "11111111-1111-1111-1111-111111111111",
     part: "holdout",
-    perils: [{ peril: "AD", large_loss_kind: "capped", modelled_burning_cost_minor: 10000 }],
-    observed_burning_cost_minor: 10200,
-    modelled_burning_cost_minor: 10000,
+    perils: [{ peril: "AD", large_loss_kind: "capped", modelled_burning_cost: 10000 }],
+    observed_burning_cost: 10200,
+    modelled_burning_cost: 10000,
     tolerance: "0.05",
     computed_at: "2026-08-25T00:00:00Z",
     ratio: "0.9804",

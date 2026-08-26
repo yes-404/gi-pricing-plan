@@ -1497,12 +1497,12 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
                         ReconciledPeril(
                             peril=p.peril,
                             large_loss_kind=p.large_loss_kind,
-                            modelled_burning_cost_minor=p.modelled_burning_cost_minor,
+                            modelled_burning_cost=p.modelled_burning_cost,
                         )
                         for p in result.perils
                     ),
-                    observed_burning_cost_minor=result.observed_burning_cost_minor,
-                    modelled_burning_cost_minor=result.modelled_burning_cost_minor,
+                    observed_burning_cost=result.observed_burning_cost,
+                    modelled_burning_cost=result.modelled_burning_cost,
                     tolerance=result.tolerance,
                     computed_at=datetime.now(UTC),
                 ),

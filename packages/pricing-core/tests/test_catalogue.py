@@ -447,8 +447,11 @@ def test_vr_act_12_severity_plausible_catches_a_units_error() -> None:
             "claim_amount_minor": [250_000] * 10,
         }
     )
-    bounds = {"min_severity_minor": 50_000, "max_severity_minor": 1_000_000}
-    assert run("severity_plausible", {"t": minor}, params=bounds).violating_rows == 0
+    bounds = {"min_severity": 50_000, "max_severity": 1_000_000}
+    outcome = run("severity_plausible", {"t": minor}, params=bounds)
+    assert outcome.violating_rows == 0
+    assert outcome.measured["mean_severity"] == pytest.approx(250_000.0)
+    assert outcome.threshold == {"min_severity": 50_000.0, "max_severity": 1_000_000.0}
 
     pounds = minor.with_columns(pl.col("claim_amount_minor") // 100)
     assert run("severity_plausible", {"t": pounds}, params=bounds).violating_rows == 1

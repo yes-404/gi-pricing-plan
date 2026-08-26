@@ -40,11 +40,11 @@ const props = defineProps<{ reconciliation: Reconciliation }>();
  * no shares, which is a different statement from "0%".
  */
 const shares = computed(() => {
-  const total = props.reconciliation.modelled_burning_cost_minor;
+  const total = props.reconciliation.modelled_burning_cost;
   return props.reconciliation.perils.map((peril) => ({
     peril: peril.peril,
     kind: peril.large_loss_kind,
-    share: total > 0 ? Math.round((peril.modelled_burning_cost_minor / total) * 100) : null,
+    share: total > 0 ? Math.round((peril.modelled_burning_cost / total) * 100) : null,
   }));
 });
 </script>

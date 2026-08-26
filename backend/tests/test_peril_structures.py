@@ -471,8 +471,8 @@ async def test_the_reconcile_job_runs_and_persists_its_verdict(
     ]
     # FR-MODEL-58: the total is the sum over perils, exactly.
     assert (
-        sum(p.modelled_burning_cost_minor for p in structure.reconciliation.perils)
-        == structure.reconciliation.modelled_burning_cost_minor
+        sum(p.modelled_burning_cost for p in structure.reconciliation.perils)
+        == structure.reconciliation.modelled_burning_cost
     )
 
 
