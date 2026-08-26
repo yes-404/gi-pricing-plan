@@ -14,20 +14,16 @@ import { ProblemError, type ProblemDetail } from "./problem";
 
 const BASE = "/api/v1";
 
-/**
- * The bearer token the session holds (FR-PLAT-55), in memory only (FR-PLAT-2).
- * Set on user load, cleared on signout; the Authorization header that reads it lands
- * with Task 5's commit (the plan cut the setters and the header into separate tasks).
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- read by Task 5's header
-let accessToken: string | null = null;
+let currentAccessToken: string | null = null;
 
-export function setAccessToken(token: string): void {
-  accessToken = token;
+/** The bearer token subsequent requests carry (07 FR-PLAT-55). Set by the auth session;
+ *  null sends no Authorization header and lets the platform refuse (07 §3.7). */
+export function setAccessToken(token: string | null): void {
+  currentAccessToken = token;
 }
 
 export function clearAccessToken(): void {
-  accessToken = null;
+  currentAccessToken = null;
 }
 
 export interface RequestOptions {
@@ -52,6 +48,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
+  if (currentAccessToken) headers["Authorization"] = `Bearer ${currentAccessToken}`;
 
   // Spread rather than assign `undefined`: `exactOptionalPropertyTypes` distinguishes
   // "absent" from "present and undefined", and `RequestInit` accepts the first only.
