@@ -76,6 +76,24 @@ def test_the_full_stack_is_declared_for_local_use() -> None:
     assert "amazonaws.com" not in compose
 
 
+@pytest.mark.req("FR-PLAT-58")
+def test_the_local_provider_is_declared_behind_an_opt_in_profile() -> None:
+    """FR-PLAT-58: a local OIDC provider ships with the stack, behind an opt-in profile.
+
+    The profile is the requirement, not a detail of it -- FR-PLAT-58 says a contributor
+    running the test suites starts the same three containers as today. A `keycloak` service
+    with no `profiles:` key satisfies the first half of the requirement and breaks the
+    second, and the two are one line apart in the file.
+    """
+    compose = (ROOT / "deploy" / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "keycloak:" in compose
+    assert "profiles:" in compose, "the provider must not start by default"
+    # The realm is imported, not hand-configured -- FR-PLAT-58's reproducibility half.
+    assert "--import-realm" in compose
+    # deploy/keycloak/ is left free for W14's reference deployment (FR-PLAT-59).
+    assert (ROOT / "deploy" / "keycloak-local" / "realm-gi-pricing.json").is_file()
+
+
 @pytest.mark.req("FR-OVR-7")
 def test_money_discipline_is_enforced_by_the_docs_audit() -> None:
     """FR-OVR-7 is checked in two places, and both must stay.

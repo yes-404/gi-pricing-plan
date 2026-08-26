@@ -47,6 +47,34 @@ services:
       timeout: 3s
       retries: 20
 
+  # The local identity provider (FR-PLAT-58), behind an opt-in profile.
+  #
+  # Not in the default `up`: this file's own rule is that an unused container is a claim the
+  # platform does not support, and three of the four services are needed by every
+  # contributor while this one is needed only by someone working on the browser login.
+  # `--profile auth` is the difference between three containers and four.
+  #
+  # `start-dev` is deliberate. It runs HTTP-only against a dev-mode database, which is right
+  # for a provider whose entire purpose is local, and refuses to be mistaken for the
+  # production deployment FR-PLAT-59 says this project does not ship.
+  keycloak:
+    profiles: ["auth"]
+    image: quay.io/keycloak/keycloak:26.7
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin      # local only, as with postgres above
+      KC_HEALTH_ENABLED: "true"
+    ports: ["8080:8080"]
+    # Port 9000 is Keycloak's management interface and is deliberately NOT published:
+    # minio above already publishes 9000 to the host.
+    volumes: ["./keycloak-local:/opt/keycloak/data/import:ro"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
 volumes:
   pgdata:
   miniodata:
