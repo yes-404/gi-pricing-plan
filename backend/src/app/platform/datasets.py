@@ -885,7 +885,7 @@ async def lineage_of(
     if parent_id is not None:
         built_from = LineageBuiltFrom(
             parent_version_id=parent_id,
-            operation=(row.derived_from or {}).get("operation"),
+            operation=_recorded_operation(row.derived_from),
             parameters=(row.derived_from or {}).get("params") or {},
         )
     return DatasetLineage(
@@ -896,12 +896,19 @@ async def lineage_of(
                 LineageDerivedVersion(
                     version_id=c.id,
                     version=c.version,
-                    operation=(c.derived_from or {}).get("operation"),
+                    operation=_recorded_operation(c.derived_from),
                 )
                 for c in children
             ]
         ),
     )
+
+
+def _recorded_operation(derived_from: dict[str, Any] | None) -> str:
+    """The operation that built the version — every `derived_from` write records it."""
+    operation = (derived_from or {}).get("operation")
+    assert isinstance(operation, str)
+    return operation
 
 
 async def purge_subject(
