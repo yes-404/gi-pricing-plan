@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.models import (
     AuditEventRow,
+    ModelRow,
     ReferenceRowRow,
     ReferenceTableVersionRow,
     RoleAssignmentRow,
@@ -335,6 +336,53 @@ async def test_lineage_answers_both_directions(
     assert [d.version_id for d in downstream.depends_on_this.derived_versions] == [child_id]
     assert [d.operation for d in downstream.depends_on_this.derived_versions] == ["split"]
     assert downstream.built_from is None
+
+
+@pytest.mark.req("FR-DATA-35")
+async def test_the_models_arm_lists_every_model_on_the_version(
+    database: Database, workspace_id
+) -> None:
+    """`01` §4.9's `models` arm: every Model whose `dataset_version_id` is this
+    version, any status, deterministic order. The blast radius FR-DATA-23 computes
+    does not stop at approval."""
+    actor = await _with_role(database, workspace_id, "analyst")
+    _, version_id = await _version(database, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        session.add(
+            ModelRow(
+                workspace_id=workspace_id,
+                model_family_slug="motor-freq-2026",
+                status="approved",
+                dataset_version_id=version_id,
+                spec={"family": "glm", "response": "claim_count"},
+                spec_hash=f"v1:sha256:{'0' * 64}",
+                fit_result={"fitted": True},
+                diagnostics_id=new_uuid7(),
+            )
+        )
+        session.add(
+            ModelRow(
+                workspace_id=workspace_id,
+                model_family_slug="motor-freq-2026",
+                status="draft",
+                version=2,
+                dataset_version_id=version_id,
+                spec={"family": "glm", "response": "claim_count"},
+                spec_hash=f"v1:sha256:{'1' * 64}",
+            )
+        )
+
+    async with database.session() as session:
+        from app.platform import modelling as modelling_service
+
+        arm = await modelling_service.models_referencing_version(
+            session, workspace_id=workspace_id, dataset_version_id=version_id
+        )
+
+    assert [(m.slug, m.status) for m in arm] == [
+        ("motor-freq-2026", "approved"),
+        ("motor-freq-2026", "draft"),
+    ]
 
 
 # -- FR-DATA-37/38/39: access, archival, erasure --------------------------------------

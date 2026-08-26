@@ -53,6 +53,7 @@ from model_schema import (
     GlmSpec,
     Grouping,
     JobSource,
+    LineageModel,
     Model,
     ModelFlag,
     ModelSpec,
@@ -885,6 +886,33 @@ async def load_model(
             f"No model {slug!r}" + (f" version {version}." if version else "."),
         )
     return row
+
+
+async def models_referencing_version(
+    session: AsyncSession, *, workspace_id: UUID, dataset_version_id: UUID
+) -> list[LineageModel]:
+    """Every Model fitted on this Dataset Version (`01` §4.9's `models` arm).
+
+    Any status — a draft Model still references the version it was fitted on, and the
+    blast radius FR-DATA-35 exists to compute (FR-DATA-23) does not stop at approval.
+    The `ix_models_dataset_version` index serves the query. Owned by this module, not
+    the DATA service's: DEP-1 forbids DATA importing MODEL, so the router assembles
+    this arm into the lineage response where the modules meet.
+    """
+    rows = (
+        await session.execute(
+            select(ModelRow)
+            .where(
+                ModelRow.workspace_id == workspace_id,
+                ModelRow.dataset_version_id == dataset_version_id,
+            )
+            .order_by(ModelRow.model_family_slug, ModelRow.version)
+        )
+    ).scalars().all()
+    return [
+        LineageModel(model_id=row.id, slug=row.model_family_slug, status=row.status)
+        for row in rows
+    ]
 
 
 @dataclasses.dataclass(frozen=True)
