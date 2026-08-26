@@ -287,7 +287,7 @@ class ReconciledPeril(BaseModel):
 
     peril: PerilCode
     large_loss_kind: LargeLossKind
-    modelled_burning_cost_minor: MoneyMinor = Field(ge=0)
+    modelled_burning_cost: MoneyMinor = Field(ge=0)
 
 
 class Reconciliation(BaseModel):
@@ -303,8 +303,8 @@ class Reconciliation(BaseModel):
     dataset_version_id: UUID
     part: str = Field(min_length=1)
     perils: tuple[ReconciledPeril, ...] = Field(min_length=1)
-    observed_burning_cost_minor: MoneyMinor
-    modelled_burning_cost_minor: MoneyMinor = Field(ge=0)
+    observed_burning_cost: MoneyMinor
+    modelled_burning_cost: MoneyMinor = Field(ge=0)
     tolerance: DecimalStr = Field(
         description="Declared fractional tolerance on |ratio - 1| (FR-MODEL-60)."
     )
@@ -334,8 +334,8 @@ class Reconciliation(BaseModel):
     def ratio(self) -> Decimal:
         """Modelled over observed. Derived, so it cannot disagree with its own inputs."""
         return (
-            Decimal(self.modelled_burning_cost_minor)
-            / Decimal(self.observed_burning_cost_minor)
+            Decimal(self.modelled_burning_cost)
+            / Decimal(self.observed_burning_cost)
         ).quantize(TOLERANCE_QUANTUM)
 
     @computed_field  # type: ignore[prop-decorator]
@@ -350,9 +350,9 @@ class Reconciliation(BaseModel):
 
     @model_validator(mode="after")
     def _coherent(self) -> Self:
-        if self.observed_burning_cost_minor <= 0:
+        if self.observed_burning_cost <= 0:
             raise ValueError(
-                "observed_burning_cost_minor must be positive: a ratio needs a "
+                "observed_burning_cost must be positive: a ratio needs a "
                 "denominator, and a holdout with no observed cost reconciles nothing "
                 "(FR-MODEL-60)"
             )
@@ -361,10 +361,10 @@ class Reconciliation(BaseModel):
                 "tolerance must be positive; a tolerance of zero passes only an exact "
                 "match, which no fitted model produces (FR-MODEL-60)"
             )
-        total = sum(p.modelled_burning_cost_minor for p in self.perils)
-        if total != self.modelled_burning_cost_minor:
+        total = sum(p.modelled_burning_cost for p in self.perils)
+        if total != self.modelled_burning_cost:
             raise ValueError(
-                f"modelled_burning_cost_minor {self.modelled_burning_cost_minor} is not "
+                f"modelled_burning_cost {self.modelled_burning_cost} is not "
                 f"the sum of the per-peril figures ({total}). FR-MODEL-58 sums over "
                 "perils; a total that is not the sum is a third number"
             )

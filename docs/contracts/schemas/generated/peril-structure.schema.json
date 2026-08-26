@@ -259,10 +259,10 @@
         "large_loss_kind": {
           "$ref": "#/$defs/LargeLossKind"
         },
-        "modelled_burning_cost_minor": {
+        "modelled_burning_cost": {
           "description": "Amount in minor units (pence/cents) of the workspace currency.",
           "minimum": 0,
-          "title": "Modelled Burning Cost Minor",
+          "title": "Modelled Burning Cost",
           "type": "integer"
         },
         "peril": {
@@ -274,7 +274,7 @@
       "required": [
         "peril",
         "large_loss_kind",
-        "modelled_burning_cost_minor"
+        "modelled_burning_cost"
       ],
       "title": "ReconciledPeril",
       "type": "object"
@@ -293,15 +293,15 @@
           "title": "Dataset Version Id",
           "type": "string"
         },
-        "modelled_burning_cost_minor": {
+        "modelled_burning_cost": {
           "description": "Amount in minor units (pence/cents) of the workspace currency.",
           "minimum": 0,
-          "title": "Modelled Burning Cost Minor",
+          "title": "Modelled Burning Cost",
           "type": "integer"
         },
-        "observed_burning_cost_minor": {
+        "observed_burning_cost": {
           "description": "Amount in minor units (pence/cents) of the workspace currency.",
-          "title": "Observed Burning Cost Minor",
+          "title": "Observed Burning Cost",
           "type": "integer"
         },
         "part": {
@@ -328,8 +328,8 @@
         "dataset_version_id",
         "part",
         "perils",
-        "observed_burning_cost_minor",
-        "modelled_burning_cost_minor",
+        "observed_burning_cost",
+        "modelled_burning_cost",
         "tolerance",
         "computed_at"
       ],
