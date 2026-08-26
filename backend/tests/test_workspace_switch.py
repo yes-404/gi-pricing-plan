@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Settings
 from app.db.models import AuditEventRow, WorkspaceMemberRow
 from app.db.session import Database
@@ -88,9 +88,9 @@ async def test_a_service_account_sees_an_empty_list(
     between, and `FR-PLAT-65` says it never sends the header.
     """
     await grant("admin")
-    # The creation request travels as a scoped dev caller: the pin is still required by
-    # `_development_caller` today, and the Workspace-Id header is what the dev path will
-    # resolve against once the pin goes (W6b-11 Task 8) — both name a membership.
+    # The creation request travels as a scoped dev caller. The dev path resolves the
+    # `Workspace-Id` header against the memberships (W6b-11 Task 8 landed); the header
+    # names the seeded membership above, which is the only pin the path still honours.
     await _add_membership(database, principal.id, workspace_id, name="The Workspace")
     created = client.post(
         "/api/v1/service-accounts",
@@ -99,11 +99,7 @@ async def test_a_service_account_sees_an_empty_list(
             "environments": ["prod"],
             "permissions": ["score:execute"],
         },
-        headers={
-            **headers,
-            DEV_WORKSPACE_HEADER: str(workspace_id),
-            "Workspace-Id": str(workspace_id),
-        },
+        headers={**headers, "Workspace-Id": str(workspace_id)},
     ).json()
 
     response = client.get(
