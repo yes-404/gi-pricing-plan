@@ -37,6 +37,10 @@ function matchedNames(path: string): string[] {
 }
 
 describe("the /models routes", () => {
+  it("resolves /models to the model list", () => {
+    expect(matchedNames("/models")).toContain("models");
+  });
+
   it("resolves /models/new to the spec builder", () => {
     expect(matchedNames("/models/new")).toContain("model-spec-builder");
   });
