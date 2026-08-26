@@ -22,6 +22,8 @@ from app.db.models import ModelRow
 from app.errors import MODELLING_ERROR_CODES, PlatformError
 from app.platform.modelling import SPEC_HASH_VERSION, spec_hash, spec_hash_is_current
 from model_schema import (
+    SURROGATE_RESPONSE_COLUMN,
+    ApproximatedModel,
     EbmSpec,
     GbmFunctionRef,
     GbmSpec,
@@ -197,12 +199,17 @@ def test_the_algorithm_version_moved_with_the_new_field() -> None:
     # differently. FR-MODEL-66 would otherwise hand the next caller the unweighted fit for
     # a weighted spec, with nothing to see. A future reader should not conclude from the
     # v1..v9 lineage that this tag tracks fields; it tracks what a digest promises.
-    assert SPEC_HASH_VERSION == 10, (
-        "fit_gbm began honouring spec.weight (FR-MODEL-19); the tag moves with the meaning"
+    # v10 -> v11 (2026-08-26, FR-MODEL-129, OQ-MODEL-43): the companion `approximates_model`
+    # — the slug@version address — joined the payload. How a surrogate addresses the model
+    # it approximates is part of what the surrogate is, and two surrogates of the same
+    # family at different versions are different models. Every `v10:` digest is now stale
+    # and findable with `LIKE 'v10:%'`.
+    assert SPEC_HASH_VERSION == 11, (
+        "approximates_model joined the payload (FR-MODEL-129); the tag moves with it"
     )
-    assert spec_hash(_bound()).startswith("v10:sha256:")
-    assert spec_hash_is_current("v9:sha256:" + "0" * 64) is False, (
-        "every v9 digest is now stale and must be findable with LIKE 'v9:%'"
+    assert spec_hash(_bound()).startswith("v11:sha256:")
+    assert spec_hash_is_current("v10:sha256:" + "0" * 64) is False, (
+        "every v10 digest is now stale and must be findable with LIKE 'v10:%'"
     )
 
 
@@ -252,6 +259,35 @@ def test_two_bounds_against_different_central_models_do_not_collide() -> None:
         interval_for=IntervalFor(model_id=uuid4(), model_version=7, alpha=0.05), **shared
     )
     assert spec_hash(left) != spec_hash(right)
+
+
+@pytest.mark.req("FR-MODEL-129")
+def test_two_surrogates_of_different_models_do_not_collide() -> None:
+    """The companion joins the payload, so the address is part of the identity.
+
+    Two surrogates identical but for the model they address — same family at different
+    versions, or different families at the same version — must hash differently, or
+    FR-MODEL-66 would answer the second caller with the first caller's fit.
+    """
+    shared = {"response_column": SURROGATE_RESPONSE_COLUMN}
+    base = {"model_slug": "motor-ad-frequency", "model_version": 7}
+    left = _spec(
+        approximates_model_id=uuid4(),
+        approximates_model=ApproximatedModel(**base),
+        **shared,
+    )
+    different_version = _spec(
+        approximates_model_id=uuid4(),
+        approximates_model=ApproximatedModel(model_slug="motor-ad-frequency", model_version=8),
+        **shared,
+    )
+    different_family = _spec(
+        approximates_model_id=uuid4(),
+        approximates_model=ApproximatedModel(model_slug="motor-ad-severity", model_version=7),
+        **shared,
+    )
+    assert spec_hash(left) != spec_hash(different_version)
+    assert spec_hash(left) != spec_hash(different_family)
 
 
 @pytest.mark.req("FR-MODEL-100")

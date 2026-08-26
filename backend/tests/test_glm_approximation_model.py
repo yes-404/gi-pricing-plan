@@ -37,6 +37,7 @@ from model_schema import (
     FIT_RESULT_ADAPTER,
     MODEL_SPEC_ADAPTER,
     SURROGATE_RESPONSE_COLUMN,
+    ApproximatedModel,
     GbmSpec,
     JobKind,
     JobStatus,
@@ -188,6 +189,9 @@ async def test_the_artifact_names_a_fitted_model_that_holds_the_table(
     assert artifact.glm_approximation.coefficients == ()
 
     async with database.session() as session:
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
         surrogate = await model_service.load_model_by_id(
             session, workspace_id=workspace_id, model_id=surrogate_id
         )
@@ -195,6 +199,10 @@ async def test_the_artifact_names_a_fitted_model_that_holds_the_table(
     assert surrogate.diagnostics_id is not None
     spec = MODEL_SPEC_ADAPTER.validate_python(surrogate.spec)
     assert spec.approximates_model_id == model_id
+    # FR-MODEL-129: the companion names the same model in the register a human reads.
+    assert spec.approximates_model is not None
+    assert spec.approximates_model.model_slug == source_row.model_family_slug
+    assert spec.approximates_model.model_version == source_row.version
     assert spec.response_column == SURROGATE_RESPONSE_COLUMN
     assert surrogate.fit_result is not None
     assert surrogate.fit_result["coefficients"]
@@ -404,11 +412,16 @@ async def test_a_surrogate_of_a_model_that_does_not_exist_is_a_404(
     model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
     actor = await _actuary(database, workspace_id)
     async with database.session() as session:
-        source = MODEL_SPEC_ADAPTER.validate_python(
-            (await model_service.load_model_by_id(
-                session, workspace_id=workspace_id, model_id=model_id)).spec
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
         )
-    spec = approximation_spec(source, source_model_id=new_uuid7())
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
+    spec = approximation_spec(
+        source,
+        source_model_id=new_uuid7(),
+        source_model_slug=source_row.model_family_slug,
+        source_model_version=source_row.version,
+    )
 
     with pytest.raises(PlatformError) as caught:
         async with database.unit_of_work() as session:
@@ -428,11 +441,16 @@ async def test_a_surrogate_of_a_glm_is_refused(
     already makes at the endpoint, now made where a spec can arrive without one."""
     actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
     async with database.session() as session:
-        source = MODEL_SPEC_ADAPTER.validate_python(
-            (await model_service.load_model_by_id(
-                session, workspace_id=workspace_id, model_id=model_id)).spec
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
         )
-    spec = approximation_spec(source, source_model_id=model_id)
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
+    spec = approximation_spec(
+        source,
+        source_model_id=model_id,
+        source_model_slug=source_row.model_family_slug,
+        source_model_version=source_row.version,
+    )
 
     with pytest.raises(PlatformError) as caught:
         async with database.unit_of_work() as session:
@@ -452,15 +470,20 @@ async def test_a_surrogate_on_a_different_dataset_version_is_refused(
     model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
     actor = await _actuary(database, workspace_id)
     async with database.session() as session:
-        source = MODEL_SPEC_ADAPTER.validate_python(
-            (await model_service.load_model_by_id(
-                session, workspace_id=workspace_id, model_id=model_id)).spec
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
         )
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
     other_dataset = await _dataset(database, blob_store, workspace_id, actor)
     other_version = await _validated_version(
         database, blob_store, workspace_id, actor, other_dataset
     )
-    spec = approximation_spec(source, source_model_id=model_id).model_copy(
+    spec = approximation_spec(
+        source,
+        source_model_id=model_id,
+        source_model_slug=source_row.model_family_slug,
+        source_model_version=source_row.version,
+    ).model_copy(
         update={"dataset_version_id": other_version}
     )
 
@@ -472,6 +495,46 @@ async def test_a_surrogate_on_a_different_dataset_version_is_refused(
     assert caught.value.code == "MODEL_APPROXIMATION_INVALID"
     assert caught.value.status_code == 409
     assert "dataset_version_id" in str(caught.value.detail)
+
+
+@pytest.mark.req("FR-MODEL-129")
+async def test_a_surrogate_whose_companion_names_the_wrong_model_is_refused(
+    database, blob_store, workspace_id
+) -> None:
+    """FR-MODEL-129: the companion is compared like the other three fields.
+
+    A companion naming a slug or version different from the pinned model is a relation
+    failure — the surrogate says it approximates `motor-ad-frequency@7` while the id pins
+    a different model — and the same refusal names it.
+    """
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+    async with database.session() as session:
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
+    spec = approximation_spec(
+        source,
+        source_model_id=model_id,
+        source_model_slug=source_row.model_family_slug,
+        source_model_version=source_row.version,
+    ).model_copy(
+        update={
+            "approximates_model": ApproximatedModel(
+                model_slug="a-family-this-model-is-not", model_version=3
+            )
+        }
+    )
+
+    with pytest.raises(PlatformError) as caught:
+        async with database.unit_of_work() as session:
+            await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor, spec=spec
+            )
+    assert caught.value.code == "MODEL_APPROXIMATION_INVALID"
+    assert caught.value.status_code == 409
+    assert "model_slug" in str(caught.value.detail)
 
 
 # -- FR-MODEL-102: the surrogate's slug is derived at reservation --------------------------
@@ -499,11 +562,16 @@ async def test_an_over_long_source_slug_is_refused_by_name_at_reservation(
     assert status is JobStatus.SUCCEEDED, "the source model itself still fits — 58 <= 64"
     actor = await _actuary(database, workspace_id)
     async with database.session() as session:
-        source = MODEL_SPEC_ADAPTER.validate_python(
-            (await model_service.load_model_by_id(
-                session, workspace_id=workspace_id, model_id=model_id)).spec
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
         )
-    spec = approximation_spec(source, source_model_id=model_id).model_copy(
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
+    spec = approximation_spec(
+        source,
+        source_model_id=model_id,
+        source_model_slug=source_row.model_family_slug,
+        source_model_version=source_row.version,
+    ).model_copy(
         update={"model_family_slug": f"caller-chosen-{new_uuid7().hex[-6:]}"}
     )
 
@@ -535,13 +603,18 @@ async def test_a_surrogate_reserved_with_a_mismatched_caller_slug_stores_the_der
     assert status is JobStatus.SUCCEEDED
     actor = await _actuary(database, workspace_id)
     async with database.session() as session:
-        source = MODEL_SPEC_ADAPTER.validate_python(
-            (await model_service.load_model_by_id(
-                session, workspace_id=workspace_id, model_id=model_id)).spec
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
         )
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
     assert isinstance(source, GbmSpec)
     caller_slug = f"caller-chosen-{new_uuid7().hex[-6:]}"
-    spec = approximation_spec(source, source_model_id=model_id).model_copy(
+    spec = approximation_spec(
+        source,
+        source_model_id=model_id,
+        source_model_slug=source_row.model_family_slug,
+        source_model_version=source_row.version,
+    ).model_copy(
         update={"model_family_slug": caller_slug}
     )
 
@@ -663,11 +736,16 @@ async def test_a_failed_build_leaves_no_reserved_surrogate_behind(
     assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
 
     async with database.session() as session:
-        source = MODEL_SPEC_ADAPTER.validate_python(
-            (await model_service.load_model_by_id(
-                session, workspace_id=workspace_id, model_id=model_id)).spec
+        source_row = await model_service.load_model_by_id(
+            session, workspace_id=workspace_id, model_id=model_id
         )
-        slug = approximation_spec(source, source_model_id=model_id).model_family_slug
+        source = MODEL_SPEC_ADAPTER.validate_python(source_row.spec)
+        slug = approximation_spec(
+            source,
+            source_model_id=model_id,
+            source_model_slug=source_row.model_family_slug,
+            source_model_version=source_row.version,
+        ).model_family_slug
         surrogates = list(
             (
                 await session.execute(

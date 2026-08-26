@@ -144,7 +144,12 @@ __all__ = [
 #: documented one and is over-paid: an unweighted GLM's digest goes stale too, for a change
 #: that cannot have affected it. A targeted invalidation has no mechanism here, and
 #: inventing one is larger than the defect it would spare.
-SPEC_HASH_VERSION: Final = 10
+#: `approximates_model` moved it `v10` to `v11` (2026-08-26, FR-MODEL-129,
+#: OQ-MODEL-43): the companion `slug@version` address joined the payload. How a surrogate
+#: addresses the model it approximates is part of what the surrogate is — two surrogates
+#: of the same family at different versions are different models — and every `v10:` digest
+#: is now stale and findable with `LIKE 'v10:%'`.
+SPEC_HASH_VERSION: Final = 11
 
 
 def spec_hash(spec: ModelSpec) -> str:
@@ -660,6 +665,8 @@ async def _refuse_mismatched_approximation(
     """
     if not isinstance(spec, GlmSpec) or spec.approximates_model_id is None:
         return None
+    # The type-level iff (FR-MODEL-129) guarantees the companion whenever the id is set.
+    assert spec.approximates_model is not None
 
     source = await session.get(ModelRow, spec.approximates_model_id)
     if source is None or source.workspace_id != workspace_id:
@@ -697,6 +704,16 @@ async def _refuse_mismatched_approximation(
             ("dataset_version_id", spec.dataset_version_id, source_spec.dataset_version_id),
             ("split_ref", spec.split_ref, source_spec.split_ref),
             ("factors", set(spec.factors), set(source_spec.factors)),
+            (
+                "model_slug",
+                spec.approximates_model.model_slug,
+                source.model_family_slug,
+            ),
+            (
+                "model_version",
+                spec.approximates_model.model_version,
+                source.version,
+            ),
         )
         if mine != theirs
     ]

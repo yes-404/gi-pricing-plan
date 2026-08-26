@@ -37,6 +37,7 @@ import polars as pl
 
 from model_schema import (
     SURROGATE_RESPONSE_COLUMN,
+    ApproximatedModel,
     Banding,
     EbmFitResult,
     EbmNumericBins,
@@ -79,7 +80,9 @@ __all__ = [
 _WORST_REGIONS = 3
 
 
-def approximation_spec(spec: GbmSpec, *, source_model_id: UUID) -> GlmSpec:
+def approximation_spec(
+    spec: GbmSpec, *, source_model_id: UUID, source_model_slug: str, source_model_version: int
+) -> GlmSpec:
     """The specification of the GLM that approximates `spec`'s model (FR-MODEL-34, 96).
 
     Pure, and separate from the fit, because the platform reserves the Model this describes
@@ -89,6 +92,11 @@ def approximation_spec(spec: GbmSpec, *, source_model_id: UUID) -> GlmSpec:
     The approximating spec mirrors the GBM's structure — same factors, same offset, same
     split — and differs only in what it is fitted *to*. Anything else would make the
     comparison between them a comparison of two different questions.
+
+    The source model is named twice, in the two registers FR-MODEL-129 requires: the id is
+    what the lookup uses, and the slug and version are what a human reads
+    (`motor-ad-frequency@7`). The caller holds the row, so it asserts both; this function
+    does not look anything up.
     """
     return GlmSpec(
         model_family_slug=f"{spec.model_family_slug}-approx",
@@ -96,6 +104,9 @@ def approximation_spec(spec: GbmSpec, *, source_model_id: UUID) -> GlmSpec:
         split_ref=spec.split_ref,
         response_column=SURROGATE_RESPONSE_COLUMN,
         approximates_model_id=source_model_id,
+        approximates_model=ApproximatedModel(
+            model_slug=source_model_slug, model_version=source_model_version
+        ),
         offset=spec.offset,
         weight=spec.weight,
         factors=spec.factors,
@@ -148,6 +159,8 @@ def build_glm_approximation(
     *,
     holdout: pl.DataFrame,
     source_model_id: UUID,
+    source_model_slug: str,
+    source_model_version: int,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
     progress: ProgressCallback | None = None,
@@ -168,7 +181,12 @@ def build_glm_approximation(
     report = progress or NullProgress()
     report.update(0.05, "scoring the booster")
 
-    spec_ = approximation_spec(spec, source_model_id=source_model_id)
+    spec_ = approximation_spec(
+        spec,
+        source_model_id=source_model_id,
+        source_model_slug=source_model_slug,
+        source_model_version=source_model_version,
+    )
 
     frames: dict[str, pl.DataFrame] = {}
     for name, frame in (("train", data), ("holdout", holdout)):

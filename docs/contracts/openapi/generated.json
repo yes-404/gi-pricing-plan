@@ -254,6 +254,28 @@
         "title": "ApprovalStatus",
         "type": "string"
       },
+      "ApproximatedModel": {
+        "additionalProperties": false,
+        "description": "The Model this GLM approximates, addressed the way a human reads it (FR-MODEL-129).\n\nThe id stays the lookup key — `approximates_model_id` is how the platform resolves the\npin. This block carries the **slug and version** instead, following `IntervalFor`'s\nid-and-version shape with the id left out: naming the same id twice is a fact stated\ntwice, and `CLAUDE.md` §2's rule against a shape defined twice holds for a fact as\nmuch as for a field. `motor-ad-frequency@7` is what a reviewer reads; the slug alone\nwould resolve to the family's latest version, which may not be the version the id\npins.",
+        "properties": {
+          "model_slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Model Slug",
+            "type": "string"
+          },
+          "model_version": {
+            "minimum": 1.0,
+            "title": "Model Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_slug",
+          "model_version"
+        ],
+        "title": "ApproximatedModel",
+        "type": "object"
+      },
       "ArtifactRef": {
         "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
         "examples": [
@@ -4881,6 +4903,16 @@
             "minimum": 0.0,
             "title": "Alpha",
             "type": "number"
+          },
+          "approximates_model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApproximatedModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "approximates_model_id": {
             "anyOf": [
