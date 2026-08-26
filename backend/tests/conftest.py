@@ -81,6 +81,7 @@ from backend.tests.conftest_db import (  # noqa: E402,F401
     blob_store,
     database,
     grant,
+    membership,
     principal,
     workspace_id,
 )

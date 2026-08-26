@@ -16,7 +16,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.db.session import Database
 from model_schema import new_uuid7
 
@@ -28,9 +28,15 @@ def client(api_client: TestClient) -> TestClient:
 
 
 def _headers(principal_id, workspace_id) -> dict[str, str]:
+    """Headers for a caller granted in `workspace_id` (W6b-11).
+
+    `Workspace-Id` is the same header every caller path reads, and it names a membership
+    — `grant` seeds one, so the selection is checked and accepted. The old
+    `x-dev-workspace-id` pin, which bypassed the membership check entirely, is gone.
+    """
     return {
         DEV_PRINCIPAL_HEADER: str(principal_id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -78,11 +84,16 @@ def test_a_source_never_returns_its_credentials(
 
 
 @pytest.mark.req("FR-DATA-1")
-def test_creating_a_dataset_requires_a_permission(
-    client: TestClient, workspace_id, principal
+async def test_creating_a_dataset_requires_a_permission(
+    client: TestClient, workspace_id, principal, membership
 ) -> None:
     """Development identity carries no permissions. A route that answered anyway would
-    make every other test in this file meaningless."""
+    make every other test in this file meaningless.
+
+    The caller is a member but holds no role (W6b-11), so the refusal is the route's own
+    permission check rather than the membership check's `UNAUTHENTICATED`.
+    """
+    await membership()
     response = client.post(
         "/api/v1/datasets",
         json={"slug": _slug()},
@@ -1037,16 +1048,18 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
     assert large.status_code == 200, large.text
     assert len(small.json()["items"]) == 3
     assert len(large.json()["items"]) == 10
-    # Five, not four. FR-DATA-50's "one further aggregate" budgets the *page's* queries,
+    # Six, not five. FR-DATA-50's "one further aggregate" budgets the *page's* queries,
     # and four of these are it: the row query, the capped count, `_latest_versions` and
-    # `_last_validated`. The fifth is `requires(DATASET_READ)`'s role-assignment lookup —
-    # a per-request authorisation cost every route in this file pays, independent of the
+    # `_last_validated`. The fifth is `requires(DATASET_READ)`'s role-assignment lookup,
+    # and the sixth is the `workspace_members` read in identity resolution (W6b-11): the
+    # caller's workspace set comes from the database, never from a header. Both are
+    # per-request authorisation costs every route in this file pays, independent of the
     # page and of this slice. Counted rather than filtered out, because a listener that
     # only counts the statements it expects cannot catch an N+1 in one it does not.
-    assert at_three == at_ten == 5, (
+    assert at_three == at_ten == 6, (
         f"a page costs {at_three} statements at 3 rows and {at_ten} at 10; the budget is "
-        "five — the permission check, the row query, the capped count, the latest-version "
-        f"aggregate and the one further aggregate.\n{statements!r}"
+        "six — the memberships read, the permission check, the row query, the capped "
+        f"count, the latest-version aggregate and the one further aggregate.\n{statements!r}"
     )
 
 

@@ -9,10 +9,9 @@ from __future__ import annotations
 
 from typing import Annotated
 
+import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-
-import pytest
 
 from app.api.deps import DEV_PRINCIPAL_HEADER, Caller, IdentityDep, require_caller
 from app.auth.oidc import TokenClaims

@@ -13,10 +13,9 @@ it is added rather than when somebody remembers.
 from __future__ import annotations
 
 import pytest
-from backend.tests.test_api_datasets import _headers  # noqa: F401
 from fastapi.testclient import TestClient
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from model_schema import new_uuid7
 
 #: Operational surfaces, deliberately open. `07` §5.1 publishes them for probes and
@@ -45,6 +44,10 @@ NO_PERMISSION_REQUIRED = {
     # "Who am I and what may I do" — a caller with no roles must be able to ask, and the
     # answer is the empty permission set.
     "/api/v1/me",
+    # FR-PLAT-63's second amendment (PR #237): the list a first selection is made from is
+    # deliberately unscoped — a principal that needs to choose has no selection yet, so no
+    # workspace exists to hold a role check. A role is always role-in-a-workspace.
+    "/api/v1/me/workspaces",
     # Facts about the repository, no workspace data, and only where development identity
     # exists at all (FR-PLAT-53).
     "/api/v1/demo/guide",
@@ -97,19 +100,28 @@ def test_every_operation_refuses_an_anonymous_caller(api_client: TestClient) -> 
 
 
 @pytest.mark.req("FR-GOV-2")
-def test_every_operation_refuses_a_caller_holding_no_roles(
-    api_client: TestClient, workspace_id
+async def test_every_operation_refuses_a_caller_holding_no_roles(
+    api_client: TestClient, membership, workspace_id
 ) -> None:
     """A principal with no grants is authenticated and entitled to nothing (FR-PLAT-4).
 
     `403`, not `404` and not `422`: the permission check must resolve before the handler
     touches an id or a body, or the refusal leaks whether the id exists.
+
+    The caller holds a membership but no role (W6b-11). A caller with no membership at
+    all is refused earlier, with `UNAUTHENTICATED` — the wrong refusal to pin here, since
+    it proves nothing about the per-route permission declarations this test guards. The
+    code is asserted, not just the status: the refusal must come from the role check,
+    never from the membership check.
     """
+    caller = new_uuid7()
+    await membership(principal_id=caller)
     headers = {
-        DEV_PRINCIPAL_HEADER: str(new_uuid7()),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        DEV_PRINCIPAL_HEADER: str(caller),
+        "Workspace-Id": str(workspace_id),
     }
     permitted: list[str] = []
+    wrong_refusal: list[str] = []
     for method, path in _operations(api_client):
         if path in NO_PERMISSION_REQUIRED:
             continue
@@ -123,20 +135,31 @@ def test_every_operation_refuses_a_caller_holding_no_roles(
         refused = {403, 422} if method in {"POST", "PUT", "PATCH"} else {403}
         if response.status_code not in refused:
             permitted.append(f"{method} {path} → {response.status_code}")
+            continue
+        if response.status_code == 403:
+            code = response.json().get("code")
+            if code != "PERMISSION_DENIED":
+                wrong_refusal.append(f"{method} {path} → {code}")
     assert not permitted, "reachable with no roles:\n" + "\n".join(permitted)
+    assert not wrong_refusal, "refused for the wrong reason:\n" + "\n".join(wrong_refusal)
 
 
 @pytest.mark.req("FR-GOV-2")
-def test_the_permission_free_routes_really_are_permission_free(
-    api_client: TestClient, workspace_id
+async def test_the_permission_free_routes_really_are_permission_free(
+    api_client: TestClient, membership, workspace_id
 ) -> None:
     """The negative of the exclusion list: it must name routes that behave as claimed.
 
     An exclusion nobody checks is how a hole gets parked in a set literal.
+
+    The caller holds a membership but no role, exactly like the refusal sweep: these
+    routes must answer a caller the permission checks would refuse everywhere else.
     """
+    caller = new_uuid7()
+    await membership(principal_id=caller)
     headers = {
-        DEV_PRINCIPAL_HEADER: str(new_uuid7()),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        DEV_PRINCIPAL_HEADER: str(caller),
+        "Workspace-Id": str(workspace_id),
     }
     for path in sorted(NO_PERMISSION_REQUIRED):
         response = api_client.get(_concrete(path), headers=headers)

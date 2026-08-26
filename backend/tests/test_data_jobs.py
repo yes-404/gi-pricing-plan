@@ -24,6 +24,7 @@ from app.db.models import (
     RoleAssignmentRow,
     RoleRow,
     ValidationRuleSetRow,
+    WorkspaceMemberRow,
 )
 from app.db.session import Database
 from app.platform import datasets as dataset_service
@@ -88,7 +89,15 @@ def _handlers() -> None:
 async def actuary(database: Database, workspace_id) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
     async with database.unit_of_work() as session:
+        # The workspace row must exist for the membership FK (FR-PLAT-62).
+        from app.platform import workspaces
+
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await rbac.seed_builtin_roles(session, workspace_id)
+        # Membership as well as roles (W6b-11): the dev caller resolves through the
+        # memberships the database holds, so an actor that exists only as role
+        # assignments can no longer reach the routes this file tests over HTTP.
+        session.add(WorkspaceMemberRow(user_id=user.id, workspace_id=workspace_id))
         for slug in ("analyst", "pricing_actuary", "approver"):
             role = (
                 await session.execute(
@@ -429,7 +438,7 @@ async def test_an_ingested_version_reads_back_over_http(
     from fastapi.testclient import TestClient
     from pydantic import SecretStr
 
-    from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+    from app.api.deps import DEV_PRINCIPAL_HEADER
     from app.config import Environment, Settings
     from app.main import create_app
 
@@ -453,7 +462,7 @@ async def test_an_ingested_version_reads_back_over_http(
             f"/api/v1/datasets/{slug}/versions/{version.version}",
             headers={
                 DEV_PRINCIPAL_HEADER: str(actuary.id),
-                DEV_WORKSPACE_HEADER: str(workspace_id),
+                "Workspace-Id": str(workspace_id),
             },
         )
 

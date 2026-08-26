@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.main import create_app
 
@@ -35,7 +35,7 @@ async def headers(workspace_id, principal, grant) -> dict[str, str]:
     await grant("pricing_actuary")
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -68,15 +68,21 @@ def test_health_and_openapi_are_the_only_anonymous_surfaces(client: TestClient) 
 
 
 @pytest.mark.req("FR-GOV-2")
-def test_a_principal_with_no_role_reports_no_permissions(
-    client: TestClient, workspace_id, principal
+async def test_a_principal_with_no_role_reports_no_permissions(
+    client: TestClient, workspace_id, principal, membership
 ) -> None:
-    """Authentication is not authorisation; `/me` must say so rather than 403."""
+    """Authentication is not authorisation; `/me` must say so rather than 403.
+
+    The caller holds a membership but no role (W6b-11): without membership `/me` would
+    refuse with `UNAUTHENTICATED`, and the claim that a role-less member gets the empty
+    answer would go untested.
+    """
+    await membership()
     body = client.get(
         "/api/v1/me",
         headers={
             DEV_PRINCIPAL_HEADER: str(principal.id),
-            DEV_WORKSPACE_HEADER: str(workspace_id),
+            "Workspace-Id": str(workspace_id),
         },
     ).json()
     assert body["permissions"] == []
@@ -85,7 +91,7 @@ def test_a_principal_with_no_role_reports_no_permissions(
 
 @pytest.mark.req("FR-GOV-8")
 async def test_break_glass_is_visible_on_me(
-    client: TestClient, database, workspace_id, principal, grant
+    client: TestClient, database, workspace_id, principal, grant, membership
 ) -> None:
     """FR-GOV-8: prominently flagged. A user must be able to see they are elevated."""
     from app.platform import rbac
@@ -93,6 +99,9 @@ async def test_break_glass_is_visible_on_me(
 
     admin = Principal(kind=ActorKind.USER, id=new_uuid7(), display="admin")
     await grant("admin", principal_id=admin.id)
+    # The elevated principal has no role rows to seed a membership from (the grant is a
+    # temporary break-glass assignment), so the membership is seeded directly (W6b-11).
+    await membership()
     async with database.unit_of_work() as session:
         await rbac.grant_break_glass(
             session,
@@ -107,7 +116,7 @@ async def test_break_glass_is_visible_on_me(
         "/api/v1/me",
         headers={
             DEV_PRINCIPAL_HEADER: str(principal.id),
-            DEV_WORKSPACE_HEADER: str(workspace_id),
+            "Workspace-Id": str(workspace_id),
         },
     ).json()
     elevated = [r for r in body["roles"] if r["break_glass"]]
@@ -138,10 +147,11 @@ async def test_me_lists_every_membership_with_its_name(
         # idempotency: `grant`'s later call must find these rows and leave them alone.
         await workspaces.ensure_workspace(session, workspace_id=workspace_id, name="Motor")
         await workspaces.ensure_workspace(session, workspace_id=other, name="Household")
-        # Both memberships are written here. `grant` assigns a *role*, which is a different
-        # fact from membership and does not imply one — a caller can hold a role assignment
-        # in a workspace it has no `workspace_members` row for, which is exactly why this
-        # endpoint reads memberships rather than inferring them from roles.
+        # Both memberships are written here, before the grant. `grant` also seeds the
+        # fixture-workspace membership (W6b-11) — idempotently, so it finds this row
+        # rather than writing a second one. The Household row is deliberately role-less:
+        # memberships and role assignments are different facts, and this endpoint reads
+        # the former, which is exactly why it cannot be inferred from the latter.
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=workspace_id))
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
 
@@ -151,7 +161,7 @@ async def test_me_lists_every_membership_with_its_name(
         "/api/v1/me",
         headers={
             DEV_PRINCIPAL_HEADER: str(principal.id),
-            DEV_WORKSPACE_HEADER: str(workspace_id),
+            "Workspace-Id": str(workspace_id),
         },
     )
     assert response.status_code == 200, response.text

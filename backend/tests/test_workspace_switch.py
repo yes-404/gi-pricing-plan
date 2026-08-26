@@ -87,11 +87,12 @@ async def test_a_service_account_sees_an_empty_list(
     Its list is empty rather than an error (`me.py:114-117`): an SA has nothing to choose
     between, and `FR-PLAT-65` says it never sends the header.
     """
-    await grant("admin")
     # The creation request travels as a scoped dev caller. The dev path resolves the
     # `Workspace-Id` header against the memberships (W6b-11 Task 8 landed); the header
-    # names the seeded membership above, which is the only pin the path still honours.
-    await _add_membership(database, principal.id, workspace_id, name="The Workspace")
+    # names the membership `grant` seeds for the fixture workspace — the only pin the
+    # path still honours. A second, direct `_add_membership` for the same pair would
+    # violate `uq_workspace_members_user_workspace` (`models.py`).
+    await grant("admin")
     created = client.post(
         "/api/v1/service-accounts",
         json={

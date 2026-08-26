@@ -38,13 +38,17 @@ async def analyst(workspace_id, principal, grant) -> dict[str, str]:
     return _headers(principal.id, workspace_id)
 
 
-@pytest.fixture
-def unprivileged(workspace_id, principal) -> dict[str, str]:
+@pytest_asyncio.fixture
+async def unprivileged(workspace_id, principal, membership) -> dict[str, str]:
     """A caller in the workspace holding no role at all.
 
     Development identity grants no permissions (`app/api/authz.py`), so this is the refusal
-    of the route's own permission check rather than the absence of a workspace.
+    of the route's own permission check rather than the absence of a workspace. The
+    membership (W6b-11) lets the identity resolve; without it the refusal would be
+    `UNAUTHENTICATED` from the membership check and the route's permission would go
+    untested.
     """
+    await membership()
     return _headers(principal.id, workspace_id)
 
 

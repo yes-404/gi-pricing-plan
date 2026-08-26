@@ -7,7 +7,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.db.models import AuditEventRow
 from app.db.session import Database
@@ -38,15 +38,22 @@ async def headers(workspace_id, principal, grant) -> dict[str, str]:
     await grant("admin")
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
-@pytest.fixture
-def unprivileged_headers(workspace_id, principal) -> dict[str, str]:
+@pytest_asyncio.fixture
+async def unprivileged_headers(workspace_id, principal, membership) -> dict[str, str]:
+    """Authenticated, a member, and holding no role (W6b-11).
+
+    The refusal the tests expect must come from the role check. Without membership the
+    caller would be refused earlier with `UNAUTHENTICATED` and the permission
+    declarations would go untested.
+    """
+    await membership()
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -192,14 +199,20 @@ async def test_another_workspaces_account_is_404_not_403(
     """
     from sqlalchemy import select
 
-    from app.db.models import RoleAssignmentRow, RoleRow
-    from app.platform import rbac
+    from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
+    from app.platform import rbac, workspaces
     from model_schema import ScopeType, new_uuid7
 
     created = _create(client, headers).json()
 
     other_workspace = new_uuid7()
     async with database.unit_of_work() as session:
+        # The workspace row must exist for the membership FK (FR-PLAT-62), and the caller
+        # must *be* a member here (W6b-11): the `Workspace-Id` header is checked against
+        # the memberships the database holds, so a role without membership would now
+        # refuse with `WORKSPACE_SCOPE_DENIED` instead of answering from the second
+        # workspace. The caller is a member of both, so the header selects this one.
+        await workspaces.ensure_workspace(session, workspace_id=other_workspace)
         await rbac.seed_builtin_roles(session, other_workspace)
         role = (
             await session.execute(
@@ -217,9 +230,14 @@ async def test_another_workspaces_account_is_404_not_403(
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+        session.add(
+            WorkspaceMemberRow(user_id=principal.id, workspace_id=other_workspace)
+        )
 
-    other_headers = dict(headers)
-    other_headers[DEV_WORKSPACE_HEADER] = str(other_workspace)
+    other_headers = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(other_workspace),
+    }
     response = client.post(
         f"/api/v1/service-accounts/{created['account']['id']}/rotate", headers=other_headers
     )
@@ -246,3 +264,4 @@ def test_creating_a_service_account_needs_the_admin_permission(
         headers=unprivileged_headers,
     )
     assert response.status_code == 403
+    assert response.json()["code"] == "PERMISSION_DENIED"

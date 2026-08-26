@@ -91,10 +91,21 @@ async def reader(workspace_id, grant) -> dict[str, str]:
     return _headers(reader_id, workspace_id)
 
 
-@pytest.fixture
-def stranger(workspace_id) -> dict[str, str]:
-    """Authenticated into this workspace, holding nothing."""
-    return _headers(new_uuid7(), workspace_id)
+@pytest_asyncio.fixture
+async def stranger(workspace_id, database) -> dict[str, str]:
+    """Authenticated into this workspace, holding nothing.
+
+    The membership (W6b-11) lets the identity resolve, so the refusal these tests expect
+    comes from the role check rather than the membership check.
+    """
+    from app.db.models import WorkspaceMemberRow
+    from app.platform import workspaces
+
+    stranger_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        session.add(WorkspaceMemberRow(user_id=stranger_id, workspace_id=workspace_id))
+    return _headers(stranger_id, workspace_id)
 
 
 def _run[T](work: Callable[[Database], Awaitable[T]]) -> T:

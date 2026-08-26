@@ -207,6 +207,9 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
             seed += ["--rows", str(rows)]
         run(seed, step="seed freMTPL2 through the real Job path", env=env)
 
+    # The record the seed wrote is the membership the login resolves to (FR-PLAT-58).
+    # Read it here — after the seed, and in `--skip-seed` runs as the proof the
+    # workspace this run reuses was seeded at all.
     record = read_seed_record()
     api = [
         "uv", "run", "uvicorn", "app.main:create_app", "--factory",
@@ -256,6 +259,8 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
                 "  That page is derived from this checkout — the specs' view tables\n"
                 "  against the router, the published contract, and the roadmap. It says\n"
                 "  what is worth clicking and, more usefully, what is not built yet.\n\n"
+                f"  The seeded membership that answers the login (FR-PLAT-58) is analyst\n"
+                f"  {record['analyst_id']} in workspace {record['workspace_id']}.\n\n"
                 "  Ctrl-C to stop everything this command started.\n",
                 flush=True,
             )

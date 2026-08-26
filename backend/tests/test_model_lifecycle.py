@@ -30,6 +30,7 @@ from app.db.models import (
     ModelRow,
     RoleAssignmentRow,
     RoleRow,
+    WorkspaceMemberRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
@@ -57,8 +58,17 @@ async def _grant_role(
     The `grant` fixture defaults to the test principal; these tests need a *second* one,
     because separation of duties is the rule most of them are about and a suite that only
     ever has one identity cannot exercise it.
+
+    The membership row (W6b-11) is the other half of the same rule as the `grant`
+    fixture's: the dev caller resolves through the memberships the database holds, so a
+    principal granted a role but not a membership is refused before any permission check
+    runs. Idempotent — a caller may be granted two roles across two calls.
     """
     async with database.unit_of_work() as session:
+        # The workspace row must exist for the membership FK (FR-PLAT-62).
+        from app.platform import workspaces
+
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -76,6 +86,18 @@ async def _grant_role(
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+        existing = (
+            await session.execute(
+                select(WorkspaceMemberRow).where(
+                    WorkspaceMemberRow.user_id == principal_id,
+                    WorkspaceMemberRow.workspace_id == workspace_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            session.add(
+                WorkspaceMemberRow(user_id=principal_id, workspace_id=workspace_id)
+            )
 
 
 async def _principal_with(

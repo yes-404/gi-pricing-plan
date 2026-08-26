@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.main import create_app
 from app.observability.metrics import REGISTRY
@@ -48,17 +48,24 @@ def test_metrics_are_exposed_in_prometheus_format(client: TestClient) -> None:
 
 
 @pytest.mark.req("FR-PLAT-52")
-def test_the_route_label_is_the_template_not_the_path(client: TestClient) -> None:
+async def test_the_route_label_is_the_template_not_the_path(
+    client: TestClient, principal, workspace_id, membership
+) -> None:
     """The one property that decides whether this endpoint is safe to run.
 
     Labelling by resolved path creates a Prometheus time series per job id, and an instance
     that has seen a million jobs holds a million series for one counter. The failure is
     silent — the counter keeps working while the monitoring system runs out of memory — so
     it has to be asserted rather than reviewed.
+
+    The caller holds a membership but no role (W6b-11), so each request is refused at the
+    permission check — and the refusal still records against the route template, which is
+    exactly the property this test pins.
     """
+    await membership()
     headers = {
-        DEV_PRINCIPAL_HEADER: str(new_uuid7()),
-        DEV_WORKSPACE_HEADER: str(new_uuid7()),
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(workspace_id),
     }
     route = "/api/v1/jobs/{job_id}"
 
