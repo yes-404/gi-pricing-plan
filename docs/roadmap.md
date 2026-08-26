@@ -900,7 +900,7 @@ inside `DatasetRow`, `a23e16b` (W32-2) adds to `ValidationRuleRow`. `JobRow` spa
 all.** Non-regression is therefore evidenced by the change set, not by inspection alone.
 **Re-checked after `60f6e46`:** W32-7 adds a `workspaces` table and touches `db/models.py`,
 `deps.py`, `me.py`, `responses.py`, `errors.py` and `main.py` — none of the four mechanisms
-above — so the finding stands at the closing SHA and not merely at `c024f3e`.
+above — so the finding stands at the last feature SHA and not merely at `c024f3e`. The closing commit is `e2ae7c6` (#165).
 
 #### Two findings from that verification — both pre-date W32, both booked forward
 
