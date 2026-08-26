@@ -35,14 +35,17 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
+from app.platform import modelling as modelling_service
 from app.platform import profiles as profile_service
 from app.platform import validation as validation_service
 from model_schema import (
+    DatasetLineage,
     DatasetSplit,
     DatasetStatus,
     DatasetVersion,
     Job,
     JobKind,
+    LineageDependsOn,
     OneWaySummary,
     OverallOutcome,
     Profile,
@@ -374,18 +377,37 @@ async def lineage(
     caller: ReadDatasets,
     database: DatabaseDep,
     direction: Annotated[str, Query(pattern="^(up|down|both)$")] = "both",
-) -> dict[str, Any]:
-    """FR-DATA-35."""
+) -> DatasetLineage:
+    """FR-DATA-35, shaped by `01` §4.9.
+
+    A direction filter empties the arm it excludes rather than omitting it: `up`
+    returns `depends_on_this` with four empty arms, `down` returns `built_from: null`
+    (`01` §4.9). The response is assembled here, where the modules meet (DEP-1): the
+    DATA service supplies `built_from` and `derived_versions`; the models arm comes
+    from the modelling module, which owns the table.
+    """
     async with database.session() as session:
         await _scoped(session, version_id, caller)
         graph = await dataset_service.lineage_of(
             session, workspace_id=caller.workspace_id, version_id=version_id
         )
-    if direction == "up":
-        return {key: value for key, value in graph.items() if key != "descendants"}
-    if direction == "down":
-        return {key: value for key, value in graph.items() if key != "ancestors"}
-    return graph
+        if direction == "up":
+            return graph.model_copy(update={"depends_on_this": LineageDependsOn()})
+        models = await modelling_service.models_referencing_version(
+            session, workspace_id=caller.workspace_id, dataset_version_id=version_id
+        )
+        depends = graph.depends_on_this
+        return graph.model_copy(
+            update={
+                "depends_on_this": LineageDependsOn(
+                    derived_versions=depends.derived_versions,
+                    models=models,
+                    rating_versions=depends.rating_versions,
+                    monitoring_baselines=depends.monitoring_baselines,
+                ),
+                "built_from": None if direction == "down" else graph.built_from,
+            }
+        )
 
 
 @router.get(

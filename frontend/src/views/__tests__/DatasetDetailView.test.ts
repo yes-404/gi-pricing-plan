@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DatasetDetailView from "../DatasetDetailView.vue";
 
+// happy-dom's canvas is null, so a real VChart would leak unhandled zrender rejections
+// that fail the run even though every test passes — the mock all chart tests use.
+vi.mock("vue-echarts", () => ({
+  default: { template: "<div data-testid=\"chart\" />", props: ["option"] },
+}));
+
 const DATASET = {
   id: "11111111-1111-4111-8111-111111111111",
   workspace_id: "22222222-2222-4222-8222-222222222222",
@@ -48,6 +54,16 @@ function stub(putStatus = 200, dataset: Record<string, unknown> = DATASET): void
         return new Response(JSON.stringify(body), {
           status: putStatus, headers: { "Content-Type": "application/json" },
         });
+      }
+      if (url.includes("/lineage")) {
+        return new Response(JSON.stringify({
+          version_id: "a",
+          built_from: null,
+          depends_on_this: {
+            derived_versions: [], models: [],
+            rating_versions: [], monitoring_baselines: [],
+          },
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
       }
       const body = url.includes("/versions") ? VERSIONS : dataset;
       return new Response(JSON.stringify(body), {
@@ -145,5 +161,23 @@ describe("the dataset detail view", () => {
     stub(200, { ...DATASET, validation_rule_set_id: null });
     render(DatasetDetailView, { props, ...mounted });
     expect(await screen.findByText("No rule set")).toBeInTheDocument();
+  });
+
+  it("shows the lineage graph for the newest version", async () => {
+    render(DatasetDetailView, { props, ...mounted });
+    expect(
+      await screen.findByRole("table", { name: "Lineage" }),
+    ).toHaveTextContent("v2");
+  });
+
+  it("hides the lineage section when the dataset has no versions", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ items: [], next_cursor: null }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      }),
+    ));
+    render(DatasetDetailView, { props, ...mounted });
+    await screen.findByRole("table", { name: "Versions" });
+    expect(screen.queryByRole("table", { name: "Lineage" })).toBeNull();
   });
 });

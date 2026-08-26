@@ -2467,6 +2467,37 @@
         "title": "DatasetKind",
         "type": "string"
       },
+      "DatasetLineage": {
+        "additionalProperties": false,
+        "description": "The lineage graph for one Dataset Version (`01` §4.9, FR-DATA-35).",
+        "properties": {
+          "built_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LineageBuiltFrom"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "depends_on_this": {
+            "$ref": "#/components/schemas/LineageDependsOn"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "built_from",
+          "depends_on_this"
+        ],
+        "title": "DatasetLineage",
+        "type": "object"
+      },
       "DatasetSplit": {
         "additionalProperties": false,
         "description": "A named train/test split, recorded on the parent version (`01` FR-DATA-36).\n\nOn the **parent**, not the parts, so that \"trained on the same split\" is one artifact\ntwo models cite rather than two derivations believed to match. `parts` maps a part name\nto the Derived Dataset Version holding its rows.\n\nAt least two parts, always: a one-part split is a filter, and recording it as a split\nwould let a model claim a holdout it never had.",
@@ -6055,6 +6086,116 @@
           "actual"
         ],
         "title": "LiftBin",
+        "type": "object"
+      },
+      "LineageBuiltFrom": {
+        "additionalProperties": false,
+        "description": "The version this one was built from, and the operation that built it (`01` §4.9).\n\n`None` on the wire when the version has no parent — a version an Ingestion Run\ncreated from a Source, and any `direction=down` response (§4.9's invariants).\n`parameters` is the derivation's parameters, read back from the parent's\n`derived_from[\"params\"]`.",
+        "properties": {
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "parent_version_id": {
+            "format": "uuid",
+            "title": "Parent Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent_version_id",
+          "operation"
+        ],
+        "title": "LineageBuiltFrom",
+        "type": "object"
+      },
+      "LineageDependsOn": {
+        "additionalProperties": false,
+        "description": "What depends on this version (`01` §4.9).\n\n`rating_versions` and `monitoring_baselines` are declared and always empty — W9's\nand W27's arms, kept on the wire so a blast radius that silently omits two of the\nthree downstream kinds cannot read as a blast radius of one (FR-DATA-35).",
+        "properties": {
+          "derived_versions": {
+            "items": {
+              "$ref": "#/components/schemas/LineageDerivedVersion"
+            },
+            "title": "Derived Versions",
+            "type": "array"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/LineageModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "monitoring_baselines": {
+            "items": {},
+            "title": "Monitoring Baselines",
+            "type": "array"
+          },
+          "rating_versions": {
+            "items": {},
+            "title": "Rating Versions",
+            "type": "array"
+          }
+        },
+        "title": "LineageDependsOn",
+        "type": "object"
+      },
+      "LineageDerivedVersion": {
+        "additionalProperties": false,
+        "description": "A version derived from this one (`01` §4.9's `derived_versions` arm).",
+        "properties": {
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "version",
+          "operation"
+        ],
+        "title": "LineageDerivedVersion",
+        "type": "object"
+      },
+      "LineageModel": {
+        "additionalProperties": false,
+        "description": "A Model fitted on this version (`01` §4.9's `models` arm).\n\nAny status: a draft Model still references the version it was fitted on, and the\nblast radius FR-DATA-35 exists to compute (FR-DATA-23) does not stop at approval.",
+        "properties": {
+          "model_id": {
+            "format": "uuid",
+            "title": "Model Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "slug",
+          "status"
+        ],
+        "title": "LineageModel",
         "type": "object"
       },
       "LossTreatment": {
@@ -15474,7 +15615,7 @@
     },
     "/api/v1/dataset-versions/{version_id}/lineage": {
       "get": {
-        "description": "FR-DATA-35.",
+        "description": "FR-DATA-35, shaped by `01` §4.9.\n\nA direction filter empties the arm it excludes rather than omitting it: `up`\nreturns `depends_on_this` with four empty arms, `down` returns `built_from: null`\n(`01` §4.9). The response is assembled here, where the modules meet (DEP-1): the\nDATA service supplies `built_from` and `derived_versions`; the models arm comes\nfrom the modelling module, which owns the table.",
         "operationId": "lineage_api_v1_dataset_versions__version_id__lineage_get",
         "parameters": [
           {
@@ -15522,9 +15663,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Lineage Api V1 Dataset Versions  Version Id  Lineage Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DatasetLineage"
                 }
               }
             },

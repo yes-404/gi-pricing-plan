@@ -60,8 +60,10 @@ export function putDictionary(
   });
 }
 
-export function getLineage(versionId: string): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>(`/dataset-versions/${versionId}/lineage`);
+export type DatasetLineage = components["schemas"]["DatasetLineage"];
+
+export function getLineage(versionId: string): Promise<DatasetLineage> {
+  return request<DatasetLineage>(`/dataset-versions/${versionId}/lineage`);
 }
 
 /**

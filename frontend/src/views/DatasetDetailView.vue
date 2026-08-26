@@ -5,19 +5,23 @@ import { RouterLink } from "vue-router";
 import {
   forbidsModelling,
   getDataset,
+  getLineage,
   listVersions,
   putDictionary,
   type DataDictionaryEntry,
   type Dataset,
+  type DatasetLineage,
 } from "@/api/datasets";
 import { ProblemError } from "@/api/problem";
 import type { DatasetVersion } from "@/api/versions";
+import LineageGraph from "@/components/LineageGraph.vue";
 import StatusBadge from "@/components/StatusBadge.vue";
 
 const props = defineProps<{ slug: string }>();
 
 const dataset = ref<Dataset | null>(null);
 const versions = ref<DatasetVersion[]>([]);
+const lineage = ref<DatasetLineage | null>(null);
 const nextCursor = ref<string | null>(null);
 const loading = ref(true);
 const problem = ref<ProblemError | null>(null);
@@ -40,6 +44,13 @@ async function load(cursor?: string): Promise<void> {
     const page = await listVersions(props.slug, { cursor });
     versions.value = cursor ? [...versions.value, ...page.items] : page.items;
     nextCursor.value = page.next_cursor ?? null;
+    if (!cursor && page.items.length > 0) {
+      try {
+        lineage.value = await getLineage(page.items[0]!.id);
+      } catch {
+        lineage.value = null;
+      }
+    }
   } catch (error) {
     if (error instanceof ProblemError) problem.value = error;
     else throw error;
@@ -225,6 +236,16 @@ onMounted(() => void load());
         >
           Load more
         </button>
+      </section>
+
+      <section
+        v-if="lineage"
+        class="mt-8"
+      >
+        <LineageGraph
+          :lineage="lineage"
+          :version="versions[0]!.version"
+        />
       </section>
 
       <section class="mt-8">
