@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import DatasetDetailView from "../DatasetDetailView.vue";
 
+// happy-dom's canvas is null, so a real VChart would leak unhandled zrender rejections
+// that fail the run even though every test passes — the mock all chart tests use.
+vi.mock("vue-echarts", () => ({
+  default: { template: "<div data-testid=\"chart\" />", props: ["option"] },
+}));
+
 const DATASET = {
   id: "11111111-1111-4111-8111-111111111111",
   workspace_id: "22222222-2222-4222-8222-222222222222",
