@@ -327,9 +327,14 @@ async def test_lineage_answers_both_directions(
             session, workspace_id=workspace_id, version_id=parent_id
         )
 
-    assert upstream["built_from"]["parent_version_id"] == str(parent_id)
-    assert [d["version_id"] for d in downstream["depends_on_this"]] == [str(child_id)]
-    assert downstream["built_from"]["parent_version_id"] is None
+    assert upstream.built_from is not None
+    assert upstream.built_from.parent_version_id == parent_id
+    assert upstream.built_from.operation == "split"
+    assert upstream.built_from.parameters == {"part": "train", "seed": 1}
+    assert upstream.depends_on_this.derived_versions == []
+    assert [d.version_id for d in downstream.depends_on_this.derived_versions] == [child_id]
+    assert [d.operation for d in downstream.depends_on_this.derived_versions] == ["split"]
+    assert downstream.built_from is None
 
 
 # -- FR-DATA-37/38/39: access, archival, erasure --------------------------------------

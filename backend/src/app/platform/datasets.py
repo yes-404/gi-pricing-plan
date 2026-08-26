@@ -41,9 +41,13 @@ from model_schema import (
     DataDictionaryEntry,
     Dataset,
     DatasetKind,
+    DatasetLineage,
     DatasetSplit,
     DatasetStatus,
     JobSource,
+    LineageBuiltFrom,
+    LineageDependsOn,
+    LineageDerivedVersion,
     Permission,
     Principal,
     RecordGrain,
@@ -850,13 +854,19 @@ UNMATERIALISED_OPERATIONS: frozenset[str] = DERIVED_OPERATIONS - {"split"}
 
 async def lineage_of(
     session: AsyncSession, *, workspace_id: UUID, version_id: UUID
-) -> dict[str, Any]:
+) -> DatasetLineage:
     """What this was built from, and what was built from it (FR-DATA-35).
 
     Both directions, because they answer different questions. "What was this built from?"
     defends a model; "what depends on this?" is what someone asks before archiving a
     version, and getting it wrong means discovering the dependency when a rating version
     stops resolving.
+
+    Returns the `01` §4.9 shape with the arms this service owns populated — `built_from`
+    and `derived_versions`. The `models` arm is the modelling module's and is filled by
+    the router, where the modules meet (DEP-1); `rating_versions` and
+    `monitoring_baselines` are W9's and W27's and stay empty. A version with no parent
+    has `built_from: null` in every direction (§4.9's invariants).
     """
     row = await load_version(session, workspace_id=workspace_id, version_id=version_id)
 
@@ -870,21 +880,28 @@ async def lineage_of(
         )
     ).scalars().all()
 
+    built_from: LineageBuiltFrom | None = None
     parent_id = (row.derived_from or {}).get("parent_version_id")
-    return {
-        "version_id": str(version_id),
-        "built_from": {
-            "parent_version_id": parent_id,
-            "operation": (row.derived_from or {}).get("operation"),
-            "ingestion_run_id": str(row.ingestion_run_id) if row.ingestion_run_id else None,
-            "source_id": str(row.source_id) if row.source_id else None,
-        },
-        "depends_on_this": [
-            {"version_id": str(c.id), "version": c.version,
-             "operation": (c.derived_from or {}).get("operation")}
-            for c in children
-        ],
-    }
+    if parent_id is not None:
+        built_from = LineageBuiltFrom(
+            parent_version_id=parent_id,
+            operation=(row.derived_from or {}).get("operation"),
+            parameters=(row.derived_from or {}).get("params") or {},
+        )
+    return DatasetLineage(
+        version_id=version_id,
+        built_from=built_from,
+        depends_on_this=LineageDependsOn(
+            derived_versions=[
+                LineageDerivedVersion(
+                    version_id=c.id,
+                    version=c.version,
+                    operation=(c.derived_from or {}).get("operation"),
+                )
+                for c in children
+            ]
+        ),
+    )
 
 
 async def purge_subject(
