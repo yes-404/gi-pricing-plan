@@ -93,6 +93,18 @@ def test_non_prod_without_tls_starts() -> None:
     assert load_settings(environment=Environment.LOCAL).tls_terminated is False
 
 
+def test_the_oidc_client_id_is_configured_like_its_siblings() -> None:
+    settings = load_settings(
+        environment=Environment.LOCAL,
+        oidc_client_id="gi-pricing-frontend",
+    )
+    assert settings.oidc_client_id == "gi-pricing-frontend"
+
+
+def test_the_oidc_client_id_defaults_empty_like_the_rest_of_the_trio() -> None:
+    assert load_settings(environment=Environment.LOCAL).oidc_client_id == ""
+
+
 @pytest.mark.req("FR-OVR-1")
 def test_settings_are_frozen() -> None:
     """Configuration must not drift at runtime — a mutated setting is unauditable."""

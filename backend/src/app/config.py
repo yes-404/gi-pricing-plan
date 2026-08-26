@@ -140,6 +140,10 @@ class Settings(BaseSettings):
     oidc_issuer: str = ""
     oidc_audience: str = ""
     oidc_jwks_url: str = ""
+    # The browser flow's client id (FR-PLAT-66). The API's own verification does not
+    # need it, so it is not part of `oidc_configured` — joining it there would refuse
+    # an API-only deployment over a value only the SPA uses.
+    oidc_client_id: str = ""
     #: How long a fetched JWKS is trusted. Short enough that a rotated signing key is
     #: picked up without a restart; long enough that the IdP is not fetched per request.
     oidc_jwks_ttl_s: Annotated[int, Field(ge=30, le=86400)] = 300
