@@ -180,7 +180,12 @@ onMounted(() => void load());
           class="border-b border-slate-100"
         >
           <td class="py-3">
-            <span class="font-medium">{{ dataset.name || dataset.slug }}</span>
+            <RouterLink
+              :to="`/data/${dataset.slug}`"
+              class="font-medium text-sky-700 hover:underline"
+            >
+              {{ dataset.name || dataset.slug }}
+            </RouterLink>
             <span class="ml-2 font-mono text-xs text-slate-500">{{ dataset.slug }}</span>
           </td>
           <td class="py-3 text-slate-600">

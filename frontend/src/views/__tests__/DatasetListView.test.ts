@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cellUnder } from "@/test-tables";
@@ -55,7 +55,11 @@ function disagreeing() {
 
 async function table(body: unknown = SEEDED): Promise<HTMLElement> {
   stubFetch(200, body);
-  render(DatasetListView);
+  render(DatasetListView, {
+    global: {
+      stubs: { RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' } },
+    },
+  });
   await screen.findByRole("table");
   return screen.getByRole("table");
 }
@@ -89,6 +93,17 @@ describe("the dataset list", () => {
     expect(cellUnder(t, /freMTPL2/, "Name")).toHaveTextContent("fremtpl2-a78676");
     expect(cellUnder(t, /freMTPL2/, "Currency")).toHaveTextContent("EUR");
     expect(cellUnder(t, /freMTPL2/, "Latest version")).toHaveTextContent("v2");
+  });
+
+  it("links a dataset name to its detail route", async () => {
+    // FR-OVR-22: the list is the only way into the /data/:slug subtree, so the
+    // name must be a link. The slug stays visible beside it, unchanged.
+    const t = await table();
+
+    const name = cellUnder(t, /freMTPL2/, "Name");
+    const link = within(name).getByRole("link", { name: /freMTPL2 — French motor TPL/ });
+    expect(link).toHaveAttribute("href", "/data/fremtpl2-a78676");
+    expect(within(name).getByText("fremtpl2-a78676")).toBeInTheDocument();
   });
 
   it("shows the trace id when the request fails", async () => {
