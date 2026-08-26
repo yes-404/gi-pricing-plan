@@ -4,8 +4,10 @@
     uv run python scripts/demo.py
 
 It starts the compose stack, migrates, fetches and seeds freMTPL2 through the platform's
-own Job path, then runs the API and the frontend with a development identity for the
-seeded workspace — and prints the URL. `Ctrl-C` stops everything it started.
+own Job path, then runs the API and the frontend — and prints the URL. The browser signs
+in through the local provider (`deploy/README.md` has the compose profile and the OIDC
+variables; this script does not start that provider), and the seeded membership answers
+the login (FR-PLAT-58). `Ctrl-C` stops everything it started.
 
 **One switch, and it is the refusal that already exists.** Every part of this hangs off
 `dev_auth_enabled` (FR-PLAT-1), which is `False` by default and *raises at startup* in a
@@ -205,6 +207,9 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
             seed += ["--rows", str(rows)]
         run(seed, step="seed freMTPL2 through the real Job path", env=env)
 
+    # The record the seed wrote is the membership the login resolves to (FR-PLAT-58).
+    # Read it here — after the seed, and in `--skip-seed` runs as the proof the
+    # workspace this run reuses was seeded at all.
     record = read_seed_record()
     api = [
         "uv", "run", "uvicorn", "app.main:create_app", "--factory",
@@ -224,12 +229,6 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
         # running perfectly.
         "--host", "127.0.0.1",
     ]
-    frontend_env = {
-        **env,
-        "GIP_DEV_PRINCIPAL_ID": record["analyst_id"],
-        "GIP_DEV_WORKSPACE_ID": record["workspace_id"],
-    }
-
     if frontend and shutil.which("pnpm") is None:
         print(
             "\n   pnpm is not on PATH — starting the API only. "
@@ -249,7 +248,7 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
             return 0
         require_free(FRONTEND_PORT, step="the frontend")
         with background(
-            frontend_command, step=f"frontend on :{FRONTEND_PORT}", env=frontend_env
+            frontend_command, step=f"frontend on :{FRONTEND_PORT}", env=env
         ) as frontend_process:
             _still_running(frontend_process, step="the frontend")
             wait_for(f"http://localhost:{FRONTEND_PORT}/", step="frontend")
@@ -260,6 +259,8 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
                 "  That page is derived from this checkout — the specs' view tables\n"
                 "  against the router, the published contract, and the roadmap. It says\n"
                 "  what is worth clicking and, more usefully, what is not built yet.\n\n"
+                f"  The seeded membership that answers the login (FR-PLAT-58) is analyst\n"
+                f"  {record['analyst_id']} in workspace {record['workspace_id']}.\n\n"
                 "  Ctrl-C to stop everything this command started.\n",
                 flush=True,
             )

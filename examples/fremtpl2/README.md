@@ -70,16 +70,24 @@ generated.
 
 ## Opening the frontend against the seeded workspace
 
-The seed prints the two ids the dev server needs. The SPA sends no credential of its own —
-browser authentication is unspecified and open as OQ-PLAT-6 — so the Vite proxy injects a
-**development identity**, and without these two variables the API answers 401 to
-everything:
+The seed creates the workspace and its memberships, and the demo sign-in resolves to
+them: the local provider's realm user *is* the seeded analyst (`FR-PLAT-58`), so a real
+login lands in the seeded workspace. Nothing needs to be exported — the dev proxy
+injects no identity, the workspace travels as the verified `Workspace-Id` header (`07`
+FR-PLAT-65), and the selector in the app makes the choice.
+
+The provider is the extra service behind the compose `auth` profile, and the API must be
+pointed at it — `deploy/README.md` has both:
 
 ```bash
-uv run python examples/fremtpl2/seed.py     # prints both export lines
-export GIP_DEV_PRINCIPAL_ID=… GIP_DEV_WORKSPACE_ID=…
+docker compose -f deploy/docker-compose.yml --profile auth up -d --wait
+# then the GIP_OIDC_* exports from deploy/README.md, once per shell
+uv run python examples/fremtpl2/seed.py     # prints the workspace and the demo users
+GIP_DEV_AUTH_ENABLED=true uv run uvicorn app.main:create_app --factory --app-dir backend/src --port 8000
 pnpm --dir frontend dev                     # http://localhost:5173/data
 ```
 
-The headers exist in the dev server only; they are not in the production bundle and cannot
-be set from the browser. `.claude/skills/vue-frontend` has the reasoning and the check.
+Sign in at the provider as **analyst** / **analyst**. The actuary has no realm user —
+one demo login is what `FR-PLAT-58` asks for. `scripts/demo.py` runs fetch, seed and both
+servers with one command; it does not start the provider or set the OIDC variables, so
+`--profile auth` and the exports belong to the manual flow above.

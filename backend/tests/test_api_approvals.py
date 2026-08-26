@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.db.models import (
     CustomMetricRow,
@@ -69,9 +69,15 @@ def client(api_settings: Settings) -> TestClient:
 
 
 def _headers(principal_id, workspace_id) -> dict[str, str]:
+    """Headers for a caller granted in `workspace_id` (W6b-11).
+
+    `Workspace-Id` names a membership — `grant` seeds one — so the selection is checked
+    and accepted. The old `x-dev-workspace-id` pin, which bypassed the membership check,
+    is gone.
+    """
     return {
         DEV_PRINCIPAL_HEADER: str(principal_id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -188,7 +194,9 @@ async def _create_artifact(
             raise AssertionError(f"no factory for {artifact_type!r}")
 
 
-async def _allow_the_type(client: TestClient, workspace_id, grant, artifact_type: str) -> None:
+async def _allow_the_type(
+    client: TestClient, workspace_id, grant, database, artifact_type: str
+) -> None:
     """Give `artifact_type` a policy entry where `06` §4.2's defaults have none.
 
     Not a workaround. `submit` refuses an unpolicied type *before* it resolves anything, on
@@ -196,9 +204,20 @@ async def _allow_the_type(client: TestClient, workspace_id, grant, artifact_type
     reach FR-GOV-36's check at all — and
     `test_the_missing_policy_is_answered_before_the_missing_artifact` is what pins that
     order. Reaching the check means saying so first.
+
+    The policy reader is a member but holds no role (W6b-11): approval-policy needs only
+    authentication, so without membership the read would be refused with `UNAUTHENTICATED`
+    before the handler ran.
     """
+    from app.db.models import WorkspaceMemberRow
+    from app.platform import workspaces
+
+    reader = new_uuid7()
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        session.add(WorkspaceMemberRow(user_id=reader, workspace_id=workspace_id))
     policy = client.get(
-        "/api/v1/approval-policy", headers=_headers(new_uuid7(), workspace_id)
+        "/api/v1/approval-policy", headers=_headers(reader, workspace_id)
     ).json()
     if any(entry["artifact_type"] == artifact_type for entry in policy["policies"]):
         return
@@ -340,22 +359,31 @@ def test_an_approver_approves(
 
 
 @pytest.mark.req("FR-GOV-2")
-def test_deciding_requires_the_permission(
-    client: TestClient, submitter_headers
+async def test_deciding_requires_the_permission(
+    client: TestClient, submitter_headers, workspace_id, membership
 ) -> None:
-    """Negative: an analyst may submit but not decide."""
+    """Negative: an analyst may submit but not decide.
+
+    The decider holds a membership but no role (W6b-11), so the refusal must come from
+    the role check — asserted by code, not just by status.
+    """
     created = client.post(
         "/api/v1/approval-requests",
         json={"artifact_ref": MODEL, "change_summary": "Refit."},
         headers=submitter_headers,
     ).json()
     other = new_uuid7()
+    await membership(principal_id=other)
     response = client.post(
         f"/api/v1/approval-requests/{created['id']}/decide",
         json={"decision": "approve"},
-        headers=_headers(other, submitter_headers[DEV_WORKSPACE_HEADER]),
+        headers={
+            DEV_PRINCIPAL_HEADER: str(other),
+            "Workspace-Id": str(workspace_id),
+        },
     )
     assert response.status_code == 403
+    assert response.json()["code"] == "PERMISSION_DENIED"
 
 
 @pytest.mark.req("FR-GOV-15")
@@ -464,8 +492,8 @@ async def test_a_policy_that_disables_separation_of_duties_is_refused(
 
 
 @pytest.mark.req("FR-OVR-13")
-def test_another_workspaces_request_is_404(
-    client: TestClient, submitter_headers
+async def test_another_workspaces_request_is_404(
+    client: TestClient, submitter_headers, principal, database
 ) -> None:
     created = client.post(
         "/api/v1/approval-requests",
@@ -474,8 +502,19 @@ def test_another_workspaces_request_is_404(
     ).json()
     # The detail route needs only authentication, so the caller reaches the handler and
     # the 404 is about the workspace scope rather than about being refused a permission.
-    other = _headers(submitter_headers[DEV_PRINCIPAL_HEADER], new_uuid7())
-    response = client.get(f"/api/v1/approval-requests/{created['id']}", headers=other)
+    # The submitter must *be* a member of the other workspace (W6b-11): the `Workspace-Id`
+    # header is checked against the memberships the database holds, never trusted.
+    from app.db.models import WorkspaceMemberRow
+    from app.platform import workspaces
+
+    other = new_uuid7()
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=other)
+        session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+    response = client.get(
+        f"/api/v1/approval-requests/{created['id']}",
+        headers=_headers(principal.id, other),
+    )
     assert response.status_code == 404
     assert response.json()["code"] == "NOT_FOUND"
 
@@ -510,7 +549,7 @@ def test_a_reference_to_a_version_that_was_never_created_is_refused(
 @pytest.mark.req("FR-GOV-36")
 @pytest.mark.parametrize("artifact_type", RESOLVABLE)
 async def test_every_resolvable_type_refuses_a_version_that_does_not_exist(
-    client: TestClient, workspace_id, grant, submitter_headers, artifact_type: str
+    client: TestClient, workspace_id, grant, database, submitter_headers, artifact_type: str
 ) -> None:
     """Negative, once per artifact type a module in this build can look up.
 
@@ -519,7 +558,7 @@ async def test_every_resolvable_type_refuses_a_version_that_does_not_exist(
     refused is a type whose entry in the fan-out is missing or wrong, and the failure names
     which one.
     """
-    await _allow_the_type(client, workspace_id, grant, artifact_type)
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
     slug = f"{artifact_type.replace('_', '-')}-never-created"
     response = client.post(
         "/api/v1/approval-requests",
@@ -545,7 +584,7 @@ async def test_every_resolvable_type_still_accepts_the_version_that_exists(
     A resolver that refused everything would pass the six tests above and break the
     platform. This is the same six references, with the row present.
     """
-    await _allow_the_type(client, workspace_id, grant, artifact_type)
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
     slug = f"{artifact_type.replace('_', '-')}-exists"
     await _create_artifact(database, workspace_id, artifact_type, slug, 3)
     ref = f"{artifact_type}:{slug}@3"

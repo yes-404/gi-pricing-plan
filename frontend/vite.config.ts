@@ -40,32 +40,14 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
-        // **Development identity, injected here rather than in the client.** The platform
-        // refuses an unauthenticated request (`07` §3.7), and the SPA sends no credential
-        // — so before this the browser got 401 on every request while every view and its
-        // tests passed. The tests stub `fetch`; nothing exercised the real transport.
-        //
-        // It belongs in the proxy because a browser must never be able to choose its own
-        // workspace: putting these headers in `client.ts` would ship a credential the user
-        // can edit in devtools, and the code path would then exist in the production
-        // bundle. Here it lives in the dev server only, and the deployed build has no way
-        // to reach it. Real OIDC in the SPA landed with W6b-10 — the browser authenticates
-        // through the real flow. This proxy injects only the workspace pin, which goes
-        // when W6b-11 lands the selector (removal never precedes replacement).
-        configure(proxy) {
-          const workspace = process.env.GIP_DEV_WORKSPACE_ID;
-          if (!workspace) {
-            console.warn(
-              "\n  GIP_DEV_WORKSPACE_ID is unset — the API will"
-              + "\n  answer 401 to everything. `uv run python examples/fremtpl2/seed.py`"
-              + "\n  prints it.\n",
-            );
-            return;
-          }
-          proxy.on("proxyReq", (request) => {
-            request.setHeader("x-dev-workspace-id", workspace);
-          });
-        },
+        // **The dev proxy injects no development identity.** `x-dev-principal-id` went
+        // with W6b-10 when the browser's real authorization-code-with-PKCE flow landed,
+        // and `x-dev-workspace-id` went with W6b-11 (2026-08-26) when the selector
+        // landed — removal never precedes replacement. The workspace now travels as the
+        // verified `Workspace-Id` header (07 FR-PLAT-65), chosen in the UI, and the
+        // browser authenticates through the real flow. A browser must never be able to
+        // choose its own principal; with nothing injected here, the production bundle
+        // carries no code path a devtools edit could reach.
       },
     },
   },

@@ -11,7 +11,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import ConfigInvalidError, Environment, Settings, load_settings
 from app.db.session import Database
 from app.main import create_app
@@ -52,15 +52,22 @@ async def caller_headers(workspace_id, principal, grant) -> dict[str, str]:
     await grant("analyst")
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
-@pytest.fixture
-def unprivileged_headers(workspace_id, principal) -> dict[str, str]:
+@pytest_asyncio.fixture
+async def unprivileged_headers(workspace_id, principal, membership) -> dict[str, str]:
+    """Authenticated, a member, and holding no role (W6b-11).
+
+    The refusal the tests expect must come from the role check. Without membership the
+    caller would be refused earlier with `UNAUTHENTICATED` and the permission
+    declarations would go untested.
+    """
+    await membership()
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -116,10 +123,16 @@ def test_development_identity_is_refused_outside_local(environment: Environment)
         )
 
 
-@pytest.mark.req("FR-PLAT-1")
-def test_incomplete_development_identity_is_refused(client: TestClient) -> None:
+@pytest.mark.req("FR-PLAT-4")
+def test_a_principal_without_membership_is_refused(client: TestClient) -> None:
+    """A dev principal with no membership is refused, not defaulted in (FR-PLAT-4).
+
+    W6b-11 removed `x-dev-workspace-id`: the dev caller now resolves exactly like a
+    bearer caller, and the no-membership branch of the selection is what refuses.
+    `403`, not `401` — the identity was accepted; the membership is what is missing.
+    """
     response = client.get("/api/v1/jobs", headers={DEV_PRINCIPAL_HEADER: str(new_uuid7())})
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json()["code"] == "UNAUTHENTICATED"
 
 
@@ -362,7 +375,7 @@ async def test_read_permission_does_not_confer_cancel(
     await grant("auditor", principal_id=other)
     auditor_headers = {
         DEV_PRINCIPAL_HEADER: str(other),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
     assert client.get("/api/v1/jobs", headers=auditor_headers).status_code == 200

@@ -159,17 +159,29 @@ def test_the_entrance_is_absent_where_development_identity_is(tmp_path: Path) ->
 
 
 @pytest.mark.req("FR-PLAT-53")
-def test_the_guide_is_served_where_the_demo_runs(tmp_path: Path) -> None:
-    from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
-    from model_schema import new_uuid7
+async def test_the_guide_is_served_where_the_demo_runs(
+    tmp_path: Path, principal, workspace_id, membership
+) -> None:
+    from backend.tests.conftest_db import test_database_url
+    from pydantic import SecretStr
 
-    settings = Settings(environment=Environment.LOCAL, version="test", dev_auth_enabled=True)
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    # The dev caller resolves through the memberships the database holds (W6b-11), so
+    # this client needs the test database, not the default DSN.
+    settings = Settings(
+        environment=Environment.LOCAL,
+        version="test",
+        dev_auth_enabled=True,
+        database_url=SecretStr(test_database_url()),
+    )
+    await membership()
     with TestClient(create_app(settings), raise_server_exceptions=False) as client:
         response = client.get(
             "/api/v1/demo/guide",
             headers={
-                DEV_PRINCIPAL_HEADER: str(new_uuid7()),
-                DEV_WORKSPACE_HEADER: str(new_uuid7()),
+                DEV_PRINCIPAL_HEADER: str(principal.id),
+                "Workspace-Id": str(workspace_id),
             },
         )
     assert response.status_code == 200, response.text

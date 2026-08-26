@@ -60,14 +60,24 @@ async def actuary(workspace_id, principal, grant) -> dict[str, str]:
     return _headers(principal.id, workspace_id)
 
 
-@pytest.fixture
-def stranger(workspace_id) -> dict[str, str]:
+@pytest_asyncio.fixture
+async def stranger(workspace_id, database) -> dict[str, str]:
     """Authenticated into this workspace, holding nothing.
 
     The list route's refusal has to be the permission answering rather than an empty page
     that happens to look the same, so the principal must be real and hold nothing at all.
+    The membership (W6b-11) lets the identity resolve: without it the refusal would come
+    from the membership check with `UNAUTHENTICATED`, and the route's own permission
+    declaration would go untested.
     """
-    return _headers(new_uuid7(), workspace_id)
+    from app.db.models import WorkspaceMemberRow
+    from app.platform import workspaces
+
+    stranger_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        session.add(WorkspaceMemberRow(user_id=stranger_id, workspace_id=workspace_id))
+    return _headers(stranger_id, workspace_id)
 
 
 def _run[T](work: Callable[[Database], Awaitable[T]]) -> T:

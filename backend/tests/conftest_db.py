@@ -88,11 +88,15 @@ async def blob_store() -> AsyncIterator[BlobStore]:
 
 @pytest_asyncio.fixture
 async def grant(database: Database, workspace_id: UUID, principal: Principal):
-    """Seed the built-in roles and grant one to the test principal.
+    """Seed the built-in roles, grant one to the test principal, and record membership.
 
     Route tests must grant explicitly, because development identity carries **no**
     permissions. Treating the dev principal as an administrator would make every route test
     pass without exercising a single permission check — coverage that is not coverage.
+
+    The membership row (W6b-11) is the other half of the same rule: the dev caller
+    resolves through the memberships the database holds, so a granted caller must also be
+    a member, or the permission checks this fixture exists to exercise never run.
 
         await grant("analyst")
     """
@@ -100,7 +104,7 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
     async def _grant(role_slug: str, *, principal_id: UUID | None = None) -> None:
         from sqlalchemy import select
 
-        from app.db.models import RoleAssignmentRow, RoleRow
+        from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
         from app.platform import rbac, validation_rules, workspaces
         from model_schema import ScopeType
 
@@ -132,8 +136,59 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
                     scope_type=ScopeType.WORKSPACE.value,
                 )
             )
+            # Idempotent: a test may seed its own membership rows first (FR-PLAT-63's
+            # two-workspace test does), and a duplicate insert would violate
+            # `uq_workspace_members_user_workspace` (`models.py`).
+            member = principal_id or principal.id
+            existing = (
+                await session.execute(
+                    select(WorkspaceMemberRow).where(
+                        WorkspaceMemberRow.user_id == member,
+                        WorkspaceMemberRow.workspace_id == workspace_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is None:
+                session.add(
+                    WorkspaceMemberRow(user_id=member, workspace_id=workspace_id)
+                )
 
     return _grant
+
+
+@pytest_asyncio.fixture
+async def membership(database: Database, workspace_id: UUID, principal: Principal):
+    """Seed a workspace membership without any role.
+
+    Refusal tests use this. A caller with no membership is refused before any permission
+    check runs — `UNAUTHENTICATED`, not `PERMISSION_DENIED` — so a refusal test that
+    wants the **role** check to be the refuser must seed the membership and leave the
+    role assignments empty (W6b-11).
+    """
+
+    async def _membership(*, principal_id: UUID | None = None) -> None:
+        from sqlalchemy import select
+
+        from app.db.models import WorkspaceMemberRow
+        from app.platform import workspaces
+
+        member = principal_id or principal.id
+        async with database.unit_of_work() as session:
+            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+            existing = (
+                await session.execute(
+                    select(WorkspaceMemberRow).where(
+                        WorkspaceMemberRow.user_id == member,
+                        WorkspaceMemberRow.workspace_id == workspace_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is None:
+                session.add(
+                    WorkspaceMemberRow(user_id=member, workspace_id=workspace_id)
+                )
+
+    return _membership
 
 
 @pytest.fixture

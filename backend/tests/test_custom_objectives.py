@@ -614,8 +614,8 @@ def test_every_custom_objective_route_is_in_the_published_contract() -> None:
 
 
 @pytest.mark.req("FR-MODEL-75")
-def test_deriving_without_model_fit_is_refused(
-    api_client: TestClient, workspace_id, principal
+async def test_deriving_without_model_fit_is_refused(
+    api_client: TestClient, workspace_id, principal, grant
 ) -> None:
     """The RBAC half, said plainly.
 
@@ -626,7 +626,14 @@ def test_deriving_without_model_fit_is_refused(
     FR-MODEL-75, which is about *what this platform will and will not derive*, and observed
     only that an unauthorised caller is refused. The requirement's actual subject is the
     test below.
+
+    **W6b-11:** the dev caller now resolves through the memberships the database holds,
+    so a caller with neither a membership nor a role is refused with `UNAUTHENTICATED`
+    before the route runs. Granting the auditor role — which holds every read permission
+    and no `model:fit` (`model_schema.permissions`) — passes the membership check and
+    makes the route's own `FitModels` dependency the refuser again.
     """
+    await grant("auditor")
     response = api_client.post(
         f"/api/v1/custom-objectives/{new_uuid7()}/derive",
         json={},

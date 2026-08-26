@@ -37,19 +37,23 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Header, Request
+from sqlalchemy import select
 
 from app.auth.oidc import OidcVerifier
 from app.auth.service import AuthenticatedIdentity, authenticate_api_key, authenticate_bearer
 from app.config import Settings
+from app.db.models import WorkspaceMemberRow
 from app.db.session import Database
 from app.errors import PlatformError
 from model_schema import ActorKind, Principal
 
-__all__ = ["WORKSPACE_ID_DESCRIPTION", "Caller", "require_caller"]
+__all__ = ["WORKSPACE_ID_DESCRIPTION", "Caller", "Identity", "IdentityDep", "require_caller"]
 
-#: Development-only headers. Named so they cannot be mistaken for a supported mechanism.
+#: Development-only header. Named so it cannot be mistaken for a supported mechanism.
+#: Its former sibling `x-dev-workspace-id` is gone (W6b-11, 2026-08-26): the dev path
+#: resolves the workspace from the same verified `Workspace-Id` header as every caller,
+#: because a dev request must exercise the same selection a real one does.
 DEV_PRINCIPAL_HEADER = "x-dev-principal-id"
-DEV_WORKSPACE_HEADER = "x-dev-workspace-id"
 
 
 @dataclass(frozen=True)
@@ -68,6 +72,116 @@ def _settings(request: Request) -> Settings:
 
 
 SettingsDep = Annotated[Settings, Depends(_settings)]
+
+
+def _database(request: Request) -> Database:
+    database: Database = request.app.state.database
+    return database
+
+
+DatabaseDep = Annotated[Database, Depends(_database)]
+
+
+@dataclass(frozen=True)
+class Identity:
+    """An authenticated principal with no workspace selection made.
+
+    `require_caller` resolves a selection and refuses rather than defaulting
+    (`FR-PLAT-65`); this does neither. It exists for the one surface a principal must
+    reach before it has a selection — the switch endpoints in `me.py`.
+    """
+
+    principal: Principal
+    workspaces: frozenset[UUID]
+
+
+async def require_identity(
+    request: Request,
+    database: DatabaseDep,
+    settings: SettingsDep,
+) -> Identity:
+    """Authenticate the caller without resolving a workspace selection."""
+    # The same credential order `require_caller` uses (:112-127): bearer → apikey → dev.
+    authorization = request.headers.get("authorization", "")
+    scheme, _, credential = authorization.partition(" ")
+    scheme = scheme.lower()
+
+    if scheme == "bearer" and credential:
+        verifier: OidcVerifier = request.app.state.oidc_verifier
+        async with database.unit_of_work() as session:
+            identity = await authenticate_bearer(session, verifier, credential)
+        # `identity.workspaces` was read at authentication time; pass it through as-is
+        # rather than inventing a second source (`test_workspace_selection.py:46-50`
+        # re-authenticates for exactly this reason).
+        return Identity(principal=identity.principal, workspaces=identity.workspaces)
+
+    api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
+    if api_key:
+        async with database.unit_of_work() as session:
+            identity = await authenticate_api_key(session, api_key)
+        # A Service Account has exactly one workspace by construction — the single id
+        # `authenticate_api_key` already read is its membership set.
+        return Identity(principal=identity.principal, workspaces=identity.workspaces)
+
+    return await _development_identity(request, settings, database)
+
+
+async def _development_identity(
+    request: Request, settings: Settings, database: Database
+) -> Identity:
+    """Local-only identity from headers, with the memberships from the database.
+
+    The `x-dev-principal-id` half of `_development_caller` (:185-220), with no workspace
+    resolution — the selection is not this dependency's job. Memberships are read the
+    same way `authenticate_bearer` reads them, so a dev principal and a bearer principal
+    answer the same list.
+    """
+    if not settings.dev_auth_enabled:
+        raise PlatformError(
+            "UNAUTHENTICATED",
+            "Authentication required",
+            401,
+            "No credential was presented. Use an OIDC bearer token or a service account "
+            "API key.",
+        )
+
+    principal_id = request.headers.get(DEV_PRINCIPAL_HEADER)
+    if not principal_id:
+        raise PlatformError(
+            "UNAUTHENTICATED",
+            "Authentication required",
+            401,
+            f"Development identity is enabled; supply {DEV_PRINCIPAL_HEADER}.",
+        )
+
+    try:
+        principal = Principal(
+            kind=ActorKind.USER, id=UUID(principal_id), display="dev@localhost"
+        )
+    except ValueError as exc:
+        raise PlatformError(
+            "UNAUTHENTICATED",
+            "Authentication required",
+            401,
+            "Development identity headers must be UUIDs.",
+        ) from exc
+
+    async with database.unit_of_work() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(WorkspaceMemberRow.workspace_id).where(
+                        WorkspaceMemberRow.user_id == principal.id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+    return Identity(principal=principal, workspaces=frozenset(rows))
+
+
+IdentityDep = Annotated[Identity, Depends(require_identity)]
 
 #: Reused as the header's OpenAPI description on every operation, so the published contract
 #: says the same thing in each place. A generated client is written against this text.
@@ -121,10 +235,12 @@ async def require_caller(
             identity = await authenticate_api_key(session, api_key)
         return _select_workspace(identity, selected)
 
-    # The selection does not apply here: `_development_caller` reads
-    # `x-dev-workspace-id`, a different header for a different purpose, and FR-PLAT-65
-    # says so in as many words. The omission is a decision, not an oversight.
-    return _development_caller(request, settings)
+    # The dev path consumes the same `Workspace-Id` header with the same membership
+    # check as the bearer and API-key paths above. An earlier version of this comment
+    # said the dev path read "a different header for a different purpose" — that was
+    # true before W6b-11 (2026-08-26) removed `x-dev-workspace-id`, and describes no
+    # code that exists now.
+    return await _development_caller(request, settings, database, selected)
 
 
 def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) -> Caller:
@@ -182,42 +298,22 @@ def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) ->
     )
 
 
-def _development_caller(request: Request, settings: Settings) -> Caller:
-    """Local-only identity from headers. Refused outside `local`/`dev` at startup."""
-    if not settings.dev_auth_enabled:
-        raise PlatformError(
-            "UNAUTHENTICATED",
-            "Authentication required",
-            401,
-            "No credential was presented. Use an OIDC bearer token or a service account "
-            "API key.",
-        )
+async def _development_caller(
+    request: Request, settings: Settings, database: Database, selected: UUID | None
+) -> Caller:
+    """Local-only caller, resolved to a workspace exactly like a bearer caller.
 
-    principal_id = request.headers.get(DEV_PRINCIPAL_HEADER)
-    workspace_id = request.headers.get(DEV_WORKSPACE_HEADER)
-    if not principal_id or not workspace_id:
-        raise PlatformError(
-            "UNAUTHENTICATED",
-            "Authentication required",
-            401,
-            f"Development identity is enabled; supply {DEV_PRINCIPAL_HEADER} and "
-            f"{DEV_WORKSPACE_HEADER}.",
-        )
-
-    try:
-        principal = Principal(
-            kind=ActorKind.USER, id=UUID(principal_id), display="dev@localhost"
-        )
-        workspace = UUID(workspace_id)
-    except ValueError as exc:
-        raise PlatformError(
-            "UNAUTHENTICATED",
-            "Authentication required",
-            401,
-            "Development identity headers must be UUIDs.",
-        ) from exc
-
-    return Caller(principal=principal, workspace_id=workspace)
+    Identification is `_development_identity`'s job; the selection is `_select_workspace`'s
+    — the same check every other caller path runs, so a dev request is checked against the
+    memberships the platform holds, never against a header pin.
+    """
+    identity = await _development_identity(request, settings, database)
+    return _select_workspace(
+        AuthenticatedIdentity(
+            principal=identity.principal, workspaces=identity.workspaces
+        ),
+        selected,
+    )
 
 
 def job_identity(caller: Caller) -> dict[str, Any]:

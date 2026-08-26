@@ -9,7 +9,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.db.session import Database
 from app.main import create_app
@@ -41,7 +41,7 @@ async def auditor_headers(workspace_id, principal, grant) -> dict[str, str]:
     await grant("auditor")
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -205,15 +205,20 @@ async def test_an_auditor_can_read_the_log_but_the_api_offers_no_write(
 
 
 @pytest.mark.req("FR-GOV-2")
-def test_reading_the_audit_log_requires_the_permission(
-    client: TestClient, workspace_id, principal
+async def test_reading_the_audit_log_requires_the_permission(
+    client: TestClient, workspace_id, principal, membership
 ) -> None:
-    """Negative: without audit:read the log is not readable, however authenticated."""
+    """Negative: without audit:read the log is not readable, however authenticated.
+
+    The caller holds a membership but no role (W6b-11): the membership check must pass
+    so that the role check is the one that refuses.
+    """
+    await membership()
     response = client.get(
         "/api/v1/audit",
         headers={
             DEV_PRINCIPAL_HEADER: str(principal.id),
-            DEV_WORKSPACE_HEADER: str(workspace_id),
+            "Workspace-Id": str(workspace_id),
         },
     )
     assert response.status_code == 403
@@ -231,7 +236,7 @@ async def test_an_analyst_cannot_read_the_audit_log(
         "/api/v1/audit",
         headers={
             DEV_PRINCIPAL_HEADER: str(analyst),
-            DEV_WORKSPACE_HEADER: str(workspace_id),
+            "Workspace-Id": str(workspace_id),
         },
     )
     assert response.status_code == 403

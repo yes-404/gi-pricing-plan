@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 
-from app.api.deps import DEV_PRINCIPAL_HEADER, DEV_WORKSPACE_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.main import create_app
 
@@ -35,15 +35,22 @@ async def headers(workspace_id, principal, grant) -> dict[str, str]:
     await grant("admin")
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
-@pytest.fixture
-def unprivileged_headers(workspace_id, principal) -> dict[str, str]:
+@pytest_asyncio.fixture
+async def unprivileged_headers(workspace_id, principal, membership) -> dict[str, str]:
+    """Authenticated, a member, and holding no role (W6b-11).
+
+    The refusal the tests expect must come from the role check. Without membership the
+    caller would be refused earlier with `UNAUTHENTICATED` and the permission
+    declarations would go untested.
+    """
+    await membership()
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
 
 
@@ -123,8 +130,8 @@ async def test_settings_are_scoped_to_the_callers_workspace(
     """
     from sqlalchemy import select
 
-    from app.db.models import RoleAssignmentRow, RoleRow
-    from app.platform import rbac
+    from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
+    from app.platform import rbac, workspaces
     from model_schema import ScopeType, new_uuid7
 
     client.put(
@@ -135,6 +142,12 @@ async def test_settings_are_scoped_to_the_callers_workspace(
 
     other_workspace = new_uuid7()
     async with database.unit_of_work() as session:
+        # The workspace row must exist for the membership FK (FR-PLAT-62), and the caller
+        # must *be* a member here (W6b-11): the `Workspace-Id` header is checked against
+        # the memberships the database holds, so a role without membership would now
+        # refuse with `WORKSPACE_SCOPE_DENIED` instead of answering from the second
+        # workspace. The caller is a member of both, so the header selects this one.
+        await workspaces.ensure_workspace(session, workspace_id=other_workspace)
         await rbac.seed_builtin_roles(session, other_workspace)
         role = (
             await session.execute(
@@ -152,9 +165,14 @@ async def test_settings_are_scoped_to_the_callers_workspace(
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+        session.add(
+            WorkspaceMemberRow(user_id=principal.id, workspace_id=other_workspace)
+        )
 
-    other = dict(headers)
-    other[DEV_WORKSPACE_HEADER] = str(other_workspace)
+    other = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(other_workspace),
+    }
     body = client.get("/api/v1/settings", headers=other).json()
     psi = next(s for s in body if s["key"] == "validation.psi_warn_threshold")
     assert psi["effective_value"] == 0.10
@@ -163,7 +181,9 @@ async def test_settings_are_scoped_to_the_callers_workspace(
 
 @pytest.mark.req("FR-GOV-2")
 def test_reading_settings_needs_a_role(client: TestClient, unprivileged_headers) -> None:
-    assert client.get("/api/v1/settings", headers=unprivileged_headers).status_code == 403
+    response = client.get("/api/v1/settings", headers=unprivileged_headers)
+    assert response.status_code == 403
+    assert response.json()["code"] == "PERMISSION_DENIED"
 
 
 @pytest.mark.req("FR-GOV-5")
@@ -177,7 +197,7 @@ async def test_an_auditor_can_read_settings_but_not_change_them(
     await grant("auditor", principal_id=auditor)
     headers = {
         DEV_PRINCIPAL_HEADER: str(auditor),
-        DEV_WORKSPACE_HEADER: str(workspace_id),
+        "Workspace-Id": str(workspace_id),
     }
     assert client.get("/api/v1/settings", headers=headers).status_code == 200
     response = client.put(
