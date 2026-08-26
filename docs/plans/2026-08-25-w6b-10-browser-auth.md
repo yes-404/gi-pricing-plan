@@ -49,7 +49,7 @@
 
 **Finding 3 — this slice's own pin removal supersedes half of `FR-PLAT-66`'s sentence.** "…so one bundle can tell whether to start a login or trust the dev proxy" presupposes the principal pin this slice removes. After Task 7 there is no dev proxy to trust: the SPA always logs in, and `dev_auth_enabled` in the response remains for backend dev mode and because `FR-PLAT-66`'s shape publishes it. Task 7's dated note records this; the shape does not change.
 
-**Finding 4 — the realm grants no refresh tokens, so silent renewal is the iframe flow.** W6b-14's Task 2 Produces block declares the client's grants: PKCE `S256`, `http://localhost:5173/*` redirect URIs, `aud: gi-pricing-api` — no `offline_access`, no refresh token. `oidc-client-ts`'s silent renewal (`signinSilent`, `prompt=none` in a hidden iframe against a `silent_redirect_uri` route in the same SPA) is therefore the mechanism, and Keycloak supports it. Failure to renew → logout, exactly `FR-PLAT-55`'s sentence.
+**Finding 4 — the realm plan is silent on refresh tokens; silent renewal holds either way.** W6b-14's Task 2 Produces block declares the client's grants: PKCE `S256`, `http://localhost:5173/*` redirect URIs, `aud: gi-pricing-api` — and says nothing about refresh tokens (a full-plan sweep finds no `refresh` or `offline` mention). The mechanism here does not depend on that silence: `signinSilent` renews silently whether or not the session carries a refresh token — via the stored token when one exists (Keycloak's default grants one), via `prompt=none` in a hidden iframe against a `silent_redirect_uri` route in the same SPA otherwise. Failure to renew → logout, exactly `FR-PLAT-55`'s sentence.
 
 **Finding 5 — the filed W6b-11 plan claims its store will be the app's first Pinia store; this plan must not falsify it.** Pinia is registered in `main.ts` but no store exists. W6b-11's Task 6 files `workspace.ts` as "the app's **first** Pinia store". The session state here is deliberately a module singleton (in-memory by requirement anyway, framework-independent, and `oidc-client-ts` is not Vue-bound) — recorded so the executor does not "improve" the plan into a Pinia store and strand a filed claim.
 
@@ -119,7 +119,7 @@ git commit -m "feat(w6b-10): the oidc client id setting"
 - Modify: `packages/model-schema/src/model_schema/__init__.py` (re-export, beside `ActorKind` — the import list at `:90`, `__all__` at `:318`)
 - Modify: `scripts/generate-contracts.py` (register the shape in `GENERATED_SHAPES`, `:38` — an unregistered model gets no committed contract, and `build_schemas` (`:164-186`) only iterates that map)
 - Create: `backend/src/app/api/auth_config.py` (the route builder — `health.version_route`'s pattern, `health.py:123-133`)
-- Modify: `backend/src/app/main.py` (import at `:18-34`, mount beside `/version` at `:123-131`)
+- Modify: `backend/src/app/main.py` (import at `:18-34`, mount beside `/version` at `:124-131`)
 - Create: `backend/tests/test_api_auth.py`
 - Test: `packages/model-schema/tests/test_auth.py` (create — every `model-schema` shape carries its tests there)
 - Modify: `docs/specs/07-platform.md` (§5.1, after the health row at `:300`)
@@ -263,7 +263,7 @@ In `scripts/generate-contracts.py`, register it at the end of `GENERATED_SHAPES`
 ```python
 """The unauthenticated OIDC bootstrap values the browser login needs (FR-PLAT-66).
 
-One route, built the way `/version` is (`health.version_route`, `main.py:123-131`): a
+One route, built the way `/version` is (`health.version_route`, `main.py:124-131`): a
 closure bound to the loaded settings, mounted in `main.py`. Deliberately **no** auth
 dependency — the channel exists because the flow cannot start with an auth gate, and
 nothing here is a credential.
@@ -292,7 +292,7 @@ def auth_config_route(settings: Settings) -> Callable[[], OidcAuthConfig]:
     return auth_config
 ```
 
-In `main.py`: add `auth_config` to the `from app.api import (...)` list (`:18-34`, after `audit` — the list is alphabetical), `from model_schema import OidcAuthConfig` beside the other imports (the `me.py:29` import is the precedent for importing `model_schema` classes), and mount the route directly after the `/version` block (`:123-131`):
+In `main.py`: add `auth_config` to the `from app.api import (...)` list (`:18-34`, after `audit` — the list is alphabetical), `from model_schema import OidcAuthConfig` beside the other imports (the `me.py:29` import is the precedent for importing `model_schema` classes), and mount the route directly after the `/version` block (`:124-131`):
 
 ```python
     app.add_api_route(
@@ -421,7 +421,7 @@ export async function loadAuthConfig(): Promise<OidcAuthConfig> {
 1. In the §1 OIDC row (`:40`), the Skills cell's closing sentences — *"**Library choice is W6b's** — `oidc-client-ts` is the default candidate, and hand-rolling PKCE is defensible only if silent renewal comes with it. Until W6b ships, only the frontend dev proxy reaches the API from a browser"* — are false the moment this slice lands. Replace them with: *"**Chosen by W6b-10 (2026-08-25): `oidc-client-ts`**, the default candidate `OQ-PLAT-6` named — behind `frontend/src/auth/`, with `FR-PLAT-66`'s config channel as the bootstrap. Until then only the frontend dev proxy reached the API from a browser; its principal pin goes with W6b-10, the workspace pin with W6b-11."*
 2. Append a row to §5's table (after `openapi-typescript`, `:120`):
 
-| oidc-client-ts | 07 FR-PLAT-55, `frontend/src/auth/` | ★★ | `UserManager` settings, silent renewal by `prompt=none` iframe (the realm grants no refresh tokens), `InMemoryWebStorage` (the `FR-PLAT-2` load-bearing rule), the expiring/renew-error events | [oidc-client-ts docs](https://github.com/authts/oidc-client-ts) |
+| oidc-client-ts | 07 FR-PLAT-55, `frontend/src/auth/` | ★★ | `UserManager` settings, silent renewal by `prompt=none` iframe (the realm plan is silent on refresh tokens — Finding 4), `InMemoryWebStorage` (the `FR-PLAT-2` load-bearing rule), the expiring/renew-error events | [oidc-client-ts docs](https://github.com/authts/oidc-client-ts) |
 
 Then:
 
@@ -549,7 +549,7 @@ import { InMemoryWebStorage, Log, UserManager, type User } from "oidc-client-ts"
 import type { OidcAuthConfig } from "./config";
 
 /** The UserManager settings FR-PLAT-55's clauses imply: code+PKCE, memory-only storage,
- *  silent renewal by prompt=none iframe (the realm grants no refresh tokens — Finding 4). */
+ *  silent renewal by prompt=none iframe (the realm plan is silent on refresh tokens — Finding 4). */
 export function buildManager(config: OidcAuthConfig): UserManager {
   Log.setLevel(Log.INFO);
   return new UserManager({
