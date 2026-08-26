@@ -163,6 +163,23 @@ describe("the model detail view", () => {
     expect(within(table).getAllByText(/on the link scale/).length).toBeGreaterThan(0);
     expect(within(table).queryByText("1.000")).toBeNull();
   });
+
+  it("links the predict screen with this model's slug and version", async () => {
+    stub();
+    render(ModelDetailView, {
+      props,
+      global: {
+        stubs: {
+          RouterLink: {
+            props: ["to"],
+            template: '<a :href="typeof to === \'string\' ? to : to.name"><slot /></a>',
+          },
+        },
+      },
+    });
+    const link = await screen.findByText("Predict");
+    expect(link.closest("a")!.getAttribute("href")).toBe("model-predict");
+  });
 });
 
 describe("the model detail view, on a model that is not a GLM", () => {

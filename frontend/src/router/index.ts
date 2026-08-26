@@ -74,6 +74,11 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    path: "/models",
+    name: "models",
+    component: () => import("@/views/ModelListView.vue"),
+  },
+  {
     // `02` §5.3. Both this and `/models/:slug` match the path `/models/compare`, and a model
     // slug of `compare` is legal under `refs.py`'s pattern — so which one wins is a real
     // question. **Vue Router's ranking of a static segment above a dynamic one is what

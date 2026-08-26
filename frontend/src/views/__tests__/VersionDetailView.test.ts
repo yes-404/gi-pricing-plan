@@ -121,6 +121,17 @@ describe("the version detail view", () => {
     expect(link.closest("a")!.getAttribute("to")).toBe(`/factors/${VERSION.id}`);
   });
 
+  it("links the wf-01 A9 profile for a version at any status", async () => {
+    // FR-OVR-22: the profile screen was built but nothing reached it. It is a
+    // version-level surface like the validation report, not gated on `validated`.
+    stub();
+    render(VersionDetailView, { props, ...mounted });
+    const link = await screen.findByText("Profile");
+    expect(link.closest("a")!.getAttribute("to")).toBe(
+      `/data/${props.slug}/v/${VERSION.version}/profile`,
+    );
+  });
+
   it("treats a version with no ingestion run as an answer, not an error", async () => {
     // A derived version has no run of its own. FR-DATA-7's 404 here is ordinary.
     stub(
