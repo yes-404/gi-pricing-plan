@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty-two checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, and table-row cell counts — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty-three checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, and every spec §10 mirror row's status — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -105,6 +105,26 @@ strict comparison — a citation of `/models/nonsense` would match a declared `/
 `**N undeclared**` rather than `all declared` when the check failed — a note claiming
 correctness above a `FAILED` block is the shape of defect this audit exists to catch.
 
+### The §10 mirrors' status (check 23)
+
+| # | Check | The defect it catches |
+|---|---|---|
+| 23 | Every spec §10 mirror row carries a status token matching the register's status for that question | A mirror row left bare — question only, no status, no consequence — while the register has long since decided or deferred it |
+
+Check 4 proves a question is mirrored in **both directions**, but nothing used to look at
+what the mirror row *says* — a bare row was audit-clean by construction. OQ-OVR-7's two
+bodies had diverged so far they named different things while every check passed. The
+register is the source of truth: check 15 already constrains its status vocabulary, so
+check 23 reads the register's status and requires the mirror row to state it in the
+register's own words — "decided" (or the mirror-side "resolved" / "determined"), "open",
+"deferred", "superseded".
+
+Two deliberate scopes keep it narrow. It only scans a spec's §10 — a requirement row
+citing an OQ id elsewhere in the spec is a reference, not a mirror. And it anchors to the
+row: the token must follow the id on the same row, so a neighbouring row's status never
+satisfies it. The row is read whole rather than first-word, because a decided row's
+question text can contain a stray "open".
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -186,6 +206,24 @@ real defects; fix the document.
 
 ## Verified
 
+2026-08-26 — Extended with **check 23**, the §10 mirror rows' status, and repaired the
+fifteen mirror rows it caught (finding #49's option (b)). Four were the named deferred
+questions — OQ-RATE-5, OQ-OPT-1, OQ-OPT-5, OQ-MON-4 — and each got its consequence clause,
+not just a status word: what deferring means for the platform (the bundle discount unpriced
+and unmonitored; a challenger price never served; a `price_test` purpose the platform
+refuses). The other eleven were bare rows the register had already decided or deferred
+(OQ-OVR-2/16, OQ-DATA-1/2, OQ-OPT-2/3/4, OQ-MON-1/2/3/5), repaired to carry their status
+and either the consequence or a pointer to the register. The register itself was untouched
+— it is the source of truth the check reads.
+
+**Proven on deliberately broken input**: removing OQ-RATE-5's status token produced exactly
+one targeted failure — `03-rating-engine.md:661: OQ-RATE-5 mirror row carries no status
+token matching the register's 'deferred' status` — the summary line read `115 of 116`, and
+the suite passed again on restore (`116 of 116`). Two design calls are recorded in the
+script's docstring: mirror-side "resolved" / "determined" count as decided (OQ-GOV-6's row
+says "DETERMINED"), and the row is read whole, because a decided row's question text can
+contain a stray "open".
+
 2026-08-22 — Re-confirmed while deciding OQ-MODEL-23 and OQ-MODEL-24. `audit-docs.py` passed
 throughout (495 → 499 requirements, 76 → 78 open questions), and the gate-table snippet again
 reported both ids under `missing` **before** the edit — the fourth time, and the same cause as
@@ -214,10 +252,10 @@ with them. **It found a real defect on its first run**: wf-01 cited `profile_ver
 `01` §5.2 renamed to `profile_frame` / `profile_parquet` on 2026-08-15 without the journey
 following.
 
-Also worth knowing before the next check is added: **the number of checks is stated in six
-places** — `CLAUDE.md` three times, this skill's frontmatter, `.claude/skills/README.md`, and
-`docs.yml`'s comment — and every one of them had to be edited. `CLAUDE.md` §0's own rule is
-that counts which change do not belong in it.
+Also worth knowing before the next check is added: **the number of checks is stated in
+three places** — this skill's frontmatter, `.claude/skills/README.md`, and `docs.yml`'s
+comment — and every one of them has to be edited. It used to be six, until `CLAUDE.md`'s
+three mentions were removed: §0's own rule is that counts which change do not belong in it.
 
 2026-08-15 — Extended with checks 16–20 over `.claude/notes/`. **All five were proven
 against deliberately broken input**, twelve breakages in total, each producing exactly one
