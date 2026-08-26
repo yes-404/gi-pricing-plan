@@ -2,6 +2,7 @@
 import { RouterLink, RouterView } from "vue-router";
 
 import AuthControl from "./components/AuthControl.vue";
+import WorkspaceSelector from "./components/WorkspaceSelector.vue";
 </script>
 
 <template>
@@ -35,6 +36,7 @@ import AuthControl from "./components/AuthControl.vue";
         >
           Reference
         </RouterLink>
+        <WorkspaceSelector />
         <AuthControl class="ml-auto" />
       </nav>
     </header>
