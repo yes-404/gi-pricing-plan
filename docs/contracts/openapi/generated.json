@@ -19507,6 +19507,46 @@
         ]
       }
     },
+    "/api/v1/me/workspaces": {
+      "get": {
+        "operationId": "list_workspaces_api_v1_me_workspaces_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkspaceMembership"
+                  },
+                  "title": "Response List Workspaces Api V1 Me Workspaces Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          }
+        },
+        "summary": "The workspaces this principal may act in",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
     "/api/v1/model-specs/validate": {
       "post": {
         "description": "`wf-01` D2: catch the errors before any compute is spent (FR-MODEL-44).\n\n**200 with `ok: false`**, not a 4xx, when the spec is merely unfittable. The caller\nasked whether this spec is valid and got a complete answer; a 422 would say the\n*request* was malformed, and `02` §5.3's live validation would then be a form that\nerrors on every keystroke while the actuary is still typing.\n\nA spec naming a dataset version that does not exist is a different thing — a bad\nreference rather than an invalid spec — and is a 404.",

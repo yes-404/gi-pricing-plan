@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
-from app.api.deps import Caller, require_caller
+from app.api.deps import Caller, IdentityDep, require_caller
 from app.api.responses import problems
 from app.db.models import (
     RoleAssignmentRow,
@@ -153,4 +153,39 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
             WorkspaceMembership(workspace_id=str(w.id), slug=w.slug, name=w.name)
             for w in memberships
         ),
+    )
+
+
+@router.get(
+    "/me/workspaces",
+    summary="The workspaces this principal may act in",
+    responses=problems(401),
+)
+async def list_workspaces(
+    identity: IdentityDep, database: DatabaseDep
+) -> tuple[WorkspaceMembership, ...]:
+    # The same join the `/me` memberships query runs (above), keyed on
+    # identity.principal.id and ordered by name — but deliberately NOT scoped: this is the
+    # list a first selection is made from, and there is no selection yet (FR-PLAT-63's
+    # second amendment, PR #237). A Service Account has no `workspace_members` row, so the
+    # list is empty for one — the designed state, not an error (see above).
+    async with database.session() as session:
+        rows = (
+            (
+                await session.execute(
+                    select(WorkspaceRow)
+                    .join(
+                        WorkspaceMemberRow,
+                        WorkspaceMemberRow.workspace_id == WorkspaceRow.id,
+                    )
+                    .where(WorkspaceMemberRow.user_id == identity.principal.id)
+                    .order_by(WorkspaceRow.name)
+                )
+            )
+            .scalars()
+            .all()
+        )
+    return tuple(
+        WorkspaceMembership(workspace_id=str(w.id), slug=w.slug, name=w.name)
+        for w in rows
     )
