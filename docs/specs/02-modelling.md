@@ -439,7 +439,7 @@ Two things about the example above, so a reader does not take either for a promi
   "band_stats": [
     {"label": "17-20", "exposure_years": "38214.4", "claim_count": 5120,
      "frequency": 0.1340, "frequency_ci": [0.1304, 0.1377],
-     "severity_minor": 412_800, "burning_cost_minor": 55_315}
+     "mean_severity": 412_800, "mean_burning_cost": 55_315}
   ]
 }
 ```
@@ -1453,12 +1453,12 @@ backends; `best_iteration` is what `predict_gbm` passes as `iteration_range` /
   "reconciliation": {
     "dataset_version_id": "uuid", "part": "holdout",
     "perils": [{"peril": "AD", "large_loss_kind": "capped",
-                "modelled_burning_cost_minor": 15_000},
+                "modelled_burning_cost": 15_000},
                {"peril": "TP_BI", "large_loss_kind": "separate_model",
-                "modelled_burning_cost_minor": 2_337},
+                "modelled_burning_cost": 2_337},
                {"peril": "WINDSCREEN", "large_loss_kind": "none",
-                "modelled_burning_cost_minor": 1_000}],
-    "observed_burning_cost_minor": 18_412, "modelled_burning_cost_minor": 18_337,
+                "modelled_burning_cost": 1_000}],
+    "observed_burning_cost": 18_412, "modelled_burning_cost": 18_337,
     "ratio": "0.995927", "tolerance": "0.02", "status": "pass",
     "computed_at": "2026-08-18T09:14:02Z"
   },
