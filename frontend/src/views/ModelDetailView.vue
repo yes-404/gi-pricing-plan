@@ -173,6 +173,20 @@ onMounted(async () => {
       >
         Diagnostics
       </RouterLink>
+
+      <!-- Nothing else in the app reaches the predict screen, and a screen nothing
+           links to is not delivered. -->
+      <RouterLink
+        v-if="model"
+        :to="{
+          name: 'model-predict',
+          params: { slug },
+          query: { version: String(model.version) },
+        }"
+        class="mt-2 inline-block text-sm text-sky-700 hover:underline"
+      >
+        Predict
+      </RouterLink>
     </header>
 
     <p

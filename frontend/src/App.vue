@@ -23,6 +23,34 @@ import WorkspaceSelector from "./components/WorkspaceSelector.vue";
           Data
         </RouterLink>
         <RouterLink
+          to="/models"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Models
+        </RouterLink>
+        <RouterLink
+          to="/objectives"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Objectives
+        </RouterLink>
+        <RouterLink
+          to="/metrics"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Metrics
+        </RouterLink>
+        <RouterLink
+          to="/peril-structures"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Peril structures
+        </RouterLink>
+        <RouterLink
           to="/demo"
           class="text-sm text-slate-600 hover:text-slate-900"
           active-class="text-slate-900 font-medium"
