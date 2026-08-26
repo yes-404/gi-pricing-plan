@@ -354,10 +354,12 @@ async def run(rows: int | None) -> int:
 
     print(f"\nworkspace {workspace_id}")
     print(f"  analyst  {analyst.display}\n  actuary  {actuary.display}\n")
-    # The ids, not only the names: these are what the frontend's dev proxy needs, and a
-    # seed that printed neither left the only way into the UI undiscoverable.
-    # Written as well as printed: `scripts/demo.py` needs these ids to start the frontend
-    # with, and parsing them back out of stdout would make the seed's print format a
+    # The ids, not only the names: the workspace is what the demo login lands in, and a
+    # seed that printed neither left the only way into the UI undiscoverable. The dev
+    # proxy needs none of them — it injects no identity (W6b-10) and no workspace
+    # (W6b-11); the selector in the app makes the choice.
+    # Written as well as printed: `scripts/demo.py` checks this record to confirm the seed
+    # ran, and parsing ids back out of stdout would make the seed's print format a
     # contract between two programs — the least visible kind there is.
     (DATA_DIR / "last-seed.json").write_text(
         json.dumps(
