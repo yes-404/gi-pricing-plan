@@ -14,6 +14,7 @@ mechanism, so an audit can find it.
 
 from __future__ import annotations
 
+import json
 import pathlib
 import shutil
 import subprocess
@@ -92,6 +93,41 @@ def test_the_local_provider_is_declared_behind_an_opt_in_profile() -> None:
     assert "--import-realm" in compose
     # deploy/keycloak/ is left free for W14's reference deployment (FR-PLAT-59).
     assert (ROOT / "deploy" / "keycloak-local" / "realm-gi-pricing.json").is_file()
+
+
+@pytest.mark.req("FR-PLAT-58")
+def test_the_checked_in_realm_declares_a_public_pkce_client() -> None:
+    """FR-PLAT-58's realm, asserted as a file rather than against a running provider.
+
+    A test needing the container would be one nobody runs -- FR-PLAT-58 says exactly that --
+    so this reads the artifact that is committed. What it cannot check is that Keycloak
+    agrees with it; Step 6 does that once, by round-tripping an export.
+    """
+    realm = json.loads(
+        (ROOT / "deploy" / "keycloak-local" / "realm-gi-pricing.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert realm["realm"] == "gi-pricing"
+
+    spa = {c["clientId"]: c for c in realm["clients"]}["gi-pricing-frontend"]
+
+    # Public client, no secret: FR-PLAT-55 -- "no client secret exists in it".
+    assert spa["publicClient"] is True
+    assert "secret" not in spa
+    # PKCE, and S256 specifically: `plain` is a code challenge that protects nothing.
+    assert spa["attributes"]["pkce.code.challenge.method"] == "S256"
+    # The dev server, which scripts/demo.py:49 fixes at 5173.
+    assert any("localhost:5173" in uri for uri in spa["redirectUris"])
+    # The audience the API verifies (config.py:141). Keycloak does not put a resource server
+    # in `aud` unless a mapper says so -- this assertion catches its absence, because every
+    # other part of the flow works without it.
+    audiences = [
+        m["config"]["included.client.audience"]
+        for m in spa.get("protocolMappers", [])
+        if m["protocolMapper"] == "oidc-audience-mapper"
+    ]
+    assert "gi-pricing-api" in audiences
 
 
 @pytest.mark.req("FR-OVR-7")
