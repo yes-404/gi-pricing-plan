@@ -1,3 +1,7 @@
+// tsconfig.app.json scopes `types` to ["vite/client"] (builtinObjectives.test.ts
+// records the convention), so `node:fs` resolves here only through a per-file
+// reference — the node types stay out of the app program.
+/// <reference types="node" />
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";

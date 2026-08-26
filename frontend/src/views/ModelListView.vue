@@ -19,7 +19,9 @@ onMounted(async () => {
 <template>
   <section>
     <header class="mb-5 flex items-center justify-between">
-      <h1 class="text-xl font-semibold tracking-tight">Models</h1>
+      <h1 class="text-xl font-semibold tracking-tight">
+        Models
+      </h1>
       <div class="flex gap-3">
         <RouterLink
           to="/models/new"
@@ -54,9 +56,15 @@ onMounted(async () => {
     >
       <thead class="border-b border-slate-200 text-slate-500">
         <tr>
-          <th class="py-2 pr-4">Model</th>
-          <th class="py-2 pr-4">Version</th>
-          <th class="py-2">Status</th>
+          <th class="py-2 pr-4">
+            Model
+          </th>
+          <th class="py-2 pr-4">
+            Version
+          </th>
+          <th class="py-2">
+            Status
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -73,8 +81,12 @@ onMounted(async () => {
               {{ model.model_family_slug }}
             </RouterLink>
           </td>
-          <td class="py-3 pr-4">{{ model.version }}</td>
-          <td class="py-3">{{ model.status }}</td>
+          <td class="py-3 pr-4">
+            {{ model.version }}
+          </td>
+          <td class="py-3">
+            {{ model.status }}
+          </td>
         </tr>
       </tbody>
     </table>
