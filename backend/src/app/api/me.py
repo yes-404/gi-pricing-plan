@@ -11,12 +11,18 @@ to a user who clicks the button.
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
-from app.api.deps import Caller, IdentityDep, require_caller
+from app.api.deps import (
+    WORKSPACE_ID_DESCRIPTION,
+    Caller,
+    IdentityDep,
+    require_caller,
+)
 from app.api.responses import problems
 from app.db.models import (
     RoleAssignmentRow,
@@ -25,7 +31,8 @@ from app.db.models import (
     WorkspaceRow,
 )
 from app.db.session import Database
-from app.platform import rbac
+from app.errors import PlatformError
+from app.platform import rbac, workspace_switch
 from model_schema import ActorKind, Permission
 
 __all__ = ["router"]
@@ -61,6 +68,14 @@ class WorkspaceMembership(BaseModel):
     workspace_id: str
     slug: str
     name: str
+
+
+class SwitchWorkspaceRequest(BaseModel):
+    """The workspace a principal chooses to act in (FR-PLAT-63's fourth obligation)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    workspace_id: UUID
 
 
 class Me(BaseModel):
@@ -188,4 +203,72 @@ async def list_workspaces(
     return tuple(
         WorkspaceMembership(workspace_id=str(w.id), slug=w.slug, name=w.name)
         for w in rows
+    )
+
+
+@router.post(
+    "/me/workspace",
+    summary="Choose the workspace to act in",
+    responses=problems(401, 403, 422),
+)
+async def switch_workspace(
+    body: SwitchWorkspaceRequest,
+    identity: IdentityDep,
+    database: DatabaseDep,
+    workspace_id: Annotated[
+        str | None, Header(alias="Workspace-Id", description=WORKSPACE_ID_DESCRIPTION)
+    ] = None,
+) -> WorkspaceMembership:
+    """A switch is a human act, and it is audited into both chains (OQ-PLAT-12).
+
+    The absent header is the first selection after login: there is no chain to leave, and
+    `record_switch` takes `left=None` for it (FR-PLAT-63's fourth obligation). A malformed
+    header is a typed platform refusal, never a bare `422` — the header parses as `str`
+    then `UUID`, mirroring `deps.py`'s handling of the same header.
+    """
+    left: UUID | None = None
+    if workspace_id is not None:
+        try:
+            left = UUID(workspace_id)
+        except ValueError as exc:
+            raise PlatformError(
+                "WORKSPACE_SCOPE_DENIED",
+                "Workspace scope denied",
+                403,
+                "The Workspace-Id header must be a UUID.",
+            ) from exc
+
+    # The choice is checked against the memberships the platform holds, never trusted
+    # (FR-PLAT-65) — for both the workspace left and the workspace entered.
+    if body.workspace_id not in identity.workspaces:
+        raise PlatformError(
+            "WORKSPACE_SCOPE_DENIED",
+            "Workspace scope denied",
+            403,
+            "The requested workspace is not a membership of this principal. The "
+            "selection is checked against the memberships the platform holds "
+            "(07 FR-PLAT-65); it is never taken on trust.",
+        )
+    if left is not None and left not in identity.workspaces:
+        raise PlatformError(
+            "WORKSPACE_SCOPE_DENIED",
+            "Workspace scope denied",
+            403,
+            "The Workspace-Id header names a workspace this principal is not a member "
+            "of. The selection is checked against the memberships the platform holds "
+            "(07 FR-PLAT-65); it is never taken on trust.",
+        )
+
+    async with database.unit_of_work() as session:
+        await workspace_switch.record_switch(
+            session,
+            principal=identity.principal,
+            left=left,
+            entered=body.workspace_id,
+        )
+        entered_row = await session.get(WorkspaceRow, body.workspace_id)
+    assert entered_row is not None  # a membership names a workspace that exists
+
+    return WorkspaceMembership(
+        workspace_id=str(entered_row.id), slug=entered_row.slug, name=entered_row.name
     )
