@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 
 import pytest
+from backend.tests.test_api_datasets import _headers
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -60,6 +63,22 @@ async def _version(database: Database, workspace_id, actor):
             session, workspace_id=workspace_id, actor=actor, dataset_id=dataset.id
         )
         return dataset.id, version.id
+
+
+async def _derive_child(database: Database, workspace_id, actor, parent_id):
+    async with database.unit_of_work() as session:
+        child = await datasets.derive_version(
+            session, workspace_id=workspace_id, actor=actor,
+            parent_version_id=parent_id, operation="split",
+            params={"part": "train", "seed": 1},
+        )
+        return child.id
+
+
+@pytest.fixture
+def actuary(workspace_id, principal, grant) -> dict[str, str]:
+    asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
+    return _headers(principal.id, workspace_id)
 
 
 # -- FR-DATA-29: effective-dated intervals, enforced by the database -------------------------
@@ -383,6 +402,44 @@ async def test_the_models_arm_lists_every_model_on_the_version(
         ("motor-freq-2026", "approved"),
         ("motor-freq-2026", "draft"),
     ]
+
+
+def test_the_direction_filter_empties_the_excluded_arm(
+    api_client: TestClient, workspace_id, principal, actuary, database
+) -> None:
+    """`01` §4.9: a direction filter empties the arm it excludes rather than omitting
+    it — `up` returns `depends_on_this` with four empty arms, `down` returns
+    `built_from: null`."""
+    loop = asyncio.get_event_loop()
+    actor = loop.run_until_complete(_with_role(database, workspace_id, "analyst"))
+    _, parent_id = loop.run_until_complete(_version(database, workspace_id, actor))
+    child_id = loop.run_until_complete(
+        _derive_child(database, workspace_id, actor, parent_id)
+    )
+
+    up = api_client.get(
+        f"/api/v1/dataset-versions/{child_id}/lineage?direction=up", headers=actuary
+    ).json()
+    assert up["built_from"]["parent_version_id"] == str(parent_id)
+    assert up["depends_on_this"] == {
+        "derived_versions": [],
+        "models": [],
+        "rating_versions": [],
+        "monitoring_baselines": [],
+    }
+
+    down = api_client.get(
+        f"/api/v1/dataset-versions/{child_id}/lineage?direction=down", headers=actuary
+    ).json()
+    assert down["built_from"] is None
+    assert down["depends_on_this"]["derived_versions"] == []
+
+    both = api_client.get(
+        f"/api/v1/dataset-versions/{child_id}/lineage", headers=actuary
+    ).json()
+    assert both["built_from"]["parent_version_id"] == str(parent_id)
+    assert [d["version_id"] for d in both["depends_on_this"]["derived_versions"]] == []
+    assert both["depends_on_this"]["models"] == []
 
 
 # -- FR-DATA-37/38/39: access, archival, erasure --------------------------------------
