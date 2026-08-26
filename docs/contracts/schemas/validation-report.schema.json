@@ -48,7 +48,14 @@
           "affected_rows": {"type": ["integer", "null"], "minimum": 0},
           "affected_exposure_fraction": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
           "detail": {"type": "string"},
-          "offending_sample": {"type": "array", "maxItems": 100, "items": {"type": "object"}},
+          "offending_sample": {
+            "type": "array", "maxItems": 100,
+            "items": {
+              "type": "object", "minProperties": 1,
+              "additionalProperties": {"type": ["string", "null"]},
+              "$comment": "OQ-DATA-12, decided 2026-08-26: (b) — the item shape was written out by W6b-18. One object per offending row; property keys are column names; values are the cell value as string or null (None is distinct from \"\"). A column-level check emits {\"column\": <name>}."
+            }
+          },
           "evidence_blob": {"type": ["string", "null"]},
           "error_reason": {"type": ["string", "null"], "enum": ["timeout", "exception", "unavailable_dependency", null]},
           "acknowledgement": {

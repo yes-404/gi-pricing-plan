@@ -78,7 +78,8 @@ def test_vr_str_5_date_parsed() -> None:
     frame = pl.DataFrame({"start": ["2024-01-01"], "end": [date(2024, 12, 31)]})
     outcome = run("date_parsed", {"t": frame}, params={"columns": ["start", "end"]})
     assert outcome.violating_rows == 1
-    assert outcome.offending_sample == ("start",)
+    # A column-level check emits `{"column": name}` (OQ-DATA-12 (b)).
+    assert outcome.offending_sample == ({"column": "start"},)
 
     assert run("date_parsed", {"t": frame}, params={"columns": ["end"]}).violating_rows == 0
 
@@ -108,7 +109,8 @@ def test_vr_str_8_no_unexpected_columns() -> None:
     frame = pl.DataFrame({"a": [1], "b": [2], "surprise": [3]})
     outcome = run("no_unexpected_columns", {"t": frame}, params={"columns": ["a", "b"]})
     assert outcome.violating_rows == 1
-    assert outcome.offending_sample == ("surprise",)
+    # A column-level check emits `{"column": name}` (OQ-DATA-12 (b)).
+    assert outcome.offending_sample == ({"column": "surprise"},)
 
     assert (
         run(
@@ -172,7 +174,7 @@ def test_vr_ref_1_reference_resolve_is_effective_dated() -> None:
         params={"reference_table": "areas", "as_at_column": "inception"},
     )
     assert outcome.violating_rows == 1
-    assert outcome.offending_sample == ("ZZ@2023-06-01",)
+    assert outcome.offending_sample == ({"area": "ZZ@2023-06-01"},)
 
     # The same keys, before the reference table covers them at all.
     early = frame.with_columns(pl.lit(date(2020, 1, 1)).alias("inception"))
@@ -258,7 +260,7 @@ def test_vr_ref_5_code_list_drift() -> None:
         params={"reference_table": "areas"},
     )
     assert outcome.violating_rows == 1
-    assert outcome.offending_sample == ("EF",)
+    assert outcome.offending_sample == ({"area": "EF"},)
 
     assert (
         run(
@@ -482,7 +484,7 @@ def test_vr_act_13_zero_claim_cohort() -> None:
         target={"table": "t", "column": "vehicle_group"},
     )
     assert outcome.violating_rows == 1
-    assert outcome.offending_sample == ("G2",)
+    assert outcome.offending_sample == ({"vehicle_group": "G2"},)
 
     assert (
         run(
@@ -637,7 +639,7 @@ def test_vr_dst_2_new_level_and_vr_dst_3_vanished_level() -> None:
         context=context,
         target={"table": "t", "column": "vehicle_group"},
     )
-    assert new.offending_sample == ("G4",)
+    assert new.offending_sample == ({"vehicle_group": "G4"},)
 
     gone = run(
         "vanished_level",
@@ -645,7 +647,7 @@ def test_vr_dst_2_new_level_and_vr_dst_3_vanished_level() -> None:
         context=context,
         target={"table": "t", "column": "vehicle_group"},
     )
-    assert set(gone.offending_sample) == {"G2", "G3"}, (
+    assert {item["vehicle_group"] for item in gone.offending_sample} == {"G2", "G3"}, (
         "G5 vanished too but holds 0.2 % of the exposure — a rare level disappearing is "
         "noise, and reporting it would bury the two that matter"
     )
@@ -711,7 +713,7 @@ def test_vr_dst_3_vanished_level_top_levels_fallback_is_judged_on_exposure() -> 
         context=context,
         target={"table": "t", "column": "vehicle_group"},
     )
-    assert outcome.offending_sample == ("G2",), (
+    assert outcome.offending_sample == ({"vehicle_group": "G2"},), (
         "judged on count, G1 (99.5 % of rows) would be the material one and G2 (0.5 % of "
         "rows) would be filtered out as noise — the reverse of the exposure-correct answer"
     )

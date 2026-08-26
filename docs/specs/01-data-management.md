@@ -535,7 +535,7 @@ key is one target with several columns.
       "measured": {"psi": 0.148}, "threshold": {"warn_above": 0.10, "fail_above": 0.25},
       "affected_rows": null, "affected_exposure_fraction": null,
       "detail": "Driver age distribution shifted; largest contribution from band 17-21 (+2.1pp).",
-      "offending_sample": [],
+      "offending_sample": [{"column": "driver_age"}],
       "evidence_blob": "blob:sha256:… (bucketed distribution table)",
       "acknowledgement": {
         "user_id": "uuid", "at": "2026-08-14T10:02:11Z",
@@ -546,6 +546,8 @@ key is one target with several columns.
   "reference_dataset_version_id": "uuid"
 }
 ```
+
+> **Amended 2026-08-26 (W6b-18).** The example previously printed `"offending_sample": []`, which settled nothing about the item encoding (OQ-DATA-12, decided 2026-08-26: (b)). The item shape is written out: one object per offending row, property keys are column names, values are the cell value as a string or null — `None` is distinct from `""`. A composite key is one item with several properties. A column-level check emits `{"column": <name>}`.
 
 **Invariants** — `overall` is a function of the rule results alone:
 `fail` if any result is `fail`; `error` if any is `error` and none is `fail`;

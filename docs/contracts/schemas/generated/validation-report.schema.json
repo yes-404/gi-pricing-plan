@@ -106,7 +106,18 @@
         "offending_sample": {
           "default": [],
           "items": {
-            "type": "string"
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "minProperties": 1,
+            "type": "object"
           },
           "title": "Offending Sample",
           "type": "array"

@@ -961,24 +961,6 @@ def _type_map(
 #: the moment it stops earning its place. This is the shape the pin for `diagnostics`'
 #: `aliasing` had before `OQ-MODEL-15` was decided and it was removed rather than relaxed.
 #:
-#: `OQ-DATA-12` (opened 2026-08-24, W32-11). `validation-report`'s offending sample is an
-#: array of `string` on the model and of `object` in the contract, found the day this slug
-#: first gained a generated side. **Neither side is obviously right, which is why this is a
-#: question and not a fix.** The model's string is what `_sample` in
-#: `pricing_core.data.validate` actually emits — composite key values pipe-joined with no
-#: escaping, `None` rendered as `""` and so indistinguishable from an empty string, column
-#: names dropped — an encoding no specification defines. The contract's `{"type": "object"}`
-#: is bare: it names no properties, so it constrains nothing a validator could check. `01`'s
-#: glossary and FR-DATA-20 both say "primary keys of rows" without choosing an encoding, and
-#: §4.6's only example prints `"offending_sample": []`, which is evidence for neither.
-#: Deciding it means changing `pricing-core`'s validation engine, 13 assertions across three
-#: test modules — `test_validate.py`, `test_catalogue.py` and `test_api_datasets.py`, measured
-#: 2026-08-24 — the published contract, the generated frontend type and §4.6's example: a
-#: data-model change across the suite rather than a
-#: contract fix, and out of scope for a slice about certificate floors and two generated
-#: sides. So it is recorded with an owner and this comparison stays silent on that one path,
-#: on the `ENVELOPE_GAP_IS_RECORDED_NOT_FIXED` precedent above.
-#:
 #: `OQ-OVR-16` (opened 2026-08-25, W6b). `artifact-envelope` types `updated_at` non-null in
 #: the hand-authored contract under `common/` and nullable-with-`default: null` in the
 #: generated one, with identical `required` lists on both sides — found on the branch that
@@ -1000,7 +982,6 @@ def _type_map(
 #: owner and this comparison stays silent on that one path, on the `OQ-DATA-12` precedent
 #: above. The condition to remove it is concrete: the first artifact that persists an envelope.
 UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {
-    "validation-report": frozenset({"results.[].offending_sample.[]"}),
     "artifact-envelope": frozenset({"updated_at"}),
 }
 def _admits(constraints: Arm, arm: Arm) -> bool:
@@ -1124,10 +1105,13 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     strings the model always produced, and the pin that excused it is deleted rather than
     relaxed.
 
-    **A pin is live again as of 2026-08-24 (W32-11):** `validation-report`'s
-    `results.[].offending_sample.[]`, escalated as `OQ-DATA-12`. The refusal above is of a
-    *curated* exemption list — one that accumulates entries nobody can date or justify — not
-    of a single path held open against a written question with an owner, which is what
+    **A pin was held from 2026-08-24 (W32-11) to 2026-08-26 (W6b-18):**
+    `validation-report`'s `results.[].offending_sample.[]`, escalated as `OQ-DATA-12`,
+    released — deleted, not relaxed — when the decision landed: the item is a keyed object,
+    `{column: value}` with values string or null, written out on the model, the authored
+    contract, the engine's emission and §4.6's example. The refusal above is of a *curated*
+    exemption list — one that accumulates entries nobody can date or justify — not of a
+    single path held open against a written question with an owner, which is what
     `diagnostics` was. `UNRESOLVED_TYPE_DISAGREEMENTS` carries the reasoning and
     `test_the_escalated_type_disagreements_are_still_unresolved` is what stops it outliving
     the question, on the same terms `aliasing` was held and then released.

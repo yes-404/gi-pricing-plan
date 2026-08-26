@@ -33,7 +33,7 @@ const REPORT = {
       threshold: { max_inclusive: 1.05 },
       affected_rows: 571,
       detail: "571 row(s) outside the declared range for 'exposure_years'",
-      offending_sample: ["P1", "P2"],
+      offending_sample: [{ policy_id: "P1" }, { policy_id: "P2" }],
     },
     {
       rule_id: SEVERITY_RULE,

@@ -116,14 +116,14 @@ function format(value: unknown): string {
       class="mt-2"
     >
       <summary class="cursor-pointer text-xs text-slate-600">
-        Offending sample ({{ (result.offending_sample ?? []).length }} key(s))
+        Offending sample ({{ (result.offending_sample ?? []).length }} row(s))
       </summary>
       <ul class="mt-1 max-h-40 overflow-y-auto font-mono text-xs text-slate-700">
         <li
-          v-for="key in result.offending_sample"
-          :key="key"
+          v-for="(item, index) in result.offending_sample"
+          :key="index"
         >
-          {{ key }}
+          {{ Object.entries(item).map(([column, value]) => `${column}: ${value ?? 'null'}`).join('  ') }}
         </li>
       </ul>
     </details>

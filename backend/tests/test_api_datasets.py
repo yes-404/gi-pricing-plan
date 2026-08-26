@@ -429,7 +429,7 @@ def test_the_report_summary_stays_under_its_budget_at_500_rules(
                 severity=Severity.WARN,
                 outcome=RuleOutcome.WARN if index % 50 == 0 else RuleOutcome.PASS,
                 detail="x" * 200,
-                offending_sample=tuple(f"P{n}" for n in range(20)),
+                offending_sample=tuple({"policy_id": f"P{n}"} for n in range(20)),
             )
             for index in range(500)
         )
