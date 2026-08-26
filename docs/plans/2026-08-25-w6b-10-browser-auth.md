@@ -10,7 +10,7 @@
 
 **Spec:** [`../specs/07-platform.md`](../specs/07-platform.md) — `FR-PLAT-55`, `FR-PLAT-66`, `FR-PLAT-58`, `FR-PLAT-59`; [`../specs/00-overview.md`](../specs/00-overview.md) — `FR-PLAT-2`'s in-memory rule. The decisions this plan executes are [`../open-questions.md`](../open-questions.md) `OQ-PLAT-6` (PKCE, 2026-08-15) and `OQ-PLAT-17` (the channel, decided 2026-08-25 as `FR-PLAT-66`).
 
-**Anchor:** this plan describes the tree at `11cadbd7` (tip of `origin/main` at filing). Line numbers are exact there.
+**Anchor:** this plan describes the tree at `11cadbd7` — the tip of `origin/main` when its citations were verified. Nothing this plan cites changed since: the two later commits (`6776d5f`, `d5c5424`) touch only `docs/roadmap.md`. Line numbers are exact at the anchor.
 
 ## Global Constraints
 
