@@ -1069,14 +1069,14 @@ def _severity_plausible(
     if rates is None or not rates["claims"]:
         return CheckOutcome(skipped=True, skip_reason="no claims to compute a severity from")
 
-    low = float(rule.params.get("min_severity_minor", 0.0))
-    high = float(rule.params.get("max_severity_minor", 1e12))
+    low = float(rule.params.get("min_severity", 0.0))
+    high = float(rule.params.get("max_severity", 1e12))
     severity = rates["severity"]
     return CheckOutcome(
         violating_rows=0 if low <= severity <= high else 1,
-        measured={"mean_severity_minor": round(severity, 2), "claims": rates["claims"]},
-        threshold={"min_severity_minor": low, "max_severity_minor": high},
-        detail=f"mean severity is {severity:,.0f} minor units",
+        measured={"mean_severity": round(severity, 2), "claims": rates["claims"]},
+        threshold={"min_severity": low, "max_severity": high},
+        detail=f"mean severity is {severity:,.2f}",
     )
 
 

@@ -383,7 +383,7 @@ BUILTIN_RULES: Final[Mapping[str, BuiltinRule]] = MappingProxyType(
             _rule(
                 "VR-ACT-12", "severity-plausible", "severity_plausible", _W,
                 "Portfolio and per-peril mean severity within a configured band",
-                params={"min_severity_minor": 0, "max_severity_minor": 1_000_000_000_000},
+                params={"min_severity": 0, "max_severity": 1_000_000_000_000},
             ),
             _rule(
                 "VR-ACT-13", "zero-claim-cohort", "zero_claim_cohort", _W,
