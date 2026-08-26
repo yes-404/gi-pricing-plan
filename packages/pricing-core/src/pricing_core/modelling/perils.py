@@ -82,7 +82,7 @@ class ReconciledPerilResult:
 
     peril: str
     large_loss_kind: LargeLossKind
-    modelled_burning_cost_minor: int
+    modelled_burning_cost: int
 
 
 @dataclass(frozen=True)
@@ -90,8 +90,8 @@ class ReconciliationResult:
     """FR-MODEL-60's numbers. The platform stamps identity onto these and persists them."""
 
     perils: tuple[ReconciledPerilResult, ...]
-    observed_burning_cost_minor: int
-    modelled_burning_cost_minor: int
+    observed_burning_cost: int
+    modelled_burning_cost: int
     tolerance: Decimal
     ratio: Decimal
 
@@ -214,21 +214,21 @@ def reconcile(
             ReconciledPerilResult(
                 peril=peril,
                 large_loss_kind=treatments[peril],
-                modelled_burning_cost_minor=_to_minor(modelled),
+                modelled_burning_cost=_to_minor(modelled),
             )
         )
 
     # The total is the **sum of the rounded parts**, never a separately rounded total.
     # Rounding three perils and their total independently disagrees by a penny about half
     # the time, and `Reconciliation`'s own invariant would then reject a correct result.
-    modelled_minor = sum(p.modelled_burning_cost_minor for p in perils)
+    modelled_minor = sum(p.modelled_burning_cost for p in perils)
     ratio = (Decimal(modelled_minor) / Decimal(observed_minor)).quantize(
         Decimal("0.000001")
     )
     return ReconciliationResult(
         perils=tuple(perils),
-        observed_burning_cost_minor=observed_minor,
-        modelled_burning_cost_minor=modelled_minor,
+        observed_burning_cost=observed_minor,
+        modelled_burning_cost=modelled_minor,
         tolerance=tolerance,
         ratio=ratio,
     )

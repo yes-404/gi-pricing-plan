@@ -163,8 +163,8 @@ def test_reconciliation_compares_exposure_weighted_means() -> None:
         tolerance=Decimal("0.02"),
         treatments={"WINDSCREEN": LargeLossKind.NONE},
     )
-    assert result.modelled_burning_cost_minor == 200
-    assert result.observed_burning_cost_minor == 200
+    assert result.modelled_burning_cost == 200
+    assert result.observed_burning_cost == 200
     assert result.ratio == Decimal("1.000000")
     assert result.status == "pass"
 
@@ -232,8 +232,8 @@ def test_the_per_peril_figures_sum_to_the_total_exactly() -> None:
         treatments=dict.fromkeys(("WINDSCREEN", "AD", "TP_BI"), LargeLossKind.NONE),
     )
     assert (
-        sum(p.modelled_burning_cost_minor for p in result.perils)
-        == result.modelled_burning_cost_minor
+        sum(p.modelled_burning_cost for p in result.perils)
+        == result.modelled_burning_cost
     )
 
 
