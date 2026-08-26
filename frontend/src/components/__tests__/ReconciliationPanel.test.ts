@@ -12,11 +12,11 @@ const RECONCILIATION = {
   dataset_version_id: "11111111-1111-1111-1111-111111111111",
   part: "holdout",
   perils: [
-    { peril: "AD", large_loss_kind: "capped", modelled_burning_cost_minor: 7500 },
-    { peril: "TP_BI", large_loss_kind: "separate_model", modelled_burning_cost_minor: 2500 },
+    { peril: "AD", large_loss_kind: "capped", modelled_burning_cost: 7500 },
+    { peril: "TP_BI", large_loss_kind: "separate_model", modelled_burning_cost: 2500 },
   ],
-  observed_burning_cost_minor: 10200,
-  modelled_burning_cost_minor: 10000,
+  observed_burning_cost: 10200,
+  modelled_burning_cost: 10000,
   tolerance: "0.05",
   computed_at: "2026-08-25T00:00:00Z",
   ratio: "0.9804",
@@ -72,8 +72,8 @@ describe("ReconciliationPanel", () => {
     // A structure modelling nothing has no shares — a different statement from "0%".
     const empty = {
       ...RECONCILIATION,
-      modelled_burning_cost_minor: 0,
-      perils: [{ peril: "AD", large_loss_kind: "capped", modelled_burning_cost_minor: 0 }],
+      modelled_burning_cost: 0,
+      perils: [{ peril: "AD", large_loss_kind: "capped", modelled_burning_cost: 0 }],
     } as unknown as Reconciliation;
     const text = panel(empty);
     expect(text).not.toContain("NaN");
