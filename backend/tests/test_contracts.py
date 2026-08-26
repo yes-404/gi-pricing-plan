@@ -961,29 +961,15 @@ def _type_map(
 #: the moment it stops earning its place. This is the shape the pin for `diagnostics`'
 #: `aliasing` had before `OQ-MODEL-15` was decided and it was removed rather than relaxed.
 #:
-#: `OQ-OVR-16` (opened 2026-08-25, W6b). `artifact-envelope` types `updated_at` non-null in
-#: the hand-authored contract under `common/` and nullable-with-`default: null` in the
-#: generated one, with identical `required` lists on both sides — found on the branch that
-#: made this pair compare at all, since `_authored` resolved flat and a schema authored in
-#: `common/` was never eligible. **Neither side is the tested one, which is what makes it a
-#: question.** `ArtifactEnvelope` has no producer — a definition, a re-export,
-#: `generate-contracts.py:44`, and one construction in `packages/model-schema/tests/
-#: test_refs.py` — so the Pydantic default is a declaration nothing exercises; while the
-#: authored schema is `allOf`-composed by twelve artifact schemas, which makes it the form
-#: external readers were actually given. `00-overview.md` §4.3 sides with the authored form
-#: by its own convention, writing `"updated_at": "timestamptz"` where `archived_at`,
-#: `parent_id` and `description` in the same block each carry a null arm. And nothing settles
-#: it from behaviour: `updated_at` exists on exactly two backend tables, `WorkspaceSettingRow`
-#: and `ApprovalPolicyRow`, both non-null — and neither is an artifact, neither composes the
-#: envelope, and not one of the twelve composers carries the column at all. The field is
-#: specified-and-unbuilt. Widening the authored side would delete a published specification on
-#: the authority of an unexercised default, which `CLAUDE.md` §0 names as the thing not to do;
-#: narrowing the model would settle a contract against no producer. So it is recorded with an
-#: owner and this comparison stays silent on that one path, on the `OQ-DATA-12` precedent
-#: above. The condition to remove it is concrete: the first artifact that persists an envelope.
-UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {
-    "artifact-envelope": frozenset({"updated_at"}),
-}
+#: **A pin was held from 2026-08-25 (OQ-OVR-16, W6b) to 2026-08-26 (W6b-19):**
+#: `artifact-envelope.updated_at` — non-null in the hand-authored contract under `common/`,
+#: nullable-with-`default: null` in the generated one, with the field specified-and-unbuilt
+#: and no producer to settle which side was right. The pin's own removal condition was "the
+#: first artifact that persists an envelope"; W6b-19 is exactly that — `DatasetVersion`
+#: composes the envelope, its row persists `updated_at`, and the model now types it
+#: non-null. Resolved per OQ-OVR-16 option (a), the authored side, and the pin was
+#: **released — deleted, not relaxed**.
+UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {}
 def _admits(constraints: Arm, arm: Arm) -> bool:
     """Does a complete `arm` satisfy every constraint in `constraints`?
 

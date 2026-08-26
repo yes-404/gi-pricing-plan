@@ -673,27 +673,59 @@ async def get_version_by_id(
 
 
 def _version_schema(row: DatasetVersionRow) -> DatasetVersion:
+    """The row as its published contract — OQ-DATA-13 (c) made the object forms typed.
+
+    The row's columns are the flat envelope plus a `period_from`/`period_to` pair and a
+    `derived_from` JSON that also carries the ingestion `recipe`; the model's `period_covered`
+    and `derived_from` blocks are what the contract exposes, so the mapping assembles the
+    typed forms from the row's own fields. A recipe-only JSON (an ingested version whose
+    recipe was recorded) is not a derivation, and is mapped to `None`; a row that claims a
+    derivation without naming its parent fails validation loudly rather than serialising a
+    half record.
+    """
+    period = (
+        {"from": row.period_from, "to": row.period_to}
+        if row.period_from is not None and row.period_to is not None
+        else None
+    )
+    derived = None
+    if row.derived_from and (
+        "parent_version_id" in row.derived_from or "operation" in row.derived_from
+    ):
+        derived = {
+            key: row.derived_from[key]
+            for key in ("parent_version_id", "operation", "params")
+            if key in row.derived_from
+        }
     return DatasetVersion.model_validate(
         {
             "id": row.id,
             "dataset_id": row.dataset_id,
             "workspace_id": row.workspace_id,
+            "slug": row.slug,
             "version": row.version,
             "status": row.status,
             "kind": row.kind,
+            "created_at": row.created_at,
+            "created_by": row.created_by,
+            "updated_at": row.updated_at,
+            "archived_at": row.archived_at,
+            "parent_id": row.parent_id,
+            "labels": row.labels,
+            "description": row.description,
+            "schema_version": row.schema_version,
+            "currency": row.currency,
             "tables": row.tables,
             "source_id": row.source_id,
             "source_fingerprint": row.source_fingerprint,
             "ingestion_run_id": row.ingestion_run_id,
             "preparation_recipe_id": row.preparation_recipe_id,
-            "period_from": row.period_from,
-            "period_to": row.period_to,
+            "period_covered": period,
             "totals": row.totals,
             "validation_report_id": row.validation_report_id,
             "profile_id": row.profile_id,
-            "derived_from": row.derived_from,
+            "derived_from": derived,
             "library_versions": row.library_versions,
-            "created_at": row.created_at,
         }
     )
 

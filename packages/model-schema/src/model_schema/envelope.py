@@ -35,7 +35,10 @@ class ArtifactEnvelope(BaseModel):
     status: str
     created_at: datetime
     created_by: UUID
-    updated_at: datetime | None = None
+    #: Non-null (OQ-OVR-16, resolved 2026-08-26): an artifact is created and updated in
+    #: the same moment, and a nullable timestamp made the two moments indistinguishable
+    #: from "never updated".
+    updated_at: datetime
     archived_at: datetime | None = None
     parent_id: UUID | None = None
     #: The workspace's single currency (OQ-OVR-3, decided 2026-08-14). Recorded on every

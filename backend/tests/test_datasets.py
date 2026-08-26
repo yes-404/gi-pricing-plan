@@ -76,6 +76,40 @@ async def test_versions_start_at_one_and_increment(
     assert versions == [1, 2, 3]
 
 
+@pytest.mark.req("FR-DATA-40")
+async def test_a_version_carries_its_envelope_inline(
+    database: Database, workspace_id
+) -> None:
+    """OQ-DATA-13 (c): a version names its own provenance — the slug is its dataset's,
+    the creator is the caller, the currency is the dataset's, and the parent is the
+    previous version's row. Archiving records the moment (FR-DATA-21)."""
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset(database, workspace_id, actor, slug="motor-gb")
+
+    async with database.unit_of_work() as session:
+        first = await datasets.new_version(
+            session, workspace_id=workspace_id, actor=actor, dataset_id=dataset_id
+        )
+        first_id, first_parent = first.id, first.parent_id
+        assert (first.slug, first.created_by, first.schema_version, first.currency) == (
+            "motor-gb",
+            actor.id,
+            1,
+            "GBP",
+        )
+        assert first_parent is None  # version 1 has no parent
+        second = await datasets.new_version(
+            session, workspace_id=workspace_id, actor=actor, dataset_id=dataset_id
+        )
+        assert second.parent_id == first_id
+        assert second.updated_at == second.created_at  # created and updated in one moment
+        await datasets.archive_version(
+            session, workspace_id=workspace_id, actor=actor,
+            version_id=second.id, reason="superseded",
+        )
+        assert second.archived_at is not None
+
+
 @pytest.mark.req("FR-DATA-2")
 async def test_a_version_number_is_never_reused(
     database: Database, workspace_id
@@ -133,6 +167,12 @@ async def test_the_unique_constraint_backs_the_allocation(
                     version=1,
                     status=DatasetStatus.DRAFT.value,
                     kind=DatasetKind.INGESTED.value,
+                    # The envelope fields, so the ONLY violation is the unique
+                    # constraint — a null slug would fail first and pass this probe
+                    # for the wrong reason.
+                    slug="motor-gb",
+                    created_by=new_uuid7(),
+                    currency="GBP",
                 )
             )
 

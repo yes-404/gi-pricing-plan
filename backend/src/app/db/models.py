@@ -772,6 +772,9 @@ class DatasetVersionRow(Base):
     __tablename__ = "dataset_versions"
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    #: The dataset's slug — a version is addressed as `dataset-slug@version`, so this is
+    #: never unique across versions of one dataset (OQ-DATA-13, decided 2026-08-26 (c)).
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -799,6 +802,24 @@ class DatasetVersionRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    #: The envelope, persisted (OQ-DATA-13 (c)). `created_by` names who made this
+    #: version; `updated_at` is non-null (OQ-OVR-16, resolved 2026-08-26 (a)) — a version
+    #: is created and updated in the same moment, and a nullable timestamp made the two
+    #: moments indistinguishable from "never updated".
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: The previous version id in the same dataset, null on version 1.
+    parent_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    labels: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False, default=dict)
+    description: Mapped[str | None] = mapped_column(Text)
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
 
     __table_args__ = (
         UniqueConstraint("dataset_id", "version", name="uq_dataset_versions_dataset_version"),

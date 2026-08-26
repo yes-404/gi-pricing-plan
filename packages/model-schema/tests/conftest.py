@@ -14,4 +14,5 @@ def envelope_kwargs():
         "status": "draft",
         "created_at": datetime.now(UTC),
         "created_by": uuid4(),
+        "updated_at": datetime.now(UTC),
     }
