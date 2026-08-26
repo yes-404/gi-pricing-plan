@@ -33,10 +33,15 @@ __all__ = [
     "DataDictionaryEntry",
     "Dataset",
     "DatasetKind",
+    "DatasetLineage",
     "DatasetSplit",
     "DatasetStatus",
     "DatasetTable",
     "DatasetVersion",
+    "LineageBuiltFrom",
+    "LineageDependsOn",
+    "LineageDerivedVersion",
+    "LineageModel",
     "PiiClass",
     "RecordGrain",
     "SourceKind",
@@ -334,6 +339,72 @@ class DatasetVersion(BaseModel):
         exactly one, and it is not a judgement call.
         """
         return self.status is DatasetStatus.VALIDATED
+
+
+class LineageBuiltFrom(BaseModel):
+    """The version this one was built from, and the operation that built it (`01` §4.9).
+
+    `None` on the wire when the version has no parent — a version an Ingestion Run
+    created from a Source, and any `direction=down` response (§4.9's invariants).
+    `parameters` is the derivation's parameters, read back from the parent's
+    `derived_from["params"]`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    parent_version_id: UUID
+    operation: str
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class LineageDerivedVersion(BaseModel):
+    """A version derived from this one (`01` §4.9's `derived_versions` arm)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    version_id: UUID
+    version: int
+    operation: str
+
+
+class LineageModel(BaseModel):
+    """A Model fitted on this version (`01` §4.9's `models` arm).
+
+    Any status: a draft Model still references the version it was fitted on, and the
+    blast radius FR-DATA-35 exists to compute (FR-DATA-23) does not stop at approval.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_id: UUID
+    slug: str
+    status: str
+
+
+class LineageDependsOn(BaseModel):
+    """What depends on this version (`01` §4.9).
+
+    `rating_versions` and `monitoring_baselines` are declared and always empty — W9's
+    and W27's arms, kept on the wire so a blast radius that silently omits two of the
+    three downstream kinds cannot read as a blast radius of one (FR-DATA-35).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    derived_versions: list[LineageDerivedVersion] = Field(default_factory=list)
+    models: list[LineageModel] = Field(default_factory=list)
+    rating_versions: list[Any] = Field(default_factory=list)
+    monitoring_baselines: list[Any] = Field(default_factory=list)
+
+
+class DatasetLineage(BaseModel):
+    """The lineage graph for one Dataset Version (`01` §4.9, FR-DATA-35)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    version_id: UUID
+    built_from: LineageBuiltFrom | None
+    depends_on_this: LineageDependsOn
 
 
 class DatasetSplit(BaseModel):

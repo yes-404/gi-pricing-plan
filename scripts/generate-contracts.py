@@ -136,6 +136,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # Added 2026-08-25 (W6b-10, browser auth). No hand-authored Phase-0 counterpart —
     # FR-PLAT-66 names the shape's contents, so this is its first written form.
     "oidc-auth-config": "OidcAuthConfig",
+    # Added 2026-08-26 (W6b-12). **No hand-authored Phase-0 counterpart** — `01` §4.9 is
+    # the shape's first written form, defined in the spec before any code, and the
+    # generated file is the only place a consumer can see the wire form.
+    "dataset-lineage": "DatasetLineage",
 }
 
 
