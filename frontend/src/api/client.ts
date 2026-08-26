@@ -14,6 +14,22 @@ import { ProblemError, type ProblemDetail } from "./problem";
 
 const BASE = "/api/v1";
 
+/**
+ * The bearer token the session holds (FR-PLAT-55), in memory only (FR-PLAT-2).
+ * Set on user load, cleared on signout; the Authorization header that reads it lands
+ * with Task 5's commit (the plan cut the setters and the header into separate tasks).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- read by Task 5's header
+let accessToken: string | null = null;
+
+export function setAccessToken(token: string): void {
+  accessToken = token;
+}
+
+export function clearAccessToken(): void {
+  accessToken = null;
+}
+
 export interface RequestOptions {
   readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   readonly body?: unknown;
