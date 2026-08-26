@@ -82,6 +82,7 @@ from model_schema.diagnostics import (
     UniversalDiagnostics,
     Weighting,
 )
+from model_schema.auth import OidcAuthConfig
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
 from model_schema.jobs import (
@@ -441,6 +442,7 @@ __all__ = [
     "ObjectiveUsage",
     "ObjectiveUsageModel",
     "OffsetSpec",
+    "OidcAuthConfig",
     "OneWayRow",
     "OneWaySummary",
     "OverallOutcome",

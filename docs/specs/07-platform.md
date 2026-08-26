@@ -298,6 +298,7 @@ The key value itself appears exactly once, in the creation response (FR-PLAT-3).
 | `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-PLAT-21) |
 | `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL) |
 | `GET` | `/healthz`, `/readyz`, `/version` | Health and version (FR-PLAT-41) |
+| `GET` | `/api/v1/auth/config` | The OIDC issuer and client id the browser login needs, unauthenticated (FR-PLAT-66) |
 | `GET` | `/openapi.json` | Generated OpenAPI 3.1 (FR-PLAT-48) |
 | `GET` | `/metrics` | Prometheus metrics (FR-PLAT-40) |
 | `GET` | `/api/v1/demo/guide` | What is testable today, derived (FR-PLAT-54). **404 unless `dev_auth_enabled`** |

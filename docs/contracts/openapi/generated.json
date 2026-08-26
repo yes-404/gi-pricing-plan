@@ -6885,6 +6885,31 @@
         "title": "OffsetSpec",
         "type": "object"
       },
+      "OidcAuthConfig": {
+        "additionalProperties": false,
+        "description": "The unauthenticated `/api/v1/auth/config` payload — `07` §5.1.",
+        "properties": {
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "dev_auth_enabled": {
+            "title": "Dev Auth Enabled",
+            "type": "boolean"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuer",
+          "client_id",
+          "dev_auth_enabled"
+        ],
+        "title": "OidcAuthConfig",
+        "type": "object"
+      },
       "OneWayRow": {
         "additionalProperties": false,
         "description": "One level of a one-way summary (FR-DATA-26).\n\nMoney is integer minor units and exposure a decimal string (FR-OVR-7). Frequency,\n`mean_severity` and `mean_burning_cost` are ratios and stay floats: they are\nstatistics, not amounts, and rounding them to minor units would lose the precision\nthe confidence interval is expressing (FR-DATA-46).",
@@ -12422,6 +12447,27 @@
         "summary": "Recompute the hash chain (FR-GOV-24)",
         "tags": [
           "governance"
+        ]
+      }
+    },
+    "/api/v1/auth/config": {
+      "get": {
+        "operationId": "auth_config_api_v1_auth_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcAuthConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The OIDC values the browser login needs",
+        "tags": [
+          "platform"
         ]
       }
     },
