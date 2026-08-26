@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import WorkspaceRow
+from app.db.models import UserRow, WorkspaceMemberRow, WorkspaceRow
 
-__all__ = ["ensure_workspace"]
+__all__ = ["ensure_member", "ensure_workspace"]
 
 
 async def ensure_workspace(
@@ -42,3 +43,59 @@ async def ensure_workspace(
     session.add(row)
     await session.flush()
     return row
+
+
+async def ensure_member(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    user_id: UUID,
+    issuer: str,
+    subject: str,
+    email: str | None = None,
+    display_name: str | None = None,
+) -> UserRow:
+    """Make an OIDC identity a member of a workspace, as a given principal (FR-PLAT-58).
+
+    Two rows, and each is load-bearing for a different reason:
+
+    * the `users` row **with `id=user_id`**, because `authenticate_bearer` returns
+      `UserRow.id` as the principal and a caller's role assignments are written against the
+      principal id it already uses -- a defaulted id yields a member of the workspace who
+      may do nothing in it;
+    * the `workspace_members` row, because `FR-PLAT-4` grants no access by default and
+      `authenticate_bearer` reads workspaces from that table alone.
+
+    **The workspace must already exist**: `workspace_members.workspace_id` is a foreign key
+    to `workspaces.id`, so call `ensure_workspace` first. It is not called from here because
+    the caller owns the workspace's name, and `ensure_workspace` returns an existing row
+    untouched -- naming it afterwards silently does nothing.
+
+    Idempotent, like `ensure_workspace` and `seed_builtin_roles`: a seed is re-run against an
+    existing database routinely, and both `uq_workspace_members_user_workspace` and
+    `uq_users_issuer_subject` make a second blind insert an error rather than a no-op.
+    """
+    user = await session.get(UserRow, user_id)
+    if user is None:
+        user = UserRow(id=user_id, issuer=issuer, subject=subject)
+        session.add(user)
+    # Only overwrite what the caller actually supplied: a re-run passing no email must not
+    # blank one an earlier run set.
+    if email is not None:
+        user.email = email
+    if display_name is not None:
+        user.display_name = display_name
+
+    existing = (
+        await session.execute(
+            select(WorkspaceMemberRow).where(
+                WorkspaceMemberRow.user_id == user_id,
+                WorkspaceMemberRow.workspace_id == workspace_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        session.add(WorkspaceMemberRow(user_id=user_id, workspace_id=workspace_id))
+
+    await session.flush()
+    return user

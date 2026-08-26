@@ -34,6 +34,13 @@ from arff import to_csv
 
 DATA_DIR = Path(__file__).parent / "data"
 
+#: The realm `deploy/keycloak-local/realm-gi-pricing.json` imports, and the subject it pins
+#: for the demo analyst. These two strings are the join between a browser login and this
+#: seed: `authenticate_bearer` keys a user on `(issuer, subject)`, so a realm re-import that
+#: changed either would authenticate a *different* user into nothing.
+REALM_ISSUER = "http://localhost:8080/realms/gi-pricing"
+REALM_SUBJECT = "84eea68e-a19e-46a0-9f35-a27cbd51c795"
+
 #: `IDpol` normalises to `i_dpol`, not `idpol`: the camel-case splitter reads it as
 #: `I` + `Dpol`, the same rule that correctly gives `HTTPServer` → `http_server`. No
 #: mechanical splitter can know that `ID` is the acronym here. The original header is kept
@@ -271,7 +278,7 @@ async def run(rows: int | None) -> int:
     from app.platform import datasets as dataset_service
     from app.platform import jobs as job_service
     from app.platform import profiles as profile_service
-    from app.platform import rbac
+    from app.platform import rbac, workspaces
     from app.platform import validation as validation_service
     from app.platform.blobs import BlobStore
     from app.worker.data_handlers import register_data_handlers
@@ -324,6 +331,26 @@ async def run(rows: int | None) -> int:
 
     await grant(analyst, "analyst")
     await grant(actuary, "pricing_actuary")
+
+    # A real login through the local provider (FR-PLAT-58) resolves to `analyst`, so it
+    # inherits the role assignments granted just above rather than needing its own. The
+    # workspace row comes first: `workspace_members.workspace_id` is a foreign key, and
+    # nothing has created that row until now -- `RoleRow.workspace_id` has no foreign key,
+    # which is why the seed has worked without one. The actuary has no realm user; one demo
+    # login is what FR-PLAT-58 asks for.
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(
+            session, workspace_id=workspace_id, name="freMTPL2 demo"
+        )
+        await workspaces.ensure_member(
+            session,
+            workspace_id=workspace_id,
+            user_id=analyst.id,
+            issuer=REALM_ISSUER,
+            subject=REALM_SUBJECT,
+            email=analyst.display,
+            display_name="Demo Analyst",
+        )
 
     print(f"\nworkspace {workspace_id}")
     print(f"  analyst  {analyst.display}\n  actuary  {actuary.display}\n")
