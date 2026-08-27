@@ -313,3 +313,37 @@ def test_listing_models_requires_the_read_permission(api_client: TestClient) -> 
     """**Negative.** Development identity carries no roles; the route is not open."""
     anonymous = api_client.get("/api/v1/models")
     assert anonymous.status_code in (401, 403), anonymous.text
+
+
+@pytest.mark.req("FR-DATA-56")
+def test_a_privileged_caller_cannot_fit_on_a_non_validated_version(
+    api_client, workspace_id, actuary, database, principal
+) -> None:
+    """FR-DATA-56 over HTTP: a `model:fit` caller gets `DATASET_NOT_VALIDATED`, no override.
+
+    The service-level proof exists (`test_model_jobs.py`). This proves the route's own
+    permission check and the gate fire together: the caller *holds* `model:fit` (the
+    analyst role), so the 409 must name the version's status — never a missing permission,
+    and never an override the day one is added (the test fails if the route starts
+    accepting a non-validated version).
+    """
+    import asyncio
+
+    from app.platform import datasets as dataset_service
+
+    async def _seed() -> tuple[str, str]:
+        async with database.unit_of_work() as session:
+            row = await dataset_service.create_dataset(
+                session, workspace_id=workspace_id, actor=principal, slug="fit-gate"
+            )
+            version = await dataset_service.new_version(
+                session, workspace_id=workspace_id, actor=principal, dataset_id=row.id
+            )
+            return str(row.id), str(version.id)
+
+    _, version_id = asyncio.get_event_loop().run_until_complete(_seed())
+    response = api_client.post(
+        "/api/v1/models", json={"spec": _spec("fit-gate-glm", version_id)}, headers=actuary
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "DATASET_NOT_VALIDATED"
