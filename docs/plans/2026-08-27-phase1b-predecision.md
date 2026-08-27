@@ -29,20 +29,22 @@
 
 The sources: the W7 close residue, plan review 6, the audit register, and the deferred items. Each row names the finding, its state, and the proposed disposition. A ruling on a decision point can move a disposition.
 
+**The disposition default is FIX (maintainer, 2026-08-27).** A finding is deferred only with a very strong reason. The strong reasons are two: a phase boundary, where CLAUDE.md §0 forbids building a later phase's capability now, and a trigger that has not fired, where no consumer has asked for the work. Every deferral below states its reason. The expected outcome is every fixable finding fixed, deferrals near-zero.
+
 | # | Finding | State | Proposed disposition |
 |---|---|---|---|
 | F1 | The `validate.py` "minor units" strings (auditor finding 6a) | `packages/pricing-core/src/pricing_core/data/validate.py:1007` and `:1084` assert minor units on a statistic | fix before close (MD1) |
 | F2 | The `GET /api/v1/me/workspaces` and `POST /api/v1/me/workspace` routes | **RESOLVED** — `backend/src/app/api/me.py:175` and `:210`, `record_switch` called at `:263` | discharged |
-| F3 | Batch C's change set has no test files. The demo postcondition check runs in the exit demo, not in pytest | the `_verify_journey_postconditions` check is exercised by the W7-5 demo run | accept the demo run as the verification, or add a pytest test (MD3) |
+| F3 | Batch C's change set has no test files. The demo postcondition check runs in the exit demo, not in pytest | the `_verify_journey_postconditions` check is exercised by the W7-5 demo run | fix before close, add a pytest test for the postcondition check (MD3) |
 | F4 | The `RatingVersionView` loading and network-error states | the view and a happy-path test exist (`frontend/src/views/__tests__/RatingVersionView.test.ts`). The two error states are untested | fix before close, add the two state tests (MD4) |
 | F5 | NFR-MODEL-14 has no marker | measured 0.0480 fits per pass against the 0.06 budget. The marker is missing | fix before close, add the marker (MD5) |
-| F6 | FR-DATA-57 (`unrun_layers`) | Phase 2 handoff, not built in Phase 1b | carry forward with an owner, the Phase 2 validation-report successor |
-| F7 | FR-DATA-52 (exposure-ordered top-20) | trigger-checked 2026-08-27. The trigger has not fired. Unowned by design | carry forward, trigger-based |
-| F8 | The full `03` rating surface (compile, score, rate tables, deployment) | Phase 2 | carry forward, Phase 2 |
-| F9 | The `wf-01` §4 surfaces the demo does not seed (bandings, Peril Structure, reconciliation) | Phase 2, plan review 6 P1 | carry forward, Phase 2 |
+| F6 | FR-DATA-57 (`unrun_layers`) | Phase 2 handoff, not built in Phase 1b | defer with a strong reason: the phase boundary. Owner, the Phase 2 validation-report successor |
+| F7 | FR-DATA-52 (exposure-ordered top-20) | trigger-checked 2026-08-27. The trigger has not fired. Unowned by design | defer with a strong reason: the trigger has not fired. No consumer has asked for the work |
+| F8 | The full `03` rating surface (compile, score, rate tables, deployment) | Phase 2 | defer with a strong reason: the phase boundary |
+| F9 | The `wf-01` §4 surfaces the demo does not seed (bandings, Peril Structure, reconciliation) | Phase 2, plan review 6 P1 | defer with a strong reason: the phase boundary |
 | F10 | The `listRules` client gap (backlog #8) | **RESOLVED** — `frontend/src/api/rules.ts:114` exports `listRules` with tests | discharged |
 | F11 | FR-MODEL-63/98 (prediction) delivered-but-untested | markers exist in the prediction path | discharged, verify the markers at close |
-| F12 | The four frozen-plan items (backlog #103, #87, #127, #131) | each exists only in a frozen plan | carry forward or close, per MD6 |
+| F12 | The four frozen-plan items (backlog #103, #87, #127, #131) | each exists only in a frozen plan | fix before close, resolve each item's work or record its disposition (MD6) |
 
 ---
 
@@ -52,13 +54,13 @@ The sources: the W7 close residue, plan review 6, the audit register, and the de
 
 **MD2 — the demo UAT scope.** UAT-ready covers the core `wf-01` journey over HTTP: validated dataset, split, factors, GLM and GBM fits, comparison, approval, rating version. The surfaces plan review 6 records as Phase 2 — bandings, Peril Structure, reconciliation — stay out of the UAT. **Recommendation:** accept the core-journey scope.
 
-**MD3 — F3, the postcondition check.** The demo postcondition check is exercised by the exit demo run, not by pytest. Options: accept the demo run as the verification, or add a pytest test for `_verify_journey_postconditions`. **Recommendation:** accept the demo run. The exit demo is the scheduled verification. A pytest test duplicates the seed.
+**MD3 — F3, the postcondition check.** The demo postcondition check is exercised by the exit demo run, not by pytest. Options: fix before close, or defer with a strong reason. **Recommendation:** fix before close. A pytest test exercises the check logic without the full seed.
 
 **MD4 — F4, the `RatingVersionView` states.** The happy path is tested. The loading and network-error states are not. Options: add the two state tests before close, or accept them as minor. **Recommendation:** fix before close. Two tests complete the view coverage.
 
 **MD5 — F5, the NFR-MODEL-14 marker.** The measurement exists. The marker is missing. Options: add the marker to the measured test, or accept the recorded measurement as the evidence. **Recommendation:** fix before close. A marker makes the measurement visible to `req-coverage.py`.
 
-**MD6 — F12, the frozen-plan items.** Four backlog items exist only in frozen plans. Options: carry each forward with an owner, or close each as frozen-plan-only. **Recommendation:** carry the four forward with owners. Each names real work a session agreed to.
+**MD6 — F12, the frozen-plan items.** Four backlog items exist only in frozen plans. Options: fix before close, or defer with a strong reason. **Recommendation:** fix before close. Each item names real work a session agreed to. Resolve each item's work or record why it cannot be resolved now.
 
 ---
 
@@ -76,7 +78,7 @@ The UAT checklist:
 - The UI reaches the model list, the model detail, the diagnostics, and the rating version.
 - The total seed time stays within the NFR-PLAT-4 budget, or the deviation is recorded.
 
-The fix-before-close findings (F1, F4, F5) land before the UAT run. The discharged findings (F2, F10, F11) are recorded in the register.
+The fix-before-close findings (F1, F3, F4, F5, F12) land before the UAT run. The discharged findings (F2, F10, F11) are recorded in the register. The deferrals (F6 to F9) carry their stated reasons.
 
 ---
 
@@ -102,8 +104,8 @@ The fix-before-close findings (F1, F4, F5) land before the UAT run. The discharg
 
 - [ ] Write each finding from the table above into the register rows. Key each by the requirement or artifact id it concerns.
 - [ ] Mark the discharged findings (F2, F10, F11) with their evidence.
-- [ ] Mark the carried findings (F6, F7, F8, F9) with their named owners.
-- [ ] Leave the fix-before-close findings marked `pending MD ruling` until the maintainer decides.
+- [ ] Mark the carried findings (F6, F7, F8, F9) with their named owners and their stated reasons.
+- [ ] Mark the fix-before-close findings (F1, F3, F4, F5, F12) as `fix before close`, the maintainer's default.
 - [ ] Run `python3 scripts/audit-docs.py`.
 
 ### T2. F1 — correct the `validate.py` strings (MD1, fix before close).
@@ -133,11 +135,15 @@ The fix-before-close findings (F1, F4, F5) land before the UAT run. The discharg
 - [ ] Verify `req-coverage.py` now reports NFR-MODEL-14 as evidenced.
 - [ ] Run the test to confirm the marker is valid.
 
-### T5. F3 — record the postcondition-check acceptance (MD3).
+### T5. F3 — add a pytest test for the postcondition check (MD3, fix before close).
 
-- [ ] Record in the register that the demo postcondition check is accepted as verified by the exit demo run.
-- [ ] If MD3 rules add-a-test instead, write a pytest test for `_verify_journey_postconditions`.
-- [ ] Run the relevant test half.
+**Files:**
+- Create: a backend test under `backend/tests/`
+
+- [ ] Extract or exercise the postcondition-check logic so a pytest test covers it without the full seed.
+- [ ] Write the test: the check refuses to start the browser when no approved model exists, and passes when one does.
+- [ ] Mark the test with the journey reference if a requirement governs it.
+- [ ] Run the backend test half.
 
 ### T6. Define the UAT checklist.
 
