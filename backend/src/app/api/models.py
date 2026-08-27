@@ -58,7 +58,7 @@ from app.api.pagination import (
     encode_cursor,
 )
 from app.api.responses import problems
-from app.db.models import ModelRow
+from app.db.models import ModelRow, RatingVersionRow
 from app.db.session import Database
 from app.platform import backtests as backtest_service
 from app.platform import comparison as comparison_service
@@ -1086,6 +1086,32 @@ async def predict(
             rows=[dict(row) for row in body.rows],
             blob_store=blob_store,
         )
+
+
+@router.get(
+    "/rating-versions",
+    summary="List rating versions",
+    responses=problems(401, 403),
+)
+async def list_rating_versions(
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+) -> list[RatingVersion]:
+    """The Phase 1b rating versions the demo seeds (FR-PLAT-67, W7-5).
+
+    A list for the exit demo's guide — the frontend cannot know a rating version's id to
+    call the by-id read, and a demo that cannot discover its own seeded artifact is not a
+    demo. The full `03` surface stays Phase 2.
+    """
+    async with database.session() as session:
+        rows = (
+            await session.execute(
+                select(RatingVersionRow)
+                .where(RatingVersionRow.workspace_id == caller.workspace_id)
+                .order_by(RatingVersionRow.version)
+            )
+        ).scalars().all()
+        return [rating_versions_service.to_schema(row) for row in rows]
 
 
 @router.get(
