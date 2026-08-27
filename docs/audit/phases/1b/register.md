@@ -23,7 +23,19 @@ enumerated F1-F12; the scope-audit adds F13-F22. Disposition default is FIX (mai
 | F9 | The `wf-01` §4 surfaces the demo does not seed (bandings, Peril Structure, reconciliation) | W7-5 | defer — phase boundary (plan review 6 P1) |
 | F10 | The `listRules` client gap (backlog #8) | W7 | discharged — `frontend/src/api/rules.ts:114` exports `listRules` with tests |
 | F11 | FR-MODEL-63/98 (prediction) delivered-but-untested | W6b-6b | discharged — markers exist in the prediction path |
-| F12 | The four frozen-plan items (backlog #103, #87, #127, #131) | — | fix before close (MD6) — resolve each item's work or record its disposition |
+| F12 | The four frozen-plan items (backlog #103, #87, #127, #131) | — | resolved 2026-08-27 — each shipped by its PR; see the F12 dispositions below |
+
+## F12 — the four frozen-plan items, resolved 2026-08-27
+
+Each of the four items existed only in a frozen plan. Each is resolved by the PR that
+shipped it; this section is the durable disposition the frozen plans cannot carry.
+
+| Item | Disposition |
+|---|---|
+| #103 — the two testing rules the prediction slice found | resolved — shipped by PR #103, merged 2026-08-18 (`.claude/skills/python-test`) |
+| #87 — vendored `ui-ux-pro-max` and the invariant its data files tripped | resolved — shipped by PR #87, merged 2026-08-17 (`.claude/skills/ui-ux-pro-max`) |
+| #127 — the `ci-watcher` agent | resolved — shipped by PR #127, merged 2026-08-21 (`.claude/agents/ci-watcher.md`) |
+| #131 — `python-test`: the test database cannot be truncated | resolved — shipped by PR #131, merged 2026-08-22 (`.claude/skills/python-test`) |
 
 ## Scope-audit additions (F13-F22)
 

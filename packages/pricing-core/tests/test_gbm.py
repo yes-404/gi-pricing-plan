@@ -1870,6 +1870,7 @@ def _capped_book() -> pl.DataFrame:
 
 
 @pytest.mark.req("FR-MODEL-118")
+@pytest.mark.req("NFR-MODEL-14")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_categorical_grid_is_capped_and_says_what_it_dropped(backend: str) -> None:
     """FR-MODEL-118: 20 bars, and the other 40 levels named rather than silently absent.
