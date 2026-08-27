@@ -1004,7 +1004,7 @@ def _severity_outlier(
         },
         threshold=basis,
         detail=(
-            f"{large.height} claim(s) at or above {absolute:,.0f} minor units — "
+            f"{large.height} claim(s) at or above {absolute:,.0f} — "
             "flagged for large-loss treatment, not removed"
         ),
         offending_sample=_sample(large, rule.params.get("key_columns", [])),
@@ -1080,8 +1080,8 @@ def _severity_plausible(
 ) -> CheckOutcome:
     """VR-ACT-12: portfolio mean severity inside a configured band.
 
-    Catches the counterpart of VR-ACT-11's units error: amounts loaded in pounds where the
-    platform stores minor units are out by a hundred, and every row still looks like money.
+    Catches the counterpart of VR-ACT-11's units error: amounts loaded in the wrong unit
+    are out by a hundred, and every row still looks like money.
     """
     frame = _table(tables, rule)
     rates = _portfolio_rates(frame, ctx, rule)

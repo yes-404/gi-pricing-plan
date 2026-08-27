@@ -78,20 +78,23 @@ def test_the_full_stack_is_declared_for_local_use() -> None:
 
 
 @pytest.mark.req("FR-PLAT-58")
+@pytest.mark.req("FR-PLAT-59")
 def test_the_local_provider_is_declared_behind_an_opt_in_profile() -> None:
-    """FR-PLAT-58: a local OIDC provider ships with the stack, behind an opt-in profile.
+    """FR-PLAT-58 and FR-PLAT-59: a local OIDC provider ships behind an opt-in profile.
 
     The profile is the requirement, not a detail of it -- FR-PLAT-58 says a contributor
     running the test suites starts the same three containers as today. A `keycloak` service
     with no `profiles:` key satisfies the first half of the requirement and breaks the
-    second, and the two are one line apart in the file.
+    second, and the two are one line apart in the file. The same `profiles:` assertion
+    discharges FR-PLAT-59's half: no identity provider starts in the default stack.
     """
     compose = (ROOT / "deploy" / "docker-compose.yml").read_text(encoding="utf-8")
     assert "keycloak:" in compose
     assert "profiles:" in compose, "the provider must not start by default"
     # The realm is imported, not hand-configured -- FR-PLAT-58's reproducibility half.
     assert "--import-realm" in compose
-    # deploy/keycloak/ is left free for W14's reference deployment (FR-PLAT-59).
+    # deploy/keycloak-local/ is the reference deployment FR-PLAT-59 names, left free for
+    # W14's production reference and never a component the default stack runs.
     assert (ROOT / "deploy" / "keycloak-local" / "realm-gi-pricing.json").is_file()
 
 
@@ -131,15 +134,17 @@ def test_the_checked_in_realm_declares_a_public_pkce_client() -> None:
 
 
 @pytest.mark.req("FR-OVR-7")
+@pytest.mark.req("FR-OVR-20")
 def test_money_discipline_is_enforced_by_the_docs_audit() -> None:
-    """FR-OVR-7 is checked in two places, and both must stay.
+    """FR-OVR-7 and FR-OVR-20 are checked in two places, and both must stay.
 
-    The types enforce it in code (`MoneyMinor`, `DecimalStr`); `scripts/audit-docs.py`
-    enforces it across the contracts, where a `_minor` field with a fractional example
-    would otherwise pass unnoticed.
+    The types enforce the value rule in code (`MoneyMinor`, `DecimalStr`); the docs
+    audit enforces the name rule — a `_minor` field with a fractional example would
+    otherwise pass unnoticed — across the contracts, citing FR-OVR-20.
     """
     audit = (ROOT / "scripts" / "audit-docs.py").read_text(encoding="utf-8")
     assert "_minor" in audit, "the money-discipline check is gone from the docs audit"
+    assert "FR-OVR-20" in audit, "the money check no longer cites FR-OVR-20"
 
     result = subprocess.run(
         ["python3", "scripts/audit-docs.py"], capture_output=True, text=True, cwd=ROOT

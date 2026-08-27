@@ -40,6 +40,15 @@ describe("the rating version view", () => {
     expect(screen.getByText(RATING.dataset_version_id)).toBeInTheDocument();
   });
 
+  it("shows the loading state while the read is in flight", () => {
+    // A never-resolving promise keeps `loading` true, so the view renders the loading
+    // placeholder rather than the rating or an error.
+    getRatingVersion.mockReturnValue(new Promise(() => {}));
+    render(RatingVersionView, { props, ...mounted });
+
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+  });
+
   it("renders a 404 from its title and detail", async () => {
     // The by-id read route answers 404 for a rating version that does not exist; the view
     // must surface the problem, not a blank page.
