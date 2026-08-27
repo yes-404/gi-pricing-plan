@@ -12,11 +12,11 @@ enumerated F1-F12; the scope-audit adds F13-F22. Disposition default is FIX (mai
 
 | Finding id | Concerns | Work item | Decision |
 |---|---|---|---|
-| F1 | `validate.py` "minor units" strings (`packages/pricing-core/src/pricing_core/data/validate.py:1007`, `:1084`) assert minor units on a statistic (auditor finding 6a) | W6b | fix before close (MD1) |
+| F1 | `validate.py` "minor units" strings (`packages/pricing-core/src/pricing_core/data/validate.py:1007`, `:1084`) assert minor units on a statistic (auditor finding 6a) | W6b | resolved 2026-08-27 (#280) — the strings no longer assert minor units |
 | F2 | `GET /api/v1/me/workspaces` and `POST /api/v1/me/workspace` routes | W6b-11 | discharged — `me.py:175`, `:210`, `record_switch` at `:263` |
-| F3 | Batch C's change set has no test files; the demo postcondition check runs in the exit demo, not in pytest | W7-5 | fix before close (MD3) |
-| F4 | `RatingVersionView` loading and network-error states untested | W7-5 | fix before close (MD4) |
-| F5 | NFR-MODEL-14 has no `@pytest.mark.req` marker; measured 0.0480 fits/pass vs 0.06 budget | W7 | fix before close (MD5) |
+| F3 | Batch C's change set has no test files; the demo postcondition check runs in the exit demo, not in pytest | W7-5 | resolved 2026-08-27 (#280) — `backend/tests/test_demo_postconditions.py` exercises the check in pytest |
+| F4 | `RatingVersionView` loading and network-error states untested | W7-5 | resolved 2026-08-27 (#280) — loading test added; the RFC 9457 problem-alert test existed (#273) |
+| F5 | NFR-MODEL-14 has no `@pytest.mark.req` marker; measured 0.0480 fits/pass vs 0.06 budget | W7 | resolved 2026-08-27 (#280) — marker added; `req-coverage.py` now reports NFR-MODEL-14 |
 | F6 | FR-DATA-57 (`unrun_layers`) — Phase 2 projection | W7-4 | defer — phase boundary; owner the Phase 2 validation-report successor |
 | F7 | FR-DATA-52 (exposure-ordered top-20) — trigger-checked, unfired | W7-4 | defer — trigger has not fired; no consumer has asked for the work |
 | F8 | The full `03` rating surface (compile, score, rate tables, deployment) | — | defer — phase boundary |
@@ -45,10 +45,10 @@ did not name. Each states its disposition; the strong-reason deferrals name the 
 | Finding id | Concerns | Decision |
 |---|---|---|
 | F13 | FR-OVR-22 (route reachability) — delivered by #136; enforced by the Vitest reachability suite (`frontend/src/router/__tests__/reachability.test.ts`), which the Python marker instrument cannot see; positive control + mutation verified in the #259 audit | accept — alternative instrument (Vitest), verified |
-| F14 | FR-OVR-20 (`_minor` suffix rule) — enforced by `scripts/audit-docs.py` check 12, which cites FR-OVR-20 | fix before close — make the enforcement visible to `req-coverage.py` with a test naming FR-OVR-20 |
+| F14 | FR-OVR-20 (`_minor` suffix rule) — enforced by `scripts/audit-docs.py` check 12, which cites FR-OVR-20 | resolved 2026-08-27 (#280) — `tests/test_repository_invariants.py:137` names FR-OVR-20; `req-coverage.py` now reports it |
 | F15 | FR-OVR-21 (§5.3 cell is prose) — the declared-prose affordance; binding surface is the generated contract | accept — the rule is the contract's declared-prose affordance |
 | F16 | FR-PLAT-55 (browser PKCE) — delivered by W6b-10; enforced by the Vitest auth suite (`frontend/src/auth/__tests__/session.test.ts`) | accept — alternative instrument (Vitest) |
-| F17 | FR-PLAT-59 (no IdP in prod) — delivered by W6b-14; the provider ships behind the compose `auth` profile; `tests/test_repository_invariants.py:94` names the rule | fix before close — add a marker to the repository-invariant test |
+| F17 | FR-PLAT-59 (no IdP in prod) — delivered by W6b-14; the provider ships behind the compose `auth` profile; `tests/test_repository_invariants.py:94` names the rule | resolved 2026-08-27 (#280) — `@pytest.mark.req("FR-PLAT-59")` added to the repository-invariant test; `req-coverage.py` now reports it |
 | F18 | NFR-PLAT-4 (compose stack to usable state < 5 min) — measured 27 s vs 300 s (roadmap :298); deliberately not a test | accept — measured, recorded |
 | F19 | FR-OVR-9 (pseudonymisation) — ingestion enforces the refusal (FR-DATA-13/41 path); the modelling PII guard gap (a `Factor.prohibited` derivation) is a separate roadmap finding with a §14 disposition | accept — enforcement exists; the PII-guard gap is recorded in the roadmap |
 | F20 | Cross-cutting OVR without markers — FR-OVR-2 (JSON-serialisable), FR-OVR-4 (audit same-txn), FR-OVR-10 (long-ops are Jobs), FR-OVR-11 (OpenAPI surface), FR-OVR-12 (UTC), FR-OVR-14 (maturity refs), FR-OVR-15/16 (tenant isolation, provenance — ADR-0006), FR-OVR-19 (error-code check — `audit-docs.py` check 10 is the mechanism) | accept — conventions, ADRs and the audit's own checks are the enforcement; a marker pass is out of scope for Phase 1b |
@@ -60,3 +60,20 @@ did not name. Each states its disposition; the strong-reason deferrals name the 
 F6-F9 and F22 defer to later phases with named owners; each is carried to
 [`../../register.md`](../../register.md). F13, F15, F16, F18-F21 are accepted with their
 stated evidence; the acceptance is recorded here and in the close record.
+
+## Auditor close-confirmation (T9, 2026-08-27)
+
+The auditor reviewed the register and the UAT evidence at `9799947` and confirms Phase 1b
+**can go to the close decision**:
+
+- The seven fix-before-close findings (F1, F3, F4, F5, F12, F14, F17) all landed in #280
+  and are evidenced (F5, F14, F17 confirmed by `req-coverage.py`; F1, F3, F4 by their
+  tests; F12 by the register dispositions).
+- The five deferrals (F6-F9, F22) each carry a strong reason — a phase boundary or an
+  unfired trigger — and named owners.
+- The exit-demo UAT (`docs/audit/exit-demo-uat.md`) shows all seven checklist items
+  passing; the seed reached a usable state in **90 s** against the 300 s NFR-PLAT-4
+  budget (30 %).
+
+Remaining findings: none blocking. The register's F-rows were updated 2026-08-27 to
+reflect the landed fixes. Confirmation recorded.
