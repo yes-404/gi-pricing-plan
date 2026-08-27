@@ -143,3 +143,56 @@ async def test_an_unknown_rating_version_reference_is_refused(
             session, workspace_id=workspace_id, artifact_ref=ref
         )
     assert resolved is False
+
+
+def test_the_rating_version_routes_read_over_http(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    """`GET /rating-versions` and `GET /rating-versions/{id}` read what the seed writes.
+
+    The by-id route is the plan's one read; the list route is the exit demo's discovery
+    seam (W7-5). Both answer a `rating:read` caller with the seeded artifact.
+    """
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(workspace_id),
+    }
+    model_ref = ArtifactRef(type="model", slug="fremtpl2-glm", version=1)
+    rating_id = asyncio.get_event_loop().run_until_complete(
+        _draft(database, workspace_id, principal, model_ref)
+    )
+
+    listed = api_client.get("/api/v1/rating-versions", headers=headers)
+    assert listed.status_code == 200, listed.text
+    assert [item["id"] for item in listed.json()] == [str(rating_id)]
+
+    detail = api_client.get(f"/api/v1/rating-versions/{rating_id}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["slug"] == "fremtpl2-demo"
+    assert detail.json()["status"] == "draft"
+    assert detail.json()["model_ref"] == "model:fremtpl2-glm@1"
+
+
+def test_an_unknown_rating_version_id_is_a_404_over_http(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """The by-id read refuses an id that does not exist (FR-PLAT-67, the 404 route)."""
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(workspace_id),
+    }
+    response = api_client.get(
+        f"/api/v1/rating-versions/{new_uuid7()}", headers=headers
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "NOT_FOUND"
