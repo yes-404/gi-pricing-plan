@@ -283,6 +283,9 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "EXPRESSION_SCALE_OVERFLOW",
         "EXPRESSION_INVALID_VOCABULARY",
         "EXPRESSION_NON_DETERMINISTIC",
+        # Bundle compilation (W9-3).
+        "RATING_VERSION_UNPINNED",
+        "BUNDLE_COMPILE_FAILED",
     }
 )
 
