@@ -48,12 +48,15 @@ def test_the_demo_runs_where_development_identity_does(environment: str) -> None
 def test_the_demo_env_points_the_browser_at_the_local_provider() -> None:
     """The one-command demo starts the auth profile and sets the OIDC variables.
 
-    Without these three the API has no issuer to verify against and the browser login
-    fails at the first redirect — the gap `deploy/README.md` recorded until W6b. The test
-    pins the values so a removal is a deliberate act, not a silent regression.
+    Without the issuer, audience and JWKS the API has nothing to verify against, and
+    without the client id the browser login fails at the first redirect — the
+    `deploy/README.md` gap, which resurfaced at Phase 1b UAT when the client id was
+    omitted. The test pins all four so a removal is a deliberate act, not a silent
+    regression.
     """
     env = demo_script.demo_env()
     assert env["GIP_OIDC_ISSUER"] == "http://localhost:8080/realms/gi-pricing"
+    assert env["GIP_OIDC_CLIENT_ID"] == "gi-pricing-frontend"
     assert env["GIP_OIDC_AUDIENCE"] == "gi-pricing-api"
     assert env["GIP_OIDC_JWKS_URL"] == (
         "http://localhost:8080/realms/gi-pricing/protocol/openid-connect/certs"

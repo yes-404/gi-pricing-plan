@@ -192,6 +192,7 @@ def demo_env() -> dict[str, str]:
             "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
         ),
         "GIP_OIDC_ISSUER": "http://localhost:8080/realms/gi-pricing",
+        "GIP_OIDC_CLIENT_ID": "gi-pricing-frontend",
         "GIP_OIDC_AUDIENCE": "gi-pricing-api",
         "GIP_OIDC_JWKS_URL": (
             "http://localhost:8080/realms/gi-pricing/protocol/openid-connect/certs"
