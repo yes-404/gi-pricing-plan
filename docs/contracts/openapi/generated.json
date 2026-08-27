@@ -2355,6 +2355,17 @@
             "title": "Owner Id",
             "type": "string"
           },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
           "slug": {
             "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
             "title": "Slug",

@@ -1,5 +1,6 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
+import type { components as requestComponents } from "./generated/schema.requests";
 
 /**
  * Bandings and groupings — `02` §5.1's six routes, and the two shapes the workbench edits.
@@ -9,11 +10,18 @@ import type { components } from "./generated/schema";
  * decide where a row lands — `closed`, `null_level` and the two range policies among them —
  * and a hand-written copy that fell behind any one of them would show statistics for a
  * banding the platform would not store.
+ *
+ * `Banding`/`Grouping` read responses and stay on the **strict** set (OQ-PLAT-16 (c)); the
+ * write paths take `RequestBanding`/`RequestGrouping` from the **permissive** set, whose
+ * defaulted fields (`closed`, `minimums`, `above_range`, …) a request may omit. A strict
+ * object is assignable to its permissive twin, so an edited response sends unchanged.
  */
 
 export type Banding = components["schemas"]["Banding"];
+export type RequestBanding = requestComponents["schemas"]["Banding"];
 export type BandingMethod = components["schemas"]["BandingMethod"];
 export type Grouping = components["schemas"]["Grouping"];
+export type RequestGrouping = requestComponents["schemas"]["Grouping"];
 export type GroupingMethod = components["schemas"]["GroupingMethod"];
 export type GroupingEvidence = components["schemas"]["GroupingEvidence"];
 export type OneWayRow = components["schemas"]["OneWayRow"];
@@ -38,7 +46,7 @@ export function proposeBanding(body: {
  */
 export function evaluateBanding(
   datasetVersionId: string,
-  banding: Banding,
+  banding: RequestBanding,
 ): Promise<Banding> {
   return request<Banding>("/bandings/evaluate", {
     method: "POST",
@@ -47,7 +55,7 @@ export function evaluateBanding(
 }
 
 /** FR-MODEL-12. An existing slug allocates the next version rather than editing. */
-export function createBanding(banding: Banding): Promise<Banding> {
+export function createBanding(banding: RequestBanding): Promise<Banding> {
   return request<Banding>("/bandings", { method: "POST", body: banding });
 }
 
@@ -70,7 +78,7 @@ export function proposeGrouping(body: {
 /** FR-MODEL-83, and the half `02` §5.3 names: the deviance/df trade-off before saving. */
 export function evaluateGrouping(
   datasetVersionId: string,
-  grouping: Grouping,
+  grouping: RequestGrouping,
 ): Promise<Grouping> {
   return request<Grouping>("/groupings/evaluate", {
     method: "POST",
@@ -79,7 +87,7 @@ export function evaluateGrouping(
 }
 
 /** FR-MODEL-16. Creation is an audited event, because grouping is a modelling decision. */
-export function createGrouping(grouping: Grouping): Promise<Grouping> {
+export function createGrouping(grouping: RequestGrouping): Promise<Grouping> {
   return request<Grouping>("/groupings", { method: "POST", body: grouping });
 }
 

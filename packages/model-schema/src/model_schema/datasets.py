@@ -168,6 +168,12 @@ class Dataset(BaseModel):
     #: owned and leave `06`'s review trails with no named subject to address.
     owner_id: UUID
 
+    #: The owner's resolved display name (OQ-OVR-15 (a)). Derived per request from `users`
+    #: and `service_accounts` and stored on no row; `None` means the id did not resolve,
+    #: which is an honest answer — the owner column then falls back to the id, never to a
+    #: fabricated name.
+    owner_name: str | None = None
+
     name: str = ""
     description: str | None = None
 

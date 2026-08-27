@@ -25,7 +25,9 @@ const SEEDED = {
       latest_version_status: "validated",
       last_validated_at: "2026-08-20T11:04:00Z",
       last_validated_version: 2,
+      // OQ-OVR-15 (a): the list resolves the owner to a display name when it can.
       owner_id: OWNER,
+      owner_name: "Demo Analyst",
       created_at: "2026-08-15T08:30:00Z",
     },
   ],
@@ -195,11 +197,24 @@ describe("the three columns W32-3 served and nothing read (FR-DATA-50, FR-DATA-5
     expect(cellUnder(t, /freMTPL2/, "Last validated")).toHaveTextContent("—");
   });
 
-  it("shows the whole owner id, not a prefix of it", async () => {
-    // Decision 1, as ruled. An opaque id's only utility is exact copy and exact search,
-    // and a `String.slice` destroys both — so this asserts the exact value. Narrowing is
-    // CSS, which this assertion is blind to and should be.
+  it("renders the resolved owner name when the list resolved one", async () => {
+    // OQ-OVR-15 (a): the list endpoint resolves `owner_id` to a display name, and the
+    // column renders the name — never the raw id the name stands in for.
     const cell = cellUnder(await table(), /freMTPL2/, "Owner");
+
+    expect(cell.textContent?.trim()).toBe("Demo Analyst");
+  });
+
+  it("shows the whole owner id when the name did not resolve", async () => {
+    // A `null` owner_name is an honest answer (the id matched no `users` or
+    // `service_accounts` row), and a raw id's only utility is exact copy and exact search
+    // — so this asserts the exact value, not a prefix of it. Narrowing is CSS, which this
+    // assertion is blind to and should be.
+    const t = await table({
+      ...SEEDED,
+      items: [{ ...SEEDED.items[0], owner_name: null }],
+    });
+    const cell = cellUnder(t, /freMTPL2/, "Owner");
 
     expect(cell).toHaveTextContent(OWNER);
     expect(cell.textContent?.trim()).toBe(OWNER);
@@ -210,25 +225,29 @@ describe("the three columns W32-3 served and nothing read (FR-DATA-50, FR-DATA-5
     // and is unreachable by keyboard and touch. A `title` may be added as a mouse
     // convenience; it may never become the only home of the value. This test fails if a
     // later change moves the id there.
-    const cell = cellUnder(await table(), /freMTPL2/, "Owner");
+    const t = await table({
+      ...SEEDED,
+      items: [{ ...SEEDED.items[0], owner_name: null }],
+    });
+    const cell = cellUnder(t, /freMTPL2/, "Owner");
 
     expect(cell.textContent).toContain(OWNER);
   });
 
-  it("renders different owners differently", async () => {
+  it("renders a resolved name and a raw id differently", async () => {
     // The guard against a hardcoded placeholder, which every single-row test above would
-    // otherwise pass.
+    // otherwise pass: one owner the endpoint resolved, one it could not.
     const other = "01a0048c-1111-7000-8000-222233334444";
     const t = await table({
       ...SEEDED,
       items: [
         SEEDED.items[0],
         { ...SEEDED.items[0], id: "01a0048c-2222-7000-8000-333344445555",
-          slug: "other-ds", name: "Another dataset", owner_id: other },
+          slug: "other-ds", name: "Another dataset", owner_id: other, owner_name: null },
       ],
     });
 
-    expect(cellUnder(t, /freMTPL2/, "Owner").textContent?.trim()).toBe(OWNER);
+    expect(cellUnder(t, /freMTPL2/, "Owner").textContent?.trim()).toBe("Demo Analyst");
     expect(cellUnder(t, /Another dataset/, "Owner").textContent?.trim()).toBe(other);
   });
 });

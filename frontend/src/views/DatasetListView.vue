@@ -215,17 +215,24 @@ onMounted(() => void load());
             {{ lastValidated(dataset) ?? "—" }}
           </td>
           <!--
-            The whole `owner_id`, not a slice of it. An opaque id's only utility is exact copy
-            and exact search, and `String.slice` destroys both; narrowing is presentational, so
+            The resolved display name when the list endpoint resolved one (OQ-OVR-15 (a)),
+            the whole raw id when it could not. An opaque id's only utility is exact copy and
+            exact search, and `String.slice` destroys both; narrowing is presentational, so
             CSS does it. The value must also never live only in a `title`: a native tooltip is
             not dismissable, hoverable or persistent, and is unreachable by keyboard and touch
             — WCAG 2.2 SC 1.4.13, which NFR-OVR-10 binds this SPA to at AA.
 
-            It names nobody, and that is the honest rendering: no endpoint resolves a principal
-            id to a person (`/api/v1/me` answers for the caller alone), which is OQ-OVR-15.
+            A `None` name is an honest answer: the id did not resolve to a `users` or
+            `service_accounts` row, and a raw id is the correct interim — never a fabricated
+            name (OQ-OVR-15).
           -->
           <td class="py-3">
             <span
+              v-if="dataset.owner_name"
+              class="block max-w-[24ch] truncate text-xs text-slate-600"
+            >{{ dataset.owner_name }}</span>
+            <span
+              v-else
               class="block max-w-[12ch] truncate font-mono text-xs text-slate-500"
             >{{ dataset.owner_id }}</span>
           </td>

@@ -293,7 +293,7 @@ async def create_dataset(
             default_record_grain=body.default_record_grain,
             data_dictionary=body.data_dictionary,
         )
-        return service.to_schema(row)
+        return service.to_schema(row, owner_name=caller.principal.display)
 
 
 @router.get("/datasets", summary="List datasets", responses=problems(400, 401, 403, 422))
@@ -330,6 +330,9 @@ async def list_datasets(
         page_ids = [row.id for row in page_rows]
         latest = await _latest_versions(session, page_ids)
         validated = await _last_validated(session, page_ids)
+        owner_names = await service.resolve_owner_names(
+            session, {row.owner_id for row in page_rows}
+        )
 
     return Page[Dataset](
         items=[
@@ -337,6 +340,7 @@ async def list_datasets(
                 row,
                 latest_version=latest.get(row.id),
                 last_validated=validated.get(row.id),
+                owner_name=owner_names.get(row.owner_id),
             )
             for row in page_rows
         ],
@@ -437,10 +441,12 @@ async def get_dataset(slug: str, caller: ReadDatasets, database: DatabaseDep) ->
         # nothing where the list showed a date would be its own defect (FR-DATA-50).
         latest = await _latest_versions(session, [row.id])
         validated = await _last_validated(session, [row.id])
+        owner_names = await service.resolve_owner_names(session, {row.owner_id})
         return service.to_schema(
             row,
             latest_version=latest.get(row.id),
             last_validated=validated.get(row.id),
+            owner_name=owner_names.get(row.owner_id),
         )
 
 
@@ -476,10 +482,12 @@ async def patch_dataset_owner(
         )
         latest = await _latest_versions(session, [row.id])
         validated = await _last_validated(session, [row.id])
+        owner_names = await service.resolve_owner_names(session, {row.owner_id})
         return service.to_schema(
             row,
             latest_version=latest.get(row.id),
             last_validated=validated.get(row.id),
+            owner_name=owner_names.get(row.owner_id),
         )
 
 @router.put(
@@ -499,7 +507,8 @@ async def put_dictionary(
             slug=slug,
             entries=body.data_dictionary,
         )
-        return service.to_schema(row)
+        owner_names = await service.resolve_owner_names(session, {row.owner_id})
+        return service.to_schema(row, owner_name=owner_names.get(row.owner_id))
 
 
 @router.post(

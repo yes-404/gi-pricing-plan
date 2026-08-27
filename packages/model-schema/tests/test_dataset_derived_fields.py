@@ -82,3 +82,15 @@ def test_a_validated_version_without_its_date_is_refused() -> None:
             latest_version_status=DatasetStatus.VALIDATED,
             last_validated_version=11,
         )
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_owner_name_is_optional_and_unresolved_by_default() -> None:
+    """OQ-OVR-15 (a): the resolved name is a derived field, and `None` is an honest answer.
+
+    A projection that never resolved the id must still construct — the list renders the raw
+    id as its fallback. The default (rather than a required parameter) is what lets every
+    existing caller keep working while the resolving routes pass the name.
+    """
+    assert _dataset().owner_name is None
+    assert _dataset(owner_name="Demo Analyst").owner_name == "Demo Analyst"

@@ -17,8 +17,9 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
+from app.db.models import ServiceAccountRow, UserRow
 from app.db.session import Database
-from model_schema import new_uuid7
+from model_schema import ActorKind, Principal, new_uuid7
 
 
 @pytest.fixture
@@ -853,6 +854,177 @@ def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
+@pytest.mark.req("FR-DATA-51")
+def test_the_list_resolves_an_owner_to_its_display_name(
+    client, workspace_id, principal, grant, database
+) -> None:
+    """OQ-OVR-15 (a): the owner column renders a resolved name, not a bare uuid.
+
+    The list must resolve `owner_id` to a display name the way it already resolves
+    `latest_version_status` — batched, from `users`, and null when the id does not resolve.
+    """
+    from app.platform import datasets as dataset_service
+
+    _run(grant("analyst"))
+    owner_id = new_uuid7()
+
+    async def _seed() -> None:
+        async with database.unit_of_work() as session:
+            session.add(
+                UserRow(
+                    id=owner_id,
+                    issuer="https://provider.example",
+                    subject="analyst",
+                    email="analyst@example.fr",
+                    display_name="Demo Analyst",
+                )
+            )
+            await session.flush()
+            row = await dataset_service.create_dataset(
+                session, workspace_id=workspace_id, actor=principal, slug="owned-by-analyst"
+            )
+            # The caller (current owner) hands the dataset to the seeded user.
+            await dataset_service.set_owner(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                dataset_id=row.id,
+                owner_id=owner_id,
+            )
+
+    _run(_seed())
+    headers = _headers(principal.id, workspace_id)
+    items = client.get("/api/v1/datasets", headers=headers).json()["items"]
+    row = next(item for item in items if item["slug"] == "owned-by-analyst")
+    assert row["owner_name"] == "Demo Analyst"
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_the_list_reports_null_for_an_unresolvable_owner(
+    client, workspace_id, principal, grant, database
+) -> None:
+    """A principal id with no row in `users` or `service_accounts` is an honest null.
+
+    The test-suite `principal` fixture has no `UserRow`; its datasets must read
+    `owner_name: null` and the frontend falls back to the raw id — never a fabricated
+    name (OQ-OVR-15).
+    """
+    from app.platform import datasets as dataset_service
+
+    _run(grant("analyst"))
+
+    async def _seed() -> None:
+        async with database.unit_of_work() as session:
+            await dataset_service.create_dataset(
+                session,
+                workspace_id=workspace_id,
+                actor=Principal(
+                    kind=ActorKind.USER, id=principal.id, display="a.actuary@insurer.example"
+                ),
+                slug="ownerless-in-resolvable-terms",
+            )
+
+    _run(_seed())
+    headers = _headers(principal.id, workspace_id)
+    items = client.get("/api/v1/datasets", headers=headers).json()["items"]
+    row = next(item for item in items if item["slug"] == "ownerless-in-resolvable-terms")
+    assert row["owner_name"] is None
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_a_service_account_owner_resolves_to_its_slug(
+    client, workspace_id, principal, grant, database
+) -> None:
+    """A service-account principal resolves to its slug, not to nothing.
+
+    `Principal.display` for a service account is `account.slug` (`auth/service.py`); the
+    list resolution must answer the same way, so an ingestion driven by a key does not
+    render a nameless owner.
+    """
+    from app.platform import datasets as dataset_service
+
+    _run(grant("analyst"))
+    account_id = new_uuid7()
+
+    async def _seed() -> None:
+        async with database.unit_of_work() as session:
+            session.add(
+                ServiceAccountRow(
+                    id=account_id,
+                    workspace_id=workspace_id,
+                    slug="api-pipeline",
+                    description="key-driven ingestion",
+                    environments=[],
+                    permissions=[],
+                )
+            )
+            await session.flush()
+            row = await dataset_service.create_dataset(
+                session, workspace_id=workspace_id, actor=principal, slug="pipeline-owned"
+            )
+            await dataset_service.set_owner(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                dataset_id=row.id,
+                owner_id=account_id,
+            )
+
+    _run(_seed())
+    headers = _headers(principal.id, workspace_id)
+    items = client.get("/api/v1/datasets", headers=headers).json()["items"]
+    row = next(item for item in items if item["slug"] == "pipeline-owned")
+    assert row["owner_name"] == "api-pipeline"
+
+
+@pytest.mark.req("FR-DATA-51")
+def test_the_detail_route_agrees_with_the_list_on_owner_name(
+    client, workspace_id, principal, grant, database
+) -> None:
+    """The detail route resolves the same name as the list.
+
+    FR-DATA-50's recorded finding is that the same artifact shape from two routes
+    disagreeing is a defect; `owner_name` must not repeat it. The owner-change and
+    dictionary routes call the same `resolve_owner_names` helper over the row's owner.
+    """
+    from app.platform import datasets as dataset_service
+
+    _run(grant("analyst"))
+    owner_id = new_uuid7()
+
+    async def _seed() -> None:
+        async with database.unit_of_work() as session:
+            session.add(
+                UserRow(
+                    id=owner_id,
+                    issuer="https://provider.example",
+                    subject="owner",
+                    email="owner@example.fr",
+                    display_name="The Owner",
+                )
+            )
+            await session.flush()
+            row = await dataset_service.create_dataset(
+                session, workspace_id=workspace_id, actor=principal, slug="agreed-owner"
+            )
+            await dataset_service.set_owner(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                dataset_id=row.id,
+                owner_id=owner_id,
+            )
+
+    _run(_seed())
+    headers = _headers(principal.id, workspace_id)
+
+    listed = client.get("/api/v1/datasets", headers=headers).json()["items"]
+    row = next(item for item in listed if item["slug"] == "agreed-owner")
+    detail = client.get("/api/v1/datasets/agreed-owner", headers=headers).json()
+    assert row["owner_name"] == "The Owner"
+    assert detail["owner_name"] == row["owner_name"]
+
+
 async def _draft_dataset(
     database: Database, workspace_id: UUID, actor, slug: str, *, versions: int = 1
 ) -> UUID:
@@ -1048,18 +1220,22 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
     assert large.status_code == 200, large.text
     assert len(small.json()["items"]) == 3
     assert len(large.json()["items"]) == 10
-    # Six, not five. FR-DATA-50's "one further aggregate" budgets the *page's* queries,
+    # Eight, not five. FR-DATA-50's "one further aggregate" budgets the *page's* queries,
     # and four of these are it: the row query, the capped count, `_latest_versions` and
     # `_last_validated`. The fifth is `requires(DATASET_READ)`'s role-assignment lookup,
     # and the sixth is the `workspace_members` read in identity resolution (W6b-11): the
     # caller's workspace set comes from the database, never from a header. Both are
     # per-request authorisation costs every route in this file pays, independent of the
-    # page and of this slice. Counted rather than filtered out, because a listener that
+    # page and of this slice. The seventh and eighth are OQ-OVR-15 (a)'s owner
+    # resolution (W6b-21): one `users` query and one `service_accounts` query, both
+    # `WHERE id IN (...)` over the page's owners, size-independent by the same argument
+    # as `_latest_versions`. Counted rather than filtered out, because a listener that
     # only counts the statements it expects cannot catch an N+1 in one it does not.
-    assert at_three == at_ten == 6, (
+    assert at_three == at_ten == 8, (
         f"a page costs {at_three} statements at 3 rows and {at_ten} at 10; the budget is "
-        "six — the memberships read, the permission check, the row query, the capped "
-        f"count, the latest-version aggregate and the one further aggregate.\n{statements!r}"
+        "eight — the memberships read, the permission check, the row query, the capped "
+        "count, the latest-version aggregate, the last-validated aggregate, the users "
+        f"owner lookup and the service-accounts owner lookup.\n{statements!r}"
     )
 
 

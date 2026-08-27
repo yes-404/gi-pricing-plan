@@ -29,8 +29,10 @@ from app.db.models import (
     DatasetRow,
     DatasetSplitRow,
     DatasetVersionRow,
+    ServiceAccountRow,
     SourceRow,
     SubjectPurgeRow,
+    UserRow,
 )
 from app.errors import PlatformError
 from app.observability.logging import get_logger
@@ -361,17 +363,59 @@ async def set_owner(
     return row
 
 
+async def resolve_owner_names(
+    session: AsyncSession, owner_ids: set[UUID]
+) -> dict[UUID, str]:
+    """Resolve principal ids to display names, for `Dataset.owner_name` (OQ-OVR-15 (a)).
+
+    A principal id is a `users.id` or a `service_accounts.id` — two tables, one query each,
+    independent of page size, which is the property that lets the list batch a whole page
+    the way `_latest_versions` does. A user resolves to `display_name` or `email` or
+    `subject` (the same fallback `authenticate_bearer` records into `Principal.display`);
+    a service account resolves to its `slug`. An id in neither table is absent — the
+    schema then reports `owner_name = None` and the frontend renders the raw id, which is
+    the correct interim and never a fabricated name.
+    """
+    if not owner_ids:
+        return {}
+
+    names: dict[UUID, str] = {}
+    users = (
+        await session.execute(
+            select(UserRow.id, UserRow.display_name, UserRow.email, UserRow.subject).where(
+                UserRow.id.in_(owner_ids)
+            )
+        )
+    ).all()
+    for user in users:
+        names[user.id] = user.display_name or user.email or user.subject
+    accounts = (
+        await session.execute(
+            select(ServiceAccountRow.id, ServiceAccountRow.slug).where(
+                ServiceAccountRow.id.in_(owner_ids)
+            )
+        )
+    ).all()
+    for account in accounts:
+        names.setdefault(account.id, account.slug)
+    return names
+
+
 def to_schema(
     row: DatasetRow,
     *,
     latest_version: tuple[int, str] | None = None,
     last_validated: tuple[int, datetime] | None = None,
+    owner_name: str | None = None,
 ) -> Dataset:
     """The row as the `01` §4.1 artifact the API returns.
 
     `latest_version` is a `(version, status)` pair rather than two parameters so a caller
     cannot supply one without the other — the schema refuses that combination anyway
     (FR-DATA-50), and a pair turns a runtime `ValidationError` into a type error.
+
+    `owner_name` is derived per request and stored on no row; a caller that does not
+    resolve it yields `None` and the frontend falls back to the id (OQ-OVR-15 (a)).
     """
     return Dataset(
         id=row.id,
@@ -391,6 +435,7 @@ def to_schema(
         },
         validation_rule_set_id=row.validation_rule_set_id,
         owner_id=row.owner_id,
+        owner_name=owner_name,
         latest_version=latest_version[0] if latest_version else None,
         latest_version_status=(
             DatasetStatus(latest_version[1]) if latest_version else None
