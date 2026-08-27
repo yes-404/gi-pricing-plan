@@ -574,6 +574,16 @@ async def run(rows: int | None) -> int:
         )
     print(f"  a model may be fitted on {slug}@{promoted.version} ({fittable.id})")
     print("  and still may not on @1 — `01` §1.3 has no override\n")
+
+    # W7-1: the demo models — factors, a GLM and a GBM, through the real Job path.
+    # `Path(__file__).parent` is on sys.path (the seed's own import shim), so `model` —
+    # not `examples.fremtpl2.model` — is the importable name here.
+    from model import fit_demo_models
+
+    fitted = await fit_demo_models(
+        database, blob_store, workspace_id, analyst, dataset_id, second
+    )
+    print(f"  demo models fitted: GLM {fitted['glm']}, GBM {fitted['gbm']}\n")
     await database.dispose()
     return 0
 
