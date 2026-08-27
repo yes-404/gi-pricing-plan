@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
-import { listVersions } from "@/api/datasets";
+import { getDataset, listVersions, type Dataset } from "@/api/datasets";
 import { ProblemError, isProblem } from "@/api/problem";
 import {
   compareProfiles,
@@ -20,7 +20,7 @@ import ColumnDrift from "@/components/ColumnDrift.vue";
 import HistogramChart from "@/components/HistogramChart.vue";
 import OneWayChart from "@/components/OneWayChart.vue";
 
-const props = defineProps<{ slug: string; version: string; currency?: string }>();
+const props = defineProps<{ slug: string; version: string }>();
 
 const profile = ref<Profile | null>(null);
 const selected = ref<string | null>(null);
@@ -39,7 +39,12 @@ const warnAbove = ref<number | null>(null);
 const route = useRoute();
 const router = useRouter();
 
-const currency = computed(() => props.currency ?? "GBP");
+/** The dataset the profile is for — its currency is what amounts are denominated in.
+ *  The empty string is unreachable at render: the value is read only inside the loaded
+ *  branch, where `getDataset` has set it. It exists to keep the required-`string`
+ *  consumers honest, not as a money default (OQ-OVR-14, decided 2026-08-26 (b)). */
+const dataset = ref<Dataset | null>(null);
+const currency = computed(() => dataset.value?.currency ?? "");
 const rateable = computed(() => (profile.value?.one_ways ?? []).map((o) => o.column));
 
 const referenceLabel = computed(() => {
@@ -82,6 +87,7 @@ async function load(): Promise<void> {
   try {
     const version = await getVersion(props.slug, Number(props.version));
     versionId.value = version.id;
+    dataset.value = await getDataset(props.slug);
     profile.value = await getProfile(version.id);
     selected.value = rateable.value[0] ?? null;
   } catch (error) {

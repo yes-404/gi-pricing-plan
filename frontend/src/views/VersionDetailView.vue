@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
+import { getDataset, type Dataset } from "@/api/datasets";
 import { isProblem, ProblemError } from "@/api/problem";
 import {
   formatDecimalString,
@@ -12,9 +13,14 @@ import {
   type RejectedRows,
 } from "@/api/versions";
 
-const props = defineProps<{ slug: string; version: string; currency?: string }>();
+const props = defineProps<{ slug: string; version: string }>();
 
 const detail = ref<DatasetVersion | null>(null);
+/** The dataset this version belongs to — its currency is what amounts are denominated
+ *  in. The empty string is unreachable at render: the value is read only inside the
+ *  loaded branch, where `getDataset` has set it. It exists to keep `formatMinor`'s
+ *  required-`string` signature honest, not as a money default (OQ-OVR-14 (b)). */
+const dataset = ref<Dataset | null>(null);
 const rejected = ref<RejectedRows | null>(null);
 /** Distinct from "not loaded": a derived version has no run of its own, and that is an
  *  answer rather than a failure. */
@@ -22,7 +28,7 @@ const hasNoRun = ref(false);
 const loading = ref(true);
 const problem = ref<ProblemError | null>(null);
 
-const currency = computed(() => props.currency ?? "GBP");
+const currency = computed(() => dataset.value?.currency ?? "");
 const tables = computed(() => detail.value?.tables ?? []);
 
 const STATUS_TONE: Record<string, string> = {
@@ -38,6 +44,7 @@ async function load(): Promise<void> {
   try {
     const loaded = await getVersion(props.slug, Number(props.version));
     detail.value = loaded;
+    dataset.value = await getDataset(props.slug);
     try {
       rejected.value = await getRejected(loaded.id);
     } catch (error) {

@@ -201,6 +201,7 @@ function stub(
   compare: { status?: number; body?: unknown } = {},
   versions: { status?: number; body?: unknown } = {},
   rules: { status?: number; body?: unknown } = {},
+  dataset: unknown = DATASET,
 ): void {
   vi.stubGlobal(
     "fetch",
@@ -222,10 +223,23 @@ function stub(
       // fall-through below.
       if (/\/versions(\?|$)/.test(url)) return json(versions.body ?? VERSIONS, versions.status ?? 200);
       if (url.includes("/profile")) return json(PROFILE);
+      // The dataset itself, `/datasets/{slug}` — the source of the currency (OQ-OVR-14 (b)).
+      // Everything with a resource past the slug (the single-version lookup below) is not it.
+      if (/\/datasets\/[^/]+$/.test(url)) return json(dataset);
       return json(VERSION);
     }),
   );
 }
+
+/** The dataset the profile is for — its `currency` is what `OneWayChart` renders with
+ *  (OQ-OVR-14 (b)). The view fetches it via `getDataset(slug)`; no prop carries it. */
+const DATASET = {
+  id: "22222222-2222-4222-8222-222222222222",
+  workspace_id: "11111111-1111-4111-8111-111111111111",
+  slug: "fremtpl2",
+  name: "freMTPL2",
+  currency: "EUR",
+};
 
 beforeEach(() => {
   routerReplace.mockClear();
@@ -234,7 +248,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const props = { slug: "fremtpl2", version: "2", currency: "EUR" };
+const props = { slug: "fremtpl2", version: "2" };
 //: `RouterLink: true` renders `<router-link-stub>` and **discards the default slot**, so
 //: any assertion on a link's text fails against an empty element. This stub keeps the
 //: content, which is what the view actually renders.
@@ -263,6 +277,16 @@ describe("the profile view", () => {
     const chart = await screen.findByTestId("chart");
     expect(chart).toHaveTextContent("veh_brand");
     expect(chart).toHaveAttribute("data-currency", "EUR");
+  });
+
+  it("reads the currency from the dataset, not from a default", async () => {
+    // The positive control for OQ-OVR-14 (b): a dataset that changed its currency away
+    // from the model default must flow it to the chart. A hardcoded "GBP" anywhere in the
+    // view would fail this test.
+    stub(200, ONE_WAY, {}, {}, {}, { ...DATASET, currency: "USD" });
+    render(ProfileView, { props, ...mounted });
+    const chart = await screen.findByTestId("chart");
+    expect(chart).toHaveAttribute("data-currency", "USD");
   });
 
   it("treats a column with no stored one-way as an answer", async () => {

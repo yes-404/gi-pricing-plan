@@ -39,12 +39,26 @@ const REJECTED = {
   sample: [],
 };
 
-function stub(rejected: unknown = REJECTED, rejectedStatus = 200): void {
+/** The dataset the version belongs to. Its `currency` is what `formatMinor` renders with
+ *  (OQ-OVR-14 (b)) — the view fetches it via `getDataset(slug)`, never a hardcoded prop. */
+const DATASET = {
+  id: "01a00495-58d0-71f8-a039-cd4c45337960",
+  workspace_id: "01a00495-4977-7ec0-95e3-850dc18d1177",
+  slug: "fremtpl2",
+  name: "freMTPL2",
+  currency: "EUR",
+};
+
+function stub(rejected: unknown = REJECTED, rejectedStatus = 200, dataset: unknown = DATASET): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL) => {
       const url = String(input);
-      const body = url.includes("/rejected") ? rejected : VERSION;
+      const body = url.includes("/rejected")
+        ? rejected
+        : url.includes("/versions/")
+          ? VERSION
+          : dataset;
       return new Response(JSON.stringify(body), {
         status: url.includes("/rejected") ? rejectedStatus : 200,
         headers: { "Content-Type": "application/json" },
@@ -55,7 +69,7 @@ function stub(rejected: unknown = REJECTED, rejectedStatus = 200): void {
 
 afterEach(() => vi.unstubAllGlobals());
 
-const props = { slug: "fremtpl2", version: "1", currency: "EUR" };
+const props = { slug: "fremtpl2", version: "1" };
 //: `RouterLink: true` renders `<router-link-stub>` and **discards the default slot**, so
 //: any assertion on a link's text fails against an empty element.
 const mounted = {
@@ -75,6 +89,15 @@ describe("the version detail view", () => {
     render(VersionDetailView, { props, ...mounted });
     // €4,075,400.56 from 407540056 minor units — a French book, not a British one.
     expect(await screen.findByText(/4,075,400\.56/)).toBeInTheDocument();
+  });
+
+  it("reads the currency from the dataset, not from a default", async () => {
+    // The positive control for OQ-OVR-14 (b): a dataset that changed its currency away
+    // from the model default must render in that currency. A hardcoded "GBP" (or "EUR")
+    // anywhere in the view would fail this test.
+    stub(REJECTED, 200, { ...DATASET, currency: "USD" });
+    render(VersionDetailView, { props, ...mounted });
+    expect(await screen.findByText(/\$4,075,400\.56/)).toBeInTheDocument();
   });
 
   it("shows the source header each column came from", async () => {
@@ -109,7 +132,9 @@ describe("the version detail view", () => {
         const url = String(input);
         const body = url.includes("/rejected")
           ? REJECTED
-          : { ...VERSION, status: "validated" };
+          : url.includes("/versions/")
+            ? { ...VERSION, status: "validated" }
+            : DATASET;
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { "Content-Type": "application/json" },
