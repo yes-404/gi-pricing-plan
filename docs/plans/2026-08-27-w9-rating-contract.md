@@ -180,6 +180,19 @@
 
 **DP3 — the lifecycle ceiling.** FR-RATE-23 names `draft → review → approved → live → retired`. Deployment is W14. Options: W9 builds through `approved` and declares `live`/`retired` transitions for the deployment slice, or W9 builds the full transition set. **Recommendation:** build through `approved` now. The `live` and `retired` transitions belong with the deployment slice.
 
+**Ruled 2026-08-27 (decision-maker) — all three confirmed.**
+
+- **DP1 confirmed.** The Bundle is the JDM graph plus the pinned artifacts' resolved
+  payloads, wrapped by the `pricing-core` facade (ADR-0004). The content hash covers the
+  graph and the pinned artifact hashes. This matches FR-RATE-24's self-contained bundle
+  and the spec's Bundle and Compiled Bundle definitions.
+- **DP2 confirmed.** Build the sub-graph reference and the inlining in W9-1. FR-RATE-6
+  requires sub-graphs to be "inlined at bundle time"; deferring the inlining would
+  contradict the requirement. The mount point is already in the `03` §4.1 example.
+- **DP3 confirmed.** Build through `approved`; declare `live`/`retired` for the
+  deployment slice W14. FR-RATE-23 makes `live` a property of a Deployment, so the
+  transition belongs with W14.
+
 ---
 
 ## Verification
