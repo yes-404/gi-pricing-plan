@@ -9,7 +9,9 @@ import {
   unpublishedByModule,
   type DemoGuide,
 } from "@/api/demo";
+import { listModels, type Model } from "@/api/models";
 import { isProblem, ProblemError } from "@/api/problem";
+import { listRatingVersions, type RatingVersion } from "@/api/ratingVersions";
 
 /**
  * The demo entrance (FR-PLAT-53) and its guide (FR-PLAT-54).
@@ -24,6 +26,11 @@ const guide = ref<DemoGuide | null>(null);
 const loading = ref(true);
 const disabled = ref(false);
 const problem = ref<ProblemError | null>(null);
+
+/** The seeded models and rating version (W7-5) — best-effort: absent when dev auth is off. */
+const demoModels = ref<Model[]>([]);
+const ratingVersions = ref<RatingVersion[]>([]);
+const seededError = ref(false);
 
 const modules = computed(() => (guide.value ? byModule(guide.value) : []));
 const built = computed(() => (guide.value?.views ?? []).filter((view) => view.implemented));
@@ -53,6 +60,18 @@ onMounted(async () => {
     if (isProblem(error, "NOT_FOUND")) disabled.value = true;
     else if (error instanceof ProblemError) problem.value = error;
     else throw error;
+  }
+  // Best-effort, after the guide: the seeded workspace's models and rating version
+  // (W7-5). A failure here (auth off, or nothing seeded) is not a guide failure — the
+  // section simply shows nothing.
+  try {
+    const page = await listModels();
+    demoModels.value = page.items.filter(
+      (model) => model.status === "approved" || model.status === "fitted",
+    );
+    ratingVersions.value = await listRatingVersions();
+  } catch {
+    seededError.value = true;
   } finally {
     loading.value = false;
   }
@@ -171,6 +190,45 @@ onMounted(async () => {
           dataset or version in the path, so they are reached from the list rather than
           linked here — a link with <code class="font-mono">:slug</code> in it would 404.
         </p>
+      </section>
+
+      <section
+        v-if="!seededError && (demoModels.length > 0 || ratingVersions.length > 0)"
+        class="mt-8"
+      >
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Seeded workspace
+        </h2>
+        <p class="mt-1 text-sm text-slate-600">
+          The freMTPL2 seed fits a GLM and a GBM, compares them, and approves one — the
+          Phase 1b modelling half (W7). The approved model is what the rating version pins.
+        </p>
+        <ul class="mt-3 flex flex-wrap gap-2">
+          <li
+            v-for="model in demoModels"
+            :key="model.id"
+          >
+            <RouterLink
+              :to="`/models/${model.model_family_slug}?version=${model.version}`"
+              class="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+            >
+              {{ model.model_family_slug }}
+              <span class="ml-1 font-mono text-xs text-slate-500">{{ model.status }}</span>
+            </RouterLink>
+          </li>
+          <li
+            v-for="rating in ratingVersions"
+            :key="rating.id"
+          >
+            <RouterLink
+              :to="`/rating-versions/${rating.id}`"
+              class="rounded border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+            >
+              {{ rating.slug }}
+              <span class="ml-1 font-mono text-xs text-slate-500">{{ rating.status }}</span>
+            </RouterLink>
+          </li>
+        </ul>
       </section>
 
       <section

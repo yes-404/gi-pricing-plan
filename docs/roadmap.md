@@ -248,6 +248,15 @@ drives the version to `validated` — with the report and profile visible. This 
 | ~~**Exit demo**~~ ✔ | Phase 1a's exit criterion exercised through `/demo` | ✔ **accepted 2026-08-15** — one command to a served page in 27 s, the failure loop on real data, two defects found. Exercised over HTTP by Claude; the maintainer accepted without driving it, deferring hands-on testing until more functionality exists |
 | ~~**Exit gate**~~ ✔ | FR-DATA-41 (ingestion refuses a `direct_identifier` column) · FR-DATA-42 (append-only triggers on `validation_reports`, `profiles`, `validation_acknowledgements`) | ✔ **delivered 2026-08-15** — five injections, five caught. `blobs` left the list when building it proved it could not be append-only; the requirement was corrected rather than the table dropped |
 
+#### Phase 1b status
+
+| WS | Scope | Status |
+|---|---|---|
+| **W5** | Modelling workbench — model detail, comparison, diagnostics, transparency, objective library, perils, factors | ✔ **closed 2026-08-22** — see the closure record below |
+| **W6b** | Modelling-workbench UI — dataset list, rule set editor, model spec builder, browser auth, workspace selector, lineage, rating-version demo seam | ✔ **closed 2026-08-27** — see the closure record below |
+| **W7** | freMTPL2 demo seed — **the modelling half** | **in progress** — factors, GLM + GBM fits, comparison, one approved model, and the Phase 1b rating version (FR-PLAT-67) seed end to end. The batches are open as PRs |
+| **Exit demo** | Phase 1b's exit criterion — `wf-01` end to end on freMTPL2 — exercised over HTTP | **pending** — a scripted HTTP run of the journey with the postconditions verified, with the UI available for hands-on driving. The maintainer accepts the scripted run; hands-on driving of the UI remains available |
+
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
 to fail on broken input, NFRs measured against their budget, and what was *not* delivered

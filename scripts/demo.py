@@ -201,6 +201,7 @@ def demo_env() -> dict[str, str]:
 
 def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
     check_environment()
+    started = time.monotonic()
 
     env = demo_env()
 
@@ -261,6 +262,7 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
     with background(api, step=f"API on :{API_PORT}", env=env) as api_process:
         _still_running(api_process, step="the API")
         wait_for(f"http://localhost:{API_PORT}/api/v1/demo/guide", step="API")
+        _verify_journey_postconditions(record, env)
         if not frontend:
             print(f"\n   API ready: http://localhost:{API_PORT}/docs", flush=True)
             print("   Ctrl-C to stop.\n", flush=True)
@@ -272,10 +274,13 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
         ) as frontend_process:
             _still_running(frontend_process, step="the frontend")
             wait_for(f"http://localhost:{FRONTEND_PORT}/", step="frontend")
+            elapsed = time.monotonic() - started
             print(
                 f"\n{'═' * 62}\n"
                 f"  Open  http://localhost:{FRONTEND_PORT}/demo\n"
                 f"{'═' * 62}\n"
+                f"  Seeded to a usable state in {elapsed:.0f}s"
+                f"  (NFR-PLAT-4: < 5 min on a developer laptop).\n\n"
                 "  That page is derived from this checkout — the specs' view tables\n"
                 "  against the router, the published contract, and the roadmap. It says\n"
                 "  what is worth clicking and, more usefully, what is not built yet.\n\n"
@@ -286,6 +291,35 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
             )
             _wait_for_interrupt()
     return 0
+
+
+def _verify_journey_postconditions(record: dict[str, str], env: dict[str, str]) -> None:
+    """wf-01 §4's demo subset, over HTTP: an approved model exists (W7-5 T1).
+
+    The full §4 list includes bandings, a peril structure and a reconciliation the demo
+    does not seed; the demo's subset is the validated dataset, the split, one approved
+    model and the rating version. The approved-model check is the one the API can answer
+    without extra ids, and it fails the demo loudly if the seed produced nothing approved
+    — a demo that reaches a browser with no model to show has wasted the reader's time.
+    """
+    import urllib.request
+
+    url = f"http://localhost:{API_PORT}/api/v1/models?status=approved&limit=5"
+    request = urllib.request.Request(
+        url,
+        headers={
+            "x-dev-principal-id": record["analyst_id"],
+            "Workspace-Id": record["workspace_id"],
+        },
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        body = json.loads(response.read())
+    approved = body.get("items", [])
+    if not approved:
+        raise DemoRefusedError(
+            "wf-01's demo subset: no approved model after the seed — see the seed output"
+        )
+    print(f"  wf-01 demo subset: {len(approved)} approved model(s)", flush=True)
 
 
 def _wait_for_interrupt() -> None:

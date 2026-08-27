@@ -22590,6 +22590,82 @@
         ]
       }
     },
+    "/api/v1/rating-versions": {
+      "get": {
+        "description": "The Phase 1b rating versions the demo seeds (FR-PLAT-67, W7-5).\n\nA list for the exit demo's guide — the frontend cannot know a rating version's id to\ncall the by-id read, and a demo that cannot discover its own seeded artifact is not a\ndemo. The full `03` surface stays Phase 2.",
+        "operationId": "list_rating_versions_api_v1_rating_versions_get",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RatingVersion"
+                  },
+                  "title": "Response List Rating Versions Api V1 Rating Versions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          }
+        },
+        "summary": "List rating versions",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/rating-versions/{rating_version_id}": {
       "get": {
         "description": "The Phase 1b rating version the demo seeds (FR-PLAT-67, OD1).\n\nOne read route for the exit demo: the demo guide links the approved rating version, and\nthe full `03` surface stays Phase 2.",
