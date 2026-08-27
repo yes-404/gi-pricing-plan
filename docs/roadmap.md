@@ -254,8 +254,8 @@ drives the version to `validated` — with the report and profile visible. This 
 |---|---|---|
 | **W5** | Modelling workbench — model detail, comparison, diagnostics, transparency, objective library, perils, factors | ✔ **closed 2026-08-22** — see the closure record below |
 | **W6b** | Modelling-workbench UI — dataset list, rule set editor, model spec builder, browser auth, workspace selector, lineage, rating-version demo seam | ✔ **closed 2026-08-27** — see the closure record below |
-| **W7** | freMTPL2 demo seed — **the modelling half** | **in progress** — factors, GLM + GBM fits, comparison, one approved model, and the Phase 1b rating version (FR-PLAT-67) seed end to end. The batches are open as PRs |
-| **Exit demo** | Phase 1b's exit criterion — `wf-01` end to end on freMTPL2 — exercised over HTTP | **pending** — a scripted HTTP run of the journey with the postconditions verified, with the UI available for hands-on driving. The maintainer accepts the scripted run; hands-on driving of the UI remains available |
+| ~~**W7**~~ ✔ | freMTPL2 demo seed — **the modelling half** | ✔ **closed 2026-08-27** — see the closure record below |
+| **Exit demo** | Phase 1b's exit criterion — the core `wf-01` journey (dataset → factors → GLM + GBM fits → comparison → approval → rating version) — exercised over HTTP; bandings, Peril Structure and reconciliation are recorded as Phase 2 | **pending** — a scripted HTTP run of the journey with the postconditions verified, with the UI available for hands-on driving. The maintainer accepts the scripted run; hands-on driving of the UI remains available |
 
 Closing a workstream follows `CLAUDE.md` §13 and the `close-workstream` skill: every
 deliverable re-verified against its row above, the gate run locally, each new check proven
@@ -808,6 +808,39 @@ ownership, instrument, or drift defect inside the existing shape.
 
 ---
 
+### Plan review 6 — at W7's close, before the Phase 1b exit demo, 2026-08-27
+
+`CLAUDE.md` §14's sixth run. Both triggers fire at once: W7 closed, and the exit demo is
+the next milestone. Five questions, in order, each answered — including the ones whose
+answer is "no change". The W7 close record below carries the completion evidence.
+
+**1. Completion.** W7 was the last Phase 1b workstream; its close record below carries
+the delivery, the verdicts and the module delta. The only row left in the Phase 1b status
+table is the Exit demo.
+
+**2. Omission.** The surfaces the core journey does not seed — versioned bandings and
+groupings, approved Peril Structure with reconciliation — are named in P1 and recorded as
+Phase 2, so no row is left unnamed.
+
+**3. Skills and research.** **No change** — P2.
+
+**4. Document drift.** **No change** — P2.
+
+**5. Shape.** The Phase 1b exit criterion is restated as the **core `wf-01` journey** —
+dataset → factors → GLM + GBM fits → comparison → approval → rating version — with
+bandings, Peril Structure and reconciliation recorded as Phase 2.
+
+#### Proposals, consolidated
+
+| # | Proposal | Kind |
+|---|---|---|
+| 1 | Phase 1b exit criterion restated as the core `wf-01` journey — dataset → factors → GLM + GBM fits → comparison → approval → rating version — exercised over HTTP; bandings, Peril Structure and reconciliation recorded as Phase 2 | plan |
+| 2 | No change on questions 3 and 4 | plan |
+
+**Maintainer accepted 2026-08-27.**
+
+---
+
 ### W6b — the frontend of Phase 1b: closed 2026-08-27
 
 Evidence pins: close-time origin/main = `ebba7de` (#263). 20 PRs merged (#243–#263)
@@ -994,6 +1027,102 @@ W32 record did.
 - W6B-CLOSE-RECORD-SKELETON-2026-08-26.md.
 - W6B-PLAN-REVIEW-5-DRAFT-2026-08-27.md.
 - origin/main `ebba7de` (#263); roadmap §5, §6; the W32 closure record.
+
+### W7 — freMTPL2 modelling half: closed 2026-08-27
+
+Evidence pins: close-time origin/main = `a9b0326` (#271). W7 shipped as three batches:
+#267 (Batch A), #268 (Batch B), #271 (Batch C). The auditor's evidence is
+W6B-AUDITOR-HANDOVER.md §23–§26; the §13 verdicts are the manager's, quoted verbatim in
+§3–§4.
+
+#### 1. Scope
+
+W7 is the freMTPL2 demo seed — the modelling half (roadmap §6 row). The plan is
+`docs/plans/2026-08-27-w7-fremtpl2-modelling.md`. The scope: a fitted GLM on freMTPL2,
+a rating version, and `wf-01` end to end. The manager's OD rulings (2026-08-27) set the
+boundaries: full GLM+GBM journey with comparison (OD3 b), a minimal Phase 1b rating
+version minted as FR-PLAT-67 (OD1 a), the NFR-MODEL-7 verdict reversed (OD2 a), seed-time
+fit with a sample fallback on budget breach (OD4 a+b), and a scripted HTTP exit run
+(OD5 a).
+
+Slices: W7-1 (demo models, carried-forward obligations), W7-2 (comparison and approval),
+W7-3 (the Phase 1b rating version), W7-4 (obligation checks), W7-5 (the exit demo).
+
+#### 2. Delivery — batches and PRs
+
+| Batch | PR | Squash | Content |
+|---|---|---|---|
+| A | #267 | `836b417` | freMTPL2 demo models (GLM+GBM), split, factors, the carried-forward obligations (FR-DATA-55/56, NFR-MODEL-7 tests) |
+| B | #268 | `4493f80` | the demo comparison and approval; the Phase 1b rating version (FR-PLAT-67, `RatingVersion`, `GET /rating-versions/{id}`) |
+| C | #271 | `a9b0326` | the exit demo: journey timing, postcondition check, demo guide links, acceptance statement |
+
+#### 3. The W7 requirement set — verdicts (manager, 2026-08-27)
+
+| Requirement | Verdict | Evidence (markers cited) |
+|---|---|---|
+| FR-PLAT-37 | DELIVERED | 2 markers, examples/fremtpl2/test_seed.py :34, :47 |
+| FR-PLAT-67 | DELIVERED | 7 markers, test_rating_versions.py (3) + test_rating.py (4) |
+| FR-DATA-55 | DELIVERED | 1 marker, test_reference_pin.py (the pinned, None, and pinned-but-unprofiled paths) |
+| FR-DATA-56 | DELIVERED | 1 marker, test_api_models.py (HTTP 409 broken-input proof) |
+| NFR-MODEL-7 | DELIVERED | 2 markers, test_model_round_trip.py |
+| FR-DATA-57 | DEFERRED | Phase 2 validation-report successor; not built in Phase 1b |
+| FR-DATA-52 | DEFERRED | trigger = named exposure-ordered reader; unowned by design |
+
+5 of 7 evidenced. The two unevidenced are deliberate deferrals with named successors.
+
+#### 4. Not delivered — verdicts (manager, 2026-08-27)
+
+| ID | Verdict | Owner / trigger |
+|---|---|---|
+| FR-DATA-57 | DEFERRED | Phase 2 validation-report successor (`unrun_layers` projection) |
+| FR-DATA-52 | DEFERRED | trigger = a named exposure-ordered reader; unowned by design |
+
+The full `03` rating surface (compile, score, rate tables, deployment) stays Phase 2. The
+rating version built here is the Phase 1b subset scoped by the dated `03` §4.3 note.
+
+#### 5. Exit criterion
+
+The core `wf-01` journey is delivered and postcondition-checked: validated freMTPL2
+dataset → split → factors → GLM and GBM fits through the real Job path → comparison →
+approved model → approved rating version. `demo.py _verify_journey_postconditions`
+asserts an approved model over HTTP and refuses to start the browser otherwise.
+
+The full `wf-01` §4 surface (versioned bandings and groupings, approved Peril Structure
+with reconciliation) is **not** seeded; those surfaces stay Phase 2 (auditor W7-5 drift
+1). The roadmap's Exit demo row reads "pending"; the acceptance mechanism is stated
+(scripted HTTP run, UI available for hands-on driving).
+
+#### 6. Module delta (vs `ebba7de`, pre-W7)
+
+| Module | In scope | Evidenced | Note |
+|---|---|---|---|
+| PLAT | 78 | 48 (62%) | FR-PLAT-67 added and evidenced |
+| DATA | 67 | 63 (94%) | FR-DATA-55/56 evidenced; FR-DATA-57/52, NFR-DATA-1/2 unevidenced |
+| MODEL | 143 | 128 (90%) | NFR-MODEL-7 evidenced |
+
+W7 closed three previously unevidenced W6b focus items (FR-DATA-55, FR-DATA-56,
+NFR-MODEL-7) and added FR-PLAT-67 evidenced.
+
+#### 7. Residue and carry-forward
+
+- The full-seed NFR-PLAT-4 measurement (678 013 rows, GLM+GBM fit) ran end to end in
+  **131 s — 43.7% of the 300 s budget** — with one approved model, the rating version
+  approved, and the postcondition banner reached. The v1 failure is the deliberate
+  validation step, not a defect.
+- `GET /rating-versions/{id}` and the new list route have no direct test; the service and
+  resolver are tested. The RatingVersionView has no test file (structural gap).
+- Batch C's change set has no test files; the demo postcondition check is exercised by
+  the W7-5 exit demo run, not by pytest.
+- Carry-forward into Phase 2: FR-DATA-57 (`unrun_layers`), FR-DATA-52 (trigger), the full
+  `03` surface, and wf-01's remaining §4 postconditions (bandings, Peril Structure,
+  reconciliation).
+
+#### 8. Sources
+
+- W6B-AUDITOR-HANDOVER.md §23–§26 (W7 audit records, the §13 evidence pass at `a9b0326`).
+- W6B-CLOSE-RECORD-DRAFT-2026-08-27.md (the W6b close, carry-forward to W7).
+- `docs/plans/2026-08-27-w7-fremtpl2-modelling.md` (the plan).
+- origin/main `a9b0326` (#271); roadmap §6 (the W7 row).
 
 ### W32 — the backend of Phase 1b: closed 2026-08-24
 
@@ -5559,11 +5688,14 @@ model, compares them, and gets one approved — **`wf-01` end to end**.
 | ~~**W5**~~ ✔ | Modelling: factors, bandings, groupings, glum GLM, XGBoost, diagnostics, transparency artifacts, custom objective **templates only** | W4 (1a) | **Closed 2026-08-22** — 110 built · 10 declared-and-refused-by-name · 16 unevidenced with a verdict, of 136; 41/41 endpoints. See the closure record above. Every `MODEL` requirement — the largest single workstream in the project; `scope-audit.py MODEL` counts them, and per plan review 3's question 5 (accepted 2026-08-22) that is now the only place a reader should take a count from. **Started 2026-08-15**: ~~twenty-two~~ **twenty-eight** slices in — the GLM spine, bandings and groupings, the factor workbench, diagnostics, spec validation, the model lifecycle, model comparison, `wf-01`'s citation audit, gradient boosting with its transparency artifact, `wf-01` driven end to end, peril structures with their reconciliation, interaction factors, backtests, prediction, custom objectives, FR-DATA-47's artifact triggers, the profile contract, `top_levels`' exposure per level, the exact-decimal refusal of a float, paired quantile models, the GLM approximation as a Model (FR-MODEL-96, FR-MODEL-102 — measured at +0.26 s / ~7 % against a **single-factor** fixture; type-III diagnostics refit the surrogate once per factor, so this does not bound a multi-factor model, and `type_iii=False` is the lever if that ever bites, not pulled without the maintainer), and **custom metrics** (FR-MODEL-45/103/105/106/107/108 — a Custom Metric reaches `approved` on the same lifecycle and grammar as a Custom Objective, `GbmSpec.eval_metrics` is now honoured rather than merely declared, and MODEL's endpoint axis closed at **40 of 40**, the first module in this repository to publish every declared endpoint), **regularisation and cross-validation** (FR-MODEL-20/53), **Tweedie power by profile likelihood** (FR-MODEL-22), **offset from another model** (FR-MODEL-24), **EBM via interpret-core** (FR-MODEL-37) and **GBM declared weights with the dropped eval metric record** (FR-MODEL-19/111), and **the audit-remediation slice** (2026-08-22, this one); see the slice records below. *(The count said eighteen and omitted the exact-decimal slice, which had already landed as PR #116; corrected 2026-08-19 by the paired-quantile slice.)* *(It went stale the same way again and is corrected 2026-08-22 by the audit-remediation slice: five slices — regularisation/CV (#124), Tweedie (#125), offset (#126), EBM (#129) and GBM weights (#130) — landed between 08-21 and 08-22 with the count left at twenty-two, while this file's own newest record already called itself "the twenty-seventh slice". Both stale values are kept. **The mechanism is the same both times and is worth naming rather than re-fixing:** a slice's PR strikes its row in the outstanding-work table and stops there, and this count is a second place nothing reconciles against that table — #116 did it, then #124 and #125 did it again. The same mechanism left the buildable-slice counter at one when every row beneath it was struck, and left six verdicts stale in the diagnostics slice's table. **A slice updates the row that describes itself; every other place that counts slices is unowned.** The count is of **numbered** slices, so the three decision-only records of 2026-08-18 (PRs #106, #107, #108) have records and no number and have never been in it.)* **The prediction slice (PR #102, 2026-08-18) landed without a slice record** — the omission is recorded here rather than reconstructed from the diff; what it found is in `02`'s dated notes — FR-MODEL-93, OQ-MODEL-13 and OQ-MODEL-14, plus the `inverse`-link resolution at §3.4 — and in `.claude/skills/python-test`. **Scope set by the 2026-08-15 decisions:** templates only, with the certification machinery built here (FR-MODEL-75/76); both credibility methods, not one (FR-MODEL-80); SHAP interaction *suggestions* (FR-MODEL-79); the complexity diagnostic and its optional gate (FR-MODEL-81); paired quantile models as the only GBM interval (FR-MODEL-77/78). **W5 also finishes `wf-01`, and has**: the citation audit and the journey test landed 2026-08-17, and on 2026-08-18 the peril-structure and interaction slices drove the last three pinned steps, so FR-OVR-17(ii) for `wf-01` is **delivered** — the first of the five journeys. **The closure slice (2026-08-22) is the last, and the count above is deliberately not incremented to twenty-nine**: plan review 3's question 5 was accepted the same day, and adding a fourth hand-written count to the file whose staleness prompted the proposal would be the clearest possible way to ignore it. The slice records below are the list; `scope-audit.py` is the count |
 | ~~**W6b**~~ ✔ | Frontend: **factor workbench**, model detail, diagnostics — **and the frontend platform**: browser authentication, accessibility beyond semantics, the workspace selector's **shell control only**, and the audit's two enforcement gaps — **FR-DATA-41** and **FR-DATA-42** | W5, W6a ✔, OQ-PLAT-6 ✔ | **Closed 2026-08-27** — see the closure record above. `02` §5.3's interaction requirement — an edit's consequence visible before saving. The platform half was added by plan review 1 (accepted 2026-08-15): **FR-PLAT-55** (authorization code + PKCE — until it ships, only the dev proxy reaches the API from a browser), **NFR-OVR-10**'s tabular fallback for charts, and a workspace selector, which `07` §3.1 needs the moment a principal belongs to more than one. **Corrected 2026-08-23 (W6b slice-map backlog item 2): that clause read as a citation and was a forecast — §3.1 had never contained the requirement.** It does now, as FR-PLAT-62 (a Workspace becomes a named entity; there was no `workspaces` table, so a selector had nothing to render) and FR-PLAT-63 (the selection, verified against membership). **Both are W32's, not W6b's** — a table, a migration and an API — and the transport is OQ-PLAT-9. W6b keeps the shell control and stays blocked until the backend half lands. |
 | ~~**W32**~~ ✔ | Everything in Phase 1b that is not a browser — the contract guards, `model-schema` shapes, a migration, backend defects, endpoint tests and one skill | W5 | **Added 2026-08-24** (`plans/2026-08-23-w32-closure-proposal.md` Part B1, accepted by the maintainer that day). **Split from W6b 2026-08-22** and accepted the same day (`plans/2026-08-22-w6b-slice-map.md` §1, acceptance table row 1) — but the split created a workstream name without creating a row, so for two days work merged under a name this plan did not contain, and the coverage figure under Phase 1b described a scope that excluded it. **Eleven slices**, W32-1 … W32-11 — ten as scoped on 2026-08-22, plus **W32-11** allocated 2026-08-24 by the closure proposal's Part C decisions, which W32's close waits on. **W32-11 is the terminal slice**, picked up 2026-08-24 by the closure-execution session and confirmed by the maintainer the same day; findings it cannot resolve are booked forward with an owner rather than held against the close — see the decision record above; **W6b-1 and W6b-5 depend on W32-1, W6b-13 on W32-2, and W6b-3 on W32-3** — all three merged, so **those four W6b slices** wait on nothing but this workstream's close. **`W6b-11` is not among them and does wait on unbuilt W32 code**: FR-PLAT-62 and FR-PLAT-63 are **W32-7's**, and W32-7 is unstarted — there is no `workspaces` table (only `workspace_members` and `workspace_settings`), `record_switch` appears nowhere in `backend`, `packages` or `frontend`, no migration mentions a workspace, and `deps.py`'s `_single_workspace` still refuses a multi-membership caller outright. *(Corrected 2026-08-24: this clause read "W6b-1, -3, -5 and -13 are blocked on it", and two W6b sessions reached opposite readings of "it" — W32-11, the nearest noun, versus W32, the row's subject. Arbitrated against `plans/2026-08-22-w6b-slice-map.md` §5's slice table: those four are **exactly** the W6b rows whose dep column names a W32 slice, the other nine naming a W6b row or nothing. A dependency discovered after 2026-08-22 would have no reason to fall on precisely that pre-existing subset, so the clause compressed the column rather than recording something new. The frozen map needs no amendment.)* *(Corrected again 2026-08-24, hours later — the clause above was itself correction text, and the correction introduced this defect. It ended "all three merged, **so no W6b slice waits on unbuilt W32 code**; what they wait on is this workstream's close." The compression to the frozen dependency column is sound and is left standing; the trailing clause **generalised from the four slices that column names to all thirteen**, and that universal is false. `W6b-11`'s dependency on W32 was created **2026-08-23** by FR-PLAT-62/63 — *after* `plans/2026-08-22-w6b-slice-map.md` §5's table was frozen — so it is invisible in the very column the compression is derived from, and the **W6b row immediately above already said the opposite**: "W6b keeps the shell control and stays blocked until the backend half lands." Two consecutive rows of one table asserted contradictory things for as long as the clause stood. Found by `w6b-decision-maker`, routed via `w6b-lead`, verified here against five independent sources, one of them the code. **The mechanism is that a frozen dependency column ages into a false "ready"**: every dep it names merges, the row reads unblocked, and a dependency discovered later is nowhere in it to say otherwise. **A claim derived from a frozen column describes the column, never the world** — the compression was legitimate up to the em-dash and became a forecast after it. **The clause is in fact refutable on its own text, with the W6b row unread**: the justification licensing it — "a dependency discovered after 2026-08-22 would have no reason to fall on precisely that pre-existing subset" — is exactly the assertion that **the subset is not the population**. The premise that makes the narrow claim sound is the one that refutes the broad one. Diagnosed against the neighbouring row you fix a sentence; diagnosed against the quantifier you fix the class, which is why it is written this way round. Cost had it stood: a W6b session builds a workspace selector against a table that does not exist.)* *(Corrected 2026-08-24 at `60f6e46`, the last feature SHA. The closing commit is `e2ae7c6` (#165): **the `W6b-11` clause above is now false in every particular, and is left standing because it was true when written.** W32-7 merged (#164) and ships the `workspaces` table, its migration, `record_switch` in `platform/workspace_switch.py`, and a `deps.py` that resolves a verified `Workspace-Id` header instead of refusing a multi-membership caller outright. **`W6b-11` no longer waits on unbuilt W32 code**; what it waits on is this workstream's close, recorded above. **One residual remains and it is not a build dependency**: FR-PLAT-63's fourth obligation — a switch audited into both chains — is delivered as a mechanism and tested, and **unenforced on the request path**, because `require_caller` runs once per request and cannot observe that a selection *changed*. Deferred with an owner, **owner W6b-11**, tracked as **`OQ-PLAT-12`**. A W6b session building the selector will find the table and the header; it will not find a request-path trigger, and it owns writing one. **And `plans/2026-08-22-w6b-slice-map.md` is frozen at its date and was not corrected by this close** — `CLAUDE.md` §2 freezes a filed plan, and editing one destroys the record of what was believed at its date while reading as though it had always been right. Its **line 192** still tells `W6b-11` it waits only on W32 building the header half, which was accurate when written and now misleads the one session it gates. **This clause is the live correction; that map is not current.**)* Slice records are above — W32-1 … W32-5 back-filled 2026-08-24, which is the same omission in its second form, and the workstream's closure record is in §6 above |
-| **W7** | freMTPL2 demo seed — **the modelling half** | W5, W6b | `07` FR-PLAT-37. What remains is the half that needs a model: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
+| ~~**W7**~~ ✔ | freMTPL2 demo seed — **the modelling half** | W5, W6b | **Closed 2026-08-27** — see the closure record above: a fitted GLM, a rating version, and `wf-01` end to end. The data half closed as **W7a**, the entrance and its guide as **W7b** (FR-PLAT-53/54, `NT-0002`) — both in Phase 1a, because neither needed modelling and Phase 1a's exit demo needed both |
 
 **Coverage:** ≈ 78 of 375 module requirements (~21 %).
 
-**Exit:** [`wf-01`](workflows/wf-01-dataset-to-model.md) end to end on freMTPL2.
+**Exit:** the core [`wf-01`](workflows/wf-01-dataset-to-model.md) journey on freMTPL2 —
+dataset → factors → GLM + GBM fits → comparison → approval → rating version — exercised
+over HTTP. Bandings, Peril Structure and reconciliation are recorded as Phase 2 (plan
+review 6, accepted 2026-08-27).
 
 W5's *frontend* work (W6b) can start as soon as the `02` contracts are frozen, which is the
 main parallelisation opportunity inside 1b.
