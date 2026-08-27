@@ -371,7 +371,7 @@ dislocation, and serves a live quote inside the latency budget.
 | # | Workstream | Notes |
 |---|---|---|
 | **W8** | **Spike S1/S2 resolution and ADR-0004 confirmation** | Must complete before W9. If S1 fails, this phase is re-planned |
-| **W9** | Rating algorithm contract, validation, bundle compilation | `03` FR-RATE-1..13, 22..27 |
+| ~~**W9**~~ ✔ | Rating algorithm contract, validation, bundle compilation | `03` FR-RATE-1..13, 22..27, 56/57/58/59 — **Closed 2026-08-27** — see the W9 closure record (`docs/audit/work/W9/README.md`). The RatingAlgorithm contract (#291), the save-time validation and boundary guards (#292), and the bundle compilation (#293) shipped |
 | **W10** | Rate tables incl. seeding from models, diffs, bulk operations, import/export | FR-RATE-14..21 |
 | **W11** | Scoring: real-time, batch, trace, one shared evaluator | FR-RATE-34..42; NFR-RATE-1 is the hard target |
 | **W12** | Testing: golden quotes, property assertions, regression runs | FR-RATE-43..45 |
