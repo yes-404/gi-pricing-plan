@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-24, Claude — during W6b, from seven items that were found, agreed to be real, and then held only in a session's working memory |
-| **Status** | `open` — seven backlog items, each needing a maintainer decision on *where* it lands. Raised and assessed, not agreed: nothing is built on them |
+| **Status** | `landed` — all seven filed 2026-08-27 via #276: (a) the `Next free:` marker, (b) check 24, (d) the summary-line verdicts, (e) the `00` §5.6 canonical note, (f) OQ-OVR-17; (c) and (g) recorded discharged in `docs/audit/register.md` |
 | **Deliverable** | Mixed, and stated per item below. Five are **no code and no spec change** (a convention, two one-line script fixes, a plan-freeze consequence, eight roadmap gate placements); one is a **new audit check**; one is an **`OQ-` entry**. None is a requirement |
 | **Owner** | Claude records · maintainer accepts, per item |
 | **Lands in** | Per item: [`scripts/audit-docs.py`](../../scripts/audit-docs.py), [`docs/open-questions.md`](../../docs/open-questions.md), [`docs/roadmap.md`](../../docs/roadmap.md), [`docs/specs/00-overview.md`](../../docs/specs/00-overview.md) |
