@@ -346,6 +346,14 @@ status is `approved` or better (FR-OVR-14); `bundle.content_hash` is reproducibl
 pins; every `model_call` step's `mode` equals `model_reference_mode`
 (FR-RATE-60).
 
+> *(Scoped 2026-08-27, W7-3 — OD1.)* Phase 1b builds the **minimal subset** of this shape:
+> `slug`, `version`, `status` (`draft → review → approved`), `workspace_id`,
+> `dataset_version_id`, a single pinned `model:{slug}@{version}` reference, `created_at`,
+> `created_by`, `updated_at`. Compile, score, rate tables, the `pins`/`evidence`/`bundle`
+> blocks, `model_reference_mode`, and deployment stay Phase 2 (FR-PLAT-67). The
+> `RatingVersion` model in `model-schema` carries only the Phase 1b subset; a Phase 2
+> build widens the shape with the full contract.
+
 ### 4.4 `QuoteContext` and `ScoringResult`
 
 ```json

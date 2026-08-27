@@ -1872,3 +1872,37 @@ class MetricCertificateRow(Base):
             "certified_at",
         ),
     )
+
+
+class RatingVersionRow(Base):
+    """A Phase 1b rating version (OD1, W7-3) — the artifact a model approval reaches.
+
+    Minimal on purpose: `slug`, `version`, `status` (`draft → review → approved`), the
+    dataset version it was fitted against, the pinned approved Model as an `ArtifactRef`
+    string (`model:{slug}@{version}`), and the envelope timestamps. The full `03` surface
+    stays Phase 2 (FR-PLAT-67).
+    """
+
+    __tablename__ = "rating_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    dataset_version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    #: The pinned approved Model, as the canonical `model:{slug}@{version}` string (ID-3).
+    model_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+    approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", "version", name="uq_rating_versions_slug_version"),
+        Index("ix_rating_versions_workspace", "workspace_id", "slug"),
+    )
