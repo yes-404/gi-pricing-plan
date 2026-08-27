@@ -1906,3 +1906,34 @@ class RatingVersionRow(Base):
         UniqueConstraint("workspace_id", "slug", "version", name="uq_rating_versions_slug_version"),
         Index("ix_rating_versions_workspace", "workspace_id", "slug"),
     )
+
+
+class RatingAlgorithmRow(Base):
+    """A saved Rating Algorithm (03 §4.1, W9-2).
+
+    The validated algorithm is stored as its JSON content — a declarative artifact,
+    never a pickle (CLAUDE.md §2). Save-time validation runs before a row is written;
+    the `content` column therefore holds only validated algorithms.
+    """
+
+    __tablename__ = "rating_algorithms"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "slug", "version", name="uq_rating_algorithms_slug_version"
+        ),
+        Index("ix_rating_algorithms_workspace", "workspace_id", "slug"),
+    )

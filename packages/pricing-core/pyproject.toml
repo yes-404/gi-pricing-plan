@@ -50,6 +50,7 @@ dependencies = [
     # rule the fit exports verbatim (spike-verified against 0.7.8; ~115 MB incremental;
     # the workspace's sklearn 1.9.0 satisfies its requirement).
     "interpret-core==0.7.8",
+    "zen-engine==0.53.0",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and
