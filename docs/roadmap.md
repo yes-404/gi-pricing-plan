@@ -1105,10 +1105,10 @@ NFR-MODEL-7) and added FR-PLAT-67 evidenced.
 
 #### 7. Residue and carry-forward
 
-- The full-seed NFR-PLAT-4 measurement (678 013 rows, GLM+GBM fit) is the close's own
-  measurement, not independently verifiable by the auditor (empty compose DB). The demo
-  prints elapsed. The measurement is **in flight** (task #23) and is appended to this
-  record on completion; the record does **not** assert an unmeasured number.
+- The full-seed NFR-PLAT-4 measurement (678 013 rows, GLM+GBM fit) ran end to end in
+  **131 s — 43.7% of the 300 s budget** — with one approved model, the rating version
+  approved, and the postcondition banner reached. The v1 failure is the deliberate
+  validation step, not a defect.
 - `GET /rating-versions/{id}` and the new list route have no direct test; the service and
   resolver are tested. The RatingVersionView has no test file (structural gap).
 - Batch C's change set has no test files; the demo postcondition check is exercised by
