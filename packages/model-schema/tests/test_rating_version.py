@@ -43,8 +43,9 @@ def test_the_phase_1b_subset_still_parses() -> None:
 
 @pytest.mark.req("FR-RATE-22")
 @pytest.mark.req("FR-RATE-26")
+@pytest.mark.req("FR-RATE-27")
 def test_the_full_43_contract_parses() -> None:
-    """FR-RATE-22/26: pins, mode, effective dates, bundle and change summary parse."""
+    """FR-RATE-22/26/27: pins, mode, effective dates, bundle and change summary parse."""
     data = _base()
     data.update({
         "algorithm_ref": "rating_algorithm:motor-gb@14",
