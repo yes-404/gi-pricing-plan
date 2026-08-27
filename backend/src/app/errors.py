@@ -26,6 +26,7 @@ __all__ = [
     "GOVERNANCE_ERROR_CODES",
     "MODELLING_ERROR_CODES",
     "PLATFORM_ERROR_CODES",
+    "RATING_ERROR_CODES",
     "PlatformError",
     "install_error_handlers",
     "problem_response",
@@ -269,6 +270,22 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
     }
 )
 
+#: Error codes owned by `03 — Rating Engine` (§5.1). Raised by the save-time
+#: validation of a `RatingAlgorithm` (W9-2) and the bundle compilation (W9-3).
+RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
+    {
+        "RATING_GRAPH_CYCLIC",
+        "RATING_GRAPH_UNRESOLVED_REF",
+        "RATING_TYPE_MISMATCH",
+        "MONETARY_FLOAT_REFUSED",
+        # The four W8-confirmed boundary guards, surfaced at save time (W9-2).
+        "EXPRESSION_UNGUARDED_DIVISION",
+        "EXPRESSION_SCALE_OVERFLOW",
+        "EXPRESSION_INVALID_VOCABULARY",
+        "EXPRESSION_NON_DETERMINISTIC",
+    }
+)
+
 #: Codes raised by the shared request machinery rather than owned by one module.
 _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
     {"VALIDATION_FAILED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR"}
@@ -279,6 +296,7 @@ _KNOWN_CODES: Final[frozenset[str]] = (
     | GOVERNANCE_ERROR_CODES
     | DATA_ERROR_CODES
     | MODELLING_ERROR_CODES
+    | RATING_ERROR_CODES
     | _GENERIC_ERROR_CODES
 )
 

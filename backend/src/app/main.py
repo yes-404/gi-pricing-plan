@@ -30,6 +30,7 @@ from app.api import (
     me,
     models,
     peril_structures,
+    rating_algorithms,
     reference_tables,
     service_accounts,
     validation,
@@ -116,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(blobs.router, prefix=API_PREFIX)
     app.include_router(demo.router, prefix=API_PREFIX)
     app.include_router(models.router, prefix=API_PREFIX)
+    app.include_router(rating_algorithms.router, prefix=API_PREFIX)
     app.include_router(peril_structures.router, prefix=API_PREFIX)
     app.include_router(custom_objectives.router, prefix=API_PREFIX)
     app.include_router(custom_metrics.router, prefix=API_PREFIX)
