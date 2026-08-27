@@ -77,3 +77,20 @@ The auditor reviewed the register and the UAT evidence at `9799947` and confirms
 
 Remaining findings: none blocking. The register's F-rows were updated 2026-08-27 to
 reflect the landed fixes. Confirmation recorded.
+
+## UAT findings (F23-F25), recorded 2026-08-27
+
+The hands-on UAT found three defects. Two are fixed; one is documented with its root
+cause.
+
+| Finding id | Concerns | Resolution |
+|---|---|---|
+| F23 | Empty `client_id` — `demo_env()` never set `GIP_OIDC_CLIENT_ID`, so `/api/v1/auth/config` returned `client_id ""` and the browser login threw `Error: client_id` at sign-in | fixed — PR #283 sets `GIP_OIDC_CLIENT_ID: gi-pricing-frontend` and pins it in the demo test |
+| F24 | Localhost-only redirect — the SPA client whitelisted only `http://localhost:5173/*`; a browser reaching the demo via a port-forward bound to `127.0.0.1` sends `redirect_uri=http://127.0.0.1:5173/callback`, which the provider rejects | fixed — PR #283 whitelists both `localhost` and `127.0.0.1` in `redirectUris` and `webOrigins` |
+| F25 | Seed-wipe — the pytest suite's session-scoped autouse fixture (`backend/tests/conftest_db.py`) truncates the whole shared database after each run, wiping any `scripts/demo.py` seed | re-seeded — `uv run python scripts/demo.py` again; root cause documented in `backend/tests/conftest_db.py` (the fixture's own docstring: "This empties the whole database, including any `scripts/demo.py` seed") and `.claude/skills/python-test` |
+
+## Phase closure — maintainer sign-off, 2026-08-27
+
+Phase 1b is closed by the maintainer on 2026-08-27. The exit criterion (the core `wf-01`
+journey over HTTP) is met, the demo UAT is signed off, and every finding F1-F25 has a
+disposition. The closure record is [`README.md`](README.md).
