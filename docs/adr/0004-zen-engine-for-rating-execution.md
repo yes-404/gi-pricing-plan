@@ -1,6 +1,6 @@
 # ADR-0004 — GoRules ZEN Engine executes rating DAGs
 
-- **Status:** accepted · **confirmed by research 2026-08-14** (see Addendum)
+- **Status:** accepted · **confirmed by research 2026-08-14 and 2026-08-27** (see Addenda)
 - **Date:** 2026-08-14
 - **Deciders:** maintainer
 - **Related:** NFR-OVR-1, ADR-0003, `03-rating-engine.md`
@@ -65,3 +65,21 @@ disappeared:
 | Decimal scale is capped at 28 | `03` FR-RATE-58 |
 
 Evidence: [`docs/research/track-a-findings.md`](../research/track-a-findings.md) F1.
+
+---
+
+## Addendum — 2026-08-27: S1 and S2 confirmed at Phase 2 entry
+
+The 2026-08-14 addendum confirmed the engine's decimal semantics. This addendum records
+the Phase 2 entry re-verification (W8, `docs/plans/2026-08-27-w8-spike-resolution.md`):
+the S1 suite re-ran against the installed `zen-engine` 0.53.0 and all four boundary
+requirements hold — FR-RATE-56 (exact arithmetic), FR-RATE-57 (division guarded, unguarded
+division rejected), FR-RATE-58 (decimal scale cap within the rounding discipline),
+FR-RATE-59 (expression vocabulary validated against the engine). NFR-RATE-14 holds at
+p99 1.626 ms with `nthread=1` (3.3 % of the 50 ms budget); NFR-RATE-13's design rule holds
+and its ~1 ms premise is amended (see `03` NFR-RATE-13).
+
+**This addendum does not change the decision** and does not supersede the ADR. The
+residual risks remain specified as FR-RATE-56/57/58. **W9 proceeds** on this basis.
+
+Evidence: [`docs/research/w8-spike-resolution.md`](../research/w8-spike-resolution.md).
