@@ -44,6 +44,22 @@ def test_the_demo_runs_where_development_identity_does(environment: str) -> None
     demo_script.check_environment({"GIP_ENVIRONMENT": environment})
 
 
+@pytest.mark.req("FR-PLAT-58")
+def test_the_demo_env_points_the_browser_at_the_local_provider() -> None:
+    """The one-command demo starts the auth profile and sets the OIDC variables.
+
+    Without these three the API has no issuer to verify against and the browser login
+    fails at the first redirect — the gap `deploy/README.md` recorded until W6b. The test
+    pins the values so a removal is a deliberate act, not a silent regression.
+    """
+    env = demo_script.demo_env()
+    assert env["GIP_OIDC_ISSUER"] == "http://localhost:8080/realms/gi-pricing"
+    assert env["GIP_OIDC_AUDIENCE"] == "gi-pricing-api"
+    assert env["GIP_OIDC_JWKS_URL"] == (
+        "http://localhost:8080/realms/gi-pricing/protocol/openid-connect/certs"
+    )
+
+
 @pytest.mark.req("FR-PLAT-53")
 def test_the_seed_record_is_read_rather_than_scraped_from_output(tmp_path: Path) -> None:
     """The seed writes ids to a file; the demo reads that file.

@@ -3,11 +3,11 @@
 
     uv run python scripts/demo.py
 
-It starts the compose stack, migrates, fetches and seeds freMTPL2 through the platform's
-own Job path, then runs the API and the frontend — and prints the URL. The browser signs
-in through the local provider (`deploy/README.md` has the compose profile and the OIDC
-variables; this script does not start that provider), and the seeded membership answers
-the login (FR-PLAT-58). `Ctrl-C` stops everything it started.
+It starts the compose stack including the local provider behind the `auth` profile,
+migrates, fetches and seeds freMTPL2 through the platform's own Job path, then runs the
+API and the frontend — and prints the URL. The browser signs in through that provider
+(`analyst` / `analyst`, FR-PLAT-58), and the seeded membership answers the login.
+`Ctrl-C` stops everything it started.
 
 **One switch, and it is the refusal that already exists.** Every part of this hangs off
 `dev_auth_enabled` (FR-PLAT-1), which is `False` by default and *raises at startup* in a
@@ -175,21 +175,41 @@ def _stop_group(process: subprocess.Popen[bytes]) -> None:
             process.wait(timeout=10 if send is signal.SIGINT else 5)
 
 
-def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
-    check_environment()
+def demo_env() -> dict[str, str]:
+    """The environment the demo's processes run with.
 
-    env = {
+    The local provider (FR-PLAT-58) is started behind the `auth` profile, and the API must
+    verify against it: `deploy/README.md` pins these OIDC values, and the browser signs in
+    through this issuer — so the one-command demo sets them here, not on the operator.
+    Exposed as a function so `test_demo_command.py` can assert the browser path is wired
+    without running the orchestration.
+    """
+    return {
         **os.environ,
         "GIP_DEV_AUTH_ENABLED": "true",
         "GIP_DATABASE_URL": os.environ.get(
             "GIP_DATABASE_URL",
             "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
         ),
+        "GIP_OIDC_ISSUER": "http://localhost:8080/realms/gi-pricing",
+        "GIP_OIDC_AUDIENCE": "gi-pricing-api",
+        "GIP_OIDC_JWKS_URL": (
+            "http://localhost:8080/realms/gi-pricing/protocol/openid-connect/certs"
+        ),
     }
 
+
+def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
+    check_environment()
+
+    env = demo_env()
+
     run(
-        ["docker", "compose", "-f", "deploy/docker-compose.yml", "up", "-d", "--wait"],
-        step="infrastructure (postgres, redis, minio)",
+        [
+            "docker", "compose", "-f", "deploy/docker-compose.yml",
+            "--profile", "auth", "up", "-d", "--wait",
+        ],
+        step="infrastructure (postgres, redis, minio, keycloak)",
         env=env,
     )
     run(["uv", "run", "alembic", "upgrade", "head"], step="migrations", env=env)
