@@ -926,15 +926,27 @@ foundations; the owning workstream's closure record is the evidence.
   (§9) documents the tests. Verdict carried as the manager's W6b-6b verdict.
 - FR-DATA-57 (`unrun_layers`): NOT STARTED, spec-only projection. Carry-forward with an
   owner: the report-side projection is Phase 2 validation-report work; **owned by W7 at
-  this close** (user direction 2026-08-27).
+  this close** (user direction 2026-08-27). **Handed off 2026-08-27 (W7): the successor
+  owner is the Phase 2 validation-report workstream; the projection is not built in
+  Phase 1b.**
 - FR-DATA-55 and FR-DATA-56: the caveated halves of §3 are carried forward — the
   never-inferred seam test and the fit-gate no-override enforcement proof. **Owned by W7.**
+  **Delivered 2026-08-27 (W7):** `backend/tests/test_reference_pin.py` covers FR-DATA-55's
+  three reference paths, and `backend/tests/test_api_models.py` carries FR-DATA-56's
+  HTTP-level no-override proof.
 - FR-DATA-52 (OQ-DATA-10): the exposure-ordered top-20 and the exposure-weighted
   `VR-DST-1` deferral, decided 2026-08-19 and previously unowned by design. **Owned by W7
-  at this close** (user direction 2026-08-27).
+  at this close** (user direction 2026-08-27). **Trigger-checked 2026-08-27 (W7): the
+  factor workbench proposes exposure-*quantile* bandings but never requests
+  exposure-*ordered* levels, and no monitoring view does either — the trigger has not
+  fired; the deferral stays unowned.**
 - NFR-MODEL-7: the Model export/import round-trip (FR-OVR-2), maintainer verdict out of
   Phase 1 scope (plan review 3, 2026-08-22). **Owned by W7 at this close**, which decides
   whether the export/import path is phase work or hands the verdict to Phase 2.
+  **Delivered 2026-08-27 (W7, OD2): the verdict is reversed** with a dated note in `02`
+  §9, and `packages/pricing-core/tests/test_model_round_trip.py` proves the round-trip —
+  a GLM exported as JSON and scored in a clean subprocess reproduces the in-process score
+  to the last representable digit.
 - The validate.py:1079 "minor units" string (auditor finding 6a): an open prose defect.
   It is not governed by FR-OVR-20 (a formatted string is not a name); it needs its own
   line item.

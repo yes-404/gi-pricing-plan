@@ -3101,6 +3101,14 @@ for grouping.
 >   is out of *this phase's* scope, and the phase that adopts it inherits the requirement as
 >   written. Recording that is what lets W5 close honestly: an unevidenced requirement with no
 >   owner would otherwise read as W5 owing a feature it was never asked for.
+>
+>   **Verdict reversed 2026-08-27 (W7, OD2).** The finding the verdict rested on — "no Model
+>   export path and no import path" — is now answered by the round-trip test
+>   `packages/pricing-core/tests/test_model_round_trip.py`: a GLM is fitted, its
+>   `GlmFitResult` plus spec and factors are exported as JSON, re-imported in a clean
+>   subprocess where `glum`/`sklearn`/`interpret` cannot be imported, and scored twice —
+>   with both clean instances byte-identical to the in-process score. The requirement is
+>   **delivered**, and its parent FR-OVR-2 now carries NFR-MODEL-7's marker.
 > * **NFR-MODEL-6 — ~~half evidenced, and the roadmap called it evidenced~~ both halves now
 >   carry markers, 2026-08-22 (W5, the closure slice).** It asks for identical GLM coefficients
 >   to 1e-10 **and** an identical booster hash. Until this date the single marker it carried was
