@@ -72,6 +72,7 @@ def test_the_approximation_is_fitted_to_the_boosters_predictions(backend: str) -
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, factors, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     assert approximation.r_squared > 0.8
     assert approximation.deviance_explained > 0.5
@@ -94,6 +95,7 @@ def test_the_worst_regions_name_a_cell_and_its_share_of_the_book(backend: str) -
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, factors, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     assert approximation.worst_regions
     worst = approximation.worst_regions[0]
@@ -246,6 +248,7 @@ def test_the_fidelity_statement_says_where_the_approximation_fails(backend: str)
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, factors, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     summary = build_shap_summary(
         fit.result, fit.booster_bytes, spec, factors, data, holdout=data, sample=1_000
@@ -293,6 +296,7 @@ def test_the_kinds_are_derived_from_what_is_present(backend: str) -> None:
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, factors, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     artifact = TransparencyArtifact(
         id=new_uuid7(), model_id=new_uuid7(),
@@ -321,6 +325,7 @@ def test_a_monotone_gbm_approximates_to_a_monotone_table(backend: str) -> None:
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, used, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     age = next(c for c in approximation.result.coefficients if c.term == "driv_age")
     assert age.estimate > 0
@@ -356,6 +361,7 @@ def test_an_approximation_reports_a_poor_fit_as_a_poor_fit(backend: str) -> None
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, FACTORS, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     assert approximation.r_squared < 0.95
     statement = fidelity_statement(approximation.artifact_block(new_uuid7()), None)
@@ -375,11 +381,16 @@ def test_the_approximation_returns_the_fit_that_produced_it(backend: str) -> Non
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, factors, data,
         holdout=data, source_model_id=source,
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     assert approximation.result.model_type == "glm"
     assert any(c.term == "intercept" for c in approximation.result.coefficients)
     assert approximation.result.relativities
     assert approximation.spec.approximates_model_id == source
+    # FR-MODEL-129: the companion names the same model in the register a human reads.
+    assert approximation.spec.approximates_model is not None
+    assert approximation.spec.approximates_model.model_slug == "motor-ad-frequency"
+    assert approximation.spec.approximates_model.model_version == 1
     assert approximation.spec.response_column == SURROGATE_RESPONSE_COLUMN
     # The surrogate target travels with the frames, so the caller's diagnostics measure the
     # surrogate against the booster rather than against the observed response.
@@ -395,6 +406,7 @@ def test_the_artifact_block_names_the_model_and_carries_no_table(backend: str) -
     approximation = build_glm_approximation(
         fit.result, fit.booster_bytes, spec, factors, data,
         holdout=data, source_model_id=new_uuid7(),
+        source_model_slug=spec.model_family_slug, source_model_version=1,
     )
     model_id = new_uuid7()
     block = approximation.artifact_block(model_id)

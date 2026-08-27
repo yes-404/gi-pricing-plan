@@ -282,13 +282,17 @@ def test_a_failure_records_measurement_threshold_rows_and_sample() -> None:
     assert result.affected_rows == 2
     assert result.measured["violating_rows"] == 2
     assert result.threshold["min_exclusive"] == 0
-    assert set(result.offending_sample) == {"P2", "P3"}
+    assert {item["policy_id"] for item in result.offending_sample} == {"P2", "P3"}
     assert result.detail
 
 
 @pytest.mark.req("FR-DATA-20")
-def test_the_offending_sample_is_capped_at_a_hundred_keys() -> None:
-    """A failing rule on five million rows must not put five million keys in a report."""
+def test_the_offending_sample_is_capped_at_a_hundred_items() -> None:
+    """A failing rule on five million rows must not put five million rows in a report.
+
+    The cap counts items (OQ-DATA-12 (b)): one item is one offending row, so a composite
+    key is one item with several properties.
+    """
     frame = pl.DataFrame(
         {"policy_id": [f"P{i}" for i in range(500)], "exposure_years": [-1.0] * 500}
     )
@@ -395,7 +399,7 @@ def test_a_referential_check_finds_an_unresolved_key() -> None:
                  params={"references_table": "policy_exposure", "references_column": "policy_id"})
     report = _run(_set(rule), tables={"claim": claims, "policy_exposure": EXPOSURE})
     assert report.results[0].outcome is RuleOutcome.FAIL
-    assert report.results[0].offending_sample == ("UNKNOWN",)
+    assert report.results[0].offending_sample == ({"policy_id": "UNKNOWN"},)
 
 
 @pytest.mark.req("FR-DATA-16")

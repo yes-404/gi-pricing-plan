@@ -188,6 +188,11 @@ async def _create_artifact(
                     version=version,
                     status=DatasetStatus.DRAFT.value,
                     kind=DatasetKind.INGESTED.value,
+                    # OQ-DATA-13 (c): a version names its own provenance (the row's
+                    # envelope columns are non-null since 2057e7372a9a).
+                    slug=slug,
+                    created_by=new_uuid7(),
+                    currency="GBP",
                 )
             )
         else:  # pragma: no cover - a new member of RESOLVABLE with no factory
@@ -267,6 +272,10 @@ async def the_model_every_test_here_pins(database: Database, workspace_id) -> No
             status=DatasetStatus.VALIDATED.value,
             kind=DatasetKind.INGESTED.value,
             validation_report_id=new_uuid7(),
+            # OQ-DATA-13 (c): the envelope columns are non-null since 2057e7372a9a.
+            slug=MODEL_SLUG,
+            created_by=new_uuid7(),
+            currency="GBP",
         )
         session.add(version)
         await session.flush()

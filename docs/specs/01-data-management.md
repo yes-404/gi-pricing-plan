@@ -255,10 +255,22 @@ the single answer to whether the data is fittable *(OQ-DATA-9, decided 2026-08-1
 
 ```json
 {
-  "dataset_id": "uuid",
+  "id": "uuid",
+  "workspace_id": "uuid",
+  "slug": "motor-book",
   "version": 12,
   "status": "draft | validating | validated | failed | archived",
   "kind": "ingested | derived",
+  "created_at": "2026-08-14T09:00:00Z",
+  "created_by": "uuid",
+  "updated_at": "2026-08-14T09:00:00Z",
+  "archived_at": "2026-08-14T09:00:00Z|null",
+  "parent_id": "uuid|null",
+  "labels": {},
+  "description": "…|null",
+  "schema_version": 1,
+  "currency": "GBP",
+  "dataset_id": "uuid",
   "tables": [
     {
       "name": "policy_exposure",
@@ -284,6 +296,18 @@ the single answer to whether the data is fittable *(OQ-DATA-9, decided 2026-08-1
   "library_versions": {"polars": "1.x", "duckdb": "1.x", "pandera": "0.x"}
 }
 ```
+
+> **Amended 2026-08-26 (W6b-19).** OQ-DATA-13, decided (c): a version carries its
+> envelope inline, and the example above now shows every field the envelope contributes.
+> Per-field semantics: `slug` is the dataset's slug — a version is addressed as
+> `dataset-slug@version`, so the slug is never unique across versions of one dataset;
+> `parent_id` is the previous version id in the same dataset (the `Model.parent_model_id`
+> precedent), null on version 1; `archived_at` is set only by archiving (FR-DATA-21);
+> `labels` is a free-form object; `description` is nullable and free text; `schema_version`
+> is the envelope schema version (ADR-0002); `currency` is the dataset's reporting
+> currency (FR-OVR-3). `updated_at` is non-null per OQ-OVR-16, resolved by this
+> amendment: the envelope's `updated_at` is a required `date-time`, and a version is
+> created and updated in the same moment.
 
 **Invariants**
 
@@ -535,7 +559,7 @@ key is one target with several columns.
       "measured": {"psi": 0.148}, "threshold": {"warn_above": 0.10, "fail_above": 0.25},
       "affected_rows": null, "affected_exposure_fraction": null,
       "detail": "Driver age distribution shifted; largest contribution from band 17-21 (+2.1pp).",
-      "offending_sample": [],
+      "offending_sample": [{"column": "driver_age"}],
       "evidence_blob": "blob:sha256:… (bucketed distribution table)",
       "acknowledgement": {
         "user_id": "uuid", "at": "2026-08-14T10:02:11Z",
@@ -546,6 +570,8 @@ key is one target with several columns.
   "reference_dataset_version_id": "uuid"
 }
 ```
+
+> **Amended 2026-08-26 (W6b-18).** The example previously printed `"offending_sample": []`, which settled nothing about the item encoding (OQ-DATA-12, decided 2026-08-26: (b)). The item shape is written out: one object per offending row, property keys are column names, values are the cell value as a string or null — `None` is distinct from `""`. A composite key is one item with several properties. A column-level check emits `{"column": <name>}`.
 
 **Invariants** — `overall` is a function of the rule results alone:
 `fail` if any result is `fail`; `error` if any is `error` and none is `fail`;

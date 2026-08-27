@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import time
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from typing import Any, Final
 from uuid import UUID
 
@@ -123,6 +124,10 @@ async def ingest_upload(
 
     started = time.perf_counter()
     fingerprint = _fingerprint(data)
+    # The moment the source was read — what `extracted_at` means (OQ-DATA-13 (c)). It is
+    # the fingerprint's own field, not a timestamp recorded beside it: a fingerprint
+    # without one cannot answer "was this file re-ingested after its contents changed?".
+    extracted_at = datetime.now(UTC)
 
     if idempotency_key is not None:
         existing = await _find_run(
@@ -204,7 +209,13 @@ async def ingest_upload(
         )
 
     version.tables = tables
-    version.source_fingerprint = {"kind": "file_sha256", "value": fingerprint}
+    version.source_fingerprint = {
+        "kind": "file_sha256",
+        "value": fingerprint,
+        # ISO, not a `datetime`: the JSONB columns serialize with stdlib `json.dumps`,
+        # which has no datetime encoder. The model parses the string back on read.
+        "extracted_at": extracted_at.isoformat(),
+    }
     # FR-DATA-14: stored with the version and replayable. The steps themselves, not an id
     # pointing at a mutable recipe row — a recipe edited later would rewrite the history of
     # every version that cites it.

@@ -80,6 +80,10 @@ async def test_a_surrogate_spec_is_not_reported_as_missing_its_response(
         split_ref=split,
         response_column=SURROGATE_RESPONSE_COLUMN,
         approximates_model_id=new_uuid7(),
+        approximates_model={
+            "model_slug": "motor-ad-frequency",
+            "model_version": 1,
+        },
     )
     result = await _validate(database, workspace_id, actor, spec)
     assert not [p for p in result.problems if p.kind is SpecProblemKind.RESPONSE_MISSING]

@@ -31,7 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 from model_schema.money import DecimalStr
 from model_schema.prediction import UncertaintyBasis
 from model_schema.profiles import OneWayRow
-from model_schema.refs import BlobRef, ModelRef
+from model_schema.refs import BlobRef, ModelRef, Slug
 
 __all__ = [
     "FIT_RESULT_ADAPTER",
@@ -40,6 +40,7 @@ __all__ = [
     "TERMINAL_MODEL_STATUSES",
     "VALID_MODEL_TRANSITIONS",
     "AboveRangePolicy",
+    "ApproximatedModel",
     "Banding",
     "BandingEvaluation",
     "BandingMethod",
@@ -1008,6 +1009,24 @@ class TweediePowerFit(BaseModel):
         return self
 
 
+class ApproximatedModel(BaseModel):
+    """The Model this GLM approximates, addressed the way a human reads it (FR-MODEL-129).
+
+    The id stays the lookup key — `approximates_model_id` is how the platform resolves the
+    pin. This block carries the **slug and version** instead, following `IntervalFor`'s
+    id-and-version shape with the id left out: naming the same id twice is a fact stated
+    twice, and `CLAUDE.md` §2's rule against a shape defined twice holds for a fact as
+    much as for a field. `motor-ad-frequency@7` is what a reviewer reads; the slug alone
+    would resolve to the family's latest version, which may not be the version the id
+    pins.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_slug: Slug
+    model_version: int = Field(ge=1)
+
+
 class GlmSpec(ModelSpecCommon):
     """`02` §4.4's common block plus the `glm` arm.
 
@@ -1038,6 +1057,9 @@ class GlmSpec(ModelSpecCommon):
     #: FR-MODEL-96 — the Model whose predictions this GLM approximates. `None` for every
     #: model fitted on an observed response, which is every model but a surrogate.
     approximates_model_id: UUID | None = None
+    #: FR-MODEL-129 — the same pin's `slug@version` address, set iff the id is set
+    #: (checked below). The id is what the lookup uses; this block is what a human reads.
+    approximates_model: ApproximatedModel | None = None
 
     @property
     def uncertainty_basis(self) -> UncertaintyBasis:
@@ -1128,6 +1150,24 @@ class GlmSpec(ModelSpecCommon):
                 f"{self.response_column!r}, not {SURROGATE_RESPONSE_COLUMN!r} "
                 "(FR-MODEL-102). A surrogate is fitted to another model's predictions; a "
                 "spec fitted to an observed column is a model in its own right."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _the_companion_is_set_iff_the_id_is(self) -> GlmSpec:
+        """FR-MODEL-129: `approximates_model` is set iff `approximates_model_id` is set.
+
+        The two name the same model in different registers, so a spec carrying one without
+        the other is a fact stated once and assertable twice. Each half alone is a
+        different defect: a companion without an id addresses a model nothing pins, and an
+        id without a companion sends a reviewer back to resolving one id to get the
+        version.
+        """
+        if (self.approximates_model is None) != (self.approximates_model_id is None):
+            raise ValueError(
+                "approximates_model and approximates_model_id must be set together "
+                "(FR-MODEL-129): the id is the lookup key and the block is its "
+                "slug@version address, and a surrogate's spec carries both or neither."
             )
         return self
 

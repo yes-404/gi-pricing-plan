@@ -34,6 +34,10 @@ def _surrogate(**over: object) -> GlmSpec:
         "dataset_version_id": new_uuid7(),
         "response_column": SURROGATE_RESPONSE_COLUMN,
         "approximates_model_id": new_uuid7(),
+        "approximates_model": {
+            "model_slug": "motor-ad-frequency",
+            "model_version": 7,
+        },
         "family": "gamma",
         "link": "log",
         "offset": EXPOSURE,
@@ -61,6 +65,42 @@ def test_a_spec_fitting_the_surrogate_column_with_no_source_model_is_refused() -
     """A model of a prediction, with nothing saying whose prediction it is."""
     with pytest.raises(pydantic.ValidationError, match="approximates_model_id"):
         _surrogate(approximates_model_id=None)
+
+
+@pytest.mark.req("FR-MODEL-129")
+def test_the_companion_addresses_the_pinned_model() -> None:
+    """The block is the id's slug@version address — both registers, one pin."""
+    spec = _surrogate()
+    assert spec.approximates_model is not None
+    assert spec.approximates_model.model_slug == "motor-ad-frequency"
+    assert spec.approximates_model.model_version == 7
+
+
+@pytest.mark.req("FR-MODEL-129")
+def test_a_companion_with_no_id_is_refused() -> None:
+    """A companion without an id addresses a model nothing pins.
+
+    An observed response column keeps FR-MODEL-102's own refusal quiet, so the
+    companion's half of the iff is what fires.
+    """
+    with pytest.raises(pydantic.ValidationError, match="both or neither"):
+        _surrogate(approximates_model_id=None, response_column="claim_count")
+
+
+@pytest.mark.req("FR-MODEL-129")
+def test_an_id_with_no_companion_is_refused() -> None:
+    """An id without a companion sends a reviewer back to resolving one id."""
+    with pytest.raises(pydantic.ValidationError, match="both or neither"):
+        _surrogate(approximates_model=None)
+
+
+@pytest.mark.req("FR-MODEL-129")
+def test_a_companion_block_rejects_a_bad_slug_or_version() -> None:
+    """The block itself is typed: a slug that is not a slug, a version below one."""
+    with pytest.raises(pydantic.ValidationError, match="model_slug"):
+        _surrogate(approximates_model={"model_slug": "NOT_A_SLUG", "model_version": 7})
+    with pytest.raises(pydantic.ValidationError, match="model_version"):
+        _surrogate(approximates_model={"model_slug": "motor-ad-frequency", "model_version": 0})
 
 
 @pytest.mark.req("FR-MODEL-96")

@@ -18,14 +18,14 @@ from __future__ import annotations
 
 import enum
 from datetime import date, datetime
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.money import Currency, DecimalStr, MoneyMinor
 from model_schema.profiles import SemanticType
-from model_schema.refs import BlobRef
+from model_schema.refs import BlobRef, Slug
 
 __all__ = [
     "TERMINAL_DATASET_STATUSES",
@@ -38,12 +38,15 @@ __all__ = [
     "DatasetStatus",
     "DatasetTable",
     "DatasetVersion",
+    "DerivedFrom",
     "LineageBuiltFrom",
     "LineageDependsOn",
     "LineageDerivedVersion",
     "LineageModel",
+    "PeriodCovered",
     "PiiClass",
     "RecordGrain",
+    "SourceFingerprint",
     "SourceKind",
     "VersionTotals",
 ]
@@ -274,34 +277,97 @@ class VersionTotals(BaseModel):
     claim_amount_minor: MoneyMinor = 0
 
 
+class PeriodCovered(BaseModel):
+    """The policy period the data covers (`01` §4.2).
+
+    Both ends are required and ordered — a version whose exposure window has no known
+    end is one whose totals cannot be re-read against a calendar later. OQ-DATA-13,
+    decided 2026-08-26 (c): the object form replaces the model's scalar
+    `period_from`/`period_to`, which could not carry an ordered pair as one fact.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
+
+    from_: date = Field(alias="from")
+    to: date
+
+
+class SourceFingerprint(BaseModel):
+    """Provenance of the file or query the version was ingested from (`01` §4.2).
+
+    OQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare `dict[str, str]`
+    so `extracted_at` is required — a fingerprint without the moment it was taken cannot
+    answer "was this file re-ingested after its contents changed?".
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["file_sha256", "query_hash", "asset_partition"]
+    value: str
+    extracted_at: datetime
+
+
+class DerivedFrom(BaseModel):
+    """How a derived version was produced from its parent (`01` §4.2, FR-DATA-33).
+
+    OQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare dict so the
+    declared operation's parameters are distinguishable from the identity of the parent —
+    the split that made version 7 from version 6 is not the same fact as which version
+    that was.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    parent_version_id: UUID
+    operation: Literal["sample", "split", "filter", "union"]
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
 class DatasetVersion(BaseModel):
     """An immutable versioned snapshot of policy, claims and exposure data (`01` §4.2)."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    #: The envelope, inline (00 §4.3). OQ-DATA-13, decided 2026-08-26 (c): a version
+    #: carries every envelope field, so one document answers both "which artifact is
+    #: this?" and "what is its provenance?". `slug` is the dataset's slug, never unique
+    #: across versions of one dataset — a version is addressed as `dataset-slug@version`.
+    #: `parent_id` is the previous version id in the same dataset (the
+    #: `Model.parent_model_id` precedent), null on version 1. `updated_at` is non-null
+    #: (OQ-OVR-16, resolved 2026-08-26): a version is created and updated in the same
+    #: moment, and a nullable timestamp made the two moments indistinguishable from
+    #: "never updated".
     id: UUID
-    dataset_id: UUID
     workspace_id: UUID
+    slug: Slug
     version: Annotated[int, Field(ge=1)]
     status: DatasetStatus
     kind: DatasetKind = DatasetKind.INGESTED
+    created_at: datetime
+    created_by: UUID
+    updated_at: datetime
+    archived_at: datetime | None = None
+    parent_id: UUID | None = None
+    labels: dict[str, str] = Field(default_factory=dict)
+    description: str | None = None
+    schema_version: int = Field(default=1, ge=1)
+    currency: Currency = "GBP"
 
+    dataset_id: UUID
     tables: tuple[DatasetTable, ...] = ()
     source_id: UUID | None = None
-    source_fingerprint: dict[str, str] | None = None
+    source_fingerprint: SourceFingerprint | None = None
     ingestion_run_id: UUID | None = None
     preparation_recipe_id: UUID | None = None
 
-    period_from: date | None = None
-    period_to: date | None = None
+    period_covered: PeriodCovered | None = None
     totals: VersionTotals | None = None
 
     validation_report_id: UUID | None = None
     profile_id: UUID | None = None
-    derived_from: dict[str, object] | None = None
+    derived_from: DerivedFrom | None = None
 
     library_versions: dict[str, str] = Field(default_factory=dict)
-    created_at: datetime
 
     @model_validator(mode="after")
     def _validated_requires_a_report(self) -> DatasetVersion:
@@ -327,8 +393,8 @@ class DatasetVersion(BaseModel):
 
     @model_validator(mode="after")
     def _period_is_ordered(self) -> DatasetVersion:
-        if self.period_from and self.period_to and self.period_to < self.period_from:
-            raise ValueError("period_to precedes period_from")
+        if self.period_covered and self.period_covered.to < self.period_covered.from_:
+            raise ValueError("period_covered.to precedes period_covered.from")
         return self
 
     @property

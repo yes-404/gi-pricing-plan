@@ -74,6 +74,10 @@
             "type": ["string", "null"], "format": "uuid",
             "description": "FR-MODEL-96 — the Model whose predictions this GLM approximates. Null for every model fitted on an observed response."
           },
+          "approximates_model": {
+            "oneOf": [{"$ref": "#/$defs/ApproximatedModel"}, {"type": "null"}],
+            "description": "FR-MODEL-129 — the companion address, set iff `approximates_model_id` is set (OQ-MODEL-43 decided (a)). The id is the lookup key; this is how the Model is addressed for reading, following `interval_for`'s slug@version shape with the id left out."
+          },
           "custom_objective_ref": {
             "type": ["string", "null"],
             "description": "DECLARED AND UNBUILT (FR-MODEL-87, owner W30 — Phase 2, reassigned 2026-08-22 and confirmed 2026-08-25 to reach this field and its `Model` twin). `GlmSpec` carries no such field; `ObjectiveBackend.glm` exists so an author can narrow applicability to a backend nothing reaches yet."
@@ -179,6 +183,15 @@
       "description": "FR-MODEL-22's profile-likelihood grid for the Tweedie power.",
       "properties": {
         "p_grid": {"type": "array", "items": {"type": "number"}}
+      }
+    },
+    "ApproximatedModel": {
+      "type": "object",
+      "required": ["model_slug", "model_version"],
+      "description": "FR-MODEL-129 — the Model a surrogate GLM approximates, addressed the way a human reads it (slug@version), with the id deliberately absent: the id stays the lookup key.",
+      "properties": {
+        "model_slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"},
+        "model_version": {"type": "integer", "minimum": 1}
       }
     },
     "GbmFunctionRef": {

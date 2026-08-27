@@ -17,11 +17,11 @@ This module is where that is true or not. Three things make it true:
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -430,22 +430,32 @@ async def new_version(
             ns=_VERSION_LOCK_NAMESPACE, key=(dataset_id.int & 0x7FFF_FFFF) - 0x4000_0000
         )
     )
-    highest = (
+    previous = (
         await session.execute(
-            select(func.max(DatasetVersionRow.version)).where(
-                DatasetVersionRow.dataset_id == dataset_id
-            )
+            select(DatasetVersionRow)
+            .where(DatasetVersionRow.dataset_id == dataset_id)
+            .order_by(DatasetVersionRow.version.desc())
+            .limit(1)
         )
-    ).scalar()
+    ).scalar_one_or_none()
 
     row = DatasetVersionRow(
         workspace_id=workspace_id,
         dataset_id=dataset_id,
-        version=(highest or 0) + 1,
+        version=(previous.version if previous else 0) + 1,
         status=DatasetStatus.DRAFT.value,
         kind=kind.value,
         source_id=source_id,
         derived_from=derived_from,
+        # OQ-DATA-13 (c): a version names its own provenance — the slug is its dataset's
+        # (a version is addressed as `dataset-slug@version`), the creator is the caller,
+        # the currency is its dataset's, and the parent is the previous version's row
+        # (null on version 1).
+        slug=dataset.slug,
+        created_by=actor.id,
+        currency=dataset.currency,
+        schema_version=1,
+        parent_id=previous.id if previous else None,
     )
     session.add(row)
     await session.flush()
@@ -680,6 +690,8 @@ async def archive_version(
         version_id=version_id,
         to_status=DatasetStatus.ARCHIVED,
         justification=reason,
+        # OQ-DATA-13 (c): `archived_at` is set only by archiving (FR-DATA-21).
+        also_set={"archived_at": datetime.now(UTC)},
     )
 
 

@@ -153,6 +153,12 @@ def _seed_model_and_version(workspace_id: UUID) -> tuple[UUID, UUID]:
                 status="validated",
                 validation_report_id=new_uuid7(),
                 tables=[],
+                # OQ-DATA-13 (c): the envelope columns are non-null since 2057e7372a9a.
+                # No DatasetRow exists here (the route under test never joins one), so
+                # the slug is a placeholder the constraint only needs to be non-null.
+                slug="motor-gb",
+                created_by=new_uuid7(),
+                currency="GBP",
             )
             later = DatasetVersionRow(
                 workspace_id=workspace_id,
@@ -161,6 +167,9 @@ def _seed_model_and_version(workspace_id: UUID) -> tuple[UUID, UUID]:
                 status="validated",
                 validation_report_id=new_uuid7(),
                 tables=[],
+                slug="motor-gb",
+                created_by=new_uuid7(),
+                currency="GBP",
             )
             session.add_all([fitted_on, later])
             await session.flush()

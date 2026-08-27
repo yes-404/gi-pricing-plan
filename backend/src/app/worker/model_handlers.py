@@ -967,7 +967,12 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
     # `models.model_family_slug` is a `String(64)` and this Job generates a slug seven
     # characters longer than the one the analyst chose. Refused here, naming the cause,
     # rather than as a driver `DataError` naming a column at the end of the compute.
-    surrogate_spec = approximation_spec(spec, source_model_id=model_id)
+    surrogate_spec = approximation_spec(
+        spec,
+        source_model_id=model_id,
+        source_model_slug=source_slug,
+        source_model_version=source_version,
+    )
     if len(surrogate_spec.model_family_slug) > 64:
         raise PlatformError(
             "VALIDATION_FAILED",
@@ -1041,6 +1046,8 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             result, booster, spec, factors, frame,
             holdout=holdout,
             source_model_id=model_id,
+            source_model_slug=source_slug,
+            source_model_version=source_version,
             bandings=transformations.bandings,
             groupings=transformations.groupings,
             progress=ScaledProgress(progress, start=0.20, end=0.50),

@@ -961,48 +961,15 @@ def _type_map(
 #: the moment it stops earning its place. This is the shape the pin for `diagnostics`'
 #: `aliasing` had before `OQ-MODEL-15` was decided and it was removed rather than relaxed.
 #:
-#: `OQ-DATA-12` (opened 2026-08-24, W32-11). `validation-report`'s offending sample is an
-#: array of `string` on the model and of `object` in the contract, found the day this slug
-#: first gained a generated side. **Neither side is obviously right, which is why this is a
-#: question and not a fix.** The model's string is what `_sample` in
-#: `pricing_core.data.validate` actually emits — composite key values pipe-joined with no
-#: escaping, `None` rendered as `""` and so indistinguishable from an empty string, column
-#: names dropped — an encoding no specification defines. The contract's `{"type": "object"}`
-#: is bare: it names no properties, so it constrains nothing a validator could check. `01`'s
-#: glossary and FR-DATA-20 both say "primary keys of rows" without choosing an encoding, and
-#: §4.6's only example prints `"offending_sample": []`, which is evidence for neither.
-#: Deciding it means changing `pricing-core`'s validation engine, 13 assertions across three
-#: test modules — `test_validate.py`, `test_catalogue.py` and `test_api_datasets.py`, measured
-#: 2026-08-24 — the published contract, the generated frontend type and §4.6's example: a
-#: data-model change across the suite rather than a
-#: contract fix, and out of scope for a slice about certificate floors and two generated
-#: sides. So it is recorded with an owner and this comparison stays silent on that one path,
-#: on the `ENVELOPE_GAP_IS_RECORDED_NOT_FIXED` precedent above.
-#:
-#: `OQ-OVR-16` (opened 2026-08-25, W6b). `artifact-envelope` types `updated_at` non-null in
-#: the hand-authored contract under `common/` and nullable-with-`default: null` in the
-#: generated one, with identical `required` lists on both sides — found on the branch that
-#: made this pair compare at all, since `_authored` resolved flat and a schema authored in
-#: `common/` was never eligible. **Neither side is the tested one, which is what makes it a
-#: question.** `ArtifactEnvelope` has no producer — a definition, a re-export,
-#: `generate-contracts.py:44`, and one construction in `packages/model-schema/tests/
-#: test_refs.py` — so the Pydantic default is a declaration nothing exercises; while the
-#: authored schema is `allOf`-composed by twelve artifact schemas, which makes it the form
-#: external readers were actually given. `00-overview.md` §4.3 sides with the authored form
-#: by its own convention, writing `"updated_at": "timestamptz"` where `archived_at`,
-#: `parent_id` and `description` in the same block each carry a null arm. And nothing settles
-#: it from behaviour: `updated_at` exists on exactly two backend tables, `WorkspaceSettingRow`
-#: and `ApprovalPolicyRow`, both non-null — and neither is an artifact, neither composes the
-#: envelope, and not one of the twelve composers carries the column at all. The field is
-#: specified-and-unbuilt. Widening the authored side would delete a published specification on
-#: the authority of an unexercised default, which `CLAUDE.md` §0 names as the thing not to do;
-#: narrowing the model would settle a contract against no producer. So it is recorded with an
-#: owner and this comparison stays silent on that one path, on the `OQ-DATA-12` precedent
-#: above. The condition to remove it is concrete: the first artifact that persists an envelope.
-UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {
-    "validation-report": frozenset({"results.[].offending_sample.[]"}),
-    "artifact-envelope": frozenset({"updated_at"}),
-}
+#: **A pin was held from 2026-08-25 (OQ-OVR-16, W6b) to 2026-08-26 (W6b-19):**
+#: `artifact-envelope.updated_at` — non-null in the hand-authored contract under `common/`,
+#: nullable-with-`default: null` in the generated one, with the field specified-and-unbuilt
+#: and no producer to settle which side was right. The pin's own removal condition was "the
+#: first artifact that persists an envelope"; W6b-19 is exactly that — `DatasetVersion`
+#: composes the envelope, its row persists `updated_at`, and the model now types it
+#: non-null. Resolved per OQ-OVR-16 option (a), the authored side, and the pin was
+#: **released — deleted, not relaxed**.
+UNRESOLVED_TYPE_DISAGREEMENTS: Final[dict[str, frozenset[str]]] = {}
 def _admits(constraints: Arm, arm: Arm) -> bool:
     """Does a complete `arm` satisfy every constraint in `constraints`?
 
@@ -1124,10 +1091,13 @@ def test_generated_and_authored_agree_on_scalar_types(slug: str) -> None:
     strings the model always produced, and the pin that excused it is deleted rather than
     relaxed.
 
-    **A pin is live again as of 2026-08-24 (W32-11):** `validation-report`'s
-    `results.[].offending_sample.[]`, escalated as `OQ-DATA-12`. The refusal above is of a
-    *curated* exemption list — one that accumulates entries nobody can date or justify — not
-    of a single path held open against a written question with an owner, which is what
+    **A pin was held from 2026-08-24 (W32-11) to 2026-08-26 (W6b-18):**
+    `validation-report`'s `results.[].offending_sample.[]`, escalated as `OQ-DATA-12`,
+    released — deleted, not relaxed — when the decision landed: the item is a keyed object,
+    `{column: value}` with values string or null, written out on the model, the authored
+    contract, the engine's emission and §4.6's example. The refusal above is of a *curated*
+    exemption list — one that accumulates entries nobody can date or justify — not of a
+    single path held open against a written question with an owner, which is what
     `diagnostics` was. `UNRESOLVED_TYPE_DISAGREEMENTS` carries the reasoning and
     `test_the_escalated_type_disagreements_are_still_unresolved` is what stops it outliving
     the question, on the same terms `aliasing` was held and then released.

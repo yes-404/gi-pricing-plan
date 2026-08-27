@@ -131,6 +131,91 @@
       "title": "DatasetTable",
       "type": "object"
     },
+    "DerivedFrom": {
+      "additionalProperties": false,
+      "description": "How a derived version was produced from its parent (`01` §4.2, FR-DATA-33).\n\nOQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare dict so the\ndeclared operation's parameters are distinguishable from the identity of the parent —\nthe split that made version 7 from version 6 is not the same fact as which version\nthat was.",
+      "properties": {
+        "operation": {
+          "enum": [
+            "sample",
+            "split",
+            "filter",
+            "union"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "parent_version_id": {
+          "format": "uuid",
+          "title": "Parent Version Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parent_version_id",
+        "operation"
+      ],
+      "title": "DerivedFrom",
+      "type": "object"
+    },
+    "PeriodCovered": {
+      "additionalProperties": false,
+      "description": "The policy period the data covers (`01` §4.2).\n\nBoth ends are required and ordered — a version whose exposure window has no known\nend is one whose totals cannot be re-read against a calendar later. OQ-DATA-13,\ndecided 2026-08-26 (c): the object form replaces the model's scalar\n`period_from`/`period_to`, which could not carry an ordered pair as one fact.",
+      "properties": {
+        "from": {
+          "format": "date",
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "format": "date",
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "PeriodCovered",
+      "type": "object"
+    },
+    "SourceFingerprint": {
+      "additionalProperties": false,
+      "description": "Provenance of the file or query the version was ingested from (`01` §4.2).\n\nOQ-DATA-13, decided 2026-08-26 (c): the object form replaces a bare `dict[str, str]`\nso `extracted_at` is required — a fingerprint without the moment it was taken cannot\nanswer \"was this file re-ingested after its contents changed?\".",
+      "properties": {
+        "extracted_at": {
+          "format": "date-time",
+          "title": "Extracted At",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "file_sha256",
+            "query_hash",
+            "asset_partition"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value",
+        "extracted_at"
+      ],
+      "title": "SourceFingerprint",
+      "type": "object"
+    },
     "VersionTotals": {
       "additionalProperties": false,
       "description": "The headline numbers, checked by validation and shown everywhere.\n\nMoney is integer minor units and exposure is a decimal string (FR-OVR-7): a float\nexposure total silently disagrees with the sum of its parts, and the disagreement is\nexactly the kind of thing an actuary is asked to explain.",
@@ -164,9 +249,33 @@
   "additionalProperties": false,
   "description": "An immutable versioned snapshot of policy, claims and exposure data (`01` §4.2).",
   "properties": {
+    "archived_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Archived At"
+    },
     "created_at": {
       "format": "date-time",
       "title": "Created At",
+      "type": "string"
+    },
+    "created_by": {
+      "format": "uuid",
+      "title": "Created By",
+      "type": "string"
+    },
+    "currency": {
+      "default": "GBP",
+      "pattern": "^[A-Z]{3}$",
+      "title": "Currency",
       "type": "string"
     },
     "dataset_id": {
@@ -177,15 +286,25 @@
     "derived_from": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/DerivedFrom"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "title": "Derived From"
+      "title": "Description"
     },
     "id": {
       "format": "uuid",
@@ -209,6 +328,13 @@
       "$ref": "#/$defs/DatasetKind",
       "default": "ingested"
     },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Labels",
+      "type": "object"
+    },
     "library_versions": {
       "additionalProperties": {
         "type": "string"
@@ -216,10 +342,10 @@
       "title": "Library Versions",
       "type": "object"
     },
-    "period_from": {
+    "parent_id": {
       "anyOf": [
         {
-          "format": "date",
+          "format": "uuid",
           "type": "string"
         },
         {
@@ -227,20 +353,18 @@
         }
       ],
       "default": null,
-      "title": "Period From"
+      "title": "Parent Id"
     },
-    "period_to": {
+    "period_covered": {
       "anyOf": [
         {
-          "format": "date",
-          "type": "string"
+          "$ref": "#/$defs/PeriodCovered"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Period To"
+      "default": null
     },
     "preparation_recipe_id": {
       "anyOf": [
@@ -268,20 +392,27 @@
       "default": null,
       "title": "Profile Id"
     },
+    "schema_version": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "slug": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Slug",
+      "type": "string"
+    },
     "source_fingerprint": {
       "anyOf": [
         {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "type": "object"
+          "$ref": "#/$defs/SourceFingerprint"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Source Fingerprint"
+      "default": null
     },
     "source_id": {
       "anyOf": [
@@ -318,6 +449,11 @@
       ],
       "default": null
     },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
     "validation_report_id": {
       "anyOf": [
         {
@@ -344,11 +480,14 @@
   },
   "required": [
     "id",
-    "dataset_id",
     "workspace_id",
+    "slug",
     "version",
     "status",
-    "created_at"
+    "created_at",
+    "created_by",
+    "updated_at",
+    "dataset_id"
   ],
   "title": "DatasetVersion",
   "type": "object"

@@ -43,8 +43,10 @@ from pricing_core.progress import ProgressCallback
 
 __all__ = ["CHECKS", "CheckOutcome", "register_check", "run_validation"]
 
-#: FR-DATA-20 caps the Offending Sample at 100 keys. A failing rule on five million rows
-#: would otherwise put five million keys into a report somebody has to open.
+#: FR-DATA-20 caps the Offending Sample at 100 primary keys. A failing rule on five
+#: million rows would otherwise put five million keys into a report somebody has to open.
+#: The cap counts items — one item is one offending row, so a composite key is one item
+#: with several properties (OQ-DATA-12, decided 2026-08-26 (b)).
 MAX_OFFENDING_SAMPLE: Final = 100
 
 #: Per-rule budget (FR-DATA-19). Exceeding it is an `error` with reason `timeout`, not a
@@ -65,7 +67,9 @@ class CheckOutcome:
     measured: dict[str, Any] | None = None
     threshold: dict[str, Any] | None = None
     detail: str = ""
-    offending_sample: tuple[str, ...] = ()
+    #: Up to 100 offending rows, keyed `{column: value}` (FR-DATA-20, OQ-DATA-12 (b)) —
+    #: property keys are column names, values are the cell value as a string or null.
+    offending_sample: tuple[dict[str, str | None], ...] = ()
     affected_exposure_fraction: float | None = None
     skipped: bool = False
     skip_reason: str = ""
@@ -125,14 +129,22 @@ def _table(tables: Mapping[str, pl.DataFrame], rule: ValidationRule) -> pl.DataF
     return tables[name]
 
 
-def _sample(frame: pl.DataFrame, keys: Sequence[str]) -> tuple[str, ...]:
-    """Up to 100 primary keys from the offending rows (FR-DATA-20)."""
+def _sample(frame: pl.DataFrame, keys: Sequence[str]) -> tuple[dict[str, str | None], ...]:
+    """Up to 100 offending rows, keyed `{column: value}` (FR-DATA-20, OQ-DATA-12 (b)).
+
+    One item per offending row; property keys are the usable key columns' names, values
+    are the cell value as a string or null — `None` is distinct from `""`. A composite
+    key is one item with several properties, so the cap counts items, not keys.
+    """
     usable = [k for k in keys if k in frame.columns]
     if not usable or frame.height == 0:
         return ()
     head = frame.select(usable).head(MAX_OFFENDING_SAMPLE)
     return tuple(
-        "|".join("" if v is None else str(v) for v in row)
+        {
+            key: (None if value is None else str(value))
+            for key, value in zip(usable, row, strict=True)
+        }
         for row in head.iter_rows()
     )
 
@@ -275,7 +287,8 @@ def _dtype_match(
             if mismatched
             else "every declared column matches its dtype"
         ),
-        offending_sample=tuple(sorted(mismatched)),
+        # A column-level check emits `{"column": name}` — the column is the offending row.
+        offending_sample=tuple({"column": name} for name in sorted(mismatched)),
     )
 
 
@@ -306,7 +319,8 @@ def _date_parsed(
         },
         threshold={"columns": list(columns)},
         detail=f"{len(unparsed)} declared date column(s) did not parse to a date type",
-        offending_sample=tuple(unparsed),
+        # A column-level check emits `{"column": name}` — the column is the offending row.
+        offending_sample=tuple({"column": name} for name in unparsed),
     )
 
 
@@ -372,7 +386,8 @@ def _no_unexpected_columns(
         measured={"unexpected_columns": unexpected},
         threshold={"declared_columns": sorted(declared)},
         detail=f"{len(unexpected)} column(s) are present but not declared",
-        offending_sample=tuple(unexpected),
+        # A column-level check emits `{"column": name}` — the column is the offending row.
+        offending_sample=tuple({"column": name} for name in unexpected),
     )
 
 
@@ -514,7 +529,9 @@ def _reference_lookup(
         measured={"unresolved_keys": len(missing)},
         threshold={"reference_table": rule.params.get("reference_table")},
         detail=f"{len(missing)} value(s) of {column!r} do not resolve in the reference table",
-        offending_sample=tuple(sorted(missing)[:MAX_OFFENDING_SAMPLE]),
+        offending_sample=tuple(
+            {column: value} for value in sorted(missing)[:MAX_OFFENDING_SAMPLE]
+        ),
     )
 
 
@@ -643,7 +660,9 @@ def _code_list_drift(
         measured={"new_codes": len(new_codes)},
         threshold={"known_codes": len(known)},
         detail=f"{len(new_codes)} code(s) in {column!r} were not present in the reference",
-        offending_sample=tuple(new_codes[:MAX_OFFENDING_SAMPLE]),
+        offending_sample=tuple(
+            {column: code} for code in new_codes[:MAX_OFFENDING_SAMPLE]
+        ),
     )
 
 # -- Layer 3: actuarial sanity ---------------------------------------------------------------
@@ -1142,7 +1161,9 @@ def _zero_claim_cohort(
             f"{len(offending)} level(s) of {column!r} carry material exposure and no claims, "
             "having had claims in the reference version"
         ),
-        offending_sample=tuple(offending[:MAX_OFFENDING_SAMPLE]),
+        offending_sample=tuple(
+            {column: level} for level in offending[:MAX_OFFENDING_SAMPLE]
+        ),
     )
 
 
@@ -1267,7 +1288,9 @@ def _currency_consistency(
         measured={"currencies_present": present},
         threshold={"declared_currency": declared},
         detail=detail,
-        offending_sample=tuple(present[:MAX_OFFENDING_SAMPLE]),
+        offending_sample=tuple(
+            {column: currency} for currency in present[:MAX_OFFENDING_SAMPLE]
+        ),
     )
 
 
@@ -1504,7 +1527,9 @@ def _new_level(
         measured={"new_levels": len(new_levels)},
         threshold={"reference_levels": len(known)},
         detail=f"{len(new_levels)} level(s) of {column!r} are new since the reference version",
-        offending_sample=tuple(new_levels[:MAX_OFFENDING_SAMPLE]),
+        offending_sample=tuple(
+            {column: level} for level in new_levels[:MAX_OFFENDING_SAMPLE]
+        ),
     )
 
 
@@ -1584,7 +1609,9 @@ def _vanished_level(
             f"{len(vanished)} level(s) of {column!r} carried material reference weight and "
             "are now absent"
         ),
-        offending_sample=tuple(vanished[:MAX_OFFENDING_SAMPLE]),
+        offending_sample=tuple(
+            {column: level} for level in vanished[:MAX_OFFENDING_SAMPLE]
+        ),
     )
 
 

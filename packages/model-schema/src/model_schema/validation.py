@@ -19,7 +19,7 @@ import enum
 from collections.abc import Mapping
 from datetime import datetime
 from types import MappingProxyType
-from typing import Any, Final
+from typing import Annotated, Any, Final
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
@@ -29,6 +29,7 @@ __all__ = [
     "BUILTIN_RULES",
     "Acknowledgement",
     "BuiltinRule",
+    "OffendingSampleItem",
     "OverallOutcome",
     "RuleOutcome",
     "RuleResult",
@@ -477,6 +478,14 @@ def builtin_rule(catalogue_id: str) -> BuiltinRule:
         ) from None
 
 
+#: One offending row, written out rather than implicit (OQ-DATA-12, decided 2026-08-26 (b)).
+#: Property keys are column names and values are the cell value as a string or null, so
+#: `None` is distinct from `""`. A composite key is one item with several properties; a
+#: column-level check emits `{"column": <name>}`. FR-DATA-20's 100-primary-key cap counts
+#: items, so `min_length=1` refuses an empty object — an item with no keys names no row.
+OffendingSampleItem = Annotated[dict[str, str | None], Field(min_length=1)]
+
+
 class Acknowledgement(BaseModel):
     """A Principal accepting a warning, on this report (FR-DATA-17, FR-DATA-18)."""
 
@@ -504,9 +513,10 @@ class RuleResult(BaseModel):
     affected_rows: int | None = None
     affected_exposure_fraction: float | None = None
     detail: str = ""
-    #: Up to 100 primary keys (FR-DATA-20). Capped because a failing rule on five million
-    #: rows would otherwise put five million keys in a report somebody has to open.
-    offending_sample: tuple[str, ...] = ()
+    #: Up to 100 offending rows, keyed `{column: value}` (FR-DATA-20, OQ-DATA-12 (b)).
+    #: Capped because a failing rule on five million rows would otherwise put five million
+    #: keys in a report somebody has to open.
+    offending_sample: tuple[OffendingSampleItem, ...] = ()
     error_reason: str | None = None
     acknowledgement: Acknowledgement | None = None
 

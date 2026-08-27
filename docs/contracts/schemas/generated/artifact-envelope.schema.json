@@ -84,17 +84,9 @@
       "type": "string"
     },
     "updated_at": {
-      "anyOf": [
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Updated At"
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
     },
     "version": {
       "minimum": 1,
@@ -114,7 +106,8 @@
     "version",
     "status",
     "created_at",
-    "created_by"
+    "created_by",
+    "updated_at"
   ],
   "title": "ArtifactEnvelope",
   "type": "object"
