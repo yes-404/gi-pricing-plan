@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-24, Claude — during W6b, after both rules were broken inside a single day by sessions that were checking each other's work for exactly this |
-| **Status** | `open` — two reading rules proposed as `CLAUDE.md` §13 material. Raised and assessed, not agreed: nothing is built on them |
+| **Status** | `landed` — accepted 2026-08-27 and added to `CLAUDE.md` §13 as one bullet ("Name the range, not the tip; verify the claim, not just the citation") |
 | **Deliverable** | **No code and no spec change.** Two rules about how evidence is read, with the instance that produced each |
 | **Owner** | Claude records · maintainer accepts |
 | **Lands in** | Proposed: `CLAUDE.md` §13, beside "Scope is derived from the specification first, then evidenced" |

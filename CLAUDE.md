@@ -171,6 +171,11 @@ follow:
 - **Read bounded ranges, not whole files** — `sed -n '100,160p'`, `grep -n -C3`, `head`, and
   a `wc -l` before anything large. A whole file read to find one function stays in context
   permanently, re-read every turn thereafter.
+- **A boundary metric reads zero by construction.** "Zero calls above 200k" reports where the
+  compaction cap sits, not how light the usage was — a heavy session and a disciplined one
+  produce the same zero. Read trends at the boundary (the share of calls near the cap, and
+  the spend those calls carry), never absence above it.
+  ([`NT-0007`](.claude/notes/0007-context-bound-measures-cap-not-discipline.md))
 
 ## 11. Commands Reference — *every command is in `.claude/skills/dev-commands`*
 
@@ -234,6 +239,17 @@ bind wherever anything here is audited, not only at a close:
 - **NFRs are measured, not asserted; enforcement is proven on deliberately broken input.** A
   check that has never printed a failure has not been tested, and a generated artifact
   matching its source proves neither correct.
+- **A reference carries its scope and its measurement.** A count carries the tree *and* the
+  corpus it counted over; a schema or contract name carries its full path; a `Verified` date
+  carries the tree; a word with two scopes (`shape`, `slug`, `contract`, `variant`) says which
+  it means. The test: would it still resolve for a reader holding none of your open context?
+  ([`NT-0004`](.claude/notes/0004-a-reference-that-resolves-only-for-the-writer.md))
+- **Name the range, not the tip; verify the claim, not just the citation.** A review or gate
+  names `origin/main...branch`, never the branch's tip SHA — a tip is the record of the last
+  edit, not the change set. And a citation can be correct while the content it vouches for is
+  wrong: read to the part of the cited artifact that carries the claim — a requirement's
+  clauses including its dated amendments, a test's asserts, a function's body.
+  ([`NT-0006`](.claude/notes/0006-two-rules-for-reading-an-artifact.md))
 
 ## 14. Phase Review Standard — *the standard is `.claude/skills/phase-review`*
 

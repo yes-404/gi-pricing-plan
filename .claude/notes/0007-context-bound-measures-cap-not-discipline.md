@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-25, Claude — during W6b, after a session cited its "zero calls above 200k" figure as evidence of context discipline |
-| **Status** | `open` — a reading rule for the §10 context metric. Raised and assessed, not agreed: nothing is built on it |
+| **Status** | `landed` — accepted 2026-08-27 and added to `CLAUDE.md` §10 as a third context-discipline bullet ("A boundary metric reads zero by construction") |
 | **Deliverable** | **No code and no spec change.** A rule about how the boundary metric is read, with the instance that produced it |
 | **Owner** | Claude records · maintainer accepts |
 | **Lands in** | Proposed: `CLAUDE.md` §10, beside the context-discipline rule it qualifies |
