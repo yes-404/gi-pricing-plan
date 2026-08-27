@@ -25,6 +25,7 @@ import zen
 from pydantic import BaseModel, ConfigDict
 
 from model_schema.rating import (
+    Pins,
     RatingAlgorithm,
     RatingExpressionStep,
     RatingInputStep,
@@ -358,19 +359,21 @@ class Bundle(BaseModel):
     algorithm_ref: str
     graph: JdmGraph
     resolved_payloads: dict[str, Any]
-    pins: dict[str, list[str]]
+    pins: Pins
     content_hash: str
     compiled_at: datetime
 
 
-def bundle_hash(graph: JdmGraph, pins: dict[str, list[str]]) -> str:
+def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     """A reproducible content hash from the graph and the pins (FR-RATE-24).
 
-    The hash excludes `compiled_at` and any prior `content_hash`, so it is stable across
-    compilations of the same pins and graph.
+    The hash covers the graph and the pinned artifact references, excluding `compiled_at`
+    and any prior `content_hash` — hashing a timestamp would break reproducibility. Per
+    DP1 and FR-RATE-24, the hash is reproducible from the pins and the graph (03 §5.2,
+    corrected 2026-08-27, F-W9-3-2).
     """
     canonical = json.dumps(
-        {"graph": graph.model_dump(), "pins": pins},
+        {"graph": graph.model_dump(), "pins": pins.model_dump()},
         sort_keys=True,
         separators=(",", ":"),
     )
@@ -409,7 +412,6 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         _raise_named(issues[0].code, issues[0].message)
     check_model_reference_mode(version, algorithm)
 
-    pins: dict[str, list[str]] = {}
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
         *version.pins.rate_tables,
@@ -426,14 +428,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             )
         payloads[str(ref)] = resolved.payload
 
-    pins = {
-        "rate_tables": [str(r) for r in version.pins.rate_tables],
-        "models": [str(r) for r in version.pins.models],
-        "reference_tables": [str(r) for r in version.pins.reference_tables],
-        "custom_objectives": [str(r) for r in version.pins.custom_objectives],
-    }
-
     graph = to_jdm(algorithm)
+    pins = version.pins
     return Bundle(
         algorithm_ref=str(version.algorithm_ref),
         graph=graph,

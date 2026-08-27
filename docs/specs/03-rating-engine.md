@@ -511,7 +511,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
 def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-0004 translation layer
-def bundle_hash(bundle: Bundle) -> str
+def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
 
 # pricing_core/rating/score.py
 def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
@@ -534,6 +534,12 @@ def generate_contexts(contract: InputContract, n: int, seed: int) -> list[QuoteC
 def to_minor(value: Decimal, currency: str) -> int
 def apply_factor(amount_minor: int, factor: Decimal, rounding: Rounding) -> int
 ```
+
+> *(Corrected 2026-08-27, F-W9-3-2 — the decision-maker ruled the spec was wrong.)* The
+> content hash is `bundle_hash(graph, pins)`, never `bundle_hash(bundle)`: the Bundle
+> carries `compiled_at`, and hashing a timestamp would make the hash unreproducible. Per
+> DP1 and FR-RATE-24, the hash covers the graph and the pinned artifact references and is
+> reproducible from the pins; `compiled_at` is metadata and is excluded.
 
 `score_one` and `score_batch` share the identical step evaluator (FR-RATE-37);
 `score_batch` is a vectorised driver over the same compiled graph, not a second engine.
