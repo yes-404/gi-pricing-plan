@@ -42,6 +42,8 @@ must say where it went.
 | [NT-0005](0005-deferred-items-with-no-durable-custody.md) | Seven deferred items with no durable custody — found during W6b, held only in a session's working memory | 2026-08-24 | `open` | Mixed, per item: a marker line, a roadmap row, eight gate placements, two one-line `audit-docs.py` fixes, a convention, a new check, and one `OQ-` entry |
 | [NT-0006](0006-two-rules-for-reading-an-artifact.md) | Two rules for reading an artifact — the tip commit that is not the change set, and the citation that is right about the wrong content | 2026-08-24 | `open` | Proposed rules → `CLAUDE.md` §13; **no code, no spec change** |
 | [NT-0007](0007-context-bound-measures-cap-not-discipline.md) | "Zero calls above 200k" measures the compaction cap, not discipline — a boundary metric reads as zero by construction | 2026-08-25 | `open` | Proposed rule → `CLAUDE.md` §10; **no code, no spec change** |
+| [NT-0008](0008-project-closure-audit-structure.md) | A closure-audit structure for work items and phases — per-work-item and per-phase records, two registers, conventions | 2026-08-27 | `open` | Proposed standard: `docs/audit/` + checklists + registers; ADR or skill extension — spec-change-first |
+| [NT-0009](0009-slim-the-roadmap.md) | Slim the roadmap — split the forward-looking plan from the archive (closure records, plan reviews, retrofit list) | 2026-08-27 | `accepted` | Restructure of `docs/roadmap.md`: archive → `docs/audit/`; scheduled after W7 |
 
 ## What a note must contain
 
