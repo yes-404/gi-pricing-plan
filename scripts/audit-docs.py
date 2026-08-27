@@ -451,7 +451,11 @@ def main() -> int:
         fail(f"{q} raised in a spec but not mirrored into open-questions.md")
     for q in sorted(in_file - in_specs):
         fail(f"{q} listed in open-questions.md but raised in no spec")
-    notes.append(f"{len(in_file)} open questions, all mirrored")
+    # The verdict goes in the summary line, not just in the failure list (check 21's
+    # pattern): a note reading "all mirrored" above a FAILED block hides the failure.
+    unmirrored = len(in_specs - in_file) + len(in_file - in_specs)
+    verdict = "all mirrored" if not unmirrored else f"**{unmirrored} not mirrored**"
+    notes.append(f"{len(in_file)} open questions, {verdict}")
 
     # 5. ADRs
     adrs = {p.name.split("-")[0] for p in ROOT.glob("adr/0*.md")}
@@ -565,6 +569,7 @@ def main() -> int:
 
     # 10. error-code ownership is exclusive
     owner: dict[str, str] = {}
+    conflicts = 0
     code_re = re.compile(r"\*\*Error codes owned by this module:\*\*(.+?)(?:\n\n|###)", re.S)
     for f in specs:
         m = code_re.search(f.read_text(encoding="utf-8"))
@@ -576,13 +581,17 @@ def main() -> int:
             if reraised:
                 continue  # explicitly borrowed from the owning module
             if code in owner and owner[code] != f.name:
+                conflicts += 1
                 fail(
                     f"error code {code} claimed by both {owner[code]} and "
                     f"{f.name} — annotate one as '(re-raised from `NN`)' or "
                     "give ownership to one module"
                 )
             owner.setdefault(code, f.name)
-    notes.append(f"{len(owner)} error codes, ownership exclusive")
+    # The verdict goes in the summary line (check 21's pattern): a note reading
+    # "ownership exclusive" above a FAILED block hides the failure.
+    verdict = "ownership exclusive" if not conflicts else f"**{conflicts} conflicts**"
+    notes.append(f"{len(owner)} error codes, {verdict}")
 
     # 11. DEP-1 build order: a module must not consume from a module to its right
     order = ["PLAT", "GOV", "DATA", "MODEL", "RATE", "OPT", "MON"]
@@ -747,6 +756,64 @@ def main() -> int:
     # the other checks scan `docs/` only: it is the most-read document here, it is full of
     # tables, and `docs.yml` already runs on a change to it.
     check_table_rows([*md, REPO / "CLAUDE.md"])
+
+    # 24. the §5.3 route column agrees with the §5.6 canonical route column
+    #
+    # `00` §5.6 declares the canonical routes (FR-OVR-22); each module's §5.3 gives the
+    # route of every view it builds. A route §5.6 declares for a module must appear in that
+    # module's §5.3 — a §5.3 that drops or rewrites a canonical route is drift nothing else
+    # sees. Routes, never view names: two named views on one route are two §5.3 rows
+    # carrying the same route. A module's §5.3 legitimately carries detail routes the
+    # inventory does not list, so the check is one-directional: §5.6 is canonical and a
+    # mismatch is a §5.3 error (recorded 2026-08-27, `00` §5.6).
+    def _norm_route(r: str) -> str:
+        r = r.split("?", 1)[0].rstrip("/")
+        return re.sub(r"\{([^}]+)\}", r":\1", r)
+
+    def _route_rows(spec: pathlib.Path, sec: str) -> list[list[str]]:
+        rows: list[list[str]] = []
+        on = False
+        for line in spec.read_text(encoding="utf-8").splitlines():
+            if line.strip() == f"### {sec}" or line.startswith(f"### {sec} "):
+                on = True
+                continue
+            if on and re.match(r"^#{2,4} ", line):
+                break
+            if on and line.startswith("|"):
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                if cells and cells[0] != "View":
+                    rows.append(cells)
+        return rows
+
+    def _row_routes(row: list[str], col: int) -> set[str]:
+        return {_norm_route(p) for p in re.findall(r"`(/[^`]+)`", row[col])}
+
+    overview = next(f for f in specs if f.name == "00-overview.md")
+    canonical: dict[str, set[str]] = collections.defaultdict(set)
+    for row in _route_rows(overview, "5.6"):
+        if len(row) >= 3:
+            canonical[row[2]].update(_row_routes(row, 1))
+    for f in specs:
+        if f.name == "00-overview.md":
+            continue
+        code = f.name[:2]
+        s53: set[str] = set()
+        for row in _route_rows(f, "5.3"):
+            if len(row) >= 2:
+                s53.update(_row_routes(row, 1))
+        for route in sorted(canonical.get(code, set())):
+            if route.endswith("/*"):
+                prefix = route[:-1]
+                if not any(r.startswith(prefix) for r in s53):
+                    fail(
+                        f"{f.name} §5.3: no route under `{route}` declared in `00` §5.6 "
+                        f"(owner {code}) — fix {f.name} §5.3 (`00` §5.6 is canonical)"
+                    )
+            elif route not in s53:
+                fail(
+                    f"{f.name} §5.3: route `{route}` declared in `00` §5.6 (owner {code}) "
+                    f"has no matching row — fix {f.name} §5.3 (`00` §5.6 is canonical)"
+                )
 
     # 16-20. the working notes in .claude/notes/
     check_notes(set(defined), in_file, adrs)

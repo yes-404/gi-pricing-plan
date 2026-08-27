@@ -258,9 +258,13 @@ phase boundaries, workstream cuts and requirement set still make sense now that 
 work is real. The plan is a working hypothesis, re-tested while the phase is still open.
 *(Raised as [`NT-0001`](.claude/notes/0001-phase-boundary-plan-review.md), 2026-08-15.)*
 **Trigger: at each workstream close, and again before a phase's exit demo** — fixed, not
-"sometime". The five questions are in the skill; two rules bind outside it:
+"sometime". The five questions are in the skill; three rules bind outside it:
 
 - **The output is a proposal, never a change** — recommendation, rationale, and an explicit
   maintainer acceptance line with a date. A review that edits the roadmap on its own
   authority is re-planning.
 - **A later phase's finding is a spec change only** (§0's table).
+- **Nothing starts in the next phase while an open finding from the current phase lacks a
+  resolution.** A finding has a resolution when the close fixes it, carries it forward with
+  a named owner, or accepts it. The phase closure record lists every open finding with its
+  resolution.
