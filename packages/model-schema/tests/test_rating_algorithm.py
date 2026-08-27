@@ -75,8 +75,17 @@ def valid_algorithm() -> dict:
     }
 
 
+@pytest.mark.req("FR-RATE-1")
+@pytest.mark.req("FR-RATE-2")
+@pytest.mark.req("FR-RATE-4")
+@pytest.mark.req("FR-RATE-6")
 def test_a_valid_algorithm_parses() -> None:
-    """T1: the §4.1 shape accepts a consistent graph with all seven step types."""
+    """T1: the §4.1 shape accepts a consistent graph with all seven step types.
+
+    Covers FR-RATE-1 (the shape is a DAG of steps that passes its invariants),
+    FR-RATE-2 (the typed input contract), FR-RATE-4 (step_id is a stable identifier,
+    distinct from the label), FR-RATE-6 (the sub-graph references and mount points).
+    """
     algorithm = RatingAlgorithm.model_validate(valid_algorithm())
     assert algorithm.slug == "motor-gb"
     assert algorithm.version == 14
@@ -89,10 +98,33 @@ def test_a_valid_algorithm_parses() -> None:
         "RatingExpressionStep", "RatingModelCallStep", "RatingConstraintStep",
         "RatingOutputStep",
     } <= types
+    # FR-RATE-2: each input carries a name, a type, nullability, and a range or domain.
+    age = algorithm.input_contract[0]
+    assert age.name == "driver_age"
+    assert age.type.value == "int"
+    assert age.nullable is False
+    assert age.min == 17
+    assert age.max == 99
+    channel = algorithm.input_contract[2]
+    assert channel.domain == ["direct", "broker"]
+    # FR-RATE-4: a step's id is a separate, stable identifier, never derived from its
+    # human label — renaming the label cannot change the id.
+    for step in algorithm.steps:
+        assert step.step_id != step.label
 
 
+@pytest.mark.req("FR-RATE-8")
+@pytest.mark.req("FR-RATE-9")
+@pytest.mark.req("FR-RATE-10")
+@pytest.mark.req("FR-RATE-11")
+@pytest.mark.req("FR-RATE-12")
 def test_the_seven_step_types_accept_their_key_fields() -> None:
-    """T1: each step type carries the key fields from 03 §3.2."""
+    """T1: each step type carries the key fields from 03 §3.2.
+
+    Covers FR-RATE-8 (table steps pin a rate table), FR-RATE-9 (lookup steps evaluate
+    as at a declared date), FR-RATE-10 (model_call declares a mode), FR-RATE-11
+    (constraint steps carry a reason code), FR-RATE-12 (output steps declare rounding).
+    """
     algorithm = RatingAlgorithm.model_validate(valid_algorithm())
     by_id = {s.step_id: s for s in algorithm.steps}
 
@@ -122,6 +154,7 @@ def test_the_seven_step_types_accept_their_key_fields() -> None:
     assert by_id["s_out"].rounding.dp == 0
 
 
+@pytest.mark.req("FR-RATE-13")
 def test_a_monetary_result_typed_as_float_is_refused() -> None:
     """T1: FR-RATE-13 — money is `decimal` or `money_minor`, never float."""
     data = valid_algorithm()
@@ -137,6 +170,7 @@ def test_a_monetary_result_typed_as_float_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
 
+@pytest.mark.req("FR-RATE-10")
 def test_a_model_call_declares_exactly_one_reference() -> None:
     """T1: FR-RATE-10 — a model_call pins a model or a peril structure, not both."""
     data = valid_algorithm()
@@ -149,6 +183,7 @@ def test_a_model_call_declares_exactly_one_reference() -> None:
         RatingAlgorithm.model_validate(data)
 
 
+@pytest.mark.req("FR-RATE-1")
 def test_a_cycle_is_refused() -> None:
     """T2: FR-RATE-1 — a cyclic graph fails."""
     data = valid_algorithm()
@@ -169,6 +204,7 @@ def test_a_cycle_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
 
+@pytest.mark.req("FR-RATE-1")
 def test_an_undefined_reference_is_refused() -> None:
     """T2: FR-RATE-1 — a consumed name no step produces fails."""
     data = valid_algorithm()
@@ -180,6 +216,7 @@ def test_an_undefined_reference_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
 
+@pytest.mark.req("FR-RATE-3")
 def test_a_missing_output_step_is_refused() -> None:
     """T2: FR-RATE-3 — every declared output has an output step."""
     data = valid_algorithm()
@@ -188,6 +225,7 @@ def test_a_missing_output_step_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
 
+@pytest.mark.req("FR-RATE-1")
 def test_an_orphaned_step_is_refused() -> None:
     """T2: FR-RATE-1 — a step neither reachable from an input nor feeding an output."""
     data = valid_algorithm()
@@ -200,6 +238,7 @@ def test_an_orphaned_step_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
 
+@pytest.mark.req("FR-RATE-7")
 def test_the_diff_names_added_removed_and_changed_steps() -> None:
     """T3: FR-RATE-7 — the structural diff names each change."""
     old = RatingAlgorithm.model_validate(valid_algorithm())
@@ -227,6 +266,7 @@ def test_the_diff_names_added_removed_and_changed_steps() -> None:
     assert "no structural change" not in diff.summary
 
 
+@pytest.mark.req("FR-RATE-7")
 def test_the_diff_names_a_repointed_table() -> None:
     """T3: FR-RATE-7 — a table step whose rate table changed is named as re-pointed."""
     old = RatingAlgorithm.model_validate(valid_algorithm())
