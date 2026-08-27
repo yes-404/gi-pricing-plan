@@ -23,6 +23,7 @@
 - Money is integer minor units or Decimal in the rating path, never float (CLAUDE.md §7).
 - `pricing-core` stays importable standalone with zero FastAPI/SQLAlchemy/Redis deps.
 - The engine is confirmed by W8. W9 builds the contract and the compilation on it.
+- The three slices run one at a time. Each slice is executed and audited with the work-item-close checklist before the next slice starts. No batching all slices and one audit at the end.
 - A filed plan under `docs/plans/` stays frozen at its date.
 
 ---
@@ -70,6 +71,8 @@
 ---
 
 ## The three slices
+
+**Sequencing:** the slices run one at a time. The executor finishes W9-1, the auditor audits it against the work-item-close checklist, and only then does W9-2 start. The same holds between W9-2 and W9-3. The audit is per-slice, never one audit after all three.
 
 ### Slice W9-1 — the RatingAlgorithm contract
 
