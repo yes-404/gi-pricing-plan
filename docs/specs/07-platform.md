@@ -116,6 +116,13 @@ The substrate every other module stands on:
 | **FR-PLAT-22** | **Redis** provides the Celery broker, the compiled rating bundle cache (`03` FR-RATE-51), and short-lived response caches. Nothing durable lives only in Redis — every cached value is reconstructible from PostgreSQL and the blob store. |
 | **FR-PLAT-23** | Backups: PostgreSQL continuous archiving with PITR (RPO ≤ 15 min, NFR-OVR-7); blob store versioning and replication. A documented, tested restore procedure is part of the deliverable, not an afterthought. |
 
+> *(Recorded 2026-08-27, W6b-23 — OQ-PLAT-11 decided 2026-08-26 (c).)* A stored artifact is
+> validated on write against whatever the model said that day, then parsed again on read
+> against whatever it says now — so a **narrowing change to a stored shape is a migration
+> event, not a model edit**. The on-demand answer to "is anything stored unreadable?" is
+> `scripts/revalidate-artifacts.py`, which parses every stored artifact against today's
+> models and reports what no longer reads, on the committer's clock instead of the user's.
+
 ### 3.4 Secrets
 
 | ID | Requirement |
