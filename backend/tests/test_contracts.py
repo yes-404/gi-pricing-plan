@@ -56,6 +56,41 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "validation-rule",
 )
 
+#: Slugs present on exactly one of the authored/generated sides, declared on purpose
+#: (OQ-PLAT-10 (b)). The value is the reason, and it is documentation rather than
+#: load-bearing: the guard (`test_every_one_sided_slug_is_declared`) keeps the set equal
+#: to the corpus in both directions — a one-sided slug without a declaration fails, and a
+#: declared slug that gained the other side fails too (the `peril-structure` drift, in
+#: reverse). Generated-only entries are first written forms; `metric-certificate` is the
+#: exception — OQ-PLAT-13 (c) makes it a known gap with a trigger, never a claim of
+#: intent. Authored-only entries are later-phase shapes or shared `common/` defs.
+ONE_SIDED_SLUGS: Final[dict[str, str]] = {
+    # generated-only — first written forms
+    "backtest": "first written form — FR-MODEL-57 named it; no document defined its shape",
+    "custom-metric": "first written form — 02 §4.13 printed an example, no contract",
+    "dataset-lineage": "first written form — 01 §4.9 (W6b-12)",
+    "dataset-split": "first written form — the split artifact the spec builder reads",
+    "model-comparison": "first written form — 02 §5.2 named the return type",
+    "objective-usage": "first written form — FR-MODEL-47 named the query",
+    "oidc-auth-config": "first written form — FR-PLAT-66 names the contents",
+    "problem-detail": "first written form — the RFC 9457 problem shape",
+    "metric-certificate": "OQ-PLAT-13 (c): authored by the next certificate workstream",
+    # authored-only — later-phase shapes, or shared common/ defs
+    "approval-request": "later-phase — 06 governance",
+    "dislocation-run": "later-phase — 03 rating",
+    "dossier": "later-phase — 06 governance",
+    "gipp-check": "later-phase — 06 governance",
+    "monitoring": "later-phase — 05 monitoring",
+    "optimisation-run": "later-phase — 04 optimisation",
+    "rate-table": "later-phase — 03 rating",
+    "rating-algorithm": "later-phase — 03 rating",
+    "rating-version": "later-phase — 03 rating",
+    "regression-suite": "later-phase — 04 optimisation",
+    "scoring": "later-phase — 03 rating",
+    "money": "shared common/ defs with no Phase 1b emitter",
+    "provenance": "shared common/ defs with no Phase 1b emitter",
+}
+
 
 def _load(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -1467,6 +1502,61 @@ _COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
     }
 )
 
+#: A compared constraint keyword declared on exactly one side at a field path present on
+#: both sides, declared on purpose (OQ-PLAT-10 (b), finding F2 subsumed). Keyed
+#: `(slug, dotted_path)`; the value is the one-sided keywords. These are the bounds the
+#: corpus carried at 8b0977f where the model and the contract do not agree on whether a
+#: bound exists — measured 2026-08-27, 36 rows over 31 paths, with the five examples
+#: OQ-PLAT-10 names (`banding.slug`, `grouping.slug`, `model.spec_hash`, `job.error.code`,
+#: `job.result.kind`) all reproducing. A side converging deletes the entry, never leaves it.
+#: `test_a_constraint_keyword_on_one_side_is_not_silent` keeps this equal to the corpus in
+#: both directions.
+ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
+    ("banding", "band_stats.[].frequency"): frozenset({"minimum"}),
+    ("banding", "slug"): frozenset({"pattern"}),
+    ("custom-objective", "applicability.backends"): frozenset({"minItems"}),
+    ("custom-objective", "applicability.responses"): frozenset({"minItems"}),
+    ("dataset-version", "tables"): frozenset({"minItems"}),
+    ("dataset-version", "tables.[].name"): frozenset({"pattern"}),
+    ("grouping", "evidence.source_level_stats.[].frequency_ci"): frozenset(
+        {"minItems", "maxItems"}
+    ),
+    ("grouping", "evidence.source_level_stats.[].severity_ci"): frozenset(
+        {"minItems", "maxItems"}
+    ),
+    ("grouping", "evidence.target_level_stats.[].frequency_ci"): frozenset(
+        {"minItems", "maxItems"}
+    ),
+    ("grouping", "evidence.target_level_stats.[].severity_ci"): frozenset(
+        {"minItems", "maxItems"}
+    ),
+    ("grouping", "slug"): frozenset({"pattern"}),
+    ("job", "error.code"): frozenset({"pattern"}),
+    ("job", "result.kind"): frozenset({"pattern"}),
+    ("model", "fit_result.bins.[].cuts"): frozenset({"minItems"}),
+    ("model", "fit_result.bins.[].levels"): frozenset({"minItems"}),
+    ("model", "fit_result.terms.[].term_name"): frozenset({"minLength"}),
+    ("model", "spec.factors"): frozenset({"minItems"}),
+    ("model", "spec.model_family_slug"): frozenset({"pattern"}),
+    ("model", "spec_hash"): frozenset({"pattern"}),
+    ("model-spec", "factors"): frozenset({"minItems"}),
+    ("model-spec", "model_family_slug"): frozenset({"pattern"}),
+    ("objective-certificate", "result.checks"): frozenset({"minItems"}),
+    ("peril-structure", "reconciliation.modelled_burning_cost"): frozenset({"minimum"}),
+    ("peril-structure", "reconciliation.perils.[].modelled_burning_cost"): frozenset(
+        {"minimum"}
+    ),
+    ("profile", "one_ways.[].rows.[].frequency"): frozenset({"minimum"}),
+    ("validation-report", "results.[].affected_exposure_fraction"): frozenset(
+        {"minimum", "maximum"}
+    ),
+    ("validation-report", "results.[].affected_rows"): frozenset({"minimum"}),
+    ("validation-report", "results.[].offending_sample"): frozenset({"maxItems"}),
+    ("validation-report", "results.[].rule_version"): frozenset({"minimum"}),
+    ("validation-report", "rule_set_version"): frozenset({"minimum"}),
+    ("validation-rule", "rationale"): frozenset({"minLength"}),
+}
+
 
 def _conjoin(into: dict[str, Any], declared: dict[str, Any], where: tuple[Arm, str]) -> None:
     """Merge one variant's bounds into an arm's, refusing to resolve a collision silently.
@@ -1494,6 +1584,46 @@ def _conjoin(into: dict[str, Any], declared: dict[str, Any], where: tuple[Arm, s
             "(max for a lower bound, min for an upper) before this schema can be compared"
         )
     into.update(declared)
+
+
+def _field_paths(
+    document: dict[str, Any],
+    node: dict[str, Any],
+    base: pathlib.Path,
+    path: str = "",
+    *,
+    arm: Arm = frozenset(),
+    _depth: int = 0,
+) -> dict[str, frozenset[str]]:
+    """Every dotted field path → the compared-constraint keywords declared there.
+
+    `_constraint_map`'s sibling, asked for the **field paths** rather than only the paths
+    that carry a compared keyword. Recording every path — constrained or not — is what lets
+    the F2 check intersect the two sides' *fields* and see a bound declared on one side at a
+    path the other side carries unconstrained, which the constraint comparison's double
+    intersection drops before anything can look at it (its own docstring measures the 2026-08-24
+    surface). Reuses `_variants` so `allOf`, `if`/`then`, `$ref` and `prefixItems`/`items`
+    resolve exactly as the comparison's walker does.
+    """
+    found: dict[str, frozenset[str]] = {}
+    for owner, variant, found_in in _variants(document, node, base, path=path, arm=arm):
+        declared = frozenset(k for k in variant if k in _COMPARED_CONSTRAINTS)
+        key = path or _ROOT_PATH
+        found[key] = found.get(key, frozenset()) | declared
+        for name, child in variant.get("properties", {}).items():
+            for sub, keywords in _field_paths(
+                owner, child, base, f"{path}.{name}".lstrip("."), arm=found_in, _depth=_depth + 1
+            ).items():
+                found[sub] = found.get(sub, frozenset()) | keywords
+        elements = list(variant.get("prefixItems", ()))
+        if "items" in variant:
+            elements.append(variant["items"])
+        for child in elements:
+            for sub, keywords in _field_paths(
+                owner, child, base, f"{path}.[]".lstrip("."), arm=found_in, _depth=_depth + 1
+            ).items():
+                found[sub] = found.get(sub, frozenset()) | keywords
+    return found
 
 
 def _constraint_map(
@@ -1740,6 +1870,50 @@ def test_generated_and_authored_agree_on_scalar_constraints(slug: str) -> None:
             for (arm, path), d in disagreed.items()
         )
     )
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_a_constraint_keyword_on_one_side_is_not_silent() -> None:
+    """OQ-PLAT-10's F2, subsumed: a bound on one side at a shared field is declared, not silent.
+
+    The comparison above intersects keys and then keywords, so a `minItems` the authored
+    side declares at a path the generated side carries unconstrained is dropped before
+    anything can look at it — the `gbm.quantile_crossing` case, and the reason F2 needed no
+    separate row from OQ-PLAT-10. This closes it: at every field path present on **both**
+    sides, a compared constraint keyword on exactly one side must be declared in
+    `ONE_SIDED_KEYWORDS`, and a declared entry that is no longer one-sided is stale.
+    """
+    for slug in COMPARED_SLUGS:
+        generated = _load(GENERATED / f"{slug}.schema.json")
+        authored = _load(_authored_schema(slug))
+        produced = _field_paths(generated, generated, GENERATED)
+        declared = _field_paths(authored, authored, AUTHORED)
+
+        for path in sorted(set(produced) & set(declared)):
+            one_sided = produced[path] ^ declared[path]
+            if not one_sided:
+                continue
+            registered = ONE_SIDED_KEYWORDS.get((slug, path), frozenset())
+            assert one_sided == registered, (
+                f"{slug} {path} carries a compared keyword on one side only "
+                f"({sorted(one_sided)}), and ONE_SIDED_KEYWORDS records {sorted(registered)} "
+                "— declare it with a reason, or delete the entry once the sides agree "
+                "(OQ-PLAT-10 (b), F2)"
+            )
+
+        for (slug_, path) in sorted(ONE_SIDED_KEYWORDS):
+            if slug_ != slug:
+                continue
+            if path not in set(produced) & set(declared):
+                pytest.fail(
+                    f"{slug} {path} is declared one-sided but the field is no longer on "
+                    "both sides — remove the ONE_SIDED_KEYWORDS entry"
+                )
+            if not (produced[path] ^ declared[path]):
+                pytest.fail(
+                    f"{slug} {path} is declared one-sided but the two sides agree now — "
+                    "remove the ONE_SIDED_KEYWORDS entry"
+                )
 
 
 @pytest.mark.req("FR-PLAT-48")
@@ -2328,6 +2502,49 @@ def test_every_eligible_schema_is_compared() -> None:
     assert not unaccounted, (
         "these schemas have both an authored and a generated side and are not compared: "
         f"{sorted(unaccounted)}"
+    )
+
+
+def _one_sided_slugs() -> tuple[set[str], set[str]]:
+    """The slugs present on exactly one side: `(authored_only, generated_only)`.
+
+    The same discovery the eligibility test uses, asked for the complement of the
+    intersection. `common/` counts as authored through `_authored`'s recursive scan; the
+    `GENERATED` subtree exclusion is what keeps the generated side out of the authored set.
+    """
+    generated = {p.name.split(".")[0] for p in GENERATED.glob("*.schema.json")}
+    authored = {
+        p.name.split(".")[0]
+        for p in AUTHORED.rglob("*.schema.json")
+        if GENERATED not in p.parents
+    }
+    return authored - generated, generated - authored
+
+
+@pytest.mark.req("FR-PLAT-48")
+def test_every_one_sided_slug_is_declared() -> None:
+    """OQ-PLAT-10 (b): one-sidedness is declared, never inferred.
+
+    The intersection of the two sides is what the comparisons above cover; a shape present
+    on exactly one side is outside all of them by construction, so the guard is silent in
+    the same way whether the one-sidedness is deliberate or accidental. This test closes
+    that: every one-sided slug must be declared in `ONE_SIDED_SLUGS` with a reason, and a
+    declared slug that has gained the other side is stale — the `peril-structure` comment
+    drift, now in reverse, where the guard's own comment went stale instead of a test.
+    """
+    authored_only, generated_only = _one_sided_slugs()
+    one_sided = authored_only | generated_only
+
+    undeclared = one_sided - set(ONE_SIDED_SLUGS)
+    assert not undeclared, (
+        "a schema present on exactly one side must declare that in ONE_SIDED_SLUGS "
+        f"(OQ-PLAT-10 (b)): {sorted(undeclared)}"
+    )
+
+    stale = set(ONE_SIDED_SLUGS) - one_sided
+    assert not stale, (
+        "a slug declared one-sided now has both sides — remove the declaration "
+        f"(the peril-structure drift, in reverse): {sorted(stale)}"
     )
 
 
