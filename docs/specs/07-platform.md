@@ -304,11 +304,19 @@ The key value itself appears exactly once, in the creation response (FR-PLAT-3).
 | `GET`/`PUT` | `/api/v1/settings` | Read effective settings with sources; update workspace settings |
 | `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-PLAT-21) |
 | `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL) |
-| `GET` | `/healthz`, `/readyz`, `/version` | Health and version (FR-PLAT-41) |
+| `GET` | `/healthz` | Liveness — is the process alive? (FR-PLAT-41) |
+| `GET` | `/readyz` | Readiness — database, Redis, blob store reachability (FR-PLAT-41) |
+| `GET` | `/version` | Image tag, commit, schema version (FR-PLAT-41) |
 | `GET` | `/api/v1/auth/config` | The OIDC issuer and client id the browser login needs, unauthenticated (FR-PLAT-66) |
 | `GET` | `/openapi.json` | Generated OpenAPI 3.1 (FR-PLAT-48) |
 | `GET` | `/metrics` | Prometheus metrics (FR-PLAT-40) |
 | `GET` | `/api/v1/demo/guide` | What is testable today, derived (FR-PLAT-54). **404 unless `dev_auth_enabled`** |
+
+> **Amended 2026-08-27, at W6b's close (plan review 5, proposal 2.4).** The three routes were
+> previously joined in one path cell, which a spec-reconciler pass read as declaring none of
+> them — plan review 5 recorded `/readyz` and `/version` as undeclared. They were declared
+> all along; the combined cell was the blind spot. Each route now has its own row, so a path
+> cell that declares exactly one route can be matched against the code in either direction.
 
 > **`/metrics` scope, 2026-08-15 (W4).** FR-PLAT-40 names five families. Three are emitted:
 > request rate/latency/error by route template, job queue depth and duration by kind, and

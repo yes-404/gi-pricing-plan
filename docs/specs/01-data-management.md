@@ -955,30 +955,52 @@ def apply_recipe(
 
 # packages/pricing-core/src/pricing_core/data/validate.py
 def run_validation(
-    tables: dict[str, pl.LazyFrame],
+    tables: Mapping[str, pl.DataFrame],
     rule_set: ValidationRuleSet,
     *,
+    dataset_version_id: UUID,
+    reference_tables: Mapping[str, pl.DataFrame] | None = None,
+    reference_frames: Mapping[str, pl.DataFrame] | None = None,
     reference_profile: Profile | None = None,
-    reference_tables: Mapping[str, ReferenceTableVersion],
-    time_budget_s: float = 300.0,
+    exposure_column: str = "exposure_years",
+    rule_budget_s: float = DEFAULT_RULE_BUDGET_S,   # 60 s
     progress: ProgressCallback | None = None,
 ) -> ValidationReport
 
 # packages/pricing-core/src/pricing_core/data/profile.py     (corrected 2026-08-15)
 def profile_frame(
-    tables: Mapping[str, pl.DataFrame],
+    frame: pl.DataFrame,
     *,
     dataset_version_id: UUID,
+    one_way_columns: Sequence[str] | Literal["auto"] = (),
     exposure_column: str = "exposure_years",
-    one_way_columns: Sequence[str] | Literal["auto"] = "auto",
+    claim_count_column: str = "claim_count",
+    claim_amount_column: str = "claim_amount_minor",
+    job_id: UUID | None = None,
 ) -> Profile
 def profile_parquet(...) -> Profile          # same shape, aggregated in DuckDB (FR-DATA-27)
 def compare_profiles(current: Profile, reference: Profile) -> ProfileComparison   # PSI etc.
 def candidate_rating_columns(columns, *, exposure_column="exposure_years") -> tuple[str, ...]
 
 # packages/pricing-core/src/pricing_core/data/prepare.py     (corrected 2026-08-15)
-def explode_period(df: pl.DataFrame, spec: ExplodePeriodSpec) -> pl.DataFrame     # FR-DATA-11
-def attach_claims(exposure: pl.DataFrame, claims: pl.DataFrame, spec: AttachClaimsSpec) -> AttachResult
+def explode_period(
+    frame: pl.DataFrame,
+    *,
+    key_column: str = "policy_id",
+    start_column: str = "exposure_start",
+    end_column: str = "exposure_end",
+    exposure_column: str = "exposure_years",
+    boundaries: Sequence[date] = (),
+) -> pl.DataFrame                        # FR-DATA-11
+def attach_claims(
+    exposure: pl.DataFrame,
+    claims: pl.DataFrame,
+    *,
+    key_column: str = "policy_id",
+    loss_date_column: str = "date_of_loss",
+    start_column: str = "exposure_start",
+    end_column: str = "exposure_end",
+) -> AttachResult                        # FR-DATA-12
 
 # packages/pricing-core/src/pricing_core/data/expressions.py — the restricted AST that
 # compiles a recipe expression to Polars without `eval` (FR-DATA-9)
@@ -990,6 +1012,18 @@ def attach_claims(exposure: pl.DataFrame, claims: pl.DataFrame, spec: AttachClai
 > in an `exposure.py` that does not exist. It was amended for `ingest.py` in W4 and not for
 > the rest, so it described the shape of the code as it was designed rather than as it was
 > written. Two modules it never mentioned are listed above.
+>
+> **Amended 2026-08-27, at W6b's close (plan review 5, proposal 4.1).** The 2026-08-15
+> correction fixed the module names but not these four signatures, which a caller copying
+> them could not invoke. The code was right in each case; the spec was the wrong side.
+> `run_validation` names `rule_budget_s` (the per-rule budget, default 60 s), not a
+> `time_budget_s`, and takes raw DataFrames — `reference_tables` is `Mapping[str,
+> pl.DataFrame] | None`, plus a sibling `reference_frames` — with `dataset_version_id` and
+> `exposure_column` required. `profile_frame` takes a single `frame`, not a `tables`
+> mapping, defaults `one_way_columns` to `()` (auto-selection is opted into), and carries
+> the claim-column names and an optional `job_id`. `explode_period` and `attach_claims`
+> take column-name kwargs, not `spec:` objects — `ExplodePeriodSpec` and
+> `AttachClaimsSpec` do not exist.
 
 All of these are pure: no I/O, no database, `parquet_uris` read through an injected
 filesystem object supplied by the caller (ADR-0001).
