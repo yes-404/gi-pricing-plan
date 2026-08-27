@@ -46,13 +46,14 @@ artifact, owned by W14, and `deploy/keycloak/` is left free for it. This directo
 
 **It is an alternative to `dev_auth_enabled`, not a replacement.** Both test suites run with no
 container at all, which is why every test covering this provider asserts against the committed
-realm file or the database rather than a live one. `scripts/demo.py` is unchanged and still
-uses the dev headers: it runs `docker compose up` with no profile (`scripts/demo.py:189`), so
-the one-command demo starts the same three containers it always did.
+realm file or the database rather than a live one. `scripts/demo.py` now starts the auth profile
+(`docker compose --profile auth up`) and sets the `GIP_OIDC_*` variables, so the one-command
+demo runs all four containers and the browser signs in through this provider
+(*corrected 2026-08-27, W6b: it previously ran no profile and used the dev headers*).
 
-**The browser cannot use this yet.** The PKCE flow is `FR-PLAT-55`, owned by `W6b-10`, and how
-the SPA learns the issuer and client id is an open question with the maintainer — nothing in
-the frontend reads either value today.
+**The browser uses it.** The PKCE flow is `FR-PLAT-55`; the SPA learns the issuer and client id
+from `FR-PLAT-66`'s `/api/v1/auth/config` (W6b-10), and the seeded membership answers the
+`analyst` / `analyst` login (FR-PLAT-58).
 
 ## Verified
 
