@@ -1901,6 +1901,15 @@ class RatingVersionRow(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
     approval_request_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    #: The widened 03 §4.3 contract (W9-3). All optional so Phase 1b rows keep parsing.
+    algorithm_ref: Mapped[str | None] = mapped_column(String(100))
+    pins: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    model_reference_mode: Mapped[str] = mapped_column(String(16), default="exact")
+    effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    bundle: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    change_summary: Mapped[str | None] = mapped_column(Text)
+    evidence: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", "version", name="uq_rating_versions_slug_version"),

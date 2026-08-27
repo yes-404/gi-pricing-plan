@@ -10,25 +10,31 @@ approver's decision reaches the row through `apply_approval_decision`, the seam
 
 from __future__ import annotations
 
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ApprovalRequestRow, RatingVersionRow
+from app.db.models import ApprovalRequestRow, ModelRow, RatingAlgorithmRow, RatingVersionRow
 from app.errors import PlatformError
 from app.platform import approvals, audit, rbac
 from model_schema import (
     ArtifactRef,
+    BundleMetadata,
     JobSource,
     Permission,
+    Pins,
     Principal,
     RatingVersion,
+    RatingVersionEvidence,
     RatingVersionStatus,
 )
+from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
 
 __all__ = [
     "apply_approval_decision",
+    "compile_rating_version",
     "create_rating_version",
     "load_rating_version",
     "submit_for_review",
@@ -37,7 +43,11 @@ __all__ = [
 
 
 def to_schema(row: RatingVersionRow) -> RatingVersion:
-    """The row as the `03` §4.3 Phase 1b subset (`FR-PLAT-67`)."""
+    """The row as the `03` §4.3 RatingVersion — the Phase 1b subset plus the W9-3 fields.
+
+    The §4.3 fields are nullable so Phase 1b rows (the demo seed) keep parsing; a W9-3
+    version carries `algorithm_ref` and `pins` for compilation.
+    """
     return RatingVersion(
         id=row.id,
         workspace_id=row.workspace_id,
@@ -49,6 +59,19 @@ def to_schema(row: RatingVersionRow) -> RatingVersion:
         created_at=row.created_at,
         created_by=row.created_by,
         updated_at=row.updated_at,
+        algorithm_ref=(
+            ArtifactRef.model_validate(row.algorithm_ref) if row.algorithm_ref else None
+        ),
+        pins=Pins.model_validate(row.pins) if row.pins else None,
+        model_reference_mode=cast(
+            Literal["exact", "approximation"], row.model_reference_mode or "exact"
+        ),
+        effective_from=row.effective_from,
+        effective_to=row.effective_to,
+        bundle=BundleMetadata.model_validate(row.bundle) if row.bundle else None,
+        change_summary=row.change_summary,
+        evidence=RatingVersionEvidence.model_validate(row.evidence) if row.evidence else None,
+        approval_request_id=row.approval_request_id,
     )
 
 
@@ -198,3 +221,68 @@ async def apply_approval_decision(
         after={"status": RatingVersionStatus.APPROVED.value},
     )
     return row
+
+
+async def compile_rating_version(
+    session: AsyncSession, workspace_id: UUID, rating_version_id: UUID
+) -> dict[str, Any]:
+    """Compile a pinned Rating Version to a Bundle and store its metadata (W9-3).
+
+    Resolves the algorithm and the pins through the workspace's own tables. Rate tables,
+    reference tables and custom objectives have no tables yet (Phase 2), so a version
+    pinning one is refused with `NOT_FOUND` — a compile cannot embed what does not exist.
+    """
+    row = await load_rating_version(
+        session, workspace_id=workspace_id, rating_version_id=rating_version_id
+    )
+    schema = to_schema(row)
+
+    class _Resolver:
+        async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+            if ref.type == "rating_algorithm":
+                algo = await session.scalar(
+                    select(RatingAlgorithmRow).where(
+                        RatingAlgorithmRow.workspace_id == workspace_id,
+                        RatingAlgorithmRow.slug == ref.slug,
+                        RatingAlgorithmRow.version == ref.version,
+                    )
+                )
+                if algo is None:
+                    raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
+                return ResolvedArtifact(status="approved", payload=algo.content)
+            if ref.type == "model":
+                model = await session.scalar(
+                    select(ModelRow).where(
+                        ModelRow.workspace_id == workspace_id,
+                        ModelRow.model_family_slug == ref.slug,
+                        ModelRow.version == ref.version,
+                    )
+                )
+                if model is None:
+                    raise PlatformError("NOT_FOUND", "Model not found", 404)
+                return ResolvedArtifact(
+                    status=model.status, payload={"status": model.status}
+                )
+            raise PlatformError(
+                "NOT_FOUND",
+                "Pinned artifact cannot be resolved yet",
+                404,
+                f"{ref} has no backend table yet (Phase 2); a compile cannot embed it.",
+            )
+
+    try:
+        bundle = await compile_bundle(schema, _Resolver())
+    except ValueError as exc:
+        text = str(exc)
+        code, _, detail = text.partition(": ")
+        if not (code.isupper() and "_" in code):
+            code, detail = "BUNDLE_COMPILE_FAILED", text
+        raise PlatformError(
+            code, code.replace("_", " ").title(), 422, detail
+        ) from exc
+    row.bundle = {
+        "content_hash": bundle.content_hash,
+        "bytes": len(bundle.model_dump_json().encode()),
+        "compiled_at": bundle.compiled_at.isoformat(),
+    }
+    return dict(row.bundle or {})

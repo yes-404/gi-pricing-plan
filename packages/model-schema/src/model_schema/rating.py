@@ -21,16 +21,24 @@ from model_schema.refs import ArtifactRef, Slug
 
 
 class RatingVersionStatus(StrEnum):
-    """The three states a minimal rating version passes through (OD1)."""
+    """The lifecycle of a rating version (03 §3.4, FR-RATE-23).
+
+    W9-3 builds through `approved`; `live` and `retired` are declared here because they
+    are part of the lifecycle (DP3), but their transitions belong to the deployment
+    slice W14 — `live` is a property of a Deployment, not of the version.
+    """
 
     DRAFT = "draft"
     REVIEW = "review"
     APPROVED = "approved"
+    LIVE = "live"
+    RETIRED = "retired"
 
 
 #: The lifecycle, as data rather than scattered `if` statements. `draft` may skip review
 #: straight to `approved` only where the caller is an approver deciding in one step; the
-#: normal path goes through `review`.
+#: normal path goes through `review`. `live` and `retired` are unreachable here — their
+#: transitions are W14's, because FR-RATE-23 makes `live` a property of a Deployment.
 VALID_RATING_VERSION_TRANSITIONS: dict[
     RatingVersionStatus, frozenset[RatingVersionStatus]
 ] = {
@@ -39,15 +47,61 @@ VALID_RATING_VERSION_TRANSITIONS: dict[
     ),
     RatingVersionStatus.REVIEW: frozenset({RatingVersionStatus.APPROVED}),
     RatingVersionStatus.APPROVED: frozenset(),
+    RatingVersionStatus.LIVE: frozenset(),
+    RatingVersionStatus.RETIRED: frozenset(),
 }
 
 
-class RatingVersion(BaseModel):
-    """A Phase 1b-minimal rating version that pins an approved Model (OD1, W7-3).
+class Pins(BaseModel):
+    """The exact artifact pins of a Rating Version (03 §4.3, FR-RATE-22).
 
-    The envelope is inline (00 §4.3), like `DatasetVersion`. `model_ref` is the pinned
-    approved Model as an `ArtifactRef` (`model:{slug}@{version}`), so the approval trail
-    names the exact model a version of rating logic would be approved against.
+    Nothing is unpinned: every rate table a `table` step references, every model or peril
+    structure a `model_call` references, every reference table a `lookup` references, and
+    every custom objective reachable from a `model_call` is pinned by exact version.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rate_tables: list[ArtifactRef] = Field(default_factory=list)
+    models: list[ArtifactRef] = Field(default_factory=list)
+    reference_tables: list[ArtifactRef] = Field(default_factory=list)
+    custom_objectives: list[ArtifactRef] = Field(default_factory=list)
+
+
+class BundleMetadata(BaseModel):
+    """The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    content_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    bytes: int = Field(ge=0)
+    compiled_at: datetime
+
+
+class RatingVersionEvidence(BaseModel):
+    """The evidence an `approved` version carries (03 §4.3, FR-RATE-40)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    regression_suite_run_id: UUID | None = None
+    dislocation_run_id: UUID | None = None
+    gipp_check_id: UUID | None = None
+    structural_diff_blob: str | None = None
+
+
+#: The model reference mode (FR-RATE-60): the version declares it, and every `model_call`
+#: step's `mode` must equal it.
+ModelReferenceMode = Literal["exact", "approximation"]
+
+
+class RatingVersion(BaseModel):
+    """A Rating Version (03 §4.3) — the artifact a rating algorithm approves against.
+
+    W9-3 widens the Phase 1b subset with the full contract: `algorithm_ref`, the exact
+    `pins` (FR-RATE-22), `model_reference_mode` (FR-RATE-60), the effective dates
+    (FR-RATE-26), the compiled `bundle` (FR-RATE-24), the `change_summary`
+    (FR-RATE-27), `evidence`, and `approval_request_id`. The Phase 1b fields stay:
+    `model_ref` is the single pinned approved Model the exit demo carries.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -62,6 +116,31 @@ class RatingVersion(BaseModel):
     created_at: datetime
     created_by: UUID
     updated_at: datetime
+    #: The widened §4.3 contract (W9-3). `None` means "not yet compiled/pinned" so the
+    #: Phase 1b subset keeps parsing.
+    algorithm_ref: ArtifactRef | None = None
+    pins: Pins | None = None
+    model_reference_mode: ModelReferenceMode = "exact"
+    effective_from: datetime | None = None
+    effective_to: datetime | None = None
+    bundle: BundleMetadata | None = None
+    change_summary: str | None = None
+    evidence: RatingVersionEvidence | None = None
+    approval_request_id: UUID | None = None
+
+
+def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorithm) -> None:
+    """FR-RATE-60: every `model_call` step's `mode` equals the version's declared mode.
+
+    Raises `ValueError` on the first mismatch, so a version whose steps disagree with its
+    `model_reference_mode` is refused before it can compile.
+    """
+    for step in algorithm.steps:
+        if isinstance(step, RatingModelCallStep) and step.mode != version.model_reference_mode:
+            raise ValueError(
+                f"model_call step {step.step_id!r} declares mode {step.mode!r}, but the "
+                f"version declares {version.model_reference_mode!r} (FR-RATE-60)"
+            )
 
 
 # ---------------------------------------------------------------------------

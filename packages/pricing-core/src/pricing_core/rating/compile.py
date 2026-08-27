@@ -14,18 +14,26 @@ need the expression text and the engine.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
+from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any, NoReturn, Protocol
 
 import zen
 from pydantic import BaseModel, ConfigDict
 
 from model_schema.rating import (
+    Pins,
     RatingAlgorithm,
     RatingExpressionStep,
     RatingInputStep,
     RatingOutputStep,
+    RatingVersion,
+    check_model_reference_mode,
 )
+from model_schema.refs import ArtifactRef
 
 _NON_DETERMINISTIC: tuple[str, ...] = ("now(", "random(", "rand(", "today(", "clock(")
 #: FR-RATE-30: a quote timestamp is an input; `now()` does not exist.
@@ -266,8 +274,181 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
     return issues
 
 
+# ---------------------------------------------------------------------------
+# Bundle compilation (03 §4.3, FR-RATE-24/25, slice W9-3).
+#
+# DP1 (ruled 2026-08-27): the Bundle is the JDM graph plus the pinned artifacts'
+# resolved payloads, wrapped by the pricing-core facade. The content hash covers the
+# graph and the pinned artifact refs, so it is reproducible from the pins (FR-RATE-24).
+# The Bundle is self-contained: sufficient to score with no database access.
+# ---------------------------------------------------------------------------
+
+_APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
+
+
+class ResolvedArtifact(BaseModel):
+    """An artifact resolved by a bundle compiler: its maturity and its payload."""
+
+    model_config = ConfigDict(frozen=True)
+
+    status: str
+    payload: dict[str, Any]
+
+
+class ArtifactResolver(Protocol):
+    """Resolves a pinned artifact to its payload and maturity (the DB-backed half).
+
+    `compile_bundle` never touches a database; the caller supplies a resolver that
+    does. This keeps `pricing-core` standalone (ADR-0001).
+    """
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact: ...
+
+
+class JdmGraph(BaseModel):
+    """The algorithm translated to the engine's graph shape (ADR-0004, DP1).
+
+    Each step becomes a node carrying its ZEN-usable expression and its produces /
+    consumes edges; the DAG is captured by the `nodes` map plus the declared inputs and
+    outputs. This is the part of the Bundle the engine executes.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    slug: str
+    version: int
+    input_contract: list[dict[str, Any]]
+    outputs: list[dict[str, Any]]
+    nodes: dict[str, dict[str, Any]]
+
+
+def to_jdm(algo: RatingAlgorithm) -> JdmGraph:
+    """Translate a `RatingAlgorithm` to the engine's graph shape (ADR-0004)."""
+    nodes: dict[str, dict[str, Any]] = {}
+    for step in algo.steps:
+        step_dump = step.model_dump()
+        nodes[step.step_id] = {
+            "type": step.type,
+            "label": step.label,
+            "produces": _as_list(step.produces),
+            "consumes": _as_list(step.consumes),
+            **{
+                k: v
+                for k, v in step_dump.items()
+                if k not in ("step_id", "label", "produces", "consumes")
+            },
+        }
+    return JdmGraph(
+        slug=algo.slug,
+        version=algo.version,
+        input_contract=[field.model_dump() for field in algo.input_contract],
+        outputs=[output.model_dump() for output in algo.outputs],
+        nodes=nodes,
+    )
+
+
+class Bundle(BaseModel):
+    """A self-contained compiled rating bundle (03 §4.3, FR-RATE-24).
+
+    `graph` and `resolved_payloads` are sufficient to score with no database access
+    (NFR-RATE-3); `content_hash` is reproducible from the pins and the graph.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    algorithm_ref: str
+    graph: JdmGraph
+    resolved_payloads: dict[str, Any]
+    pins: Pins
+    content_hash: str
+    compiled_at: datetime
+
+
+def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
+    """A reproducible content hash from the graph and the pins (FR-RATE-24).
+
+    The hash covers the graph and the pinned artifact references, excluding `compiled_at`
+    and any prior `content_hash` — hashing a timestamp would break reproducibility. Per
+    DP1 and FR-RATE-24, the hash is reproducible from the pins and the graph (03 §5.2,
+    corrected 2026-08-27, F-W9-3-2).
+    """
+    canonical = json.dumps(
+        {"graph": graph.model_dump(), "pins": pins.model_dump()},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _raise_named(code: str, message: str) -> NoReturn:
+    raise ValueError(f"{code}: {message}")
+
+
+async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
+    """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-RATE-24/25).
+
+    Validates the whole structure: the algorithm's DAG, references, types, constraints
+    and boundary guards (re-checked via `validate_algorithm`), the pins resolve to
+    `approved` or better (FR-OVR-14), every `model_call` mode equals the version's
+    `model_reference_mode` (FR-RATE-60), and no pinned custom objective is unapproved.
+    Raises `ValueError` named with the first failure's code.
+    """
+    if version.algorithm_ref is None:
+        _raise_named(
+            "RATING_VERSION_UNPINNED",
+            "the rating version has no algorithm_ref (FR-RATE-22)",
+        )
+    if version.pins is None:
+        _raise_named(
+            "RATING_VERSION_UNPINNED",
+            "the rating version has no pins (FR-RATE-22)",
+        )
+
+    resolved_algorithm = await resolver.resolve(version.algorithm_ref)
+    algorithm = RatingAlgorithm.model_validate(resolved_algorithm.payload)
+
+    issues = validate_algorithm(algorithm)
+    if issues:
+        _raise_named(issues[0].code, issues[0].message)
+    check_model_reference_mode(version, algorithm)
+
+    payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
+    all_refs: list[ArtifactRef] = [
+        *version.pins.rate_tables,
+        *version.pins.models,
+        *version.pins.reference_tables,
+        *version.pins.custom_objectives,
+    ]
+    for ref in all_refs:
+        resolved = await resolver.resolve(ref)
+        if resolved.status not in _APPROVED_OR_BETTER:
+            _raise_named(
+                "PIN_NOT_APPROVED",
+                f"{ref} is {resolved.status!r}, not approved or better (FR-OVR-14)",
+            )
+        payloads[str(ref)] = resolved.payload
+
+    graph = to_jdm(algorithm)
+    pins = version.pins
+    return Bundle(
+        algorithm_ref=str(version.algorithm_ref),
+        graph=graph,
+        resolved_payloads=payloads,
+        pins=pins,
+        content_hash=bundle_hash(graph, pins),
+        compiled_at=datetime.now(UTC),
+    )
+
+
 __all__ = [
+    "ArtifactResolver",
+    "Bundle",
+    "JdmGraph",
+    "ResolvedArtifact",
     "ValidationIssue",
     "assert_integer_minor_round_trip",
+    "bundle_hash",
+    "compile_bundle",
+    "to_jdm",
     "validate_algorithm",
 ]

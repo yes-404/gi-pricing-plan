@@ -1134,3 +1134,28 @@ async def get_rating_version(
             session, workspace_id=caller.workspace_id, rating_version_id=rating_version_id
         )
         return rating_versions_service.to_schema(row)
+
+
+@router.post(
+    "/rating-versions/{rating_version_id}/compile",
+    summary="Compile a rating version to a self-contained Bundle",
+    responses=problems(401, 403, 404, 422),
+)
+async def compile_rating_version(
+    rating_version_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_COMPILE))],
+    database: DatabaseDep,
+) -> dict[str, Any]:
+    """**200** with the compiled Bundle's metadata (FR-RATE-24/25).
+
+    The pinned version compiles to a self-contained Bundle with a reproducible content
+    hash; every validation failure is named. Rate tables, reference tables and custom
+    objectives have no backend tables yet (Phase 2), so a version pinning one is refused
+    with `NOT_FOUND`.
+    """
+    async with database.unit_of_work() as session:
+        return await rating_versions_service.compile_rating_version(
+            session,
+            workspace_id=caller.workspace_id,
+            rating_version_id=rating_version_id,
+        )

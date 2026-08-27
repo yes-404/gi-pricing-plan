@@ -875,6 +875,34 @@
         "title": "BuildTransparency",
         "type": "object"
       },
+      "BundleMetadata": {
+        "additionalProperties": false,
+        "description": "The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash.",
+        "properties": {
+          "bytes": {
+            "minimum": 0.0,
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "compiled_at": {
+            "format": "date-time",
+            "title": "Compiled At",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_hash",
+          "bytes",
+          "compiled_at"
+        ],
+        "title": "BundleMetadata",
+        "type": "object"
+      },
       "CalibrationBin": {
         "additionalProperties": false,
         "description": "Predicted against observed within a predicted-decile bin (FR-MODEL-50).",
@@ -8161,6 +8189,42 @@
         "title": "PiiClass",
         "type": "string"
       },
+      "Pins": {
+        "additionalProperties": false,
+        "description": "The exact artifact pins of a Rating Version (03 §4.3, FR-RATE-22).\n\nNothing is unpinned: every rate table a `table` step references, every model or peril\nstructure a `model_call` references, every reference table a `lookup` references, and\nevery custom objective reachable from a `model_call` is pinned by exact version.",
+        "properties": {
+          "custom_objectives": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "title": "Custom Objectives",
+            "type": "array"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "rate_tables": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "title": "Rate Tables",
+            "type": "array"
+          },
+          "reference_tables": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "title": "Reference Tables",
+            "type": "array"
+          }
+        },
+        "title": "Pins",
+        "type": "object"
+      },
       "PredictRows": {
         "additionalProperties": false,
         "description": "Rows to score, as records — the shape a caller already has (`02` §5.1).",
@@ -8567,8 +8631,51 @@
       },
       "RatingVersion": {
         "additionalProperties": false,
-        "description": "A Phase 1b-minimal rating version that pins an approved Model (OD1, W7-3).\n\nThe envelope is inline (00 §4.3), like `DatasetVersion`. `model_ref` is the pinned\napproved Model as an `ArtifactRef` (`model:{slug}@{version}`), so the approval trail\nnames the exact model a version of rating logic would be approved against.",
+        "description": "A Rating Version (03 §4.3) — the artifact a rating algorithm approves against.\n\nW9-3 widens the Phase 1b subset with the full contract: `algorithm_ref`, the exact\n`pins` (FR-RATE-22), `model_reference_mode` (FR-RATE-60), the effective dates\n(FR-RATE-26), the compiled `bundle` (FR-RATE-24), the `change_summary`\n(FR-RATE-27), `evidence`, and `approval_request_id`. The Phase 1b fields stay:\n`model_ref` is the single pinned approved Model the exit demo carries.",
         "properties": {
+          "algorithm_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "approval_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Request Id"
+          },
+          "bundle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BundleMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Summary"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -8584,6 +8691,40 @@
             "title": "Dataset Version Id",
             "type": "string"
           },
+          "effective_from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective From"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RatingVersionEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -8591,6 +8732,25 @@
           },
           "model_ref": {
             "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "model_reference_mode": {
+            "default": "exact",
+            "enum": [
+              "exact",
+              "approximation"
+            ],
+            "title": "Model Reference Mode",
+            "type": "string"
+          },
+          "pins": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pins"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "slug": {
             "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
@@ -8631,12 +8791,69 @@
         "title": "RatingVersion",
         "type": "object"
       },
+      "RatingVersionEvidence": {
+        "additionalProperties": false,
+        "description": "The evidence an `approved` version carries (03 §4.3, FR-RATE-40).",
+        "properties": {
+          "dislocation_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dislocation Run Id"
+          },
+          "gipp_check_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gipp Check Id"
+          },
+          "regression_suite_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regression Suite Run Id"
+          },
+          "structural_diff_blob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structural Diff Blob"
+          }
+        },
+        "title": "RatingVersionEvidence",
+        "type": "object"
+      },
       "RatingVersionStatus": {
-        "description": "The three states a minimal rating version passes through (OD1).",
+        "description": "The lifecycle of a rating version (03 §3.4, FR-RATE-23).\n\nW9-3 builds through `approved`; `live` and `retired` are declared here because they\nare part of the lifecycle (DP3), but their transitions belong to the deployment\nslice W14 — `live` is a property of a Deployment, not of the version.",
         "enum": [
           "draft",
           "review",
-          "approved"
+          "approved",
+          "live",
+          "retired"
         ],
         "title": "RatingVersionStatus",
         "type": "string"
@@ -23007,6 +23224,120 @@
           }
         },
         "summary": "Get a rating version",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/rating-versions/{rating_version_id}/compile": {
+      "post": {
+        "description": "**200** with the compiled Bundle's metadata (FR-RATE-24/25).\n\nThe pinned version compiles to a self-contained Bundle with a reproducible content\nhash; every validation failure is named. Rate tables, reference tables and custom\nobjectives have no backend tables yet (Phase 2), so a version pinning one is refused\nwith `NOT_FOUND`.",
+        "operationId": "compile_rating_version_api_v1_rating_versions__rating_version_id__compile_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Compile Rating Version Api V1 Rating Versions  Rating Version Id  Compile Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Compile a rating version to a self-contained Bundle",
         "tags": [
           "modelling"
         ]
