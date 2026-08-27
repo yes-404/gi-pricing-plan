@@ -68,17 +68,13 @@ GENERATED_SHAPES: dict[str, str] = {
     # hand-authored Phase-0 contract that nothing has ever compared against code, and R3
     # makes this the artifact a Rating Version's approval hangs from.
     "transparency-artifact": "TransparencyArtifact",
-    # Added 2026-08-18 (W5, peril structures). No hand-authored Phase-0 counterpart: `02`
-    # §4.10 printed an example and defined no contract, so this is the shape's first
-    # written form. It is also the artifact `03-rating-engine.md` will reference, which
-    # makes it the one an external consumer reads before anything downstream exists.
-    # **Superseded 2026-08-24 (W32-11): it has an authored side now**, added by #133's audit
-    # remediation, so this slug is two-sided and compared like any other. The sentence above
-    # is kept rather than rewritten because it was true when written and the drift is the
-    # point: nothing checks these comments against the corpus, so the only place this
-    # module's one-sidedness was ever declared went stale silently for six days. That is the
-    # worked instance behind `OQ-PLAT-10`, which asks for the declaration to be derived
-    # rather than narrated here.
+    # Added 2026-08-18 (W5, peril structures), and **superseded 2026-08-24 (W32-11)**: the
+    # slug has an authored side now (added by #133's audit remediation), so it is two-sided
+    # and compared like any other. The "No hand-authored Phase-0 counterpart" sentence that
+    # once stood here went stale silently for six days — the worked instance behind
+    # `OQ-PLAT-10`. One-sidedness is now declared in `ONE_SIDED_SLUGS` in
+    # `backend/tests/test_contracts.py` and checked against the corpus in both directions;
+    # this comment no longer narrates it (2026-08-27, W6b-22).
     "peril-structure": "PerilStructure",
     # Added 2026-08-18 (W5, backtests). No hand-authored Phase-0 counterpart: FR-MODEL-57
     # named the operation and no document defined what it produces, so this is the shape's
