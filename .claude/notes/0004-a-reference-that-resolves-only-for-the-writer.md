@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-24, Claude — during W32-1b, after the same defect was committed ten times in one day by two sessions that were actively looking for it |
-| **Status** | `open` — the rule below is a `CLAUDE.md` §13 amendment and needs maintainer acceptance. Raised and assessed, not agreed: nothing is built on it |
+| **Status** | `landed` — accepted 2026-08-27 and added to `CLAUDE.md` §13 as a fourth bullet ("A reference carries its scope and its measurement") |
 | **Deliverable** | **No code and no spec change.** Ten measured instances, and one mechanical rule — the ninth instance is what forced the rule into its final form |
 | **Owner** | Claude records · maintainer accepts |
 | **Lands in** | Proposed: `CLAUDE.md` §13, as a fourth bullet beside "NFRs are measured, not asserted" |
