@@ -329,8 +329,11 @@ async def run(rows: int | None) -> int:
                     )
                 )
 
+    approver = Principal(kind=ActorKind.USER, id=new_uuid7(), display="approver@example.fr")
+
     await grant(analyst, "analyst")
     await grant(actuary, "pricing_actuary")
+    await grant(approver, "approver")
 
     # A real login through the local provider (FR-PLAT-58) resolves to `analyst`, so it
     # inherits the role assignments granted just above rather than needing its own. The
@@ -575,15 +578,24 @@ async def run(rows: int | None) -> int:
     print(f"  a model may be fitted on {slug}@{promoted.version} ({fittable.id})")
     print("  and still may not on @1 — `01` §1.3 has no override\n")
 
-    # W7-1: the demo models — factors, a GLM and a GBM, through the real Job path.
-    # `Path(__file__).parent` is on sys.path (the seed's own import shim), so `model` —
-    # not `examples.fremtpl2.model` — is the importable name here.
-    from model import fit_demo_models
+    # W7-1/W7-2: the demo models — factors, GLM and GBM fits, then the comparison and
+    # approval. `Path(__file__).parent` is on sys.path (the seed's own import shim), so
+    # `model` — not `examples.fremtpl2.model` — is the importable name here.
+    from model import compare_and_approve, create_approved_rating_version, fit_demo_models
 
     fitted = await fit_demo_models(
         database, blob_store, workspace_id, analyst, dataset_id, second
     )
-    print(f"  demo models fitted: GLM {fitted['glm']}, GBM {fitted['gbm']}\n")
+    print(f"  demo models fitted: GLM {fitted['glm']}, GBM {fitted['gbm']}")
+    approved = await compare_and_approve(
+        database, blob_store, workspace_id, actuary, approver,
+        fitted["glm"], fitted["gbm"],
+    )
+    print(f"  approved model: {approved}")
+    await create_approved_rating_version(
+        database, workspace_id, analyst, actuary, approver, second, approved
+    )
+    print()
     await database.dispose()
     return 0
 

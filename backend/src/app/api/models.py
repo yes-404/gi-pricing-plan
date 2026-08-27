@@ -67,6 +67,7 @@ from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as service
 from app.platform import prediction as prediction_service
+from app.platform import rating_versions as rating_versions_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
@@ -92,6 +93,7 @@ from model_schema import (
     ModelStatus,
     MonotonicDirection,
     Prediction,
+    RatingVersion,
     SpecValidation,
     TransparencyArtifact,
 )
@@ -1084,3 +1086,25 @@ async def predict(
             rows=[dict(row) for row in body.rows],
             blob_store=blob_store,
         )
+
+
+@router.get(
+    "/rating-versions/{rating_version_id}",
+    summary="Get a rating version",
+    responses=problems(401, 403, 404),
+)
+async def get_rating_version(
+    rating_version_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+) -> RatingVersion:
+    """The Phase 1b rating version the demo seeds (FR-PLAT-67, OD1).
+
+    One read route for the exit demo: the demo guide links the approved rating version, and
+    the full `03` surface stays Phase 2.
+    """
+    async with database.session() as session:
+        row = await rating_versions_service.load_rating_version(
+            session, workspace_id=caller.workspace_id, rating_version_id=rating_version_id
+        )
+        return rating_versions_service.to_schema(row)

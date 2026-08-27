@@ -250,6 +250,7 @@ from model_schema.profiles import (
     ProfileComparison,
     SemanticType,
 )
+from model_schema.rating import RatingVersion, RatingVersionStatus
 from model_schema.reference import (
     ReferenceLookup,
     ReferenceRow,
@@ -485,6 +486,8 @@ __all__ = [
     "ProfileComparison",
     "Progress",
     "QuantileCrossing",
+    "RatingVersion",
+    "RatingVersionStatus",
     "ReconciledPeril",
     "Reconciliation",
     "ReconciliationStatus",

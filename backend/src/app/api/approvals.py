@@ -45,6 +45,7 @@ from app.platform import metrics as metrics_service
 from app.platform import modelling as modelling_service
 from app.platform import objectives as objectives_service
 from app.platform import perils as perils_service
+from app.platform import rating_versions as rating_versions_service
 from app.platform import validation_rules as validation_rules_service
 from model_schema import (
     ApprovalPolicy,
@@ -390,6 +391,30 @@ async def _resolve_custom_metric(
     return True
 
 
+async def _resolve_rating_version(
+    session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
+) -> bool:
+    """W7-3's own by-slug-and-version read, adapted to the fan-out's contract.
+
+    A `rating_version` reference must resolve so a submission naming a rating version is
+    refused if it does not exist (FR-GOV-36) — and accepted once `W7-3` builds the version.
+    """
+    if artifact_ref.type != "rating_version":
+        return False
+    from app.db.models import RatingVersionRow
+
+    row = (
+        await session.execute(
+            select(RatingVersionRow).where(
+                RatingVersionRow.workspace_id == workspace_id,
+                RatingVersionRow.slug == artifact_ref.slug,
+                RatingVersionRow.version == artifact_ref.version,
+            )
+        )
+    ).scalar_one_or_none()
+    return row is not None
+
+
 async def _resolve_the_artifact(
     session: AsyncSession, *, workspace_id: UUID, artifact_ref: ArtifactRef
 ) -> None:
@@ -428,6 +453,10 @@ async def _resolve_the_artifact(
     ):
         return
     if await datasets_service.resolve_artifact_ref(
+        session, workspace_id=workspace_id, artifact_ref=artifact_ref
+    ):
+        return
+    if await _resolve_rating_version(
         session, workspace_id=workspace_id, artifact_ref=artifact_ref
     ):
         return
@@ -473,6 +502,12 @@ async def _carry_to_the_artifact(
         request=request,
     )
     await metrics_service.apply_approval_decision(
+        session,
+        workspace_id=caller.workspace_id,
+        actor=caller.principal,
+        request=request,
+    )
+    await rating_versions_service.apply_approval_decision(
         session,
         workspace_id=caller.workspace_id,
         actor=caller.principal,
