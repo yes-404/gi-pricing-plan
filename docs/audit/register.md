@@ -6,7 +6,20 @@ when the close resolves it, accepts it, or re-plans it with an owner.
 
 | Finding id | Concerns | Work item | Phase | Decision |
 |---|---|---|---|---|
-| The requirement or artifact id | What the finding is about | `pr-NNN`, a slice id, or a workstream id | `1a`, `1b`, `2` | `fix before close` · `carry forward with an owner` · `accept` |
+| FR-DATA-57 (F6) | `unrun_layers` projection — Phase 2 validation-report successor | W7-4 | 2 | carry forward with an owner (Phase 2 validation-report workstream) |
+| FR-DATA-52 (F7) | exposure-ordered top-20 deferral — trigger has not fired | W7-4 | 2 | carry forward with a trigger (a named exposure-ordered reader), unowned by design |
+| 03 rating surface (F8) | compile, score, rate tables, deployment | — | 2 | carry forward — phase boundary |
+| wf-01 §4 surfaces (F9) | bandings, Peril Structure, reconciliation | W7-5 | 2 | carry forward — phase boundary |
+| Phase 2/3/4 unevidenced (F22) | FR-MODEL-6/40/82/115/121; FR-PLAT-15/23-29/31-36/49/50/56/60/61/64; FR-GOV-16/17/18/27-35/38-45; NFR-OVR-1..8/10/11; NFR-PLAT-1/2/5/6/8/9/10; NFR-GOV-1/3-7 | — | 2/3/4 | carry forward — phase boundary; owners are the later-phase workstreams named in the roadmap |
+| FR-OVR-20 (F14) | `_minor` suffix rule — enforcement invisible to `req-coverage.py` | W6b-15 | 1b | fix before close — add a test naming FR-OVR-20 |
+| FR-PLAT-59 (F17) | no IdP in prod — enforcement not marker-evidenced | W6b-14 | 1b | fix before close — add a marker to the repository-invariant test |
+| FR-OVR-22 (F13) | route reachability — Vitest-enforced, Python-marker-blind | #136 | 1b | accept — alternative instrument (Vitest), positive control + mutation verified |
+| FR-OVR-21 (F15) | §5.3 cell is prose | W6b | 1b | accept — declared-prose affordance |
+| FR-PLAT-55 (F16) | browser PKCE — Vitest-enforced | W6b-10 | 1b | accept — alternative instrument (Vitest) |
+| NFR-PLAT-4 (F18) | compose < 5 min — measured 27 s | W6b-14 | 1b | accept — measured, recorded |
+| FR-OVR-9 (F19) | pseudonymisation — ingestion enforces; PII-guard gap has a roadmap home | W6b | 1b | accept — enforcement exists; the PII-guard gap is recorded in the roadmap |
+| Cross-cutting OVR (F20) | FR-OVR-2/4/10/11/12/14/15/16/19 | W6b/W7 | 1b | accept — conventions, ADRs, audit checks |
+| Measured NFRs (F21) | NFR-DATA-1/2, NFR-MODEL-1..5, 10..13 | W4/W5/W7 | 1b | accept — measured, not asserted |
 
 A carried finding is written here by the work-item close checklist
 ([`checklists/work-item-close.md`](checklists/work-item-close.md)) and by the phase close
