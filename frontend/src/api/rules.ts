@@ -1,14 +1,18 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
+import type { components as requestComponents } from "./generated/schema.requests";
 import { pageThrough, type Paged } from "./paging";
 
 export type ValidationRuleSet = components["schemas"]["ValidationRuleSet"];
 export type ValidationRule = components["schemas"]["ValidationRule"];
 export type RuleSetEntry = components["schemas"]["RuleSetEntry"];
 export type ValidationLayer = components["schemas"]["ValidationLayer"];
-export type RuleSetMemberWrite = components["schemas"]["RuleSetMemberWrite"];
 export type Severity = components["schemas"]["Severity"];
-export type RuleCreate = components["schemas"]["RuleCreate"];
+// The two shapes the client **writes** — request bodies, so they alias the permissive
+// generated set (OQ-PLAT-16 (c)): `RuleCreate.message`/`rationale` and
+// `RuleSetMemberWrite.enabled` carry defaults a request may omit.
+export type RuleSetMemberWrite = requestComponents["schemas"]["RuleSetMemberWrite"];
+export type RuleCreate = requestComponents["schemas"]["RuleCreate"];
 
 /** The four layers, in the order `01` §3.3 and §4.4 present them. */
 export const LAYERS: readonly ValidationLayer[] = [

@@ -1,11 +1,15 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
+import type { components as requestComponents } from "./generated/schema.requests";
 
 export type Dataset = components["schemas"]["Dataset"];
 export type DatasetStatus = components["schemas"]["DatasetStatus"];
 export type DatasetPage = components["schemas"]["Page_Dataset_"];
 export type VersionPage = components["schemas"]["Page_DatasetVersion_"];
 export type DataDictionaryEntry = components["schemas"]["DataDictionaryEntry"];
+// The dictionary **write** takes the permissive entry (OQ-PLAT-16 (c)): `description` and
+// `pii_class` carry defaults a request may omit. Reads keep the strict `DataDictionaryEntry`.
+export type RequestDataDictionaryEntry = requestComponents["schemas"]["DataDictionaryEntry"];
 export type PiiClass = components["schemas"]["PiiClass"];
 
 /**
@@ -52,7 +56,7 @@ export function listVersions(
  */
 export function putDictionary(
   slug: string,
-  entries: Record<string, DataDictionaryEntry>,
+  entries: Record<string, RequestDataDictionaryEntry>,
 ): Promise<Dataset> {
   return request<Dataset>(`/datasets/${encodeURIComponent(slug)}/dictionary`, {
     method: "PUT",

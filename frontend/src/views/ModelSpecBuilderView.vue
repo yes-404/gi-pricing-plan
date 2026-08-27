@@ -86,6 +86,11 @@ const gbmBackend = ref<"xgboost" | "lightgbm">("xgboost");
  * a custom one `ref` and no `name`.
  */
 const gbmObjective = ref<GbmFunctionRef>({ kind: "builtin", name: "count:poisson" });
+// FR-MODEL-32: `categorical_handling` is **required with no default** — "a default would
+// be the silence the requirement exists to refuse". The permissive spec type (OQ-PLAT-16)
+// kept it required, so the GBM arm must name it; it is the only required field the three
+// arms leave to the form.
+const gbmCategoricalHandling = ref<"native" | "factor_encoding">("native");
 const ebmObjective = ref<"rmse" | "mae">("rmse");
 
 // The option lists live in `@/api/modelSpecs` and are imported above: a list the type test
@@ -118,14 +123,12 @@ const common = computed(() => ({
 /**
  * `null` until the three required fields are present — no point asking before then.
  *
- * The casts are `unknown`-mediated and deliberate. `ModelSpec` is generated from the
- * **response** shape, where every server-side default is present and therefore typed as
- * required (`alpha`, `seed`, `method`, `loss_treatment`, …). A request body may omit them
- * and the server fills them in, so the request-shaped type and the response-shaped type
- * genuinely differ and only the latter is generated. The alternative — spelling out every
+ * `ModelSpec` aliases the **permissive** generated set (OQ-PLAT-16 (c)): a server-defaulted
+ * property (`alpha`, `seed`, `loss_treatment`, …) is optional on the way out and the server
+ * fills it in, so the three arm objects assign directly — no cast, and a misspelled field
+ * is a compile error rather than a runtime one. The alternative — spelling out every
  * default here — would hand-write the contract's defaults into the frontend, which is
- * `CLAUDE.md` §2's prohibition and the thing this slice has been careful about elsewhere.
- * The cast is confined to these three returns and the fields above it are all typed.
+ * `CLAUDE.md` §2's prohibition.
  */
 const spec = computed<ModelSpec | null>(() => {
   if (!modelFamilySlug.value || !versionId.value || !responseColumn.value) return null;
@@ -139,20 +142,21 @@ const spec = computed<ModelSpec | null>(() => {
       ...(family.value === "tweedie"
         ? { family_params: { power: tweediePower.value } }
         : {}),
-    } as unknown as ModelSpec;
+    };
   }
   if (arm.value === "gbm") {
     return {
       ...common.value,
       model_type: gbmBackend.value,
       objective: gbmObjective.value,
-    } as unknown as ModelSpec;
+      categorical_handling: gbmCategoricalHandling.value,
+    };
   }
   return {
     ...common.value,
     model_type: "ebm",
     objective: ebmObjective.value,
-  } as unknown as ModelSpec;
+  };
 });
 
 const validation = ref<SpecValidation | null>(null);
@@ -548,6 +552,25 @@ onMounted(async () => {
           :response="response"
           :backend="gbmBackend"
         />
+      </FormField>
+
+      <FormField
+        field-id="gbm-categorical-handling"
+        label="Categorical handling"
+        help="FR-MODEL-32: native uses the backend's categorical support; factor_encoding takes the mapping from the Factor's grouping. No default, so the form must name it."
+      >
+        <select
+          id="gbm-categorical-handling"
+          v-model="gbmCategoricalHandling"
+          class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        >
+          <option value="native">
+            Native
+          </option>
+          <option value="factor_encoding">
+            Factor encoding
+          </option>
+        </select>
       </FormField>
     </template>
 

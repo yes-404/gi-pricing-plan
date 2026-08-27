@@ -113,6 +113,9 @@ describe("the model spec builder", () => {
     const gbm = validateSpec.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(gbm.objective).toEqual({ kind: "builtin", name: "count:poisson" });
     expect(gbm.family).toBeUndefined();
+    // FR-MODEL-32: `categorical_handling` is required with no default — the GBM arm must
+    // name it, and the permissive spec type (OQ-PLAT-16) refuses a body that omits it.
+    expect(gbm.categorical_handling).toBe("native");
 
     await user.click(screen.getByRole("tab", { name: "EBM" }));
     await settle();

@@ -1,13 +1,18 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
+import type { components as requestComponents } from "./generated/schema.requests";
 
 /**
  * The union `02` §4.4 defines, and the reason this slice builds three objective controls
  * rather than one: `GlmSpec` carries `family` × `link`, `GbmSpec` an objective
  * `GbmFunctionRef`, `EbmSpec` the literal `"rmse" | "mae"`. Three shapes `model-schema`
  * keeps apart, so nothing here normalises them into a fourth (`CLAUDE.md` §2).
+ *
+ * Alias from the **permissive** generated set (OQ-PLAT-16 (c)): this type shapes a request
+ * body, where a server-defaulted property may be omitted. The strict set (the default
+ * `--default-non-nullable`) shapes responses, whose defaults are always present.
  */
-export type ModelSpec = components["schemas"]["ModelSpecValidate"]["spec"];
+export type ModelSpec = requestComponents["schemas"]["ModelSpecValidate"]["spec"];
 export type GlmSpec = components["schemas"]["GlmSpec"];
 export type GbmSpec = components["schemas"]["GbmSpec"];
 export type EbmSpec = components["schemas"]["EbmSpec"];

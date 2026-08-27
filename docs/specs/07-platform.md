@@ -373,6 +373,15 @@ def get(key: str, workspace_id: UUID) -> SettingResolution
 | System status | `/admin/status` | Component health, queue depths, cache hit rates, blob store usage, schema version |
 | **Demo entrance** | `/demo` | What is testable today: views built against those a spec declares, endpoints published against those declared, workstream state, and the routes that can be opened without an id. Derived on every request (FR-PLAT-53, FR-PLAT-54); absent where `dev_auth_enabled` is false |
 
+> *(Recorded 2026-08-27, W6b-24 — OQ-PLAT-16 decided 2026-08-26 (c).)* The generated API
+> client is produced **twice** from the same OpenAPI: `generate:api` runs `openapi-typescript`
+> once with `--default-non-nullable` (its default, *strict* — every server-defaulted property
+> is a required TypeScript property, right for reading a response) and once with
+> `--default-non-nullable false` (*permissive* — such a property is optional, right for writing
+> a request). Request-body types in the client alias the permissive set; responses keep the
+> strict set. Both artifacts live under `frontend/src/api/generated/` and are VCS-ignored,
+> never hand-edited.
+
 ---
 
 ## 6. Workflows
