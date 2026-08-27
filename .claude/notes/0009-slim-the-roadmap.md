@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-27, maintainer — "create a note for research and discuss for slim roadmap.md, current the file mixed with material irrelevant to roadmap" |
-| **Status** | `accepted` — maintainer accepted 2026-08-27: the historical record (closure records, plan reviews 1–5, the retrofit-impossible list) moves to `docs/audit/`, and `docs/roadmap.md` keeps only the forward-looking plan. The restructure is scheduled after W7 |
+| **Status** | `landed` — the archive moved 2026-08-27 via #274: closure records, plan reviews 1–6 and the retrofit-impossible list now live in `docs/audit/`; `docs/roadmap.md` keeps only the forward-looking plan |
 | **Deliverable** | Spec-change-first: a restructured `docs/roadmap.md` that separates the forward-looking plan from the historical record. No code |
 | **Owner** | Maintainer accepts the structure · Claude drafts the restructure and files it |
 | **Lands in** | `docs/roadmap.md` (restructure); possibly a new secondary file for closure records and plan reviews |

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-27, maintainer |
-| **Status** | `open` — a proposal to research and discuss. Raised and assessed, not agreed: nothing is built on it |
+| **Status** | `landed` — the structure filed 2026-08-27 via #276: `docs/audit/` README + checklists + registers + example records, and the `CLAUDE.md` §14 third rule. The three acceptance points were decided 2026-08-27 (hybrid complement · reuse ids · §14 rule) |
 | **Deliverable** | A closure-audit standard: a `docs/audit/` structure, two checklists (work-item close, phase close), two registers, and their conventions — spec-change-first, then the structure |
 | **Owner** | Maintainer accepts the structure · Claude drafts the standard and files it |
 | **Lands in** | `docs/audit/` (new), and either an ADR or an extension of `.claude/skills/close-workstream` and `.claude/skills/phase-review` |
