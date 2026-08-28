@@ -1946,3 +1946,82 @@ class RatingAlgorithmRow(Base):
         ),
         Index("ix_rating_algorithms_workspace", "workspace_id", "slug"),
     )
+
+
+class RateTableRow(Base):
+    """A rate table catalog entry (03 §3.3, W10-2).
+
+    The declarative definition (keys, value column, bounds, default row) lives on each
+    immutable version; this row only names the table and tracks its current version.
+    """
+
+    __tablename__ = "rate_tables"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False)
+    current_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_rate_tables_workspace_slug"),
+        Index("ix_rate_tables_workspace", "workspace_id", "slug"),
+    )
+
+
+class RateTableVersionRow(Base):
+    """An immutable rate table version (03 §3.3, FR-RATE-15/62, W10-2).
+
+    The `definition` JSONB holds the validated `RateTable` shape (with the real
+    version number injected); `seeded_from` holds the `SeededFrom` shape for versions
+    seeded from a model (FR-RATE-16). `storage` is fixed at write time — a `rows`
+    version carries cells in `rate_table_cells`, a `parquet` version a blob (W10-3).
+    """
+
+    __tablename__ = "rate_table_versions"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    rate_table_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage: Mapped[str] = mapped_column(String(16), nullable=False)
+    definition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    change_note: Mapped[str] = mapped_column(Text, nullable=False)
+    seeded_from: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "rate_table_id", "version_number", name="uq_rate_table_versions_table_version"
+        ),
+        Index("ix_rate_table_versions_table", "rate_table_id"),
+    )
+
+
+class RateTableCellRow(Base):
+    """One cell of a `rows`-storage version (03 §3.3, FR-RATE-17, W10-2).
+
+    `key` is the key tuple as a JSON array (`["male", 25]`); `value` is the decimal
+    relativity as a JSON string — never a float (R2).
+    """
+
+    __tablename__ = "rate_table_cells"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    version_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    key: Mapped[list[Any]] = mapped_column(JSONB, nullable=False)
+    value: Mapped[str] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("version_id", "key", name="uq_rate_table_cells_version_key"),
+        Index("ix_rate_table_cells_version", "version_id"),
+    )

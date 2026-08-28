@@ -2,9 +2,11 @@
 
 W10-1 adds RateTable and RateTableVersion to model-schema. These tests verify the shapes
 parse correctly, immutability invariants hold, and storage mode is fixed at write time.
+W10-2 extends the contract with `SeededFrom` (FR-RATE-16) and `RateTableDiff`
+(FR-RATE-17) per 03 §4.2.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -13,9 +15,11 @@ from pydantic import ValidationError
 
 from model_schema.rating import (
     RateTable,
+    RateTableDiff,
     RateTableKey,
     RateTableValue,
     RateTableVersion,
+    SeededFrom,
 )
 from model_schema.refs import ArtifactRef
 
@@ -189,11 +193,6 @@ class TestRateTableVersionImmutability:
 
     def test_rate_table_version_tracks_seed_source(self):
         """seeded_from tracks the source model reference and timestamp (FR-RATE-16)."""
-        model_ref = ArtifactRef(
-            type="Model",
-            slug="pricing-model-v2",
-            version=5,
-        )
         version = RateTableVersion(
             id=uuid4(),
             workspace_id=uuid4(),
@@ -201,11 +200,15 @@ class TestRateTableVersionImmutability:
             version_number=1,
             storage="rows",
             change_note="Seeded from model",
-            seeded_from=model_ref,
+            seeded_from=SeededFrom(
+                model_ref=ArtifactRef(type="model", slug="pricing-model-v2", version=5),
+                seeded_at=datetime(2026, 7, 2, 10, 0, tzinfo=UTC),
+            ),
             created_at=datetime.now(),
             created_by=uuid4(),
         )
-        assert version.seeded_from == model_ref
+        assert version.seeded_from is not None
+        assert version.seeded_from.model_ref.slug == "pricing-model-v2"
 
 
 @pytest.mark.req("FR-RATE-21")
@@ -279,3 +282,74 @@ class TestStorageMode:
         )
         with pytest.raises(ValidationError):
             version.storage = "parquet"  # type: ignore
+
+
+@pytest.mark.req("FR-RATE-16")
+class TestSeededFrom:
+    """Seeded-from metadata: the source model reference and the timestamp (03 §4.2)."""
+
+    def test_seeded_from_parses_with_model_ref_and_timestamp(self):
+        """`seeded_from` is `{model_ref, seeded_at}` on the wire (03 §4.2)."""
+        seeded = SeededFrom(
+            model_ref=ArtifactRef(type="model", slug="motor-ad-frequency", version=7),
+            seeded_at=datetime(2026, 7, 2, 10, 0, tzinfo=UTC),
+        )
+        assert seeded.model_ref.slug == "motor-ad-frequency"
+        assert seeded.seeded_at == datetime(2026, 7, 2, 10, 0, tzinfo=UTC)
+
+    def test_rate_table_version_carries_seeded_from(self):
+        """A seeded RateTableVersion records model_ref and seeded_at."""
+        version = RateTableVersion(
+            id=uuid4(),
+            workspace_id=uuid4(),
+            rate_table_id=uuid4(),
+            version_number=1,
+            storage="rows",
+            change_note="Seeded from model",
+            seeded_from=SeededFrom(
+                model_ref=ArtifactRef(type="model", slug="motor-ad-frequency", version=7),
+                seeded_at=datetime(2026, 7, 2, 10, 0, tzinfo=UTC),
+            ),
+            created_at=datetime.now(),
+            created_by=uuid4(),
+        )
+        assert version.seeded_from is not None
+        assert str(version.seeded_from.model_ref) == "model:motor-ad-frequency@7"
+
+
+@pytest.mark.req("FR-RATE-17")
+class TestRateTableDiff:
+    """The cell-diff artifact (03 §4.2): counts and percentages, never floats."""
+
+    def test_diff_parses_with_changed_cells(self):
+        """A diff requires changed_cells and carries the two percentages."""
+        diff = RateTableDiff(
+            changed_cells=3,
+            max_abs_change_pct=Decimal("4.2"),
+            exposure_weighted_mean_change_pct=Decimal("0.8"),
+        )
+        assert diff.changed_cells == 3
+        assert diff.max_abs_change_pct == Decimal("4.2")
+        assert diff.exposure_weighted_mean_change_pct == Decimal("0.8")
+
+    def test_diff_serialises_decimals_as_strings(self):
+        """Percentages are decimal strings on the wire, never JSON floats (R2)."""
+        diff = RateTableDiff(
+            changed_cells=3,
+            max_abs_change_pct=Decimal("4.20"),
+            exposure_weighted_mean_change_pct=Decimal("0.8"),
+        )
+        dumped = diff.model_dump_json()
+        assert '"max_abs_change_pct":"4.20"' in dumped, dumped
+        assert '"exposure_weighted_mean_change_pct":"0.8"' in dumped, dumped
+
+    def test_diff_accepts_absent_percentages(self):
+        """A diff with no comparable values has None percentages."""
+        diff = RateTableDiff(changed_cells=0)
+        assert diff.max_abs_change_pct is None
+        assert diff.exposure_weighted_mean_change_pct is None
+
+    def test_diff_rejects_negative_changed_cells(self):
+        """changed_cells cannot be negative."""
+        with pytest.raises(ValidationError):
+            RateTableDiff(changed_cells=-1)

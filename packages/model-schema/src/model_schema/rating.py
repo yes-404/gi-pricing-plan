@@ -658,13 +658,42 @@ class RateTable(BaseModel):
     default_row: dict[str, Any] | None = None
 
 
+class SeededFrom(BaseModel):
+    """The seed origin of a rate table version (03 §4.2, FR-RATE-16).
+
+    The pinned source model reference and the timestamp at which the relativities were
+    imported, so "how far have we moved from the technical rate?" is answerable by
+    diffing against this origin.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model_ref: ArtifactRef
+    seeded_at: datetime
+
+
+class RateTableDiff(BaseModel):
+    """A cell-level diff between two rate table versions (03 §4.2, FR-RATE-17).
+
+    `changed_cells` is the number of cells whose value differs. The two percentages are
+    `None` where there is nothing to compare (no cells, or no cell has a non-zero
+    baseline); percentages are Decimals, serialised as strings, never JSON floats (R2).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    changed_cells: int = Field(ge=0)
+    max_abs_change_pct: Decimal | None = None
+    exposure_weighted_mean_change_pct: Decimal | None = None
+
+
 class RateTableVersion(BaseModel):
     """A Rate Table Version (FR-RATE-15, FR-RATE-62, 03 §3.3).
 
     An immutable version of one rate table. Editing produces a new version with a
     required change note. The storage mode is fixed when the version is written and
     immutable with it (FR-RATE-62). An optional seeded_from reference tracks the
-    source model for diffing (FR-RATE-16).
+    source model and timestamp for diffing (FR-RATE-16).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -675,6 +704,6 @@ class RateTableVersion(BaseModel):
     version_number: int = Field(ge=1)
     storage: RateTableStorageMode
     change_note: str
-    seeded_from: ArtifactRef | None = None
+    seeded_from: SeededFrom | None = None
     created_at: datetime
     created_by: UUID

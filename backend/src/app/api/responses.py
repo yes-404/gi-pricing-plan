@@ -33,6 +33,7 @@ _TITLES: Final[dict[int, str]] = {
     422: "Request validation failed",
     429: "Rate limited",
     500: "Internal server error",
+    501: "Not implemented",
     503: "Not ready",
 }
 
