@@ -8649,6 +8649,46 @@
         "title": "QuantileCrossing",
         "type": "object"
       },
+      "RateTableDiff": {
+        "additionalProperties": false,
+        "description": "A cell-level diff between two rate table versions (03 §4.2, FR-RATE-17).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).",
+        "properties": {
+          "changed_cells": {
+            "minimum": 0.0,
+            "title": "Changed Cells",
+            "type": "integer"
+          },
+          "exposure_weighted_mean_change_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Weighted Mean Change Pct"
+          },
+          "max_abs_change_pct": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Abs Change Pct"
+          }
+        },
+        "required": [
+          "changed_cells"
+        ],
+        "title": "RateTableDiff",
+        "type": "object"
+      },
       "RatingVersion": {
         "additionalProperties": false,
         "description": "A Rating Version (03 §4.3) — the artifact a rating algorithm approves against.\n\nW9-3 widens the Phase 1b subset with the full contract: `algorithm_ref`, the exact\n`pins` (FR-RATE-22), `model_reference_mode` (FR-RATE-60), the effective dates\n(FR-RATE-26), the compiled `bundle` (FR-RATE-24), the `change_summary`\n(FR-RATE-27), `evidence`, and `approval_request_id`. The Phase 1b fields stay:\n`model_ref` is the single pinned approved Model the exit demo carries.",
@@ -23118,7 +23158,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}/diff": {
       "get": {
-        "description": "**200** with the diff (FR-RATE-17): changed cells and exposure-weighted change.\n\nThe baseline resolves to the previous version, the seed version, or an explicit\nversion number. A diff touching a `parquet` version is refused with **501**\n`RATE_TABLE_PARQUET_UNBUILT` until W10-3 delivers parquet storage.",
+        "description": "**200** with the diff (FR-RATE-17); **202** with a Job where either version is\n`storage: parquet` (FR-RATE-62) — the same artifact, only latency and status\ndiffer.\n\nThe baseline resolves to the previous version, the seed version, or an explicit\nversion number. The Job runs on the compute queue and stores the diff artifact as\na blob; `result.ref` is its sha256, fetchable from `/blobs/{sha256}`. The 200 read\npath is compute-on-read behind the DP3 cache (rulings 2026-08-28): a hit serves\nthe stored artifact, a miss computes and stores — the key covers the versions'\ncontent hashes and the portfolio identity, never a date.",
         "operationId": "rate_table_diff_api_v1_rate_tables__slug___version__diff_get",
         "parameters": [
           {
@@ -23174,13 +23214,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Rate Table Diff Api V1 Rate Tables  Slug   Version  Diff Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RateTableDiff"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Accepted"
           },
           "401": {
             "content": {
@@ -23241,21 +23289,6 @@
               }
             },
             "description": "Request validation failed"
-          },
-          "501": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              },
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description": "Not implemented"
           }
         },
         "summary": "Cell diff of a rate table version against a baseline",

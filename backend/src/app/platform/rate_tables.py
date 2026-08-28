@@ -32,6 +32,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore
+from app.platform.diff_cache import DiffCache, version_content_hash
 from app.platform.modelling import load_model, to_model
 from model_schema.rating import (
     FloorAndCapParameters,
@@ -204,12 +205,45 @@ async def _load_table(
     return table_row
 
 
+async def diff_needs_job(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    against: str | int,
+) -> bool:
+    """Whether the diff must answer 202 with a Job (03 §5.1, FR-RATE-62).
+
+    Either version `storage: parquet` routes the request to a `rate_table.diff` Job;
+    a rows-only pair stays on the synchronous 200 path. Raises the same refusals as
+    `diff` (a missing table or version, a baseless baseline) so the two forms cannot
+    disagree about what exists. Versions are immutable, so a later resolution inside
+    the worker arrives at the same baseline and the same cells.
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        baseline_number = await _resolve_baseline(
+            session, table_row.id, version, against
+        )
+        baseline_row = await _load_version(
+            session, table_row.id, baseline_number, slug
+        )
+        return (
+            version_row.storage == "parquet" or baseline_row.storage == "parquet"
+        )
+
+
 async def diff(
     database: Database,
     workspace_id: UUID,
     slug: str,
     version: int,
     against: str | int,
+    *,
+    blob_store: BlobStore,
+    cache: DiffCache | None = None,
+    portfolio_dataset_version_id: UUID | None = None,
 ) -> RateTableDiff:
     """Cell-level diff of one version against a baseline (FR-RATE-17, spec §5.1).
 
@@ -218,31 +252,51 @@ async def diff(
     version number. Diffed on read (DP3: compute on read, nothing materialised at
     version creation). Exposure weights are supplied by the caller at fetch time
     (DP1); this slice passes none — the portfolio-dataset join is not yet built.
-    Answers 200 for `rows`-stored versions; a `parquet` version is refused with
-    `RATE_TABLE_PARQUET_UNBUILT` — nothing can yet write parquet storage, so the
-    202-with-Job form (FR-RATE-62) lands in W10-3 with the storage itself.
+
+    One compute path for both storages (FR-RATE-62): a `parquet` version's cells are
+    materialised from its blob the way every bounded table transform does; storage
+    decides whether the API answers 200 or 202 with a Job (`diff_needs_job`), never
+    what the artifact contains.
+
+    With `cache` (DP3 (b)) the read path is compute-on-read: a miss computes and
+    stores, a hit serves the stored artifact. The key covers both versions' content
+    hashes and the portfolio identity, never a wall-clock date — an immutable pair
+    can only ever name one entry (`diff_cache`).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
-        # The parquet refusal fires before the baseline resolves: version 1 against
-        # `previous` would otherwise 404 as baseless before the storage check runs.
-        _refuse_parquet(version_row, slug, version)
         baseline_number = await _resolve_baseline(
             session, table_row.id, version, against
         )
         baseline_row = await _load_version(
             session, table_row.id, baseline_number, slug
         )
-        _refuse_parquet(baseline_row, slug, baseline_number)
 
         table = RateTable.model_validate(version_row.definition)
-        current_cells = await _load_cells(session, version_row.id, table)
-        baseline_cells = await _load_cells(session, baseline_row.id, table)
+        current_cells = await _load_cells_of(
+            session, version_row, table, blob_store
+        )
+        baseline_cells = await _load_cells_of(
+            session, baseline_row, table, blob_store
+        )
+        key: str | None = None
+        if cache is not None:
+            key = cache.key(
+                version_content_hash(current_cells),
+                version_content_hash(baseline_cells),
+                portfolio_dataset_version_id,
+            )
+            cached = await cache.get(key)
+            if cached is not None:
+                return cached
         if against == "seed":
             diff = diff_vs_seed(baseline_cells, current_cells, table.keys, table.value)
         else:
             diff = diff_vs_previous(baseline_cells, current_cells, table.keys, table.value)
+        if key is not None:
+            assert cache is not None
+            await cache.set(key, diff)
         return diff
 
 
@@ -359,19 +413,6 @@ async def import_confirmed(
             created_by=created_by,
             threshold=threshold,
             blob_store=blob_store,
-        )
-
-
-def _refuse_parquet(version_row: RateTableVersionRow, slug: str, number: int) -> None:
-    """Refuse a diff touching a parquet-stored version (03 §5.1, RATE_TABLE_PARQUET_UNBUILT)."""
-    if version_row.storage == "parquet":
-        raise PlatformError(
-            "RATE_TABLE_PARQUET_UNBUILT",
-            "Parquet-backed diff is not built yet",
-            501,
-            f"{slug}@{number} is stored as parquet, whose diff answers 202 with a "
-            "Job (FR-RATE-62) — deferred to W10-3 with the parquet storage itself, "
-            "and refused here rather than fabricating a diff.",
         )
 
 

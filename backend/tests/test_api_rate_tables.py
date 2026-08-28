@@ -491,19 +491,40 @@ def test_diff_seed_without_a_seed_origin_404s(
 
 
 @pytest.mark.req("FR-RATE-62")
-def test_a_parquet_version_is_refused_until_w10_3(
+def test_a_diff_touching_a_parquet_version_answers_202_with_a_job(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
-    """FR-RATE-62's parquet form answers 202 with a Job in W10-3; nothing can yet write
-    parquet storage, so a diff touching one is refused with the named code rather than
-    fabricating a diff."""
+    """03 §5.1: where either version is `storage: parquet` the diff answers 202 with a
+    Job on the compute queue (FR-RATE-62) — the same artifact the row-backed 200
+    returns, only latency and status differ (FR-RATE-17)."""
     slug = _table_slug()
+    definition = {
+        "slug": slug,
+        "version": 1,
+        "rateable": True,
+        "storage": "rows",
+        "keys": [
+            {
+                "name": "driver_age_band",
+                "type": "string",
+                "banding_ref": None,
+            }
+        ],
+        "value": {
+            "name": "relativity",
+            "type": "relativity",
+            "unit": "factor",
+            "min": None,
+            "max": None,
+        },
+        "default_row": None,
+    }
     _insert_rows(
         [
             RateTableRow(
                 workspace_id=workspace_id,
                 slug=slug,
-                current_version=1,
+                current_version=2,
                 created_by=uuid4(),
             )
         ]
@@ -524,28 +545,19 @@ def test_a_parquet_version_is_refused_until_w10_3(
                     workspace_id=workspace_id,
                     rate_table_id=table_row.id,
                     version_number=1,
+                    storage="rows",
+                    definition=definition,
+                    change_note="rows baseline",
+                    created_by=uuid4(),
+                )
+            )
+            session.add(
+                RateTableVersionRow(
+                    workspace_id=workspace_id,
+                    rate_table_id=table_row.id,
+                    version_number=2,
                     storage="parquet",
-                    definition={
-                        "slug": slug,
-                        "version": 1,
-                        "rateable": True,
-                        "storage": "parquet",
-                        "keys": [
-                            {
-                                "name": "driver_age_band",
-                                "type": "string",
-                                "banding_ref": None,
-                            }
-                        ],
-                        "value": {
-                            "name": "relativity",
-                            "type": "relativity",
-                            "unit": "factor",
-                            "min": None,
-                            "max": None,
-                        },
-                        "default_row": None,
-                    },
+                    definition={**definition, "version": 2, "storage": "parquet"},
                     change_note="parquet probe",
                     created_by=uuid4(),
                 )
@@ -565,12 +577,19 @@ def test_a_parquet_version_is_refused_until_w10_3(
         loop.close()
 
     response = api_client.get(
-        f"/api/v1/rate-tables/{slug}@1/diff",
+        f"/api/v1/rate-tables/{slug}@2/diff",
         params={"against": "previous"},
         headers=actuary,
     )
-    assert response.status_code == 501, response.text
-    assert response.json()["code"] == "RATE_TABLE_PARQUET_UNBUILT"
+    assert response.status_code == 202, response.text
+    job = response.json()
+    assert job["kind"] == "rate_table.diff"
+    assert job["queue"] == "compute"
+    assert job["status"] == "queued"
+    assert job["parameters"]["slug"] == slug
+    assert job["parameters"]["version"] == 2
+    assert job["parameters"]["against"] == "previous"
+    assert response.headers["location"] == f"/api/v1/jobs/{job['id']}"
 
 
 @pytest.mark.req("FR-PLAT-47")

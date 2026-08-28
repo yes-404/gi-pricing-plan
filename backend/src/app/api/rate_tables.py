@@ -26,12 +26,16 @@ from fastapi import (
 )
 
 from app.api.authz import requires
-from app.api.deps import Caller, DatabaseDep, SettingsDep
+from app.api.deps import Caller, DatabaseDep, SettingsDep, job_identity
 from app.api.responses import problems
 from app.errors import PlatformError
+from app.platform import jobs as job_service
 from app.platform import rate_tables as service
 from app.platform.blobs import BlobStore
-from model_schema import Permission
+from app.platform.diff_cache import DiffCache
+from model_schema import JobKind, Permission
+from model_schema.jobs import Job
+from model_schema.rating import RateTableDiff
 from model_schema.refs import ArtifactRef
 
 __all__ = ["router"]
@@ -300,23 +304,61 @@ async def import_rate_table(
 @router.get(
     "/rate-tables/{slug}@{version}/diff",
     summary="Cell diff of a rate table version against a baseline",
-    responses=problems(401, 403, 404, 422, 501),
+    response_model=None,
+    responses={
+        **problems(401, 403, 404, 422),
+        200: {"model": RateTableDiff},
+        202: {"model": Job},
+    },
 )
 async def rate_table_diff(
     slug: str,
     version: int,
     caller: RatingReadDep,
     database: DatabaseDep,
+    settings: SettingsDep,
+    response: Response,
+    blob_store: BlobStoreDep,
     against: str = Query(..., description="`previous`, `seed`, or a version number"),
-) -> dict[str, Any]:
-    """**200** with the diff (FR-RATE-17): changed cells and exposure-weighted change.
+) -> RateTableDiff | Job:
+    """**200** with the diff (FR-RATE-17); **202** with a Job where either version is
+    `storage: parquet` (FR-RATE-62) — the same artifact, only latency and status
+    differ.
 
     The baseline resolves to the previous version, the seed version, or an explicit
-    version number. A diff touching a `parquet` version is refused with **501**
-    `RATE_TABLE_PARQUET_UNBUILT` until W10-3 delivers parquet storage.
+    version number. The Job runs on the compute queue and stores the diff artifact as
+    a blob; `result.ref` is its sha256, fetchable from `/blobs/{sha256}`. The 200 read
+    path is compute-on-read behind the DP3 cache (rulings 2026-08-28): a hit serves
+    the stored artifact, a miss computes and stores — the key covers the versions'
+    content hashes and the portfolio identity, never a date.
     """
     baseline = _parse_against(against)
-    diff = await service.diff(
+    if await service.diff_needs_job(
         database, caller.workspace_id, slug, version, baseline
+    ):
+        async with database.unit_of_work() as session:
+            job = await job_service.submit(
+                session,
+                JobKind.RATE_TABLE_DIFF,
+                {
+                    **job_identity(caller),
+                    "slug": slug,
+                    "version": version,
+                    "against": against,
+                },
+                caller.principal,
+                workspace_id=caller.workspace_id,
+            )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
+    cache = DiffCache.from_url(settings.redis_url.get_secret_value())
+    return await service.diff(
+        database,
+        caller.workspace_id,
+        slug,
+        version,
+        baseline,
+        blob_store=blob_store,
+        cache=cache,
     )
-    return diff.model_dump()
