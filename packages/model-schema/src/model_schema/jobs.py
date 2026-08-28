@@ -52,6 +52,7 @@ class JobKind(enum.StrEnum):
     METRIC_CERTIFY = "metric.certify"
     RATING_COMPILE = "rating.compile"
     RATING_REGRESSION = "rating.regression"
+    RATE_TABLE_DIFF = "rate_table.diff"
     SCORE_BATCH = "score.batch"
     DISLOCATION_RUN = "dislocation.run"
     OPTIMISATION_RUN = "optimisation.run"

@@ -12,12 +12,19 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    model_validator,
+)
 
-from model_schema.refs import ArtifactRef, Slug
+from model_schema.refs import ArtifactRef, BlobRef, Slug
 
 
 class RatingVersionStatus(StrEnum):
@@ -584,7 +591,9 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
 #
 # W10-1 adds RateTable and RateTableVersion to model-schema: keys, value
 # column, storage mode (rows vs parquet), immutability invariants, and
-# seeding metadata. Cells and diffs are W10-2/W10-3.
+# seeding metadata. W10-2 adds SeededFrom and RateTableDiff. W10-3 reshapes
+# RateTableVersion to the 03 §4.2 wire form and adds the BulkOperation record
+# (04 §4.4) and the import verdict/preview (03 §5.2).
 # ---------------------------------------------------------------------------
 
 
@@ -687,23 +696,172 @@ class RateTableDiff(BaseModel):
     exposure_weighted_mean_change_pct: Decimal | None = None
 
 
-class RateTableVersion(BaseModel):
-    """A Rate Table Version (FR-RATE-15, FR-RATE-62, 03 §3.3).
+#: The key filter of 03 §5.2: exact-value match over the table's declared keys.
+KeyFilter = dict[str, list[str]]
 
-    An immutable version of one rate table. Editing produces a new version with a
-    required change note. The storage mode is fixed when the version is written and
-    immutable with it (FR-RATE-62). An optional seeded_from reference tracks the
-    source model and timestamp for diffing (FR-RATE-16).
+
+class BulkOperationResult(BaseModel):
+    """The outcome of a bulk operation (04 §4.4): what changed and what it created."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    changed_cells: int = Field(ge=0)
+    new_version: ArtifactRef
+
+
+class BulkOperationBase(BaseModel):
+    """The fields every BulkOperation carries (04 §4.4): applied_to and result."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    applied_to: ArtifactRef
+    result: BulkOperationResult
+
+
+class UpliftTableParameters(BaseModel):
+    """`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    percentage: Decimal
+
+
+class UpliftByFilterParameters(BaseModel):
+    """`uplift_by_filter`'s parameters (04 §4.4): the percentage plus the key filter."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    percentage: Decimal
+    filter: KeyFilter
+
+
+class FloorAndCapParameters(BaseModel):
+    """`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    floor: Decimal
+    cap: Decimal
+
+
+class RebaseToLevelParameters(BaseModel):
+    """`rebase_to_level`'s parameters (04 §4.4): the reference level that becomes 1.0."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    base_level: KeyFilter
+
+
+class UpliftTableOperation(BulkOperationBase):
+    kind: Literal["uplift_table"]
+    parameters: UpliftTableParameters
+
+
+class UpliftByFilterOperation(BulkOperationBase):
+    kind: Literal["uplift_by_filter"]
+    parameters: UpliftByFilterParameters
+
+
+class FloorAndCapOperation(BulkOperationBase):
+    kind: Literal["floor_and_cap"]
+    parameters: FloorAndCapParameters
+
+
+class RebaseToLevelOperation(BulkOperationBase):
+    kind: Literal["rebase_to_level"]
+    parameters: RebaseToLevelParameters
+
+
+#: The BulkOperation record (04 §4.4), discriminated on `kind`. A version created by a
+#: bulk operation carries it as `created_by_operation` (03 §4.2).
+BulkOperation = Annotated[
+    UpliftTableOperation
+    | UpliftByFilterOperation
+    | FloorAndCapOperation
+    | RebaseToLevelOperation,
+    Field(discriminator="kind"),
+]
+
+#: The wire-parse path for a BulkOperation payload — dict in, member out. An
+#: `Annotated` union alias is not directly callable, so the boundary parses through
+#: the adapter (the `MODEL_SPEC_ADAPTER` precedent in modelling.py).
+BULK_OPERATION_ADAPTER: Final[TypeAdapter[BulkOperation]] = TypeAdapter(BulkOperation)
+
+
+class ImportVerdict(BaseModel):
+    """The source identity of a version created by import (03 §4.2, 03 §5.2).
+
+    `round_trip` is the strict verdict: the file parsed back to exactly the cells it was
+    exported from, so an import can never silently drop or re-type a cell. `applied_to`
+    names the addressed baseline version (the import endpoint addresses `{slug}@{version}`),
+    so the seed-lineage inheritance check (03 §4.2) is expressible at save time and
+    auditable after.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    id: UUID
-    workspace_id: UUID
-    rate_table_id: UUID
-    version_number: int = Field(ge=1)
+    filename: str
+    content_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    round_trip: Literal["passed"]
+    applied_to: ArtifactRef
+
+
+class ImportPreview(BaseModel):
+    """The import preview (03 §5.2): the would-be version's diff plus the verdict."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    diff: RateTableDiff
+    created_by_import: ImportVerdict
+
+
+class RateTableVersion(BaseModel):
+    """A Rate Table Version (FR-RATE-15, FR-RATE-62, 03 §4.2).
+
+    An immutable version of one rate table, in the §4.2 wire form: the definition
+    (`keys`, `value`, `default_row`), the cells (`rows` for row storage, `cells` as a
+    parquet BlobRef above the threshold), the seed origin, and the creation metadata.
+    Editing produces a new version with a required change note. The storage mode is
+    fixed when the version is written and immutable with it (FR-RATE-62), and a version
+    is created by a seed, an operation or an import — never more than one.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: Slug
+    version: int = Field(ge=1)
+    rateable: bool
     storage: RateTableStorageMode
+    keys: list[RateTableKey]
+    value: RateTableValue
+    default_row: dict[str, Any] | None = None
+    rows: list[dict[str, str | int]] | None = None
+    cells: BlobRef | None = None
     change_note: str
     seeded_from: SeededFrom | None = None
-    created_at: datetime
-    created_by: UUID
+    created_by_operation: BulkOperation | None = None
+    created_by_import: ImportVerdict | None = None
+
+    @model_validator(mode="after")
+    def _cells_match_storage_mode(self) -> RateTableVersion:
+        """Cells are inline rows under the threshold, a parquet BlobRef above it."""
+        if self.storage == RateTableStorageMode.ROWS:
+            if self.rows is None or self.cells is not None:
+                raise ValueError(
+                    "a rows-stored version carries inline rows and no blob (FR-RATE-62)"
+                )
+        elif self.rows is not None or self.cells is None:
+            raise ValueError(
+                "a parquet version addresses its cells by a BlobRef, never inline "
+                "rows (FR-RATE-62)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _one_creation_path(self) -> RateTableVersion:
+        if self.created_by_operation is not None and self.created_by_import is not None:
+            raise ValueError(
+                "a version is created by an operation or by an import, never both "
+                "(03 §4.2)"
+            )
+        return self

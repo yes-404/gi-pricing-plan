@@ -71,6 +71,7 @@ DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
     JobKind.METRIC_CERTIFY: JobQueue.COMPUTE,
     JobKind.RATING_COMPILE: JobQueue.DEFAULT,
     JobKind.RATING_REGRESSION: JobQueue.COMPUTE,
+    JobKind.RATE_TABLE_DIFF: JobQueue.COMPUTE,
     JobKind.SCORE_BATCH: JobQueue.SCORING,
     JobKind.DISLOCATION_RUN: JobQueue.COMPUTE,
     JobKind.OPTIMISATION_RUN: JobQueue.COMPUTE,
