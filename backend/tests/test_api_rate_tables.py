@@ -129,6 +129,7 @@ def _table_slug() -> str:
     return f"motor-driver-age-{uuid4().hex[:8]}"
 
 
+@pytest.mark.req("FR-RATE-16")
 def test_seed_creates_version_one_with_cells(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -160,6 +161,8 @@ def test_seed_creates_version_one_with_cells(
     assert [row["relativity"] for row in body["rows"]] == ["1.92", "1.41", "1.12"]
 
 
+@pytest.mark.req("FR-RATE-16")
+@pytest.mark.req("FR-RATE-17")
 def test_seed_appends_the_next_version_and_diff_vs_previous(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -198,6 +201,7 @@ def test_seed_appends_the_next_version_and_diff_vs_previous(
     assert body["exposure_weighted_mean_change_pct"] is None
 
 
+@pytest.mark.req("FR-RATE-17")
 def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -238,6 +242,7 @@ def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
     assert vs_seed.json()["changed_cells"] == 2  # 17-20 and 21-24, from the origin
 
 
+@pytest.mark.req("FR-RATE-17")
 def test_diff_against_an_explicit_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -264,6 +269,7 @@ def test_diff_against_an_explicit_version(
     assert diff.json()["changed_cells"] == 1
 
 
+@pytest.mark.req("FR-RATE-16")
 def test_seed_refuses_a_non_approved_model(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -293,6 +299,7 @@ def test_seed_refuses_a_non_approved_model(
     assert response.json()["code"] == "PIN_NOT_APPROVED"
 
 
+@pytest.mark.req("FR-RATE-16")
 def test_seed_refuses_a_missing_model(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -304,6 +311,8 @@ def test_seed_refuses_a_missing_model(
     assert response.status_code == 404, response.text
 
 
+@pytest.mark.req("FR-RATE-15")
+@pytest.mark.req("FR-RATE-16")
 def test_seed_refuses_a_bad_body(api_client: TestClient, workspace_id, actuary) -> None:
     response = api_client.post(
         f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
@@ -328,6 +337,7 @@ def test_seed_refuses_a_bad_body(api_client: TestClient, workspace_id, actuary) 
     assert wrong_type.status_code == 422, wrong_type.text
 
 
+@pytest.mark.req("FR-RATE-19")
 def test_seed_validation_failure_is_named(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -347,6 +357,7 @@ def test_seed_validation_failure_is_named(
     assert response.json()["code"] == "RATE_TABLE_KEY_DUPLICATE"
 
 
+@pytest.mark.req("FR-RATE-17")
 def test_diff_404s_for_unknown_table_and_version(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -383,6 +394,7 @@ def test_diff_404s_for_unknown_table_and_version(
     assert no_previous.status_code == 404, no_previous.text
 
 
+@pytest.mark.req("FR-RATE-17")
 def test_diff_rejects_an_unknown_baseline(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -405,6 +417,65 @@ def test_diff_rejects_an_unknown_baseline(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
+@pytest.mark.req("FR-RATE-17")
+def test_diff_seed_without_a_seed_origin_404s(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """`against=seed` resolves the baseline from the `seeded_from` trail; a version
+    carrying no trail (direct inserts — the only creation path in this slice always
+    pins a seed origin) answers 404 RATE_TABLE_MISS."""
+    slug = _table_slug()
+    table_row = RateTableRow(
+        workspace_id=workspace_id,
+        slug=slug,
+        current_version=1,
+        created_by=uuid4(),
+    )
+    _insert_rows([table_row])
+    _insert_rows(
+        [
+            RateTableVersionRow(
+                workspace_id=workspace_id,
+                rate_table_id=table_row.id,
+                version_number=1,
+                storage="rows",
+                definition={
+                    "slug": slug,
+                    "version": 1,
+                    "rateable": True,
+                    "storage": "rows",
+                    "keys": [
+                        {
+                            "name": "driver_age_band",
+                            "type": "string",
+                            "banding_ref": None,
+                        }
+                    ],
+                    "value": {
+                        "name": "relativity",
+                        "type": "relativity",
+                        "unit": "factor",
+                        "min": None,
+                        "max": None,
+                    },
+                    "default_row": None,
+                },
+                change_note="unseeded probe",
+                created_by=uuid4(),
+            ),
+        ]
+    )
+
+    response = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/diff",
+        params={"against": "seed"},
+        headers=actuary,
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "RATE_TABLE_MISS"
+
+
+@pytest.mark.req("FR-RATE-62")
 def test_a_parquet_version_is_refused_until_w10_3(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -487,6 +558,7 @@ def test_a_parquet_version_is_refused_until_w10_3(
     assert response.json()["code"] == "RATE_TABLE_PARQUET_UNBUILT"
 
 
+@pytest.mark.req("FR-PLAT-47")
 def test_routes_are_permission_gated(
     api_client: TestClient, workspace_id, principal, auditor_headers, actuary
 ) -> None:
