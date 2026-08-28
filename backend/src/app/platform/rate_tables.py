@@ -61,6 +61,9 @@ from pricing_core.rate_tables.operations import (
     uplift_table,
 )
 from pricing_core.rate_tables.operations import (
+    import_confirmed as import_confirmed_op,
+)
+from pricing_core.rate_tables.operations import (
     seed_from_model as seed_from_model_op,
 )
 
@@ -153,7 +156,7 @@ async def seed_from_model(
             keys=result.table.keys,
             value=result.table.value,
             default_row=result.table.default_row,
-            rows=list(result.cells),
+            rows=_wire_rows(result.cells),
             change_note=change_note,
             seeded_from=result.seeded_from,
         )
@@ -177,14 +180,22 @@ def _cells_for_rows(
     return [([row[name] for name in key_names], row[value_name]) for row in cells]
 
 
+def _wire_rows(cells: Sequence[dict[str, str]]) -> list[dict[str, str | int]]:
+    """Cells → the wire form's row type (§4.2): every value is a decimal string."""
+    return cast(list[dict[str, str | int]], list(cells))
+
+
 async def _load_table(
     session: Any, workspace_id: UUID, slug: str
 ) -> RateTableRow:
-    table_row = await session.scalar(
-        select(RateTableRow).where(
-            RateTableRow.workspace_id == workspace_id,
-            RateTableRow.slug == slug,
-        )
+    table_row = cast(
+        RateTableRow | None,
+        await session.scalar(
+            select(RateTableRow).where(
+                RateTableRow.workspace_id == workspace_id,
+                RateTableRow.slug == slug,
+            )
+        ),
     )
     if table_row is None:
         raise PlatformError(
@@ -281,10 +292,9 @@ async def import_preview(
 ) -> ImportPreview:
     """The would-be version as a diff against the addressed one (FR-RATE-20, 03 §5.1).
 
-    Strict round-trip preview only: nothing is created — the confirmed-clean version
-    is the ruling-gated confirmation half. The file's extension routes CSV vs XLSX
-    (the core dispatches the same way); the verdict's canonical filename is the
-    ruling-gated part.
+    Strict round-trip preview only: nothing is created. The file's extension routes
+    CSV vs XLSX (the core dispatches the same way); the verdict's canonical filename
+    is the upload's name as received (DP5).
     """
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -292,10 +302,64 @@ async def import_preview(
         table = await _to_version(session, version_row, blob_store)
         try:
             if filename.endswith(".csv"):
-                return import_from_csv(table, content)
-            return import_from_xlsx(table, content)
+                return import_from_csv(table, content, filename=filename)
+            return import_from_xlsx(table, content, filename=filename)
         except ValueError as exc:
             raise _map_operation_error(exc) from exc
+
+
+async def import_confirmed(
+    database: Database,
+    workspace_id: UUID,
+    created_by: UUID,
+    settings: Settings,
+    blob_store: BlobStore,
+    *,
+    slug: str,
+    version: int,
+    filename: str,
+    content: bytes,
+) -> RateTableVersion:
+    """Create the version the preview showed (FR-RATE-20, 03 §5.1, DP6).
+
+    The upload is parsed again through the same strict pipeline the preview ran —
+    the created version cannot diverge from the preview (same bytes, same immutable
+    baseline). The verdict is recorded on the version as `created_by_import` (DP5),
+    the seed anchor is inherited from the baseline (DP4, FR-RATE-19), and the
+    storage decision follows the workspace threshold like any other version (DP2).
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        table = await _to_version(session, version_row, blob_store)
+        try:
+            result = import_confirmed_op(table, content, filename=filename)
+        except ValueError as exc:
+            raise _map_operation_error(exc) from exc
+        derived = RateTableVersion(
+            slug=slug,
+            version=version + 1,
+            rateable=True,
+            storage=RateTableStorageMode.ROWS,
+            keys=table.keys,
+            value=table.value,
+            default_row=table.default_row,
+            rows=_wire_rows(result.cells),
+            change_note=f"import: {filename}",
+            seeded_from=table.seeded_from,
+            created_by_import=result.created_by_import,
+        )
+        _guard_seed_lineage(derived, version_row)
+        threshold = await _resolve_threshold(session, settings, workspace_id)
+        return await _persist_new_version(
+            session,
+            table_row=table_row,
+            derived=derived,
+            version_number=version + 1,
+            created_by=created_by,
+            threshold=threshold,
+            blob_store=blob_store,
+        )
 
 
 def _refuse_parquet(version_row: RateTableVersionRow, slug: str, number: int) -> None:
@@ -459,7 +523,7 @@ async def _to_version(
         keys=table.keys,
         value=table.value,
         default_row=table.default_row,
-        rows=cells,
+        rows=_wire_rows(cells),
         change_note=version_row.change_note,
         seeded_from=(
             SeededFrom.model_validate(version_row.seeded_from)
@@ -520,7 +584,7 @@ async def _persist_new_version(
         slug=derived.slug,
         version=version_number,
         rateable=derived.rateable,
-        storage=storage_mode,
+        storage=RateTableStorageMode(storage_mode),
         keys=derived.keys,
         value=derived.value,
         default_row=derived.default_row,
@@ -580,11 +644,11 @@ async def _persist_new_version(
         slug=derived.slug,
         version=version_number,
         rateable=derived.rateable,
-        storage=storage_mode,
+        storage=RateTableStorageMode(storage_mode),
         keys=derived.keys,
         value=derived.value,
         default_row=derived.default_row,
-        rows=cells if storage_mode == "rows" else None,
+        rows=_wire_rows(cells) if storage_mode == "rows" else None,
         cells=blob_ref,
         change_note=derived.change_note,
         seeded_from=derived.seeded_from,
@@ -599,19 +663,19 @@ def _dispatch_operation(
     """Parse the 04 §4.4 parameters (decimal strings, never floats) and run the op."""
     match kind:
         case "uplift_table":
-            params = UpliftTableParameters.model_validate(parameters)
-            return uplift_table(table, percentage=params.percentage)
+            uplift_params = UpliftTableParameters.model_validate(parameters)
+            return uplift_table(table, percentage=uplift_params.percentage)
         case "uplift_by_filter":
-            params = UpliftByFilterParameters.model_validate(parameters)
+            filter_params = UpliftByFilterParameters.model_validate(parameters)
             return uplift_by_filter(
-                table, percentage=params.percentage, filter=params.filter
+                table, percentage=filter_params.percentage, filter=filter_params.filter
             )
         case "floor_and_cap":
-            params = FloorAndCapParameters.model_validate(parameters)
-            return floor_and_cap(table, floor=params.floor, cap=params.cap)
+            floor_params = FloorAndCapParameters.model_validate(parameters)
+            return floor_and_cap(table, floor=floor_params.floor, cap=floor_params.cap)
         case "rebase_to_level":
-            params = RebaseToLevelParameters.model_validate(parameters)
-            return rebase_to_level(table, base_level=params.base_level)
+            rebase_params = RebaseToLevelParameters.model_validate(parameters)
+            return rebase_to_level(table, base_level=rebase_params.base_level)
         case _:
             raise PlatformError(
                 "VALIDATION_FAILED",

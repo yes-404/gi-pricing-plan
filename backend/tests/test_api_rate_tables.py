@@ -846,9 +846,152 @@ def test_import_previews_a_modified_export(
     body = response.json()
     assert body["diff"]["changed_cells"] == 1
     verdict = body["created_by_import"]
+    assert verdict["filename"] == "import.csv"
     assert verdict["content_sha256"] == hashlib.sha256(modified).hexdigest()
     assert verdict["round_trip"] == "passed"
     assert verdict["applied_to"] == f"rate_table:{slug}@1"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_preview_creates_nothing(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP6: without `confirm` the request is a strict preview — no version is made."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", exported.content, "text/csv")},
+        headers=actuary,
+    )
+    assert response.status_code == 200, response.text
+
+    missing = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff",
+        params={"against": "previous"},
+        headers=actuary,
+    )
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "RATE_TABLE_MISS"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_confirm_creates_the_version(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP6: `confirm: true` re-parses the same upload and creates the version."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+    modified = exported.content.replace(b"21-24,1.41", b"21-24,1.4500")
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", modified, "text/csv")},
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["version"] == 2
+    assert body["created_by_operation"] is None
+    verdict = body["created_by_import"]
+    assert verdict is not None
+    assert verdict["filename"] == "import.csv"
+    assert verdict["content_sha256"] == hashlib.sha256(modified).hexdigest()
+    assert verdict["round_trip"] == "passed"
+    assert verdict["applied_to"] == f"rate_table:{slug}@1"
+
+    exported_v2 = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/export/csv",
+        headers=actuary,
+    )
+    assert exported_v2.status_code == 200, exported_v2.text
+    assert b"21-24,1.4500" in exported_v2.content
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_confirm_cannot_override_the_verdict(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP6: confirmation reruns the strict round-trip — a verdict violation on the
+    preview stays a refusal on the confirm, and nothing is created."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", b"vehicle_age_band,relativity\n17-20,1.92\n", "text/csv")},
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "IMPORT_KEY_MISMATCH"
+    missing = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff",
+        params={"against": "previous"},
+        headers=actuary,
+    )
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "RATE_TABLE_MISS"
+
+
+@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-RATE-20")
+def test_import_confirm_on_a_parquet_baseline_spills(
+    api_client: TestClient, workspace_id, actuary, admin_headers
+) -> None:
+    """DP2: the confirmed version obeys the workspace threshold like any other."""
+    _set_threshold(api_client, admin_headers, 2)
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", exported.content, "text/csv")},
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["storage"] == "parquet"
+    assert response.json()["rows"] is None
+    assert response.json()["cells"]["media_type"] == "application/parquet"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_refuses_an_oversized_filename(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP5: the verdict's filename is bounded — it is a record, never a path."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": (f"{'a' * 256}.csv", exported.content, "text/csv")},
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
 
 
 @pytest.mark.req("FR-RATE-20")

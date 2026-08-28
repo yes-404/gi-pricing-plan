@@ -13,7 +13,17 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Query, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 
 from app.api.authz import requires
 from app.api.deps import Caller, DatabaseDep, SettingsDep
@@ -164,7 +174,7 @@ async def bulk_operate_rate_table(
             422,
             detail="body must carry `kind` and `parameters` (04 §4.4)",
         )
-    version = await service.bulk_operation(
+    created = await service.bulk_operation(
         database,
         caller.workspace_id,
         caller.principal.id,
@@ -175,7 +185,7 @@ async def bulk_operate_rate_table(
         kind=kind,
         parameters=parameters,
     )
-    return version.model_dump(mode="json")
+    return created.model_dump(mode="json")
 
 
 @router.get(
@@ -234,27 +244,57 @@ async def import_rate_table(
     version: int,
     caller: RatingWriteDep,
     database: DatabaseDep,
+    settings: SettingsDep,
     blob_store: BlobStoreDep,
+    response: Response,
     file: Annotated[UploadFile, File()],
+    confirm: Annotated[bool, Form()] = False,
 ) -> dict[str, Any]:
     """**200** with the would-be version's diff and its strict verdict (FR-RATE-20,
     03 §5.1): the file is checked against the addressed version's own domain — same
     keys, same key types, same coverage — and nothing is created.
 
+    **201** with `confirm: true` (DP6): the same upload is parsed again through the
+    same strict pipeline and the version is created — confirmation cannot override
+    the round-trip verdict, so the created version cannot diverge from the preview.
     The permission is `RATING_WRITE` by the platform convention that file-upload
-    preview endpoints take the write dep (the datasets preview does), even though
-    this call only previews; the confirmed-clean creation half is ruling-gated.
+    endpoints take the write dep (the datasets preview does).
     """
-    preview = await service.import_preview(
+    filename = file.filename or "import.csv"
+    if len(filename) > 255:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Import filename too long",
+            422,
+            f"the upload's filename is {len(filename)} characters; the verdict "
+            "records it bounded to 255 (DP5) — it is a record, never a path.",
+        )
+    content = await file.read()
+    if not confirm:
+        preview = await service.import_preview(
+            database,
+            caller.workspace_id,
+            slug,
+            version,
+            blob_store,
+            filename=filename,
+            content=content,
+        )
+        return preview.model_dump(mode="json")
+    assert caller.principal.id is not None
+    created = await service.import_confirmed(
         database,
         caller.workspace_id,
-        slug,
-        version,
+        caller.principal.id,
+        settings,
         blob_store,
-        filename=file.filename or "import.csv",
-        content=await file.read(),
+        slug=slug,
+        version=version,
+        filename=filename,
+        content=content,
     )
-    return preview.model_dump(mode="json")
+    response.status_code = status.HTTP_201_CREATED
+    return created.model_dump(mode="json")
 
 
 @router.get(

@@ -97,6 +97,19 @@ class SeedResult:
     seeded_from: SeededFrom
 
 
+@dataclass(frozen=True)
+class ImportResult:
+    """What a confirmed import yields (DP6): the would-be cells and the strict verdict.
+
+    The verdict names the file, the content hash and the addressed baseline; only the
+    API persists — the caller builds the version from `cells` and records
+    `created_by_import`.
+    """
+
+    cells: tuple[CellRow, ...]
+    created_by_import: ImportVerdict
+
+
 def check_model_approved(model: Model) -> None:
     """FR-OVR-14: only an approved (or better) model may seed a rate table."""
     if model.status not in _APPROVED_OR_BETTER:
@@ -717,23 +730,24 @@ def _check_import_types(table: RateTableVersion, file_rows: list[CellRow]) -> No
                 )
 
 
-def _import_preview(
-    table: RateTableVersion, content: bytes, *, filename: str
-) -> ImportPreview:
-    """The shared import pipeline (03 §5.2, ruling b): diff and strict verdict.
+def _checked_import(
+    version: RateTableVersion, content: bytes, *, filename: str
+) -> ImportResult:
+    """The shared strict pipeline (03 §5.2): parse, keys, types, completeness.
 
-    The would-be version is checked against the addressed version's own validated
+    The would-be cells are checked against the addressed version's own validated
     domain — same keys, same key types, same coverage — so an import can never
-    silently drop, re-type, or re-key a cell. Only a confirmed-clean diff creates a
-    version, and only the caller (the API) persists it.
+    silently drop, re-type, or re-key a cell. Only a strict pass yields a verdict
+    (DP6: confirmation cannot override it). The verdict's filename is the upload's
+    name as passed (DP5).
     """
-    rows = _rows_of(table)
+    rows = _rows_of(version)
     header, data = (
         _parse_csv(content, filename)
         if filename.endswith(".csv")
         else _parse_xlsx(content, filename)
     )
-    expected_header = [key.name for key in table.keys] + [table.value.name]
+    expected_header = [key.name for key in version.keys] + [version.value.name]
     if header != expected_header:
         raise ValueError(
             f"{IMPORT_KEY_MISMATCH}: header {header} is not the declared keys and "
@@ -742,31 +756,55 @@ def _import_preview(
     if any(len(row) != len(header) for row in data):
         raise ValueError(f"{IMPORT_PARSE_ERROR}: {filename} has ragged rows")
     file_rows = [dict(zip(header, row, strict=True)) for row in data]
-    _check_import_types(table, file_rows)
+    _check_import_types(version, file_rows)
     issues = validate_rate_table(
         file_rows,
-        table.keys,
-        table.value,
-        key_domains={key.name: frozenset(row[key.name] for row in rows) for key in table.keys},
-        default_row=table.default_row,
+        version.keys,
+        version.value,
+        key_domains={
+            key.name: frozenset(row[key.name] for row in rows) for key in version.keys
+        },
+        default_row=version.default_row,
     )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")
-    diff = _compute_diff(rows, file_rows, table.keys, table.value, None)
     verdict = ImportVerdict(
         filename=filename,
         content_sha256=hashlib.sha256(content).hexdigest(),
         round_trip="passed",
-        applied_to=_ref(table, table.version),
+        applied_to=_ref(version, version.version),
     )
-    return ImportPreview(diff=diff, created_by_import=verdict)
+    return ImportResult(cells=tuple(file_rows), created_by_import=verdict)
 
 
-def import_from_csv(version: RateTableVersion, content: bytes) -> ImportPreview:
-    """FR-RATE-20: preview the would-be version against the addressed one (ruling b)."""
-    return _import_preview(version, content, filename="import.csv")
+def import_from_csv(
+    version: RateTableVersion, content: bytes, *, filename: str
+) -> ImportPreview:
+    """FR-RATE-20: preview the would-be version against the addressed one (03 §5.1)."""
+    result = _checked_import(version, content, filename=filename)
+    diff = _compute_diff(
+        _rows_of(version), result.cells, version.keys, version.value, None
+    )
+    return ImportPreview(diff=diff, created_by_import=result.created_by_import)
 
 
-def import_from_xlsx(version: RateTableVersion, content: bytes) -> ImportPreview:
-    """FR-RATE-20: preview the would-be version against the addressed one (ruling b)."""
-    return _import_preview(version, content, filename="import.xlsx")
+def import_from_xlsx(
+    version: RateTableVersion, content: bytes, *, filename: str
+) -> ImportPreview:
+    """FR-RATE-20: preview the would-be version against the addressed one (03 §5.1)."""
+    result = _checked_import(version, content, filename=filename)
+    diff = _compute_diff(
+        _rows_of(version), result.cells, version.keys, version.value, None
+    )
+    return ImportPreview(diff=diff, created_by_import=result.created_by_import)
+
+
+def import_confirmed(
+    version: RateTableVersion, content: bytes, *, filename: str
+) -> ImportResult:
+    """DP6: the confirmed import — the same bytes re-parsed, verdict strict.
+
+    Re-runs the full strict pipeline against the same immutable baseline, so the
+    created version cannot diverge from the preview; only the API persists.
+    """
+    return _checked_import(version, content, filename=filename)

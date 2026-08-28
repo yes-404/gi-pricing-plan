@@ -10,6 +10,7 @@ not how the fit happened.
 
 from __future__ import annotations
 
+import hashlib
 import io
 from decimal import Decimal
 from uuid import uuid4
@@ -406,3 +407,91 @@ async def test_malformed_operation_parameters_are_refused(
         )
     assert exc.value.code == "VALIDATION_FAILED"
     assert exc.value.status_code == 422
+
+
+@pytest.mark.req("FR-RATE-20")
+async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
+    database: Database, workspace_id, principal, blob_store: BlobStore
+) -> None:
+    """DP6: the confirmed import creates the version with `created_by_import` (DP5:
+    the real upload name) and the baseline's seed anchor (DP4)."""
+    family = f"mf-{uuid4().hex[:8]}"
+    slug = _table_slug()
+    seeded = await _seed(database, workspace_id, principal, family, slug, blob_store)
+    baseline = seeded.seeded_from.model_dump(mode="json")
+    content = (
+        b"driver_age_band,relativity\n"
+        b"17-20,1.9200\n"
+        b"21-24,1.4500\n"
+        b"25-29,1.1200\n"
+    )
+
+    wire = await svc.import_confirmed(
+        database,
+        workspace_id,
+        principal.id,
+        Settings(),
+        blob_store,
+        slug=slug,
+        version=1,
+        filename="rate-change-2026-08.csv",
+        content=content,
+    )
+
+    assert wire.version == 2
+    assert wire.storage == "rows"
+    assert {row["driver_age_band"]: row["relativity"] for row in wire.rows or []} == {
+        "17-20": "1.9200",
+        "21-24": "1.4500",
+        "25-29": "1.1200",
+    }
+    assert wire.created_by_operation is None
+    verdict = wire.created_by_import
+    assert verdict is not None
+    assert verdict.filename == "rate-change-2026-08.csv"
+    assert verdict.content_sha256 == hashlib.sha256(content).hexdigest()
+    assert verdict.round_trip == "passed"
+    assert verdict.applied_to == ArtifactRef(
+        type="rate_table", slug=slug, version=1
+    )
+    assert wire.seeded_from is not None
+    assert wire.seeded_from.model_dump(mode="json") == baseline
+
+    version_row = await _version_row(database, workspace_id, slug, 2)
+    assert version_row.created_by_import is not None
+    assert version_row.created_by_import["filename"] == "rate-change-2026-08.csv"
+    assert version_row.seeded_from == baseline
+
+
+@pytest.mark.req("FR-RATE-62")
+async def test_import_confirmed_obeys_the_threshold(
+    database: Database, workspace_id, principal, blob_store: BlobStore
+) -> None:
+    """DP2: the threshold applies to import-created versions like any other."""
+    await _set_threshold(database, workspace_id, 2)
+    family = f"mf-{uuid4().hex[:8]}"
+    slug = _table_slug()
+    await _seed(database, workspace_id, principal, family, slug, blob_store)
+    content = (
+        b"driver_age_band,relativity\n"
+        b"17-20,1.9200\n"
+        b"21-24,1.4500\n"
+        b"25-29,1.1200\n"
+    )
+
+    wire = await svc.import_confirmed(
+        database,
+        workspace_id,
+        principal.id,
+        Settings(),
+        blob_store,
+        slug=slug,
+        version=1,
+        filename="import.csv",
+        content=content,
+    )
+
+    assert wire.storage == "parquet"
+    version_row = await _version_row(database, workspace_id, slug, 2)
+    assert version_row.storage == "parquet"
+    assert version_row.cells is not None

@@ -615,7 +615,15 @@ def export_to_csv(table: RateTableVersion) -> bytes
 def export_to_xlsx(table: RateTableVersion) -> bytes
 def import_from_csv(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
 def import_from_xlsx(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
+def import_confirmed(version: RateTableVersion, content: bytes, *, filename: str) -> ImportResult
 ```
+
+> *(`import_confirmed` added 2026-08-28, DP6 — the confirmation half of FR-RATE-20.)*
+> `POST /import` with `confirm: true` re-parses the same upload through the same strict
+> pipeline and creates the version; `import_confirmed` returns the checked cells and the
+> verdict (`ImportResult`), and the API persists — confirmation cannot override the
+> round-trip verdict, so the created version cannot diverge from the preview (same
+> bytes, same immutable baseline).
 
 `ImportPreview` is the FR-RATE-17 cell diff of the would-be version **against the
 addressed version** plus the strict round-trip verdict (FR-RATE-20); a mismatch in keys,

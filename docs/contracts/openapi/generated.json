@@ -849,6 +849,11 @@
       },
       "Body_import_rate_table_api_v1_rate_tables__slug___version__import_post": {
         "properties": {
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          },
           "file": {
             "contentMediaType": "application/octet-stream",
             "title": "File",
@@ -23467,7 +23472,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}/import": {
       "post": {
-        "description": "**200** with the would-be version's diff and its strict verdict (FR-RATE-20,\n03 §5.1): the file is checked against the addressed version's own domain — same\nkeys, same key types, same coverage — and nothing is created.\n\nThe permission is `RATING_WRITE` by the platform convention that file-upload\npreview endpoints take the write dep (the datasets preview does), even though\nthis call only previews; the confirmed-clean creation half is ruling-gated.",
+        "description": "**200** with the would-be version's diff and its strict verdict (FR-RATE-20,\n03 §5.1): the file is checked against the addressed version's own domain — same\nkeys, same key types, same coverage — and nothing is created.\n\n**201** with `confirm: true` (DP6): the same upload is parsed again through the\nsame strict pipeline and the version is created — confirmation cannot override\nthe round-trip verdict, so the created version cannot diverge from the preview.\nThe permission is `RATING_WRITE` by the platform convention that file-upload\nendpoints take the write dep (the datasets preview does).",
         "operationId": "import_rate_table_api_v1_rate_tables__slug___version__import_post",
         "parameters": [
           {

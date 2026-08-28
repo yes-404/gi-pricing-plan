@@ -35,6 +35,7 @@ from pricing_core.rate_tables.operations import (
     export_to_csv,
     export_to_xlsx,
     floor_and_cap,
+    import_confirmed,
     import_from_csv,
     import_from_xlsx,
     rebase_to_level,
@@ -355,7 +356,7 @@ class TestImport:
     @pytest.mark.req("FR-RATE-20")
     def test_round_trip_import_yields_a_passing_verdict(self) -> None:
         content = export_to_csv(_version())
-        preview = import_from_csv(_version(), content)
+        preview = import_from_csv(_version(), content, filename="rate-change-2026-08.csv")
         assert isinstance(preview, ImportPreview)
         assert preview.diff.changed_cells >= 0
         assert preview.created_by_import.round_trip == "passed"
@@ -365,21 +366,64 @@ class TestImport:
     @pytest.mark.req("FR-RATE-20")
     def test_xlsx_round_trip_import(self) -> None:
         content = export_to_xlsx(_version())
-        preview = import_from_xlsx(_version(), content)
+        preview = import_from_xlsx(_version(), content, filename="rate-change.xlsx")
         assert preview.created_by_import.round_trip == "passed"
         assert str(preview.created_by_import.applied_to) == f"rate_table:{_SLUG}@6"
+
+    @pytest.mark.req("FR-RATE-20")
+    def test_the_verdict_records_the_upload_name_as_received(self) -> None:
+        """DP5: the verdict's filename is the real upload name, not a format constant —
+        the only link between the offline artifact and the online audit record."""
+        content = export_to_csv(_version())
+        preview = import_from_csv(
+            _version(), content, filename="2026-08-28-rate-change.csv"
+        )
+        assert preview.created_by_import.filename == "2026-08-28-rate-change.csv"
+
+    @pytest.mark.req("FR-RATE-20")
+    def test_the_confirmed_import_returns_the_cells_and_verdict(self) -> None:
+        """DP6: `confirm` re-parses the same bytes — the API persists only what a
+        strict pass hands it, so preview and created version cannot diverge."""
+        content = (
+            b"driver_age_band,relativity\n"
+            b"17-20,1.8400\n"
+            b"21-24,1.4500\n"
+            b"25-29,1.1200\n"
+        )
+        result = import_confirmed(_version(), content, filename="confirmed.csv")
+        assert [row["driver_age_band"] for row in result.cells] == [
+            "17-20",
+            "21-24",
+            "25-29",
+        ]
+        assert [row["relativity"] for row in result.cells] == [
+            "1.8400",
+            "1.4500",
+            "1.1200",
+        ]
+        assert result.created_by_import.filename == "confirmed.csv"
+        assert result.created_by_import.round_trip == "passed"
+        assert str(result.created_by_import.applied_to) == f"rate_table:{_SLUG}@6"
+
+    @pytest.mark.req("FR-RATE-20")
+    def test_the_confirmed_import_refuses_a_verdict_violation(self) -> None:
+        """Confirmation cannot override the round-trip verdict: the same named error
+        on both calls (DP6)."""
+        content = b"vehicle_age_band,relativity\n17-20,1.8400\n"
+        with pytest.raises(ValueError, match="IMPORT_KEY_MISMATCH"):
+            import_confirmed(_version(), content, filename="wrong-header.csv")
 
     @pytest.mark.req("FR-RATE-20")
     def test_unknown_header_column_is_refused(self) -> None:
         content = b"driver_age_band,relativity,extra\n17-20,1.8400\n"
         with pytest.raises(ValueError, match="IMPORT_KEY_MISMATCH"):
-            import_from_csv(_version(), content)
+            import_from_csv(_version(), content, filename="import.csv")
 
     @pytest.mark.req("FR-RATE-20")
     def test_missing_key_column_is_refused(self) -> None:
         content = b"relativity\n1.8400\n"
         with pytest.raises(ValueError, match="IMPORT_KEY_MISMATCH"):
-            import_from_csv(_version(), content)
+            import_from_csv(_version(), content, filename="import.csv")
 
     @pytest.mark.req("FR-RATE-20")
     def test_key_type_mismatch_is_refused(self) -> None:
@@ -387,13 +431,13 @@ class TestImport:
         keys = [_key(type=RateTableKeyType.INT)]
         version = _version(keys=keys)
         with pytest.raises(ValueError, match="IMPORT_TYPE_MISMATCH"):
-            import_from_csv(version, content)
+            import_from_csv(version, content, filename="import.csv")
 
     @pytest.mark.req("FR-RATE-20")
     def test_import_against_a_parquet_version_is_refused(self) -> None:
         content = export_to_csv(_version())
         with pytest.raises(ValueError, match="PARQUET_CELLS_UNAVAILABLE"):
-            import_from_csv(_version(storage=RateTableStorageMode.PARQUET), content)
+            import_from_csv(_version(storage=RateTableStorageMode.PARQUET), content, filename="import.csv")
 
     @pytest.mark.req("FR-RATE-20")
     def test_modified_file_diffs_against_the_addressed_version(self) -> None:
@@ -404,7 +448,7 @@ class TestImport:
             b"21-24,1.4500\n"
             b"25-29,1.1200\n"
         )
-        preview = import_from_csv(_version(), content)
+        preview = import_from_csv(_version(), content, filename="import.csv")
         assert preview.diff.changed_cells == 1
         assert (
             preview.created_by_import.content_sha256
@@ -449,4 +493,4 @@ class TestSeedLineage:
             b"21-24,south,1.4100\n"
         )
         with pytest.raises(ValueError, match="INCOMPLETE_KEY_DOMAIN"):
-            import_from_csv(version, content)
+            import_from_csv(version, content, filename="import.csv")
