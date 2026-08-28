@@ -576,3 +576,105 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
         input_contract_changed=old.input_contract != new.input_contract,
         outputs_changed=old.outputs != new.outputs,
     )
+
+
+# ---------------------------------------------------------------------------
+# Rate Tables (03 §3.3, FR-RATE-14..21, FR-RATE-62) — versioned typed tables
+# of factors and constants that actuaries edit when making a rate change.
+#
+# W10-1 adds RateTable and RateTableVersion to model-schema: keys, value
+# column, storage mode (rows vs parquet), immutability invariants, and
+# seeding metadata. Cells and diffs are W10-2/W10-3.
+# ---------------------------------------------------------------------------
+
+
+class RateTableKeyType(StrEnum):
+    """Valid types for a rate table key."""
+
+    INT = "int"
+    STRING = "string"
+    DATE = "date"
+    BOOL = "bool"
+
+
+class RateTableValueType(StrEnum):
+    """Valid types for a rate table value (FR-RATE-14, 03 §3.3)."""
+
+    RELATIVITY = "relativity"
+    MONEY_MINOR = "money_minor"
+    PERCENTAGE = "percentage"
+    COUNT = "count"
+
+
+class RateTableStorageMode(StrEnum):
+    """Storage mode for rate table cells (FR-RATE-62, 03 §3.3).
+
+    `rows` is the default for small tables (< 250k cells); `parquet` is used
+    for larger tables. Once written, the storage mode is immutable with the version.
+    """
+
+    ROWS = "rows"
+    PARQUET = "parquet"
+
+
+class RateTableKey(BaseModel):
+    """A key column declaration (FR-RATE-14): name, type, optional banding reference."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    type: RateTableKeyType
+    banding_ref: ArtifactRef | None = None
+
+
+class RateTableValue(BaseModel):
+    """A value column declaration (FR-RATE-14): name, type, unit, optional bounds."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    type: RateTableValueType
+    unit: str
+    min: Decimal | int | None = None
+    max: Decimal | int | None = None
+
+
+class RateTable(BaseModel):
+    """A Rate Table definition (FR-RATE-14, FR-RATE-21, 03 §3.3).
+
+    A typed table with declared key columns (each bound to a Factor or banded input),
+    a declared value column with type and unit, an optional default row, and a
+    rateable/diagnostic flag.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: Slug
+    version: int = Field(ge=1)
+    rateable: bool
+    storage: RateTableStorageMode
+    keys: list[RateTableKey]
+    value: RateTableValue
+    default_row: dict[str, Any] | None = None
+
+
+class RateTableVersion(BaseModel):
+    """A Rate Table Version (FR-RATE-15, FR-RATE-62, 03 §3.3).
+
+    An immutable version of one rate table. Editing produces a new version with a
+    required change note. The storage mode is fixed when the version is written and
+    immutable with it (FR-RATE-62). An optional seeded_from reference tracks the
+    source model for diffing (FR-RATE-16).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    workspace_id: UUID
+    rate_table_id: UUID
+    version_number: int = Field(ge=1)
+    storage: RateTableStorageMode
+    change_note: str
+    seeded_from: ArtifactRef | None = None
+    created_at: datetime
+    created_by: UUID
