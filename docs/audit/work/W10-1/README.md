@@ -27,7 +27,7 @@ All 15 tests passing (15/15) in `packages/model-schema/tests/test_rate_tables.py
 | FR-RATE-62 | ✓ delivered and tested (partial) — storage mode immutable at write time |
 | FR-RATE-16 | ✓ delivered, marker incomplete — seeded_from lineage metadata present |
 | FR-RATE-17 | deferred to W10-2 — cell-level diffs |
-| FR-RATE-18 | deferred to W10-2 — bulk operations |
+| FR-RATE-18 | deferred to W10-3 — bulk operations |
 | FR-RATE-19 | deferred to W10-2 — validation |
 | FR-RATE-20 | deferred to W10-3 — CSV/XLSX import/export |
 
