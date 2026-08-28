@@ -492,7 +492,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-RATE-17); **202** with a Job where either version is `storage: parquet` (FR-RATE-62) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-RATE-20) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-RATE-20) |
-| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff for confirmation (FR-RATE-20) |
+| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation (FR-RATE-20) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-RATE-25) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-RATE-40) |
@@ -572,18 +572,31 @@ def rebase_to_level(table: RateTableVersion, *, base_level: KeyFilter) -> RateTa
 def decide_storage_mode(cell_count: int, threshold: int = 250_000) -> Literal["rows", "parquet"]
 def export_to_csv(table: RateTableVersion) -> bytes
 def export_to_xlsx(table: RateTableVersion) -> bytes
-def import_from_csv(table: RateTable, content: bytes) -> ImportPreview
-def import_from_xlsx(table: RateTable, content: bytes) -> ImportPreview
+def import_from_csv(version: RateTableVersion, content: bytes) -> ImportPreview
+def import_from_xlsx(version: RateTableVersion, content: bytes) -> ImportPreview
 ```
 
-`ImportPreview` is the FR-RATE-17 cell diff for the would-be version plus the strict
-round-trip verdict (FR-RATE-20); a mismatch in keys, types or completeness is a named
-error, and the import only creates a version after the diff is confirmed. `KeyFilter`
+`ImportPreview` is the FR-RATE-17 cell diff of the would-be version **against the
+addressed version** plus the strict round-trip verdict (FR-RATE-20); a mismatch in keys,
+types or completeness is a named error — completeness is checked against the addressed
+version's validated domain (an explicit `default_row` waives it) — and the import only
+creates a version after the diff is confirmed. `KeyFilter`
 matches FR-RATE-18's "key filter"; `rebase_to_level`'s `base_level` names the reference
 level (single-key tables: the key value; multi-key: the combination) whose value becomes
 1.0. Each operation validates the result before persisting (FR-RATE-19) and returns a
 new immutable version whose `created_by_operation` carries the `BulkOperation` record
 (`04` §4.4).
+
+> *(`import_from_csv`/`import_from_xlsx` corrected 2026-08-28 — the W10-3 readiness
+> amendment named a bare `RateTable`; the decision-maker ruled the signature wrong.)* The
+> import endpoint addresses `{slug}@{version}` (§5.1), and the confirmation diff that
+> FR-RATE-20's workflow depends on must show what the import changes against the version
+> the actuary exported — an empty-baseline "all cells new" preview cannot confirm anything,
+> so the round-trip confirmation would be a rubber stamp. The signature therefore takes
+> the addressed `RateTableVersion`: the preview diffs the would-be version against it, and
+> completeness is checked against its validated domain. Import into a versionless table is
+> out of scope — the endpoint addresses a version, as the ruling on bulk-operation
+> addressing established.
 
 > *(Corrected 2026-08-27, F-W9-3-2 — the decision-maker ruled the spec was wrong.)* The
 > content hash is `bundle_hash(graph, pins)`, never `bundle_hash(bundle)`: the Bundle
