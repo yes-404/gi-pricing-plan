@@ -9,7 +9,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from pydantic import FrozenInstanceError, ValidationError
+from pydantic import ValidationError
 
 from model_schema.rating import (
     RateTable,
@@ -154,7 +154,7 @@ class TestRateTableVersionImmutability:
             created_at=datetime.now(),
             created_by=uuid4(),
         )
-        with pytest.raises(FrozenInstanceError):
+        with pytest.raises(ValidationError):
             version.storage = "parquet"  # type: ignore
 
     def test_rate_table_version_requires_change_note(self):
@@ -184,7 +184,7 @@ class TestRateTableVersionImmutability:
             created_by=uuid4(),
         )
         assert version.storage == "rows"
-        with pytest.raises(FrozenInstanceError):
+        with pytest.raises(ValidationError):
             version.storage = "parquet"  # type: ignore
 
     def test_rate_table_version_tracks_seed_source(self):
@@ -277,5 +277,5 @@ class TestStorageMode:
             created_at=datetime.now(),
             created_by=uuid4(),
         )
-        with pytest.raises(FrozenInstanceError):
+        with pytest.raises(ValidationError):
             version.storage = "parquet"  # type: ignore
