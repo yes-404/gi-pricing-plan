@@ -69,6 +69,7 @@
         "metric.certify",
         "rating.compile",
         "rating.regression",
+        "rate_table.diff",
         "score.batch",
         "dislocation.run",
         "optimisation.run",
