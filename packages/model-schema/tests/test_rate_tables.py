@@ -338,6 +338,46 @@ class TestStorageMode:
                 change_note="rows storage with no cells",
             )
 
+    def test_rows_storage_rejects_a_blob(self):
+        """A rows-stored version never carries a blob alongside its inline rows."""
+        with pytest.raises(ValidationError):
+            _version(
+                storage="rows",
+                rows=[{"driver_age_band": "17-20", "relativity": "1.8400"}],
+                cells=BlobRef(
+                    sha256="c" * 64,
+                    bytes=1234,
+                    media_type="application/vnd.apache.parquet",
+                ),
+            )
+
+    def test_parquet_storage_rejects_inline_rows_alongside_the_blob(self):
+        """A parquet version addresses cells by the blob alone — never both."""
+        with pytest.raises(ValidationError):
+            _version(
+                storage="parquet",
+                rows=[{"driver_age_band": "17-20", "relativity": "1.8400"}],
+                cells=BlobRef(
+                    sha256="d" * 64,
+                    bytes=1234,
+                    media_type="application/vnd.apache.parquet",
+                ),
+            )
+
+    def test_parquet_storage_rejects_a_version_with_no_cells_at_all(self):
+        """A parquet version with neither blob nor rows is refused."""
+        with pytest.raises(ValidationError):
+            RateTableVersion(
+                slug="motor-driver-age-relativity",
+                version=1,
+                rateable=True,
+                storage="parquet",
+                keys=[RateTableKey(name="driver_age_band", type="string")],
+                value=RateTableValue(name="relativity", type="relativity", unit="factor"),
+                rows=None,
+                change_note="parquet storage with no cells",
+            )
+
     def test_storage_is_immutable_with_version(self):
         """Once written, storage cannot change (FR-RATE-62)."""
         version = _version()
@@ -537,6 +577,7 @@ class TestImportContract:
         assert preview.created_by_import.filename == "motor-relativity.csv"
 
 
+@pytest.mark.req("FR-RATE-62")
 def test_rate_table_diff_job_kind_exists() -> None:
     """The parquet diff answers 202 with a Job whose kind is rate_table.diff (03 §5.1)."""
     assert JobKind.RATE_TABLE_DIFF.value == "rate_table.diff"
