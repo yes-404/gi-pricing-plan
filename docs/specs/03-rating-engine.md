@@ -295,6 +295,8 @@ and unreferenced by an `output` (FR-RATE-1).
     {"driver_age_band": "25-29", "relativity": "1.1200"}
   ],
   "seeded_from": {"model_ref": "model:motor-ad-frequency@7", "seeded_at": "2026-07-02T10:00:00Z"},
+  "created_by_operation": null,
+  "created_by_import": null,
   "change_note": "Softened 17-20 from 1.92 to 1.84 following competitor review; see OPT run 2026-07-11.",
   "diff_vs_previous": {"changed_cells": 3, "max_abs_change_pct": 4.2,
                        "exposure_weighted_mean_change_pct": 0.8},
@@ -311,6 +313,15 @@ Values are stored as decimal strings, never JSON floats (R2).
 > is absent from this document and the cells are addressed by a `BlobRef`; every other field
 > here, and every question a caller may ask, is unchanged — what changes is that FR-RATE-17's
 > diff and its exposure weighting answer **202 with a Job** rather than 200.
+
+> *(`created_by_operation` and `created_by_import` added 2026-08-28, W10-3 readiness.)* A
+> version created by a bulk operation carries the operation record — `BulkOperation`,
+> `04` §4.4 — which is what FR-RATE-18's "records its parameters, not just the resulting
+> cells" means. A version created by CSV/XLSX import carries the source file's identity
+> and the strict round-trip verdict (`created_by_import`: `{"filename", "content_sha256",
+> "round_trip": "passed"}`), per FR-RATE-20. Both are set at creation and immutable with
+> the version; the before/after cells and the actor belong to NFR-RATE-10's Audit Event,
+> not here. This example's version was edited by hand, so both are `null`.
 
 ### 4.3 `RatingVersion`
 
@@ -477,9 +488,11 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 | `GET` | `/api/v1/rating-algorithms/{slug}@{version}/diff?against=` | Structural diff (FR-RATE-7) |
 | `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version with change note |
 | `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | Seed from a model's relativities (FR-RATE-16) |
-| `POST` | `/api/v1/rate-tables/{slug}/bulk-operation` | Uplift / floor / cap / rebase, recorded as parameters (FR-RATE-18) |
+| `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-RATE-18) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-RATE-17); **202** with a Job where either version is `storage: parquet` (FR-RATE-62) |
-| `POST` | `/api/v1/rate-tables/{slug}/import` | Import CSV/XLSX → returns a diff for confirmation (FR-RATE-20) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-RATE-20) |
+| `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-RATE-20) |
+| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff for confirmation (FR-RATE-20) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-RATE-25) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-RATE-40) |
@@ -503,6 +516,14 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 `BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
 `LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`.
+
+> *(Ruled 2026-08-28, decision-maker — bulk-operation, import and export address a
+> specific version, `{slug}@{version}`.)* The W10 plan's T4 drafted `/versions/{version}/`
+> forms; the ruling adopts `@{version}`, this module's established versioned addressing
+> (the diff row above), because an operation must state the baseline it transforms — an
+> implicit "latest" would race concurrent writers and make the recorded operation's
+> meaning drift from the cells it actually changed. Export gained its rows here:
+> FR-RATE-20 requires export, and §5.1 previously had only the import row.
 
 ### 5.2 `pricing-core` interfaces
 
@@ -533,7 +554,29 @@ def generate_contexts(contract: InputContract, n: int, seed: int) -> list[QuoteC
 # pricing_core/rating/money.py — the decimal discipline (R2)
 def to_minor(value: Decimal, currency: str) -> int
 def apply_factor(amount_minor: int, factor: Decimal, rounding: Rounding) -> int
+
+# pricing_core/rate_tables/operations.py
+KeyFilter = dict[str, list[str]]          # exact-value match over the table's declared keys
+def uplift_table(table: RateTableVersion, *, percentage: Decimal) -> RateTableVersion
+def uplift_by_filter(table: RateTableVersion, *, percentage: Decimal,
+                     filter: KeyFilter) -> RateTableVersion
+def floor_and_cap(table: RateTableVersion, *, floor: Decimal, cap: Decimal) -> RateTableVersion
+def rebase_to_level(table: RateTableVersion, *, base_level: KeyFilter) -> RateTableVersion
+def decide_storage_mode(cell_count: int, threshold: int = 250_000) -> Literal["rows", "parquet"]
+def export_to_csv(table: RateTableVersion) -> bytes
+def export_to_xlsx(table: RateTableVersion) -> bytes
+def import_from_csv(table: RateTable, content: bytes) -> ImportPreview
+def import_from_xlsx(table: RateTable, content: bytes) -> ImportPreview
 ```
+
+`ImportPreview` is the FR-RATE-17 cell diff for the would-be version plus the strict
+round-trip verdict (FR-RATE-20); a mismatch in keys, types or completeness is a named
+error, and the import only creates a version after the diff is confirmed. `KeyFilter`
+matches FR-RATE-18's "key filter"; `rebase_to_level`'s `base_level` names the reference
+level (single-key tables: the key value; multi-key: the combination) whose value becomes
+1.0. Each operation validates the result before persisting (FR-RATE-19) and returns a
+new immutable version whose `created_by_operation` carries the `BulkOperation` record
+(`04` §4.4).
 
 > *(Corrected 2026-08-27, F-W9-3-2 — the decision-maker ruled the spec was wrong.)* The
 > content hash is `bundle_hash(graph, pins)`, never `bundle_hash(bundle)`: the Bundle
@@ -633,6 +676,7 @@ OPT → RATE and DEP-1 is respected.
 | **XGBoost / LightGBM** | `model_call` in `exact` mode | Booster load time, single-row prediction latency, thread pinning to avoid contention at 200 rps |
 | **hypothesis** | Property assertion generation (FR-RATE-44) | Strategies derived from an input contract; shrinking counterexamples an actuary can read |
 | **Vue Flow (frontend)** | The DAG designer | Custom node types per step type, edge validation, layout, undo/redo, mapping canvas state to the `RatingAlgorithm` contract |
+| **openpyxl** | CSV/XLSX import/export with strict round-trip (FR-RATE-20) | XLSX read + write in one library; CSV is stdlib; round-trip keeps decimal strings — never float through the file |
 | **TanStack Table (frontend)** | Rate table editor | Virtualised editable grids, decimal-safe cell input, diff shading |
 | **ECharts (frontend)** | Ladder waterfall, dislocation histogram, attribution waterfall | Waterfall chart construction; large-histogram rendering |
 | **OpenTelemetry** | Per-step timing on the latency path | Low-overhead spans; sampling so tracing does not become the bottleneck |

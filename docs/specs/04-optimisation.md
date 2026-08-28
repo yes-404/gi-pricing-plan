@@ -245,6 +245,52 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 }
 ```
 
+### 4.4 `BulkOperation`
+
+The record of a bulk operation on a rate table, carried by the version it creates
+(`03` §4.2 `created_by_operation`). FR-RATE-18 requires the parameters, not just the
+resulting cells, to be recorded; this record is what "recorded" means.
+
+```json
+{
+  "kind": "uplift_table | uplift_by_filter | floor_and_cap | rebase_to_level",
+  "parameters": {
+    "percentage": "0.10",
+    "filter": {"driver_age_band": ["17-20", "21-24"]},
+    "floor": "0.5000",
+    "cap": "2.0000",
+    "base_level": {"driver_age_band": ["25-29"]}
+  },
+  "applied_to": "rate_table:motor-driver-age-relativity@6",
+  "result": {"changed_cells": 3, "new_version": "rate_table:motor-driver-age-relativity@7"}
+}
+```
+
+Each `kind` uses the parameters FR-RATE-18 names:
+
+- `uplift_table` — `percentage` only; applies to every cell of the table.
+- `uplift_by_filter` — `percentage` plus `filter`; applies to the selected cells.
+- `floor_and_cap` — `floor` and `cap` (decimal strings, `floor ≤ cap`); clamps every cell
+  into the bounds.
+- `rebase_to_level` — `base_level`; rescales the table so the named reference level's
+  value becomes 1.0.
+
+`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2).
+`filter` and `base_level` use exact-value matching over the table's declared keys (`03`
+§4.2 `keys`) — the "key filter" FR-RATE-18 names; richer filter syntax (ranges,
+expressions) is an append-only extension of the `parameters` shape. `applied_to` names
+the baseline version the operation transformed; `result.new_version` names the immutable
+version it created (`03` §4.3 `pins` reference syntax). The full audit trail — before and
+after cells, actor — is the `03` NFR-RATE-10 Audit Event, not part of this record.
+
+> *(`BulkOperation` added 2026-08-28, W10-3 readiness — the W10 plan's Sources note
+> deferred this contract to the spec "if W10 requires it", and W10-3 T1/T4 require it:
+> the operation and its parameters are recorded on the new version. The four kinds and
+> their parameters are FR-RATE-18's, lifted from the optimisation toolset (FR-OPT-10's
+> `segment_factor` and `global_levers` materialise through them, FR-OPT-25). A version
+> created by an optimisation materialisation cites the run in its change note per
+> FR-OPT-25 and does not need this record.)*
+
 ---
 
 ## 5. Interfaces
