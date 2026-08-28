@@ -21,6 +21,8 @@ when the close resolves it, accepts it, or re-plans it with an owner.
 | Cross-cutting OVR (F20) | FR-OVR-2/4/10/11/12/14/15/16/19 | W6b/W7 | 1b | accept — conventions, ADRs, audit checks |
 | Measured NFRs (F21) | NFR-DATA-1/2, NFR-MODEL-1..5, 10..13 | W4/W5/W7 | 1b | accept — measured, not asserted |
 | NFR-RATE-13/14 (F-W9-1) | validate-inbound-never-outbound; nthread=1 per model_call — design constraints whose measurement belongs to the scoring path | W9-3 | 2 | carry forward with an owner — the W11 scoring workstream; W8's measurements recorded (NFR-RATE-13 p99 0.070 ms, NFR-RATE-14 p99 1.626 ms) |
+| FR-RATE-17/18/19/20 (F-W10-1) | Cell diffs, bulk operations, validation, CSV/XLSX import/export | W10-1 | 2 | carry forward with owners — W10-2 (diffs, bulk ops, validation: FR-RATE-17/18/19), W10-3 (import/export: FR-RATE-20) |
+| FR-RATE-16 (F-W10-1-1) | seeded_from lineage metadata: implemented in W10-1 but test marker not separate (tested within FR-RATE-15 immutability suite) | W10-1 | 2 | carry forward — marker can be added when seeding logic is implemented in W10-2 |
 
 A carried finding is written here by the work-item close checklist
 ([`checklists/work-item-close.md`](checklists/work-item-close.md)) and by the phase close
