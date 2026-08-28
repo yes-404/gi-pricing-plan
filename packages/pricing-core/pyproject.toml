@@ -51,6 +51,10 @@ dependencies = [
     # the workspace's sklearn 1.9.0 satisfies its requirement).
     "interpret-core==0.7.8",
     "zen-engine==0.53.0",
+    # FR-RATE-20: CSV/XLSX import/export with strict round-trip (`03` §8). XLSX read +
+    # write in one library; CSV is stdlib. The round-trip keeps decimal strings — never
+    # float through the file — so openpyxl cells are written as text.
+    "openpyxl>=3.1",
 ]
 
 # Without this, uv resolves `model-schema` from PyPI — where it does not exist — and
