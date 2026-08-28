@@ -319,9 +319,23 @@ Values are stored as decimal strings, never JSON floats (R2).
 > `04` §4.4 — which is what FR-RATE-18's "records its parameters, not just the resulting
 > cells" means. A version created by CSV/XLSX import carries the source file's identity
 > and the strict round-trip verdict (`created_by_import`: `{"filename", "content_sha256",
-> "round_trip": "passed"}`), per FR-RATE-20. Both are set at creation and immutable with
-> the version; the before/after cells and the actor belong to NFR-RATE-10's Audit Event,
-> not here. This example's version was edited by hand, so both are `null`.
+> "round_trip": "passed", "applied_to"}`; `applied_to` added 2026-08-28, naming the
+> addressed baseline version — the import endpoint addresses `{slug}@{version}`, so the
+> record mirrors `BulkOperation.applied_to`), per FR-RATE-20. Both are set at creation
+> and immutable with the version; the before/after cells and the actor belong to
+> NFR-RATE-10's Audit Event, not here. This example's version was edited by hand, so both
+> are `null`.
+
+> **Seed lineage survives every derivation.** `seeded_from` is set only by
+> seed-from-model, on the first version of a lineage; every derived version — manual
+> edit, bulk operation, import — inherits the baseline's `seeded_from` unchanged, and a
+> version whose baseline had none carries none. This example's hand-edited version keeps
+> its `seeded_from`, and FR-RATE-16's "how far have we moved from the technical rate?"
+> must stay answerable along the whole chain, so `diff_vs_seed` remains meaningful on
+> every derived version. Save-time validation (FR-RATE-19) checks the equality against
+> the resolved baseline — `BulkOperation.applied_to` or `created_by_import.applied_to` —
+> and a derived version may not invent or drop the anchor. `created_by_operation` and
+> `created_by_import` remain mutually exclusive.
 
 ### 4.3 `RatingVersion`
 
