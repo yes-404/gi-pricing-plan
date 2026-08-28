@@ -94,3 +94,39 @@ Rationale:
 **Implementation note (for W10-3 T3):** `decide_storage_mode()` reads the workspace's
 configured threshold at version-creation time only; the threshold is never consulted again
 for a written version, and lowering it must not rescan existing versions.
+
+## DP4 — seed lineage on derived versions (bulk operation / import)
+
+**Options:** (a) a version created by a bulk operation or import inherits the baseline's
+`seeded_from` unchanged, so FR-RATE-16's question stays answerable along the whole chain;
+(b) the derived version drops `seeded_from`, so only versions that were themselves
+seed-from-model carry the anchor.
+
+**Ruled: (a) — derived versions inherit the baseline's `seeded_from` unchanged.
+Confirmed.**
+
+Rationale:
+
+- **FR-RATE-16's guarantee is a chain, not a point.** "Subsequent manual edits are diffed
+  against that seed, so 'how far have we moved from the technical rate?' is always
+  answerable." A bulk operation or import is the same kind of edit — one that creates a
+  version — and dropping the anchor on it would make the question unanswerable exactly at
+  the derivations that move the table furthest. The W10-2 contract (`03` §4.2) already
+  keeps `seeded_from` across manual edits; a bulk op or import is a manual edit with a
+  recorded mechanism, not a new lineage.
+- **Inheritance is the only shape a save-time check can state.** "Never re-seed, never
+  invent, never drop": the derived version must carry exactly the baseline's `seeded_from`
+  (or none, if the baseline had none). That equality is checkable against the baseline the
+  record names — `BulkOperation.applied_to` or `created_by_import.applied_to` — so
+  FR-RATE-19's validation can enforce it at save time, and the audit record can re-derive
+  it after.
+- **`created_by_import.applied_to` is the missing half of the guard.** `BulkOperation`
+  already names its baseline (`applied_to`, `04` §4.4); `ImportVerdict` did not, so an
+  import version's baseline could not be resolved from the record. The ruling adds the
+  field (W10-3A), making the import path's inheritance check expressible and auditable.
+
+**Implementation note (W10-3A):** `ImportVerdict` gains `applied_to: ArtifactRef`, naming
+the addressed baseline version (the import endpoint addresses `{slug}@{version}`).
+FR-RATE-19's save-time validation resolves the baseline from `BulkOperation.applied_to` /
+`created_by_import.applied_to` and rejects a derived version whose `seeded_from` differs
+from the baseline's.

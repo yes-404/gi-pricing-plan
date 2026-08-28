@@ -291,6 +291,10 @@ after cells, actor — is the `03` NFR-RATE-10 Audit Event, not part of this rec
 > created by an optimisation materialisation cites the run in its change note per
 > FR-OPT-25 and does not need this record.)*
 
+> The version the operation creates inherits the baseline's `seeded_from` unchanged
+> (`03` §4.2) — `applied_to` is what makes that inheritance checkable at save time and
+> auditable after.
+
 ---
 
 ## 5. Interfaces
