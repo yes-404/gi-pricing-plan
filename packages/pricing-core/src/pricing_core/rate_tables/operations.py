@@ -435,12 +435,17 @@ def _new_version(
     change_note: str,
     operation: BulkOperation,
 ) -> RateTableVersion:
+    """The derived version (ruling #306 (a)): the baseline's seed lineage is inherited
+    unchanged — never re-seeded, invented, or dropped. The explicit update keeps the
+    ruling literal in the code; the API's save-time check (03 §4.2) then proves the
+    equality against the baseline resolved from `applied_to`."""
     return table.model_copy(
         update={
             "version": table.version + 1,
             "rows": rows,
             "change_note": change_note,
             "created_by_operation": operation,
+            "seeded_from": table.seeded_from,
         }
     )
 
@@ -752,6 +757,7 @@ def _import_preview(
         filename=filename,
         content_sha256=hashlib.sha256(content).hexdigest(),
         round_trip="passed",
+        applied_to=_ref(table, table.version),
     )
     return ImportPreview(diff=diff, created_by_import=verdict)
 

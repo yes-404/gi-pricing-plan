@@ -9,6 +9,7 @@ strings everywhere — never JSON floats, and never float through the file (R2).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
 from typing import ClassVar
@@ -25,7 +26,9 @@ from model_schema.rating import (
     RateTableValue,
     RateTableValueType,
     RateTableVersion,
+    SeededFrom,
 )
+from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
     decide_storage_mode,
     export_to_csv,
@@ -72,6 +75,7 @@ def _version(
     value: RateTableValue | None = None,
     storage: RateTableStorageMode = RateTableStorageMode.ROWS,
     keys: list[RateTableKey] | None = None,
+    seeded_from: SeededFrom | None = None,
 ) -> RateTableVersion:
     if storage is RateTableStorageMode.PARQUET:
         return RateTableVersion(
@@ -83,6 +87,7 @@ def _version(
             value=value if value is not None else _value(),
             change_note="parquet test version",
             cells={"sha256": "a" * 64, "bytes": 42, "media_type": "parquet"},
+            seeded_from=seeded_from,
         )
     return RateTableVersion(
         slug=_SLUG,
@@ -93,6 +98,7 @@ def _version(
         value=value if value is not None else _value(),
         rows=rows if rows is not None else list(_DEFAULT_ROWS),
         change_note="baseline version",
+        seeded_from=seeded_from,
     )
 
 
@@ -353,12 +359,14 @@ class TestImport:
         assert preview.diff.changed_cells >= 0
         assert preview.created_by_import.round_trip == "passed"
         assert isinstance(preview.created_by_import, ImportVerdict)
+        assert str(preview.created_by_import.applied_to) == f"rate_table:{_SLUG}@6"
 
     @pytest.mark.req("FR-RATE-20")
     def test_xlsx_round_trip_import(self) -> None:
         content = export_to_xlsx(_version())
         preview = import_from_xlsx(_version(), content)
         assert preview.created_by_import.round_trip == "passed"
+        assert str(preview.created_by_import.applied_to) == f"rate_table:{_SLUG}@6"
 
     @pytest.mark.req("FR-RATE-20")
     def test_unknown_header_column_is_refused(self) -> None:
@@ -385,6 +393,27 @@ class TestImport:
         content = export_to_csv(_version())
         with pytest.raises(ValueError, match="PARQUET_CELLS_UNAVAILABLE"):
             import_from_csv(_version(storage=RateTableStorageMode.PARQUET), content)
+
+
+class TestSeedLineage:
+    """The #306 ruling (a): a derived version inherits the baseline's seeded_from."""
+
+    @pytest.mark.req("FR-RATE-16")
+    def test_derived_version_keeps_the_baseline_seeded_from(self) -> None:
+        baseline = _version(
+            seeded_from=SeededFrom(
+                model_ref=ArtifactRef(type="model", slug="motor", version=3),
+                seeded_at=datetime(2026, 8, 28, tzinfo=UTC),
+            )
+        )
+        result = uplift_table(baseline, percentage=Decimal("0.10"))
+        assert result.seeded_from is not None
+        assert result.seeded_from == baseline.seeded_from
+
+    @pytest.mark.req("FR-RATE-16")
+    def test_unseeded_baseline_stays_unseeded(self) -> None:
+        result = uplift_table(_version(), percentage=Decimal("0.10"))
+        assert result.seeded_from is None
 
     @pytest.mark.req("FR-RATE-20")
     def test_missing_key_combination_is_refused(self) -> None:
