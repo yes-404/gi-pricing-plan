@@ -533,6 +533,9 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
 `LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`,
 `RATE_TABLE_PARQUET_UNBUILT` *(added 2026-08-28, W10-2)*, `RATE_TABLE_SEED_MISMATCH`
+*(added 2026-08-28, W10-3C)*, `NO_RELATIVITIES`, `FILTER_UNKNOWN_KEY`,
+`FLOOR_ABOVE_CAP`, `REBASE_NO_MATCH`, `REBASE_AMBIGUOUS`, `REBASE_ZERO_REFERENCE`,
+`IMPORT_KEY_MISMATCH`, `IMPORT_TYPE_MISMATCH`, `IMPORT_PARSE_ERROR`
 *(added 2026-08-28, W10-3C)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
@@ -540,6 +543,16 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 > can yet be written as parquet — seeding always writes `rows` — so the branch is declared
 > rather than discovered, mirroring `01`'s `DERIVATION_NOT_MATERIALISED` precedent: a
 > fabricated diff or a worker-less JobKind would fail later and silently.
+
+> **Bulk-operation and import refusals (2026-08-28, W10-3C).** The bulk operations
+> (04 §4.4) and the import preview refuse with their own names: `RATE_TABLE_SEED_MISMATCH`
+> is the save-time seed-lineage equality proof (FR-RATE-19), `NO_RELATIVITIES` is the seed
+> gate, `FILTER_UNKNOWN_KEY` / `FLOOR_ABOVE_CAP` / `REBASE_NO_MATCH` / `REBASE_AMBIGUOUS` /
+> `REBASE_ZERO_REFERENCE` are the four operations' named refusals, and
+> `IMPORT_KEY_MISMATCH` / `IMPORT_TYPE_MISMATCH` / `IMPORT_PARSE_ERROR` are the strict
+> round-trip's refusals (FR-RATE-20). All ten were declared in `app/errors.py` before
+> first use — an unregistered code would surface as a 500, so the ownership block is
+> the declaration of record.
 
 > *(Ruled 2026-08-28, decision-maker — bulk-operation, import and export address a
 > specific version, `{slug}@{version}`.)* The W10 plan's T4 drafted `/versions/{version}/`

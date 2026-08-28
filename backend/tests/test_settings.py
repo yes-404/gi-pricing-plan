@@ -88,6 +88,26 @@ async def test_a_setting_with_no_override_resolves_to_the_default(
     ]
 
 
+@pytest.mark.req("FR-RATE-62")
+def test_the_rate_table_cell_threshold_defaults_to_250000() -> None:
+    definition = svc.REGISTRY["rate_tables.cell_threshold"]
+    assert definition.type is SettingType.INT
+    assert definition.default == 250_000
+    assert definition.constraints["min"] == 1
+
+
+@pytest.mark.req("FR-RATE-62")
+async def test_the_rate_table_cell_threshold_resolves_to_the_default(
+    database: Database, workspace_id
+) -> None:
+    async with database.session() as session:
+        resolution = await svc.resolve(
+            session, Settings(), workspace_id, "rate_tables.cell_threshold"
+        )
+    assert resolution.effective_value == 250_000
+    assert resolution.resolved_from is SettingSource.DEFAULT
+
+
 @pytest.mark.req("FR-PLAT-43")
 async def test_a_workspace_override_wins_over_the_default(
     database: Database, workspace_id

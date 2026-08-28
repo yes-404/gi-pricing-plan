@@ -1,22 +1,28 @@
-"""Rate table platform service (03 §3.3, slice W10-2): seeding and cell diffs.
+"""Rate table platform service (03 §3.3, slices W10-2/W10-3C): seeding, cell diffs,
+bulk operations, and the parquet write path.
 
 Thin over the pure operations in `pricing_core.rate_tables.operations`: load the
-model artifact, run the operation, persist rows. Named failures from pricing-core are
+model artifact, run the operation, persist rows (or a parquet blob above the
+workspace's cell-count threshold, FR-RATE-62). Named failures from pricing-core are
 mapped onto the module's API error codes (03 §5.2): the four validation codes become
 `RATE_TABLE_INCOMPLETE` / `RATE_TABLE_KEY_DUPLICATE`, the approval gate stays
-`PIN_NOT_APPROVED`.
+`PIN_NOT_APPROVED`, and the bulk-operation/import refusals keep their own names.
 """
 
 from __future__ import annotations
 
+import io
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
+import polars as pl
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.config import Settings
 from app.db.models import (
     RateTableCellRow,
     RateTableRow,
@@ -24,15 +30,35 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import settings as settings_svc
+from app.platform.blobs import BlobStore
 from app.platform.modelling import load_model, to_model
 from model_schema.rating import (
+    FloorAndCapParameters,
+    ImportPreview,
     RateTable,
     RateTableDiff,
+    RateTableKey,
+    RateTableStorageMode,
+    RateTableVersion,
+    RebaseToLevelParameters,
+    SeededFrom,
+    UpliftByFilterParameters,
+    UpliftTableParameters,
 )
-from model_schema.refs import ArtifactRef
+from model_schema.refs import ArtifactRef, BlobRef
 from pricing_core.rate_tables.operations import (
+    decide_storage_mode,
     diff_vs_previous,
     diff_vs_seed,
+    export_to_csv,
+    export_to_xlsx,
+    floor_and_cap,
+    import_from_csv,
+    import_from_xlsx,
+    rebase_to_level,
+    uplift_by_filter,
+    uplift_table,
 )
 from pricing_core.rate_tables.operations import (
     seed_from_model as seed_from_model_op,
@@ -66,17 +92,20 @@ async def seed_from_model(
     database: Database,
     workspace_id: UUID,
     created_by: UUID,
+    settings: Settings,
+    blob_store: BlobStore,
     *,
     slug: str,
     model_ref: ArtifactRef,
     change_note: str,
     rateable: bool = True,
-) -> dict[str, Any]:
+) -> RateTableVersion:
     """Seed a new rate table version from an approved model (FR-RATE-16, spec §5.1).
 
-    The seed is the only version-creation path in this slice: it creates the table
-    (version 1) or appends the next version of an existing table, and pins
-    `seeded_from` so "how far from the technical rate?" is answerable (FR-RATE-16).
+    The seed is the origin of a lineage: it creates the table (version 1) or appends
+    the next version of an existing table, pins `seeded_from` so "how far from the
+    technical rate?" is answerable (FR-RATE-16), and its storage is decided against
+    the workspace threshold like every new version (FR-RATE-62, DP2).
     """
     async with database.unit_of_work() as session:
         model_row = await load_model(
@@ -107,7 +136,7 @@ async def seed_from_model(
             table_row = RateTableRow(
                 workspace_id=workspace_id,
                 slug=slug,
-                current_version=1,
+                current_version=0,
                 created_by=created_by,
             )
             session.add(table_row)
@@ -116,43 +145,28 @@ async def seed_from_model(
         else:
             version_number = table_row.current_version + 1
 
-        definition = result.table.model_dump()
-        definition["version"] = version_number
-        version_row = RateTableVersionRow(
-            workspace_id=workspace_id,
-            rate_table_id=table_row.id,
-            version_number=version_number,
-            storage=result.table.storage,
-            definition=definition,
+        derived = RateTableVersion(
+            slug=result.table.slug,
+            version=version_number,
+            rateable=result.table.rateable,
+            storage=RateTableStorageMode.ROWS,
+            keys=result.table.keys,
+            value=result.table.value,
+            default_row=result.table.default_row,
+            rows=list(result.cells),
             change_note=change_note,
-            seeded_from=result.seeded_from.model_dump(mode="json"),
+            seeded_from=result.seeded_from,
+        )
+        threshold = await _resolve_threshold(session, settings, workspace_id)
+        return await _persist_new_version(
+            session,
+            table_row=table_row,
+            derived=derived,
+            version_number=version_number,
             created_by=created_by,
+            threshold=threshold,
+            blob_store=blob_store,
         )
-        session.add(version_row)
-        try:
-            await session.flush()
-        except IntegrityError as exc:
-            raise PlatformError(
-                "VALIDATION_FAILED",
-                "Rate table version already exists",
-                409,
-                f"{slug}@{version_number} already exists in this workspace.",
-            ) from exc
-        table_row.current_version = version_number
-        session.add_all(
-            RateTableCellRow(version_id=version_row.id, key=key, value=value)
-            for key, value in _cells_for_rows(
-                result.cells, result.table.keys, result.table.value.name
-            )
-        )
-        await session.flush()
-
-        return {
-            **definition,
-            "rows": list(result.cells),
-            "seeded_from": result.seeded_from.model_dump(mode="json"),
-            "change_note": change_note,
-        }
 
 
 def _cells_for_rows(
@@ -161,6 +175,22 @@ def _cells_for_rows(
     """Rows → (key tuple as JSON array, value as decimal string), in key order."""
     key_names = [key.name for key in keys]
     return [([row[name] for name in key_names], row[value_name]) for row in cells]
+
+
+async def _load_table(
+    session: Any, workspace_id: UUID, slug: str
+) -> RateTableRow:
+    table_row = await session.scalar(
+        select(RateTableRow).where(
+            RateTableRow.workspace_id == workspace_id,
+            RateTableRow.slug == slug,
+        )
+    )
+    if table_row is None:
+        raise PlatformError(
+            "RATE_TABLE_MISS", "Rate table not found", 404, f"{slug} not found."
+        )
+    return table_row
 
 
 async def diff(
@@ -182,17 +212,7 @@ async def diff(
     202-with-Job form (FR-RATE-62) lands in W10-3 with the storage itself.
     """
     async with database.unit_of_work() as session:
-        table_row = await session.scalar(
-            select(RateTableRow).where(
-                RateTableRow.workspace_id == workspace_id,
-                RateTableRow.slug == slug,
-            )
-        )
-        if table_row is None:
-            raise PlatformError(
-                "RATE_TABLE_MISS", "Rate table not found", 404, f"{slug} not found."
-            )
-
+        table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
         # The parquet refusal fires before the baseline resolves: version 1 against
         # `previous` would otherwise 404 as baseless before the storage check runs.
@@ -213,6 +233,69 @@ async def diff(
         else:
             diff = diff_vs_previous(baseline_cells, current_cells, table.keys, table.value)
         return diff
+
+
+async def export_csv(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    blob_store: BlobStore,
+) -> bytes:
+    """The version's cells as CSV, decimal strings only (FR-RATE-20).
+
+    Reads parquet-stored versions inline from their blob — a bounded table transform
+    (03 §3.3, W10-3D), the same materialisation `_to_version` does for operations.
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        table = await _to_version(session, version_row, blob_store)
+        return export_to_csv(table)
+
+
+async def export_xlsx(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    blob_store: BlobStore,
+) -> bytes:
+    """The version's cells as XLSX, every cell written as text (FR-RATE-20)."""
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        table = await _to_version(session, version_row, blob_store)
+        return export_to_xlsx(table)
+
+
+async def import_preview(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    blob_store: BlobStore,
+    *,
+    filename: str,
+    content: bytes,
+) -> ImportPreview:
+    """The would-be version as a diff against the addressed one (FR-RATE-20, 03 §5.1).
+
+    Strict round-trip preview only: nothing is created — the confirmed-clean version
+    is the ruling-gated confirmation half. The file's extension routes CSV vs XLSX
+    (the core dispatches the same way); the verdict's canonical filename is the
+    ruling-gated part.
+    """
+    async with database.unit_of_work() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        table = await _to_version(session, version_row, blob_store)
+        try:
+            if filename.endswith(".csv"):
+                return import_from_csv(table, content)
+            return import_from_xlsx(table, content)
+        except ValueError as exc:
+            raise _map_operation_error(exc) from exc
 
 
 def _refuse_parquet(version_row: RateTableVersionRow, slug: str, number: int) -> None:
@@ -309,3 +392,287 @@ async def _load_cells(
         | {table.value.name: row[1]}
         for row in rows
     ]
+
+
+async def _resolve_threshold(
+    session: Any, settings: Settings, workspace_id: UUID
+) -> int:
+    """The workspace's cell-count threshold, read when a version is written (DP2)."""
+    resolution = await settings_svc.resolve(
+        session, settings, workspace_id, "rate_tables.cell_threshold"
+    )
+    return cast(int, resolution.effective_value)
+
+
+def _cells_to_parquet(
+    cells: Sequence[dict[str, str]], keys: Sequence[RateTableKey], value_name: str
+) -> bytes:
+    """Cells → parquet bytes (FR-RATE-62). Every column is UTF-8: keys and values are
+    level names and decimal strings, and a numeric inference would silently re-type
+    them — the strict round-trip FR-RATE-20's verdict is about."""
+    columns: dict[str, list[str]] = {
+        key.name: [row[key.name] for row in cells] for key in keys
+    }
+    columns[value_name] = [row[value_name] for row in cells]
+    frame = pl.DataFrame(columns, schema={name: pl.Utf8 for name in columns})
+    buffer = io.BytesIO()
+    frame.write_parquet(buffer)
+    return buffer.getvalue()
+
+
+def _cells_from_parquet(content: bytes) -> list[dict[str, str]]:
+    frame = pl.read_parquet(io.BytesIO(content))
+    return cast(list[dict[str, str]], frame.to_dicts())
+
+
+async def _load_cells_of(
+    session: Any,
+    version_row: RateTableVersionRow,
+    table: RateTable,
+    blob_store: BlobStore,
+) -> list[dict[str, str]]:
+    """The version's cells, wherever storage keeps them (FR-RATE-62)."""
+    if version_row.storage == "parquet":
+        ref = BlobRef.model_validate(version_row.cells)
+        return _cells_from_parquet(await blob_store.read(ref))
+    return await _load_cells(session, version_row.id, table)
+
+
+async def _to_version(
+    session: Any, version_row: RateTableVersionRow, blob_store: BlobStore
+) -> RateTableVersion:
+    """The version as a transformation input, cells materialised inline.
+
+    Parquet-stored versions are read from their blob here — a bounded table
+    transform, unlike the Job-worthy diff (W10-3D). The returned model always
+    presents `rows`: pricing-core's operations refuse blobs by design
+    (PARQUET_CELLS_UNAVAILABLE), and the persistence path re-decides storage
+    against the threshold (DP2), so the in-memory claim is never stored.
+    """
+    table = RateTable.model_validate(version_row.definition)
+    cells = await _load_cells_of(session, version_row, table, blob_store)
+    return RateTableVersion(
+        slug=table.slug,
+        version=table.version,
+        rateable=table.rateable,
+        storage=RateTableStorageMode.ROWS,
+        keys=table.keys,
+        value=table.value,
+        default_row=table.default_row,
+        rows=cells,
+        change_note=version_row.change_note,
+        seeded_from=(
+            SeededFrom.model_validate(version_row.seeded_from)
+            if version_row.seeded_from is not None
+            else None
+        ),
+    )
+
+
+def _guard_seed_lineage(
+    derived: RateTableVersion, baseline: RateTableVersionRow
+) -> None:
+    """Save-time equality proof (03 §4.2, FR-RATE-19, DP4): a derived version's seed
+    anchor must equal its resolved baseline's — never invented, dropped or swapped.
+
+    pricing-core builds the derived version from the same baseline, so through the
+    API this fires on internal construction corruption rather than request input;
+    the broken-input test states the invariant it protects.
+    """
+    derived_anchor = (
+        derived.seeded_from.model_dump(mode="json")
+        if derived.seeded_from is not None
+        else None
+    )
+    if derived_anchor != baseline.seeded_from:
+        raise PlatformError(
+            "RATE_TABLE_SEED_MISMATCH",
+            "Seed lineage mismatch",
+            422,
+            f"derived version {derived.slug}@{derived.version} carries seeded_from "
+            f"{derived_anchor!r} but its baseline @{baseline.version_number} carries "
+            f"{baseline.seeded_from!r}; a derived version may not invent or drop the "
+            "seed anchor (03 §4.2).",
+        )
+
+
+async def _persist_new_version(
+    session: Any,
+    *,
+    table_row: RateTableRow,
+    derived: RateTableVersion,
+    version_number: int,
+    created_by: UUID,
+    threshold: int,
+    blob_store: BlobStore,
+) -> RateTableVersion:
+    """Write the derived version, deciding its storage against the resolved threshold.
+
+    DP2: the threshold is read at version-creation time only; storage is decided here
+    from the cell count and frozen with the version (FR-RATE-62). At or below the
+    threshold the cells keep the `rate_table_cells` rows; above it they are written
+    to a content-addressed parquet blob addressed by `cells`. Returns the version in
+    its §4.2 wire form.
+    """
+    cells = cast(list[dict[str, str]], derived.rows)
+    storage_mode = decide_storage_mode(len(cells), threshold)
+    definition = RateTable(
+        slug=derived.slug,
+        version=version_number,
+        rateable=derived.rateable,
+        storage=storage_mode,
+        keys=derived.keys,
+        value=derived.value,
+        default_row=derived.default_row,
+    ).model_dump()
+    version_row = RateTableVersionRow(
+        workspace_id=table_row.workspace_id,
+        rate_table_id=table_row.id,
+        version_number=version_number,
+        storage=storage_mode,
+        definition=definition,
+        change_note=derived.change_note,
+        seeded_from=(
+            derived.seeded_from.model_dump(mode="json")
+            if derived.seeded_from is not None
+            else None
+        ),
+        created_by=created_by,
+        created_by_operation=(
+            derived.created_by_operation.model_dump(mode="json")
+            if derived.created_by_operation is not None
+            else None
+        ),
+        created_by_import=(
+            derived.created_by_import.model_dump(mode="json")
+            if derived.created_by_import is not None
+            else None
+        ),
+    )
+    session.add(version_row)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Rate table version already exists",
+            409,
+            f"{derived.slug}@{version_number} already exists in this workspace.",
+        ) from exc
+    table_row.current_version = version_number
+    blob_ref: BlobRef | None = None
+    if storage_mode == "rows":
+        session.add_all(
+            RateTableCellRow(version_id=version_row.id, key=key, value=value)
+            for key, value in _cells_for_rows(
+                cells, derived.keys, derived.value.name
+            )
+        )
+    else:
+        blob_ref = await blob_store.put(
+            session,
+            _cells_to_parquet(cells, derived.keys, derived.value.name),
+            "application/parquet",
+        )
+        version_row.cells = blob_ref.model_dump(mode="json")
+    await session.flush()
+    return RateTableVersion(
+        slug=derived.slug,
+        version=version_number,
+        rateable=derived.rateable,
+        storage=storage_mode,
+        keys=derived.keys,
+        value=derived.value,
+        default_row=derived.default_row,
+        rows=cells if storage_mode == "rows" else None,
+        cells=blob_ref,
+        change_note=derived.change_note,
+        seeded_from=derived.seeded_from,
+        created_by_operation=derived.created_by_operation,
+        created_by_import=derived.created_by_import,
+    )
+
+
+def _dispatch_operation(
+    kind: str, parameters: dict[str, Any], table: RateTableVersion
+) -> RateTableVersion:
+    """Parse the 04 §4.4 parameters (decimal strings, never floats) and run the op."""
+    match kind:
+        case "uplift_table":
+            params = UpliftTableParameters.model_validate(parameters)
+            return uplift_table(table, percentage=params.percentage)
+        case "uplift_by_filter":
+            params = UpliftByFilterParameters.model_validate(parameters)
+            return uplift_by_filter(
+                table, percentage=params.percentage, filter=params.filter
+            )
+        case "floor_and_cap":
+            params = FloorAndCapParameters.model_validate(parameters)
+            return floor_and_cap(table, floor=params.floor, cap=params.cap)
+        case "rebase_to_level":
+            params = RebaseToLevelParameters.model_validate(parameters)
+            return rebase_to_level(table, base_level=params.base_level)
+        case _:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Unknown bulk operation kind",
+                422,
+                f"kind={kind!r}: expected one of uplift_table, uplift_by_filter, "
+                "floor_and_cap, rebase_to_level (04 §4.4).",
+            )
+
+
+async def bulk_operation(
+    database: Database,
+    workspace_id: UUID,
+    created_by: UUID,
+    settings: Settings,
+    blob_store: BlobStore,
+    *,
+    slug: str,
+    version: int,
+    kind: str,
+    parameters: dict[str, Any],
+) -> RateTableVersion:
+    """Apply a bulk operation and persist the new version (FR-RATE-18, 03 §5.1).
+
+    The operation addresses a specific version (`{slug}@{version}`): the baseline is
+    loaded from the addressed version, its seed lineage is proven equal at save time
+    (FR-RATE-19, 03 §4.2, DP4), and the new version's storage is decided against the
+    workspace threshold (FR-RATE-62, DP2).
+    """
+    async with database.unit_of_work() as session:
+        table_row = await session.scalar(
+            select(RateTableRow).where(
+                RateTableRow.workspace_id == workspace_id,
+                RateTableRow.slug == slug,
+            )
+        )
+        if table_row is None:
+            raise PlatformError(
+                "RATE_TABLE_MISS", "Rate table not found", 404, f"{slug} not found."
+            )
+        baseline_row = await _load_version(session, table_row.id, version, slug)
+        baseline = await _to_version(session, baseline_row, blob_store)
+        try:
+            derived = _dispatch_operation(kind, parameters, baseline)
+        except ValidationError as exc:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Invalid bulk operation parameters",
+                422,
+                str(exc),
+            ) from exc
+        except ValueError as exc:
+            raise _map_operation_error(exc) from exc
+        _guard_seed_lineage(derived, baseline_row)
+        threshold = await _resolve_threshold(session, settings, workspace_id)
+        return await _persist_new_version(
+            session,
+            table_row=table_row,
+            derived=derived,
+            version_number=baseline_row.version_number + 1,
+            created_by=created_by,
+            threshold=threshold,
+            blob_store=blob_store,
+        )
