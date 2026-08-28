@@ -64,3 +64,33 @@ Rationale:
 wall-clock date. A date key would silently serve stale diffs if the executor keys on
 "today" rather than on the snapshot. With a dataset-version key, invalidation is exact:
 the diff recomputes precisely when the portfolio actually changes.
+
+## DP2 — parquet spill triggering
+
+**Options:** (a) retroactively move an existing version to parquet if the threshold is
+lowered (breaks immutability); (b) the threshold change applies to new versions only (old
+versions keep their original storage mode).
+
+**Ruled: (b) — the threshold change applies to new versions only. Confirmed.**
+
+Rationale:
+
+- **FR-RATE-62 already decides this.** The requirement's own text: "The threshold is a
+  stored property of the version, not a runtime decision: `storage` is `rows | parquet`
+  on `RateTableVersion` (§4.2), fixed when the version is written and immutable with it,
+  so a reader never has to ask which form a past version took and **a change of threshold
+  cannot silently re-home existing versions**." The ruling adopts the spec's stated design;
+  option (a) contradicts the requirement it would implement.
+- **A retroactive re-home breaks references.** Above the threshold the cells are addressed
+  by a content-addressed `BlobRef`; moving a version to parquet changes the address of its
+  cells, invalidating every pin, diff and comparison that points at the version as it was
+  recorded. The version's immutable record (`storage: rows`) would also lie about where
+  its data lives.
+- **"New versions only" is not a loss.** The threshold's purpose is to bound storage for
+  tables that grow; a version written under the old threshold was written under the rules
+  it was reviewed against, and its reader (the FR-RATE-17 diff / FR-RATE-62 Job path)
+  already handles both forms.
+
+**Implementation note (for W10-3 T3):** `decide_storage_mode()` reads the workspace's
+configured threshold at version-creation time only; the threshold is never consulted again
+for a written version, and lowering it must not rescan existing versions.
