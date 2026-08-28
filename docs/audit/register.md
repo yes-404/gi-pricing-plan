@@ -20,7 +20,7 @@ when the close resolves it, accepts it, or re-plans it with an owner.
 | FR-OVR-9 (F19) | pseudonymisation — ingestion enforces; PII-guard gap has a roadmap home | W6b | 1b | accept — enforcement exists; the PII-guard gap is recorded in the roadmap |
 | Cross-cutting OVR (F20) | FR-OVR-2/4/10/11/12/14/15/16/19 | W6b/W7 | 1b | accept — conventions, ADRs, audit checks |
 | Measured NFRs (F21) | NFR-DATA-1/2, NFR-MODEL-1..5, 10..13 | W4/W5/W7 | 1b | accept — measured, not asserted |
-| NFR-RATE-13/14 (F-W9-1) | validate-inbound-never-outbound; nthread=1 per model_call — design constraints whose measurement belongs to the scoring path | W9-3 | 2 | carry forward with an owner — the W10 scoring workstream; W8's measurements recorded (NFR-RATE-13 p99 0.070 ms, NFR-RATE-14 p99 1.626 ms) |
+| NFR-RATE-13/14 (F-W9-1) | validate-inbound-never-outbound; nthread=1 per model_call — design constraints whose measurement belongs to the scoring path | W9-3 | 2 | carry forward with an owner — the W11 scoring workstream; W8's measurements recorded (NFR-RATE-13 p99 0.070 ms, NFR-RATE-14 p99 1.626 ms) |
 
 A carried finding is written here by the work-item close checklist
 ([`checklists/work-item-close.md`](checklists/work-item-close.md)) and by the phase close
