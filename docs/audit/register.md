@@ -21,8 +21,10 @@ when the close resolves it, accepts it, or re-plans it with an owner.
 | Cross-cutting OVR (F20) | FR-OVR-2/4/10/11/12/14/15/16/19 | W6b/W7 | 1b | accept — conventions, ADRs, audit checks |
 | Measured NFRs (F21) | NFR-DATA-1/2, NFR-MODEL-1..5, 10..13 | W4/W5/W7 | 1b | accept — measured, not asserted |
 | NFR-RATE-13/14 (F-W9-1) | validate-inbound-never-outbound; nthread=1 per model_call — design constraints whose measurement belongs to the scoring path | W9-3 | 2 | carry forward with an owner — the W11 scoring workstream; W8's measurements recorded (NFR-RATE-13 p99 0.070 ms, NFR-RATE-14 p99 1.626 ms) |
-| FR-RATE-17/18/19/20 (F-W10-1) | Cell diffs, bulk operations, validation, CSV/XLSX import/export | W10-1 | 2 | carry forward with owners — W10-2 (diffs, validation: FR-RATE-17/19), W10-3 (bulk ops, import/export: FR-RATE-18/20) |
-| FR-RATE-16 (F-W10-1-1) | seeded_from lineage metadata: implemented in W10-1 but test marker not separate (tested within FR-RATE-15 immutability suite) | W10-1 | 2 | carry forward — marker can be added when seeding logic is implemented in W10-2 |
+| FR-RATE-17/18/19/20 (F-W10-1) | Cell diffs, bulk operations, validation, CSV/XLSX import/export | W10-1 | 2 | carry forward with owners — W10-2 (diffs, validation: FR-RATE-17/19), W10-3 (bulk ops, import/export: FR-RATE-18/20). *W10-2 half resolved 2026-08-28 (PR #302 — FR-RATE-17/19 delivered and tested; the remaining FR-RATE-17 wiring is F-W10-2).* |
+| FR-RATE-16 (F-W10-1-1) | seeded_from lineage metadata: implemented in W10-1 but test marker not separate (tested within FR-RATE-15 immutability suite) | W10-1 | 2 | *resolved 2026-08-28 (PR #302) — FR-RATE-16 markers added to the API tests; lineage delivered and tested.* |
+| FR-RATE-17 (F-W10-2) | exposure-weight wiring at the diff endpoint: pricing-core accepts caller weights (DP1) but the endpoint passes none; the portfolio-dataset join is scheduled in no slice | W10-2 | 2 | carry forward with an owner — portfolio-dataset integration (wiring lands with the join) |
+| DP3 diff cache (F-W10-2-1) | the DP3 ruling's Redis cache (keyed by version hash + portfolio identity) is unbuilt and its deferral was not declared in PR #302 — silent until the closure record | W10-2 | 2 | carry forward with an owner — W10-3 diff/portfolio work (the cache wrapper lands with the weights it caches) |
 
 A carried finding is written here by the work-item close checklist
 ([`checklists/work-item-close.md`](checklists/work-item-close.md)) and by the phase close
