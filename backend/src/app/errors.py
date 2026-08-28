@@ -291,9 +291,6 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",
-        # W10-2: a diff touching a parquet-stored version is refused until W10-3 ships
-        # parquet storage; declared rather than discovered (03 §5.1, FR-RATE-62).
-        "RATE_TABLE_PARQUET_UNBUILT",
         # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-RATE-19) and
         # the named refusals of the bulk-operation and import operations (03 §5.1).
         "RATE_TABLE_SEED_MISMATCH",

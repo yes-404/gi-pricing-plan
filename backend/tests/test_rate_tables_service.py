@@ -495,3 +495,119 @@ async def test_import_confirmed_obeys_the_threshold(
     version_row = await _version_row(database, workspace_id, slug, 2)
     assert version_row.storage == "parquet"
     assert version_row.cells is not None
+
+
+@pytest.mark.req("FR-RATE-62")
+async def test_diff_needs_job_flags_a_diff_touching_parquet(
+    database: Database, workspace_id, principal, blob_store: BlobStore
+) -> None:
+    """03 §5.1: the diff answers 202 with a Job where either version is `storage:
+    parquet`; a rows-only pair stays on the synchronous 200 path."""
+    family = f"mf-{uuid4().hex[:8]}"
+    slug = _table_slug()
+    await _seed(database, workspace_id, principal, family, slug, blob_store)
+    await _set_threshold(database, workspace_id, 2)
+    content = (
+        b"driver_age_band,relativity\n"
+        b"17-20,1.9200\n"
+        b"21-24,1.4500\n"
+        b"25-29,1.1200\n"
+    )
+    await svc.import_confirmed(
+        database,
+        workspace_id,
+        principal.id,
+        Settings(),
+        blob_store,
+        slug=slug,
+        version=1,
+        filename="import.csv",
+        content=content,
+    )
+    await _set_threshold(database, workspace_id, 1000)
+    await svc.import_confirmed(
+        database,
+        workspace_id,
+        principal.id,
+        Settings(),
+        blob_store,
+        slug=slug,
+        version=2,
+        filename="import-2.csv",
+        content=content,
+    )
+
+    # version 2 is parquet, version 3 is rows again.
+    assert (
+        await svc.diff_needs_job(
+            database, workspace_id, slug, version=2, against="previous"
+        )
+        is True
+    )
+    assert (
+        await svc.diff_needs_job(
+            database, workspace_id, slug, version=3, against="previous"
+        )
+        is True
+    )
+    assert (
+        await svc.diff_needs_job(
+            database, workspace_id, slug, version=3, against="seed"
+        )
+        is False
+    )
+
+
+@pytest.mark.req("FR-RATE-62")
+async def test_diff_materialises_parquet_cells_to_the_same_artifact(
+    database: Database, workspace_id, principal, blob_store: BlobStore
+) -> None:
+    """The Job's compute answers the same artifact as the row-backed 200 — storage
+    decides latency and status, never the maths (FR-RATE-62's 'same API')."""
+    family = f"mf-{uuid4().hex[:8]}"
+    content = (
+        b"driver_age_band,relativity\n"
+        b"17-20,1.9200\n"
+        b"21-24,1.4500\n"
+        b"25-29,1.1200\n"
+    )
+
+    rows_slug = _table_slug()
+    await _seed(database, workspace_id, principal, family, rows_slug, blob_store)
+    await svc.import_confirmed(
+        database,
+        workspace_id,
+        principal.id,
+        Settings(),
+        blob_store,
+        slug=rows_slug,
+        version=1,
+        filename="import.csv",
+        content=content,
+    )
+
+    parquet_ws = uuid4()
+    await _set_threshold(database, parquet_ws, 2)
+    parquet_slug = _table_slug()
+    await _seed(database, parquet_ws, principal, family, parquet_slug, blob_store)
+    await svc.import_confirmed(
+        database,
+        parquet_ws,
+        principal.id,
+        Settings(),
+        blob_store,
+        slug=parquet_slug,
+        version=1,
+        filename="import.csv",
+        content=content,
+    )
+
+    rows_diff = await svc.diff(
+        database, workspace_id, rows_slug, 2, "previous", blob_store=blob_store
+    )
+    parquet_diff = await svc.diff(
+        database, parquet_ws, parquet_slug, 2, "previous", blob_store=blob_store
+    )
+
+    assert parquet_diff == rows_diff
+    assert parquet_diff.changed_cells == 1

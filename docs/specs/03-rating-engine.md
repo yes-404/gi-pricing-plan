@@ -532,7 +532,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 `BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
 `LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`,
-`RATE_TABLE_PARQUET_UNBUILT` *(added 2026-08-28, W10-2)*, `RATE_TABLE_SEED_MISMATCH`
+`RATE_TABLE_SEED_MISMATCH`
 *(added 2026-08-28, W10-3C)*, `NO_RELATIVITIES`, `FILTER_UNKNOWN_KEY`,
 `FLOOR_ABOVE_CAP`, `REBASE_NO_MATCH`, `REBASE_AMBIGUOUS`, `REBASE_ZERO_REFERENCE`,
 `IMPORT_KEY_MISMATCH`, `IMPORT_TYPE_MISMATCH`, `IMPORT_PARSE_ERROR`
@@ -543,6 +543,18 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 > can yet be written as parquet — seeding always writes `rows` — so the branch is declared
 > rather than discovered, mirroring `01`'s `DERIVATION_NOT_MATERIALISED` precedent: a
 > fabricated diff or a worker-less JobKind would fail later and silently.
+
+> **Superseded 2026-08-28 (W10-3D): the 501 is retired and the 202-with-Job form is
+> live.** The diff Job runs on the compute queue (`JobKind.RATE_TABLE_DIFF`,
+> `07` FR-PLAT-15's model) and computes the same artifact the 200 path computes — the
+> same service call, a parquet-stored version materialised from its blob — then stores
+> it as a JSON blob and returns `result.ref` as the blob's sha256, fetchable from
+> `/blobs/{sha256}`: the codebase's first `JobResult(kind="blob")`. The refusal and its
+> code are removed; the blockquote above stands as the record of the interim. The Job
+> exists only where either version is `storage: parquet`; the 200 read path is unchanged
+> and now serves compute-on-read through the DP3 cache (rulings 2026-08-28) — keyed by
+> both versions' content hashes and the portfolio dataset version's identity, never a
+> date, and failing open to a plain compute when Redis is unreachable.
 
 > **Bulk-operation and import refusals (2026-08-28, W10-3C).** The bulk operations
 > (04 §4.4) and the import preview refuse with their own names: `RATE_TABLE_SEED_MISMATCH`
