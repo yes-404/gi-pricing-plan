@@ -163,3 +163,38 @@ filename: str` (03 §5.2) and the pricing-core preview records it on the verdict
 endpoint passes the upload's name as received (multipart/form-data, stored as text,
 bounded length, never used as a path). No change to the `ImportVerdict` shape —
 `filename: str` already exists.
+
+## DP6 — the import confirmation surface (`confirm` on `POST /import`)
+
+**Options:** (a) a `confirm: true` flag on the import request; (b) a preview id returned by
+the preview call and redeemed by a follow-up call; (c) (b) in disguise.
+
+**Ruled: (a) — the `confirm` flag on `POST /import`. Confirmed.**
+
+Rationale:
+
+- **(a) is the human gate on an immutable baseline** — the confirm re-parses the same
+  bytes, so preview and created version cannot diverge by construction.
+- **(b)'s preview id buys nothing but undefined server state.**
+- **(c) is (b) in disguise.**
+
+**Implementation note (W10-3C):** `POST /import` gains `confirm` (multipart/form-data):
+without it the request returns the diff and creates nothing; with `confirm: true` the
+upload is parsed again and, verdict strict, the version is created — confirmation cannot
+override the round-trip verdict.
+
+## DP7 — named refusal for a seed-anchor mismatch (`RATE_TABLE_SEED_MISMATCH`)
+
+**Ruled: approved — `RATE_TABLE_SEED_MISMATCH`. Confirmed.**
+
+Rationale:
+
+- **It matches the `RATE_TABLE_*` family and the platform's `*_MISMATCH` suffix form**
+  (`RATING_TYPE_MISMATCH`, `GOLDEN_QUOTE_MISMATCH`, `OBJECTIVE_REF_MISMATCH`,
+  `SCORING_FEATURES_MISMATCH`).
+- **It is direction-neutral** — the check forbids both inventing and dropping a seed
+  anchor.
+
+**Implementation note (W10-3C):** `RATE_TABLE_SEED_MISMATCH` joins 03 §5.1's owned-code
+list; the save-time seed-lineage guard (DP4) raises it when a derived version's
+`seeded_from` differs from the addressed baseline's.

@@ -508,7 +508,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | **200** Cell-level diff with exposure weights (FR-RATE-17); **202** with a Job where either version is `storage: parquet` (FR-RATE-62) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-RATE-20) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-RATE-20) |
-| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation (FR-RATE-20) |
+| `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-RATE-20) |
 | `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-RATE-25) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-RATE-40) |
@@ -532,7 +532,8 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 `BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
 `LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`,
-`RATE_TABLE_PARQUET_UNBUILT` *(added 2026-08-28, W10-2)*.
+`RATE_TABLE_PARQUET_UNBUILT` *(added 2026-08-28, W10-2)*, `RATE_TABLE_SEED_MISMATCH`
+*(added 2026-08-28, W10-3C)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version
@@ -551,6 +552,13 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 > *(`created_by_import.filename` ruled 2026-08-28, DP5.)* The import request carries the
 > uploaded file and its name (multipart/form-data); `created_by_import.filename` records
 > the upload's name as received.
+
+> *(`confirm` ruled 2026-08-28, W10-3C.)* The import request is multipart/form-data; without
+> `confirm` it returns the diff and creates nothing. With `confirm: true` the same upload is
+> parsed again and, verdict strict, the version is created — the diff is re-computed on the
+> same bytes against the same immutable baseline, so the created version cannot diverge from
+> the preview. Confirmation cannot override the round-trip verdict: a mismatch in keys, types
+> or completeness is the same named error on both calls.
 
 ### 5.2 `pricing-core` interfaces
 
