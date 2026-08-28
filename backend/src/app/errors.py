@@ -294,6 +294,18 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # W10-2: a diff touching a parquet-stored version is refused until W10-3 ships
         # parquet storage; declared rather than discovered (03 §5.1, FR-RATE-62).
         "RATE_TABLE_PARQUET_UNBUILT",
+        # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-RATE-19) and
+        # the named refusals of the bulk-operation and import operations (03 §5.1).
+        "RATE_TABLE_SEED_MISMATCH",
+        "NO_RELATIVITIES",
+        "FILTER_UNKNOWN_KEY",
+        "FLOOR_ABOVE_CAP",
+        "REBASE_NO_MATCH",
+        "REBASE_AMBIGUOUS",
+        "REBASE_ZERO_REFERENCE",
+        "IMPORT_KEY_MISMATCH",
+        "IMPORT_TYPE_MISMATCH",
+        "IMPORT_PARSE_ERROR",
     }
 )
 

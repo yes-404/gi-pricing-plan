@@ -199,6 +199,16 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         "(FR-PLAT-20).",
         constraints={"min": 1, "max": 3650},
     ),
+    SettingDefinition(
+        key="rate_tables.cell_threshold",
+        type=SettingType.INT,
+        default=250_000,
+        description="The cell count above which a rate table version's cells spill from "
+        "PostgreSQL rows to a content-addressed parquet blob (FR-RATE-62, 03 §4.2). "
+        "Decided at version-creation time only and immutable with the version — a "
+        "threshold change never re-homes existing versions (DP2 ruling 2026-08-28).",
+        constraints={"min": 1},
+    ),
     # -- feature flags (FR-PLAT-46) ---------------------------------------------------
     SettingDefinition(
         key="features.expression_objectives_enabled",

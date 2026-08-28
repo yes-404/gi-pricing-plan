@@ -1,20 +1,26 @@
-"""Rate table routes (03 §5.1, slice W10-2): seeding and cell diffs.
+"""Rate table routes (03 §5.1, slices W10-2/W10-3C): seeding, cell diffs, bulk
+operations, and the export/import preview.
 
-`POST /rate-tables/{slug}/seed-from-model` (FR-RATE-16) and
-`GET /rate-tables/{slug}@{version}/diff?against=` (FR-RATE-17). Models are inserted
-rather than fitted — these routes care that the model row carries an approved status and
-a fit result with relativities, not how the fit happened, and a real GLM fit per test
-would buy nothing this file asserts.
+`POST /rate-tables/{slug}/seed-from-model` (FR-RATE-16),
+`GET /rate-tables/{slug}@{version}/diff?against=` (FR-RATE-17),
+`POST /rate-tables/{slug}@{version}/bulk-operation` (FR-RATE-18), and the CSV/XLSX
+export and import preview (FR-RATE-20). Models are inserted rather than fitted —
+these routes care that the model row carries an approved status and a fit result with
+relativities, not how the fit happened, and a real GLM fit per test would buy nothing
+this file asserts.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import io
 from uuid import UUID, uuid4
 
 import pytest
 from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
+from openpyxl import load_workbook
 from sqlalchemy import select
 
 from app.config import Settings
@@ -39,6 +45,15 @@ def auditor_headers(workspace_id, grant) -> dict[str, str]:
     """A caller with `RATING_READ` but not `RATING_WRITE` (the `auditor` role)."""
     other = uuid4()
     asyncio.get_event_loop().run_until_complete(grant("auditor", principal_id=other))
+    return _headers(other, workspace_id)
+
+
+@pytest.fixture
+def admin_headers(workspace_id, grant) -> dict[str, str]:
+    """A caller with `ADMIN_MANAGE_SETTINGS` — the workspace threshold is a setting
+    (FR-RATE-62), so the parquet-path tests set it through the API like an operator."""
+    other = uuid4()
+    asyncio.get_event_loop().run_until_complete(grant("admin", principal_id=other))
     return _headers(other, workspace_id)
 
 
@@ -600,3 +615,444 @@ def test_routes_are_permission_gated(
         headers=auditor_headers,
     )
     assert read_only_diff.status_code == 200, read_only_diff.text
+
+    anon_operation = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "0.10"}),
+    )
+    assert anon_operation.status_code == 401, anon_operation.text
+
+    read_only_operation = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "0.10"}),
+        headers=auditor_headers,
+    )
+    assert read_only_operation.status_code == 403, read_only_operation.text
+
+    anon_export = api_client.get(f"/api/v1/rate-tables/{slug}@1/export/csv")
+    assert anon_export.status_code == 401, anon_export.text
+
+    read_only_export = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=auditor_headers,
+    )
+    assert read_only_export.status_code == 200, read_only_export.text
+
+    anon_import = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", b"driver_age_band,relativity\n17-20,1.92\n", "text/csv")},
+    )
+    assert anon_import.status_code == 401, anon_import.text
+
+    read_only_import = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", b"driver_age_band,relativity\n17-20,1.92\n", "text/csv")},
+        headers=auditor_headers,
+    )
+    assert read_only_import.status_code == 403, read_only_import.text
+
+
+def _bulk_body(kind: str, parameters: dict[str, object]) -> dict[str, object]:
+    return {"kind": kind, "parameters": parameters}
+
+
+@pytest.mark.req("FR-RATE-18")
+def test_bulk_operation_creates_a_new_version_with_the_operation_record(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "0.10"}),
+        headers=actuary,
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["version"] == 2
+    assert body["storage"] == "rows"
+    assert [row["relativity"] for row in body["rows"]] == ["2.112", "1.551", "1.232"]
+    operation = body["created_by_operation"]
+    assert operation["kind"] == "uplift_table"
+    assert operation["parameters"] == {"percentage": "0.10"}
+    assert operation["applied_to"] == f"rate_table:{slug}@1"
+    assert operation["result"] == {
+        "changed_cells": 3,
+        "new_version": f"rate_table:{slug}@2",
+    }
+    assert body["created_by_import"] is None
+    assert body["seeded_from"]["model_ref"] == f"model:{family}@1"
+
+
+@pytest.mark.req("FR-RATE-18")
+def test_bulk_operation_refuses_an_unknown_kind(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("lift_everything", {}),
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-RATE-18")
+def test_bulk_operation_refuses_floor_above_cap(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("floor_and_cap", {"floor": "2.0", "cap": "1.0"}),
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "FLOOR_ABOVE_CAP"
+
+
+@pytest.mark.req("FR-RATE-18")
+def test_bulk_operation_on_a_missing_version_is_refused(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug = _table_slug()
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "0.10"}),
+        headers=actuary,
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "RATE_TABLE_MISS"
+
+
+def _set_threshold(
+    api_client: TestClient, admin_headers: dict[str, str], value: int
+) -> None:
+    """The workspace cell-count threshold through the settings API (FR-RATE-62)."""
+    response = api_client.put(
+        "/api/v1/settings",
+        json={"values": {"rate_tables.cell_threshold": value}},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200, response.text
+
+
+def _seeded_table(
+    api_client: TestClient, workspace_id, actuary
+) -> tuple[str, str]:
+    """Seed a table and return (slug, family) — the W10-3C test shorthand."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+    return slug, family
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_export_csv_returns_the_seeded_cells(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/csv")
+    assert response.content == (
+        b"driver_age_band,relativity\n"
+        b"17-20,1.92\n"
+        b"21-24,1.41\n"
+        b"25-29,1.12\n"
+    )
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_export_xlsx_parses_to_the_seeded_cells(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/xlsx",
+        headers=actuary,
+    )
+
+    assert response.status_code == 200, response.text
+    workbook = load_workbook(io.BytesIO(response.content), read_only=True)
+    sheet = workbook.active
+    assert [row for row in sheet.iter_rows(values_only=True)] == [
+        ("driver_age_band", "relativity"),
+        ("17-20", "1.92"),
+        ("21-24", "1.41"),
+        ("25-29", "1.12"),
+    ]
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_previews_a_modified_export(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+    modified = exported.content.replace(b"21-24,1.41", b"21-24,1.4500")
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", modified, "text/csv")},
+        headers=actuary,
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["diff"]["changed_cells"] == 1
+    verdict = body["created_by_import"]
+    assert verdict["filename"] == "import.csv"
+    assert verdict["content_sha256"] == hashlib.sha256(modified).hexdigest()
+    assert verdict["round_trip"] == "passed"
+    assert verdict["applied_to"] == f"rate_table:{slug}@1"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_preview_creates_nothing(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP6: without `confirm` the request is a strict preview — no version is made."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", exported.content, "text/csv")},
+        headers=actuary,
+    )
+    assert response.status_code == 200, response.text
+
+    missing = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff",
+        params={"against": "previous"},
+        headers=actuary,
+    )
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "RATE_TABLE_MISS"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_confirm_creates_the_version(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP6: `confirm: true` re-parses the same upload and creates the version."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+    modified = exported.content.replace(b"21-24,1.41", b"21-24,1.4500")
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", modified, "text/csv")},
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["version"] == 2
+    assert body["created_by_operation"] is None
+    verdict = body["created_by_import"]
+    assert verdict is not None
+    assert verdict["filename"] == "import.csv"
+    assert verdict["content_sha256"] == hashlib.sha256(modified).hexdigest()
+    assert verdict["round_trip"] == "passed"
+    assert verdict["applied_to"] == f"rate_table:{slug}@1"
+
+    exported_v2 = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/export/csv",
+        headers=actuary,
+    )
+    assert exported_v2.status_code == 200, exported_v2.text
+    assert b"21-24,1.4500" in exported_v2.content
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_confirm_cannot_override_the_verdict(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP6: confirmation reruns the strict round-trip — a verdict violation on the
+    preview stays a refusal on the confirm, and nothing is created."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", b"vehicle_age_band,relativity\n17-20,1.92\n", "text/csv")},
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "IMPORT_KEY_MISMATCH"
+    missing = api_client.get(
+        f"/api/v1/rate-tables/{slug}@2/diff",
+        params={"against": "previous"},
+        headers=actuary,
+    )
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "RATE_TABLE_MISS"
+
+
+@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-RATE-20")
+def test_import_confirm_on_a_parquet_baseline_spills(
+    api_client: TestClient, workspace_id, actuary, admin_headers
+) -> None:
+    """DP2: the confirmed version obeys the workspace threshold like any other."""
+    _set_threshold(api_client, admin_headers, 2)
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", exported.content, "text/csv")},
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["storage"] == "parquet"
+    assert response.json()["rows"] is None
+    assert response.json()["cells"]["media_type"] == "application/parquet"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_refuses_an_oversized_filename(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """DP5: the verdict's filename is bounded — it is a record, never a path."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": (f"{'a' * 256}.csv", exported.content, "text/csv")},
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-RATE-20")
+def test_import_refuses_a_wrong_header(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", b"vehicle_age_band,relativity\n17-20,1.92\n", "text/csv")},
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "IMPORT_KEY_MISMATCH"
+
+
+@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-RATE-20")
+def test_export_reads_a_parquet_version_inline(
+    api_client: TestClient, workspace_id, actuary, admin_headers
+) -> None:
+    """Above the threshold the version lives as a parquet blob; export materialises
+    the cells from it — the Job-worthy read is the diff (W10-3D), not an export."""
+    _set_threshold(api_client, admin_headers, 2)
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.content == (
+        b"driver_age_band,relativity\n"
+        b"17-20,1.92\n"
+        b"21-24,1.41\n"
+        b"25-29,1.12\n"
+    )
+
+
+@pytest.mark.req("FR-RATE-62")
+@pytest.mark.req("FR-RATE-20")
+def test_import_diffs_against_a_parquet_baseline(
+    api_client: TestClient, workspace_id, actuary, admin_headers
+) -> None:
+    _set_threshold(api_client, admin_headers, 2)
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/export/csv",
+        headers=actuary,
+    )
+    assert exported.status_code == 200, exported.text
+    modified = exported.content.replace(b"21-24,1.41", b"21-24,1.4500")
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files={"file": ("import.csv", modified, "text/csv")},
+        headers=actuary,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["diff"]["changed_cells"] == 1
