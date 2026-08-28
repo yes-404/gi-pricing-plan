@@ -540,15 +540,17 @@ class TestImportContract:
     """The import preview (03 §5.2): a diff for the would-be version + round-trip verdict."""
 
     def test_import_verdict_parses(self):
-        """The verdict carries the filename, the content hash, and round_trip passed."""
+        """The verdict carries the filename, the content hash, round_trip and baseline."""
         verdict = ImportVerdict(
             filename="motor-relativity.csv",
             content_sha256="a" * 64,
             round_trip="passed",
+            applied_to="rate_table:motor-driver-age-relativity@6",
         )
         assert verdict.filename == "motor-relativity.csv"
         assert verdict.content_sha256 == "a" * 64
         assert verdict.round_trip == "passed"
+        assert str(verdict.applied_to) == "rate_table:motor-driver-age-relativity@6"
 
     def test_import_verdict_rejects_non_sha256_hex(self):
         """content_sha256 must be 64 lowercase hex digits."""
@@ -556,6 +558,16 @@ class TestImportContract:
             ImportVerdict(
                 filename="x.csv",
                 content_sha256="not-a-sha256",
+                round_trip="passed",
+                applied_to="rate_table:motor-driver-age-relativity@6",
+            )
+
+    def test_import_verdict_requires_applied_to(self):
+        """The addressed baseline is required: the inheritance check (03 §4.2) reads it."""
+        with pytest.raises(ValidationError):
+            ImportVerdict(
+                filename="motor-relativity.csv",
+                content_sha256="a" * 64,
                 round_trip="passed",
             )
 
@@ -571,6 +583,7 @@ class TestImportContract:
                 filename="motor-relativity.csv",
                 content_sha256="a" * 64,
                 round_trip="passed",
+                applied_to="rate_table:motor-driver-age-relativity@6",
             ),
         )
         assert preview.diff.changed_cells == 3

@@ -792,7 +792,10 @@ class ImportVerdict(BaseModel):
     """The source identity of a version created by import (03 §4.2, 03 §5.2).
 
     `round_trip` is the strict verdict: the file parsed back to exactly the cells it was
-    exported from, so an import can never silently drop or re-type a cell.
+    exported from, so an import can never silently drop or re-type a cell. `applied_to`
+    names the addressed baseline version (the import endpoint addresses `{slug}@{version}`),
+    so the seed-lineage inheritance check (03 §4.2) is expressible at save time and
+    auditable after.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -800,6 +803,7 @@ class ImportVerdict(BaseModel):
     filename: str
     content_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     round_trip: Literal["passed"]
+    applied_to: ArtifactRef
 
 
 class ImportPreview(BaseModel):
