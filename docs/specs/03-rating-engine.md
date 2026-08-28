@@ -515,7 +515,14 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 `RATE_TABLE_KEY_DUPLICATE`, `CONTROL_FACTOR_IN_RATEABLE_PATH`, `PIN_NOT_APPROVED`,
 `BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
-`LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`.
+`LADDER_RECONCILIATION_FAILED`, `MODEL_REFERENCE_MODE_INCONSISTENT`,
+`RATE_TABLE_PARQUET_UNBUILT` *(added 2026-08-28, W10-2)*.
+
+> **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
+> version is refused with **501** until W10-3 delivers the 202-with-Job form. No version
+> can yet be written as parquet — seeding always writes `rows` — so the branch is declared
+> rather than discovered, mirroring `01`'s `DERIVATION_NOT_MATERIALISED` precedent: a
+> fabricated diff or a worker-less JobKind would fail later and silently.
 
 > *(Ruled 2026-08-28, decision-maker — bulk-operation, import and export address a
 > specific version, `{slug}@{version}`.)* The W10 plan's T4 drafted `/versions/{version}/`

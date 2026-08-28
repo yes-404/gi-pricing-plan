@@ -286,6 +286,14 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # Bundle compilation (W9-3).
         "RATING_VERSION_UNPINNED",
         "BUNDLE_COMPILE_FAILED",
+        # Rate tables (W10-2), enumerated in 03 §5.1.
+        "RATE_TABLE_MISS",
+        "RATE_TABLE_INCOMPLETE",
+        "RATE_TABLE_KEY_DUPLICATE",
+        "PIN_NOT_APPROVED",
+        # W10-2: a diff touching a parquet-stored version is refused until W10-3 ships
+        # parquet storage; declared rather than discovered (03 §5.1, FR-RATE-62).
+        "RATE_TABLE_PARQUET_UNBUILT",
     }
 )
 
