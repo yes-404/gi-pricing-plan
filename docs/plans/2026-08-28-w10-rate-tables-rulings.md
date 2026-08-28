@@ -130,3 +130,36 @@ the addressed baseline version (the import endpoint addresses `{slug}@{version}`
 FR-RATE-19's save-time validation resolves the baseline from `BulkOperation.applied_to` /
 `created_by_import.applied_to` and rejects a derived version whose `seeded_from` differs
 from the baseline's.
+
+## DP5 — the import record's filename (`created_by_import.filename`)
+
+**Options:** (a) the import endpoint carries the real uploaded filename, and
+`created_by_import.filename` records the name as received; (b) keep the format-derived
+constant — the record names the import's kind, not the file.
+
+**Ruled: (a) — the import endpoint carries the real uploaded filename. Confirmed.**
+
+Rationale:
+
+- **A placeholder bakes into an immutable record.** The spec already promises
+  `created_by_import.filename` = "the source file's identity" (03 §4.2); a format-derived
+  constant identifies nothing and bakes a placeholder into every immutable import
+  version's audit record.
+- **The hash and the name answer different audit questions.** The hash answers "which
+  content"; the name answers "which file" — and the name is the only link between the
+  offline artifact and the online record in FR-RATE-20's export→edit→import workflow.
+- **The name is orthogonal to the content-based round-trip.** The strict verdict checks
+  keys, types and completeness against the content; the recorded name neither strengthens
+  nor weakens it, so passing the real name costs the round-trip nothing.
+- **A derived name reads as fabrication.** A constant presented as the file's identity
+  reads as if that were the name the actuary uploaded; the audit record then vouches for
+  a name nobody supplied.
+- **Precedent.** The `import_from_csv`/`import_from_xlsx` signature correction
+  (2026-08-28) ruled the same way: the record must name what the actuary actually did —
+  the addressed version there, the uploaded file here.
+
+**Implementation note (W10-3C):** `import_from_csv`/`import_from_xlsx` gain `*,
+filename: str` (03 §5.2) and the pricing-core preview records it on the verdict; the
+endpoint passes the upload's name as received (multipart/form-data, stored as text,
+bounded length, never used as a path). No change to the `ImportVerdict` shape —
+`filename: str` already exists.

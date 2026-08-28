@@ -321,10 +321,12 @@ Values are stored as decimal strings, never JSON floats (R2).
 > and the strict round-trip verdict (`created_by_import`: `{"filename", "content_sha256",
 > "round_trip": "passed", "applied_to"}`; `applied_to` added 2026-08-28, naming the
 > addressed baseline version — the import endpoint addresses `{slug}@{version}`, so the
-> record mirrors `BulkOperation.applied_to`), per FR-RATE-20. Both are set at creation
-> and immutable with the version; the before/after cells and the actor belong to
-> NFR-RATE-10's Audit Event, not here. This example's version was edited by hand, so both
-> are `null`.
+> record mirrors `BulkOperation.applied_to`); `filename` (amended 2026-08-28, DP5) is the
+> name of the actually-uploaded file as the endpoint received it (stored as text, bounded
+> length, never used as a path), not a format-derived constant — per FR-RATE-20. Both are
+> set at creation and immutable with the version; the before/after cells and the actor
+> belong to NFR-RATE-10's Audit Event, not here. This example's version was edited by
+> hand, so both are `null`.
 
 > **Seed lineage survives every derivation.** `seeded_from` is set only by
 > seed-from-model, on the first version of a lineage; every derived version — manual
@@ -546,6 +548,10 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 > meaning drift from the cells it actually changed. Export gained its rows here:
 > FR-RATE-20 requires export, and §5.1 previously had only the import row.
 
+> *(`created_by_import.filename` ruled 2026-08-28, DP5.)* The import request carries the
+> uploaded file and its name (multipart/form-data); `created_by_import.filename` records
+> the upload's name as received.
+
 ### 5.2 `pricing-core` interfaces
 
 ```python
@@ -586,8 +592,8 @@ def rebase_to_level(table: RateTableVersion, *, base_level: KeyFilter) -> RateTa
 def decide_storage_mode(cell_count: int, threshold: int = 250_000) -> Literal["rows", "parquet"]
 def export_to_csv(table: RateTableVersion) -> bytes
 def export_to_xlsx(table: RateTableVersion) -> bytes
-def import_from_csv(version: RateTableVersion, content: bytes) -> ImportPreview
-def import_from_xlsx(version: RateTableVersion, content: bytes) -> ImportPreview
+def import_from_csv(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
+def import_from_xlsx(version: RateTableVersion, content: bytes, *, filename: str) -> ImportPreview
 ```
 
 `ImportPreview` is the FR-RATE-17 cell diff of the would-be version **against the
@@ -599,7 +605,8 @@ matches FR-RATE-18's "key filter"; `rebase_to_level`'s `base_level` names the re
 level (single-key tables: the key value; multi-key: the combination) whose value becomes
 1.0. Each operation validates the result before persisting (FR-RATE-19) and returns a
 new immutable version whose `created_by_operation` carries the `BulkOperation` record
-(`04` §4.4).
+(`04` §4.4). The verdict's `filename` is the upload's name as passed, recorded on the
+created version's `created_by_import.filename`.
 
 > *(`import_from_csv`/`import_from_xlsx` corrected 2026-08-28 — the W10-3 readiness
 > amendment named a bare `RateTable`; the decision-maker ruled the signature wrong.)* The
