@@ -9,6 +9,7 @@ strings everywhere — never JSON floats, and never float through the file (R2).
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
@@ -393,6 +394,22 @@ class TestImport:
         content = export_to_csv(_version())
         with pytest.raises(ValueError, match="PARQUET_CELLS_UNAVAILABLE"):
             import_from_csv(_version(storage=RateTableStorageMode.PARQUET), content)
+
+    @pytest.mark.req("FR-RATE-20")
+    def test_modified_file_diffs_against_the_addressed_version(self) -> None:
+        """Ruling (b) evidenced positively: the diff counts what actually moved."""
+        content = (
+            b"driver_age_band,relativity\n"
+            b"17-20,1.8400\n"
+            b"21-24,1.4500\n"
+            b"25-29,1.1200\n"
+        )
+        preview = import_from_csv(_version(), content)
+        assert preview.diff.changed_cells == 1
+        assert (
+            preview.created_by_import.content_sha256
+            == hashlib.sha256(content).hexdigest()
+        )
 
 
 class TestSeedLineage:
