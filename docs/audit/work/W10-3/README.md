@@ -83,6 +83,15 @@ frontend success, python in flight at filing time (lead verifies terminal state)
 | F-W10-3 | 03 §5.1 `POST /api/v1/rate-tables/{slug}/versions` ("New Rate Table Version with change note", declared Phase 0) has no route; version creation happens via the three create paths (seed-from-model creates the table or appends, bulk-operation, import-confirm), each change-note-required | deferred with an owner — the W15 rate-table editor slice (the manual editing entry point); the plan's W10-1 T3 create/GET/list endpoint tasks were plan-only, never spec-declared, and fold into this row | carried (register row filed) |
 | NO_RELATIVITIES (3C nuance) | its first platform use was W10-2's seed path, where it was absent from errors.py — a latent 500; 3C declares it with the other nine owned codes | accepted — the spec's "all ten declared before first use" is strictly true for nine, and this PR closed the gap | closed |
 
+**3A record note — the job_kind migration landed with 3D.** 3A declared
+`JobKind.RATE_TABLE_DIFF` in model-schema, but the database enum was never registered
+for it — a 3A-side gap invisible until a Job of that kind was actually submitted. The
+3D 202 test caught it (the migration-catcher: submitting the diff Job would have failed
+the enum cast), and the migration `d5e6f7a8b9c0` (`ALTER TYPE job_kind ADD VALUE IF NOT
+EXISTS 'rate_table.diff' AFTER 'metric.certify'`, downgrade documented as impossible —
+enum values cannot be dropped) shipped with 3D, revising `c9c2e5f8b1d4`. Noted here so
+the 3A record reads complete without a separate file.
+
 **Spec record notes (non-blockers):** 03 §4.2's example version carries
 `diff_vs_previous` / `diff_vs_seed` keys — these are the diff endpoint's read model
 (`RateTableDiff`), not stored fields on the version; candidate annotation cleanup.
