@@ -140,7 +140,19 @@ project to stop.
 
 Sequential processing of a layer's **children** (Project→Phase→Work→Slice: no two Slices
 run at once, at any layer) — the same bound on context/resource usage per session
-NT-0010 §7 intended. **With a carve-out** (rulings record Part B1): unrestricted
+the **reproduced design proposal's** §7 intended, at
+`.claude/notes/0010-layered-slice-based-workflow.md:322-327` ("this bounds context/resource
+usage per session ... revisit only if resource budget materially changes"). That is the
+proposal reproduced *inside* the note, **not** NT-0010's own §7, which is a different
+subject; the bare "NT-0010 §7" resolved only for a reader who already knew which numbering
+was meant (Ruling 33, `docs/plans/2026-08-29-w11-slice-parallelism-ruling.md`).
+
+**The interest §8 protects is resource contention, not plan stability.** Two children can be
+perfectly plan-independent and running them concurrently still breaches this rule, so an
+exception argued on plan-independence argues past it (Ruling 33 refused exactly that
+argument). Where a child carries an NFR *measurement*, the rule is also a correctness
+control: a measurement taken while another child's suite or load test runs is a contended
+one, and it fails in the direction that gets booked as a pass. **With a carve-out** (rulings record Part B1): unrestricted
 read-only fan-out for **evidence gathering** within a layer is not forbidden by this rule
 — `dispatching-parallel-agents` (`.claude/skills/README.md`) is an installed, named
 precedent skill for exactly this shape ("2+ independent tasks... without shared state or
