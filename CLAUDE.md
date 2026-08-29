@@ -3,13 +3,12 @@
 **Binding rules live here; the procedures and reasoning that satisfy them live in
 `.claude/skills/`, which this file points at rather than restates.** Read it fully.
 
-## 0. CURRENT PROJECT PHASE: 1b — MODELLING WORKBENCH (read this before anything else)
+## 0. Current Project Phase — *the phase is `docs/roadmap.md` §6's to state (read this before anything else)*
 
-**Phase 1b is active, and writing application code is the expected default** for work
-inside its scope (§9). **Which workstreams are open is `docs/roadmap.md` §6's to state, not
-this file's**, as are the phase closure dates. The `docs/` suite is the contract Phase 1
-builds against: **read the relevant spec before writing the code that implements it** —
-guessing is never the faster path.
+**Which phase is current, which workstreams are open, and the phase closure dates are
+`docs/roadmap.md` §6's to state, not this file's.** The `docs/` suite is the contract every
+phase builds against: **read the relevant spec before writing the code that implements
+it** — guessing is never the faster path.
 
 | Request | Deliverable |
 |---|---|
@@ -197,8 +196,8 @@ pnpm --dir frontend test && pnpm --dir frontend build
 ## 12. Skills
 
 Project procedures live in `.claude/skills/`, versioned with the repo. **Its `README.md` is
-the index**, `.claude/agents/README.md` the same for the delegable specialists. **This
-section keeps no second list**
+the index**, `.claude/agents/README.md` the same for the delegable specialists,
+`.claude/roles/` for the team roles. **This section keeps no second list**
 ([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md)).
 
 - **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
@@ -213,16 +212,28 @@ section keeps no second list**
 - Monthly, or on "skill audit": re-run the gap analysis, propose additions and removals.
 - Never modify `~/.claude/skills/` (personal/global) as part of project work.
 
-**Team process.** How this repository's Claude Code team does the work — the Project →
-Phase → Work → Slice layering, roles, escalation guards, and the monitoring loop — is
-`docs/process/delivery-process.md` and its companion `docs/process/agent-settings.md`.
-Distinct from `docs/workflows/wf-01…05`, the cross-module *domain* journeys (§4) — one
-describes how the team works, the other what the platform does.
+**Evidence is delegated; authority is bounded by charter.** A subagent runs in its own
+context and returns a conclusion — what §10 asks for — and **skills outrank agents on
+procedure**. Two kinds of agent are governed differently:
+- A **delegable specialist** (`.claude/agents/`) gathers or verifies and **decides
+  nothing**. That directory's README is its dividing line.
+- A **role** (`.claude/roles/`) **decides what its own charter names and nothing else**,
+  and **writes the artifacts its charter names, including under `docs/`**. A spec change
+  still follows `.claude/skills/spec-change`; a requirement id is still permanent (§5).
+  **A question in no charter is the lead's.**
 
-**Evidence is delegated, verdicts are not.** A subagent runs in its own context and returns
-a conclusion — what §10 asks for — but **skills outrank agents on procedure** and the
-**verdict stays in the main thread**: §13's four verdicts, §14's proposals, §0's decision
-about which of spec and code was wrong, slice design, every edit to `docs/`.
+Four things are never a role's:
+- **§13's four verdicts** and the **merge** — the lead's. An auditor *proposes*; the lead
+  adopts, amends or rejects before the record is filed.
+- **Acceptance of a Work, Phase or Project close** — the maintainer's. A Slice closes on a
+  clean audit and the lead's merge.
+- **A §14 plan review's acceptance line** — the maintainer's. The review itself is the
+  planner's to write, and binds nothing until dated.
+- **An amendment to what this file requires** — the maintainer's. Editing this file to
+  *point at* something already ruled is not an amendment.
+
+**Every decision lands as a dated artifact** — a ruling record, an audit record, a plan —
+never in chat.
 
 **Precedence — superpowers first.** When a superpowers skill and any other both apply,
 follow the superpowers one. Read `using-superpowers` when a task starts;
@@ -256,6 +267,8 @@ bind wherever anything here is audited, not only at a close:
   wrong: read to the part of the cited artifact that carries the claim — a requirement's
   clauses including its dated amendments, a test's asserts, a function's body.
   ([`NT-0006`](.claude/notes/0006-two-rules-for-reading-an-artifact.md))
+- **A Work, Phase or Project close is accepted by the maintainer, with a dated line. A Slice
+  is not: it closes on a clean audit and the lead's merge.**
 
 ## 14. Phase Review Standard — *the standard is `.claude/skills/phase-review`*
 
@@ -274,3 +287,13 @@ work is real. The plan is a working hypothesis, re-tested while the phase is sti
   resolution.** A finding has a resolution when the close fixes it, carries it forward with
   a named owner, or accepts it. The phase closure record lists every open finding with its
   resolution.
+
+## 15. Team Process — *the process is `docs/process/delivery-process.md`; the roles are `.claude/roles/`*
+
+**A team member is spawned from its role file in `.claude/roles/`, never from an inline
+brief** — the file is the charter; a brief dies with its session. **A role file that
+proves insufficient is a finding against the file**: fix the file, do not paste a brief
+back in.
+
+Distinct from `docs/workflows/wf-01…05`, the domain journeys (§4): one is how the team
+works, the other what the platform does.

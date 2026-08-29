@@ -13,7 +13,5 @@
   a handover file that does not persist.
 - **Spawn:** only when a new decision point or spec conflict appears; stopped when duties
   complete.
-- **Tools:** Read; write to ruling records and the open-questions log only. **docs/-write
-  scope beyond ruling records and open-questions.md: pending Part A2** — until ruled, a
-  decision-maker session does not edit `docs/specs/` or other `docs/` content directly;
-  route such a finding to the planner or the lead.
+- **Tools:** Read; write to ruling records, the open-questions log, and `docs/specs/` for the
+  spec changes its charter already owns — never a frozen plan, per `CLAUDE.md` §12.

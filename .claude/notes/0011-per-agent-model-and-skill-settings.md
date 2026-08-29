@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-29, maintainer — supplied `agents-settings-proposal.md` as the companion to the workflow proposal, with the instruction to convert it into a working note |
-| **Status** | `open` — assessed here, not agreed. It cannot be adopted ahead of its parent, and it carries one internal contradiction and one wrong assumption |
+| **Status** | `landed` 2026-08-29 — ruled alongside its parent in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`; the landing locations are recorded in `.claude/notes/README.md`'s index row |
 | **Deliverable** | Role definitions under `.claude/agents/` and an agent-settings document. **No change to `docs/specs/` and no product code** |
 | **Owner** | Maintainer accepts and rules the open items · Claude drafts the role files and the settings document |
 | **Lands in** | Proposed by the author: `docs/process/agents.md`; also `.claude/agents/` (seven new role files) and `.claude/agents/README.md` (its dividing line, which the decision-maker role contradicts) |

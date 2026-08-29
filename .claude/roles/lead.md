@@ -14,5 +14,6 @@
   outside your own worktree; check `pwd` and `git branch --show-current` before every git
   write; read-only git is safe anywhere (two real W10 incidents discarded uncommitted work
   this rule exists to prevent).
-- **Tools:** full read; git merge authority; write to handover/status files only.
-  **docs/-write scope beyond handover/status: pending Part A2.**
+- **Tools:** full read; git merge authority; write to handover/status files, plus any
+  `docs/` content no other role's charter names — `CLAUDE.md` §12: "a question in no
+  charter is the lead's."
