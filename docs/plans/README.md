@@ -129,7 +129,12 @@ has no context to check it against.
    that ruling exists to delete. The two were mutually inconsistent and each looked fine in
    isolation. **Grep the ruling's own subject across the whole document; never re-read the
    section you just edited**, which agrees with itself by construction — rule 3, one level
-   up. **The first pass at this rule was itself an instance of it**: written from the six
+   up. **And enumerate the rulings by diffing the record, not by listing its headings.** A
+   sweep that walked `## Ruling N` headings missed a fourth obligation filed as an addendum
+   under a prose heading — an addendum to an existing ruling never gets a new numbered
+   heading, which makes heading-based enumeration blind to precisely the changes that arrive
+   late. `git diff` between the revision you last read and current cannot miss a section
+   whose heading you failed to predict. **The first pass at this rule was itself an instance of it**: written from the six
    sites in hand, it named Files and Steps and not Acceptance, and a second sweep then found
    that *no* ruling-derived check had reached any of that plan's five Acceptance blocks —
    an auditor would have passed a build violating two rulings outright. Generalise from the

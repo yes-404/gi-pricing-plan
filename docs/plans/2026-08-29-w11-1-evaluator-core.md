@@ -136,8 +136,8 @@ Every task's requirements implicitly include this section.
   test fails when a deliberate DB call is inserted.
 - **A negative test for every invariant introduced**, marked `@pytest.mark.req("<id>")`.
 - **Spec-vs-code disagreement is a finding, stopped and resolved, never silently matched**
-  ([`../../CLAUDE.md`](../../CLAUDE.md) §0). Three are already open below; a fourth is
-  raised, not fixed in passing.
+  ([`../../CLAUDE.md`](../../CLAUDE.md) §0). Several are raised below, each with its owner;
+  none is fixed in passing, and every one has since been ruled by the charter that owned it.
 - **Worktree hygiene:** your own worktree, never `git checkout`/`git switch` outside it,
   `pwd` + `git branch --show-current` before every git write.
 - **The gate, both halves, run locally before every push:**
@@ -372,11 +372,14 @@ OQ-RATE-4 — the contract was never disagreed with, it was never revisited.
 **Ruled (b): Task 1.4 fixes it, not the ruling's own commit** — `model-schema` defines no
 `purpose` enum at all, so correcting the contract now would fix the only *existing* copy
 while the *authoritative* one is still unwritten, opening a second window for the two to
-diverge. **Three obligations bind Task 1.4, all in one PR:** the five-member enum defined
-once in `model-schema`; `scoring.schema.json:12` corrected to match in the same commit; and
-FR-RATE-63's refusal test covering **both** members.
+diverge. **The obligations bind Task 1.4, all in one PR** — the five-member enum defined once
+in `model-schema`; `scoring.schema.json:12` corrected to match in the same commit;
+FR-RATE-63's refusal test covering **both** members; and, added by the addendum in PR #373,
+the new shapes into `GENERATED_SHAPES` with `"scoring"` lifted from `test_contracts.py`'s
+exclusion dict. Enumerated, not totalled: the earlier wording said "three" and a fourth
+arrived hours later.
 
-**The third obligation is a correction to this plan, not only to the contract.** Task 1.4
+**The refusal-test obligation is a correction to this plan, not only to the contract.** Task 1.4
 Step 9 as first written tested `purpose: "mid_term_adjustment"` alone — inherited from the
 frozen map's own exit criterion (`2026-08-29-w11-scoring.md:401-404`). That is precisely the
 half the stale contract *can* express, so the test as written **would have gone green with
@@ -487,7 +490,7 @@ the row's first sentence only would ship the rung and miss it.
 **Owner: Task 1.4.** Both halves are exit criteria there.
 
 **F-W11-1-5 — `03` §5.2's money block diverges from the shipped code at every line it has.
-RULED — PR #375: the code is right, the spec is stale. Not a blocker.**
+RULED — Ruling 13 (PR #375): the code is right, the spec is stale. Not a blocker.**
 As first filed this named only the module path and a parameter name — an enumeration that
 read as complete and was not. The decision-maker found more; checking
 their list found more again. Enumerated rather than counted, because the split between the
@@ -515,7 +518,7 @@ from a path that does not exist and pass a keyword that is not accepted — and,
 `reconcile_ladder` row, would find no declared signature at all for a function Step 12
 already calls.
 **Owner: the decision-maker** — it is a spec-vs-code conflict, which
-`delivery-process.md` §3 makes theirs; **ruled in PR #375** along the recommendation below.
+`delivery-process.md` §3 makes theirs; **ruled as Ruling 13 (PR #375)** along the recommendation below.
 **Recommended resolution, as ruled:** the code is right and the spec is stale — `pricing_core/money.py` is imported by the shipped rating path and moving it
 would break `pricing_core`'s public surface for a naming preference. The correction is a
 dated amendment to §5.2, not a code move. **Not a blocker:** Task 1.4 imports from the real
@@ -923,7 +926,9 @@ needs no ruling: the target shape is fixed externally by the engine's own wire f
   - `CompiledBundle`, with at minimum `content_hash: str`, `decision: zen.ZenDecision`,
     `algorithm: RatingAlgorithm`, `boosters: Mapping[str, object]`
 
-**Three obligations from Rulings 7, 8 and 10, all landing in this task.**
+**Obligations from Rulings 7, 8 and 10, all landing in this task** — enumerated rather than
+totalled, since a ruling can gain one by addendum after this line is written, which is
+exactly what happened to Ruling 12's list.
 
 1. **Ruling 7 — a `model_call`'s payload travels *inside* the `Bundle`, never as a
    reference, and must survive a JSON round trip.** `Bundle` is persisted and cached as
@@ -1097,6 +1102,9 @@ completely; thread-offloaded `evaluate()` is *worse than sequential* (0.90–0.9
 - Create: `packages/model-schema/src/model_schema/scoring.py` — `QuoteContext`,
   `LadderRung`, `ScoringResult`, `Trace`, `TraceStep`.
 - Create: `packages/pricing-core/src/pricing_core/rating/score.py`.
+- Modify: `scripts/generate-contracts.py` — add the three new shapes to `GENERATED_SHAPES`;
+  and `backend/tests/test_contracts.py` — lift `"scoring"` from the exclusion dict
+  (Ruling 12's addendum, PR #373).
 - Modify: `docs/contracts/schemas/scoring.schema.json:12` — the five-member `purpose` enum
   (Ruling 12, obligation 2), in the same commit as the `model-schema` enum.
 - Modify: `backend/src/app/errors.py` — add `MODEL_CALL_FAILED`, `INPUT_CONTRACT_VIOLATION`,
@@ -1137,14 +1145,28 @@ belongs; read `.claude/skills/contract-guard` before adding one — it records f
 that were in the guards rather than in the schemas, and why `required` is compared in one
 direction only.
 
-**`purpose` is ruled — Ruling 12 — and it is five members, `cancellation` included.** Three
-obligations land in this one PR, and they are one change, not three:
+**`purpose` is ruled — Ruling 12 — and it is five members, `cancellation` included.** The
+obligations below all land in this one PR, and they are one change, not several. **No count
+is given deliberately**: the list gained a fourth member by addendum after this plan first
+stated it as "three", and a total here would only age again:
 1. The five-member enum defined **once**, in `model-schema` (ADR-0002, `CLAUDE.md` §2 —
    nobody hand-writes a shape `model-schema` owns, and today nothing owns this one).
 2. `docs/contracts/schemas/scoring.schema.json:12` corrected to those five, **in the same
    commit** — `CLAUDE.md` §2 requires a change spanning spec and code to land as one, or the
    audit reports a consistency the repository does not have.
 3. FR-RATE-63's refusal test covering both members (Step 9).
+4. **Add the new shapes to `scripts/generate-contracts.py`'s `GENERATED_SHAPES`, and lift
+   `"scoring"` from `backend/tests/test_contracts.py`'s exclusion dict** (Ruling 12's
+   addendum, PR #373). This is a **forward** guard on a gap *this task opens*, not a
+   recovery of one that missed the enum defect: the exclusion's reason —
+   `"later-phase — 03 rating"` — is true today because `QuoteContext` exists nowhere in
+   `model-schema`, and **Task 1.4 is what makes it false.** From the moment this task
+   creates `QuoteContext`, `ScoringResult` and `Trace`, the hand-authored contract and the
+   generated shape can diverge, and the exclusion is what would let that happen silently.
+   The addendum is explicit that `test_contracts.py` could *never* have caught the `purpose`
+   divergence — it reads no file under `docs/specs/` at all, so it compares
+   contract-versus-generated, never spec-versus-contract. Do not describe it as the guard
+   that missed this one.
 
 - [ ] **Step 2: write the golden test, and run it red**
 
@@ -1338,6 +1360,9 @@ what an audit checks against:
   `cancellation` (Ruling 12).
 - The five-member `purpose` enum in `model-schema` **and** `scoring.schema.json:12`
   corrected, in the same commit (Ruling 12).
+- `QuoteContext`/`ScoringResult`/`Trace` in `GENERATED_SHAPES`, and `"scoring"` **lifted**
+  from `test_contracts.py`'s exclusion dict (Ruling 12 addendum) — the drift guard must be
+  armed in the same PR that creates the shapes it guards.
 - **Four** codes in `RATING_ERROR_CODES`, and `score_one` raising a code-named `ValueError`
   via `_raise_named` — **never `PlatformError`**, which `pricing-core` cannot import
   (Ruling 11). `lint-imports` staying green is the mechanical proof.
@@ -1440,7 +1465,7 @@ differing reason is a plan defect.
 **6. What this plan does not decide — and nothing it raised is now undecided.** Every
 question this plan opened has been ruled by someone whose charter owns it, none by the
 planner. **F-W11-1-5** (the `03` §5.2 money block) was the decision-maker's as a spec-vs-code
-conflict and is ruled in PR #375 — code right, spec stale; it blocked nothing, since Task 1.4
+conflict and is ruled as Ruling 13 (PR #375) — code right, spec stale; it blocked nothing, since Task 1.4
 imports from the real path either way. **F-W11-1-1** is Ruling 12. The slice-granularity
 question was the lead's, who accepted running
 Tasks 1.1–1.5 as **five sequential slices with the frozen map unedited** and recorded that
@@ -1465,6 +1490,22 @@ discusses it — across the whole document, then check the four site classes sep
 absent in the next three. Running that sweep is what produced the table above; reading the
 plan through would not have, since the plan agrees with itself by construction
 ([`README.md`](README.md) rule 3, one level up).
+
+**A third pass found what the second could not see.** The re-derivation swept *per ruling*,
+enumerating them by their `## Ruling N` headings — and Ruling 12 had since gained a fourth
+obligation filed under `## The larger thing, and a fourth obligation on Task 1.4`
+(`002f4d8`, PR #373). **An addendum to an existing ruling does not get a new `Ruling N`
+heading**, by definition, so a heading-based enumeration is structurally blind to exactly the
+class of change most likely to arrive late. The sweep was not run carelessly; it was run
+against the wrong index. The fix is to enumerate by **document diff** — `git diff` the whole
+ruling record between the revision you last read and current — rather than by re-listing
+headings, because a diff cannot miss a section that has no heading you predicted.
+
+The same pass also found this plan's own bare count: *"Three obligations land in this one
+PR"*, written hours before the fourth arrived. It is the strongest evidence for the
+prospective form — the sentence was correct when written, aged without anyone touching it,
+and no amount of care at writing time would have prevented it. Only declining to write the
+number would have.
 
 That is now `README.md` rule 5. It was written from the first pass, which is why it named
 Files and Steps and not Acceptance — the rule was itself an instance of the defect it
