@@ -332,8 +332,39 @@ owning row in the same edit that accepts it, or is explicitly marked unowned.
 Phases 2–4. Nothing this review found argues for re-cutting them; every finding is an
 ownership or instrument defect inside the existing shape.
 
-**Maintainer acceptance:** _pending — no recommendation above binds until this line carries a
-date and a decision._
+**Maintainer acceptance: accepted as proposed, 2026-08-29.** Each proposal below binds from
+that date. Recorded per proposal rather than as one blanket sentence, on review 3's own
+reasoning at line 214 — *"a single 'accepted' over five proposals leaves no way to tell later
+which of them anyone actually read."* Review 4 has three proposals and no consolidated table,
+so they are enumerated here from the questions that raised them.
+
+- **Question 2, the W32 row — accepted 2026-08-29.** The row is **not** amended: it records
+  what the split intended on 2026-08-22, and rewriting it destroys that. What binds is the
+  accompanying statement that **the slice map determines slices and the scope sentence only
+  describes them**. The separate W30 observation — four requirements against a scope row
+  describing one capability — is Phase 2 and remains a **spec change only** (§0's table), not
+  a roadmap edit made here. **Owner: unowned**; the phase-plan sentence is a `docs/roadmap.md`
+  edit and naming who makes it is not a planner's call.
+- **Question 4, `scope-audit.py --params` gets an owner — accepted 2026-08-29, and still
+  unowned as of this date.** Re-verified at `3edd75a`: the parser declares five arguments and
+  `grep -c -- --params scripts/scope-audit.py` returns 0, so the axis review 3 accepted on
+  2026-08-22 has now gone un-built through two further reviews. Accepting the proposal does
+  not build it and does not name its owner — **unowned**, and recorded as such deliberately,
+  because that is exactly the state question 5 below is about.
+- **Question 5, every accepted §14 proposal gets an owning row — accepted 2026-08-29, and it
+  binds this edit first.** *"Every accepted §14 proposal gets an owning row in the same edit
+  that accepts it, or is explicitly marked unowned."* This is the only proposal here that
+  changes how acceptance itself is written, and today's edit is the first to fall under it:
+  every item accepted below — in reviews 7 and 8 as well as this one — therefore carries an
+  owner or is marked **unowned**. Marking unowned is not a lesser outcome; it is the escape
+  the proposal itself names, and it is used wherever naming an owner would be a
+  `docs/roadmap.md` edit, which `CLAUDE.md` §12 does not put in a planner's hands.
+- **The three instrument findings needed no acceptance line and did not wait on one** —
+  corrections are unreviewed writes; the §0 correction convention manufactures its own false
+  positives; an accidental gap in a permanent-id sequence is a collision invitation. Each is a
+  finding about the instrument, not a proposal to the maintainer.
+- **The "no change" answer stands** on the phase boundaries, Phase 1b's exit criterion and
+  Phases 2–4, and needed no acceptance.
 
 ### Plan review 5 — at W6b's close, 2026-08-27
 
@@ -616,8 +647,23 @@ below are properties of code W11 slice 1 is building regardless of FR-RATE-63's 
 > as above — the refusal guard in W11 slice 1 unconditionally, the authoring half in its own
 > small slice separate from W11. Not a roadmap edit on this review's own authority.
 >
-> **Maintainer acceptance:** _pending on FR-RATE-63's ownership; F-W9-2 needs no acceptance
-> line to bind, since it was never this review's proposal to make._
+> **Maintainer acceptance: accepted 2026-08-29 — the split binds; the owner is still not
+> named.** What is accepted is the *shape*: FR-RATE-63's refusal guard is W11 slice 1's
+> unconditionally, and the sub-graph mounting and refund/pro-rata authoring half is a separate
+> small catch-up slice, W9-shaped, landing with or before W11 but not part of its plan.
+>
+> **What acceptance does not do is name the workstream.** This review deliberately declined to
+> name one — *"that is the maintainer's, the same restraint plan review 2's Proposal B
+> applied"* — and the acceptance relayed today carries no id either. So FR-RATE-63's id-level
+> ownership (a corrected W9 closure note, or a new row) is **accepted as owed and explicitly
+> unowned**, per review 4's question-5 rule above. Verified at `3edd75a`: `FR-RATE-63` appears
+> in `docs/audit/register.md` only inside F27's prose about `scoring.schema.json`'s `purpose`
+> enum, and in `docs/roadmap.md` only at the OQ-RATE-6 decision prose — no register row and no
+> workstream row owns the id. The register row this recommendation was held out of is now
+> released to be written, and writing it is not this document's to do.
+>
+> **F-W9-2 needed no acceptance line to bind**, since it was never this review's proposal to
+> make; that half is unchanged by this date.
 
 **3. Skills and research — re-run, not appended to.**
 
@@ -667,7 +713,16 @@ not to rule it):
 > complete as of this filing, which this review notes rather than duplicates: the rulings
 > themselves are a decision-maker record, not a plan-review one.
 >
-> **Maintainer acceptance:** _pending._
+> **Maintainer acceptance: accepted 2026-08-29 — and all four items have since been ruled, so
+> this line confirms rather than releases them.** Verified at `3edd75a`, each against the
+> artifact that discharged it rather than against recollection: the compile-endpoint 202/200
+> divergence is `docs/plans/2026-08-29-w11-prework-rulings.md` Ruling 2; the async/sync
+> `compile_bundle` mismatch is Ruling 3; the `Bundle`/`CompiledBundle` question is Ruling 4;
+> and the missing citation on `POST /api/v1/rating-versions` is now on the row itself —
+> `docs/specs/03-rating-engine.md:513` reads *"Create a draft Rating Version with pins
+> (FR-RATE-22)"*, landed with W11 Task 1.1 (PR #371). **Owner: discharged, none owed.** The
+> recommendation was that these reach the decision-maker's queue before W11's plan was filed;
+> they did, and the acceptance records that the route taken was the route proposed.
 
 **5. Shape.** No change proposed to W9's own scope or boundary — it closed against a
 coherent, single-subject row and nothing in this review's evidence argues otherwise. The
@@ -685,8 +740,28 @@ close is reached and W11 is next — carried into review 8 immediately below, wh
 | 4.1 | Compile-endpoint 202/200 divergence, the async/sync `compile_bundle` mismatch, and the `Bundle`/`CompiledBundle` question ruled by the decision-maker before W11 touches `compile_rating_version` or the evaluator | decision — queue reports complete as of this filing |
 | 4.2 | `POST /api/v1/rating-versions`'s missing FR- citation ruled | decision |
 
-**Maintainer acceptance:** _pending — no recommendation above binds until this line carries
-a date and a decision._
+**Maintainer acceptance: accepted as proposed, 2026-08-29.** All six rows bind from that date.
+Per row, with the owner review 4's question-5 rule now requires — and where no owner can be
+named without a `docs/roadmap.md` edit, the row says **unowned** rather than leaving it to be
+inferred:
+
+- **2.1 — accepted, and already landed.** F-W9-2, PR #319. Never depended on this review.
+  **Owner: W13**, as the row states.
+- **2.2 — accepted as owed, owner not named. Unowned.** See the per-item line above: the
+  review declined to name a workstream and today's acceptance names none either.
+- **2.3 — accepted.** The refusal guard is **W11 slice 1's**; the authoring half is its own
+  small catch-up slice, **unowned** until 2.2's owner is named.
+- **3.1 — accepted, and landed. Owner: discharged** — but not on the date the table claims,
+  and the divergence is recorded rather than smoothed. The row reads *"fixed in this commit"*,
+  i.e. review 7's own filing on 2026-08-27; `.claude/skills/phase-review/SKILL.md`'s `Verified`
+  block dates the Output correction to **2026-08-29** and says it was *"caught while filing
+  plan reviews 7 and 8"* — caught then, applied two days later. The skill now reads
+  *"Proposals land in `docs/audit/plan-reviews.md`"* (`:110`), so the proposal is discharged
+  either way; what was wrong was the parenthetical, checked here rather than restated on the
+  table's word.
+- **4.1 — accepted, and discharged** by prework Rulings 2, 3 and 4. **Owner: discharged.**
+- **4.2 — accepted, and discharged**: the FR-RATE-22 citation is on `03` §5.1's row at
+  `:513`. **Owner: discharged.**
 
 ---
 
@@ -733,7 +808,17 @@ concurrent async calls — whether it blocks the event loop, whether it is threa
 > (whether `score_one` needs `run_in_executor` thread-pool offload) rather than adding a
 > requirement.
 >
-> **Maintainer acceptance:** _pending._
+> **Maintainer acceptance: accepted 2026-08-29 — and already discharged, so this line confirms
+> the route rather than authorising it.** The spike ran and landed as
+> `docs/research/zen-evaluate-concurrency.md` (PR #321), in exactly the shape proposed: a dated
+> finding under `docs/research/`, not a skill, run at the start of the evaluator slice rather
+> than discovered mid-slice. It answered the architecture question the recommendation named —
+> sync `evaluate()` blocks the event loop, thread-offloaded `evaluate()` is worse than
+> sequential, `async_evaluate()` is both non-blocking and faster — and that answer is now
+> prework Ruling 5. **Owner: discharged.** One limit worth recording where the acceptance is,
+> because it is the kind of thing a "discharged" mark otherwise hides: the spike measured an
+> expression-only graph, and Ruling 5 carries a named follow-up to repeat it once a
+> `model_call` custom node exists. Accepting 3.1 does not accept that follow-up as done.
 
 **4. Document drift.** **The requirement-range omission has now fired twice, and it is a
 finding about how rows are written, not two coincidences.** W10's own row read
@@ -768,8 +853,26 @@ already written, and the row was never re-checked against the section's current 
 > decided here. Landing the two individual fixes (above) does not close this half — the same
 > mechanism will fire a third time on some future row unless the check exists.
 >
-> **Maintainer acceptance:** _pending on the mechanical-fix proposal; the two individual
-> corrections are already live and need no acceptance line to bind._
+> **Maintainer acceptance: the mechanical fix is accepted 2026-08-29. Unowned, and the
+> mechanism has since fired a third time.** What binds is the shape: a workstream row cites
+> the spec **section** as its scope of record, with any numeric range kept only as a
+> human-readable gloss beside it, never as the sole scope statement.
+>
+> **Acceptance does not choose where the check lives.** The recommendation left that open —
+> *"whether that check belongs in `audit-docs.py` or `scope-audit.py` is an implementation
+> choice for whoever owns it, not decided here"* — and nothing in today's acceptance closes
+> it. **Owner: unowned**, per review 4's question-5 rule.
+>
+> **The third firing, verified at `3edd75a` rather than predicted.** `docs/roadmap.md`'s W11
+> row still reads `FR-RATE-34..42, FR-RATE-64`, and **FR-RATE-65 sits outside that range** —
+> it is the requirement that defines `CompiledBundle` as a distinct runtime type, `03` §3.4,
+> discharged by W11 Slice 1 Task 1.3, and `git grep -n "FR-RATE-65" -- docs/roadmap.md`
+> returns nothing. So the recommendation's own prediction — *"the same mechanism will fire a
+> third time on some future row unless the check exists"* — is now an observation. Recorded
+> here rather than fixed here: correcting the row is a `docs/roadmap.md` edit and this is a
+> review document.
+>
+> **The two individual corrections remain live and needed no acceptance line to bind.**
 >
 > **A second mechanism, distinct from the range omission and with a different fix.** The
 > same period produced corrections to a *measured figure* — NFR-RATE-14 (#314) and
@@ -798,7 +901,24 @@ already written, and the row was never re-checked against the section's current 
 > checks." Three artifacts, three counts, and nothing links them — the same mechanism this
 > question names, surviving inside the instrument built to prevent it.
 >
-> **Maintainer acceptance:** _pending._
+> **Maintainer acceptance: accepted 2026-08-29 — the proposal binds, the limb is not chosen,
+> and the worked instance is fixed.** The recommendation is a disjunction — *extend the
+> OQ-mirror pattern (`audit-docs` checks 4 and 23) to a measured figure,* **or** *make
+> "grep the figure or range across all of `docs/`" a standing step in the correction
+> procedure.* Accepting the proposal accepts that one of them must happen; it does not pick
+> which, and satisfying either limb is what discharges it. Naming that explicitly, because
+> declining one limb of a disjunction is not satisfying it, and a later reader checking only
+> the mirror half would read a satisfied proposal as open. **Owner: unowned.**
+>
+> **The worked instance is resolved, verified at `3edd75a` rather than assumed from its age.**
+> `scripts/audit-docs.py`'s module docstring now enumerates checks 1 through **24**, so 23 and
+> 24 are no longer unlisted; and `.claude/skills/docs-audit/SKILL.md` no longer states a count
+> at all, saying instead that *"the script's own module docstring is the numbered list, kept
+> current there rather than counted here."* Three artifacts with three counts became one
+> artifact with the count and two pointing at it — which is the structural half of this
+> proposal applied to the instrument, arrived at independently of this line. **The general
+> proposal is not discharged by it**: one instance being fixed is not the standing step, and
+> the credit to the executor who found and articulated the mechanism stands as recorded.
 
 **5. Shape — is the cut still right?**
 
@@ -863,7 +983,28 @@ plan that quietly ships a stub and calls the requirement done. That is W11's own
 (its DP1 and DP2), not this review's; this review's job is only to say the boundaries
 holding it are the right ones.
 
-> **Maintainer acceptance:** _pending._
+> **Maintainer acceptance: accepted 2026-08-29 — no re-cut of Phase 2's W11–W14 boundaries.**
+> The completion-ordering reading binds: FR-RATE-34's default-live path and FR-RATE-40's
+> approval gate are not separable into a cheap shell, and neither pulling W14 forward nor
+> holding W11 behind W12–W14 is worth its cost.
+>
+> **Acceptance makes the paragraph above binding. It does not meet it.** The clause is a
+> condition on W11's close, not a recommendation that acceptance discharges: FR-RATE-34 and
+> FR-RATE-40 must **each** get an explicit, named, dated deferral in
+> [`register.md`](register.md) when W11 closes — not silence, and not a stub shipped and
+> called done. Approving the no-re-cut recommendation is what puts that obligation in force;
+> it is the price of the boundaries being held, and reading this date as having satisfied it
+> would invert the clause.
+>
+> **Unmet as of 2026-08-29, verified rather than assumed.** `git grep -n
+> "FR-RATE-34\|FR-RATE-40" docs/audit/register.md` at `3edd75a` returns exactly one line, and
+> it is F-W9-2's prose about FR-RATE-61 — *"specialises FR-RATE-40's general approval-evidence
+> gate, which W11 builds"* — a mention of the requirement inside another row, not a deferral
+> of it. Neither id has a row of its own. **Two rows are owed at W11's close, and DP1 and DP2
+> having since been ruled does not write them**: a ruling settles what the code does, a
+> register row records what the workstream did not deliver, and those are different artifacts.
+> **Owner: W11's close** — an owner this acceptance can name without a roadmap edit, because
+> the review already named when the obligation falls due rather than who would carry it.
 
 #### Proposals, consolidated — review 8
 
@@ -876,8 +1017,28 @@ holding it are the right ones.
 | 4.4 | A distinct mechanism (a measured figure copied into free prose, not mirrored) — extend the OQ-mirror pattern (`audit-docs` checks 4 and 23) to it, or make a `docs/`-wide grep a standing correction step (executor's finding, credited) | tool or convention |
 | 5.1 | **No re-cut** of Phase 2's W11-W14 boundaries; FR-RATE-34/40 get named deferrals inside W11's own plan | plan — no change |
 
-**Maintainer acceptance:** _pending — no recommendation above binds until this line carries
-a date and a decision._
+**Maintainer acceptance: accepted as proposed, 2026-08-29.** All six rows bind from that date,
+recorded per row with the owner review 4's question-5 rule now requires:
+
+- **3.1 — accepted, and discharged** by `docs/research/zen-evaluate-concurrency.md` (PR #321).
+  **Owner: discharged**, with Ruling 5's `model_call` follow-up expressly not covered.
+- **4.1 — accepted, and already landed** (PR #314). **Owner: discharged.**
+- **4.2 — accepted. Unowned**, and the mechanism has fired a third time on FR-RATE-65; see the
+  per-item line above. Where the check lives is not decided by this acceptance.
+- **4.3 — accepted, and already landed** (PR #314). **Owner: discharged.**
+- **4.4 — accepted. Unowned**, and it is a disjunction: either limb discharges it, and this
+  line picks neither. The worked instance inside `audit-docs.py` is separately resolved.
+- **5.1 — accepted: no re-cut.** **Owner: W11's close**, which owes FR-RATE-34 and FR-RATE-40 a
+  named dated register deferral each. **Binding from today and unmet today** — see the per-item
+  line above for the verification.
+
+**What is still owed, enumerated rather than counted** — because the first draft of this
+sentence carried a tally and got it wrong, which is the defect questions 4 and 5 of this very
+review are about. **Open: 4.2** (unowned, and now fired a third time), **4.4** (unowned, limb
+unchosen), and **5.1's condition** (two register rows at W11's close). **Not open: 3.1**
+discharged by the spike, **4.1** and **4.3** landed in PR #314 before this date. What this
+acceptance mostly does is make the record say what the repository already did; a reader looking
+for what is still owed should read the three named above and derive no total from them.
 
 #### Sources — reviews 7 and 8
 
