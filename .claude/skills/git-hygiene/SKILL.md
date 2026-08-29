@@ -221,6 +221,18 @@ commit is actually checked out — nothing moves it until a `merge`, `rebase`, o
 does. Same shape as `--date=iso-strict` below: a command answers exactly what it was asked,
 which is not always the question the reader meant.
 
+**A `--ff-only` merge that FAILS is a worse trap than never fetching at all — it leaves a
+belief of having synced instead of the visible absence of a sync.** `git merge --ff-only
+origin/main` run while checked out on an unrelated feature branch fails with "Not possible
+to fast-forward" — that branch's own divergence, nothing to do with whether the *home*
+branch could have fast-forwarded cleanly. Switching back to the home branch afterward and
+treating the failed attempt as "tried, moving on" — rather than re-running the merge from
+the branch it actually applies to — leaves the tree exactly as stale as never having
+fetched. Worse: never fetching prompts a retry the next time freshness matters, because
+nothing claims to have happened; a failed-then-abandoned attempt reads, from memory alone,
+as "I synced this session," and that false belief survives until something external
+contradicts it.
+
 **A file count is ambiguous unless it names its measure, and a deletion decision needs the
 right one.** Checking whether a branch is safe to delete can produce three different file
 counts, disagreeing in both number and membership — found recovering a stranded commit
@@ -434,6 +446,20 @@ disk. Recorded beside the UTC-offset entry below, not merged into it: same shape
 answering precisely what it was asked rather than what the reader meant, but different
 commands and different fixes, so a reader hitting them back to back can still tell them
 apart.
+
+**2026-08-29 — the failed-ff-only-then-abandoned entry added, same day, a worse variant of
+the entry above.** The auditor's `git merge --ff-only origin/main` failed while checked out
+on an unrelated feature branch (`docs/w11-roadmap-nfr-rate-13-14`); the session then
+switched back to its home branch without retrying the merge, and treated the sync as done.
+A charter file was read and reported stale — a real, landed grant (`.claude/roles/
+auditor.md`, PR #352, `271787a`) was reported missing. Confirmed by ancestry after the
+fact: `b1d5741`, the auditor's own last-recorded position, was 3 commits behind `271787a`
+and 10 behind the actual current tip — not the failed merge's target branch's problem, the
+*home* branch's own staleness, uncorrected because the failed attempt was never revisited.
+Distinguished from the entry above on exactly the axis that makes it worse: a bare
+unfetched tree carries no claim of freshness, so a careful reader treats it as suspect by
+default; a *failed, silently abandoned* sync attempt reads from memory as "handled," and
+the false belief survives until an external ancestry check contradicts it.
 
 **2026-08-29 — the UTC-offset date-rendering entry added.** A wrong calendar date, read from
 a rendering whose offset was never checked, reached a filed plan review this same day.
