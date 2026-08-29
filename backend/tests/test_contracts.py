@@ -75,16 +75,17 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "oidc-auth-config": "first written form — FR-PLAT-66 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
     "metric-certificate": "OQ-PLAT-13 (c): authored by the next certificate workstream",
-    # authored-only — later-phase shapes, or shared common/ defs
+    # authored-only — later-phase shapes, shared common/ defs, or (F27) shapes that
+    # have since shipped in model-schema and are excluded by omission rather than by plan
     "approval-request": "later-phase — 06 governance",
     "dislocation-run": "later-phase — 03 rating",
     "dossier": "later-phase — 06 governance",
     "gipp-check": "later-phase — 06 governance",
     "monitoring": "later-phase — 05 monitoring",
     "optimisation-run": "later-phase — 04 optimisation",
-    "rate-table": "later-phase — 03 rating",
-    "rating-algorithm": "later-phase — 03 rating",
-    "rating-version": "later-phase — 03 rating",
+    "rate-table": "shipped in model-schema, never compared — register F27",
+    "rating-algorithm": "shipped in model-schema, never compared — register F27",
+    "rating-version": "shipped in model-schema, never compared — register F27",
     "regression-suite": "later-phase — 04 optimisation",
     "scoring": "later-phase — 03 rating",
     "money": "shared common/ defs with no Phase 1b emitter",
