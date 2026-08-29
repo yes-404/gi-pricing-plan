@@ -207,6 +207,12 @@ plan's Task 6. This section describes the mechanism `.claude/roles/watcher.md` a
   **decision-maker** rules before either side is silently changed; balance begin-close
   threshold → **close sequence**: file the record, present it — closure acceptance is
   the user's alone.
+- **Messages are 50 words or fewer** (maintainer rule, 2026-08-29). A dispatch states the
+  instruction and cites its artifact by path, PR number or task id; it does not carry the
+  reasoning. Reasoning belongs in a task, a plan, a ruling record or a merged artifact —
+  somewhere that outlives an inbox. **If a message cannot be said in 50 words, what it is
+  trying to say needs a durable home first, and the message becomes a pointer to it.**
+  Applies to every role including the lead.
 
 Runtime state files (`roster-state.md`, balance log, reporter state) live in the
 handover/ops directory outside this repository, not in `docs/` — operational state, not
