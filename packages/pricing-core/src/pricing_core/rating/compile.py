@@ -319,11 +319,18 @@ class ArtifactResolver(Protocol):
 
 
 class JdmGraph(BaseModel):
-    """The algorithm translated to the engine's graph shape (ADR-0004, DP1).
+    """The algorithm translated to pricing-core's own intermediate graph shape (ADR-0004,
+    DP1) — **not** the engine's wire shape (corrected W11 Task 1.3, `runtime.py`'s
+    `to_wire`).
 
-    Each step becomes a node carrying its ZEN-usable expression and its produces /
-    consumes edges; the DAG is captured by the `nodes` map plus the declared inputs and
-    outputs. This is the part of the Bundle the engine executes.
+    Each step becomes one entry in `nodes`, keyed by `step_id`, carrying its ZEN-usable
+    expression and its `produces`/`consumes` lists standing in for edges. This is close to
+    what the engine executes, but not it: the real `zen-engine` Python binding wants a node
+    *list* plus an explicit *edge* list, with exactly one `inputNode` and one `outputNode`
+    — verified live against `zen.ZenEngine().create_decision(...)`, never assumed from this
+    docstring's earlier, unqualified claim. `pricing_core.rating.runtime.to_wire` is the
+    translation from this shape to that one; trust a live engine call over any prose here,
+    this docstring's own history included.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -336,7 +343,10 @@ class JdmGraph(BaseModel):
 
 
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph:
-    """Translate a `RatingAlgorithm` to the engine's graph shape (ADR-0004)."""
+    """Translate a `RatingAlgorithm` to pricing-core's own `JdmGraph` (ADR-0004) — the
+    step towards the engine's wire shape, not that shape itself. See `JdmGraph`'s own
+    docstring: `pricing_core.rating.runtime.to_wire` is what a live `zen.ZenEngine` call
+    actually needs, verified rather than assumed (W11 Task 1.3)."""
     nodes: dict[str, dict[str, Any]] = {}
     for step in algo.steps:
         step_dump = step.model_dump()

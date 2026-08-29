@@ -2342,10 +2342,14 @@ def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
             objective: CustomObjective | None = None,
             metrics: Mapping[str, CustomMetric] | None = None,
             progress: ProgressCallback | None = None) -> GbmFit   # .result, .booster_bytes
-def predict_gbm(result: GbmFitResult, booster: bytes, data: pl.DataFrame,
+def predict_gbm(result: GbmFitResult, booster: bytes | object, data: pl.DataFrame,
                 factors: Sequence[Factor] = (), *,
                 bandings: Mapping[UUID, Banding] | None = None,
                 groupings: Mapping[UUID, Grouping] | None = None) -> pl.Series
+                # booster: bytes (loads fresh) or load_gbm_booster's return (Ruling 8)
+def load_gbm_booster(model_type: Literal["xgboost", "lightgbm"], booster: bytes) -> object
+            # added 2026-08-29 (W11 Task 1.3, Ruling 8) — the loaded-booster seam:
+            # deserialise once, hand the result to predict_gbm on every subsequent call
 def apply_loss_treatment(response: NDArray[float64], treatment: LossTreatment
                          ) -> NDArray[float64]
 
