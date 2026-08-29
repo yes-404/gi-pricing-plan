@@ -209,6 +209,18 @@ guard against, when the cheaper fix sits with whoever holds the push."*
 Neither `planner.md` nor `auditor.md` says a branch under audit is frozen, or that an audit
 report names the commit it read.
 
+**The mirror of this rule cost a commit, and the loss is silent.** P7 as stated binds the
+*writer* not to move a branch someone is **reading**. The same rule binds the *merger* not to
+land a branch someone is still **writing** to — and the lead broke it: #377 was merged while
+the auditor was mid-push of a further correction to the same file. With
+`delete_branch_on_merge` enabled the branch is deleted at merge, so the racing push does not
+fail — **it recreates the ref as an orphan**. The pusher sees success, the PR is closed, and
+the commit sits on a branch nothing points at. It was recovered only because the auditor
+noticed and cherry-picked it onto a fresh branch (#385); nothing in the tooling reports it,
+and the same repository already carries one incident of a stranded commit found days late.
+**Before merging, re-fetch and confirm the head is the one you reviewed** — the check that
+catches a racing push is the same one that catches a stale review.
+
 *(Both of `docs/plans/README.md`'s rule 4s are unmerged context at the time of writing. On
 `main` the unenforced list still reads "these **three** are not"; #370's branch carries five,
 adding rule 4 and — as P9's remedy — rule 5. No line number is cited for either, because that
