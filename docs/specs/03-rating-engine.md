@@ -538,7 +538,8 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 `FLOOR_ABOVE_CAP`, `REBASE_NO_MATCH`, `REBASE_AMBIGUOUS`, `REBASE_ZERO_REFERENCE`,
 `IMPORT_KEY_MISMATCH`, `IMPORT_TYPE_MISMATCH`, `IMPORT_PARSE_ERROR`
 *(added 2026-08-28, W10-3C)*, `MODEL_CALL_FAILED`
-*(added 2026-08-29, W11 Slice 1 — FR-RATE-38's fifth category, model failure; ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 11)*.
+*(added 2026-08-29, W11 Slice 1 — FR-RATE-38's fifth category, model failure; ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 11)*, `NO_LIVE_RATING_VERSION`
+*(added 2026-08-29, W11 Slice 2 — **409**. FR-RATE-34's default path resolves the Rating Version live in the target environment, and `live` is a property of a Deployment (FR-RATE-23), which is W14's. A `POST /api/v1/score` omitting `rating_version_ref` is refused with this code rather than scored against a guessed version. The branch is permanent, not a stub: after W14 it is what an environment holding no Deployment answers. Ruled in `docs/plans/2026-08-29-w11-slice2-rulings.md` Ruling 14)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version
