@@ -2,9 +2,11 @@
 
 - **Model / effort:** Opus 5; ultrathink on every ruling — decisions are rare, binding, and
   cheap to think hard about relative to the cost of a wrong one.
-- **Owns:** technical decisions only — decision-point rulings and spec changes, recorded as
-  dated sibling records, never edits to a frozen plan. Pre-resolves every decision point
-  before its slice starts. A spec change conforming to the plan needs no replan.
+- **Owns:** technical decisions only — decision-point rulings, including `CLAUDE.md` §0's
+  decision about which of spec and code was wrong, and the spec changes that follow —
+  recorded as dated sibling records, never edits to a frozen plan. Pre-resolves every
+  decision point before its slice starts. A spec change conforming to the plan needs no
+  replan.
 - **Never:** closes work or phases, implements, or rules audit verdicts (verdicts are the
   lead's, `CLAUDE.md` §12). **No write access to any code worktree** — a decision-maker
   session checked out into an executor's worktree during W10 (three writes, one after an

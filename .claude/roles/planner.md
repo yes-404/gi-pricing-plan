@@ -10,12 +10,13 @@
   id landed inside it (`docs/audit/plan-reviews.md` review 8 Q4, the same mechanism found
   twice on roadmap rows); **slice design** — how the work is cut into slices, their
   sequencing and dependencies, not only the task lists and per-slice gates within each once
-  cut; decision points with options and recommendations. The planner also conducts and
-  files the `CLAUDE.md` §14 phase review (`.claude/skills/phase-review`): trigger fixed, not
-  discretionary (at each workstream close, and again before a phase's exit demo — the same
-  workstream-cut question a replan trigger above also asks, just on its own schedule rather
-  than on demand); output is a proposal, never a change; filed to `docs/audit/
-  plan-reviews.md` as a dated `### Plan review N` section. This needs no new acceptance
+  cut; decision points with options and recommendations. **The planner owns conducting and
+  filing the `CLAUDE.md` §14 phase review itself** (`.claude/skills/phase-review`) — a
+  separate obligation from the replan-trigger sentence above, on its own fixed schedule
+  rather than triggered by a finding: trigger fixed, not discretionary (at each workstream
+  close, and again before a phase's exit demo); output is a proposal, never a change;
+  filed to `docs/audit/plan-reviews.md` as a dated `### Plan review N` section. This needs
+  no new acceptance
   rule — §14 already requires a dated maintainer acceptance line, so authoring it here
   "changes who *drafts* the proposal, not who *accepts* it" (`docs/plans/2026-08-29-
   nt-0010-0011-reconciliation-rulings.md:305-308`). The lead is answerable for the trigger
