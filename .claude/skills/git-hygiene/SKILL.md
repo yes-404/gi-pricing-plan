@@ -539,6 +539,19 @@ unfetched tree carries no claim of freshness, so a careful reader treats it as s
 default; a *failed, silently abandoned* sync attempt reads from memory as "handled," and
 the false belief survives until an external ancestry check contradicts it.
 
+**2026-08-29 — the `EnterWorktree` false-success case added, same class as the entry
+above: an operation that reads as done when it wasn't.** Two of the six subagents in the
+pre-stand-down worktree audit (worktree-isolation section above) called
+`EnterWorktree({path: <an unlocked sibling>})` and got back a SUCCESS report — *"working
+directory... now point at the worktree"* — then had every command afterward, including a
+bare `pwd`, refused by the sandbox with the identical "isolated to your original
+worktree" error, as if the switch had never happened. Full mechanism and all three
+refusal shapes are recorded above; noted here too because the shared trap is the belief,
+not the tool: **a reported success is not evidence of an effect**, exactly as a
+silently-failed `--ff-only` merge above reads as a completed sync. No disruption resulted
+here — the guard held regardless of what its own report claimed — but the pattern is the
+one worth carrying forward, not this specific safe outcome.
+
 **2026-08-29 — the UTC-offset date-rendering entry added.** A wrong calendar date, read from
 a rendering whose offset was never checked, reached a filed plan review this same day.
 Verified rather than narrated: two real commits from this repository's own W9 history
