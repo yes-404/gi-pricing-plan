@@ -764,23 +764,29 @@ already written, and the row was never re-checked against the section's current 
 > decided here. Landing the two individual fixes (above) does not close this half — the same
 > mechanism will fire a third time on some future row unless the check exists.
 >
-> **Reframed by the executor's reading of the mechanism, which sharpens the proposal rather
-> than replacing it:** a fact copied into free prose is corrected only where the tooling
-> structurally links the copy back to its source — the OQ mirror pair, which `audit-docs.py`
-> already enforces (check 4 proves a question is mirrored both ways; check 15 fixes the
-> register's own status vocabulary; check 23 requires each spec §10 row's status token to
-> match it). Everywhere a fact is merely *quoted* in passing rather than mirrored — a
-> requirement's rationale, a roadmap cell, a skills-map summary — nothing but a literal-text
-> grep across `docs/` can find every copy, so a correction fixes the location that prompted
-> it and every other copy survives, exactly as OQ-RATE-2's stale S2 figures did across six
-> locations. This repository has already built structural enforcement for exactly this
-> problem in one place; the fix is to extend that pattern to workstream-row ranges rather
-> than invent a new mechanism, or — short of that — to make a `docs/`-wide grep for the
-> figure or range a standing step of the correction procedure itself, not an ad hoc one this
-> review happened to run.
->
 > **Maintainer acceptance:** _pending on the mechanical-fix proposal; the two individual
 > corrections are already live and need no acceptance line to bind._
+>
+> **A second mechanism, distinct from the range omission and with a different fix.** The
+> same period produced corrections to a *measured figure* — NFR-RATE-14 (#314) and
+> OQ-RATE-2 across six locations (#317). The executor, who swept them, named why they were
+> never caught together: **a fact copied into free prose is corrected only where the
+> tooling structurally links the copy back to its source.** This repository has exactly one
+> such link — the OQ mirror pair, enforced by `audit-docs` check 15 — and it worked: the
+> two OQ-RATE-2 copies could not diverge. Everywhere the same figure was merely *quoted in
+> passing* — a requirement's rationale (FR-RATE-61's body), a roadmap cell, a
+> `skills-map.md` row, and another module's open question (OQ-MODEL-11) — nothing but a
+> literal-text grep could find it. So each correction event fixed the one location that
+> prompted it, and every other copy survived until someone ran that grep.
+>
+> **Recommendation:** extend the pattern this repository has already built rather than
+> invent a new check — the OQ mirror pair is the working precedent. The cheaper floor, if
+> extending the structural link is too costly: make *"grep the figure or range across all
+> of `docs/`"* a standing step in the correction procedure itself, so the sweep is not left
+> to whoever happens to think of it. Credit: found and articulated by the executor while
+> sweeping OQ-RATE-2.
+>
+> **Maintainer acceptance:** _pending._
 
 **5. Shape — is the cut still right?**
 
@@ -853,8 +859,9 @@ holding it are the right ones.
 |---|---|---|
 | 3.1 | A short ZEN-evaluate-side concurrency spike, run at W11 evaluator-slice start | research |
 | 4.1 | W11's roadmap row corrected for FR-RATE-64 | docs — **landed, PR #314** |
-| 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only; extend the OQ-mirror pattern (`audit-docs.py` checks 4/15/23) to it, or make a `docs/`-wide grep a standing correction step (executor's reframing) | tool or convention |
+| 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only | tool or convention |
 | 4.3 | NFR-RATE-14 gains a dated amendment reconciling the 1.09 ms / 1.626 ms figures | spec — **landed, PR #314** |
+| 4.4 | A distinct mechanism (a measured figure copied into free prose, not mirrored) — extend the OQ-mirror pattern (`audit-docs` check 15) to it, or make a `docs/`-wide grep a standing correction step (executor's finding, credited) | tool or convention |
 | 5.1 | **No re-cut** of Phase 2's W11-W14 boundaries; FR-RATE-34/40 get named deferrals inside W11's own plan | plan — no change |
 
 **Maintainer acceptance:** _pending — no recommendation above binds until this line carries
