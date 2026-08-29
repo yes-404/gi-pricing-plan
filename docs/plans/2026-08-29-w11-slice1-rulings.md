@@ -572,13 +572,26 @@ cannot see this file at all.
 
 ## The larger thing, and a fourth obligation on Task 1.4
 
-**Ruling 12 obligation 2 is not sufficient on its own, and fixing the line without this would
-disarm the only mechanism that could have caught the defect.** `backend/tests/test_contracts.py`
-excludes `"scoring"` from the drift guard with the reason `"later-phase — 03 rating"`. That
-reason is true *today* — `QuoteContext` exists nowhere in `model-schema`. **Task 1.4 is what
-makes it false**, by creating `QuoteContext`, `ScoringResult` and `Trace` there. A Task 1.4
-that corrects the enum and leaves the exclusion in place ships the shape *and* leaves it
-unguarded, which is the state that let a four-member enum survive from 2026-08-18 to now.
+**Corrected before merge — the first filing of this paragraph overstated the guard, and the
+wrong half is named rather than quietly rewritten.** It claimed that fixing the enum without
+lifting the exclusion "would disarm the only mechanism that could have caught the defect."
+**That is false.** `backend/tests/test_contracts.py`'s own docstring scopes it to two claims —
+*"**Freshness.** The committed files match what the models produce right now"* and
+*"**Conformance.** Where a shape has both a hand-authored Phase 0 contract and a generated
+one, they agree"* — and it reads no file under `docs/specs/` at all. It could never have
+caught the `purpose` divergence, which is spec-versus-hand-authored-contract, not
+contract-versus-generated. Found by a sweep run after this addendum was first pushed, and
+corrected on the same branch before merge.
+
+**What is true, and why obligation 4 still stands.** `test_contracts.py` excludes
+`"scoring"` with the reason `"later-phase — 03 rating"`. That reason is true *today* —
+`QuoteContext` exists nowhere in `model-schema`. **Task 1.4 is what makes it false**, by
+creating `QuoteContext`, `ScoringResult` and `Trace` there. From that moment the
+hand-authored contract and the generated shape can diverge, and the exclusion is what would
+let that happen silently. Obligation 4 is therefore a **forward** guard on a gap Task 1.4
+itself opens — not, as first written, a recovery of the guard that missed this one. The
+distinction matters, because a reader who believes the drift guard covers spec-to-contract
+drift will not ask for the check that actually does.
 
 **Obligation 4, therefore, in the same PR:** add the new shapes to
 `scripts/generate-contracts.py`'s `GENERATED_SHAPES`, and lift `"scoring"` from
@@ -617,6 +630,50 @@ Not proposed for fixing here: whether W9's and W10's closes should be reopened f
 whether it becomes a register row with an owner, is a scope question for the lead and the
 §14 plan review — `CLAUDE.md` §12 and `docs/process/delivery-process.md` §5 step 7 both put
 that call outside this role. What is ruled is only that **W11 does not add a fourth.**
+
+## Second finding: `purpose` was not the only shape `eb43022` left behind, and the second is worse
+
+A sweep of every enum `03-rating-engine.md` declares in §2 and §4 against its hand-authored
+schema found **two** disagreements, not one, and both were landed by the same 2026-08-18
+commit:
+
+| # | Shape | Spec | Hand-authored contract | Gap |
+|---|---|---|---|---|
+| 1 | `QuoteContext.purpose` | `:63`, `:240-241` | `scoring.schema.json:12` | enum member `cancellation` missing |
+| 2 | `RateTableVersion.storage` | FR-RATE-62 `:123`, `:289`, `:310-316` | `rate-table.schema.json` | **the whole field is absent** |
+
+**The second is the worse one**, and it is `03`'s, not W11's: `FR-RATE-62` added `storage`
+(`rows \| parquet`, "fixed when the version is written and immutable with it") on 2026-08-18,
+and `grep -n storage docs/contracts/schemas/rate-table.schema.json` returns **nothing** — not
+in `properties`, not in `required`. That schema has exactly one commit in its history
+(`b452c78`, 2026-08-14), so it has never been touched since it was drafted, including not for
+the requirement that added a field to it. W10 shipped `RateTable`/`RateTableVersion` into
+`model-schema` against a contract missing that field.
+
+Every other enum in §2 and §4 agrees — `RatingVersion.status`, `model_reference_mode`,
+`ScoringResult.outcome`, `LadderRung.rung`, `operation.kind`, `input_contract[].type` and the
+step `type` set were all checked and all match. So the class is two, bounded, and named.
+
+## Third finding: nothing compares a spec's declared shape against its hand-authored contract
+
+This is the gap that let both of the above survive, and it is the one worth fixing.
+
+- **`scripts/audit-docs.py` does not do it.** Its only two checks touching
+  `docs/contracts/schemas/` are *"Every JSON Schema parses and has no duplicate keys"* and
+  *"Every JSON Schema `$ref` resolves"* — structural, not semantic. Grepped case-insensitively
+  for `enum` across the whole script: every hit is Python's `enumerate()` builtin, never the
+  JSON Schema keyword.
+- **`backend/tests/test_contracts.py` does not do it either**, and says so in its own
+  docstring — freshness and hand-authored-versus-generated conformance, with no file under
+  `docs/specs/` read anywhere in it.
+
+So a requirement can add a field or an enum member to a shape, and both the document gate and
+the contract gate stay green while the committed contract goes on describing the old shape.
+Two instances are on `main` today. **This is the same shape as the first finding in this
+record** — error codes are unchecked across the spec/code boundary in both directions — and
+the two together suggest the real gap is categorical: the gate checks documents against
+documents and code against code, and nothing checks a document against the artifact it
+specifies. Reported, not ruled: the remedy is a new check, which is scope.
 
 ---
 
