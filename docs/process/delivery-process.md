@@ -243,5 +243,7 @@ a check; each was caught by someone declining to accept something.
   the receiving one: a member holding a supplied premise it doubts says so instead of
   implementing it. On 2026-08-29 this was the only mechanism that caught anything: a
   quotation from a paragraph superseded twelve minutes earlier, a clause contradicting a
-  ruling its sender had filed hours before, and a draft granting one role a file assigned
-  minutes earlier to another.
+  ruling its sender had filed hours before, and a role-file draft that put a file in the
+  auditor's Tools line minutes after that same file had been assigned to the planner in the
+  same conversation — caught by running `git log` against the file itself and finding every
+  commit on it was already a plan review, not by remembering the earlier assignment.

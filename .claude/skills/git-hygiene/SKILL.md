@@ -215,6 +215,12 @@ the branch's own files as additions. That reads as "not merged" for a branch tha
 fails safe but for the wrong reason, and the next move after a misread is usually `-D`
 anyway.
 
+**`git fetch` updates a ref, never your working tree.** `git log origin/main` can read
+correctly the moment a fetch completes while every file on disk still reflects whichever
+commit is actually checked out — nothing moves it until a `merge`, `rebase`, or `checkout`
+does. Same shape as `--date=iso-strict` below: a command answers exactly what it was asked,
+which is not always the question the reader meant.
+
 **A file count is ambiguous unless it names its measure, and a deletion decision needs the
 right one.** Checking whether a branch is safe to delete can produce three different file
 counts, disagreeing in both number and membership — found recovering a stranded commit
@@ -418,6 +424,16 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the fetch-updates-a-ref-not-a-working-tree line added.** Same day, a
+different session's local `HEAD` sat thirteen commits behind while `git log origin/main`
+read correctly from a completed fetch, because a fetch had never been followed by a merge,
+rebase, or checkout — a role-file audit count came back a flat contradiction against the
+real one until the files were re-read with `git show origin/main:` instead of trusted from
+disk. Recorded beside the UTC-offset entry below, not merged into it: same shape, a command
+answering precisely what it was asked rather than what the reader meant, but different
+commands and different fixes, so a reader hitting them back to back can still tell them
+apart.
 
 **2026-08-29 — the UTC-offset date-rendering entry added.** A wrong calendar date, read from
 a rendering whose offset was never checked, reached a filed plan review this same day.
