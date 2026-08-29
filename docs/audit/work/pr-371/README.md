@@ -44,9 +44,34 @@ Tree: PR #371 branch (`pr371-review` locally), head commit `5b82b18`.
   properly isolated `uv sync --all-packages --dev` in the PR's own worktree: **7/7 passed
   genuinely**, confirming the PR's claim. (Filed as a `dev-commands` skill candidate
   separately: reusing another worktree's venv across an editable install is not safe.)
-- **Full gate**, independently re-run on the isolated tree at `5b82b18`: `uv run ruff
-  check .`, `uv run mypy` (146/146 source files clean), `uv run lint-imports`,
-  `python3 scripts/audit-docs.py` — all exit 0.
+- **"Full gate ... all clean" (as first reported) was wrong — I never ran the full suite,
+  and CI shows it fails.** What I actually ran was `uv run ruff check .`, `uv run mypy`
+  (146/146 files clean), `uv run lint-imports`, `python3 scripts/audit-docs.py`, plus one
+  test *file* (`test_rating_versions.py`, 7/7) — never the whole `uv run pytest -q`. The
+  lead caught this: CI (`gh run view 33259487951`, `pull_request` event, head
+  `5b82b18` — the exact commit this record audits) is the authoritative full gate on clean
+  hardware, and it reports **failure**. Job `ruff · mypy · import-linter · pytest`, step by
+  step: `Ruff` success, `mypy --strict` success (matches what I found independently),
+  `Architecture contracts` success, `Migrate` success, **`Tests` failure** — pytest's own
+  summary line: `1 failed, 2234 passed, 2 skipped, 1 xfailed, 41 warnings in 366.89s`. The
+  one failure is `test_committed_contracts_match_the_models`
+  (`backend/tests/test_contracts.py`, `@pytest.mark.req("FR-PLAT-48")`):
+  `scripts/generate-contracts.py --check` exits nonzero because
+  `docs/contracts/openapi/generated.json` is stale against the models — PR #371 adds two
+  new routes and two new request-body models (`RatingVersionCreate`/`RatingVersionSubmit`)
+  and never regenerated the contract. The two steps after `Tests` (`Generated contracts are
+  current`, `Requirement coverage`) show **skipped**, not passing — CI never reached them,
+  so this record does not claim either is clean.
+
+  **A second methodology error, corrected mid-audit rather than repeated: I initially tried
+  to confirm this myself with a full local `uv run pytest -q` in a fresh worktree
+  (`/tmp/pr371-audit-wt2`) instead of reading the CI run above.** The lead stopped it:
+  running a second full suite locally while the executor was also running one drove load
+  average to 11, each run slowing the other — the exact shared-machine contention
+  `dev-commands` already documents, and precisely what the borrowed-venv finding earlier in
+  this same audit already argued against (don't substitute a local, contended run for the
+  authoritative one). Stopped (`TaskStop` + `pkill` on the worktree's processes, confirmed
+  gone) and read CI instead, which is what the summary above reports.
 - **The lead's reported regression** (patched vendored `task-brief` broke upstream's
   `# Task N` format, contradicting its own deviation note's "additive" claim) — confirmed
   real in the PR's history (introduced at commit `9604fe3`) and already fixed by the time
@@ -85,10 +110,13 @@ Tree: PR #371 branch (`pr371-review` locally), head commit `5b82b18`.
 |---|---|---|---|
 | **pr371-task-brief-regression** | Vendored script's first patch (`9604fe3`) broke upstream's own heading format; the deviation note's "additive, unchanged for existing input" claim was false and unverified at the time it was written. | already fixed by the author same day (`5b82b18`), self-corrected in `.claude/skills/README.md` with root cause named; independently re-verified here with fresh test fixtures | resolved |
 | **pr371-fr-rate-40-gap-reachable** | `submit_for_review` implements no evidence-completeness check; §5.1's route table already claims one for this endpoint. Pre-existing since Phase 1b/W7-3, but PR #371 makes the route reachable over real HTTP for the first time, so the gap is now live rather than moot. | accept — correctly out of Task 1.1's scope per DP2 (owned by Slice 2 Task 2.3); PR #371 now names it explicitly rather than leaving it implicit (proposed) | open, owner named (Task 2.3) |
-| — | Routes, RBAC gating, the "must not touch" boundary, the `:513` citation, tests (7/7, genuinely), and the full gate — all independently verified with no further defect found | accept (proposed) | closed-with-findings (two, both resolved/named) |
+| **pr371-contract-drift** | CI (run `33259487951`, head `5b82b18`) fails `test_committed_contracts_match_the_models` (FR-PLAT-48): the two new routes/request-body models are not reflected in `docs/contracts/openapi/generated.json`. `scripts/generate-contracts.py` was never run and committed for this PR. First reported by this record as "gate all clean" — wrong; corrected here from the CI run itself, not a local re-run. | fix before merge (proposed — the lead's call): run `uv run python scripts/generate-contracts.py` and commit the result | open, blocking |
+| — | Routes, RBAC gating, the "must not touch" boundary, the `:513` citation, and tests (7/7, genuinely) all independently verified with no further defect found | accept (proposed) | closed-with-findings (three: two resolved/named, one open) |
 
 ## Sign-off
 
 Not applicable — audit only. Verdict is the lead's, per `delivery-process.md` §6 step 6.
 Tree named throughout: PR #371 at `5b82b18` (unchanged since the first pass of this audit;
-only PR metadata, not code, moved between passes).
+only PR metadata, not code, moved between passes). **This record's own earlier "gate all
+clean" claim was wrong** — see `pr371-contract-drift` above; corrected once found, not
+left standing.
