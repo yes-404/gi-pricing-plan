@@ -219,3 +219,29 @@ NT-0010 §15's own adoption workflow (freeze → reconcile → plan → implemen
 pilot → close and supersede), in progress. See `docs/plans/2026-08-29-nt-0010-0011-
 reconciliation-rulings.md` Part B4 (adopted as written) and `docs/plans/2026-08-29-nt-
 0010-0011-adoption.md` for where each step currently stands.
+
+## 15. Correction and message discipline
+
+Three failures that put wrong content into filed artifacts on 2026-08-29. None was caught by
+a check; each was caught by someone declining to accept something.
+
+- **Name which claim is wrong, in the first sentence.** A hedged correction — "both readings
+  are valid", "that may also be right" — preserves the error: the wrong claim stays standing
+  in a filed document, and the hedge grows a sentence explaining a discrepancy that does not
+  exist. State which side is wrong and supply exact replacement text, not a description of
+  the change.
+- **Dispatch and report cross, and neither is ordered.** A message and the thing it describes
+  travel independently. A correction routinely arrives after the artifact it corrects is
+  published; a report of "not landed yet" is routinely written before a merge it could not
+  have seen. Before acting on a premise someone sent you, check it is still live. When
+  sending, name the tree or SHA your claim is about — a status claim with no named tree is
+  unverifiable the moment it is sent.
+- **Verify against the primary source; never implement against a relay.** A fact arriving
+  from whoever reads everything and derives nothing reads as already-checked, so it gets
+  *less* scrutiny rather than more. `lead.md` already requires the sending half of this —
+  the lead states this explicitly in every dispatch — and the half no charter states yet is
+  the receiving one: a member holding a supplied premise it doubts says so instead of
+  implementing it. On 2026-08-29 this was the only mechanism that caught anything: a
+  quotation from a paragraph superseded twelve minutes earlier, a clause contradicting a
+  ruling its sender had filed hours before, and a draft granting one role a file assigned
+  minutes earlier to another.
