@@ -1003,16 +1003,22 @@ rather than in chat, and a comment on a closed pull request is nearer to chat th
 record. The review at W11's close folds these in, numbers them, and takes them to the
 maintainer.
 
-**Deliberately unnumbered — and that is the first finding.** Both candidates below have been
-referred to as "rule 6". `docs/audit/work/nt-0010-0011-adoption/pilot-findings.md`'s P7
-disposition reads *"the writer's half … is drafted as rule 6 and deliberately **not
-landed**"*, and P13's reads *"Rides with rule 6 into the §14 review"* — while the only text
-actually drafted under that number, in `#370`'s comments, is candidate B. **Candidate A was
-promised, not drafted**, so the number attached to whichever proposal a reader had in mind. A
-rule number is an identifier, and an identifier assigned before the thing exists is the same
-defect as a count written before the list is closed. **Numbering happens at acceptance.** The
-P7/P13 wording is a finding against that record and belongs to the role that owns it — this
-entry does not edit it.
+**Deliberately unnumbered — and that is the first finding.** Both candidates below had been
+referred to as "rule 6". Read at `97fcb16`,
+`docs/audit/work/nt-0010-0011-adoption/pilot-findings.md`'s P7 disposition read *"the
+writer's half … is drafted as rule 6 and deliberately **not landed**"*, and P13's read
+*"Rides with rule 6 into the §14 review"* — while the only text actually drafted under that
+number, in `#370`'s comments, was candidate B. **Candidate A was promised, not drafted**, so
+the number attached to whichever proposal a reader had in mind. A rule number is an
+identifier, and an identifier assigned before the thing exists is the same defect as a count
+written before the list is closed. **Numbering happens at acceptance.**
+
+> **Corrected upstream while this entry was open.** PR #390 (`e9f9fa5`) fixed both
+> dispositions: P7 now records the writer's half as filed unnumbered here, and P13 is marked
+> **fixed** because its clause is already in rule 5 on `main`. The quotations above are
+> therefore historical, and are kept with the tree they were read at rather than deleted —
+> the collision was real and is why both candidates are unnumbered. Reporting it rather than
+> editing another role's tree was the disposition; the owning role made the correction.
 
 ### Candidate A — do not move a branch someone is reading *(P7's writer's half; drafted here for the first time)*
 
@@ -1053,8 +1059,8 @@ entry does not edit it.
 **P13 sharpens rule 5 rather than adding to it.** The sweep's unit is every obligation the
 record imposes, not every heading matching a pattern — an addendum to an existing ruling
 never gets a new numbered heading, so a heading-keyed index is blind to precisely the changes
-that arrive late. That clause is already in rule 5 as merged (`#370`); P13's disposition
-should read as discharged there rather than as riding with a rule-6 proposal.
+that arrive late. That clause is already in rule 5 as merged (`#370`), and P13's disposition
+now reads **fixed** for that reason (PR #390). Nothing rides with a rule-6 proposal.
 
 **Why both candidates are proposals and not edits.** [`../../CLAUDE.md`](../../CLAUDE.md)
 §14: a review's output is a proposal with a dated maintainer acceptance line, never a change.
