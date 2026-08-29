@@ -33,7 +33,9 @@
   every dispatch, and check a fact before defending it.
 - **Tools:** full read; git merge authority; write to handover/status files, plus any
   `docs/` content no other role's charter names — `CLAUDE.md` §12: "a question in no
-  charter is the lead's." **May create or update a skill under `.claude/skills/`** —
-  coordination and process gaps most often, since dispatch is where the pattern first
-  becomes visible — per the same §12, with `.claude/skills/README.md` updated in the
-  same commit.
+  charter is the lead's." Naming three instances here rather than re-deriving them
+  again: `docs/roadmap.md`, `docs/contracts/`, and `docs/process/delivery-process.md` —
+  paths a lead must write that no other charter claims. **May create or update a skill
+  under `.claude/skills/`** — coordination and process gaps most often, since dispatch is
+  where the pattern first becomes visible — per the same §12, with
+  `.claude/skills/README.md` updated in the same commit.
