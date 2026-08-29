@@ -247,3 +247,9 @@ a check; each was caught by someone declining to accept something.
   auditor's Tools line minutes after that same file had been assigned to the planner in the
   same conversation — caught by running `git log` against the file itself and finding every
   commit on it was already a plan review, not by remembering the earlier assignment.
+- **Messages are 50 words or fewer** (maintainer rule, 2026-08-29). A dispatch states the
+  instruction and cites its artifact by path, PR number or task id; it does not carry the
+  reasoning. Reasoning belongs in a task, a plan, a ruling record or a merged artifact —
+  somewhere that outlives an inbox. **If a message cannot be said in 50 words, what it is
+  trying to say needs a durable home first, and the message becomes a pointer to it.**
+  Applies to every role including the lead.
