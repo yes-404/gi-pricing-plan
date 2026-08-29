@@ -409,6 +409,25 @@ plain `Bundle`, consistent with `FR-RATE-24`'s framing, not a Redis-location cla
 
 `python3 scripts/audit-docs.py` re-run clean on this delta (below).
 
+**Addendum, filed later the same day: the citation itself resolved nowhere.** Ruling 4's
+rationale and disposition (above, at three points — the `(a)` bullet, the `(b)` bullet, and
+the disposition's own last sentence) cite "this session's own W11 orientation report" as
+though it were an existing, committed document. It was not: the report was sent as a
+teammate message during W11 setup and never promoted into a filed file — a citation that
+resolved only for the writer, `NT-0004`'s own defect, inside the record that exists to
+avoid exactly that. Found by the lead sweeping the handover for content with no committed
+home, the same sweep that produced `NT-0012` and `NT-0013`.
+
+**Now resolves to `docs/plans/2026-08-29-w11-decision-points-recovery.md` (#362,
+merged).** That document recovers all five of the session's original decision-point
+scopings verbatim, quotes this ruling's own citing sentence back for cross-reference, and
+states plainly why it quotes rather than links: "session transcripts are local to the
+machine and session that produced them, not a durable citation." The original wording above
+is left exactly as written, per this record's own header precedent for a citation later
+found to need redirecting rather than rewriting — a reader hitting "this session's own W11
+orientation report" now has this paragraph to resolve it, which is the fix; the phrase
+itself is not worth three separate edits to reword.
+
 ## Ruling 5 — `score_one`'s real-time path: `async_evaluate()`, not `evaluate()` + executor offload; and whether §5.2's sync convention is itself the defect
 
 **The finding, precisely, and its evidence.** `docs/research/zen-evaluate-concurrency.md`
