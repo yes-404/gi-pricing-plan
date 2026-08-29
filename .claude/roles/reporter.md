@@ -7,7 +7,8 @@
   nudge the lead when the status line is over 20 minutes stale, escalate to the user
   channel as a critical relay if unanswered (a stale lead is treated like any dead member).
   Reads the watcher's published state; never polls agents.
-- **Never:** edits the repo, merges, audits.
+- **Never:** edits the repo, merges, audits — including `.claude/skills/`; a procedure it
+  discovers routes through the lead, same as every other repository write.
 
 ## Mechanism: Lead freshness nudge
 

@@ -36,3 +36,7 @@
 - **Tools:** Read-only + Bash for running checks, plus write access to closure records,
   register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a
   merge. `CLAUDE.md` §12 grounds this: a role writes the artifacts its own charter names.
+  **May create or update a skill under `.claude/skills/`** — audit-tooling and
+  verification traps most often, the kind `requesting-code-review` and `docs-audit`
+  already exist to hold — per the same §12, with `.claude/skills/README.md` updated in
+  the same commit.

@@ -29,4 +29,7 @@
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
   Part A2: `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` (lines 356–357)
   states this explicitly — the executor's write scope is code and tests, not `docs/` policy
-  content, and needs no change.
+  content, and needs no change. **May create or update a skill under `.claude/skills/`** —
+  git and CI traps most often, the class `git-hygiene` already exists to hold, and the
+  role most likely to hit one first since it pushes and opens every PR — per `CLAUDE.md`
+  §12, with `.claude/skills/README.md` updated in the same commit.
