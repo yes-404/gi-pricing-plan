@@ -496,6 +496,39 @@ row until a plan review ruled its owner. **In none of those cases would anything
 detected the violation.** That is the process working in the only place a process can be
 tested — where breaking it would have been invisible.
 
+## Dispositions — every finding fixed or carried with an owner
+
+Required by the adoption workflow's own step 6: *"Process defects found in the pilot are
+register findings like any other — fixed or carried with owners."* Registered as **F28**,
+one row, pointing here for the enumeration rather than copying thirteen findings into a
+second place that would then age against this one.
+
+**Nothing here is closed by the pilot's end.** A carried finding is carried, not discharged;
+the owner column is what makes it recoverable after this session.
+
+| # | Disposition | Owner |
+|---|---|---|
+| **P1** | carry — `watcher.md` requires liveness proof after arming, and states that neither a Monitor id nor its own log line is that proof | §15 step 7 |
+| **P1b** | carry — no file defect; a reasoning failure worth a working note of its own, since it generalises past this repository | §14 review |
+| **P2** | carry — the skill is authoritative, the handover carries runtime state, the skill wins on conflict. *Partly discharged: the watcher corrected `watcher-state.md` §4 Step 1 to the durable `extract_token.py` path during the pilot* | §15 step 7 |
+| **P3** | carry — ruled, with wording accepted; `reporter.md` does not yet carry it, and the same question is owed to `watcher.md` | §15 step 7 |
+| **P4** | carry — ruled for W11 (five sequential process-slices, frozen map untouched). **The definitional defect remains**: `delivery-process.md` must distinguish the process-slice from a plan's slice heading, or the plan template must stop using the word for the group | §15 step 7 |
+| **P5** | carry — the stand-down procedure must state that stand-down is not termination, that worktree locks persist while the agent lives, and that a successor cuts a fresh worktree | §15 step 7 |
+| **P6** | carry — something must write `.last_lead_status_ts` or the detector is removed, and `reporter-state.md:29`/`:90` are corrected. *Partly discharged: the reporter now writes the marker itself, verified at 15:15Z with no false escalation* | §15 step 7 |
+| **P7** | carry — the writer's half (*do not move a branch someone is reading*) is drafted as rule 6 and deliberately **not landed**, because a §14 review's output is a proposal | §14 review |
+| **P8** | **fixed** — `5b82b18` merges the two awk rules so a task heading cannot fall through to the clear-branch; verified independently on upstream task 1, upstream task 2 to EOF, and house 1.1. The general lesson carries | executor / §14 review |
+| **P9** | **fixed** — every ruling re-derived across narrative, Files, Steps and Acceptance; rule 5 lands in `docs/plans/README.md` with #370 | planner |
+| **P10** | **fixed** — Step 5 now names the measurement shape (incl. `DMatrix`, booster pre-loaded), and the manufactured comparator choice is removed | planner |
+| **P11** | carry — **a gate claim names its corpus**: the command, the totals and the tree. No artifact yet requires it; `executor.md` and `auditor.md` are the candidate homes | §15 step 7 |
+| **P12** | carry — no single file owns it; the operational form is that a correction is checked by a *differently-shaped* probe than the one that found the original, never by re-reading the passage just edited | §14 review |
+| **P13** | carry — sharpens rule 5: the sweep's unit is every obligation the record imposes, not every heading matching a pattern. Rides with rule 6 into the §14 review | §14 review |
+
+**Read the owner column as a claim about who acts, not about who has agreed.** §15 step 7's
+items are the lead's to land after the maintainer accepts; the §14 review's are proposals the
+maintainer accepts or rejects. **Neither set is discharged by the pilot closing**, and the
+adoption's closure record must list them again with whatever resolution it reaches
+(`CLAUDE.md` §14: nothing starts in the next phase while an open finding lacks a resolution).
+
 ## Provenance
 
 Collected by the lead during the pilot; each finding attributed above to the member that
