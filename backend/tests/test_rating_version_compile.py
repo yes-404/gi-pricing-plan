@@ -21,7 +21,7 @@ from backend.tests.test_rate_tables_service import _seed as _seed_rate_table
 from backend.tests.test_rate_tables_service import _table_slug as _rate_table_slug
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
-from app.db.models import BlobRow, JobRow, ModelRow, RatingVersionRow
+from app.db.models import BlobRow, JobRow, ModelRow, RateTableVersionRow, RatingVersionRow
 from app.db.session import Database
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.rating_versions import compile_rating_version
@@ -224,6 +224,26 @@ def test_a_version_pinning_a_rate_table_compiles(
     ref_key = f"rate_table:{seeded.slug}@{seeded.version}"
     assert ref_key in bundle.resolved_payloads
     assert bundle.resolved_payloads[ref_key]["rows"], "the rate table's rows were dropped"
+
+
+@pytest.mark.req("FR-OVR-14")
+def test_rate_table_version_row_has_no_status_column() -> None:
+    """Self-invalidating guard for Ruling 22's `rate_table` maturity exemption.
+
+    `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`: the resolver above
+    cannot report `rate_table`'s real maturity because `RateTableVersionRow` has none to
+    read, so `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` exempts the type from
+    the FR-OVR-14 floor rather than inventing `"approved"`. That exemption is only sound
+    while the premise holds. This test is the tripwire: the day a migration adds a
+    `status` column to `rate_table_versions`, it fails and names this record — the
+    exemption (and `OQ-RATE-7`) must be revisited rather than carried forward silently.
+    """
+    assert "status" not in RateTableVersionRow.__table__.columns, (
+        "RateTableVersionRow gained a status column — Ruling 22's rate_table maturity "
+        "exemption (docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md) and "
+        "OQ-RATE-7 must be revisited: the resolver should report this real status "
+        "instead of staying exempt from the FR-OVR-14 floor."
+    )
 
 
 @pytest.mark.req("FR-RATE-25")

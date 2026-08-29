@@ -305,12 +305,19 @@ async def compile_rating_version(
                     session, version_row, blob_store
                 )
                 # `RateTableVersionRow` carries no status column at all (rate tables are
-                # immutable-on-write — seed, operation or import, never a draft phase) —
-                # there is no real maturity value to read, so "approved" is the only
-                # member of `compile_bundle`'s `_APPROVED_OR_BETTER` this artifact type
-                # can ever report.
+                # immutable-on-write — seed, operation or import, never a draft phase),
+                # so there is no real maturity value to read here. Ruling 22
+                # (`docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`) refused
+                # inventing "approved" for it: that would put a constant where
+                # `compile_bundle`'s gate reads a discriminator, and fail open the day
+                # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
+                # what actually admits this pin past the FR-OVR-14 floor; the sentinel
+                # below is deliberately not a member of `_APPROVED_OR_BETTER`, so a pin
+                # still fails closed if the exemption is ever removed without this
+                # branch being updated to match.
                 return ResolvedArtifact(
-                    status="approved", payload=materialised.model_dump(mode="json")
+                    status="no_maturity_concept",
+                    payload=materialised.model_dump(mode="json"),
                 )
             if ref.type == "reference_table":
                 version = await reference_service.version_view(

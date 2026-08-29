@@ -152,11 +152,35 @@ async def test_an_unpinned_version_is_refused() -> None:
 
 @pytest.mark.req("FR-OVR-14")
 async def test_an_unapproved_pin_is_refused() -> None:
-    """FR-OVR-14: a pin whose artifact is not approved fails, naming the pin."""
+    """FR-OVR-14: a pin whose artifact is not approved fails, naming the pin.
+
+    Targets the `model` pin rather than `rate_table`: Ruling 22
+    (`docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`) exempts
+    `rate_table` from this floor (`_MATURITY_CHECK_EXEMPT`), so it can no longer be the
+    example that proves the gate fires.
+    """
     resolver = _resolver()
-    resolver._statuses["rate_table:motor-expense@3"] = "draft"
+    resolver._statuses["model:motor-ad-frequency@7"] = "draft"
     with pytest.raises(ValueError, match="PIN_NOT_APPROVED"):
         await compile_bundle(_version(), resolver)
+
+
+@pytest.mark.req("FR-OVR-14")
+async def test_a_rate_table_pin_compiles_regardless_of_status() -> None:
+    """Ruling 22: `rate_table` is exempt from the FR-OVR-14 floor, not a fourth member
+    of `_APPROVED_OR_BETTER` — the gate is bypassed for the type, not satisfied by it.
+
+    Proves the exemption is real rather than incidental: the resolver reports a status
+    no member of `_APPROVED_OR_BETTER` would ever admit, and the pin still compiles.
+    That the real `_Resolver.resolve` never invents an approved-sounding value for
+    `rate_table` is a separate guarantee, held by that branch's own comment and by
+    `test_rate_table_version_row_has_no_status_column`
+    (`backend/tests/test_rating_version_compile.py`), not by this test.
+    """
+    resolver = _resolver()
+    resolver._statuses["rate_table:motor-expense@3"] = "no_maturity_concept"
+    bundle = await compile_bundle(_version(), resolver)
+    assert "rate_table:motor-expense@3" in bundle.resolved_payloads
 
 
 @pytest.mark.req("FR-RATE-60")

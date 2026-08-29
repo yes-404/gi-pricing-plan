@@ -285,6 +285,19 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 
+# Ruling 22 (2026-08-29, `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`):
+# `rate_table` has no status column to read a real maturity from at all —
+# `RateTableVersionRow` carries none — while `06` §2's Governed Artifact row still calls a
+# Rate Table Version approval-bearing and FR-OVR-14 requires every pin to be at least as
+# mature as the referencing artifact's own state. Exempting the type from the floor below,
+# rather than inventing an "approved" the row cannot back, is declared rather than silent,
+# and it is provisional: OQ-RATE-7 asks whether `06`'s governance claim or the rate-table
+# lifecycle (`03` §3.3, the schema) is the side that needs to change. Membership is
+# expected to be temporary — `test_rate_table_version_row_has_no_status_column`
+# (`backend/tests/test_rating_version_compile.py`) fails the day a `status` column is
+# added to `RateTableVersionRow`, and names this record for revisiting.
+_MATURITY_CHECK_EXEMPT = frozenset({"rate_table"})
+
 
 class ResolvedArtifact(BaseModel):
     """An artifact resolved by a bundle compiler: its maturity and its payload."""
@@ -421,7 +434,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     ]
     for ref in all_refs:
         resolved = await resolver.resolve(ref)
-        if resolved.status not in _APPROVED_OR_BETTER:
+        exempt = ref.type in _MATURITY_CHECK_EXEMPT
+        if not exempt and resolved.status not in _APPROVED_OR_BETTER:
             _raise_named(
                 "PIN_NOT_APPROVED",
                 f"{ref} is {resolved.status!r}, not approved or better (FR-OVR-14)",
