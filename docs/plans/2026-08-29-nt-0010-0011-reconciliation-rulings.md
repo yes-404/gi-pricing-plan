@@ -722,3 +722,17 @@ close.
   wording" verbatim block, which stays untouched per the notes' own convention.
 - Both notes' `Status` field stays `open`: Part A's two rows are not yet accepted, and
   `.claude/notes/README.md`'s own acceptance criteria are not met until they are.
+
+  *(Corrected 2026-08-29, found by the §15 step 5 audit: both notes' `Status` field is now
+  `landed`, each carrying a dated acceptance line pointing at this record
+  (`.claude/notes/0010-layered-slice-based-workflow.md:6`,
+  `0011-per-agent-model-and-skill-settings.md:6`), mirrored the same way in
+  `.claude/notes/README.md`'s own index rows. The sentence above was accurate when this
+  Verification section was first filed, before Part A2 had a maintainer ruling to close on;
+  #335 is what changed it. Preserved rather than rewritten, per this record's own header
+  precedent for exactly this situation — a document correcting a governing pair of notes for
+  going stale had not yet applied the same check to its own closing section. Checked at the
+  same time and still accurate, not stale: the surrounding bullets above (the `audit-docs.py`
+  clean-run claim, the `07ae047` verification baseline for this record's original filing, and
+  the NT-0011 citation-correction note) — none introduces or is falsified by anything landed
+  since.)*
