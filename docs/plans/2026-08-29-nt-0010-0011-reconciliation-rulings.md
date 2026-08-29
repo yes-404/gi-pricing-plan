@@ -5,8 +5,17 @@
 freeze the inputs (step 1, done — PR #313, `07ae047`), reconcile against every governing
 document in force (step 2a, the auditor), then rule every numbered section adopt / amend /
 reject in one dated record (step 2b — this file), before a dated implementation plan (step 3)
-is written. Steps 3 onward do not start until this record's two open rows are closed by the
-maintainer; nothing else in it waits.
+is written.
+
+*(Corrected 2026-08-29, on Part A1's ruling landing while Part A2 was still open: the
+original text here said steps 3 onward would not start until both of Part A's rows closed.
+Practice was more precise than that sentence — `docs/process/delivery-process.md` and
+`docs/process/agent-settings.md` (steps 3–4) were written and landed with the specific
+sections that depend on an open row named and marked (`delivery-process.md:18`, `BLOCKED
+pending Part A1`; `agent-settings.md:69,72`, `pending Part A2`), rather than the whole
+document, or the whole step, waiting. That is the
+accurate rule, stated once here rather than left implicit: **a section that depends on an
+open row is named and blocked; everything else proceeds.**)*
 
 **Evidence.** The auditor swept fourteen governing documents (`CLAUDE.md`, the skills the
 notes bind, `docs/README.md`, `docs/audit/register.md`, `TEAM-STRUCTURE.md` is explicitly
@@ -16,10 +25,11 @@ tree at `origin/main` `07ae047` before being written down, including one correct
 auditor's own finding (Part B, item 8) — a citation is not trusted twice removed from the
 source, however careful the hand that gathered it.
 
-**Form.** Two rows stay open — the two items reserved to the maintainer per `CLAUDE.md` §10
-("do not silently pick a side on an open design choice"). Every other numbered section of
-both documents gets a ruling now; nothing is built before the open rows close, but nothing
-else waits on them either.
+**Form.** Two rows were reserved to the maintainer per `CLAUDE.md` §10 ("do not silently
+pick a side on an open design choice"); every other numbered section of both documents got
+a ruling immediately. **One is now closed**: Part A1 carries the maintainer's dated
+acceptance, below. **One remains open**: Part A2. A section that depends on an open row is
+named and blocked where it is used (`docs/process/`); nothing else waits on it.
 
 ---
 
@@ -59,7 +69,48 @@ that currently has one waiting for it. (b) discards a rule the record shows has 
 been bypassed without cost; (c) is a plausible middle position but invents a new
 distinction (which defers "carry unrecorded risk") that neither document asks for.
 
-**Maintainer acceptance:** _____________________ (date: __________)
+**Maintainer acceptance: ruled 2026-08-29.** Verbatim, quoted rather than reasoned around —
+this is the maintainer's own authority, not a decision-maker ruling: *"close a work stream:
+maintainer only makes decision on work, phase and project close but not slice close."*
+
+**What this decides.** The human checkpoint sits at **three** named layers — Work, Phase and
+Project close — with the maintainer deciding at each. **Slice close is not the maintainer's**:
+a slice closes on a clean audit and the lead's merge, exactly as it does today. **NT-0010 §9
+is rejected as written**, on this ground, not amended into it: §9's "exactly one human
+approval, at Project close" put the checkpoint at the wrong layer (and at only one of the
+three the maintainer names), so the proposal's structure was wrong, not merely its wording —
+recording it as rejected is the accurate description, where "amended" would imply the
+maintainer's ruling is an edited version of §9 rather than an independent one that happens to
+share (a)'s recommendation to reject the single-checkpoint reading. **This does not decide
+Part A2** (below) — role-agent write authority to `docs/` is a separate question the
+maintainer has not yet ruled, and nothing here should be read as bearing on it.
+
+**Two things that make this stronger than a preference, on the record because a future
+reader should have them, not just the outcome:**
+
+1. **It formalises what already happens rather than changing it.** The lead merges slice
+   PRs on a clean audit today; W6b, W9 and W10 each closed on the maintainer's word, never
+   the auditor's or the team's own verdict (Part A1's own sourcing, above). The ruling
+   writes an existing, previously-unwritten boundary down at three named layers — exactly
+   the class of gap Part D (below) catalogues: real, consistently followed, and invisible to
+   `audit-docs.py` or any governing skill until now.
+2. **It survives the objection that would otherwise weaken it.** W9 closed on the
+   maintainer's acceptance and still shipped incomplete: its own scope prose "names four
+   sections totalling 26 requirements; it verdicted 24" (`docs/audit/plan-reviews.md:572`,
+   plan review 7) — the closure record reported a completeness the repository did not have,
+   on work the maintainer had already accepted. That is evidence the checkpoint does not
+   catch scope gaps, which could read as evidence against having one. It is not: the
+   checkpoint decides **whether work stops**, an authority question, while the mechanical
+   scope audit derived from the spec (`scripts/scope-audit.py`, `close-workstream`'s own
+   first step) is what is supposed to catch what was missed, and did not run completely at
+   W9's close. Recording both halves matters because a reader who takes the checkpoint for
+   a safety net will over-trust it exactly where W9 shows it does not act as one.
+
+**What now unblocks, named so it is on the record rather than only in a message.**
+`docs/process/delivery-process.md` §2 ("Human checkpoint — BLOCKED pending Part A1") can now
+be written with this ruling's content — three named layers, Slice excluded, the maintainer's
+line as its grounds. That edit is Task 5's A1 half and belongs to the executor, not to this
+record.
 
 ### A2. Role agents that decide and write to `docs/` — NT-0010 §2/§4 item 2, bundled with NT-0011's auditor tool-scope (§2 "auditor") and the `.claude/agents/README.md` scope question
 
