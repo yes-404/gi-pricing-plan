@@ -7,7 +7,8 @@ skill reviews the plan; this checklist adds the roll-up record the close leaves 
 ## When a record is written
 
 A phase is named by its existing id (`1a`, `1b`, `2`). The record directory is
-`docs/audit/phases/<phase>/`.
+`docs/audit/phases/<phase>/`. "Phase" here is `docs/process/delivery-process.md` §4's
+Phase layer — same artifact, same id space (`1a`, `1b`, `2`, ...).
 
 ## The record
 
