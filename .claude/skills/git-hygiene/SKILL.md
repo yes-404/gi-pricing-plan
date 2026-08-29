@@ -82,6 +82,24 @@ rule and not a one-off caution: it has been seen to fail its local branch-delete
 exiting `1` on one PR and `0` on another, same underlying message either way — so **no exit
 code means "the merge landed."** Only re-reading state does.
 
+**The rule generalises past `gh` too: a plain `git push` can report success and still
+strand the commit, if the PR it was going to was merged out from under it.** Merging a PR
+deletes its branch (`delete_branch_on_merge`); pushing to that branch name afterwards
+*recreates the deleted remote ref* — `git push` succeeds, prints nothing alarming beyond an
+unexpected "create a pull request" hint on a branch that should already have had one — and
+the pushed commit is now on a ref with no open PR, nowhere near `main`. **Check `gh pr view
+<N> --json state,mergedAt` before pushing to a PR branch you did not just open, and again
+after any push that prints something unfamiliar.** If a commit is found stranded this way,
+**the fix is a cherry-pick onto current `main` in a fresh branch, not a re-push to the old
+one** — and verify the resulting diff (`git diff origin/main --stat`) is exactly the
+stranded commit and nothing else re-added from the dead branch.
+
+**Name the race for what it is: it takes two sides, and only naming both prevents it.** It
+happens when a reviewer merges a PR while its author is still pushing to it. The author's
+half is the check above. **The reviewer's half is asking before merging a PR whose author
+may still be working**, rather than merging the moment CI goes green — a rule that
+disciplines only the pusher lets the merger repeat their half of it indefinitely.
+
 ## The stash stack is shared by every worktree — never use bare `git stash`
 
 **There is one stash stack per repository, not one per worktree.** Every parallel session in
@@ -321,6 +339,16 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the stranded-push race added, found live during this same adoption's own
+filing.** A PR was merged by the reviewer while the author was still pushing a follow-up
+commit to its branch; the push succeeded, silently recreating the branch `delete_branch_on_
+merge` had just removed, and the commit landed nowhere near `main` until re-filed via a
+fresh cherry-pick. Caught by the author checking PR state after an unfamiliar push message,
+which is the "re-read the artifact" rule from the entry below applied across the `gh`/`git`
+boundary it was not originally written for — confirmed generalising correctly rather than
+assumed to. Recorded with both sides of the race named, since a rule binding only the
+pusher does not stop the merger from repeating their half.
 
 **2026-08-29 — the `gh pr edit` warning above widened from `--base` alone to the whole
 command, and generalised into the "re-read the artifact" rule.** First recorded 2026-08-24
