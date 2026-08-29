@@ -1,4 +1,4 @@
-# W11 Slice 1 decision-point rulings — the seven decisions that block Tasks 1.2 to 1.5 (2026-08-29)
+# W11 Slice 1 decision-point rulings — the eight decisions that block Tasks 1.2 to 1.5 (2026-08-29)
 
 **What this is.** `.claude/roles/decision-maker.md` requires every decision point to be
 pre-resolved *before* its slice starts. W11 Slice 1 is the pilot for the NT-0010/0011
@@ -261,6 +261,23 @@ together) and §5's ten-section standard, where §5.2 is the `pricing-core` inte
 that scoring N quotes against one `CompiledBundle` performs exactly **one** booster
 deserialisation, not N. Written to fail against the plan-as-written implementation (a)
 first — a probe that has never gone red has not been tested (`CLAUDE.md` §13).
+
+**Clarification added 2026-08-29, with Ruling 13: which `NFR-RATE-14` figure this ruling makes
+the right comparator.** Raised by the planner, who spotted that a per-call-load measurement is
+not comparable to the number it is checked against — correct, and the remedy they first
+proposed is not. `docs/research/w8-spike-resolution.md:76-80` publishes three rows, and
+**none of them includes booster load**: `nthread=1 (incl. DMatrix)` **1.626 ms**,
+`all-cores (incl. DMatrix)` 4.737 ms, and `predict-only (nthread=1)` 0.308 ms. Under this
+ruling `CompiledBundle` holds the booster already loaded, and `score_one` still builds a
+`DMatrix` per quote from that quote's features — so the shipping per-quote path is exactly
+the *incl. DMatrix* shape and **1.626 ms is the correct comparator**, as `NFR-RATE-14`'s own
+amended row already states. **0.308 ms is not the missing shape and must not be substituted
+for it**: predict-only excludes `DMatrix` construction, which `score_one` genuinely performs,
+so measuring against it would demand real work be free. What the plan's Task 1.4 Step 5
+actually measures is a **fourth** shape — load + `DMatrix` + predict — that W8 never measured
+and that is strictly larger than 1.626 ms, so it would read as a FAIL caused by the
+implementation the ruling removes. The figure should be cited **with its shape** ("incl.
+`DMatrix`, booster pre-loaded"), which is the durable fix; switching the number is not.
 
 ---
 
@@ -682,13 +699,103 @@ specifies. Reported, not ruled: the remedy is a new check, which is scope.
 
 ---
 
-## Dispositions applied to `../specs/03-rating-engine.md` in this commit
+---
+
+## Ruling 13 — `03` §5.2's money block: the code is right and the spec is stale, in more places than `F-W11-1-5` reports
+
+**Raised as `F-W11-1-5`** in the Slice 1 plan (`2026-08-29-w11-1-evaluator-core.md`, PR #370),
+which routed it here correctly: *"it is a spec-vs-code conflict, which `delivery-process.md`
+§3 makes theirs."* It is `CLAUDE.md` §0's question — which of spec and code is wrong — and
+this record answers it.
+
+**The finding as reported understates its own scope.** `F-W11-1-5` says *"Both the module
+path and the third parameter's name differ."* Checked against `002f4d8`, the table below is
+the finding; **it carries no total, deliberately** — see the correction beneath it. Every row
+marked *no* in the last column is a divergence the report does not mention:
+
+| # | Spec, `../specs/03-rating-engine.md` §5.2 | Shipped code | Reported? |
+|---|---|---|---|
+| 1 | module `pricing_core/rating/money.py` (`:619`) | `packages/pricing-core/src/pricing_core/money.py`; **no `rating/money.py` exists** | yes |
+| 2 | `apply_factor(..., rounding: Rounding)` (`:621`) | `apply_factor(..., mode: RoundingMode)` (`money.py:33`) | the name, yes |
+| 3 | the type `Rounding` | `RoundingMode = Literal["half_even", "half_up", "ceiling", "floor", "down"]` (`money.py:20`); **`Rounding` exists nowhere in the codebase** | **no** |
+| 4 | declares `to_minor` here (`:620`) | `to_minor` is not in `pricing-core` at all — it is `model_schema/money.py:105`, a different package | **no** |
+| 5 | `to_minor(value: Decimal, currency: str) -> int` (`:620`) | `to_minor(value: Decimal, *, places: int = 2) -> int` — keyword-only `places`, not positional `currency` | **no** |
+| 6 | does **not** declare `reconcile_ladder` | `reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool` ships (`money.py:55`) and is re-exported | **no** |
+
+**Corrected twice before merge, and the second correction removed the number rather than
+fixing it a third time.** The first filing said *"four"*: rows 4–6 were bundled into one row
+while rows 1–3 each held one defect, so the total under-reported at the table's own
+granularity — the same defect this ruling opens by naming in `F-W11-1-5`, committed in the
+act of naming it. Splitting the row gave *"six"*. The planner then made the argument that
+settles it: **six is right only at this table's granularity, and that granularity is a choice
+rather than a fact** — rows 5 and 6 could themselves be split or merged, and a reader
+quoting "six" would be quoting how the table was drawn, not what the repository contains.
+
+**So the total is gone, not corrected**, following this suite's own precedent for exactly
+this situation: `2026-08-29-w11-scoring.md:570-571` — *"every bare count in this section is
+removed rather than corrected a third time, replaced by the enumerated list above"* — and
+`:93`, where prerequisites are *"named individually, because … a bare count of them is not
+load-bearing anywhere in this document."* Nothing was ever missing from the text; only the
+number moved. **The list is the artifact; the total was the liability**, and this is the
+fourth instance in this area, which is what makes it a convention rather than a preference.
+
+Rows 4–6 point in opposite directions: two are a declared function that is in a different
+*package* with a different *signature*, and one is an undeclared function that ships. Row 6
+matters for this slice — `reconcile_ladder` is what `NFR-RATE-8`'s ladder-reconciliation test
+exercises, and Task 1.4's Step 12 is that test, so the plan depends on a function §5.2 does
+not list.
+
+**Ruled: the code is right; §5.2 is stale.** Grounds:
+
+- **`pricing_core.money` is public surface, not an internal path.**
+  `packages/pricing-core/src/pricing_core/__init__.py:13` re-exports
+  `ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder` from it. Moving the module
+  to match the spec would break `pricing-core`'s published API for a naming preference,
+  which is the tail wagging the dog.
+- **The parameter name is deliberate and requirement-grounded**, not incidental.
+  `money.py:36-37`: *"`mode` has no default. FR-RATE-12 requires rounding to be declared per
+  step; a default here would silently satisfy the type checker while defeating the
+  requirement."* A spec correction costs nothing; a rename to `rounding` would gain nothing
+  and lose that reasoning's anchor.
+- **`Rounding` never existed.** This is not a rename that drifted — the spec names a type the
+  repository has never had, so there is no code side to prefer.
+
+**Disposition — applied to `../specs/03-rating-engine.md` §5.2 in this commit**, following
+the correction convention that block already uses (`bundle_hash` carries *"corrected
+2026-08-27 (F-W9-3-2)"*, `compile_bundle` was corrected to `async def` by Ruling 3):
+
+- the module comment becomes `pricing_core/money.py`;
+- `apply_factor`'s third parameter becomes `mode: RoundingMode`;
+- `reconcile_ladder` is added, because it ships and `NFR-RATE-8` depends on it;
+- `to_minor`'s line is replaced by a pointer comment naming where it actually lives.
+
+**Deliberately not decided here, and flagged rather than folded in: which spec should declare
+`model_schema.money.to_minor`.** It is declared in exactly one place in the whole suite today
+— `03` §5.2, wrongly — and removing it from there without a home elsewhere loses the reader's
+path, which is why a pointer comment replaces it rather than a deletion. But `to_minor` is
+`model-schema`'s, so its §5.2 home is `00`'s or `02`'s surface, not `03`'s, and choosing
+between them is a different module's interface question rather than this conflict's
+resolution. Queued below.
+
+**`F-W11-1-5`'s "not a blocker" assessment is confirmed**, and it was the planner's to make
+rather than mine to accept on trust: Task 1.4 imports from the real path either way, and the
+plan states the real path in its Global Constraints, so no executor reads §5.2 for it. The
+correction is filed because a stale interface list is a trap for the *next* reader, not
+because it blocks this one.
+
+---
+
+## Dispositions applied to `../specs/03-rating-engine.md`
+
+*("this commit" in the first filing; the record has since grown across three PRs — #368, #373 and
+the one carrying Ruling 13 — so each row names its own.)*
 
 | Ruling | Edit | Section |
 |---|---|---|
 | 7 | Add the `rating/runtime.py` block with `def load_bundle(bundle: Bundle) -> CompiledBundle` | §5.2 |
 | 9 | Dated amendment to `FR-RATE-39` — full evaluation, all firing codes collected, ladder always populated | §3 |
 | 11 | Append `MODEL_CALL_FAILED` to the owned-code block | §5.1 |
+| 13 | Money block corrected: module path, `apply_factor`'s third parameter, `reconcile_ladder` added, `to_minor` repointed | §5.2 |
 
 Rulings 6, 8, 10 and 12 apply no spec edit. Ruling 8's spec change is owed by the PR that
 builds the seam, and Ruling 12's contract correction by the PR that builds `QuoteContext`,
@@ -705,6 +812,7 @@ same standard this record follows.
 | **DP2** — `FR-RATE-40`'s approval gate ahead of W12/W13 | 2 | Plan recommends (a), build the mechanism now. Blocks Task 2.3 only |
 | **`FR-RATE-38`'s batch abort threshold — where it is configured** | 3 | The requirement says *"unless the failure rate exceeds a declared threshold"* and names no home. Recovery item 4 recommends a workspace setting on `FR-PLAT-45`'s precedent with a per-request override. It reaches into `07`, and Slice 3's exit criteria are where it becomes real |
 | **Trace persistence — thin Postgres row + blob body, GC-based retention** | 4 | Recovery item 2's recommendation (b). Slice 4's own scope |
+| **Which spec declares `model_schema.money.to_minor`** | — | Ruling 13 removed it from `03` §5.2, where it was wrong on package and signature alike, and left a pointer comment. Its correct §5.2 home is `00`'s or `02`'s surface, not `03`'s. Not urgent; it is declared nowhere correct today |
 | **`FR-RATE-41`/`42` state no **batch** sampling default** | 4 | A spec silence, not a choice inside an existing requirement — recovery item 2 flags it as needing an `OQ-` or a spec change. Raised properly it is an `OQ-RATE`, which per `.claude/skills/spec-change` also takes a `../roadmap.md` §10 decision-gate row and a recount of that row's `N (M open)` count. Owed before Slice 4 |
 
 ## Findings reported, not ruled

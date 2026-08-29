@@ -616,9 +616,11 @@ def run_regression(bundle: CompiledBundle, suite: RegressionSuite,
                    *, seed: int) -> RegressionRun
 def generate_contexts(contract: InputContract, n: int, seed: int) -> list[QuoteContext]
 
-# pricing_core/rating/money.py — the decimal discipline (R2)
-def to_minor(value: Decimal, currency: str) -> int
-def apply_factor(amount_minor: int, factor: Decimal, rounding: Rounding) -> int
+# pricing_core/money.py — the decimal discipline (R2); path and signatures
+# corrected 2026-08-29 (W11 Slice 1, Ruling 13) — there is no rating/money.py
+def apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int
+def reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool
+# to_minor is model-schema's, not pricing-core's: model_schema/money.py
 
 # pricing_core/rate_tables/operations.py
 KeyFilter = dict[str, list[str]]          # exact-value match over the table's declared keys
