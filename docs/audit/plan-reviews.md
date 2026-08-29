@@ -997,8 +997,8 @@ holding it are the right ones.
 > of it. Neither id has a row of its own. **Two rows are owed at W11's close, and DP1 and DP2
 > having since been ruled does not write them**: a ruling settles what the code does, a
 > register row records what the workstream did not deliver, and those are different artifacts.
-> **Owner: W11's close** — the one item on this page today that has an owner without needing a
-> roadmap edit, because the review already named when it falls due.
+> **Owner: W11's close** — an owner this acceptance can name without a roadmap edit, because
+> the review already named when the obligation falls due rather than who would carry it.
 
 #### Proposals, consolidated — review 8
 
