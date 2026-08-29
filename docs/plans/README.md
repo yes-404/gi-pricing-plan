@@ -64,7 +64,7 @@ Run `python3 scripts/audit-docs.py` before handing a plan off.
 
 ## The conventions the audit cannot check
 
-The four above are enforced; these three are not. The gate reads documents and never the
+The four above are enforced; these five are not. The gate reads documents and never the
 Python a document quotes, so every literal in a plan is taken on trust by an executor who
 has no context to check it against.
 
@@ -89,6 +89,61 @@ has no context to check it against.
    cannot verify, name the authority instead of supplying a sample: "mirror the neighbouring
    test rather than the sample; do not reinvent the module's fixtures" caught a second
    W6b-13b mismatch the plan's own text could not.
+
+4. **Re-check for rulings between the evidence sweep and the pull request — premises age
+   faster than literals.** Rules 1–3 all guard against a *literal* aging — a fixture name, a
+   route, an enum member. The premise a plan argues from ages too, and faster, because a
+   decision-maker is ruling concurrently and a ruling is not a commit to the tree your sweep
+   pinned. The W11 Slice 1 plan was written against `7b8473a`, and six rulings landed in the
+   same hour: they unblocked one task, changed a ruled signature the plan had guessed a
+   parameter onto, turned a recommendation into a decision with a sharper acceptance test,
+   and corrected a defect the plan would otherwise have shipped — it told an executor to
+   raise `PlatformError` from inside `pricing-core`, which the import-linter contract
+   forbids. None of that was visible in the tree; all of it was visible in one open pull
+   request. **So the last step before opening a plan's PR is `gh pr list --state open` and a
+   read of anything that rules on the plan's own subject** — and where a revision follows,
+   name it at each point it applies rather than folding it in silently, so a reader can still
+   tell which parts rest on measured evidence and which on someone else's decision.
+
+   **Reading it is not enough: name the commit you read.** The same session then reported
+   "that PR does not cover it" after reading the ruling branch at `02699c3`, whose headings
+   stopped at Ruling 11. `dc4d980` appended Ruling 12 six minutes later and eleven seconds
+   before the merge, so the report was true of the tree it was written against and false by
+   the time it arrived. `../process/delivery-process.md` §15 already requires the fix —
+   *"name the tree or SHA your claim is about"*, because *"a status claim with no named tree
+   is unverifiable the moment it is sent"* — and a claim about an **open** PR is where it
+   bites hardest, since that branch is moving while you read it. The rule was not missing
+   here; it was not applied.
+
+5. **Apply a ruling at every site it operates, not only where the plan discusses it.** A
+   ruling that arrives mid-write gets revised into the paragraph explaining the design —
+   which is where you were already thinking about it — while the **Files** lists, the
+   numbered **Steps** an executor works from, and the **Acceptance** block an auditor checks
+   against all keep saying what they said before. Those three are the half that gets
+   implemented and the half that gets verified. **Check the four site classes separately** —
+   narrative, Files, Steps, Acceptance — because a claim can be present in one and absent in
+   the next three. Six sites in one plan on 2026-08-29: Ruling 7's
+   *"the payload travels inside the `Bundle`, never as a reference"* landed in the task that
+   summarised it, while the operative step one task earlier still said "the booster blob
+   reference" — and Ruling 8's site still told the executor to tune the per-call booster load
+   that ruling exists to delete. The two were mutually inconsistent and each looked fine in
+   isolation. **Grep the ruling's own subject across the whole document; never re-read the
+   section you just edited**, which agrees with itself by construction — rule 3, one level
+   up. **And enumerate the rulings by diffing the record, not by listing its headings.** A
+   sweep that walked `## Ruling N` headings missed a fourth obligation filed as an addendum
+   under a prose heading — an addendum to an existing ruling never gets a new numbered
+   heading, which makes heading-based enumeration blind to precisely the changes that arrive
+   late. `git diff` between the revision you last read and current cannot miss a section
+   whose heading you failed to predict. **The first pass at this rule was itself an instance of it**: written from the six
+   sites in hand, it named Files and Steps and not Acceptance, and a second sweep then found
+   that *no* ruling-derived check had reached any of that plan's five Acceptance blocks —
+   an auditor would have passed a build violating two rulings outright. Generalise from the
+   class, not from the sites you happen to have found. The same test governs a measured
+   figure: **a number carries the shape it was measured
+   in**, or the executor reproduces a different shape and compares it against your budget.
+   The same plan cited `p99 1.626 ms` without saying it included DMatrix construction over an
+   already-loaded booster; the predict-only figure beside it in the source is `0.308 ms`, and
+   reproducing the wrong one reads as five times the real headroom.
 
 **A missing neighbour is a scope finding.** Rule 3's fallback assumes there is something to
 mirror. Before writing sample tests for a module, grep its test file for the verb under
