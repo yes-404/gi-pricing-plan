@@ -57,6 +57,21 @@ informally — no new artifact, per the rulings record Part C row 3; only the la
 existing workstream (W1, W2, … W11, …). **Slice** is the existing per-task/PR unit a
 workstream is already sliced into.
 
+> **"Slice" has two scopes in this repository, and only one of them is this one**
+> (pilot finding P4). A **process-slice** — the sense used everywhere in this document — is
+> **one TDD leaf, one PR, one audit, one gate**, and it is what §7's retry caps and §8's
+> no-two-at-once govern. A **plan's `## Slice N` heading** is a *grouping of tasks* in a
+> filed plan, and a single one may hold several process-slices: W11's "Slice 1" held five.
+> The two differ by a factor of the group's size, so applying §7 or §8 to a plan heading
+> silently changes what they bound. **When either word could be meant, say which**
+> (`CLAUDE.md` §13's reference rule). Where a plan groups tasks under a `Slice N` heading,
+> each task is its own process-slice; the heading is a table of contents, not a unit of
+> work.
+>
+> *Left as a known collision rather than renamed: the plan template's heading and this
+> document's unit are both long-established, and renaming either would strand every citation
+> of it. The rule is to disambiguate at each use.*
+
 ## 5. Per-layer flow (Project / Phase / Work)
 
 1. **Enter** — load context from the parent layer + relevant findings-register entries.
@@ -132,6 +147,25 @@ precedent skill for exactly this shape ("2+ independent tasks... without shared 
 sequential dependencies"), and `CLAUDE.md`'s own memory-cost instruction ("delegate noisy
 investigation to a subagent") is the same standing rule. What stays forbidden is two
 *children* of the same layer running at once — not a bounded, read-only sweep inside one.
+
+**This rule governs parallelism between a layer's children. It says nothing about two
+*roles* independently verifying the same artifact, and that gap has a cost** (pilot finding
+P14). An executor and an auditor each, correctly, ran the full test suite on the same PR
+because neither knew the other was; two suites at once drove load average past 11 and both
+read as stalled agents for twenty minutes. **The symptom of contention is slowness, which is
+indistinguishable from a hang** — `CLAUDE.md` §11 already names this for command timings.
+
+So: **announce an expensive verification to the team when you start it, and check for one
+already in flight before starting.** The announcement is the load-bearing half. A rule that
+says only "check whether one is already running" is unactionable when nothing publishes what
+is running — **coordination state must be visible, not relayed pairwise**, or it reaches
+exactly the members whoever holds it happened to think of. *(Recorded because the first
+statement of this fix was exactly that unactionable form, and the finding recurred twice
+inside an hour before the announcement half was added.)*
+
+**And prefer the check that already exists**: for a pushed branch, CI is the authoritative
+full gate and runs on clean hardware. A reviewer re-running the suite locally buys nothing CI
+does not buy better, and risks the borrowed-environment traps `dev-commands` documents.
 
 ## 9. Global findings register
 
@@ -224,8 +258,10 @@ reconciliation-rulings.md` Part B4 (adopted as written) and `docs/plans/2026-08-
 
 ## 15. Correction and message discipline
 
-Three failures that put wrong content into filed artifacts on 2026-08-29. None was caught by
-a check; each was caught by someone declining to accept something.
+Failures that put wrong content into filed artifacts on 2026-08-29, enumerated below rather
+than counted — this line said "three" while listing four, because a bullet was appended and
+the number was not. **None was caught by a check; each was caught by someone declining to
+accept something.**
 
 - **Name which claim is wrong, in the first sentence.** A hedged correction — "both readings
   are valid", "that may also be right" — preserves the error: the wrong claim stays standing
@@ -249,6 +285,16 @@ a check; each was caught by someone declining to accept something.
   auditor's Tools line minutes after that same file had been assigned to the planner in the
   same conversation — caught by running `git log` against the file itself and finding every
   commit on it was already a plan review, not by remembering the earlier assignment.
+- **A gate or check result names its corpus — the command, the totals, and the tree**
+  (pilot finding P11). Two roles independently reported a PR's gate "clean" while its CI was
+  failing on a named invariant. Neither lied: one had run its own new test file (7/7), the
+  other had run four checks and one test file and re-run a real failure until it went green
+  in a borrowed environment. **"Clean" reported from whatever was run is unfalsifiable** —
+  `7/7` and `2234 passed` are distinguishable at a glance once both are written down, and
+  indistinguishable when only the word *clean* is reported. This is `CLAUDE.md` §13's
+  reference rule applied to a test count instead of a citation, and §11 already warns that a
+  Python-only "gate" has been green here while the frontend was red. **A subset is a subset;
+  say which one you ran.**
 - **Messages are 50 words or fewer** (maintainer rule, 2026-08-29). A dispatch states the
   instruction and cites its artifact by path, PR number or task id; it does not carry the
   reasoning. Reasoning belongs in a task, a plan, a ruling record or a merged artifact —
