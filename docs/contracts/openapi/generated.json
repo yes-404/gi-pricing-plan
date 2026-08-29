@@ -24207,7 +24207,7 @@
     },
     "/api/v1/rating-versions/{rating_version_id}/compile": {
       "post": {
-        "description": "**200** with the compiled Bundle's metadata (FR-RATE-24/25).\n\nThe pinned version compiles to a self-contained Bundle with a reproducible content\nhash; every validation failure is named. Rate tables, reference tables and custom\nobjectives have no backend tables yet (Phase 2), so a version pinning one is refused\nwith `NOT_FOUND`.",
+        "description": "**202** with a Job (`03` §5.1:514, FR-RATE-24/25, W11 Task 1.2).\n\nCompilation resolves the pinned algorithm, rate tables, reference tables, custom\nobjectives and model to their real content and persists the compiled Bundle as a\nblob — no longer a synchronous 200, since resolving real content can do real I/O.\nPolling the returned Job to completion yields a `JobResult(kind=\"blob\")` whose `ref`\nis the persisted Bundle's content-addressed sha256.",
         "operationId": "compile_rating_version_api_v1_rating_versions__rating_version_id__compile_post",
         "parameters": [
           {
@@ -24244,9 +24244,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Compile Rating Version Api V1 Rating Versions  Rating Version Id  Compile Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/Job"
                 }
               }
             },

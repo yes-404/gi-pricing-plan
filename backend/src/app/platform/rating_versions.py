@@ -10,7 +10,7 @@ approver's decision reaches the row through `apply_approval_decision`, the seam
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Literal, cast
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -19,9 +19,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import ApprovalRequestRow, ModelRow, RatingAlgorithmRow, RatingVersionRow
 from app.errors import PlatformError
 from app.platform import approvals, audit, rbac
+from app.platform import objectives as objectives_service
+from app.platform import rate_tables as rate_tables_service
+from app.platform import reference as reference_service
+from app.platform.blobs import BlobStore
+from app.platform.modelling import to_model
 from model_schema import (
     ArtifactRef,
     BundleMetadata,
+    GbmFitResult,
     JobSource,
     Permission,
     Pins,
@@ -30,7 +36,13 @@ from model_schema import (
     RatingVersionEvidence,
     RatingVersionStatus,
 )
-from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
+from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
+
+#: `reference.rows_as_at`'s default `limit` (200) is a UI page size. A compiled Bundle
+#: must be self-contained (FR-RATE-24) and embed a pinned reference table's rows in full —
+#: a lookup key past the first page would silently miss inside a `CompiledBundle` that can
+#: perform no I/O (Task 1.3/Ruling 7) — so this resolver asks for effectively all of them.
+_ALL_REFERENCE_ROWS = 10_000_000
 
 __all__ = [
     "apply_approval_decision",
@@ -224,13 +236,20 @@ async def apply_approval_decision(
 
 
 async def compile_rating_version(
-    session: AsyncSession, workspace_id: UUID, rating_version_id: UUID
-) -> dict[str, Any]:
-    """Compile a pinned Rating Version to a Bundle and store its metadata (W9-3).
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    rating_version_id: UUID,
+    blob_store: BlobStore,
+) -> Bundle:
+    """Compile a pinned Rating Version to a self-contained Bundle (W9-3, W11 Task 1.2).
 
-    Resolves the algorithm and the pins through the workspace's own tables. Rate tables,
-    reference tables and custom objectives have no tables yet (Phase 2), so a version
-    pinning one is refused with `NOT_FOUND` — a compile cannot embed what does not exist.
+    Resolves the algorithm and every pin — rate tables, reference tables, custom
+    objectives and models — through the workspace's own tables, embedding each pinned
+    artifact's real content in `resolved_payloads` (Ruling 7: inline, never a blob
+    reference, so `Bundle` stays self-contained and `load_bundle` needs no I/O). Returns
+    the full `Bundle`; the caller (the `rating.compile` Job handler) persists it as a
+    blob. `row.bundle` keeps carrying just the summary metadata it always has.
     """
     row = await load_rating_version(
         session, workspace_id=workspace_id, rating_version_id=rating_version_id
@@ -260,8 +279,80 @@ async def compile_rating_version(
                 )
                 if model is None:
                     raise PlatformError("NOT_FOUND", "Model not found", 404)
+                model_obj = to_model(model)
+                payload = model_obj.model_dump(mode="json")
+                if isinstance(model_obj.fit_result, GbmFitResult):
+                    # `gbm.py`'s `_fit_xgboost`/`fit_gbm` persist the booster as JSON
+                    # text wrapped in bytes (`bytes(booster.save_raw(raw_format="json"))`)
+                    # behind a content-addressed blob reference — the only place the
+                    # actual booster content exists. Compile time is when DB/blob access
+                    # is allowed (Ruling 8); dereference it now so the Bundle carries the
+                    # booster itself, never the reference (Ruling 7).
+                    booster_bytes = await blob_store.read(model_obj.fit_result.booster_blob)
+                    payload["fit_result"]["booster_content"] = booster_bytes.decode("utf-8")
+                return ResolvedArtifact(status=model.status, payload=payload)
+            if ref.type == "rate_table":
+                # `rate_tables.py`'s own materialiser: a version's cells are either row-
+                # or parquet-stored, and `_to_version` always returns them inline as
+                # `rows` — reused rather than re-implemented (03 §3.3, FR-RATE-62).
+                table_row = await rate_tables_service._load_table(
+                    session, workspace_id, ref.slug
+                )
+                version_row = await rate_tables_service._load_version(
+                    session, table_row.id, ref.version, ref.slug
+                )
+                materialised = await rate_tables_service._to_version(
+                    session, version_row, blob_store
+                )
+                # `RateTableVersionRow` carries no status column at all (rate tables are
+                # immutable-on-write — seed, operation or import, never a draft phase),
+                # so there is no real maturity value to read here. Ruling 22
+                # (`docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`) refused
+                # inventing "approved" for it: that would put a constant where
+                # `compile_bundle`'s gate reads a discriminator, and fail open the day
+                # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
+                # what actually admits this pin past the FR-OVR-14 floor; the sentinel
+                # below is deliberately not a member of `_APPROVED_OR_BETTER`, so a pin
+                # still fails closed if the exemption is ever removed without this
+                # branch being updated to match.
                 return ResolvedArtifact(
-                    status=model.status, payload={"status": model.status}
+                    status="no_maturity_concept",
+                    payload=materialised.model_dump(mode="json"),
+                )
+            if ref.type == "reference_table":
+                version = await reference_service.version_view(
+                    session, workspace_id=workspace_id, slug=ref.slug, version=ref.version
+                )
+                rows = await reference_service.rows_as_at(
+                    session,
+                    workspace_id=workspace_id,
+                    slug=ref.slug,
+                    version=ref.version,
+                    as_at=None,
+                    limit=_ALL_REFERENCE_ROWS,
+                )
+                # FR-DATA-30's own lifecycle is `draft`/`published`, not compile.py's
+                # generic `approved`/`live`/`retired` vocabulary. "published" is that
+                # lifecycle's FR-OVR-14 maturity gate (FR-DATA-30: "independently
+                # approvable"); bridged here, deliberately and narrowly, rather than by
+                # widening `compile_bundle`'s own `_APPROVED_OR_BETTER` (out of Task
+                # 1.2's scope — see PR description). A real `draft` version still reports
+                # its own, non-mature status, so an unpublished pin is still refused.
+                status = "approved" if version.status == "published" else version.status
+                return ResolvedArtifact(
+                    status=status,
+                    payload={
+                        "definition": version.model_dump(mode="json"),
+                        "rows": [row_.model_dump(mode="json") for row_ in rows],
+                    },
+                )
+            if ref.type == "custom_objective":
+                objective = await objectives_service.resolve_ref(
+                    session, workspace_id=workspace_id, ref=str(ref)
+                )
+                return ResolvedArtifact(
+                    status=objective.status.value,
+                    payload=objective.model_dump(mode="json"),
                 )
             raise PlatformError(
                 "NOT_FOUND",
@@ -285,4 +376,4 @@ async def compile_rating_version(
         "bytes": len(bundle.model_dump_json().encode()),
         "compiled_at": bundle.compiled_at.isoformat(),
     }
-    return dict(row.bundle or {})
+    return bundle
