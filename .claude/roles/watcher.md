@@ -25,6 +25,12 @@
 - **Owns (agent):** judgment on ambiguous anomalies and the written signal to the lead.
 - **Never:** dispatches stand-ins, touches the repo — including `.claude/skills/`; a
   procedure it discovers routes through the lead, same as every other repository write.
+
+**Implementation:** `.claude/skills/balance-watch` — the poller script, its env-var
+configuration, the thresholds and why each, and the re-arm procedure. This file states
+the WHAT and the numbers; that skill states the HOW, mirroring `.claude/skills/
+reporter-cycle` (task #33).
+
 - **Built:** not by `docs/plans/2026-08-29-nt-0010-0011-adoption.md` — see
   `docs/process/delivery-process.md` §13 for the mechanism this file describes, and that
   plan's Task 6 for why the script itself is deliberately deferred.
