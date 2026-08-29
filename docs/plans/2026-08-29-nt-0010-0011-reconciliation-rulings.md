@@ -27,9 +27,12 @@ source, however careful the hand that gathered it.
 
 **Form.** Two rows were reserved to the maintainer per `CLAUDE.md` §10 ("do not silently
 pick a side on an open design choice"); every other numbered section of both documents got
-a ruling immediately. **One is now closed**: Part A1 carries the maintainer's dated
-acceptance, below. **One remains open**: Part A2. A section that depends on an open row is
-named and blocked where it is used (`docs/process/`); nothing else waits on it.
+a ruling immediately. **Both are now closed**, each carrying the maintainer's own dated
+acceptance line: Part A1 (2026-08-29) and Part A2 (2026-08-29), below. Every section that
+depended on one of these two rows was named and blocked exactly where it was used
+(`docs/process/`, `.claude/roles/`) rather than the whole document or the whole step
+waiting; those named sections are listed at the end of A1 and A2 respectively, for the
+executor to resolve against this record rather than against this file's own prose.
 
 ---
 
@@ -181,7 +184,107 @@ observed (c). Naming the boundary explicitly — per role, per artifact class �
 an unrecorded drift into a decision, which is the entire point of ruling it rather than
 quietly adopting the notes as written.
 
-**Maintainer acceptance:** _____________________ (date: __________)
+**Maintainer acceptance: ruled 2026-08-29.** Verbatim, quoted rather than reasoned around —
+this is the maintainer's own authority: *"I assume that agents works involve change files
+in docs, it must be allowed"* — then, presented with options, **"option 2"**: split the two
+axes. Writing to `docs/` is unremarkable and allowed; *deciding* is bounded by charter. (The
+full option set put to the maintainer was not relayed to this record beyond the selected
+one and its refined text below; recorded as heard, not reconstructed.)
+
+**The outcome substantially adopts recommendation (a)'s conclusion — role sessions may
+decide and write within a stated boundary — by a different mechanism than (a) proposed.**
+(a) suggested amending `.claude/agents/README.md`'s own text with one belt-and-braces
+sentence. The ruling instead uses Part B11's placement answer (role files live in a
+separate `.claude/roles/` directory, not `.claude/agents/`) to make that sentence
+unnecessary: the two directories' dividing lines never overlap, so nothing in
+`.claude/agents/README.md` needs editing. Recommendation (b) (reject the drift, restore the
+literal rule) and (c) (split by artifact type) are not the path taken.
+
+**The ruled `CLAUDE.md` §12 replacement text, as put to the maintainer and accepted:**
+
+> **Evidence is delegated; authority is bounded by charter.** A subagent runs in its own
+> context and returns a conclusion — what §10 asks for — and **skills outrank agents on
+> procedure**. Two kinds of agent are governed differently:
+> - A **delegable specialist** (`.claude/agents/`) gathers or verifies and **decides
+>   nothing**. That directory's README is its dividing line.
+> - A **role** (`.claude/roles/`) **decides what its own charter names and nothing else**,
+>   and **writes the artifacts its charter names, including under `docs/`**. A spec change
+>   still follows `.claude/skills/spec-change`; a requirement id is still permanent (§5).
+>   **A question in no charter is the lead's.**
+>
+> Four things are never a role's:
+> - **§13's four verdicts** and the **merge** — the lead's. An auditor *proposes*; the lead
+>   adopts, amends or rejects before the record is filed.
+> - **Acceptance of a Work, Phase or Project close** — the maintainer's. A Slice closes on a
+>   clean audit and the lead's merge.
+> - **A §14 plan review's acceptance line** — the maintainer's. The review itself is the
+>   planner's to write, and binds nothing until dated.
+> - **An amendment to what this file requires** — the maintainer's. Editing this file to
+>   *point at* something already ruled is not an amendment.
+>
+> **Every decision lands as a dated artifact** — a ruling record, an audit record, a plan —
+> never in chat.
+
+**Record what moved, not just what was decided.** The clause this replaces named five
+things staying in "the main thread": §13's four verdicts, §14's proposals, §0's decision,
+slice design, and every edit to `docs/`. Two survive unchanged as the lead's (§13's
+verdicts, the merge). **Three move to a named charter rather than being dropped, and a
+reader must be able to see that they were relocated, not discarded:**
+- **§14's proposals → the planner.** Safe because §14 already independently requires "an
+  explicit maintainer acceptance line with a date" (`CLAUDE.md:263-264`) — the old §12
+  clause was redundant with a rule that is both older and stricter, so moving authorship to
+  the planner's charter changes who *drafts* the proposal, not who *accepts* it.
+- **§0's spec-versus-code decision → the decision-maker.** This is this session's own
+  established practice, evidenced by every ruling in Part B of this record and PR #315.
+- **Slice design → the planner.** The plan (`docs/plans/`, frozen at its date) is exactly
+  where slice design already lives in current practice; the old clause named the main
+  thread only because no other charter existed to name.
+- **"Every edit to `docs/`"** is replaced by charter-plus-`spec-change`, not removed
+  outright: the `spec-change` skill's append-only-id and ten-section rules were always the
+  actual safeguard against a bad edit, never the "main thread" clause — that clause
+  restricted *who*, never *how*, and the *how* is unchanged.
+
+**Flagged explicitly as the lead's drafting, not the maintainer's word — recorded here
+because the axis it touches is precisely the one that must not be misattributed.** The
+fourth "never" bullet's second clause — *"editing this file to point at something already
+ruled is not an amendment"* — is the lead's own distinction, supplied to justify why PR
+#325 (the `CLAUDE.md` pointer to `docs/process/`) needed no separate maintainer round-trip.
+The maintainer accepted the §12 text as a whole; this specific reading of what counts as
+"an amendment to what this file requires" was not independently confirmed word-for-word.
+It stands as the lead's operating interpretation, open to the maintainer tightening it later
+to "every `CLAUDE.md` edit" — recorded as attributed rather than presented as ruled, because
+this is the one place in the whole record where putting words in the maintainer's mouth
+would land on the exact question the ruling is about: what needs the maintainer.
+
+**The conflict of interest, on the record rather than only in the lead's own head.** This
+ruling ratifies the practice this team has already been running under — role sessions
+deciding within charter and writing to `docs/` — and the lead both recommended adopting it
+(option (a) above, and the framing put to the maintainer) and is a direct beneficiary: it is
+the lead's own dispatch pattern, this session's own PRs (#315, #320, #322, #323, #329, and
+this one), and the auditor's #308/#309 that the ruling retroactively legitimises. Naming
+this is not a claim that the ruling is wrong — the evidence for it (Part B11, PRs #308/#309)
+is independent of who proposed adopting it — but a reader auditing the adoption should not
+have to infer the conflict from the pattern of PRs alone. **Binding on the §15 step 5
+audit**: test the adopted rule against what this session actually did today, not only
+against NT-0010/0011's proposal text, precisely because the person who benefits from a
+lenient reading is also the one who drafted it.
+
+**Not an ADR, and why.** This repository's ADRs record architecture — `pricing-core`
+staying standalone, `model-schema`, the ZEN engine (`docs/adr/`). This ruling is process,
+and the adoption is creating `docs/process/` as process's own home; filing it as an ADR
+*as well* would be a fourth place the same rule lives, which is the exact failure `NT-0003`
+already named for duplicated status. `CLAUDE.md` §12 points at `docs/process/`; neither
+duplicates the other's content once the executor's edit lands.
+
+**What now unblocks, named so it is on the record rather than only in a message.** Five
+`docs/-write scope: pending Part A2` gates, all built in Task 5 ahead of this ruling and
+correctly left blocked until now, can be resolved with this ruling's content:
+`.claude/roles/decision-maker.md:16-19`, `.claude/roles/auditor.md:21`,
+`.claude/roles/planner.md:18`, `.claude/roles/lead.md:18`, and
+`docs/process/agent-settings.md:69,72`. (`.claude/roles/executor.md:11` is explicitly
+unaffected — its scope is code and tests, not `docs/` policy content — and needs no change.)
+That editing is Task 5's A2 half and belongs to the executor against this filed record, not
+to this ruling.
 
 ---
 
