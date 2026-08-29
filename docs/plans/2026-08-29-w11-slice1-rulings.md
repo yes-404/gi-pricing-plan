@@ -262,6 +262,23 @@ that scoring N quotes against one `CompiledBundle` performs exactly **one** boos
 deserialisation, not N. Written to fail against the plan-as-written implementation (a)
 first — a probe that has never gone red has not been tested (`CLAUDE.md` §13).
 
+**Clarification added 2026-08-29, with Ruling 13: which `NFR-RATE-14` figure this ruling makes
+the right comparator.** Raised by the planner, who spotted that a per-call-load measurement is
+not comparable to the number it is checked against — correct, and the remedy they first
+proposed is not. `docs/research/w8-spike-resolution.md:76-80` publishes three rows, and
+**none of them includes booster load**: `nthread=1 (incl. DMatrix)` **1.626 ms**,
+`all-cores (incl. DMatrix)` 4.737 ms, and `predict-only (nthread=1)` 0.308 ms. Under this
+ruling `CompiledBundle` holds the booster already loaded, and `score_one` still builds a
+`DMatrix` per quote from that quote's features — so the shipping per-quote path is exactly
+the *incl. DMatrix* shape and **1.626 ms is the correct comparator**, as `NFR-RATE-14`'s own
+amended row already states. **0.308 ms is not the missing shape and must not be substituted
+for it**: predict-only excludes `DMatrix` construction, which `score_one` genuinely performs,
+so measuring against it would demand real work be free. What the plan's Task 1.4 Step 5
+actually measures is a **fourth** shape — load + `DMatrix` + predict — that W8 never measured
+and that is strictly larger than 1.626 ms, so it would read as a FAIL caused by the
+implementation the ruling removes. The figure should be cited **with its shape** ("incl.
+`DMatrix`, booster pre-loaded"), which is the durable fix; switching the number is not.
+
 ---
 
 ## Ruling 9 — how a decline is represented: the whole DAG evaluates, and every firing constraint's code is collected
