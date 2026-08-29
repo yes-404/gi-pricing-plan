@@ -563,12 +563,14 @@ carries that finding rather than re-deriving a competing one.** FR-RATE-63 is a 
 gap**, not an orphan: nothing blocked it — FR-RATE-6 (sub-graphs) was W9-1's own delivery,
 and FR-RATE-63 is a `RatingVersion` pins-extension structurally identical to what W9-3 built
 for FR-RATE-60 in the *same* PR (#293). It was decided 2026-08-18, nine days before W9
-closed (2026-08-27) — not the one-day window first reported and corrected before this filing
-(`git log`: #291/#292 merged 2026-08-27, #293 merged 2026-08-28, W9's own close commit
-`eb9b6a1` at 2026-08-28T00:47+01:00, which the roadmap's own accounting books as the
-2026-08-27 close). A week-plus window, not a same-day scramble: FR-RATE-60, decided one day
-*before* FR-RATE-63, rode into #293 on that same merge, so the identical-shape sibling
-requirement had every opportunity to ride in beside it and did not. W9's own scope prose
+closed (2026-08-27) — not the one-day window first reported. #291, #292 and #293 all merged
+2026-08-27 (`git log`, converted to UTC — this repository's dates are UTC throughout, and a
+near-midnight commit's local-offset rendering reads as the next calendar day if taken at
+face value; caught here before filing, since a plan review's dates are exactly what later
+readers cite without rechecking). A week-plus window, not a same-day scramble: FR-RATE-60,
+decided one day *before* FR-RATE-63, rode into #293 on that same merge, so the
+identical-shape sibling requirement had every opportunity to ride in beside it and did not.
+W9's own scope prose
 names four sections totalling 26 requirements; it verdicted 24. **W9's closure record
 reports a completeness the repository does not have** — `CLAUDE.md` §13's own stated failure
 mode, on work already closed. FR-RATE-61, by contrast, genuinely could not have been built
