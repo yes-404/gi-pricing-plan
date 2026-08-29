@@ -701,17 +701,17 @@ specifies. Reported, not ruled: the remedy is a new check, which is scope.
 
 ---
 
-## Ruling 13 — `03` §5.2's money block: the code is right, the spec is stale in six ways, not the two reported
+## Ruling 13 — `03` §5.2's money block: the code is right and the spec is stale, in more places than `F-W11-1-5` reports
 
 **Raised as `F-W11-1-5`** in the Slice 1 plan (`2026-08-29-w11-1-evaluator-core.md`, PR #370),
 which routed it here correctly: *"it is a spec-vs-code conflict, which `delivery-process.md`
 §3 makes theirs."* It is `CLAUDE.md` §0's question — which of spec and code is wrong — and
 this record answers it.
 
-**The finding as reported understates its own scope, and the count is the part worth
-correcting first.** `F-W11-1-5` says *"Both the module path and the third parameter's name
-differ."* Checked against `002f4d8`, **six** things differ, and four of them are not in the
-report:
+**The finding as reported understates its own scope.** `F-W11-1-5` says *"Both the module
+path and the third parameter's name differ."* Checked against `002f4d8`, the table below is
+the finding; **it carries no total, deliberately** — see the correction beneath it. Every row
+marked *no* in the last column is a divergence the report does not mention:
 
 | # | Spec, `../specs/03-rating-engine.md` §5.2 | Shipped code | Reported? |
 |---|---|---|---|
@@ -722,13 +722,22 @@ report:
 | 5 | `to_minor(value: Decimal, currency: str) -> int` (`:620`) | `to_minor(value: Decimal, *, places: int = 2) -> int` — keyword-only `places`, not positional `currency` | **no** |
 | 6 | does **not** declare `reconcile_ladder` | `reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool` ships (`money.py:55`) and is re-exported | **no** |
 
-**Corrected 2026-08-29, before merge — this ruling's own count was inconsistent, and the
-planner caught it.** The first filing said *"four"*, because rows 4–6 above were bundled into
-a single row while rows 1–3 each held one defect. Nothing was missing from the text — the
-package, the signature and the omission were all stated — but a count is quoted later and a
-bundled row under-reports. Enumerated at the granularity rows 1–3 use, it is **six**. This is
-the same defect this ruling opens by naming in `F-W11-1-5`, committed in the act of naming
-it.
+**Corrected twice before merge, and the second correction removed the number rather than
+fixing it a third time.** The first filing said *"four"*: rows 4–6 were bundled into one row
+while rows 1–3 each held one defect, so the total under-reported at the table's own
+granularity — the same defect this ruling opens by naming in `F-W11-1-5`, committed in the
+act of naming it. Splitting the row gave *"six"*. The planner then made the argument that
+settles it: **six is right only at this table's granularity, and that granularity is a choice
+rather than a fact** — rows 5 and 6 could themselves be split or merged, and a reader
+quoting "six" would be quoting how the table was drawn, not what the repository contains.
+
+**So the total is gone, not corrected**, following this suite's own precedent for exactly
+this situation: `2026-08-29-w11-scoring.md:570-571` — *"every bare count in this section is
+removed rather than corrected a third time, replaced by the enumerated list above"* — and
+`:93`, where prerequisites are *"named individually, because … a bare count of them is not
+load-bearing anywhere in this document."* Nothing was ever missing from the text; only the
+number moved. **The list is the artifact; the total was the liability**, and this is the
+fourth instance in this area, which is what makes it a convention rather than a preference.
 
 Rows 4–6 point in opposite directions: two are a declared function that is in a different
 *package* with a different *signature*, and one is an undeclared function that ships. Row 6
