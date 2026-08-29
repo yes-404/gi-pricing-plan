@@ -56,15 +56,27 @@ items 1, 4 and 5 bear on Tasks 1.3 and 1.4.
 Slice TDD cycle), §7 (the ≤ 2 re-audit guard, whose instrumentation starts with this
 slice — it is the pilot), §8 (no two slices at once; read-only fan-out permitted).
 
+**Rulings 6–11, filed in PR #368 (`docs/plans/2026-08-29-w11-slice1-rulings.md`) while
+this plan was being written.** They land after this plan's own evidence sweep and they
+change five things in it; each is applied below and named where it applies. Ruling 6 rules
+DP3 and **unblocks Task 1.5**. Ruling 7 fixes `load_bundle`'s signature and appends it to
+`03` §5.2. Ruling 8 opens the loaded-booster seam. Ruling 9 rules the decline
+representation. Ruling 10 gives Task 1.3 two properties it owes W14. Ruling 11 confirms
+`MODEL_CALL_FAILED` and corrects this plan's error-raising convention. **PR #368 also edits
+`03-rating-engine.md` §3, §5.1 and §5.2**, so every `03:NNN` line number below — all
+verified at `7b8473a`, before that PR — shifts once it merges. Re-derive rather than trust
+them: `git grep -n 'FR-RATE-39' docs/specs/03-rating-engine.md`. The requirement ids are
+permanent; only the line numbers move.
+
 **Highest ids in use, verified at `7b8473a` by scanning
 [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md):** FR-RATE-65,
 NFR-RATE-14. Next free: `FR-RATE-66`, `NFR-RATE-15`. **This plan mints none of them.** It
 cites ids that already exist and proposes no new one. The line is republished because
 [`2026-08-29-w11-scoring.md`](2026-08-29-w11-scoring.md)'s own copy was verified at
 `d708be3` and this plan is written against a later tree; a stale allocation aid is what
-mints a colliding id. Two error codes are introduced (`MODEL_CALL_FAILED` in Task 1.4,
-and the two the spec already names but the code does not register) — error codes are a
-separate namespace from `FR-`/`NFR-`/`OQ-` ids and this marker does not cover them.
+mints a colliding id. Four error codes are registered in Task 1.4 — all four are already
+owned by `03` §5.1, `MODEL_CALL_FAILED` as of Ruling 11 — and error codes are a separate
+namespace from `FR-`/`NFR-`/`OQ-` ids, so this marker does not cover them.
 
 ---
 
@@ -362,6 +374,10 @@ No thread-count control exists anywhere in `pricing_core` (zero grep hits for
 to `predict_gbm`, applied via the booster's own parameter, rather than setting a process-wide
 environment variable — a global would silently change every other caller's behaviour,
 including the fit path. The measurement is a Task 1.4 exit criterion regardless.
+**Superseded in scope by Ruling 8 (PR #368)**, which found the larger defect in the same
+function: `predict_gbm` re-loads the booster on *every* call, so a thread setting alone
+would tune a path that should not be running at all. Task 1.3 builds the loaded-booster
+seam; this finding's `nthread` half rides on it.
 
 **F-W11-1-3 — FR-RATE-56's startup self-check exists as a function and is wired to
 nothing.**
@@ -424,7 +440,7 @@ NFR-RATE-9, 11, 13 → Slice 2. NFR-RATE-12 → Slice 4.
 | 1.2 Resolver, persistence, Job | 1.1 | — | Nothing compiles to a useful Bundle today, so 1.3 has nothing to load |
 | 1.3 `CompiledBundle` + `load_bundle` | 1.2 | — | `score_one`'s first parameter does not exist until this lands |
 | 1.4 `score_one` | 1.3 | **F-W11-1-1** (the `purpose` enum only) | The evaluator |
-| 1.5 Latency harness | 1.4 | **DP3** (load-gen tooling choice) | Measures 1.4 |
+| 1.5 Latency harness | 1.4 | — (**DP3 ruled**, Ruling 6) | Measures 1.4 |
 
 Strictly sequential — `delivery-process.md` §8's "no two children of a layer at once" is
 satisfied by the dependency chain itself, not only by the rule. Read-only evidence fan-out
@@ -434,10 +450,12 @@ inside a task is permitted by the same section.
 can build and gate the ladder, the step types, the error typing and the trace before it is
 ruled, then add the guard. Do not guess the enum.
 
-**DP3 (load-generation tooling)** is restated in the frozen map and is unruled. It blocks
-Task 1.5 only. Options and the recommendation are in
-[`2026-08-29-w11-scoring.md`](2026-08-29-w11-scoring.md); this plan does not re-argue them
-and does not rule them — `delivery-process.md` §3 makes that the decision-maker's.
+**DP3 (load-generation tooling) is ruled** — Ruling 6, PR #368: `scripts/bench-rating.py`
+is stdlib-only and follows `bench-model.py`'s shape; no new dependency, no `03` §8 row and
+no `skills-map.md` row is owed. **Task 1.5 is not blocked.** The ruling states its own
+acceptance test as a violation: if a later PR adds `locust`, `k6`, `hey` or `wrk` to any
+`pyproject.toml`, `uv.lock`, CI workflow or setup instruction for this measurement, the
+ruling has been overridden and needs a successor record.
 
 **F-W11-1-4 — FR-RATE-64 carries a second refusal that the map plan does not mention.**
 The map's Task 1.4 takes FR-RATE-64 as "the `instalment_loading` ladder rung". Its full
@@ -836,6 +854,8 @@ needs no ruling: the target shape is fixed externally by the engine's own wire f
 
 **Files**
 - Create: `packages/pricing-core/src/pricing_core/rating/runtime.py`.
+- Modify: `docs/specs/02-modelling.md` §5.2 — append the loaded-booster seam's signature in
+  the same commit that adds it (Ruling 8's standing obligation, not optional).
 - Modify: `compile.py`'s `to_jdm` and `JdmGraph` docstrings, both of which currently claim
   unqualified to produce "the engine's graph shape". Correct them to say what `to_jdm`
   actually produces *relative to* the engine's input, so the next reader does not repeat
@@ -847,9 +867,38 @@ needs no ruling: the target shape is fixed externally by the engine's own wire f
   `zen.ZenDecision`.
 - *Produces*, and Task 1.4 depends on these exact names:
   - `def to_wire(graph: JdmGraph) -> dict[str, Any]` — the JDM `{"nodes": [...], "edges": [...]}`
-  - `def load_bundle(bundle: Bundle, *, custom_handler: Callable[[Any], dict[str, Any]] | None = None) -> CompiledBundle`
+  - `def load_bundle(bundle: Bundle) -> CompiledBundle` — **exactly this signature**, ruled
+    and appended to `03` §5.2 by Ruling 7 (PR #368). It takes no resolver, no handler and no
+    keyword arguments, and performs no I/O: everything it needs is inside the `Bundle`.
+    Plain `def`, per `.claude/skills/spec-change`'s rule — it awaits nothing.
   - `CompiledBundle`, with at minimum `content_hash: str`, `decision: zen.ZenDecision`,
     `algorithm: RatingAlgorithm`, `boosters: Mapping[str, object]`
+
+**Three obligations from Rulings 7, 8 and 10, all landing in this task.**
+
+1. **Ruling 7 — a `model_call`'s payload travels *inside* the `Bundle`, never as a
+   reference, and must survive a JSON round trip.** `Bundle` is persisted and cached as
+   JSON and `resolved_payloads` is typed `dict[str, Any]` (`compile.py:361`), so raw booster
+   bytes cannot sit there unencoded. This is what Task 1.2's `model` branch must produce and
+   what `load_bundle` hydrates from — the two tasks meet exactly here.
+2. **Ruling 8 — the loaded-booster seam does not exist: `predict_gbm` re-loads the booster
+   on every call.** The seam's function names, the loaded type's name, and whether the loader
+   lives in `pricing_core/modelling/gbm.py` beside `predict_gbm` or in `rating/runtime.py`
+   beside `CompiledBundle` are **this task's design**, deliberately not pre-written by the
+   ruling — naming a function before it is designed is how a spec acquires a signature
+   nothing implements, which is the failure `CompiledBundle` itself was. **The PR that adds
+   the loader appends its signature to `../specs/02-modelling.md` §5.2 in the same commit.**
+   *Acceptance, stated as the violation that must become impossible:* a test asserting that
+   scoring N quotes against one `CompiledBundle` performs exactly **one** booster load.
+3. **Ruling 10 — two properties Slice 1 owes W14, so the deployment-switch mechanism still
+   has a choice left.** (i) `CompiledBundle` exposes the `content_hash` of the `Bundle` it
+   was loaded from — every candidate switch mechanism compares a held hash against a current
+   one, and a `CompiledBundle` that has forgotten its provenance makes FR-RATE-51's "either
+   the old or the new bundle, never a mix" unverifiable at runtime. (ii) `load_bundle` is
+   **pure with respect to the cache**: it consults no cache, registers itself in no global,
+   and starts no background task. `.importlinter` forbids `pricing_core` from importing
+   `redis` at all, so any cache tier lives above it in `backend/`. The warm-worker refresh
+   trigger itself is **W14's**, not this slice's.
 
 `import zen` is permitted here: `.importlinter`'s `core-has-no-infrastructure` contract
 forbids only web, database, queue and cloud clients, and `compile.py:24` already imports it.
@@ -908,7 +957,9 @@ Rules the translation must obey, each verified live:
    `{"hitPolicy", "rules", "inputs", "outputs", "passThrough", "inputField", "outputPath",
    "executionMode"}`; `inputs`/`outputs` are lists of `{"id", "name", "field"}` and each rule
    keys on those ids.
-6. A `model_call` step becomes `{"type": "customNode"}` — Task 1.4 supplies the handler.
+6. A `model_call` step becomes `{"type": "customNode"}`. The handler is supplied when the
+   engine is constructed, not when the graph is translated — `load_bundle` takes no handler
+   argument (Ruling 7), so whichever object owns the `ZenEngine` owns the handler.
 
 - [ ] **Step 4: implement `CompiledBundle` and `load_bundle`**
 
@@ -1070,21 +1121,50 @@ Five categories, four dispositions:
 - constraint decline → **not an error.** FR-RATE-39: `outcome: "declined"` with reason
   codes, a *successful* response, never an HTTP error.
 
-Three of these are not in `errors.py`. `PlatformError.__init__` (`errors.py:344-348`)
-raises `ValueError("unknown error code ...")` for any code outside `_KNOWN_CODES`, so
-raising one before registering it fails at construction, not at the client. Add all three
-to `RATING_ERROR_CODES`. `INPUT_CONTRACT_VIOLATION` and `REFERENCE_LOOKUP_MISS` are already
-named in `03` §5.1 (`:530-531`); `MODEL_CALL_FAILED` is not, so §5.1's owned-code list gains
-it in the same commit — a code is declared in the owning spec before it is raised.
+**`MODEL_CALL_FAILED` is ruled and already in the spec** — Ruling 11 (PR #368) confirmed it
+and appended it to §5.1's owned-code block, refusing the alternative of reusing
+`BUNDLE_COMPILE_FAILED` because that names a compile-time failure and would blur the audit
+trail between a bundle that would not build and a booster that would not answer. Do not
+re-add it to the spec; it is there.
+
+**Two corrections this plan owes to Ruling 11, both of which change what Step 6 does.**
+
+*First: it is four codes, not three.* `RATING_ERROR_CODES` (`errors.py:275-307`) is missing
+`MODEL_CALL_FAILED`, `INPUT_CONTRACT_VIOLATION`, `REFERENCE_LOOKUP_MISS` **and
+`LADDER_RECONCILIATION_FAILED`** — the last is already listed as owned in §5.1 and is named
+by NFR-RATE-8's reconciliation work, and an earlier draft of this plan missed it. All four
+must reach `RATING_ERROR_CODES` before anything raises them: `PlatformError.__init__`
+(`errors.py:344-348`) raises `ValueError("unknown error code ...")` for any code outside
+`_KNOWN_CODES`, so raising one before registering it fails at construction rather than at
+the client.
+
+*Second, and more important: `score_one` does not raise `PlatformError` at all.* It lives in
+`pricing-core`, which `.importlinter`'s `core-has-no-infrastructure` contract forbids from
+importing `app`. The established convention inside `pricing-core` is a **code-named
+`ValueError`** — `compile.py`'s `_raise_named` produces `ValueError(f"{code}: {message}")`,
+and `compile_rating_version` (`rating_versions.py:275-282`) already parses that shape back
+into a `PlatformError` at the boundary. `score_one`'s refusals follow `_raise_named`; the
+mapping to `PlatformError` happens at the backend boundary in **Slice 2**. An earlier draft
+of this step said "add all three to `RATING_ERROR_CODES`" as though `score_one` raised them
+directly, which would have sent an executor into a `lint-imports` failure. Registering the
+four codes is still this task's work — Slice 2's boundary mapping needs them to exist — but
+it is a backend change beside a `pricing-core` change, not the same change.
 
 - [ ] **Step 7: the decline representation**
 
-Recovered decision point 5 recommends **collect-all**: the full DAG always evaluates,
-`outcome` flips to `declined` if any constraint step fires, `decline_reasons` collects every
-firing step's code, and the ladder stays fully populated ("what it would have cost"). This
-matches `scoring.schema.json`'s `decline_reasons` being an **array** and `premium_ladder`
-being required unconditionally. **Recommended, not ruled** — if the decision-maker rules
-short-circuit instead, this step and its test change; nothing else in the task does.
+**Ruled — Ruling 9 (PR #368), and FR-RATE-39 carries a dated amendment saying so.**
+Collect-all: the full DAG always evaluates, `outcome` flips to `declined` if any constraint
+step fires, `decline_reasons` collects **every** firing step's code, and the ladder stays
+fully populated ("what it would have cost"). This matches `scoring.schema.json`'s
+`decline_reasons` being an array and `premium_ladder` being required unconditionally. The
+amendment appends no new `FR-` because it adds no obligation FR-RATE-39 did not already
+carry — it makes precise which of two readings of "reason codes" was meant.
+
+**Acceptance, stated as the ruling states it — the test needs *two* declines, not one.** A
+`QuoteContext` firing two constraint declines returns `outcome: "declined"`,
+`len(decline_reasons) == 2`, and a `premium_ladder` that reconciles to
+`payable_premium_minor` under NFR-RATE-8's check. A single-decline test passes under
+short-circuit and collect-all alike and would prove nothing.
 
 - [ ] **Step 8: the trace (FR-RATE-41)**
 
@@ -1159,12 +1239,14 @@ shared-event-loop concern to protect.
 
 ---
 
-## Task 1.5 — The bare-metal latency harness *(blocked on DP3)*
+## Task 1.5 — The bare-metal latency harness
 
-**Do not start until DP3 carries a ruling.** The options and the recommendation are in the
-frozen map; this plan neither re-argues nor rules them. Everything below holds whichever
-option rules, because the harness's *shape* is fixed by the existing convention and only its
-load-generation half depends on DP3.
+**Unblocked — Ruling 6 (PR #368) rules DP3.** `scripts/bench-rating.py` is stdlib-only,
+following `bench-model.py`'s shape; the sustained-load driver that Slice 2's Task 2.1 needs
+is `asyncio` + `httpx` in the same `scripts/` convention. Neither is a CI gate; each
+produces a dated `docs/research/` note. The frozen map tags this task `[depends on DP3]`;
+that tag is now discharged, and PR #368's own findings section records the tag as
+over-broad in the first place.
 
 **Discharges** `docs/roadmap.md:392`'s risk mitigation — "Build the latency harness in W11
 alongside the evaluator, not after" — at the component level. The full-HTTP-path
@@ -1204,11 +1286,15 @@ individually with their owning slice or workstream, so the exclusion is visible 
 silent. FR-RATE-65 was added after checking the map's own list against `03` §3.4 — it was
 missing (C5).
 
-**2. Placeholder scan.** No bare TBD. Two things are genuinely unwritten and each says
-exactly what blocks it: `purpose` handling in Task 1.4 Step 1 (F-W11-1-1) and Task 1.5
-(DP3). Task 1.4 Step 7 states a recommendation that is explicitly not a ruling. That is the
-honest state of a blocked decision, not a placeholder — but it is also why Task 1.4 cannot
-be declared complete before F-W11-1-1 is ruled.
+**2. Placeholder scan.** No bare TBD. **One** thing is genuinely unwritten and it says
+exactly what blocks it: `purpose` handling in Task 1.4 Step 1 (F-W11-1-1). That is the
+honest state of a blocked decision, not a placeholder — and it is why Task 1.4 cannot be
+declared complete before F-W11-1-1 is ruled. Two other items were open when this plan's
+evidence sweep ran and are not open now: Task 1.5's DP3 dependency and Task 1.4's decline
+representation, both ruled by PR #368 while this was being written. One design choice is
+deliberately left to the executor rather than pre-written — the loaded-booster seam's
+naming, per Ruling 8's own reasoning that naming a function before it is designed is how a
+spec acquires a signature nothing implements.
 
 **3. Type consistency.** `CompiledBundle`, `load_bundle` and `to_wire` are named once in
 Task 1.3's *Produces* block and used under those names in Task 1.4. `score_one`'s signature
@@ -1232,9 +1318,16 @@ malformed-graph `RuntimeError` versus a wrong number in Task 1.3 Step 2. In each
 plan says what a *differently*-shaped failure would mean, because a matching status with a
 differing reason is a plan defect.
 
-**6. What this plan does not decide.** Five things, each named with its owner: F-W11-1-1 and
-F-W11-1-5 are spec-vs-code conflicts and the decision-maker's; DP3 is the decision-maker's;
-recovered decision points 1 and 5 are the decision-maker's; and whether Tasks 1.1–1.5 are
-five slices or one slice of five PRs is the lead's replan call, raised separately. A planner
-supplies options and a recommendation and does not rule any of them
+**6. What this plan does not decide.** Three things, each named with its owner. F-W11-1-1
+and F-W11-1-5 are spec-vs-code conflicts and so the decision-maker's; whether Tasks 1.1–1.5
+are five slices or one slice of five PRs is the lead's replan call, raised separately. A
+planner supplies options and a recommendation and rules none of them
 (`delivery-process.md` §3).
+
+**7. Written against `7b8473a`, revised once before freeze.** The evidence sweep, every
+line number and the five live engine measurements are at `7b8473a`. PR #368 landed six
+rulings between the sweep and the commit, and this plan was revised rather than filed
+stale — the revision is named at each point it applies rather than folded in silently, so a
+reader can see which parts rest on evidence and which on a ruling. **F-W11-1-1 survives
+that revision**: PR #368's own "findings reported, not ruled" section names two findings and
+neither is the `purpose` enum, so it remains open and this plan is still its only record.
