@@ -64,7 +64,7 @@ Run `python3 scripts/audit-docs.py` before handing a plan off.
 
 ## The conventions the audit cannot check
 
-The four above are enforced; these three are not. The gate reads documents and never the
+The four above are enforced; these four are not. The gate reads documents and never the
 Python a document quotes, so every literal in a plan is taken on trust by an executor who
 has no context to check it against.
 
@@ -90,20 +90,20 @@ has no context to check it against.
    test rather than the sample; do not reinvent the module's fixtures" caught a second
    W6b-13b mismatch the plan's own text could not.
 
-**A fourth, about premises rather than literals: re-check for rulings between the evidence
-sweep and the pull request.** Rules 1–3 all guard against a *literal* aging — a fixture name,
-a route, an enum member. The premise a plan argues from ages too, and faster, because a
-decision-maker is ruling concurrently and a ruling is not a commit to the tree your sweep
-pinned. The W11 Slice 1 plan was written against `7b8473a`, and six rulings landed in the
-same hour: they unblocked one task, changed a ruled signature the plan had guessed a
-parameter onto, turned a recommendation into a decision with a sharper acceptance test, and
-corrected a defect the plan would otherwise have shipped — it told an executor to raise
-`PlatformError` from inside `pricing-core`, which the import-linter contract forbids. None of
-that was visible in the tree; all of it was visible in one open pull request. **So the last
-step before opening a plan's PR is `gh pr list --state open` and a read of anything that
-rules on the plan's own subject** — and where a revision follows, name it at each point it
-applies rather than folding it in silently, so a reader can still tell which parts rest on
-measured evidence and which on someone else's decision.
+4. **Re-check for rulings between the evidence sweep and the pull request — premises age
+   faster than literals.** Rules 1–3 all guard against a *literal* aging — a fixture name, a
+   route, an enum member. The premise a plan argues from ages too, and faster, because a
+   decision-maker is ruling concurrently and a ruling is not a commit to the tree your sweep
+   pinned. The W11 Slice 1 plan was written against `7b8473a`, and six rulings landed in the
+   same hour: they unblocked one task, changed a ruled signature the plan had guessed a
+   parameter onto, turned a recommendation into a decision with a sharper acceptance test,
+   and corrected a defect the plan would otherwise have shipped — it told an executor to
+   raise `PlatformError` from inside `pricing-core`, which the import-linter contract
+   forbids. None of that was visible in the tree; all of it was visible in one open pull
+   request. **So the last step before opening a plan's PR is `gh pr list --state open` and a
+   read of anything that rules on the plan's own subject** — and where a revision follows,
+   name it at each point it applies rather than folding it in silently, so a reader can still
+   tell which parts rest on measured evidence and which on someone else's decision.
 
 **A missing neighbour is a scope finding.** Rule 3's fallback assumes there is something to
 mirror. Before writing sample tests for a module, grep its test file for the verb under
