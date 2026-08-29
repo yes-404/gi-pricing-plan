@@ -216,9 +216,11 @@ plan artifacts.
 
 This document, the rulings record, and the adoption implementation plan are steps 1–3 of
 NT-0010 §15's own adoption workflow (freeze → reconcile → plan → implement → audit →
-pilot → close and supersede), in progress. See `docs/plans/2026-08-29-nt-0010-0011-
+pilot → close and supersede), **complete: accepted by the maintainer 2026-08-29, and this
+document is authoritative from that date.** The two proposal notes carry dated `superseded`
+status and are kept as the proposal record. See `docs/plans/2026-08-29-nt-0010-0011-
 reconciliation-rulings.md` Part B4 (adopted as written) and `docs/plans/2026-08-29-nt-
-0010-0011-adoption.md` for where each step currently stands.
+0010-0011-adoption.md` for the record of each step.
 
 ## 15. Correction and message discipline
 

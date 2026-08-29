@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-29, maintainer — supplied `agents-settings-proposal.md` as the companion to the workflow proposal, with the instruction to convert it into a working note |
-| **Status** | `landed` 2026-08-29 — ruled alongside its parent in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`; the landing locations are recorded in `.claude/notes/README.md`'s index row |
+| **Status** | **`superseded` 2026-08-29 — by the adopted specification, `docs/process/delivery-process.md` together with `.claude/roles/*.md` and `docs/process/agent-settings.md`, authoritative from this date.** Accepted by the maintainer 2026-08-29 alongside its parent [`NT-0010`](0010-layered-slice-based-workflow.md), on the lead's presentation of the adoption record and pilot findings. This document is now the **proposal record** it was adopted from, kept rather than deleted. Where the two disagree, the adopted specification wins. *(Previously `landed` 2026-08-29 — ruled alongside its parent in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`.)* |
 | **Deliverable** | Role definitions under `.claude/agents/` and an agent-settings document. **No change to `docs/specs/` and no product code** |
 | **Owner** | Maintainer accepts and rules the open items · Claude drafts the role files and the settings document |
 | **Lands in** | Proposed by the author: `docs/process/agents.md`; also `.claude/agents/` (seven new role files) and `.claude/agents/README.md` (its dividing line, which the decision-maker role contradicts) |

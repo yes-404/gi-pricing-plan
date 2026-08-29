@@ -178,6 +178,45 @@ survives the stand-down:
   13-requirement scope, two undocumented tool caveats), each with a proposed owner, none
   yet landed.
 
+## Closed — §15 step 7, accepted 2026-08-29
+
+**Accepted by the maintainer, 2026-08-29**, on the lead's presentation of this record plus
+the pilot findings. On acceptance `NT-0010` and `NT-0011` received dated `superseded` status
+and **`docs/process/delivery-process.md` became authoritative**; both notes are kept as the
+proposal record, because the adopted specification does not carry the reasoning that produced
+it.
+
+**Five things this close is on the record as stating, because each is easy to lose:**
+
+1. **The pilot was Task 1.1, not all of Slice 1.** Ruled by the maintainer mid-pilot. The
+   Slice 1 plan (`docs/plans/2026-08-29-w11-1-evaluator-core.md`) still says at line 57 that
+   §7's instrumentation *"starts with this slice — it is the pilot"* — true when written, now
+   narrower in fact. **The plan was deliberately not edited to agree**, per
+   `docs/plans/README.md`: a filed plan records what was believed. **This record is the
+   authoritative document for the narrowing**, and the plan's line is not a defect.
+
+2. **The a-priori caveat.** The role-file gaps were found by **directed inspection before the
+   pilot**. The pilot cannot be cited as evidence that the original role files were sufficient
+   a priori — they were not. It tests only whether the **repaired** files are sufficient to
+   spawn from.
+
+3. **Two kinds of finding, and only one is charter evidence.** `pilot-findings.md`'s P1–P5
+   answer §15 step 6's own question. **P7–P14 are findings about engineering and verification**
+   — real, and not evidence about charter sufficiency. Do not present them as one body.
+
+4. **Acceptance discharges nothing carried.** Register row **F28** lists every pilot finding
+   with its disposition — fixed, or carried with a named owner. Six are carried to the lead,
+   four to the planner's §14 review at W11's close. They are enumerated there rather than
+   copied here, because a second copy would age against the first. `CLAUDE.md` §14 still
+   governs: nothing starts in the next phase while an open finding lacks a resolution.
+
+5. **What no gate caught, which is the most consequential result.** `audit-docs.py` was green
+   at every point a defect existed. The gates check **documents against documents** and **code
+   against code**; nothing checks a document against the artifact it specifies. That gap
+   contains the plans that instruct executors, the acceptance criteria that certify their
+   output, and the hand-authored contracts describing shipped types — and it is why F27, F29
+   and F30 exist. Every catch in this pilot came from a person declining to accept something.
+
 ## Provenance
 
 Both passes audited and both verdicts proposed by the auditor role (`w11-auditor`); both
