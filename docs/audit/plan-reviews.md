@@ -548,36 +548,46 @@ completion claim.
 
 **2. Omission — what the phase needs that no row names.**
 
-**FR-RATE-61 and FR-RATE-63 have no workstream owner.** (Verifying the hypothesis this
-review was handed: it named FR-RATE-60 alongside FR-RATE-61. FR-RATE-60 is not part of this
-gap — see Question 1 — it was verdicted in W9. Only FR-RATE-61 and FR-RATE-63 are orphaned;
-recorded here rather than silently substituted.) Both were decided 2026-08-18 — OQ-MODEL-11
-into FR-RATE-61 (`03-rating-engine.md:110`, §3.2), OQ-RATE-4 into FR-RATE-63 (`:87`, §3.1) —
-nine days before W9 closed. Neither appears in any `W_` row's stated scope: a full-file grep
-of `docs/roadmap.md` for both ids returns exactly two hits, both inside OQ-RATE-4's and
-OQ-MODEL-11's own decided-narrative text (`:536`, `:567`), explaining what requirement number
-a decision became, never inside a workstream row. Neither appears in W9's closure record
-either (checked directly; it verdicts FR-RATE-60 but mentions neither 61 nor 63). This is
-the omission shape the skill names: an approved id exists, nothing measures delivering it,
-and nobody had looked — orphaned at birth, not gone stale.
+**FR-RATE-61 and FR-RATE-63 have no workstream row.** (Verifying the hypothesis this review
+was handed: it named FR-RATE-60 alongside FR-RATE-61. FR-RATE-60 is not part of this gap —
+see Question 1 — it was verdicted in W9; its own roadmap-row text simply omits it from the
+literal range, a wording correction rather than a coverage gap.) Both 61 and 63 were decided
+2026-08-18 — OQ-MODEL-11 into FR-RATE-61 (`03-rating-engine.md:110`, §3.2), OQ-RATE-4 into
+FR-RATE-63 (`:87`, §3.1). Neither appears in any `W_` row's stated scope: a full-file grep of
+`docs/roadmap.md` for both ids returns exactly two hits, both inside OQ-RATE-4's and
+OQ-MODEL-11's own decided-narrative text (`:536`, `:567`), never inside a workstream row.
 
-Why it matters now rather than as a historical footnote: **FR-RATE-61 is the same
-approval-gate machinery as FR-RATE-40** (§3.8, W11) — both refuse `approved` without a
-Dislocation Run (FR-RATE-46, W13) — so whoever builds FR-RATE-40's gate touches the identical
-code path FR-RATE-61 needs. **FR-RATE-63 bears directly on W11's evaluator**: it requires
-that a Quote Context with `purpose ∈ {mid_term_adjustment, cancellation}` mounts a
-separately-versioned sub-graph rather than being priced as new business, and its own text
-names silent mispricing as the exact failure it exists to prevent. An evaluator built without
-it would reproduce that failure on day one, and nobody would notice because no test anywhere
-is chartered to.
+**The two are not the same shape of gap, and the lead's own verdicts on this evidence (issued
+2026-08-29, `CLAUDE.md` §12 — verdicts stay in the main thread) say so precisely; this review
+carries that finding rather than re-deriving a competing one.** FR-RATE-63 is a **W9 close
+gap**, not an orphan: nothing blocked it — FR-RATE-6 (sub-graphs) was W9-1's own delivery,
+FR-RATE-63 is a `RatingVersion` pins-extension structurally identical to what W9-3 built for
+FR-RATE-60 in the *same* PR, and it was decided one day after FR-RATE-60 and the day before
+W9 closed. W9's own scope prose names four sections totalling 26 requirements; it verdicted
+24. **W9's closure record reports a completeness the repository does not have** —
+`CLAUDE.md` §13's own stated failure mode, on work already closed. FR-RATE-61, by contrast,
+genuinely could not have been built by W9: its own text needs a Dislocation Run (FR-RATE-46),
+which is W13's, so it is orphaned at birth rather than missed at a close.
 
-> **Recommendation:** give both an explicit verdict rather than leave them silent
-> (`CLAUDE.md` §13: silence is not one of the four). FR-RATE-61 folds into whichever slice
-> builds FR-RATE-40's gate, since the code path is identical — a named owner there, not a
-> separate slice for one requirement. FR-RATE-63 is a decision for whoever plans W11's
-> evaluator slice: build it regardless of which workstream's number it carries (recommended,
-> since the alternative ships a known silent-mispricing mode), or defer it explicitly with a
-> named owner and a dated register row. Not a roadmap edit on this review's own authority.
+Why it matters going forward, not only as a retrospective correction: **FR-RATE-61
+specialises FR-RATE-40's approval gate for the approximation-mode case** — W11 builds the
+general gate, and W13 already owns the Dislocation Run that both need, making W13 the
+natural single owner of the specialisation rather than splitting one gate's logic across two
+workstreams. **FR-RATE-63 bears directly on W11's evaluator regardless of who owns the id**:
+it requires that a Quote Context with `purpose ∈ {mid_term_adjustment, cancellation}` mounts
+a separately-versioned sub-graph rather than being priced as new business, and its own text
+names silent mispricing as the exact failure it exists to prevent — the same universal shape
+as FR-RATE-57's null-output guard, provable only by a slice-1 test on deliberately broken
+input (a Quote Context naming a purpose whose sub-graph is not mounted must refuse, not
+silently price as new business).
+
+> **Recommendation:** FR-RATE-61 gets a register row now with owner **W13** — it does not
+> depend on this review, since W11 was never a candidate owner for it. FR-RATE-63's id-level
+> ownership (a corrected W9 closure note, or a new row) is this review's to propose and the
+> maintainer's to accept; its *build* obligation is not contingent on that answer and belongs
+> in W11's evaluator slice regardless — build it there (recommended, since the alternative
+> ships a known silent-mispricing mode on day one), recorded as evidence for whichever id
+> ends up citing it. Not a roadmap edit on this review's own authority.
 >
 > **Maintainer acceptance:** _pending._
 
@@ -603,9 +613,17 @@ not to rule it):
   specifies `POST /rating-versions/{id}/compile` as `**202** Compile + validate the bundle`;
   the shipped route (`backend/src/app/api/models.py:1139-1161`, wired to
   `compile_rating_version`, `backend/src/app/platform/rating_versions.py:226-288`) returns
-  200 synchronously. Bears directly on W11: the slice that persists the full compiled Bundle
-  (currently discarded — see review 8, Question 5) may push this operation past a
-  synchronous-response budget, which is a reason to rule before that slice starts, not after.
+  200 synchronously. Bears directly on W11: today the route persists only
+  `{content_hash, bytes, compiled_at}` and discards the full compiled Bundle
+  (`rating_versions.py:283-287`) — the slice that fixes that and persists the Bundle proper
+  may push the operation past a synchronous-response budget, which is a reason to rule
+  before that slice starts, not after. Two further code-vs-spec items surfaced since this
+  review began, queued to the same decision-maker ruling rather than re-litigated here:
+  `compile_bundle` is async in code (`compile.py:387`) against a synchronous §5.2 signature,
+  and `CompiledBundle` — the type every §5.2 scoring/dislocation/regression signature
+  takes — has no code definition anywhere; the shipped class is `Bundle`, and whether that is
+  a rename or `CompiledBundle` must become a distinct loaded-runtime wrapper is an
+  architecture question for W11 slice 1, not a spelling one.
 - **`POST /api/v1/rating-versions` (`03:512`) cites no requirement.** Every other §5.1 row
   names the FR- it implements; this one reads only "Create a draft Rating Version with
   pins." Two readings are both live: a capability the spec never got around to numbering
@@ -613,10 +631,13 @@ not to rule it):
   describes exactly this kind of provisional minimal shape) never tombstoned when Phase 2
   widened the contract. Which reading is correct changes what the register owes it.
 
-> **Recommendation:** both go to the decision-maker's queue before W11's plan is filed — the
-> compile 202/200 divergence before any slice touches `compile_rating_version`, the missing
-> citation whenever convenient since nothing currently depends on its answer. Neither is
-> resolved in this review.
+> **Recommendation:** all four items go to the decision-maker's queue before W11's plan is
+> filed — the compile 202/200 divergence, the async/sync mismatch and the
+> `Bundle`/`CompiledBundle` question before any slice touches `compile_rating_version` or
+> starts the evaluator, the missing citation whenever convenient since nothing currently
+> depends on its answer. None is resolved in this review — that queue reports itself
+> complete as of this filing, which this review notes rather than duplicates: the rulings
+> themselves are a decision-maker record, not a plan-review one.
 >
 > **Maintainer acceptance:** _pending._
 
@@ -629,10 +650,10 @@ close is reached and W11 is next — carried into review 8 immediately below, wh
 
 | # | Proposal | Kind |
 |---|---|---|
-| 2.1 | FR-RATE-61 folds into whichever slice builds FR-RATE-40's gate | decision |
-| 2.2 | FR-RATE-63 built in W11's evaluator slice, or explicitly deferred with a named owner | decision |
+| 2.1 | FR-RATE-61: register row now, owner **W13** (specialises FR-RATE-40 for approximation mode; does not depend on this review) | decision |
+| 2.2 | FR-RATE-63: id-level ownership (corrected W9 note, or a new row) is this review's to propose; its refusal-guard *build* obligation sits in W11's evaluator slice regardless of that answer | decision |
 | 3.1 | `phase-review` skill's Output section corrected to `docs/audit/plan-reviews.md` | skill (fixed in this commit) |
-| 4.1 | Compile-endpoint 202/200 divergence ruled by the decision-maker before W11 touches `compile_rating_version` | decision |
+| 4.1 | Compile-endpoint 202/200 divergence, the async/sync `compile_bundle` mismatch, and the `Bundle`/`CompiledBundle` question ruled by the decision-maker before W11 touches `compile_rating_version` or the evaluator | decision — queue reports complete as of this filing |
 | 4.2 | `POST /api/v1/rating-versions`'s missing FR- citation ruled | decision |
 
 **Maintainer acceptance:** _pending — no recommendation above binds until this line carries
