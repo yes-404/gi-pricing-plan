@@ -188,6 +188,82 @@ def test_a_prediction_scales_exactly_with_exposure(backend: str) -> None:
     assert np.allclose(ratio, 2.0, rtol=1e-5), f"{backend}: exposure is not in the score"
 
 
+@pytest.mark.req("NFR-RATE-14")
+def test_load_gbm_booster_applies_nthread_once_at_load_time(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-W11-1-2 / NFR-RATE-14: `nthread` must reach the booster as a live parameter, not
+    merely an accepted-and-silently-ignored keyword — `zen-evaluate-concurrency.md`'s own
+    trap warns against exactly this class of mistake (verify the effect, not that the call
+    was accepted). Verified against XGBoost's own `set_param`, called by `load_gbm_booster`
+    exactly once, at load time — never repeated. Two controls: `nthread=1` calls
+    `set_param({"nthread": 1})` exactly once at load; omitting `nthread` calls it not at
+    all, so a default that silently forced a thread count would fail this test too.
+    """
+    import xgboost as xgb
+
+    data = _frequency_data()
+    fit = fit_gbm(data, _spec("xgboost"), FACTORS)
+
+    calls: list[dict[str, object]] = []
+    original_set_param = xgb.Booster.set_param
+
+    def spying_set_param(self: xgb.Booster, params: dict[str, object]) -> None:
+        calls.append(dict(params))
+        original_set_param(self, params)
+
+    monkeypatch.setattr(xgb.Booster, "set_param", spying_set_param)
+
+    gbm.load_gbm_booster("xgboost", fit.booster_bytes, nthread=1)
+    # `load_model` itself calls `set_param({"validate_parameters": True})` internally —
+    # asserting membership, not equality, so this test does not couple to that unrelated
+    # internal call.
+    assert {"nthread": 1} in calls, "nthread=1 must set the booster's own live parameter"
+
+    calls.clear()
+    gbm.load_gbm_booster("xgboost", fit.booster_bytes)
+    assert {"nthread": 1} not in calls, "omitting nthread must not touch the thread parameter"
+
+
+@pytest.mark.req("NFR-RATE-14")
+def test_predict_gbm_never_reconfigures_an_already_loaded_booster(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other half of the same fix, and the one that matters most: `predict_gbm` must
+    **not** call `set_param` again on a booster it did not itself just load, no matter what
+    `nthread` it is given. This is not a style preference — verified live (not in this
+    test, which cannot reproduce timing-dependent native crashes reliably, but in the W11
+    Task 1.4 research note) that `set_param` racing a concurrent `predict()` on the *same*
+    shared `Booster` crashes with `XGBoostError: Check failed:
+    !this->need_configuration_`. `CompiledBundle.boosters` is exactly such a shared,
+    concurrently-scored object, so this guard is what keeps `nthread` from reintroducing
+    the crash Ruling 8's loaded-booster seam was built to get away from in the first place.
+    """
+    import xgboost as xgb
+
+    data = _frequency_data()
+    fit = fit_gbm(data, _spec("xgboost"), FACTORS)
+    loaded = gbm.load_gbm_booster("xgboost", fit.booster_bytes, nthread=1)
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        xgb.Booster, "set_param", lambda self, params: calls.append(dict(params))
+    )
+
+    predict_gbm(fit.result, loaded, data, nthread=1)
+    assert {"nthread": 1} not in calls, (
+        "predict_gbm must never set_param on an already-loaded booster"
+    )
+
+    # Positive control: the *bytes* path (a fresh, unshared load inside this call) still
+    # applies nthread — proving the guard above discriminates on ownership, not on
+    # nthread being silently disabled everywhere. (`load_model`'s own internal
+    # `set_param({"validate_parameters": True})` call is why this asserts membership.)
+    calls.clear()
+    predict_gbm(fit.result, fit.booster_bytes, data, nthread=1)
+    assert {"nthread": 1} in calls, "a freshly-loaded (unshared) booster must still take nthread"
+
+
 @pytest.mark.req("FR-MODEL-27")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_the_fitted_model_reproduces_the_observed_claim_total(backend: str) -> None:

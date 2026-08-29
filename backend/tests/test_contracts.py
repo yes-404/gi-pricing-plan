@@ -87,7 +87,45 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "rating-algorithm": "shipped in model-schema, never compared — register F27",
     "rating-version": "shipped in model-schema, never compared — register F27",
     "regression-suite": "later-phase — 04 optimisation",
-    "scoring": "later-phase — 03 rating",
+    # Corrected 2026-08-29 (W11 Task 1.4): "later-phase" stopped being true the moment
+    # this task defined QuoteContext/ScoringResult/LadderRung/Trace in model-schema —
+    # Ruling 12's addendum (docs/plans/2026-08-29-w11-slice1-rulings.md) obligation 4
+    # asks this slug be lifted into COMPARED_SLUGS in the same PR, and the register's
+    # F27 row (docs/audit/register.md, Ruling 29) confirms that obligation as "W11's,
+    # accepted" rather than something the §14 review absorbs.
+    #
+    # Full COMPARED_SLUGS membership is still not done, and the reason is sharper than
+    # it was when first written: it is not merely that `scoring.schema.json` is a
+    # `$defs`-only container bundling four unrelated top-level shapes with no single root
+    # model (true, and confirmed live — `models_json_schema()` over the four classes
+    # produces exactly `{"$defs": {...}}` with no top-level `properties`, matching the
+    # authored file's own shape). It is that `test_every_eligible_schema_is_compared`
+    # treats "a generated file exists" and "must go through every walker below" as the
+    # same fact — the moment a `generated/scoring.schema.json` lands under
+    # `GENERATED_SHAPES`, this slug is forced through `test_generated_and_authored_agree_
+    # on_scalar_types` and five siblings, every one of which calls `_type_map(generated,
+    # generated, ...)` / `_variants(generated, generated, ...)` — the same loaded document
+    # used both for `$ref` resolution and as the *one* node to start walking fields from.
+    # A bundle has no such node; each of those six-plus call sites would need a
+    # bundle-aware starting point (one of four `$defs` entries, not the document itself),
+    # a change to test infrastructure eighteen other slugs already depend on for
+    # correctness, needing full re-verification that none of them regress. There is no
+    # shallow middle ground here — publishing the generated file and the full walker
+    # rewrite are one indivisible piece of work, sized the way `contract-guard` sizes any
+    # new comparison (measure, write, prove-on-broken-input, meta-guard), not a same-PR
+    # add-on to an already large task.
+    #
+    # What obligation 4 asks for is not left wholly undone, given that finding:
+    # `test_generated_and_authored_agree_on_scoring_field_names` (above) compares field
+    # *names* for all four bundled shapes directly against the live models — the same
+    # level of coverage `job`/`audit-event` get without ever joining `COMPARED_SLUGS`
+    # either — verified to fail on three independent kinds of broken input (an extra
+    # authored field, a removed authored field, an unmodelled fifth top-level shape).
+    # Ruling 12's actual substance (the five-member `purpose` enum, in both `model-schema`
+    # and this contract, in one commit) was never at risk either way. What remains open is
+    # specifically type/constraint/nested-union parity — the part that needs the walker
+    # rewrite — reported here rather than forced through under time pressure.
+    "scoring": "later-phase — 03 rating (see the correction above, 2026-08-29)",
     "money": "shared common/ defs with no Phase 1b emitter",
     "provenance": "shared common/ defs with no Phase 1b emitter",
 }
@@ -340,6 +378,76 @@ def test_generated_and_authored_agree_on_field_names(slug: str) -> None:
     generated = _load(GENERATED / f"{slug}.schema.json")
     authored = _load(_authored_schema(slug))
     assert set(generated["properties"]) == set(authored["properties"])
+
+
+@pytest.mark.req("FR-OVR-6")
+def test_generated_and_authored_agree_on_scoring_field_names() -> None:
+    """Ruling 12 addendum, obligation 4 (`docs/plans/2026-08-29-w11-slice1-rulings.md`),
+    the field-names slice of it: `scoring` is no longer wholly uncompared.
+
+    `scoring.schema.json` bundles four unrelated top-level shapes — `QuoteContext` (input),
+    `ScoringResult`, `LadderRung` and `Trace` (output) — under one `$defs`-only file with no
+    shared root. `COMPARED_SLUGS` cannot take it as-is: `test_every_eligible_schema_is_
+    compared` treats "has both a generated and an authored file" as "must go through every
+    walker below," and each of those walkers (`test_generated_and_authored_agree_on_scalar_
+    types` etc.) calls `_type_map(generated, generated, ...)` — the *same* loaded document
+    used both for `$ref` resolution and as the one node to start walking fields from. That
+    assumes a single-rooted schema (`{"type": "object", "properties": {...}}`), which a
+    `$defs`-only bundle is not, so publishing a generated file under `GENERATED_SHAPES`
+    would force this slug through six-plus walker call sites that would need a bundle-aware
+    starting node each, all in test infrastructure eighteen other slugs already depend on
+    for correctness. That is real, separate work (`ONE_SIDED_SLUGS["scoring"]` below has the
+    full reasoning); this test does not attempt it.
+
+    What it does instead: compares field *names* directly against the live models, the same
+    level `test_generated_and_authored_agree_on_field_names` above gives `job`/`audit-event`
+    (also never routed through `COMPARED_SLUGS`), using `pydantic.json_schema.
+    models_json_schema()` in-test rather than a committed generated file — the same
+    "call `.model_json_schema()` live" pattern `test_decimal_money_is_pinned_to_the_string_
+    form` above already uses, so no file lands under `GENERATED_SHAPES` and `scoring` stays
+    correctly declared one-sided in `ONE_SIDED_SLUGS`.
+
+    Driven from the authored side's own `$defs` keys, not a hardcoded tuple of four names:
+    a fifth top-level shape added to `scoring.schema.json` without a matching model added to
+    `pairs` below fails loudly (the `missing_models` assertion), rather than being silently
+    skipped — the meta-guard this check needs, sized to what it actually curates.
+    """
+    from typing import Literal
+
+    from pydantic import BaseModel
+    from pydantic.json_schema import models_json_schema
+
+    from model_schema import LadderRung, QuoteContext, ScoringResult, Trace
+
+    pairs: list[tuple[type[BaseModel], Literal["validation"]]] = [
+        (QuoteContext, "validation"),
+        (LadderRung, "validation"),
+        (ScoringResult, "validation"),
+        (Trace, "validation"),
+    ]
+    _, bundle = models_json_schema(pairs, ref_template="#/$defs/{model}")
+    generated_defs = bundle["$defs"]
+    authored_defs = _load(_authored_schema("scoring"))["$defs"]
+
+    missing_models = set(authored_defs) - set(generated_defs)
+    assert not missing_models, (
+        f"scoring.schema.json declares {sorted(missing_models)} with no matching model "
+        "passed to models_json_schema() above — add it to `pairs`"
+    )
+
+    mismatched = {
+        name: (
+            sorted(set(generated_defs[name].get("properties", {}))),
+            sorted(set(authored_defs[name].get("properties", {}))),
+        )
+        for name in authored_defs
+        if set(generated_defs[name].get("properties", {}))
+        != set(authored_defs[name].get("properties", {}))
+    }
+    assert not mismatched, (
+        "model-schema and the authored scoring contract disagree on field names for "
+        f"{mismatched} (model fields, contract fields)"
+    )
 
 
 #: The schema a hand-authored contract composes to inherit `00` §4.3's envelope.

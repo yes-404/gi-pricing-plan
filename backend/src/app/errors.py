@@ -303,6 +303,16 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "IMPORT_KEY_MISMATCH",
         "IMPORT_TYPE_MISMATCH",
         "IMPORT_PARSE_ERROR",
+        # Scoring (W11 Task 1.4). All four already owned by `03` §5.1 before this
+        # commit — `MODEL_CALL_FAILED` added by Ruling 11 (PR #368); the other three were
+        # already in the spec's owned-code block but never registered here (Ruling 11's
+        # own finding). `score_one` (`pricing_core`) never raises these directly — it
+        # cannot import `PlatformError` (`.importlinter`'s `core-has-no-infrastructure`) —
+        # it raises a code-named `ValueError`; the mapping to `PlatformError` is Slice 2's.
+        "INPUT_CONTRACT_VIOLATION",
+        "REFERENCE_LOOKUP_MISS",
+        "MODEL_CALL_FAILED",
+        "LADDER_RECONCILIATION_FAILED",
     }
 )
 

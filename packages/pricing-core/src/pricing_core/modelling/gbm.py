@@ -1183,7 +1183,9 @@ def _to_raw(predicted: np.ndarray, link: Literal["exp", "logistic"]) -> np.ndarr
     return np.asarray(np.log(np.clip(predicted, 1e-12, None)), dtype=np.float64)
 
 
-def load_gbm_booster(model_type: Literal["xgboost", "lightgbm"], booster: bytes) -> object:
+def load_gbm_booster(
+    model_type: Literal["xgboost", "lightgbm"], booster: bytes, *, nthread: int | None = None
+) -> object:
     """Deserialise `booster` once into a live, reusable native booster object.
 
     W11 Task 1.3's loaded-booster seam (Ruling 8, `02` §5.2): `predict_gbm` re-loaded a
@@ -1198,14 +1200,30 @@ def load_gbm_booster(model_type: Literal["xgboost", "lightgbm"], booster: bytes)
     The return type is `object`, not a `Booster` union, because XGBoost and LightGBM are
     both optional, lazily-imported backends (ADR-0001) — the caller never needs to name
     the concrete type, only to hand it back to `predict_gbm`.
+
+    **`nthread` (W11 Task 1.4, F-W11-1-2) is applied here, once, and never again on this
+    object.** Verified live and the reason it must be this way: calling
+    `xgb.Booster.set_param({"nthread": ...})` concurrently with `predict()` on the *same*
+    shared `Booster` — exactly what a warm worker's `CompiledBundle.boosters` is, scored by
+    many concurrent `score_one` calls — crashes with `XGBoostError: Check failed:
+    !this->need_configuration_`, XGBoost's own internal assertion against a booster being
+    reconfigured while a prediction is in flight. `load_gbm_booster` runs once per pinned
+    GBM at hydration time, before any concurrent scoring begins, so setting it here is
+    safe; `predict_gbm` must not repeat it on an object it did not itself just load (see
+    `predict_gbm`'s own docstring for that half of the fix).
     """
     if model_type == "xgboost":
         import xgboost as xgb
 
         loaded = xgb.Booster()
         loaded.load_model(bytearray(booster))
+        if nthread is not None:
+            loaded.set_param({"nthread": nthread})
         return loaded
 
+    # LightGBM's own thread count is a *per-`predict()`-call* argument (`predict_gbm`'s
+    # own `num_threads` kwarg), never a mutation persisted on the `Booster` object — so
+    # there is nothing to apply once here, and `nthread` is silently unused on this branch.
     import lightgbm as lgb
 
     return lgb.Booster(model_str=booster.decode())
@@ -1219,6 +1237,7 @@ def predict_gbm(
     *,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
+    nthread: int | None = None,
 ) -> pl.Series:
     """Score `data`, on the mean scale, with the offset applied **per backend**.
 
@@ -1240,6 +1259,27 @@ def predict_gbm(
     original behaviour) or an object already returned by `load_gbm_booster` (Ruling 8):
     passing the loaded form skips deserialisation entirely, which is what a real-time
     `model_call` handler scoring many quotes against one `CompiledBundle` needs.
+
+    `nthread` (F-W11-1-2, `02` §5.2) is the thread-count control `NFR-RATE-14` requires
+    (`nthread=1` per request). Keyword-only, no process-wide default: a global would
+    silently change every other caller's behaviour, including the fit path.
+
+    **Applied differently per backend, and the difference is load-bearing, not
+    incidental.** LightGBM's `predict` accepts `num_threads` as a genuine per-call
+    keyword — passed fresh on every call, never mutating the `Booster` object, so it is
+    safe against the same object being scored concurrently. XGBoost has no such per-call
+    argument; its only live control is `Booster.set_param`, which **mutates the object**
+    — and calling it here, on an object this function did not itself just load, would
+    mutate a `Booster` while a *different* concurrent call is mid-`predict()` on the same
+    object. Verified live: exactly that crashes with `XGBoostError: Check failed:
+    !this->need_configuration_`. So for XGBoost, `nthread` is applied via `set_param`
+    **only when this call performs the load itself** (`booster` was raw `bytes`, so the
+    resulting `Booster` is local and unshared); against an **already-loaded** booster
+    (Ruling 8's seam — `CompiledBundle.boosters`, shared and scored concurrently) it is a
+    silent no-op, because the only safe place to configure that object is once, at load
+    time, before any concurrent scoring begins (`load_gbm_booster`'s own `nthread`
+    parameter — see its docstring, which is where a caller wanting `nthread` on a
+    long-lived, shared booster must set it).
     """
     if factors:
         matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
@@ -1282,8 +1322,23 @@ def predict_gbm(
 
         loaded = cast(
             xgb.Booster,
-            load_gbm_booster("xgboost", booster) if isinstance(booster, bytes) else booster,
+            load_gbm_booster("xgboost", booster, nthread=nthread)
+            if isinstance(booster, bytes)
+            else booster,
         )
+        # `nthread` on an **already-loaded** booster is deliberately a no-op here, not
+        # applied via `set_param` on this call. Verified live: `set_param` racing a
+        # concurrent `predict()` on the *same shared* `Booster` — exactly what
+        # `CompiledBundle.boosters` is, scored by many concurrent `score_one` calls —
+        # crashes with `XGBoostError: Check failed: !this->need_configuration_`. A freshly
+        # loaded booster (`isinstance(booster, bytes)`, above) is safe to configure here
+        # because nothing else holds a reference to it yet; an already-loaded one must
+        # have had `nthread`
+        # set once by its loader (`load_gbm_booster`'s own `nthread` parameter,
+        # `pricing_core.rating.runtime._load_boosters`'s call site) before any concurrent
+        # scoring began. Passing `nthread` here against an already-loaded booster that was
+        # never configured with it is silently ignored, not an error — see this
+        # function's own docstring.
         frame = xgb.DMatrix(
             x, base_margin=margin, feature_names=list(result.feature_order),
             feature_types=["c" if slug in _native_categoricals(result) else "q"
@@ -1306,7 +1361,10 @@ def predict_gbm(
             lgb.Booster,
             load_gbm_booster("lightgbm", booster) if isinstance(booster, bytes) else booster,
         )
-        raw = np.asarray(lgb_booster.predict(x, raw_score=True), dtype=np.float64)
+        lgb_kwargs: dict[str, Any] = {"num_threads": nthread} if nthread is not None else {}
+        raw = np.asarray(
+            lgb_booster.predict(x, raw_score=True, **lgb_kwargs), dtype=np.float64
+        )
         if margin is not None:
             raw = raw + margin
         # `or "exp"` is the fallback for an artifact fitted before `inverse_link` existed,
