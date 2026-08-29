@@ -707,7 +707,9 @@ def main() -> int:
 
     declared_functions: dict[str, str] = {}
     for f in specs:
-        for m in re.finditer(r"^def ([a-z_][a-z0-9_]*)\(", f.read_text(encoding="utf-8"), re.M):
+        for m in re.finditer(
+            r"^(?:async )?def ([a-z_][a-z0-9_]*)\(", f.read_text(encoding="utf-8"), re.M
+        ):
             declared_functions.setdefault(m.group(1), f.name)
 
     journeys = sorted(ROOT.glob("workflows/wf-*.md"))
