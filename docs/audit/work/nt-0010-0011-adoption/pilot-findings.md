@@ -131,30 +131,66 @@ first seen with Monitor tasks in W10, now with agent lifecycles.
 worktree locks persist while the agent lives, and that a successor should cut a fresh
 worktree rather than wait for a lock to clear.
 
-## P6 — a mechanism that computes a value and emits only its verdict forces recomputation
+## P6 — a monitoring mechanism with a reader, a documented writer, and no writer
 
-Found by the pilot-reporter, about its own tooling, after making the error itself.
+Found by the pilot-reporter, about its own tooling, and then found to be twice as large as
+either of us first said. **This section was rewritten after its first two versions were
+wrong**; the versions are kept below because the sequence is the finding.
 
-**Sequence.** Its nudge read *"stale 59 minutes (last: 11:46Z)"*; at 14:45Z that is 179
-minutes. Asked to check its arithmetic or its marker, it verified the marker correct and
-attributed the error to itself — it had computed the figure by hand. Told to read the
-script's output into the message and never recompute, it came back with the reason it could
-not: **`nudge.py` computes staleness and emits only `NUDGE_NEEDED`**. The age it had
-computed is discarded.
+**What actually happened, in order.**
 
-**Two findings, not one.**
+1. The reporter's nudge read *"stale 59 minutes (last: 11:46Z)"*. At 14:45Z that is 179.
+2. Asked to check its arithmetic or its marker, it verified the marker correct and
+   attributed the error to itself: it had computed the figure by hand.
+3. Told to read the script's output rather than recompute, it reported that `nudge.py`
+   emits only `NUDGE_NEEDED` and discards the age. **The lead ruled a code change on that
+   report without opening the script.**
+4. `nudge.py`'s `log_nudge` writes the age to `nudge.log` on every nudge. Both values were
+   sitting in that file, correct, the whole time:
 
-- **Against the tool.** The only path to a staleness figure in a message is hand
-  recomputation — so the mechanism *builds in* the defect `NT-0013` names, rather than
-  merely failing to prevent it. A component that computes a value its consumer needs and
-  emits only its own verdict guarantees the consumer will recompute.
-- **Against the dispatch — mine.** "Read the value rather than recompute it" is
-  unactionable unless the value is readable. An unactionable instruction resolves to either
-  non-compliance or fabrication, and the instruction's author is the last person positioned
-  to notice which. Before requiring that a value be read, check that something emits it.
+       14:45:01Z - nudge sent - lead status 179.0 min old (>20.0 min threshold)
+       15:00:02Z - nudge sent - lead status 194.0 min old (>20.0 min threshold)
 
-**Ruled:** `nudge.py` emits the computed age; the reporter reads it. This is a defect fix in
-a tool the pilot is using, not new instrumentation, so it falls outside the deferral below.
+   The reporter's two messages said **59** and **174**. The script was right both times; the
+   hand arithmetic was wrong both times; and the ruled fix was unnecessary.
+5. Asked why an acknowledgement had not cleared the nudge, the reporter answered that *"the
+   marker updates only when `reporter.py` detects a fresh lead status post to Slack"*.
+6. **`reporter.py` contains no reference to the marker.** Across the repository, all nine
+   worktrees, the handover directory and the job directory, every occurrence of
+   `.last_lead_status_ts` is a **read** — `nudge.py:16` and `nudge.py:77`. Nothing writes it.
+   Its mtime equals its own content: written once at 11:46:00Z and never touched again.
+
+**The finding.** The staleness detector has a reader, a *documented* writer, and no actual
+writer. Its all-clear state is unreachable, so it emits true-but-unactionable alarms
+forever and escalates on a condition that no action can satisfy. A monitor that cannot be
+satisfied is not a strict monitor; it is a broken one, and it is worse than none, because it
+trains its reader to discount it.
+
+**The propagation is the interesting half.** Three nodes asserted a writer that does not
+exist, none of them checking: the previous reporter's stand-down report (*"auto-updated on
+lead messages"*), `reporter-state.md:29` and `:90` (*"updated on fresh lead status"*,
+*"Initialize … on first lead message"*), and the current reporter, which inherited the claim
+from that state file and restated it to the lead as a mechanism. The lead then ruled on it.
+**Four restatements, no reads.**
+
+**Fix**, in order of what is load-bearing:
+
+1. Something must write the marker — the reporter touching it when it posts a lead status is
+   the obvious writer — **or** the detector is removed. Either is defensible; the present
+   state is not.
+2. `reporter-state.md`'s two claims are corrected, because they are what taught the
+   successor the wrong mechanism.
+3. `nudge.py` emitting the age on stdout as well as to `nudge.log` is a genuine but **minor**
+   improvement, and was withdrawn as the fix once the log was read. It was never the defect.
+
+**What the two wrong versions of this section were.** First: *"`nudge.py` computes staleness
+and emits only its verdict, so the only path to the figure is hand recomputation."* False —
+`log_nudge` writes it. Second, the half against the lead's dispatch: *"read the value rather
+than recompute it is unactionable unless the value is readable."* The value **was** readable.
+The dispatch was fine; what was wrong was ruling a code change on a description of a script
+rather than on the script. Both versions were the lead restating a member's account of an
+artifact instead of opening it — which is the same error the section documents, committed
+twice while documenting it.
 
 ## The one repaired clause the pilot caught working
 
@@ -193,11 +229,20 @@ absorb.
 Collected by the lead during the pilot; each finding attributed above to the member that
 found it. Filed 2026-08-29 as task #35.
 
-**P1 and P2 were both corrected within the hour of merging, and the correction is itself in
-scope.** Both errors were mine, both were restatements of a member's report that I had not
-checked against the artifact, and both survived a PR. What caught them was reading the live
-process — `/proc/<pid>/environ` and the skill's own text — rather than re-reading my summary
-of what the watcher had said. That is the same failure mode P1b names, with the lead as the
-node: **I diagnosed from a report instead of from state.** A findings file whose own author
-introduced two instances of the class it documents is the strongest evidence in it. This file records findings only: it closes nothing,
+**P1, P2 and P6 were all corrected after merging, and the corrections are themselves in
+scope.** Every one of those errors was mine, every one was a restatement of a member's
+report that I had not checked against the artifact, and every one survived a PR. P6 needed
+two corrections and a full rewrite: its first version misdescribed the tool, its second
+blamed the dispatch, and the actual defect — a marker file with a reader, a documented
+writer and no writer — was larger than either.
+
+What caught all four was reading state rather than re-reading my own summary: `/proc/<pid>/environ`
+for the poller, `SKILL.md` for the token contract, `nudge.log` for the staleness figures, and
+a repository-wide sweep for the marker's writer. In each case the artifact was one command
+away and the report about it was already in my context, which is exactly why the report won.
+
+That is the failure mode P1b names, with the lead as the node: **I diagnosed from a report
+instead of from state, four times, while writing the file that documents doing so.** A
+findings file whose own author supplied the clearest instances of the class it documents is
+the strongest evidence in it, and the reason none of them are edited out. This file records findings only: it closes nothing,
 and §15 step 7 remains gated on the maintainer's confirmation.
