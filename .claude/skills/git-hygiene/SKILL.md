@@ -339,6 +339,33 @@ The count matters in both directions. `main` also carries `… partial-dependenc
 path composes it differently. Read the landed subject rather than reasoning about which
 path appends what.
 
+## A date read from `git log`'s default rendering is not UTC, and neither is `--date=iso-strict`
+
+`git log`'s default format, and `--date=iso-strict`, both render a commit's **author-local**
+timestamp with whatever offset the committer's machine recorded — not UTC, and not
+whatever timezone the reader happens to be in. Two real commits from this repository's own
+history show why that matters: `eb9b6a1` and `3a4958a` are both recorded at `+01:00` and
+both render as `2026-08-28T00:4x...` in that offset — but in UTC they are
+`2026-08-27T23:4x...`, a full calendar day earlier. Reading either rendering at face value
+and calling it "August 28" is wrong by a day, purely from the offset, for any commit within
+about an hour of a UTC day boundary.
+
+**`--date=iso-strict` does not fix this.** Verified directly, against the same commit,
+under three different `TZ` settings: `--date=iso-strict` prints `+01:00` regardless — the
+commit's own recorded offset, unaffected by the reader's environment. The command that
+actually converts to UTC — checked under `TZ=UTC`, `TZ=America/New_York`, and no `TZ` set,
+to confirm it isn't an accident of one host's default — is:
+
+```bash
+TZ=UTC git log --date=iso-strict-local ...
+```
+
+**Use that exact command, or state the offset you read a date at.** Never quote a date from
+a rendering whose offset you have not checked — the default format and `--date=iso-strict`
+both look authoritative and are both silently wrong once a commit sits near a UTC day
+boundary. When correcting someone else's date, name the offset you read it at, so a reader
+can tell a genuine correction from the same mistake restated with more confidence.
+
 ## When a push is rejected
 
 Read the message rather than retrying. Two seen in this repo:
@@ -391,6 +418,16 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the UTC-offset date-rendering entry added.** A wrong calendar date, read from
+a rendering whose offset was never checked, reached a filed plan review this same day.
+Verified rather than narrated: two real commits from this repository's own W9 history
+(`eb9b6a1`, `3a4958a`) are recorded at `+01:00` and land within an hour of the UTC day
+boundary, so both `git log`'s default format and `--date=iso-strict` render them a full
+calendar day later than their UTC date. Checked that `--date=iso-strict` does not correct
+for this under three different `TZ` settings before writing down the command that does
+(`TZ=UTC git log --date=iso-strict-local`) — confirmed empirically, not assumed from the
+flag's name.
 
 **2026-08-29 — the rebase-invalidates-line-citations entry added, caught while preparing a
 PR description rather than after a bad citation was filed.** Checking each new upstream
