@@ -250,8 +250,12 @@ the first filing made.
 **Finding for the §15 step 5 audit, found while filing this append, not a ruling:** the `gh
 pr edit` GraphQL failure this record's own prior filing worked around (Part A2, above) was
 already known — per the lead, hit and diagnosed with the identical `gh api -X PATCH` fix on
-2026-08-24, on a PR the lead names as #173 (confirmed to exist and to have merged on that
-date; the specific detail that *this* is where the fix was first diagnosed is the lead's own
+2026-08-24, on a PR the lead names as #173 (confirmed to exist, `ccc9d64`, "feat(w6b-1a):
+model detail renders the GBM, EBM and transparency arms" — **the failure was hit editing
+#173's *body*, `#173` is not itself a PR about `gh`**, which is worth stating plainly because
+its title has nothing to do with the failure and a reader who checks it, as this record
+first did, will land on the same apparent mismatch before resolving it the same way; the
+specific detail that *this* is where the fix was first diagnosed remains the lead's own
 session-memory recollection, not independently checkable from a public artifact) — but
 recorded only in that session memory, unreachable to the role that needed it an hour before
 this one rediscovered it independently. That is this adoption's own custody thesis (Part D;
