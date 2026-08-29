@@ -192,14 +192,124 @@ rather than on the script. Both versions were the lead restating a member's acco
 artifact instead of opening it — which is the same error the section documents, committed
 twice while documenting it.
 
-## The one repaired clause the pilot caught working
+## P7 — a branch under audit must be frozen, and the rule as written binds only the reader
 
-P6 is also the pilot's first positive result, and it is worth separating from the gaps.
+The planner moved #370's head three times while the auditor was reviewing it
+(`de4af3b` → `d41f379` → `6f893c6`). The auditor filed *"Ruling 12 is not reflected"* — true
+of the head it read, false by the time it wrote.
 
-The reporter could not land its own fix: its charter forbids repo writes and names the route
-a discovered procedure takes instead. It **asked rather than wrote** — the amendment that
-added that clause was tested by a case it had not anticipated, and held. Every other finding
-above is a file failing to say something. This is a file saying something that worked.
+**What makes this more than a scheduling accident**: `docs/plans/README.md` rule 4, added by
+the planner *in that same branch, that same hour*, says **name the commit you read**. That is
+the reader's half. The writer's half — **do not move a branch someone is reading** — was
+missing, and the planner demonstrated the gap in the branch that introduced the rule. Its own
+diagnosis is the right one: *"I had been treating 'the head moved' as the reader's problem to
+guard against, when the cheaper fix sits with whoever holds the push."*
+
+Neither `planner.md` nor `auditor.md` says a branch under audit is frozen, or that an audit
+report names the commit it read.
+
+**Correctly refused**: the planner declined to file the writer's-half rule while the audit was
+still open, on the grounds that opening a follow-up PR mid-audit *"would repeat the same
+mistake at one remove — new artifact, same disruption to someone's in-flight read."* That is
+the finding being understood rather than merely reported.
+
+## P8 — the tested cases and the claimed property were disjoint
+
+The executor patched a vendored script (`subagent-driven-development/scripts/task-brief`) and
+followed `CLAUDE.md` §12 properly: it confirmed the failure empirically before touching
+anything, recorded the deviation in `.claude/skills/README.md` rather than making it silently,
+found a second-order bug its own naive fix would have introduced, and — the part usually
+skipped — ran a **generalisation control**, testing Task 2.1 from a different slice
+specifically *"to confirm the fix generalises rather than being fitted to one boundary."*
+
+All three of its cases were house-format. Its deviation note claimed *"upstream's own `Task N`
+heading still matches unchanged"* — a property **none of those three cases touch**. Running the
+control that claim implies: the unpatched script exits 0 on `# Task 1`; the patched script
+exits 3. The boundary rule `/^##?[ \t]/ { intask = 0 }` fired on the upstream task heading
+itself, clearing the flag the rule above had just set.
+
+**A well-chosen control inside the tested class does not test a claim about a class you never
+tested.** The discipline was real and the coverage was still disjoint from the claim, which is
+why this is a finding about verification design rather than about care.
+
+Fixed at `5b82b18` — the two rules merged into one `if`/`else if` so a task heading cannot fall
+through to the clear-branch — and verified independently on all three cases: upstream task 1
+(stops before `# Task 2`), upstream task 2 (runs to EOF), house 1.1 (still stops before 1.2).
+
+## P9 — a ruling lands in a plan's narration and not in its operative steps
+
+**Seven sites in one document, and the sharpest finding of the pilot.**
+
+`docs/plans/2026-08-29-w11-1-evaluator-core.md` narrates Rulings 6–12 correctly — Ruling 7's
+block even says *"This is what Task 1.2's `model` branch must produce … the two tasks meet
+exactly here."* Meanwhile seven `Files`/`Step` lines still instruct the **pre-ruling** design.
+Task 1.2 Step 4 still says *"the booster blob reference for a GBM"*, the option Ruling 7
+refused. **An executor implements the Step, not the narration.** A plan whose prose is correct
+and whose instructions are not *reads as reconciled and is not*.
+
+**Two of the seven point in opposite directions.** One stores a reference `load_bundle` cannot
+dereference; the other tunes the per-call booster construction Ruling 8 exists to delete.
+Either alone costs a rewrite. Together they would have looked mutually consistent while both
+were wrong.
+
+**The consequence, which nobody named first.** Task 1.4 Step 5 would re-measure NFR-RATE-14
+through the per-call load Ruling 8 removes. W8's baseline was taken with the booster **already
+loaded** (`w8-spike-resolution.md:70-72` — one booster, a thousand iterations, load outside the
+loop). So the measurement would not merely exercise a path that never ships; it would be
+**non-comparable to the figure it is checked against**. The executor would read a p99 far above
+1.626 ms, conclude NFR-RATE-14 is failing, and optimise code that already meets its budget. A
+wrong-path measurement wastes an afternoon; a non-comparable one sends someone to fix working
+code.
+
+**Three different search axes were needed, and no single pass found all seven.** The
+decision-maker greps a ruling's **subject**; the planner greps **operative instructions**; the
+auditor's first sweep grepped **payload wording** and found one. Each stopped where the others
+looked. The auditor recorded its own axis error rather than only the defect.
+
+Distinct from the recorded trap about an amendment stranding its list-mates: that concerns
+sibling **members** of a set, this concerns **explanatory versus operative sites** for the same
+member.
+
+## P10 — a number carried without the measurement that produced it
+
+Task 1.4 Step 5 cited `1.626 ms` as NFR-RATE-14's target. W8 publishes **two** nthread=1
+figures: 1.626 ms *including DMatrix construction* and 0.308 ms *predict-only*. The step named
+neither shape. An executor reproducing predict-only reads **five times the headroom it has**.
+
+`CLAUDE.md` §13 requires that a reference carry its scope **and its measurement**. The number
+was carried and the measurement dropped — the same omission as P9 in different dress: what was
+recorded is the conclusion, not what a reader would need to reconstruct it. The correct target
+is *incl. DMatrix*, because Ruling 8's seam amortises the booster **load** while DMatrix
+construction stays genuinely per-quote.
+
+Found by the planner against its own plan, unprompted, while verifying someone else's finding
+about a neighbouring line.
+
+## What worked — separated deliberately, because the gaps dominate the list above
+
+A findings file records defects, so read alone it describes a team that only errs. Five things
+worked, each verified rather than reported.
+
+- **A repaired charter clause held under a case it had not anticipated.** The reporter could
+  not land its own fix — its charter forbids repo writes and names the route a discovered
+  procedure takes instead — so it **asked rather than wrote**. Every finding above is a file
+  failing to say something; this is a file saying something that worked.
+- **The reporter closed its own loop after correction**, and the fix verified from the
+  mechanism rather than the claim: marker age 8.0 min at 15:15Z, no false escalation, `nudge.log`
+  showing no new entry.
+- **The decision-maker corrected its own filed record twice** — first an overstated claim, then
+  the conflated sentence that had made the overstatement sound reasonable — naming both in place
+  instead of rewriting them away.
+- **The planner recorded seven defects against its own plan rather than folding them in**,
+  diagnosed the structural cause (*"my verification consistently stops at the point where I
+  remember making the change"*), refused to self-authorise the fix, and refused to file the
+  remedy mid-audit.
+- **The executor adopted P4 mid-flight** (each task its own process-slice and PR), ran a
+  generalisation control unprompted, and booked FR-RATE-40 as **explicitly deferred** rather
+  than letting a wired route imply a delivered requirement.
+
+**Every one of these came from a member declining to take another member's word** — including
+the lead's. That is the single mechanism the pilot most clearly validates.
 
 ## Deferred during the pilot, deliberately
 
@@ -244,5 +354,20 @@ away and the report about it was already in my context, which is exactly why the
 That is the failure mode P1b names, with the lead as the node: **I diagnosed from a report
 instead of from state, four times, while writing the file that documents doing so.** A
 findings file whose own author supplied the clearest instances of the class it documents is
-the strongest evidence in it, and the reason none of them are edited out. This file records findings only: it closes nothing,
+the strongest evidence in it, and the reason none of them are edited out.
+
+**Two more of the lead's checks were the weak link, both after the above was written, and
+both are P9's own shape.** Told by the auditor that Ruling 12 was not reflected in #370, the
+lead checked and found it **cited eleven times**, and called the finding stale. The finding
+*was* stale as stated — and a **citation count is exactly the check that cannot detect
+narration-correct/steps-wrong**, which is what was actually true. The refutation was narrower
+than it sounded, and the auditor and planner returned with the real version, P9. Separately,
+two probes came back empty and would have been reported as absence — a JSON schema read for
+`properties` when the file uses `$defs`, and a grep of `reporter.py` — and in both cases only
+a positive control distinguished a broken probe from a true negative. One of those probes was
+being used to check a teammate's claim, which would have made a correct finding look false.
+
+The pattern across all six: **the lead's checks are systematically one step shallower than
+the claim they are testing**, because a check that confirms what you already believe is the
+one you stop refining. This file records findings only: it closes nothing,
 and §15 step 7 remains gated on the maintainer's confirmation.
