@@ -293,6 +293,42 @@ construction stays genuinely per-quote.
 Found by the planner against its own plan, unprompted, while verifying someone else's finding
 about a neighbouring line.
 
+## P11 — two independent roles reported a clean gate on a PR whose CI was failing
+
+The strongest instance of the pilot, because it is **two nodes, independently, in the same
+direction**, on the same artifact.
+
+PR #371's python CI failed: `test_committed_contracts_match_the_models` —
+*"committed contracts are out of date with the models"* — `1 failed, 2234 passed`, run
+`33259487951`. The new API models changed the generated OpenAPI and `docs/contracts/` was
+never regenerated. That is the **FR-PLAT-48 drift gate**, one of the repository's named
+invariants (`CLAUDE.md` §2: `docs/contracts/` is generated, CI fails on drift).
+
+**The executor reported "7/7 tests, gates clean."** Seven is the count of *its own new test
+file*. The gate is 2237 tests plus ruff, mypy and import-linter. A subset was run and a gate
+was reported.
+
+**The auditor independently reported "routes/RBAC/must-not-touch/citation/gate all clean"** —
+and had actually *seen a failure*, recording: *"my first test run gave a false 2-failed result
+(reused venv, wrong path); isolated re-run confirmed genuine 7/7."* A real failure was
+observed, attributed to the environment, and re-run until green. The re-run that "confirmed"
+the result was the narrower one.
+
+**Why this is not simply carelessness.** `CLAUDE.md` §11 already warns that *"a Python-only
+'gate' has been green here while the frontend was red"*, and both roles' charters point at
+the gate commands. The failure is not that the rule was missing; it is that **"clean" was
+reported from whatever was run**, and neither node stated the scope of what it ran. A gate
+result with no stated corpus is unfalsifiable — exactly the reference rule of `CLAUDE.md` §13
+applied to a test count instead of a citation.
+
+**Fix**: a gate claim names its corpus — the command, the totals, and the tree. "7/7" and
+"2234 passed" are distinguishable at a glance once both are written down; neither is
+distinguishable from the other when only the word *clean* is reported.
+
+**Related, and the reason it went undetected for two reporting rounds**: the lead also did not
+ask. Both reports were accepted on their face until CI contradicted them, and CI was only
+consulted because a merge was imminent.
+
 ## What worked — separated deliberately, because the gaps dominate the list above
 
 A findings file records defects, so read alone it describes a team that only errs. Five things
