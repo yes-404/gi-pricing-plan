@@ -329,6 +329,63 @@ distinguishable from the other when only the word *clean* is reported.
 ask. Both reports were accepted on their face until CI contradicted them, and CI was only
 consulted because a merge was imminent.
 
+## P12 — the correction is where the next error goes, and every role produced one
+
+The most transferable result of the pilot, and the only finding every one of the four
+repo-writing roles supplied an instance of. It is a known trap in this repository's own
+recorded lessons; what the pilot adds is that **knowing it does not prevent it**, and that
+it concentrates specifically in the *fix*, not the original.
+
+Enumerated rather than counted, because the count moved three times while this was being
+written and the enumeration did not:
+
+**Decision-maker.**
+- Filed an overstated claim about the drift guard, corrected it — and left standing the
+  conflated sentence that had made the overstatement plausible. A second pass caught it.
+- Filed "four divergences", corrected to "six", then removed the total entirely on the
+  planner's argument that six is right only at one granularity. **Two corrections, and the
+  first was itself at a wrong granularity.**
+- Drafted "nine, not seven" against the lead's field comparison and stopped only by reading
+  the `allOf` envelope that supplies `slug`/`version`. Caught before sending; would have been
+  an error inside a correction of a correction.
+
+**Planner.**
+- Wrote rule 5 — *apply a ruling at every site it operates* — **from the six sites in hand
+  rather than from the class**, so the rule itself named Files and Steps and missed
+  Acceptance. A rule derived from an incomplete sweep inherits the sweep's blind spot.
+- After marking `F-W11-1-5` ruled, self-review 6 still called it open. Caught by sweeping
+  every reference rather than re-reading the section just edited — rule 5 applied to its own
+  fix.
+- While writing the no-bare-count fix, removed two counts of its own, including *"the fourth
+  time a count has been wrong"* — an ordinal that would have been wrong the next time,
+  inside the sentence describing that exact failure.
+
+**Executor.** Fixed the vendored `task-brief` boundary rule, and its §12 deviation note
+claimed a property — that upstream's own `Task N` heading still matched — which none of its
+three test cases exercised. The claim was written as part of the fix.
+
+**Lead.** P6 was rewritten twice before it was right. P2 named the wrong artifact. A
+citation count was offered as a refutation of a narration-versus-steps claim. And **P7 — the
+finding about naming a commit precisely — shipped with an ambiguous "rule 4" (the file has
+two) and a line number cited against a branch the lead had itself just ordered amended.** The
+defect P7 documents, committed inside P7.
+
+**Why the fix is the dangerous place.** A correction arrives with its reasoning already
+performed and its author already convinced; it reads as *the checked version* of something,
+so the reviewing attention that would meet a fresh claim is spent. The author has also just
+re-read the passage they edited, which agrees with them by construction. Both effects point
+the same way, and neither announces itself.
+
+**What actually caught them.** Not a gate — no gate in this repository fires on any of the
+above. Every one died on a **second, differently-shaped** check: a peer grepping a different
+axis, a sweep of references rather than a re-read, a positive control on a surprising zero, a
+teammate refusing a relayed fact. The decision-maker's summary is the finding in one line:
+*every error I made today survived its first check and died on its second.*
+
+**Fix**: a correction gets the scrutiny of a new claim, not of a confirmation — which in
+practice means it is checked by **a differently-shaped probe than the one that found the
+original**, and never by re-reading the passage just edited.
+
 ## What worked — separated deliberately, because the gaps dominate the list above
 
 A findings file records defects, so read alone it describes a team that only errs. Five things
