@@ -187,9 +187,49 @@ quietly adopting the notes as written.
 **Maintainer acceptance: ruled 2026-08-29.** Verbatim, quoted rather than reasoned around —
 this is the maintainer's own authority: *"I assume that agents works involve change files
 in docs, it must be allowed"* — then, presented with options, **"option 2"**: split the two
-axes. Writing to `docs/` is unremarkable and allowed; *deciding* is bounded by charter. (The
-full option set put to the maintainer was not relayed to this record beyond the selected
-one and its refined text below; recorded as heard, not reconstructed.)
+axes. Writing to `docs/` is unremarkable and allowed; *deciding* is bounded by charter.
+
+**Appended 2026-08-29 (dated separately, since it was not available when the row above was
+first filed): the four options put to the maintainer, verbatim, supplied on request rather
+than reconstructed** — the earlier text here correctly declined to invent them and said so;
+a decision record naming only the winning option's number is not self-contained, so they
+are filed now that they exist to file.
+
+> **1 — Allow both, unconditionally.** Any role agent may decide and write to `docs/`.
+> Simplest. Loses whatever §12 was actually protecting, without establishing what that was.
+>
+> **2 — Split the axes.** *Writing* is allowed for every role whose charter names an
+> artifact — that is just "the author writes the document," and needs no special
+> permission. *Deciding* stays bounded by charter. §12's clause changes from "every edit to
+> `docs/`" to naming *which* decisions stay in the main thread — the four verdicts and the
+> merge.
+>
+> **3 — Allow writing, centralise all deciding.** Role agents draft; the lead makes every
+> call including DP rulings. Argued against by this session's own evidence: the
+> decision-maker rejected both options offered on one ruling and found a third in the
+> source, and answered the sync-convention question better than the lead framed it.
+> Centralising would have lost both.
+>
+> **4 — Any of the above, conditioned:** every decision lands as a dated, filed artifact,
+> never chat. Not really an alternative — a condition that should attach to whichever wins.
+
+**The ruling was option 2 with condition 4, and the adopted §12 text's "every decision lands
+as a dated artifact" line is condition 4 carried into the rule, not decoration or a
+generic closing flourish.**
+
+**The lead's stated reasoning at the time, recorded as the lead's own characterisation —
+attributed rather than independently re-verified by this record, since two of its three
+examples happened in sessions this record has no visibility into:** *"the write permission
+isn't where the risk is — what actually held today was charter."* Cited in support: the
+auditor declining to file a register row before a review was accepted, and the executor
+declining to widen a PR beyond its slice — both relayed from the lead's own visibility into
+those sessions, not confirmed here from a public artifact. The third example is directly
+confirmable from this session's own record: **this decision-maker declined task #17**
+(`docs/README.md`'s suite index gap) **as outside the decision-maker's charter**, reported
+to the lead in this session's own transcript rather than acted on. None of the three was
+policed by another role at the time — each held because the role holding it knew what it
+owned, which is offered as the strongest available evidence for option 2 over option 3
+without overstating how much of it this record can itself stand behind.
 
 **The outcome substantially adopts recommendation (a)'s conclusion — role sessions may
 decide and write within a stated boundary — by a different mechanism than (a) proposed.**
