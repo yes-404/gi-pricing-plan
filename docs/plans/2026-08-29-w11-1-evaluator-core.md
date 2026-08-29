@@ -486,18 +486,37 @@ not a rounding one."* That is a second guard, with its own broken-input test, an
 the row's first sentence only would ship the rung and miss it.
 **Owner: Task 1.4.** Both halves are exit criteria there.
 
-**F-W11-1-5 — `03` §5.2 puts the money primitives in a module the code does not have, and
-names a parameter the code does not use.**
-§5.2 (`:615-617`) declares `pricing_core/rating/money.py` with
-`apply_factor(amount_minor: int, factor: Decimal, rounding: Rounding) -> int`. The shipped
-code has `pricing_core/money.py` with
-`apply_factor(amount_minor: int, factor: Decimal, mode: RoundingMode) -> int`. Both the
-module path and the third parameter's name differ.
+**F-W11-1-5 — `03` §5.2's money block diverges from the shipped code at every line it has.
+RULED — PR #375: the code is right, the spec is stale. Not a blocker.**
+As first filed this named only the module path and a parameter name — an enumeration that
+read as complete and was not. The decision-maker found more; checking
+their list found more again. Enumerated rather than counted, because the split between the
+last two rows is a judgement call and any headline number is only right at one granularity:
+
+| `03` §5.2 (`:615-617`) declares | The shipped code has |
+|---|---|
+| module `pricing_core/rating/money.py` | `pricing_core/money.py` |
+| `apply_factor(..., rounding: ...)` | `apply_factor(..., mode: ...)` |
+| type `Rounding` | `RoundingMode` — **`Rounding` appears nowhere in `packages/` or `backend/`** |
+| *(nothing)* | `reconcile_ladder` ships undeclared — **zero hits in `docs/specs/`** — and Task 1.4 Step 12 depends on it |
+| `to_minor` under a `pricing_core` module | `model_schema/money.py:105`; `pricing_core.money.__all__` does not list it |
+| `to_minor(value: Decimal, currency: str)` | `to_minor(value: Decimal, *, places: int = 2)` |
+
+**Counts of this kind have now been wrong repeatedly in this workstream** — the map plan's
+prerequisites, this plan's "five sites", the ruling's own tally, and this row — which is why
+the sentence you are reading enumerates them rather than totalling them: an ordinal here
+would itself be wrong the next time it happened. That plan's self-review already drew the
+conclusion: *"every bare count in this section is removed
+rather than corrected a third time, replaced by the enumerated list above, each item cited to
+the document that names it."* The list is the artifact; the number is what ages against it.
+
 This matters here only because an executor implementing Task 1.4 from §5.2 would import
-from a path that does not exist and pass a keyword that is not accepted.
+from a path that does not exist and pass a keyword that is not accepted — and, for the
+`reconcile_ladder` row, would find no declared signature at all for a function Step 12
+already calls.
 **Owner: the decision-maker** — it is a spec-vs-code conflict, which
-`delivery-process.md` §3 makes theirs. **Recommended resolution:** the code is right and the
-spec is stale — `pricing_core/money.py` is imported by the shipped rating path and moving it
+`delivery-process.md` §3 makes theirs; **ruled in PR #375** along the recommendation below.
+**Recommended resolution, as ruled:** the code is right and the spec is stale — `pricing_core/money.py` is imported by the shipped rating path and moving it
 would break `pricing_core`'s public surface for a naming preference. The correction is a
 dated amendment to §5.2, not a code move. **Not a blocker:** Task 1.4 imports from the real
 path regardless, and this plan states it (Global Constraints) so the executor never reads
@@ -1175,10 +1194,13 @@ and citing it would be citing a struck number). Reproduce that shape: booster lo
 outside the loop, DMatrix built inside it. Ruling 8's seam amortises the booster *load*;
 DMatrix construction is genuinely per-quote and stays in the number.
 
-**Two ways to get a meaningless number here, and each looks plausible.** Load the booster
-inside the loop and the p99 lands far above 1.626 ms — reading as a failure of a budget the
-shipped path meets, because W8's reference was measured with the load outside. Measure
-predict-only and it lands near W8's **0.308 ms** — reading as five times the real headroom.
+**The failure mode is measuring a shape W8 never measured.** Load the booster inside the
+loop and you produce load + DMatrix + predict — a fourth shape, absent from W8's table, whose
+p99 lands far above 1.626 ms and reads as a failure of a budget the shipped path meets.
+**There is no comparator ambiguity to resolve.** W8's three rows all preload the booster
+(`nthread=1 incl. DMatrix` 1.626 ms, `all-cores incl. DMatrix` 4.737 ms, `predict-only`
+0.308 ms), and `score_one` builds a DMatrix per quote — so `nthread=1 (incl. DMatrix)` is
+the row this measurement reproduces, and the others are not alternatives to weigh.
 
 - [ ] **Step 6: the typed per-quote errors (FR-RATE-38)**
 
@@ -1415,10 +1437,12 @@ malformed-graph `RuntimeError` versus a wrong number in Task 1.3 Step 2. In each
 plan says what a *differently*-shaped failure would mean, because a matching status with a
 differing reason is a plan defect.
 
-**6. What this plan does not decide.** One thing is still open: **F-W11-1-5**, the `03` §5.2
-money-module divergence, which is a spec-vs-code conflict and so the decision-maker's. It
-blocks nothing — Task 1.4 imports from the real path either way. The other two are decided:
-F-W11-1-1 by Ruling 12, and the slice-granularity question by the lead, who accepted running
+**6. What this plan does not decide — and nothing it raised is now undecided.** Every
+question this plan opened has been ruled by someone whose charter owns it, none by the
+planner. **F-W11-1-5** (the `03` §5.2 money block) was the decision-maker's as a spec-vs-code
+conflict and is ruled in PR #375 — code right, spec stale; it blocked nothing, since Task 1.4
+imports from the real path either way. **F-W11-1-1** is Ruling 12. The slice-granularity
+question was the lead's, who accepted running
 Tasks 1.1–1.5 as **five sequential slices with the frozen map unedited** and recorded that
 this applies the process's granularity to the plan's tasks rather than re-cutting them — so
 it is not a replan. A planner supplies options and a recommendation and rules none of them
