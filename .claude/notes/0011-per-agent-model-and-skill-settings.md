@@ -55,7 +55,11 @@ practice, and four open items it asks to have confirmed.
 
 One premise is **not** in force and is load-bearing: the document says agent files that
 already exist "are **amended at adoption, not recreated**." **There are none.**
-`.claude/agents/` holds eight delegable specialists and no role definitions; the seven roles
+`.claude/agents/` holds seven delegable specialists *(corrected 2026-08-29 — a directory
+listing that included its own `README.md` read as eight; `.claude/agents/README.md:184`
+already states "all seven"; see `docs/plans/2026-08-29-nt-0010-0011-reconciliation-
+rulings.md` Part B8, which corrected NT-0010's identical instance but not this sibling
+one)* and no role definitions; the seven roles
 live in a handover file outside the repository and in spawn-time briefs that die with the
 session. Every role file is a create, not an amend.
 
