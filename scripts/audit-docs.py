@@ -27,6 +27,10 @@ Checks (all non-destructive, exit 1 on any failure):
      in the owning module's §5.1 or §5.2 (FR-OVR-17, OQ-OVR-6).
  22. Every markdown table row has its own header's cell count — catching a literal
      `|` inside a cell, which shifts every column after it while still rendering.
+ 23. Every spec §10 open-question mirror row carries a status token matching the
+     findings register's status for that question, not just a bare, unstatused mirror.
+ 24. Every route `00` §5.6 declares as canonical for a module appears in that module's
+     own §5.3 view table (FR-OVR-22); §5.6 is canonical, so a mismatch is a §5.3 error.
 
 Usage: python3 scripts/audit-docs.py
 """
