@@ -107,10 +107,17 @@ closed: check the id against `docs/roadmap.md` before acting on it, and say so p
 
 ## Output
 
-Proposals land in `docs/roadmap.md` as a dated `### Plan review N` section, and anything
-undecided goes to `docs/open-questions.md` with options and a recommendation.
+Proposals land in `docs/audit/plan-reviews.md` as a dated `### Plan review N` section, and
+anything undecided goes to `docs/open-questions.md` with options and a recommendation.
 
 ## Verified
+
+2026-08-29 — the Output location corrected. It named `docs/roadmap.md`, which was where
+reviews 1-6 originally landed; the roadmap slim (NT-0009, accepted 2026-08-27) moved all six
+to `docs/audit/plan-reviews.md` and nothing updated this skill to match, so a reader following
+it two days later would have filed the next review in the wrong file. Caught while filing
+plan reviews 7 and 8, which is the proof the correction is right: they land where this now
+says. No other section was stale.
 
 2026-08-23 — question 4 amended when `CLAUDE.md` was cut to its binding rules: §2's
 component status marks no longer exist to check, and the FR-DATA-41/42 exemplar moved here

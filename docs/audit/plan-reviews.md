@@ -527,6 +527,289 @@ bandings, Peril Structure and reconciliation recorded as Phase 2.
 
 ---
 
+### Plan review 7 — at W9's close, 2026-08-27
+
+`CLAUDE.md` §14's seventh run, filed retroactively on 2026-08-29 together with review 8:
+W9 closed 2026-08-27 and W10 closed 2026-08-28, and `CLAUDE.md` §14's trigger is fixed —
+"at each workstream close" — so both were owed and neither had been filed before W11 was
+next in line. **The output is a proposal, never a change** — every recommendation below
+needs a dated maintainer acceptance line before it binds. Evidence derived at `origin/main`
+`07ae047`; the one commit since W10 closed (#313) touched only `.claude/notes/`, so nothing
+about `RATE` or the roadmap moved underneath this review.
+
+**1. Completion — reused, not re-derived.** W9's own closure record already carries fresh
+completion evidence for its scope (`docs/audit/work/W9/README.md:26-29`), so it is cited
+rather than repeated: FR-RATE-1..13, FR-RATE-22..27 and FR-RATE-56/57/58/59 delivered, and —
+outside W9's own row's stated numeric range — **FR-RATE-60**, marker-evidenced (3 files),
+correctly caught the same way W10 later caught FR-RATE-62. No change proposed to W9's
+completion claim.
+
+**2. Omission — what the phase needs that no row names.**
+
+**FR-RATE-61 and FR-RATE-63 have no workstream owner.** (Verifying the hypothesis this
+review was handed: it named FR-RATE-60 alongside FR-RATE-61. FR-RATE-60 is not part of this
+gap — see Question 1 — it was verdicted in W9. Only FR-RATE-61 and FR-RATE-63 are orphaned;
+recorded here rather than silently substituted.) Both were decided 2026-08-18 — OQ-MODEL-11
+into FR-RATE-61 (`03-rating-engine.md:110`, §3.2), OQ-RATE-4 into FR-RATE-63 (`:87`, §3.1) —
+nine days before W9 closed. Neither appears in any `W_` row's stated scope: a full-file grep
+of `docs/roadmap.md` for both ids returns exactly two hits, both inside OQ-RATE-4's and
+OQ-MODEL-11's own decided-narrative text (`:536`, `:567`), explaining what requirement number
+a decision became, never inside a workstream row. Neither appears in W9's closure record
+either (checked directly; it verdicts FR-RATE-60 but mentions neither 61 nor 63). This is
+the omission shape the skill names: an approved id exists, nothing measures delivering it,
+and nobody had looked — orphaned at birth, not gone stale.
+
+Why it matters now rather than as a historical footnote: **FR-RATE-61 is the same
+approval-gate machinery as FR-RATE-40** (§3.8, W11) — both refuse `approved` without a
+Dislocation Run (FR-RATE-46, W13) — so whoever builds FR-RATE-40's gate touches the identical
+code path FR-RATE-61 needs. **FR-RATE-63 bears directly on W11's evaluator**: it requires
+that a Quote Context with `purpose ∈ {mid_term_adjustment, cancellation}` mounts a
+separately-versioned sub-graph rather than being priced as new business, and its own text
+names silent mispricing as the exact failure it exists to prevent. An evaluator built without
+it would reproduce that failure on day one, and nobody would notice because no test anywhere
+is chartered to.
+
+> **Recommendation:** give both an explicit verdict rather than leave them silent
+> (`CLAUDE.md` §13: silence is not one of the four). FR-RATE-61 folds into whichever slice
+> builds FR-RATE-40's gate, since the code path is identical — a named owner there, not a
+> separate slice for one requirement. FR-RATE-63 is a decision for whoever plans W11's
+> evaluator slice: build it regardless of which workstream's number it carries (recommended,
+> since the alternative ships a known silent-mispricing mode), or defer it explicitly with a
+> named owner and a dated register row. Not a roadmap edit on this review's own authority.
+>
+> **Maintainer acceptance:** _pending._
+
+**3. Skills and research — re-run, not appended to.**
+
+One gap found, self-referential: **the `phase-review` skill's own "Output" section was
+stale.** It named `docs/roadmap.md` as where a review's proposals land; the location moved
+to `docs/audit/plan-reviews.md` on 2026-08-27 (NT-0009), two days before this skill was next
+read. **Fixed in this commit** (`CLAUDE.md` §12: a skill found wrong is fixed in the same
+session, `Verified` date refreshed) — the file this review is filed into is the proof the fix
+is correct.
+
+No other skill or research gap found against W9's own scope. Carried into review 8's
+Question 3, not repeated here: no spike or research artifact covers the ZEN engine's
+*evaluate*-side behaviour — W9 never needed it, W11 will be the first to.
+
+**4. Document drift.** Two disagreements found, both inside code W9 itself shipped, both
+routed to the decision-maker rather than ruled here (`CLAUDE.md` §0: stop and resolve, never
+quietly make either side match — this review's job is to name the disagreement precisely,
+not to rule it):
+
+- **The compile endpoint is specified 202 and implemented 200.** `03-rating-engine.md:513`
+  specifies `POST /rating-versions/{id}/compile` as `**202** Compile + validate the bundle`;
+  the shipped route (`backend/src/app/api/models.py:1139-1161`, wired to
+  `compile_rating_version`, `backend/src/app/platform/rating_versions.py:226-288`) returns
+  200 synchronously. Bears directly on W11: the slice that persists the full compiled Bundle
+  (currently discarded — see review 8, Question 5) may push this operation past a
+  synchronous-response budget, which is a reason to rule before that slice starts, not after.
+- **`POST /api/v1/rating-versions` (`03:512`) cites no requirement.** Every other §5.1 row
+  names the FR- it implements; this one reads only "Create a draft Rating Version with
+  pins." Two readings are both live: a capability the spec never got around to numbering
+  (needs an appended FR), or a Phase-1b-era row (`03` §4.3's own OD1/W7-3 scoping note
+  describes exactly this kind of provisional minimal shape) never tombstoned when Phase 2
+  widened the contract. Which reading is correct changes what the register owes it.
+
+> **Recommendation:** both go to the decision-maker's queue before W11's plan is filed — the
+> compile 202/200 divergence before any slice touches `compile_rating_version`, the missing
+> citation whenever convenient since nothing currently depends on its answer. Neither is
+> resolved in this review.
+>
+> **Maintainer acceptance:** _pending._
+
+**5. Shape.** No change proposed to W9's own scope or boundary — it closed against a
+coherent, single-subject row and nothing in this review's evidence argues otherwise. The
+shape question that matters is about the workstreams *after* W9, visible only once W10's
+close is reached and W11 is next — carried into review 8 immediately below, where it belongs.
+
+#### Proposals, consolidated — review 7
+
+| # | Proposal | Kind |
+|---|---|---|
+| 2.1 | FR-RATE-61 folds into whichever slice builds FR-RATE-40's gate | decision |
+| 2.2 | FR-RATE-63 built in W11's evaluator slice, or explicitly deferred with a named owner | decision |
+| 3.1 | `phase-review` skill's Output section corrected to `docs/audit/plan-reviews.md` | skill (fixed in this commit) |
+| 4.1 | Compile-endpoint 202/200 divergence ruled by the decision-maker before W11 touches `compile_rating_version` | decision |
+| 4.2 | `POST /api/v1/rating-versions`'s missing FR- citation ruled | decision |
+
+**Maintainer acceptance:** _pending — no recommendation above binds until this line carries
+a date and a decision._
+
+---
+
+### Plan review 8 — at W10's close, 2026-08-28
+
+`CLAUDE.md` §14's eighth run, filed retroactively on 2026-08-29 alongside review 7 — see
+review 7's opening for why both were owed. **The output is a proposal, never a change.**
+Findings about a later phase are spec changes only (§0's table). Evidence as review 7: derived
+at `origin/main` `07ae047`.
+
+**1. Completion — reused, not re-derived.** W10's own closure record already covers its
+scope in full (`docs/audit/work/W10/README.md:29-37`): FR-RATE-14..21 and FR-RATE-62, all
+"delivered and tested." Module-wide, current: **78 `RATE` requirements in scope, 34
+evidenced (44 %)** (`scope-audit.py RATE`, run this session at `main@74b1b10`, confirmed
+unchanged at `07ae047` since the only intervening commit touched `.claude/notes/` only).
+§3.7/§3.8's eleven W11 requirements are 0/11 evidenced — expected, W11 has not started. No
+disagreement between the roadmap's completion claim and the derived numbers.
+
+**2. Omission.** No new omission beyond what the register already carries with named
+owners: **F-W10-2** (FR-RATE-17 exposure-weight wiring, owner: portfolio-dataset
+integration) and **F-W10-3** (`POST /rate-tables/{slug}/versions` has no route, owner: the
+W15 rate-table editor) — both `docs/audit/register.md:26,29`, neither W11's. This review's
+actual findings are research and shape gaps, Questions 3 and 5 below, not requirement-
+ownership gaps, which is why they sit there instead of here.
+
+**3. Skills and research — re-run, not appended to.** Carried from review 7: **no spike or
+research artifact has ever exercised the ZEN engine's evaluate-side (Decision/graph
+execution) behaviour.** Spike S1 (`docs/research/track-a-findings.md` F1/F14) tested
+decimal-semantics correctness through the engine's expression path; spike S2 tested a bare
+XGBoost booster's latency (`nthread=1`) in a Python loop, with no ZEN graph involved at all —
+confirmed directly: `packages/pricing-core/src/pricing_core/rating/compile.py` is the only
+file anywhere that imports `zen`, and only for `zen.compile_expression`'s syntax check.
+Nothing anywhere calls the engine's `Decision`/evaluate API. W11's evaluator will be the
+first code in this repository to do so, under real concurrency (NFR-OVR-1's 200 rps
+sustained per replica), and nobody has verified the Python binding's behaviour under
+concurrent async calls — whether it blocks the event loop, whether it is thread-safe.
+
+> **Recommendation:** a short, targeted spike on the ZEN binding's evaluate-side concurrency
+> behaviour, in the shape of S1/S2 (a dated finding in `docs/research/`, not a full skill),
+> run at the *start* of W11's evaluator slice rather than discovered mid-slice. This is
+> research, not a workstream deliverable in itself — it gates an architecture choice
+> (whether `score_one` needs `run_in_executor` thread-pool offload) rather than adding a
+> requirement.
+>
+> **Maintainer acceptance:** _pending._
+
+**4. Document drift.** **The requirement-range omission has now fired twice, and it is a
+finding about how rows are written, not two coincidences.** W10's own row read
+`FR-RATE-14..21` and omitted FR-RATE-62 (added mid-workstream, corrected at W10's close,
+`docs/roadmap.md:375`). W11's row reads `FR-RATE-34..42` and omits **FR-RATE-64**
+(`03-rating-engine.md:162`, §3.7, decided 2026-08-18 with OQ-RATE-6, sitting between
+FR-RATE-35 and FR-RATE-36 in the spec's own document order) — the same mechanism: an
+append-only id landed inside a section after the roadmap row naming that section's range was
+already written, and the row was never re-checked against the section's current membership.
+
+> **Recommendation, already accepted — recorded here for the formal record, not
+> re-litigated:** correct W11's row to `FR-RATE-34..42, FR-RATE-64 (§3.7, added 2026-08-18
+> with OQ-RATE-6 — the row's original "34..42" omitted it); NFR-RATE-1 is the hard target`,
+> mirroring W10's own correction. Lands before the W11 plan is filed, not in this review.
+>
+> **The mechanical fix, proposed new:** a numeric range in a workstream row is a derived
+> summary of a spec section's membership, and it silently rots every time that section gains
+> an append-only id — which is guaranteed to keep happening, since append-only is the rule
+> (`CLAUDE.md` §5). The row should name the **section** (`§3.7`, `§3.8`) as the citation of
+> record, with the numeric range kept only as a human-readable gloss beside it, never as the
+> sole scope statement — so a check as cheap as "does every bolded FR- id in this section
+> appear in the row it maps to" can catch the omission mechanically instead of at the next
+> close. Whether that check belongs in `audit-docs.py` or `scope-audit.py` is an
+> implementation choice for whoever owns it, not decided here.
+>
+> Separately, carried from review 7 unchanged: **NFR-RATE-14 still states spike S2's
+> original p99 1.09 ms** (`03:788`) while the register (`docs/audit/register.md:23`,
+> F-W9-1) and `docs/research/w8-spike-resolution.md` cite a W8 re-measurement of
+> **1.626 ms** — the same class of gap NFR-RATE-13 already got a dated amendment for
+> (`03:789`, amended 2026-08-27) and NFR-RATE-14 did not: an amendment stranding its
+> list-mate. Both figures are far under the 50 ms budget, so this is not a risk to
+> NFR-RATE-1, but it should not propagate into whatever measures the real path in W11.
+>
+> **Maintainer acceptance:** _pending._
+
+**5. Shape — is the cut still right?**
+
+**Yes, this review has a shape finding, and it is the one this pair of reviews exists to
+raise.** The roadmap's workstream table numbers Phase 2 linearly — W11 (scoring), W12
+(testing), W13 (dislocation), W14 (deployment) — and that numbering describes an execution
+order the requirements themselves do not support:
+
+- **FR-RATE-34** (`03:160`, W11) scores against "the Rating Version currently live in the
+  target environment." FR-RATE-23 (`03:134`) is explicit that "live is a property of a
+  **Deployment**, and the same Rating Version can be live in `uat` and not in `prod`."
+  Deployment (FR-RATE-50, §3.10) and the Environment domain entity itself (FR-PLAT-28, `07`)
+  are both **W14**'s (`docs/roadmap.md:379`) — three workstreams after W11. No Environment or
+  Deployment class exists in code today (confirmed: only an unrelated app-config
+  `Environment` enum in `backend/src/app/config.py`, and a bare `environment: str | None`
+  field on an unrelated model in `packages/model-schema/src/model_schema/approvals.py`).
+  `docs/workflows/wf-04-deploy-and-monitor.md` confirms the intended sequence directly: its
+  Phase A step A4 has a Consumer System scoring test quotes *after* a Deployment (step A1)
+  already exists — the workflow was never written assuming W11 alone reaches a live quote.
+- **FR-RATE-40** (`03:172`, W11) refuses `approved` without a passing Regression Suite
+  (FR-RATE-44, **W12**) and a Dislocation Run (FR-RATE-46, **W13**) — both unbuilt when W11
+  starts. `docs/workflows/wf-02-model-to-rating-version.md` steps D1/D6/E2/E3 confirm this is
+  load-bearing, not incidental: step E3 names a concrete failure (`EVIDENCE_INCOMPLETE`, a
+  stale dislocation run) that cannot be produced before W13 ships.
+
+Neither dependency is a defect in the *spec* — FR-RATE-23 and FR-RATE-40 read exactly as
+intended. The defect, if it is one, is in treating W11 → W12 → W13 → W14's numbering as an
+*execution* order, when the actual dependency graph has W11 needing pieces of W14 and
+W12/W13 before W11's own two requirements can be *completed* — not merely started.
+
+**Recommendation: no re-cut of the workstream boundaries.** Three reasons:
+
+1. **The mechanism that handles this already exists and already works.** F-W9-1
+   (NFR-RATE-13/14, carried to W11), F-W10-2 (FR-RATE-17 exposure weighting, carried to
+   portfolio-dataset integration) and F-W10-3 (the rate-table-version route, carried to W15)
+   are the same shape of problem at smaller scale — a workstream ships what it can and
+   defers the rest to a named owner in the register. FR-RATE-34's live default path and
+   FR-RATE-40's two preconditions are larger instances of the identical pattern, not a new
+   one.
+2. **The dependency is domain-inherent, not an artifact of the cut.** No renumbering of
+   W11-W14 changes the fact that "live" cannot mean anything before a Deployment exists, or
+   that a Dislocation Run cannot run before W13 builds it. Moving code between workstream
+   numbers does not make Deployment exist sooner; only building it does.
+3. **Re-cutting has a real cost the deferral does not.** Pulling a piece of
+   FR-PLAT-28/FR-RATE-50 forward into W11 would blur W11's boundary into W14's territory for
+   a shape (`Environment`'s promotion-order behaviour, `wf-04` step C2) that is not actually
+   separable into a cheap shell — it would mean partially building W14 under W11's name.
+   Holding W11 back until W12-W14 land first would idle the evaluator work — the thing at
+   the most schedule risk per this same roadmap's own risk row (`docs/roadmap.md:392`) —
+   behind three workstreams that do not touch it.
+
+The precedent this leans on is Phase 1a's own: no single workstream (W9, bundle compilation;
+W10, rate tables) was independently demo-able either, and neither was held to that bar. The
+phase's demo-able outcome (`docs/roadmap.md:365-367`) already names the full
+W11-through-W14 sequence as what is demonstrable, not any one workstream — consistent with
+treating this as a completion-ordering fact about two specific requirements, not a mis-cut
+of the workstreams that carry them.
+
+**What this recommendation does not excuse:** FR-RATE-34 and FR-RATE-40 must each get an
+explicit, named, dated deferral in the register when W11 closes — not silence, and not a
+plan that quietly ships a stub and calls the requirement done. That is W11's own plan's job
+(its DP1 and DP2), not this review's; this review's job is only to say the boundaries
+holding it are the right ones.
+
+> **Maintainer acceptance:** _pending._
+
+#### Proposals, consolidated — review 8
+
+| # | Proposal | Kind |
+|---|---|---|
+| 3.1 | A short ZEN-evaluate-side concurrency spike, run at W11 evaluator-slice start | research |
+| 4.1 | W11's roadmap row corrected for FR-RATE-64 (already accepted; lands before the plan is filed) | docs |
+| 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only | tool or convention |
+| 4.3 | NFR-RATE-14 gains a dated amendment reconciling the 1.09 ms / 1.626 ms figures | spec |
+| 5.1 | **No re-cut** of Phase 2's W11-W14 boundaries; FR-RATE-34/40 get named deferrals inside W11's own plan | plan — no change |
+
+**Maintainer acceptance:** _pending — no recommendation above binds until this line carries
+a date and a decision._
+
+#### Sources — reviews 7 and 8
+
+- `docs/audit/work/W9/README.md`, `docs/audit/work/W10/README.md` — closure records, reused
+  per the skill's own guidance rather than re-derived.
+- `docs/specs/03-rating-engine.md` §3.1-§3.11, §4.3, §5.1 — read directly at `07ae047`.
+- `docs/workflows/wf-02-model-to-rating-version.md`, `wf-04-deploy-and-monitor.md` — read
+  directly.
+- `docs/roadmap.md` §7 (workstream table, risk table) — read directly, plus a full-file grep
+  for FR-RATE-60/61/63.
+- `docs/audit/register.md` — rows F-W9-1, F-W10-2, F-W10-2-1, F-W10-2-2, F-W10-3.
+- `scope-audit.py RATE` / `--endpoints`, run this session at `main@74b1b10`.
+- Codebase, read directly: `backend/src/app/platform/rating_versions.py`,
+  `backend/src/app/config.py`, `packages/model-schema/src/model_schema/approvals.py`,
+  `packages/pricing-core/src/pricing_core/rating/compile.py`.
+
+---
+
 ### Plan review 1 — at W6a's close, 2026-08-15
 
 The first run of `CLAUDE.md` §14, raised as `NT-0001`. §13 asks whether a workstream did
