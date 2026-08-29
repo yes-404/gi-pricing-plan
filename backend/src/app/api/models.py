@@ -1216,17 +1216,24 @@ async def compile_rating_version(
     rating_version_id: UUID,
     caller: Annotated[Caller, Depends(requires(Perm.RATING_COMPILE))],
     database: DatabaseDep,
-) -> dict[str, Any]:
-    """**200** with the compiled Bundle's metadata (FR-RATE-24/25).
+    response: Response,
+) -> Job:
+    """**202** with a Job (`03` §5.1:514, FR-RATE-24/25, W11 Task 1.2).
 
-    The pinned version compiles to a self-contained Bundle with a reproducible content
-    hash; every validation failure is named. Rate tables, reference tables and custom
-    objectives have no backend tables yet (Phase 2), so a version pinning one is refused
-    with `NOT_FOUND`.
+    Compilation resolves the pinned algorithm, rate tables, reference tables, custom
+    objectives and model to their real content and persists the compiled Bundle as a
+    blob — no longer a synchronous 200, since resolving real content can do real I/O.
+    Polling the returned Job to completion yields a `JobResult(kind="blob")` whose `ref`
+    is the persisted Bundle's content-addressed sha256.
     """
     async with database.unit_of_work() as session:
-        return await rating_versions_service.compile_rating_version(
+        job = await job_service.submit(
             session,
+            JobKind.RATING_COMPILE,
+            {**job_identity(caller), "rating_version_id": str(rating_version_id)},
+            caller.principal,
             workspace_id=caller.workspace_id,
-            rating_version_id=rating_version_id,
         )
+        response.status_code = status.HTTP_202_ACCEPTED
+        response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+        return job
