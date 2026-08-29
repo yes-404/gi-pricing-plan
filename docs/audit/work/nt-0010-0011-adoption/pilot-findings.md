@@ -386,6 +386,48 @@ teammate refusing a relayed fact. The decision-maker's summary is the finding in
 practice means it is checked by **a differently-shaped probe than the one that found the
 original**, and never by re-reading the passage just edited.
 
+## P13 — a sweep keyed on a heading pattern is blind to whatever was filed outside it
+
+Found by the auditor, on the pass that followed being told twice that its previous finding
+was stale. Distinct from P9, and it is P9's own remedy failing.
+
+**The instance.** Ruling 12's addendum imposes a **fourth** obligation on Task 1.4 — lift
+`test_contracts.py`'s `"scoring"` exclusion once Task 1.4 creates `QuoteContext`,
+`ScoringResult` and `Trace` in `model-schema`, because from that moment the hand-authored and
+generated shapes can diverge silently. The Slice 1 plan still says *"Three obligations land
+in this one PR"*.
+
+**It was not a timing miss.** The addendum merged as `002f4d8` at 15:12:13Z; the planner's
+full re-derivation is `da0f107` at 15:21:05Z — nine minutes later, with the content on `main`
+and in hand.
+
+**The cause is structural.** Obligation 4 is filed under
+`## The larger thing, and a fourth obligation on Task 1.4` — **not** under a `## Ruling N`
+heading. The re-derivation's own stated method is *"per ruling, grep its own subject across
+the whole document"*. A sweep enumerated over rulings cannot see an obligation that is not
+headed as one, and **the content most likely to sit outside the pattern is precisely the
+content added later** — an addendum, an amendment, a correction, which is to say the content
+P12 already identifies as least-scrutinised.
+
+**This is the third occurrence of one shape today**, each time in a different role's sweep:
+the auditor's self-review checked the "findings reported, not ruled" section and missed the
+separate `## Ruling 12` section; the planner's rule 5 was written over Files and Steps and
+missed Acceptance; and now a per-ruling sweep misses a non-ruling heading. In every case the
+enumeration was faithful to its key and the key was narrower than the class.
+
+**Fix**, and it sharpens rule 5 rather than adding to it: the sweep's unit is **every
+obligation the record imposes**, not every heading matching a pattern. Where a document's
+own structure is the index, that index has to be read for what it *omits* — the practical
+form being to enumerate the document's headings and ask which carry obligations, rather than
+enumerating the ones already known to.
+
+**And the finding arrived through friction, which is worth recording separately.** The lead
+told this auditor twice that its previous finding was stale, and was right both times. It
+audited again anyway, at a named SHA, by a different method, and returned something real that
+no one else had. **Being wrong twice did not make the third report worth less**, and a
+reviewer who had taken the two corrections as a verdict on its judgement would have stopped
+before this one.
+
 ## What worked — separated deliberately, because the gaps dominate the list above
 
 A findings file records defects, so read alone it describes a team that only errs. Five things
