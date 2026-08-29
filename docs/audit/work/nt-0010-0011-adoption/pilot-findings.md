@@ -209,6 +209,16 @@ guard against, when the cheaper fix sits with whoever holds the push."*
 Neither `planner.md` nor `auditor.md` says a branch under audit is frozen, or that an audit
 report names the commit it read.
 
+**"Rule 6" named two different proposals, and the collision was this record's fault.** P7's
+disposition said the writer's-half rule *"is drafted as rule 6"*; P13's said it *"rides with
+rule 6"*. The only text ever drafted under that number was the **prospective-count** rule.
+The writer's-half rule had been promised in a message and never written — so "rule 6"
+resolved to whichever proposal the reader had in mind, and an audit record asserted a draft
+that did not exist until someone went looking for it. Both candidates are now filed
+**unnumbered** in `docs/audit/plan-reviews.md`, because a number assigned before the thing
+exists is the same defect as a count written before the list is closed — which is, exactly,
+what the other candidate is about.
+
 **The mirror of this rule cost a commit, and the loss is silent.** P7 as stated binds the
 *writer* not to move a branch someone is **reading**. The same rule binds the *merger* not to
 land a branch someone is still **writing** to — and the lead broke it: #377 was merged while
@@ -625,13 +635,13 @@ the owner column is what makes it recoverable after this session.
 | **P4** | carry — ruled for W11 (five sequential process-slices, frozen map untouched). **The definitional defect remains**: `delivery-process.md` must distinguish the process-slice from a plan's slice heading, or the plan template must stop using the word for the group | §15 step 7 |
 | **P5** | carry — the stand-down procedure must state that stand-down is not termination, that worktree locks persist while the agent lives, and that a successor cuts a fresh worktree | §15 step 7 |
 | **P6** | carry — something must write `.last_lead_status_ts` or the detector is removed, and `reporter-state.md:29`/`:90` are corrected. *Partly discharged: the reporter now writes the marker itself, verified at 15:15Z with no false escalation* | §15 step 7 |
-| **P7** | carry — the writer's half (*do not move a branch someone is reading*) is drafted as rule 6 and deliberately **not landed**, because a §14 review's output is a proposal | §14 review |
+| **P7** | carry — the writer's half, *do not move a branch someone is reading*, is filed **unnumbered** as a pending proposal in `docs/audit/plan-reviews.md` (PR #389), deliberately not landed because a §14 review's output is a proposal. *(Corrected: this row previously said the rule "is drafted as rule 6". It was not. It had been promised in a message and never written; the only text ever drafted under that number was the prospective-count rule, and the planner wrote the writer's-half rule for the first time when recovering it. The lead's row recorded a draft that did not exist.)* | §14 review |
 | **P8** | **fixed** — `5b82b18` merges the two awk rules so a task heading cannot fall through to the clear-branch; verified independently on upstream task 1, upstream task 2 to EOF, and house 1.1. The general lesson carries | executor / §14 review |
 | **P9** | **fixed** — every ruling re-derived across narrative, Files, Steps and Acceptance; rule 5 lands in `docs/plans/README.md` with #370 | planner |
 | **P10** | **fixed** — Step 5 now names the measurement shape (incl. `DMatrix`, booster pre-loaded), and the manufactured comparator choice is removed | planner |
 | **P11** | carry — **a gate claim names its corpus**: the command, the totals and the tree. No artifact yet requires it; `executor.md` and `auditor.md` are the candidate homes | §15 step 7 |
 | **P12** | carry — no single file owns it; the operational form is that a correction is checked by a *differently-shaped* probe than the one that found the original, never by re-reading the passage just edited | §14 review |
-| **P13** | carry — sharpens rule 5: the sweep's unit is every obligation the record imposes, not every heading matching a pattern. Rides with rule 6 into the §14 review | §14 review |
+| **P13** | **fixed** — its clause is in rule 5 on `main`: *"enumerate the rulings by diffing the record, not by listing its headings"*, with the reason (an addendum never gets a new numbered heading, so heading-based enumeration is blind to exactly the changes that arrive late). *(Corrected: this row said "carry … rides with rule 6". It was already discharged when written, and it rides with nothing — it sharpens an existing rule.)* | planner |
 | **P14** | carry — no role checks whether an expensive verification is already in flight for the same artifact, and `delivery-process.md` §8 governs parallelism between slices only. The operational half is that a reviewer reads CI rather than re-running the suite locally | §15 step 7 |
 
 **Read the owner column as a claim about who acts, not about who has agreed.** §15 step 7's
