@@ -701,7 +701,7 @@ specifies. Reported, not ruled: the remedy is a new check, which is scope.
 
 ---
 
-## Ruling 13 — `03` §5.2's money block: the code is right, the spec is stale in four ways, not the two reported
+## Ruling 13 — `03` §5.2's money block: the code is right, the spec is stale in six ways, not the two reported
 
 **Raised as `F-W11-1-5`** in the Slice 1 plan (`2026-08-29-w11-1-evaluator-core.md`, PR #370),
 which routed it here correctly: *"it is a spec-vs-code conflict, which `delivery-process.md`
@@ -710,7 +710,7 @@ this record answers it.
 
 **The finding as reported understates its own scope, and the count is the part worth
 correcting first.** `F-W11-1-5` says *"Both the module path and the third parameter's name
-differ."* Checked against `002f4d8`, **four** things differ, and two of them are not in the
+differ."* Checked against `002f4d8`, **six** things differ, and four of them are not in the
 report:
 
 | # | Spec, `../specs/03-rating-engine.md` §5.2 | Shipped code | Reported? |
@@ -718,13 +718,23 @@ report:
 | 1 | module `pricing_core/rating/money.py` (`:619`) | `packages/pricing-core/src/pricing_core/money.py`; **no `rating/money.py` exists** | yes |
 | 2 | `apply_factor(..., rounding: Rounding)` (`:621`) | `apply_factor(..., mode: RoundingMode)` (`money.py:33`) | the name, yes |
 | 3 | the type `Rounding` | `RoundingMode = Literal["half_even", "half_up", "ceiling", "floor", "down"]` (`money.py:20`); **`Rounding` exists nowhere in the codebase** | **no** |
-| 4 | declares `to_minor(value: Decimal, currency: str) -> int` (`:620`); does **not** declare `reconcile_ladder` | `to_minor` is not in `pricing-core` at all — it is `model_schema/money.py:105`, `to_minor(value: Decimal, *, places: int = 2) -> int`; `reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool` **does** exist (`money.py:55`) and the spec never declares it | **no** |
+| 4 | declares `to_minor` here (`:620`) | `to_minor` is not in `pricing-core` at all — it is `model_schema/money.py:105`, a different package | **no** |
+| 5 | `to_minor(value: Decimal, currency: str) -> int` (`:620`) | `to_minor(value: Decimal, *, places: int = 2) -> int` — keyword-only `places`, not positional `currency` | **no** |
+| 6 | does **not** declare `reconcile_ladder` | `reconcile_ladder(risk_premium_minor: int, steps: list[tuple[str, int]]) -> bool` ships (`money.py:55`) and is re-exported | **no** |
 
-Row 4 is two errors in opposite directions in one block — a declared function that is in a
-different *package* with a different signature, and an undeclared one that ships. The second
-half matters for this slice: `reconcile_ladder` is what `NFR-RATE-8`'s ladder-reconciliation
-test exercises, and Task 1.4's Step 12 is that test, so the plan depends on a function §5.2
-does not list.
+**Corrected 2026-08-29, before merge — this ruling's own count was inconsistent, and the
+planner caught it.** The first filing said *"four"*, because rows 4–6 above were bundled into
+a single row while rows 1–3 each held one defect. Nothing was missing from the text — the
+package, the signature and the omission were all stated — but a count is quoted later and a
+bundled row under-reports. Enumerated at the granularity rows 1–3 use, it is **six**. This is
+the same defect this ruling opens by naming in `F-W11-1-5`, committed in the act of naming
+it.
+
+Rows 4–6 point in opposite directions: two are a declared function that is in a different
+*package* with a different *signature*, and one is an undeclared function that ships. Row 6
+matters for this slice — `reconcile_ladder` is what `NFR-RATE-8`'s ladder-reconciliation test
+exercises, and Task 1.4's Step 12 is that test, so the plan depends on a function §5.2 does
+not list.
 
 **Ruled: the code is right; §5.2 is stale.** Grounds:
 
