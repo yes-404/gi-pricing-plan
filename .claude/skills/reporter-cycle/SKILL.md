@@ -74,6 +74,14 @@ bash .claude/skills/reporter-cycle/scripts/reporter-cycle.sh
    keep running through an outage — treating a missing token as a fatal script error would
    stop the entire 15-minute cycle, including the parts of it (staleness detection) that do
    not depend on Slack at all.
+6. **`.last_reported_main_sha` in the handover directory tracks the SHA last successfully
+   *posted*, not merely last seen.** `main()` only calls `set_last_reported_sha` after
+   `post_to_slack` returns success — a failed post leaves the marker alone, so the next
+   cycle re-diffs from the same baseline instead of silently dropping commits nobody actually
+   saw reported. The comparison itself always asks the remote directly
+   (`get_remote_main_sha` uses `git ls-remote`, never a cached `git log origin/main` — its
+   docstring carries the incident that made this non-optional); a `git fetch` only runs, in
+   `get_merged_subjects`, once that comparison has already shown the tip moved.
 
 ## The nudge signal is detected here; sending it is the agent's job, not the script's
 
@@ -96,9 +104,12 @@ placeholder text, not live logic: the message never actually reflected the argum
 in. Shipping that into a checked-in, reusable skill would be exactly the mistake this
 filing exists to fix — a hardcoded status frozen at whatever it last said. Dropped, along
 with an unused `mention_user` flag on the Slack post (the real nudge path is the
-`SendMessage` mechanism above, not a Slack `@mention`). The routine post today carries
-balance and open-PR count only; wiring in a real roster summary is future work, not
-regression — nothing here ever actually surfaced roster content either.
+`SendMessage` mechanism above, not a Slack `@mention`). The routine post carried balance
+and open-PR count only at filing time. Maintainer instruction, 2026-08-29, later withdrew
+the balance line and added an ETA section (relayed verbatim from a lead-owned file, never
+computed here) and an in-flight section — open PRs with their CI state, plus commits merged
+to `main` since the last successful post. Wiring in a real roster summary remains future
+work, not regression — nothing here has ever actually surfaced roster content.
 
 ## Recovering from a token outage
 
@@ -124,3 +135,22 @@ consecutive runs, confirming the outage flag actually suppresses the second writ
 than merely being created. `uv run ruff check .` passes repo-wide with the three scripts
 included in scope (`pyproject.toml`'s ruff exclusion now names vendored skill directories
 individually rather than `.claude/skills` as a whole — see that file's own comment).
+
+**2026-08-29, later the same day — balance withdrawn, ETA and in-flight sections added,
+re-verified the same way.** `get_eta` tested against the real `eta.md` (the Headline
+paragraph extracted whole across its wrapped source lines, stopping before the next
+paragraph), a missing file, a file with no `**Headline:**` paragraph, and a headline with no
+parseable `**Updated:**` stamp — each case says so explicitly rather than guessing or
+omitting the section. `get_remote_main_sha` returns the real `origin/main` tip via
+`git ls-remote` and returns `None` rather than raising against a non-repository path.
+`get_merged_subjects` returns real commit subjects for a known range and `[]` for an empty
+one. `main()` was run end-to-end four times against a scratch handover directory with
+`post_to_slack` stubbed out — no real Slack call was ever made: a first run sets the SHA
+baseline, a second run against an unmoved `main` reports "unchanged", a third run with a
+forced state marker and a stubbed *failed* post leaves that marker untouched (confirming the
+SHA advances only on a confirmed post), and a fourth confirms the token-outage path is
+unchanged. `uv run ruff check .` passes repo-wide; `uv run mypy --strict` on this file
+passes — the bare `uv run mypy` does not examine `.claude/skills/` at all (its configured
+`files` list is `packages/*/src` and `backend/src` only), so that command alone would have
+proven nothing about this file. There is no CI workflow for `.claude/**`
+(`docs/audit/register.md` F26), so these local runs are the only gate this change has.
