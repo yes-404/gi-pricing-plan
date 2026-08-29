@@ -44,6 +44,8 @@ must say where it went.
 | [NT-0007](0007-context-bound-measures-cap-not-discipline.md) | "Zero calls above 200k" measures the compaction cap, not discipline — a boundary metric reads as zero by construction | 2026-08-25 | `landed` | Rule → `CLAUDE.md` §10, third bullet; **no code, no spec change** |
 | [NT-0008](0008-project-closure-audit-structure.md) | A closure-audit structure for work items and phases — per-work-item and per-phase records, two registers, conventions | 2026-08-27 | `landed` | Structure filed 2026-08-27 via #276 — `docs/audit/` record layer + `CLAUDE.md` §14 third rule |
 | [NT-0009](0009-slim-the-roadmap.md) | Slim the roadmap — split the forward-looking plan from the archive (closure records, plan reviews, retrofit list) | 2026-08-27 | `landed` | Archive moved 2026-08-27 via #274 — historical record in `docs/audit/`, roadmap forward-looking |
+| [NT-0010](0010-layered-slice-based-workflow.md) | A layered slice-based workflow — Project → Phase → Work → Slice, gated at every layer | 2026-08-29 | `open` | Process documentation and role definitions; **no `docs/specs/` change and no product code**. Six conflicts with standards in force need a ruling first |
+| [NT-0011](0011-per-agent-model-and-skill-settings.md) | Per-agent model, thinking effort and skill bindings for the seven roles | 2026-08-29 | `open` | Role files under `.claude/agents/` + an agent-settings document; blocked on [NT-0010](0010-layered-slice-based-workflow.md) |
 
 ## What a note must contain
 
