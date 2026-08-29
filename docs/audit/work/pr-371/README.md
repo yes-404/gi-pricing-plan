@@ -72,6 +72,22 @@ Tree: PR #371 branch (`pr371-review` locally), head commit `5b82b18`.
   this same audit already argued against (don't substitute a local, contended run for the
   authoritative one). Stopped (`TaskStop` + `pkill` on the worktree's processes, confirmed
   gone) and read CI instead, which is what the summary above reports.
+- **`pr371-contract-drift`: fixed and independently confirmed at `18cfb74`.** The executor's
+  follow-up commit (`18cfb74`, "fix(contracts): regenerate OpenAPI contract for the new
+  rating-version routes") touches exactly one file —
+  `docs/contracts/openapi/generated.json`, +255/-0, purely additive — confirmed via
+  `git diff --stat 5b82b18 18cfb74`. Checked the content, not just the fact of a diff:
+  parsed the regenerated JSON and confirmed both new paths are present
+  (`/api/v1/rating-versions` now carries both `get` and `post`;
+  `/api/v1/rating-versions/{rating_version_id}/submit` carries `post`). **CI re-run at
+  `18cfb74` (three workflows: docs `33261396078`, frontend `33261396011`, python
+  `33261396040`) — all three `completed`/`success`**, independently re-checked via `gh run
+  list`/`gh pr view`, not accepted from a relayed report alone (the lead published the same
+  terminal state to both this session and the executor directly, precisely to avoid a
+  relay). A third `ci-watcher` dispatch was stopped mid-flight on the lead's catch (a third
+  instance of the same-verification-twice pattern, this one the lead's own — a watcher
+  already existed and the lead had not told this session) — the terminal state came from
+  the lead's publish plus this session's own cheap `gh` read, never from that watcher.
 - **The lead's reported regression** (patched vendored `task-brief` broke upstream's
   `# Task N` format, contradicting its own deviation note's "additive" claim) — confirmed
   real in the PR's history (introduced at commit `9604fe3`) and already fixed by the time
@@ -110,13 +126,18 @@ Tree: PR #371 branch (`pr371-review` locally), head commit `5b82b18`.
 |---|---|---|---|
 | **pr371-task-brief-regression** | Vendored script's first patch (`9604fe3`) broke upstream's own heading format; the deviation note's "additive, unchanged for existing input" claim was false and unverified at the time it was written. | already fixed by the author same day (`5b82b18`), self-corrected in `.claude/skills/README.md` with root cause named; independently re-verified here with fresh test fixtures | resolved |
 | **pr371-fr-rate-40-gap-reachable** | `submit_for_review` implements no evidence-completeness check; §5.1's route table already claims one for this endpoint. Pre-existing since Phase 1b/W7-3, but PR #371 makes the route reachable over real HTTP for the first time, so the gap is now live rather than moot. | accept — correctly out of Task 1.1's scope per DP2 (owned by Slice 2 Task 2.3); PR #371 now names it explicitly rather than leaving it implicit (proposed) | open, owner named (Task 2.3) |
-| **pr371-contract-drift** | CI (run `33259487951`, head `5b82b18`) fails `test_committed_contracts_match_the_models` (FR-PLAT-48): the two new routes/request-body models are not reflected in `docs/contracts/openapi/generated.json`. `scripts/generate-contracts.py` was never run and committed for this PR. First reported by this record as "gate all clean" — wrong; corrected here from the CI run itself, not a local re-run. | fix before merge (proposed — the lead's call): run `uv run python scripts/generate-contracts.py` and commit the result | open, blocking |
-| — | Routes, RBAC gating, the "must not touch" boundary, the `:513` citation, and tests (7/7, genuinely) all independently verified with no further defect found | accept (proposed) | closed-with-findings (three: two resolved/named, one open) |
+| **pr371-contract-drift** | CI (run `33259487951`, head `5b82b18`) failed `test_committed_contracts_match_the_models` (FR-PLAT-48): the two new routes/request-body models were not reflected in `docs/contracts/openapi/generated.json`. First reported by this record as "gate all clean" — wrong; corrected from the CI run itself, not a local re-run. | **fixed at `18cfb74`** (`uv run python scripts/generate-contracts.py`, committed) and independently re-verified: content checked, and CI re-run three-for-three green | resolved |
+| — | Routes, RBAC gating, the "must not touch" boundary, the `:513` citation, tests (7/7, genuinely), and the full gate (now genuinely, via CI at `18cfb74`, not a subset) — all independently verified with no further defect found | accept (proposed) | closed-with-findings (three: all resolved/named, none open) |
 
 ## Sign-off
 
-Not applicable — audit only. Verdict is the lead's, per `delivery-process.md` §6 step 6.
-Tree named throughout: PR #371 at `5b82b18` (unchanged since the first pass of this audit;
-only PR metadata, not code, moved between passes). **This record's own earlier "gate all
-clean" claim was wrong** — see `pr371-contract-drift` above; corrected once found, not
-left standing.
+**Audit complete at `18cfb74`.** All findings resolved or named with an owner: the
+task-brief regression (fixed same-day by the author), FR-RATE-40's evidence gap
+(correctly out of scope, owned by Task 2.3, now documented rather than silent), and the
+contract-drift failure (fixed at `18cfb74`, CI green three-for-three). No open finding
+blocks this task. Verdict (merge/proceed) is the lead's, per `delivery-process.md` §6 step
+6 and this role's charter — this record reports readiness, not a merge recommendation.
+**This record's own two mistakes are left visible rather than cleaned up**: the "gate all
+clean" claim that was never a full-gate run, and the local full-suite re-run that
+contended with the executor's own — both corrected in place, not deleted from the history
+above, per this session's own standing discipline about what a correction owes a reader.
