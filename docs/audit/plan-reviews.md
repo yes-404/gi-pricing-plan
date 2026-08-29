@@ -776,8 +776,8 @@ already written, and the row was never re-checked against the section's current 
 > OQ-RATE-2 across six locations (#317). The executor, who swept them, named why they were
 > never caught together: **a fact copied into free prose is corrected only where the
 > tooling structurally links the copy back to its source.** This repository has exactly one
-> such link — the OQ mirror pair, enforced by `audit-docs` check 15 — and it worked: the
-> two OQ-RATE-2 copies could not diverge. Everywhere the same figure was merely *quoted in
+> such link — the OQ mirror pair, enforced by `audit-docs` checks 4 and 23 — and it worked:
+> the two OQ-RATE-2 copies could not diverge. Everywhere the same figure was merely *quoted in
 > passing* — a requirement's rationale (FR-RATE-61's body), a roadmap cell, a
 > `skills-map.md` row, and another module's open question (OQ-MODEL-11) — nothing but a
 > literal-text grep could find it. So each correction event fixed the one location that
@@ -789,6 +789,14 @@ already written, and the row was never re-checked against the section's current 
 > of `docs/`"* a standing step in the correction procedure itself, so the sweep is not left
 > to whoever happens to think of it. Credit: found and articulated by the executor while
 > sweeping OQ-RATE-2.
+>
+> **A worked instance found while filing this review, in the tool that catches this
+> everywhere else.** `scripts/audit-docs.py`'s own module docstring enumerates checks 1
+> through 22; the code also runs check 23 (`:821`, the open-question mirror status this
+> paragraph cites) and check 24 (`:760`, the §5.3/§5.6 route-column agreement), neither
+> listed there; `.claude/skills/docs-audit/SKILL.md` separately states "twenty-three
+> checks." Three artifacts, three counts, and nothing links them — the same mechanism this
+> question names, surviving inside the instrument built to prevent it.
 >
 > **Maintainer acceptance:** _pending._
 
@@ -865,7 +873,7 @@ holding it are the right ones.
 | 4.1 | W11's roadmap row corrected for FR-RATE-64 | docs — **landed, PR #314** |
 | 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only | tool or convention |
 | 4.3 | NFR-RATE-14 gains a dated amendment reconciling the 1.09 ms / 1.626 ms figures | spec — **landed, PR #314** |
-| 4.4 | A distinct mechanism (a measured figure copied into free prose, not mirrored) — extend the OQ-mirror pattern (`audit-docs` check 15) to it, or make a `docs/`-wide grep a standing correction step (executor's finding, credited) | tool or convention |
+| 4.4 | A distinct mechanism (a measured figure copied into free prose, not mirrored) — extend the OQ-mirror pattern (`audit-docs` checks 4 and 23) to it, or make a `docs/`-wide grep a standing correction step (executor's finding, credited) | tool or convention |
 | 5.1 | **No re-cut** of Phase 2's W11-W14 boundaries; FR-RATE-34/40 get named deferrals inside W11's own plan | plan — no change |
 
 **Maintainer acceptance:** _pending — no recommendation above binds until this line carries
