@@ -36,17 +36,28 @@ n_re=$(printf '%s' "$n" | sed -e 's/[.[\*^$]/\\&/g')
 
 # A house-pattern plan groups several "### N.M" tasks under "## Slice N" sections in one
 # file (unlike a one-task-per-heading upstream plan), so the LAST task in a slice has no
-# following task heading to stop at — confirmed empirically: without the `##?[ \t]` rule
-# below, task 1.5's brief ran on through the "## Slice 2" boundary to the next slice
-# entirely. Any H1/H2 heading (never H3+, which is where tasks themselves live) ends
-# collection even when it is not itself a recognised task heading.
+# following task heading to stop at — confirmed empirically: without a boundary rule,
+# task 1.5's brief ran on through the "## Slice 2" boundary into the next slice entirely.
+#
+# REGRESSION, found and fixed 2026-08-29 (reported by the lead, reproduced independently
+# before touching anything: unpatched script on a synthetic "# Task 1" / "# Task 2" plan
+# exits 0; the first version of this boundary fix exited 3 on the SAME input). Upstream's
+# own "# Task N" heading is itself an H1, so a separate, unconditional
+# `!infence && /^##?[ \t]/ { intask = 0 }` rule fired on that exact line, immediately
+# clearing the flag the task-match rule above it had just set on the same record — awk runs
+# every matching pattern-block against a line, in order, so the second block silently undid
+# the first. Fixed by making the two mutually exclusive: the boundary-clear only applies
+# when the heading did NOT already match a recognised task pattern.
 awk -v n="$n_re" '
   /^```/ { infence = !infence }
-  !infence && (/^#+[ \t]+Task[ \t]+[0-9]/ || /^#+[ \t]+[0-9]+\.[0-9]+([ \t]|$)/) {
-    intask = ($0 ~ ("^#+[ \t]+Task[ \t]+" n "([^0-9]|$)")) \
-          || ($0 ~ ("^#+[ \t]+" n "([^0-9.]|$)"))
+  !infence && /^#+[ \t]/ {
+    if ($0 ~ /^#+[ \t]+Task[ \t]+[0-9]/ || $0 ~ /^#+[ \t]+[0-9]+\.[0-9]+([ \t]|$)/) {
+      intask = ($0 ~ ("^#+[ \t]+Task[ \t]+" n "([^0-9]|$)")) \
+            || ($0 ~ ("^#+[ \t]+" n "([^0-9.]|$)"))
+    } else if ($0 ~ /^##?[ \t]/) {
+      intask = 0
+    }
   }
-  !infence && /^##?[ \t]/ { intask = 0 }
   intask { print }
 ' "$plan" > "$out"
 
