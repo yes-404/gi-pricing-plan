@@ -105,6 +105,16 @@ has no context to check it against.
    name it at each point it applies rather than folding it in silently, so a reader can still
    tell which parts rest on measured evidence and which on someone else's decision.
 
+   **Reading it is not enough: name the commit you read.** The same session then reported
+   "that PR does not cover it" after reading the ruling branch at `02699c3`, whose headings
+   stopped at Ruling 11. `dc4d980` appended Ruling 12 six minutes later and eleven seconds
+   before the merge, so the report was true of the tree it was written against and false by
+   the time it arrived. `../process/delivery-process.md` §15 already requires the fix —
+   *"name the tree or SHA your claim is about"*, because *"a status claim with no named tree
+   is unverifiable the moment it is sent"* — and a claim about an **open** PR is where it
+   bites hardest, since that branch is moving while you read it. The rule was not missing
+   here; it was not applied.
+
 **A missing neighbour is a scope finding.** Rule 3's fallback assumes there is something to
 mirror. Before writing sample tests for a module, grep its test file for the verb under
 test; a zero means that path has no coverage at all, which is larger than a formatting
