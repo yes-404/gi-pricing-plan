@@ -17,8 +17,6 @@
   in the executor's worktree and discarded that member's tracked edits, and the session's
   own follow-up claim that nothing was lost was itself wrong. Read-only git is safe
   anywhere — the boundary is on writes.
-- **Tools:** Read-only + Bash for running checks. **Write access to closure records and
-  register rows: pending Part A2** — current interim practice (three merged PRs this
-  session, #308/#309, plus this session's own dispatch) already has the auditor writing
-  these directly; this line records that practice exists and is unresolved, not that it is
-  authorised or forbidden.
+- **Tools:** Read-only + Bash for running checks, plus write access to closure records,
+  register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a
+  merge. `CLAUDE.md` §12 grounds this: a role writes the artifacts its own charter names.

@@ -12,19 +12,18 @@ describes how the team works, the other what the platform does.
 This process breaks a body of work into a strict hierarchy (Project → Phase → Work →
 Slice), gates every layer with a plan/resolve/decide cycle before work starts, and gates
 every completed layer with an audit before it is accepted. Escalation to a human is
-automatic when a loop gets stuck. **Where the one routine human approval checkpoint sits is
-not yet finally ruled — see §2.** Everything else is agent-to-agent.
+automatic when a loop gets stuck. **The one routine human approval checkpoint sits at Work,
+Phase and Project close, never at Slice close — see §2.** Everything else is agent-to-agent.
 
-## 2. Human checkpoint — BLOCKED pending Part A1
+## 2. Human checkpoint
 
-**Not yet ruled.** Until `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`
-Part A1 carries a dated maintainer acceptance line, this section states only the
-interpretation already in force, not any of A1's three options: workstream (Work-layer)
-close requires the maintainer's acceptance, evidenced by W6b, W9 and W10 all closing on
-the maintainer's word (never the auditor's or the team's own verdict). This is standing
-practice, not yet a written rule anywhere else, which is why NT-0010 exists to write it
-down (Part D, item silent-but-real). Do not read this section as final; re-read Part A1's
-acceptance line before relying on it.
+**Ruled 2026-08-29** (the rulings record, Part A1). The human checkpoint sits at **three**
+named layers — Work, Phase and Project close — with the maintainer deciding at each,
+verbatim: *"maintainer only makes decision on work, phase and project close but not slice
+close."* **Slice close is not the maintainer's**: a slice closes on a clean audit and the
+lead's merge, exactly as it does today. NT-0010 §9's single checkpoint at Project close only
+is rejected, not amended — escalation-on-stuck and acceptance-of-done are different events,
+and every layer that currently waits on a human keeps one.
 
 ## 3. Roles
 

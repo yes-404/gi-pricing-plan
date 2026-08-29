@@ -66,10 +66,9 @@ they cut across roles or correct the source notes directly:
   authority stated at all). Corrected here to match confirmed practice: this session's own
   experience (every PR reviewed and merged by the lead, never self-merged) and
   `TEAM-STRUCTURE.md`'s table both match NT-0011's row, not NT-0010's.
-- **`docs/`-write scope for planner, decision-maker and auditor is pending Part A2.**
-  This document does not state a final tools column for those three roles — see
-  `.claude/roles/planner.md`, `decision-maker.md`, and `auditor.md` for the current
-  interim value, each marked `pending Part A2`.
+- **`docs/`-write scope for planner, decision-maker and auditor is ruled** (Part A2): each
+  role's own file in `.claude/roles/` states its final tools column directly — this
+  document does not duplicate it.
 - **Retry caps and cost tiers are instrumented defaults, not fixed governance** — see
   `docs/process/delivery-process.md` §7.
 

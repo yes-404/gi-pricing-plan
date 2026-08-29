@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-29, maintainer — supplied `workflow-design-proposal.md` (marked "Finalized for implementation") with the instruction to convert it into a working note |
-| **Status** | `open` — assessed here, not agreed. Six items below need a maintainer ruling before any of it is built |
+| **Status** | `landed` 2026-08-29 — ruled in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`; the landing locations are recorded in `.claude/notes/README.md`'s index row |
 | **Deliverable** | Process documentation and role definitions only: a new process specification, a `CLAUDE.md` pointer, agent role files, and ops automation. **No change to `docs/specs/` and no product code** — nothing in the pricing platform moves |
 | **Owner** | Maintainer accepts and rules the six conflicts · Claude drafts the reconciliation, the plan and the slices |
 | **Lands in** | Proposed by the author: `docs/process/workflow.md`; also `CLAUDE.md` (a pointer, and amendments to §12/§13/§14), `.claude/agents/` (role definitions and its README's dividing line), `docs/README.md` (suite index), `docs/audit/checklists/` |
