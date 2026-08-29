@@ -187,9 +187,77 @@ quietly adopting the notes as written.
 **Maintainer acceptance: ruled 2026-08-29.** Verbatim, quoted rather than reasoned around —
 this is the maintainer's own authority: *"I assume that agents works involve change files
 in docs, it must be allowed"* — then, presented with options, **"option 2"**: split the two
-axes. Writing to `docs/` is unremarkable and allowed; *deciding* is bounded by charter. (The
-full option set put to the maintainer was not relayed to this record beyond the selected
-one and its refined text below; recorded as heard, not reconstructed.)
+axes. Writing to `docs/` is unremarkable and allowed; *deciding* is bounded by charter.
+
+**Appended 2026-08-29 (dated separately, since it was not available when the row above was
+first filed): the four options put to the maintainer, verbatim, supplied on request rather
+than reconstructed** — the earlier text here correctly declined to invent them and said so;
+a decision record naming only the winning option's number is not self-contained, so they
+are filed now that they exist to file.
+
+> **1 — Allow both, unconditionally.** Any role agent may decide and write to `docs/`.
+> Simplest. Loses whatever §12 was actually protecting, without establishing what that was.
+>
+> **2 — Split the axes.** *Writing* is allowed for every role whose charter names an
+> artifact — that is just "the author writes the document," and needs no special
+> permission. *Deciding* stays bounded by charter. §12's clause changes from "every edit to
+> `docs/`" to naming *which* decisions stay in the main thread — the four verdicts and the
+> merge.
+>
+> **3 — Allow writing, centralise all deciding.** Role agents draft; the lead makes every
+> call including DP rulings. Argued against by this session's own evidence: the
+> decision-maker rejected both options offered on one ruling and found a third in the
+> source, and answered the sync-convention question better than the lead framed it.
+> Centralising would have lost both.
+>
+> **4 — Any of the above, conditioned:** every decision lands as a dated, filed artifact,
+> never chat. Not really an alternative — a condition that should attach to whichever wins.
+
+**The ruling was option 2 with condition 4, and the adopted §12 text's "every decision lands
+as a dated artifact" line is condition 4 carried into the rule, not decoration or a
+generic closing flourish.**
+
+**The lead's stated reasoning at the time, recorded as the lead's own framing — the
+reasoning itself is the lead's characterisation, but all three supporting examples are now
+independently verified against permanent, public artifacts, not relayed:** *"the write
+permission isn't where the risk is — what actually held today was charter."* Three
+examples, corrected from the first filing rather than repeated as given:
+
+- **The auditor did not file `FR-RATE-63`'s register row.** Commit `71d8ca5` (#319), body:
+  *"FR-RATE-63 was buildable inside W9's delivered scope and is a close gap, not an
+  orphan. Its register row is deliberately held until plan review 7 rules its owner, since
+  a row names an owner and filing one now would pre-empt the review."* `docs/audit/
+  register.md` has no `FR-RATE-63` row today, confirmed directly — but that absence alone
+  proves nothing (it is equally consistent with never having tried), which is exactly why
+  the commit message is the actual evidence and the grep is only corroboration.
+- **The executor filed rather than absorbed an out-of-scope finding.** Commit `d4bc394`
+  (#314), body: *"One further instance found outside this PR's scope and filed rather than
+  silently absorbed — OQ-RATE-2 carries the same stale figures in both its mirrors…"*
+- **This decision-maker declined task #17** (`docs/README.md`'s suite index gap) as outside
+  the decision-maker's charter, reported to the lead in this session's own transcript rather
+  than acted on.
+
+**Correction to the framing, not only to the sourcing: these are not three unpoliced
+instances.** The auditor's was **compliance with an explicit instruction** — the lead
+directed it to hold the row until plan review 7 ruled its owner, and `71d8ca5`'s body
+records that instruction being followed, not a boundary the auditor drew unprompted. Only
+the executor's and this decision-maker's are unpoliced restraint — a role holding a
+boundary nobody told it to hold in the moment. Two unpoliced instances plus one directed
+compliance is a different, and honestly weaker, evidentiary shape than "three instances of
+charter holding without policing," and the record says so rather than the stronger claim
+the first filing made.
+
+**Finding for the §15 step 5 audit, found while filing this append, not a ruling:** the `gh
+pr edit` GraphQL failure this record's own prior filing worked around (Part A2, above) was
+already known — per the lead, hit and diagnosed with the identical `gh api -X PATCH` fix on
+2026-08-24, on a PR the lead names as #173 (confirmed to exist and to have merged on that
+date; the specific detail that *this* is where the fix was first diagnosed is the lead's own
+session-memory recollection, not independently checkable from a public artifact) — but
+recorded only in that session memory, unreachable to the role that needed it an hour before
+this one rediscovered it independently. That is this adoption's own custody thesis (Part D;
+`NT-0005`), demonstrated on the adoption itself. Fix filed separately against
+`.claude/skills/git-hygiene`, since a skill fix is its own PR against its own file, not a
+rider on this one.
 
 **The outcome substantially adopts recommendation (a)'s conclusion — role sessions may
 decide and write within a stated boundary — by a different mechanism than (a) proposed.**
