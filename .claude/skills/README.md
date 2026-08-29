@@ -140,6 +140,38 @@ three conventions the audit cannot check. Nothing else in the four skills change
 `.superpowers/sdd/` nor `.planning/` moved, both still hold live scratch and both stay
 git-ignored.
 
+**Second deviation, 2026-08-29: `subagent-driven-development/scripts/task-brief` could not
+read this repo's own plan format.** Confirmed empirically (exit 3 on every task) before
+touching anything: this repo's `writing-plans` house pattern numbers tasks as `### 1.1 —
+Title` (`docs/plans/2026-08-29-w11-scoring.md`, citing `docs/plans/2026-08-22-w5-
+audit-remediation.md` as its precedent), grouping several tasks per `## Slice N` section in
+one file; upstream's script only recognised a heading containing the literal word "Task"
+followed by a bare integer, and had no rule to stop at a non-task heading, so the *last*
+task in a slice ran on into the next slice's content once the missing-word bug was fixed
+naively. Two changes to the vendored script: recognise `### N.M` headings too
+(regex-escaping the task number's `.` so `1.1` cannot match `1x1`), and end collection at
+any H1/H2 heading even when it is not itself a task heading — verified against Task 1.1
+(stops before 1.2's heading), Task 1.5 (the last task in Slice 1; previously ran into
+`## Slice 2`, now stops at the `---` before it), and Task 2.1 (a task in a different slice
+section, to confirm the fix generalises rather than being fitted to one boundary).
+
+**Correction, same day: this entry's "both additive (upstream's own `Task N` heading still
+matches unchanged)" claim was false, caught by the lead running the control this entry
+described but never actually showed.** Upstream's own `# Task N` heading is itself an H1 —
+so the boundary rule above, written as a second, unconditional
+`!infence && /^##?[ \t]/ { intask = 0 }` pattern-block, fired on that exact line and
+immediately cleared the flag the task-match block had just set on the *same* record (awk
+runs every matching block against a line, in order; the second undid the first). Reproduced
+independently before changing anything: a synthetic `# Task 1` / `# Task 2` plan gave exit 3
+on the version this entry originally shipped. Fixed by making the two rules mutually
+exclusive — a single `if (task-heading) {…} else if (H1/H2) { intask = 0 }` inside one
+pattern-block, rather than two separate always-evaluated ones — and re-verified: the same
+synthetic plan now gives exit 0 with the correct body for both a mid-file task and the last
+task in the file (running to EOF), and all three house-pattern checks above (Task 1.1, 1.5,
+2.1) still pass unchanged. The lesson generalises past this one script: "additive, so X is
+unchanged" is a claim about the *old* input still working, which self-tests, written and
+run, are the only way to have actually checked before writing it down.
+
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a
 skill, it would run a command at the start of every session for anyone who clones this
