@@ -428,6 +428,44 @@ no one else had. **Being wrong twice did not make the third report worth less**,
 reviewer who had taken the two corrections as a verdict on its judgement would have stopped
 before this one.
 
+## P14 — two roles ran the same expensive verification concurrently, and the contention read as a stall
+
+The pilot's last finding, and the only one about **coordination** rather than about a
+document or a claim.
+
+**What happened.** After P11 — where both had reported a clean gate from a subset — the
+executor and the auditor each independently, and correctly, decided to run the *full* gate on
+PR #371. Neither knew the other was doing it. Twenty minutes later the executor had not
+pushed and the auditor had not reported, and both looked stalled.
+
+They were not stalled. `ps` showed **two complete `pytest` suites running at once** — the
+executor's in its worktree at 19 minutes elapsed, the auditor's in an isolated
+`/tmp/pr371-audit-wt2` at 16 — with **load average 11.17** on a box already carrying twelve
+agent processes. A suite that takes ~6 minutes on CI hardware takes very much longer against
+itself.
+
+**Why it is a process finding and not bad luck.** `delivery-process.md` §8 governs
+parallelism between *slices*; nothing governs parallelism between *roles verifying the same
+artifact*. Both agents did exactly what P11's lesson told them to. The lesson was right and
+its second-order cost was unowned: **a rule that tells every role to verify more thoroughly
+will, without a coordination clause, have them verify the same thing simultaneously.**
+
+**It also self-obscures.** The symptom of contention is slowness, which is indistinguishable
+from a hung process, a stuck agent or a long-but-healthy run. `CLAUDE.md` §11 already names
+this — *"the load-contention factor that reads as a regression"* — for command timings; here
+it read as two silent agents. Neither reported anything wrong because from inside each
+process nothing was wrong.
+
+**What resolved it.** Not choosing between the two runs, but noticing that neither was needed
+for the verdict: **CI on the pushed branch is the authoritative full gate, and it runs on
+clean hardware** — which is precisely what the auditor's own borrowed-venv trap argues for. A
+local full suite is for the author deciding whether to push. A second local full suite, by a
+reviewer, buys nothing CI does not buy better.
+
+**Fix**: before starting a verification that costs minutes, a role checks whether one is
+already in flight for the same artifact — and a reviewer reads CI rather than re-running the
+suite locally, reserving local runs for the case where CI cannot answer the question.
+
 ## What worked — separated deliberately, because the gaps dominate the list above
 
 A findings file records defects, so read alone it describes a team that only errs. Five things
@@ -564,6 +602,7 @@ the owner column is what makes it recoverable after this session.
 | **P11** | carry — **a gate claim names its corpus**: the command, the totals and the tree. No artifact yet requires it; `executor.md` and `auditor.md` are the candidate homes | §15 step 7 |
 | **P12** | carry — no single file owns it; the operational form is that a correction is checked by a *differently-shaped* probe than the one that found the original, never by re-reading the passage just edited | §14 review |
 | **P13** | carry — sharpens rule 5: the sweep's unit is every obligation the record imposes, not every heading matching a pattern. Rides with rule 6 into the §14 review | §14 review |
+| **P14** | carry — no role checks whether an expensive verification is already in flight for the same artifact, and `delivery-process.md` §8 governs parallelism between slices only. The operational half is that a reviewer reads CI rather than re-running the suite locally | §15 step 7 |
 
 **Read the owner column as a claim about who acts, not about who has agreed.** §15 step 7's
 items are the lead's to land after the maintainer accepts; the §14 review's are proposals the
