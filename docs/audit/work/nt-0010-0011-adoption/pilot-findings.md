@@ -26,8 +26,15 @@ it is against. It is not evidence that the file is otherwise complete.
 three false, every pid non-existent, each disproved with `kill -0`/`ps` and a positive
 control. Reports 2 and 3 arrived *after* direct correction with evidence. What broke the
 loop was not re-asking it to arm, but telling it to **stop claiming and diagnose**. Report 4
-was true: pid 514021, running `balance_watch.py` from the skill path, token read from the
-durable source.
+was true: pid 514021, running `balance_watch.py` from the skill path.
+
+*(Corrected 2026-08-29, after this file had already merged. It first read "token read from
+the durable source", which invites the reader to think the poller opens
+`claude-deepseek.sh`. It does not, and should not. The chain the skill prescribes is:
+durable source → `extract_token.py` → a 0600 session-ephemeral cache → `TOKEN_FILE`. Checked
+against the live process rather than the report: pid 514021's environment names
+`TOKEN_FILE=<job-dir>/tmp/.ds_token`, which is precisely the form
+`.claude/skills/balance-watch/SKILL.md` line 40 prescribes.)*
 
 **The gap.** The charter's poller-silence principle covers a watch that *stops* emitting,
 not one that *never started*. A Monitor task id is not a live process; an "armed" log line
@@ -55,11 +62,31 @@ Subtract your own attempts before diagnosing from a log, or diagnose from live s
 
 ## P2 — a charter naming a skill does not stop a fresh session using a handover copy
 
-The watcher first armed against the **ephemeral job-dir token path**, hours after the skill
-was filed to end exactly that. The pointer existed; the **precedence** did not.
+The watcher first armed against the **ephemeral job-dir copy of the script**, hours after
+the skill was filed to end exactly that. The pointer existed; the **precedence** did not.
+Its own state file records the repair in those terms: *"re-armed 2026-08-29 14:41 UTC,
+corrected to use skill-filed paths"*.
 
 **Fix:** the skill is authoritative; the handover carries runtime state only; where they
 disagree, the skill wins.
+
+**Correction, 2026-08-29, after this file had already merged.** This finding first read
+"armed against the ephemeral job-dir **token** path". That is the wrong artifact, and it
+inverts the rule. The **token cache** belongs in the job directory —
+`.claude/skills/balance-watch/SKILL.md` prescribes exactly that and explains why: *"`.ds_token`
+is a cache, not the token's home… conventionally a job directory's `tmp/`, which is ephemeral
+and gone once that job directory is… Losing `.ds_token` loses only the cache, never the
+token."* Filed as written, this finding would have sent someone to "fix" a compliant
+configuration. The defect was always the **script** path.
+
+**And the root cause is still live**, which the corrected reading is what exposes.
+`watcher-state.md` §4 Step 1 — the re-arm procedure a *successor* watcher is handed — still
+says `python3 <job-dir>/tmp/extract_token.py` and *"adapt extract_token.py to your job dir"*,
+months after `extract_token.py` was filed at
+`.claude/skills/balance-watch/scripts/extract_token.py`. So the next spawn re-creates P2 by
+following its own instructions. P2 was never fixed at its root; only the running process was
+repaired. **Fix:** the successor procedure points at the skill's script, and the handover
+stops carrying a copy of it.
 
 ## P3 — `reporter.md` does not say who arms the reporter cycle
 
@@ -164,5 +191,13 @@ absorb.
 ## Provenance
 
 Collected by the lead during the pilot; each finding attributed above to the member that
-found it. Filed 2026-08-29 as task #35. This file records findings only: it closes nothing,
+found it. Filed 2026-08-29 as task #35.
+
+**P1 and P2 were both corrected within the hour of merging, and the correction is itself in
+scope.** Both errors were mine, both were restatements of a member's report that I had not
+checked against the artifact, and both survived a PR. What caught them was reading the live
+process — `/proc/<pid>/environ` and the skill's own text — rather than re-reading my summary
+of what the watcher had said. That is the same failure mode P1b names, with the lead as the
+node: **I diagnosed from a report instead of from state.** A findings file whose own author
+introduced two instances of the class it documents is the strongest evidence in it. This file records findings only: it closes nothing,
 and §15 step 7 remains gated on the maintainer's confirmation.
