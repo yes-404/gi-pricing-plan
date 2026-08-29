@@ -319,6 +319,48 @@ This is the section most worth writing, because "W1 closed" reads as "the retrof
 handled" unless something says otherwise, and that list is the one thing this project
 cannot fix cheaply later.
 
+## 5a. Every binding plan-review condition has its artifact
+
+**A §14 plan review's maintainer acceptance can put an obligation on this close, and
+accepting a recommendation is what puts it in force — it does not discharge it.** Read
+[`docs/audit/plan-reviews.md`](../../../docs/audit/plan-reviews.md), find every dated
+acceptance whose condition names this workstream's close, and check the artifact each one
+demands actually exists. Quote the clause and name the artifact; a date is not evidence.
+
+```bash
+grep -n "Maintainer acceptance" docs/audit/plan-reviews.md    # then read each one's clause
+```
+
+**Why this is its own step rather than part of §5.** §5 asks what was not delivered, which
+is answered from the build. This asks what an earlier decision *promised* would be recorded,
+which is answered only from `plan-reviews.md` — and nobody rereads a review at closing time,
+because by then it reads as settled. The failure is silent in both directions: the review
+looks accepted, and the closure record looks complete.
+
+**The instance this step was written from.** Plan review 8 §5.1 recommended no re-cut of
+Phase 2's W11–W14 boundaries and was accepted 2026-08-29. The acceptance says, in the
+maintainer's own words, *"Acceptance makes the paragraph above binding. It does not meet
+it"* — FR-RATE-34 and FR-RATE-40 must **each** get an explicit, named, dated deferral in
+[`register.md`](../../../docs/audit/register.md) when W11 closes, *"not silence, and not a
+stub shipped and called done"*, and *"reading this date as having satisfied it would invert
+the clause"*.
+
+Two traps that entry also records:
+
+- **A ruling is not a register row.** W11's DP1 and DP2 were both ruled, and the acceptance
+  says plainly that this does not write the rows: *"a ruling settles what the code does, a
+  register row records what the workstream did not deliver, and those are different
+  artifacts."*
+- **A mention inside another row is not a row.** Checking the obligation by grepping the id
+  returns F-W9-2's prose *"specialises FR-RATE-40's general approval-evidence gate, which W11
+  builds"* — the id appears, and the deferral does not exist. Grep for the id, then read
+  every hit to see whether it is a row *about* that requirement or a row that merely names it.
+
+**The precedent for taking this seriously:** F-W9-1 carried NFR-RATE-13/14 forward with a
+register row that did exist, and the roadmap still lost them for two workstreams — W11's row
+records them as *"omitted from this row until now"*. A row is necessary and has not been
+sufficient.
+
 ## 6. Update the plan docs in the same commit
 
 - `docs/roadmap.md` — status table, closure evidence with dates, the §5 mapping
@@ -376,9 +418,22 @@ docs audit 15/15 · req-coverage N requirements
 **Not delivered by W<n>:** every unevidenced requirement with a verdict — delivered but
 untested / deferred with an owner / reassigned / not started — plus the §5 retrofit
 mapping.
+
+**Binding plan-review conditions:** each dated acceptance conditioning this close, the
+artifact it demanded, and where that artifact now is. *None* is a valid answer only after
+looking.
 ```
 
 ## Verified
+
+2026-08-30 — §5a, written at W11's close from an obligation that was live and unmet while
+this skill had no step that would have found it. Plan review 8 §5.1's acceptance
+(`docs/audit/plan-reviews.md:987-1005`) requires named, dated register deferrals for
+FR-RATE-34 and FR-RATE-40; `git grep -n "FR-RATE-34\|FR-RATE-40" docs/audit/register.md`
+returns exactly one line, F-W9-2's prose about FR-RATE-61, and neither id has a row. The
+acceptance had itself verified this and said so — the gap was that nothing in the closing
+procedure sends a reader back to it. Same class as the §14 trigger that fired for neither
+the W9 nor the W10 close.
 
 2026-08-29 — the `--extra` comma-prefix trap in §0, found re-deriving W11's own baseline
 at tree `9891be1` (`scripts/scope-audit.py RATE --sections 3.7 --extra
