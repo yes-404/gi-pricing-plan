@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Runs twenty-three checks — requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, and every spec §10 mirror row's status — and the decision-gate invariant the script does not cover. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, and every spec §10 mirror row's status — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -205,6 +205,19 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-29 — The module docstring's own numbered list, the code's check-numbering
+comments, and this skill's description had drifted three ways: docstring stopped at 22,
+code ran unbroken 1-24 (re-derived by reading each check's own logic, not by grepping the
+highest numeral — the count-instead-of-read mistake this session had already caught
+twice), description said "twenty-three". The 08-26 entry below shows why: twenty-three was
+correct the day check 23 landed, check 24 landed the next day (08-27, `00` §5.6), and
+nothing has touched either number since. **Fixed by completing the docstring** (checks 23
+and 24 added, each drawn from the check's own code, not paraphrased from memory) **and by
+removing the description's count outright rather than bumping it to 24** — a bare figure
+with no link to what would keep it current is exactly the pattern plan review 8 named as
+this drift's own worked exhibit: the drift-detection instrument drifting in its own
+self-description, and then surviving being written up as the example of itself.
 
 2026-08-26 — Extended with **check 23**, the §10 mirror rows' status, and repaired the
 fifteen mirror rows it caught (finding #49's option (b)). Four were the named deferred
