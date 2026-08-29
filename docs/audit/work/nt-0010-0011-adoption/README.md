@@ -149,6 +149,11 @@ slice 1 run as the pilot → **then** the maintainer's own confirmation, seen fo
 time only after the pilot has already run. This record is the fullest surviving account of
 the reasoning the gate actually turned on.
 
+**The pilot ran. Its findings are [`pilot-findings.md`](pilot-findings.md)** — §15 step 6's
+output, and an input to both the gate and step 7. It carries the same scope limit this
+record does: the repairs were found by directed inspection beforehand, so the pilot tests
+only whether the **repaired** files are sufficient to spawn from.
+
 ## Open items at the close of this audit
 
 Not resolved by this record; tracked on the team's task board, cited here so the citation
@@ -161,7 +166,11 @@ survives the stand-down:
   landed; ruled (a), repeat-with-local-grounding, scoped to the five repo-write roles —
   check `.claude/roles/*.md` directly for whether it has landed by the time this is read.
 - **#27** — the maintainer's 50-word team-message rule needs a durable home in
-  `docs/process/delivery-process.md` §13.
+  `docs/process/delivery-process.md`. *(Landed 2026-08-29 in **§15**, "Correction and
+  message discipline", not §13 as this line first said — §13 is the monitoring and comms
+  loop. The wrong section number was the lead's, corrected before the rule merged; it is
+  fixed here rather than silently, because a citation that does not resolve is the defect
+  this record exists to document.)*
 - **#28** — the reporter's three scripts, ruled but not yet filed under
   `.claude/skills/reporter-cycle/`.
 - **#30** — three further promotion candidates surfaced by the same handover-slimming pass
