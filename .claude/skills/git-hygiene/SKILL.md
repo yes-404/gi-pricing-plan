@@ -60,11 +60,27 @@ git push --force-with-lease origin <dependant-branch>
 A retargeted PR's diff temporarily includes the commits below it; the rebase is what makes
 the diff honest again. Check it (`git diff --stat origin/main..<branch>`) before merging.
 
-**`gh pr edit --base` does not do this.** In this repository it exits reporting only a
-Projects-classic deprecation error from its own GraphQL query, and the base is left
-unchanged — silently, so a following `gh pr view` is the only way to notice. The REST call
-above works where the `gh` subcommand does not, which generalises: when `gh` fails on a
-field it did not need, reach for `gh api`.
+**`gh pr edit` does not do this, on *any* field — `--base`, `--title`, `--body` all fail the
+same way.** The command's GraphQL query always fetches `projectCards` as part of an edit,
+and that query now errors on this repository (Projects-classic deprecation) — so the whole
+command exits reporting only that error, and the edit is silently not applied, whichever
+field you asked it to change. `gh pr view` is the only way to notice, because the exit and
+the error text give no hint that the field itself was untouched. The REST call above works
+because it never asks for `projectCards`; the general working form for any field:
+
+```bash
+gh api -X PATCH repos/<owner>/<repo>/pulls/<N> -f title="…"     # short fields: -f
+gh api -X PATCH repos/<owner>/<repo>/pulls/<N> -F body=@<file>  # long/multiline: -F …@file
+```
+
+This generalises past `gh pr edit`: **every `gh` write is unverified until you re-read the
+artifact it claims to have changed** — not the exit code, not the absence of an error
+message, the artifact itself. A title or body edit: `gh pr view <N> --json title,body`. A
+base change: `gh pr view <N> --json baseRefName`. A merge: `gh pr view <N> --json
+state,mergeCommit`. `gh pr merge --delete-branch` is the sibling case for why this is a
+rule and not a one-off caution: it has been seen to fail its local branch-delete step while
+exiting `1` on one PR and `0` on another, same underlying message either way — so **no exit
+code means "the merge landed."** Only re-reading state does.
 
 ## The stash stack is shared by every worktree — never use bare `git stash`
 
@@ -305,6 +321,15 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the `gh pr edit` warning above widened from `--base` alone to the whole
+command, and generalised into the "re-read the artifact" rule.** First recorded 2026-08-24
+(PR #173) for `--base` only; rediscovered independently on 2026-08-29 hitting `--title` and
+`--body` on the NT-0010/0011 adoption's own reconciliation record, an hour before this
+adoption's own §15 step 5 audit — because the 2026-08-24 finding lived only in the diagnosing
+session's own memory, not in this file, and the role that needed it next had no way to reach
+it. The correction here is of reach, not of fact: nothing in the original `--base` warning
+was wrong, it was simply narrower than the failure actually is.
 
 **2026-08-25 — the amend-clearance section above, learned live.** W6b-13's branch was
 amended between the auditor's first table and its delta verdict; the delta was named in
