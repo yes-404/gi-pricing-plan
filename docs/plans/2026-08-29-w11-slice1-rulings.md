@@ -518,7 +518,8 @@ the paragraph above.
   granted to it. (b) is the disposition the charter permits *and* the better engineering, so
   nothing is lost here — but see the finding below, because that will not always be true.
 
-**Binding on Task 1.4 — three obligations, all in one PR:**
+**Binding on Task 1.4 — three obligations, all in one PR** (a fourth is added by the
+addendum below):
 
 1. `QuoteContext.purpose` carries **five** members including `cancellation`, defined once in
    `model-schema` (`ADR-0002`, `CLAUDE.md` §2 — nobody hand-writes a shape `model-schema`
@@ -544,6 +545,80 @@ is the wrong side and no code PR is in flight to carry the correction — at whi
 answer must be to widen the charter or route the edit to a role that has the grant, never to
 edit it anyway. Not urgent; filed so the decision is made deliberately rather than under
 time pressure.
+
+**Addendum to Ruling 12, filed the same day, after `b826790` merged.** Raised by the lead
+asking the one question this ruling had answered by inference rather than head-on — *"check
+whether `QuoteContext` also exists under `schemas/generated/` first — that changes the
+disposition entirely."* It was the right question to insist on. The answer confirms the
+disposition and, in confirming it, exposes something larger that Task 1.4 must not walk into.
+
+**The check, run head-on rather than inferred.** `docs/contracts/schemas/generated/` holds
+27 schemas and **no scoring or quote-context schema among them**. `git grep -n QuoteContext`
+over `docs/contracts/`, `packages/`, `backend/` and `frontend/src` returns three hits, and
+all three resolve to the one hand-authored definition:
+
+- `docs/contracts/schemas/scoring.schema.json:7` — the definition itself;
+- `docs/contracts/schemas/regression-suite.schema.json:19` —
+  `"context": {"$ref": "scoring.schema.json#/$defs/QuoteContext"}`;
+- `docs/contracts/openapi/gi-pricing.yaml:256` — the Phase 0 design stub, `$ref`-ing the same.
+
+The last two are `$ref`s, so correcting line 12 fixes all three at once. The lead's *"one
+hand-authored line"* is therefore exactly right, and for a better reason than either of us
+first had: not that the other references do not exist, but that they inherit.
+
+**The ruling's disposition stands unchanged.** No generated tier owns `QuoteContext`, so
+`FR-PLAT-48`'s drift gate has nothing to fire on and `scripts/generate-contracts.py --check`
+cannot see this file at all.
+
+## The larger thing, and a fourth obligation on Task 1.4
+
+**Ruling 12 obligation 2 is not sufficient on its own, and fixing the line without this would
+disarm the only mechanism that could have caught the defect.** `backend/tests/test_contracts.py`
+excludes `"scoring"` from the drift guard with the reason `"later-phase — 03 rating"`. That
+reason is true *today* — `QuoteContext` exists nowhere in `model-schema`. **Task 1.4 is what
+makes it false**, by creating `QuoteContext`, `ScoringResult` and `Trace` there. A Task 1.4
+that corrects the enum and leaves the exclusion in place ships the shape *and* leaves it
+unguarded, which is the state that let a four-member enum survive from 2026-08-18 to now.
+
+**Obligation 4, therefore, in the same PR:** add the new shapes to
+`scripts/generate-contracts.py`'s `GENERATED_SHAPES`, and lift `"scoring"` from
+`test_contracts.py`'s exclusion dict. The precedent is in that dict's own neighbours and is
+explicit about why — `GENERATED_SHAPES`' comment for the 2026-08-15 entries reads: *"Both had
+hand-authored Phase-0 contracts and no generated counterpart, so nothing compared the shape
+the code produces against the shape the contract promises — **and three divergences went
+unnoticed until `main` moved**."* This is that lesson's fourth instance, and the first where
+it was seen coming.
+
+## Finding: three shipped rating types are already in the state this obligation prevents
+
+Reported, not ruled — the remedy is scope, and scope is the lead's.
+
+Checked while establishing the precedent above, and it is a class rather than one case.
+`model-schema` **already defines** `RatingVersion` (`packages/model-schema/src/model_schema/
+rating.py:104`), `RatingAlgorithm` (`:341`), `RateTable` (`:651`), plus `RateTableVersion`
+(`:818`) and `RateTableDiff` (`:684`) — all shipped by W9 and W10. Each has a hand-authored
+contract on disk (`docs/contracts/schemas/rating-algorithm.schema.json`,
+`rating-version.schema.json`, `rate-table.schema.json`). And:
+
+- `grep -n "RatingVersion\|RatingAlgorithm\|RateTable" scripts/generate-contracts.py` returns
+  **zero**. A true negative, not a pattern miss: `GENERATED_SHAPES` is a `dict[str, str]` of
+  slug → class name whose values are literally `"Job"`, `"Banding"`, `"ModelComparison"` and
+  so on, so a class name would appear verbatim if it were there.
+- `test_contracts.py` still excludes all three as `"later-phase — 03 rating"` — a reason that
+  expired when W9 and W10 built the types.
+
+So three shipped `model-schema` types have hand-authored contracts that **nothing has ever
+compared them against**, and the exclusion that permits it now misdescribes why. That is not
+a latent risk; it is the identical mechanism that produced the `purpose` divergence this
+ruling exists to correct, already in place three more times. `scoring` would have been the
+fourth had Task 1.4 landed without obligation 4.
+
+Not proposed for fixing here: whether W9's and W10's closes should be reopened for it, or
+whether it becomes a register row with an owner, is a scope question for the lead and the
+§14 plan review — `CLAUDE.md` §12 and `docs/process/delivery-process.md` §5 step 7 both put
+that call outside this role. What is ruled is only that **W11 does not add a fourth.**
+
+---
 
 ## Dispositions applied to `../specs/03-rating-engine.md` in this commit
 
