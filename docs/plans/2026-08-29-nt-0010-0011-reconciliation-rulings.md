@@ -231,6 +231,18 @@ policed by another role at the time — each held because the role holding it kn
 owned, which is offered as the strongest available evidence for option 2 over option 3
 without overstating how much of it this record can itself stand behind.
 
+**Finding for the §15 step 5 audit, found while filing this append, not a ruling:** the `gh
+pr edit` GraphQL failure this record's own prior filing worked around (Part A2, above) was
+already known — per the lead, hit and diagnosed with the identical `gh api -X PATCH` fix on
+2026-08-24, on a PR the lead names as #173 (confirmed to exist and to have merged on that
+date; the specific detail that *this* is where the fix was first diagnosed is the lead's own
+session-memory recollection, not independently checkable from a public artifact) — but
+recorded only in that session memory, unreachable to the role that needed it an hour before
+this one rediscovered it independently. That is this adoption's own custody thesis (Part D;
+`NT-0005`), demonstrated on the adoption itself. Fix filed separately against
+`.claude/skills/git-hygiene`, since a skill fix is its own PR against its own file, not a
+rider on this one.
+
 **The outcome substantially adopts recommendation (a)'s conclusion — role sessions may
 decide and write within a stated boundary — by a different mechanism than (a) proposed.**
 (a) suggested amending `.claude/agents/README.md`'s own text with one belt-and-braces
