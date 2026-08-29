@@ -296,7 +296,19 @@ _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 # expected to be temporary — `test_rate_table_version_row_has_no_status_column`
 # (`backend/tests/test_rating_version_compile.py`) fails the day a `status` column is
 # added to `RateTableVersionRow`, and names this record for revisiting.
-_MATURITY_CHECK_EXEMPT = frozenset({"rate_table"})
+# Ruling 28 (2026-08-29, `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`):
+# `rating_algorithm` joins the exemption for the same shape of reason as `rate_table` —
+# `RatingAlgorithmRow` (`backend/src/app/db/models.py`) carries no `status` column, so
+# the resolver has nothing real to report and now returns the `"no_maturity_concept"`
+# sentinel rather than an invented `"approved"`. Unlike `rate_table`, this one carries no
+# open question: `06-governance.md` never lists a Rating Algorithm in its Governed
+# Artifact enumeration (§2) or its evidence table (§3.3) — it names Rating Algorithm only
+# as a role-assignment scope and a dossier section, never as approval-bearing — so the
+# exemption is simply true rather than provisional, and there is no `OQ-` to point at.
+# `test_rating_algorithm_row_has_no_status_column`
+# (`backend/tests/test_rating_version_compile.py`) is the tripwire: it fails the day a
+# `status` column is added to `rating_algorithms`, and names this record for revisiting.
+_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})
 
 
 class ResolvedArtifact(BaseModel):
@@ -429,6 +441,19 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
 
     resolved_algorithm = await resolver.resolve(version.algorithm_ref)
     algorithm = RatingAlgorithm.model_validate(resolved_algorithm.payload)
+
+    # Ruling 28: FR-RATE-25 clause (2) ("all references resolvable and at a sufficient
+    # maturity") named four of five pin kinds — the loop below — and left the algorithm
+    # itself unchecked. Checked here, at the point it is already resolved, rather than
+    # added to `all_refs`: that list is resolved a second time below, and
+    # `version.algorithm_ref` must not be fetched twice.
+    algorithm_exempt = version.algorithm_ref.type in _MATURITY_CHECK_EXEMPT
+    if not algorithm_exempt and resolved_algorithm.status not in _APPROVED_OR_BETTER:
+        _raise_named(
+            "PIN_NOT_APPROVED",
+            f"{version.algorithm_ref} is {resolved_algorithm.status!r}, not approved or "
+            "better (FR-OVR-14)",
+        )
 
     issues = validate_algorithm(algorithm)
     if issues:
