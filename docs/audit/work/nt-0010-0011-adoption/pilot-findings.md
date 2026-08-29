@@ -435,6 +435,67 @@ prevented P1.** What caught P1, P1b, P2 and P5 was the lead checking claims with
 supervision, not about documents, and it is the one result here that no role file can
 absorb.
 
+## What no gate caught — the synthesis, and the answer §15 step 7 actually needs
+
+Not a finding against a file. A statement about this repository's checks, which the pilot is
+the first exercise to have measured rather than assumed.
+
+**`audit-docs.py` was green at every point where a defect existed.** Every one of the
+following was live, in a document the gate reads, while the gate passed:
+
+- The Slice 1 plan instructed an executor to raise `PlatformError` from inside
+  `pricing-core`, which `.importlinter` forbids — a guaranteed gate failure, authored into
+  the plan.
+- Task 1.4's refusal test covered **one limb of a two-limb disjunction**, and the limb it
+  covered is precisely the one the stale contract could express, so it would have gone green
+  with the `purpose` gap fully in place.
+- **No ruling-derived check had reached any of the five Acceptance blocks.** Task 1.3's would
+  have passed a build violating Rulings 8 and 10 outright — the plan would have produced
+  correct code and then certified it against a standard that did not contain the rulings.
+- A plan whose narration and whose operative steps contradicted each other at the junction
+  the plan itself names.
+- Two spec-to-contract divergences on `main`, one of which makes a `RateTableVersion`
+  **unsatisfiable** for the parquet storage mode `FR-RATE-62` defines.
+- A PR whose python CI was red while two roles reported it clean (P11).
+
+**The structural reason, which is F27's parent.** This repository's gates check **documents
+against documents** (`audit-docs.py`) and **code against code** (`ruff`, `mypy`,
+`lint-imports`, `pytest`). **Nothing checks a document against the artifact it specifies.**
+Every item above lives in that gap, and the gap is not narrow — it contains the plans that
+instruct executors, the acceptance criteria that certify their output, and the hand-authored
+contracts that describe shipped types.
+
+**What did catch them: a person declining to accept something.** Named precisely, because
+"peer review works" is not actionable and this is:
+
+- The decision-maker greps a **ruling's subject**; the planner greps **operative
+  instructions**; the auditor's first sweep grepped **payload wording**. Three overlapping
+  partial views, and *each was blind exactly where it had already looked*. No single pass
+  found all seven sites; all three passes together did.
+- The catches ran in **every direction**, including upward. The planner corrected the
+  decision-maker's count; the decision-maker corrected the planner's comparator substitution
+  and the lead's premise about Ruling 12's home; the executor refused a role-file clause that
+  contradicted a filed ruling; the auditor flagged that a lead dispatch extended a frozen
+  plan.
+- The unifying error, in the planner's own words, is the one worth carrying: **"I verified
+  against my memory of making a change rather than against the artifact."** Rule 5 exists
+  because it did that to a ruling, rule 4 because it did it to a branch, the removed counts
+  because it did it to its own arithmetic.
+
+**The honest limit of this section.** It says these checks did not catch these defects. It
+does not say the checks are badly built — `audit-docs.py` does what it is written to do, and
+does it well. It says the class of defect that dominated this pilot lies outside what any of
+them can see, which is an argument for a new check (F27's part (c)) and not against the
+existing ones.
+
+**And the encouraging result, which is easy to lose among twelve findings.** Three roles
+independently held a boundary that nothing enforced: the planner drafted rule 6 and declined
+to land it because a §14 review's output is a proposal; the decision-maker declined to edit a
+hand-authored contract its charter does not grant; the auditor held `FR-RATE-63`'s register
+row until a plan review ruled its owner. **In none of those cases would anything have
+detected the violation.** That is the process working in the only place a process can be
+tested — where breaking it would have been invisible.
+
 ## Provenance
 
 Collected by the lead during the pilot; each finding attributed above to the member that
