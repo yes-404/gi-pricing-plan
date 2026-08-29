@@ -478,6 +478,24 @@ reviewer, buys nothing CI does not buy better.
 already in flight for the same artifact — and a reviewer reads CI rather than re-running the
 suite locally, reserving local runs for the case where CI cannot answer the question.
 
+**It then recurred twice within the hour, and the second recurrence shows the fix above is
+the wrong shape.** After P14 was filed, the executor began dispatching its own `ci-watcher`
+for PR #371 while the lead's was already running; the lead stopped it in one message,
+because "P14" was now a thing that could be pointed at. Fifteen minutes later **the auditor
+dispatched a third watcher on the same PR** — having never been told the first existed.
+
+**The recurrence is the lead's, not the auditor's.** The coordination state — *a watcher is
+already running on #371* — existed only in the lead's head and in one pairwise message. "A
+role checks whether one is already in flight" is unactionable when the only record of what is
+in flight is a message sent to somebody else. This is `NT-0013`'s relay problem intersecting
+P14: **a coordination fact relayed pairwise reaches exactly the nodes the relayer happened to
+think of**, and the relayer is the one person who cannot notice the omission.
+
+**The corrected fix**: coordination state must be *visible*, not relayed. Announce an
+expensive verification to the team when starting it, so the check "is one already running" has
+something to read. A rule that requires checking a fact nobody published is not a rule, it is
+a hope — and P14's first statement of its own fix was exactly that.
+
 ## What worked — separated deliberately, because the gaps dominate the list above
 
 A findings file records defects, so read alone it describes a team that only errs. Five things
