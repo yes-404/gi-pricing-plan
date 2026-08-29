@@ -13,6 +13,16 @@
 **Implementation:** `.claude/skills/reporter-cycle` — the three scripts, their env-var
 configuration, the outage flag, and why the nudge is detected there but sent here via
 `SendMessage`. This file states the WHAT and the numbers; that skill states the HOW.
+**Precedence: the skill is authoritative; a handover carries runtime state only — never the
+procedure** (pilot finding P2, same rule as `watcher.md`).
+
+**Arming — this role arms its own mechanism** (pilot finding P3). On spawn, arm the
+persistent reporter-cycle Monitor from
+`.claude/skills/reporter-cycle/scripts/reporter-cycle.sh` with `REPORTER_HANDOVER_DIR` set
+to this session's handover path, **then prove liveness with `ps -p`** before reporting it
+armed. *(This clause exists because the charter said what the mechanism does and never who
+starts it, so a fresh reporter reported its own initialisation incomplete and had to ask.
+The same liveness rule as `watcher.md`: a Monitor id is a handle, not a process.)*
 
 ## Mechanism: Lead freshness nudge
 
@@ -24,11 +34,26 @@ configuration, the outage flag, and why the nudge is detected there but sent her
 - **20-minute escalation timeout (independent threshold):** After the nudge is sent, if the lead does not respond within 20 additional minutes, escalate to the external channel as CRITICAL. This is separate from the staleness threshold to allow a grace period after first nudge before escalation.
 
 **How it works:**
-1. Stores the timestamp of the lead's last status message in a marker file
-2. On each 15-min cycle, checks marker age vs. current time
-3. If delta > 20 min (staleness threshold), emits a nudge signal to the reporter agent
-4. Reporter sends direct message to lead (via SendMessage) with staleness age
-5. If lead does not respond within 20 minutes of nudge (escalation timeout), escalates to external channel as CRITICAL
+1. **The reporter writes the marker file** — `<handover>/.last_lead_status_ts`, a bare Unix
+   timestamp — **whenever it posts a fresh lead status**. This is an obligation on this role,
+   not a thing that happens: **no script writes it** (pilot finding P6).
+2. On each 15-min cycle, `nudge.py` checks marker age vs. current time
+3. If delta > 20 min (staleness threshold), it emits a nudge signal to the reporter agent
+4. **Reporter reads the age from `<handover>/nudge.log`'s last line** and sends it to the
+   lead via `SendMessage`. **Do not recompute it by hand** — `log_nudge` has already written
+   the exact figure, and two hand-computed nudges were wrong by 120 and 20 minutes before
+   this line existed.
+5. If lead does not respond within 20 minutes of nudge (escalation timeout), escalates to
+   external channel as CRITICAL
+
+> **Why step 1 is written as an obligation.** This section previously read *"Stores the
+> timestamp of the lead's last status message in a marker file"* — passive, with no actor,
+> and **nothing performed it**. Every reference to `.last_lead_status_ts` across the
+> repository, all worktrees, the handover and the job directory was a *read*; the file's
+> mtime equalled its own contents. So the detector's all-clear state was unreachable and it
+> escalated forever on a condition no action could satisfy. Three successive documents and
+> agents asserted a writer that did not exist, each inheriting the claim from the last.
+> **A mechanism step with no named actor is a step nobody performs.**
 
 **What the reporter does NOT do:**
 - Does not poll or chase individual team members (lead only; member staleness is the watcher's concern)
