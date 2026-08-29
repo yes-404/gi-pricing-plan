@@ -100,6 +100,44 @@ and treat a non-zero exit as failure even when the summary says otherwise. Grep 
 for `Errors ` as well as `Tests `; the two are different counters and only one of them is
 in the line most readers stop at.
 
+### A pytest total is only honest against `--collect-only`
+
+A pass count from a run that silently collected fewer tests than exist reads as clean —
+the summary reports what ran, not what should have. A `conftest.py` import error, a
+misnamed `test_*.py` file, or a path excluded from `testpaths` all shrink what gets
+collected without failing the run itself.
+
+```bash
+uv run pytest --collect-only -q | tail -1   # 'N tests collected'
+uv run pytest -q                            # reconcile N against what actually ran
+```
+
+Reconcile the two before citing a pass count in a closure record or an audit — a smaller
+collected total than expected is itself the finding, not something a green run rules out.
+
+### `req-coverage.py`'s percentage has three silent failure modes — two inflate it, one deflates it
+
+The script counts a requirement as **specified** only where its id appears in bold
+(`**FR-XXX-N**`) somewhere in `docs/specs/`, and **claimed** wherever any test carries
+`@pytest.mark.req("FR-XXX-N")` — both are per-id presence checks, with no notion of degree
+or cross-linkage between related ids (`scripts/req-coverage.py`, read in full to confirm
+this before writing it here).
+
+- **Bold-coupling** (inflates): a requirement defined without bold markup — a typo, or a
+  citation outside the standard `| **FR-XXX-N** | ... |` table row — never enters the
+  `specified` set. The denominator shrinks; the percentage rises for a requirement suite
+  that did not actually get smaller.
+- **Clause-conflation** (inflates): one `@pytest.mark.req(...)` marker marks an id **fully
+  claimed**, regardless of how many distinct clauses that requirement actually bundles. A
+  compound requirement with five behaviours and one test covering one of them reports as
+  100% claimed for that id.
+- **Shared-clause-attribution** (deflates): a clause shared across several requirement ids
+  gets tagged against only one of them in practice. The untagged siblings show zero
+  coverage even though the same test exercises their shared behaviour too.
+
+None of these are bugs — the script counts exactly what it says it counts. Read `N%
+claimed` as a floor on attention, not a measure of test quality.
+
 ## Closure audit — expected scope first, then evidence
 
 ```bash
@@ -198,6 +236,15 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-29 — the `--collect-only` reconciliation note and `req-coverage.py`'s three
+failure modes added (task #30, item 3), found by the auditor checking `close-workstream`,
+`dev-commands`, `python-test` and the script's own source and finding none of the four
+stated either. Each failure mode re-derived and confirmed directly against
+`scripts/req-coverage.py`'s actual logic before writing it here, not taken as given: the
+bold-only regex, the per-id binary presence check with no clause-level granularity, and
+the absence of any cross-id linkage that would catch a shared clause tagged against only
+one sibling.
 
 2026-08-24 — the vitest exit-code trap was found during W6b-1b, by running `echo "exit=$?"`
 after a suite whose summary read `231 passed`; the same run at the preceding commit
