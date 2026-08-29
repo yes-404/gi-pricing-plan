@@ -606,14 +606,18 @@ below are properties of code W11 slice 1 is building regardless of FR-RATE-63's 
   twin. This review does not name a workstream id for it; that is the maintainer's, the same
   restraint plan review 2's Proposal B applied to naming W6b's split.
 
-> **Recommendation:** FR-RATE-61 gets a register row now with owner **W13** — it does not
-> depend on this review, since W11 was never a candidate owner for it. FR-RATE-63's id-level
-> ownership (a corrected W9 closure note, or a new row) is this review's to propose and the
-> maintainer's to accept; its build obligation does not wait on that answer and splits as
-> above — the refusal guard in W11 slice 1 unconditionally, the authoring half in its own
+> **Recommendation:** FR-RATE-61 gets a register row with owner **W13** — it never depended
+> on this review, since W11 was never a candidate owner for it, and it has since landed as
+> `docs/audit/register.md`'s F-W9-2 (PR #319), recorded here as confirmation rather than an
+> open ask. FR-RATE-63's id-level ownership (a corrected W9 closure note, or a new row) is
+> this review's to propose and the maintainer's to accept — deliberately held out of the
+> register until this line carries a date, so a row does not pre-empt the acceptance that
+> names its owner. Its build obligation does not wait on that answer either way and splits
+> as above — the refusal guard in W11 slice 1 unconditionally, the authoring half in its own
 > small slice separate from W11. Not a roadmap edit on this review's own authority.
 >
-> **Maintainer acceptance:** _pending._
+> **Maintainer acceptance:** _pending on FR-RATE-63's ownership; F-W9-2 needs no acceptance
+> line to bind, since it was never this review's proposal to make._
 
 **3. Skills and research — re-run, not appended to.**
 
@@ -674,7 +678,7 @@ close is reached and W11 is next — carried into review 8 immediately below, wh
 
 | # | Proposal | Kind |
 |---|---|---|
-| 2.1 | FR-RATE-61: register row now, owner **W13** (specialises FR-RATE-40 for approximation mode; does not depend on this review) | decision |
+| 2.1 | FR-RATE-61: register row, owner **W13** (specialises FR-RATE-40 for approximation mode; never depended on this review) | decision — **landed, F-W9-2, PR #319** |
 | 2.2 | FR-RATE-63: id-level ownership (corrected W9 note, or a new row) is this review's to propose | decision |
 | 2.3 | FR-RATE-63 splits: the refusal guard is W11 slice 1's, unconditionally; sub-graph mounting/authoring is a separate small catch-up slice, W9-shaped, not part of W11 | decision |
 | 3.1 | `phase-review` skill's Output section corrected to `docs/audit/plan-reviews.md` | skill (fixed in this commit) |
