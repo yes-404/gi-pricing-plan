@@ -43,10 +43,13 @@ as if it were about the missing id. It is not: nothing checked `FR-PLAT-48` itse
 the same *silent* shape as `req-coverage.py`'s bold-coupling and clause-conflation
 failures — a row that looks like a real verdict on the id you meant. The total in-scope
 *count* usually still comes out right (one bogus token swapped in for one dropped id), so
-the headline number will not tip you off; only the id column will. Verified 2026-08-29:
-`RATE --sections 3.7 --extra FR-RATE-40,41,42,NFR-RATE-1,13,14` (W11's own baseline
-command) parses to `{FR-RATE-40, "41", "42", NFR-RATE-1, "13", "14"}`, not the six ids it
-reads as. Re-running with every id spelled out
+the headline number will not tip you off; only the id column will. Verified at
+`9891be1` (2026-08-29) by reading `scope-audit.py`'s parser source at that tree and
+re-running the command there: `RATE --sections 3.7 --extra
+FR-RATE-40,41,42,NFR-RATE-1,13,14` — the command as inherited from the prior audit at
+`74b1b10`, a different tree than the one this verification ran against — parses to
+`{FR-RATE-40, "41", "42", NFR-RATE-1, "13", "14"}`, not the six ids it reads as.
+Re-running with every id spelled out
 (`FR-RATE-40,FR-RATE-41,FR-RATE-42,NFR-RATE-1,NFR-RATE-13,NFR-RATE-14`) landed on the same
 13-in-scope / 0-evidenced headline only because *nothing* in `RATE` §3.7/§3.8/NFR had any
 marker at all that day — the substitution happened to be inert, not proven safe in
@@ -378,10 +381,13 @@ mapping.
 ## Verified
 
 2026-08-29 — the `--extra` comma-prefix trap in §0, found re-deriving W11's own baseline
-(`scripts/scope-audit.py RATE --sections 3.7 --extra FR-RATE-40,41,42,NFR-RATE-1,13,14`,
-inherited verbatim from the prior audit at `74b1b10`). Confirmed against the parser
+at tree `9891be1` (`scripts/scope-audit.py RATE --sections 3.7 --extra
+FR-RATE-40,41,42,NFR-RATE-1,13,14`, a command inherited verbatim from the prior audit at
+`74b1b10` — that SHA names only where the command came from, not where this entry's own
+reading and re-run were done). Confirmed at `9891be1` against the parser
 (`scope-audit.py`'s `args.extra.split(",")`, a literal split with no prefix inheritance)
-and by running both the as-given string and a fully-qualified version side by side: same
+and by running both the as-given string and a fully-qualified version side by side, both
+also at `9891be1`: same
 13-in-scope / 0-evidenced headline, different (and for the as-given string, wrong) token
 set underneath. The headline agreeing is what made this easy to carry forward unnoticed —
 recorded so the next `--extra` list is written fully qualified from the start rather than
