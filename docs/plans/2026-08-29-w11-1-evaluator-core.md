@@ -889,7 +889,11 @@ needs no ruling: the target shape is fixed externally by the engine's own wire f
    nothing implements, which is the failure `CompiledBundle` itself was. **The PR that adds
    the loader appends its signature to `../specs/02-modelling.md` §5.2 in the same commit.**
    *Acceptance, stated as the violation that must become impossible:* a test asserting that
-   scoring N quotes against one `CompiledBundle` performs exactly **one** booster load.
+   scoring N quotes against one `CompiledBundle` performs exactly **one** booster
+   deserialisation, **not N** — and **written to fail first**, against the current
+   re-load-every-call behaviour. A probe that has never gone red has not been tested
+   (`CLAUDE.md` §13); this one can go green by measuring the wrong thing, so watch it fail
+   before you make it pass.
 3. **Ruling 10 — two properties Slice 1 owes W14, so the deployment-switch mechanism still
    has a choice left.** (i) `CompiledBundle` exposes the `content_hash` of the `Bundle` it
    was loaded from — every candidate switch mechanism compares a held hash against a current
