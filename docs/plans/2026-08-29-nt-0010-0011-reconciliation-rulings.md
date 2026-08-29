@@ -217,19 +217,35 @@ are filed now that they exist to file.
 as a dated artifact" line is condition 4 carried into the rule, not decoration or a
 generic closing flourish.**
 
-**The lead's stated reasoning at the time, recorded as the lead's own characterisation —
-attributed rather than independently re-verified by this record, since two of its three
-examples happened in sessions this record has no visibility into:** *"the write permission
-isn't where the risk is — what actually held today was charter."* Cited in support: the
-auditor declining to file a register row before a review was accepted, and the executor
-declining to widen a PR beyond its slice — both relayed from the lead's own visibility into
-those sessions, not confirmed here from a public artifact. The third example is directly
-confirmable from this session's own record: **this decision-maker declined task #17**
-(`docs/README.md`'s suite index gap) **as outside the decision-maker's charter**, reported
-to the lead in this session's own transcript rather than acted on. None of the three was
-policed by another role at the time — each held because the role holding it knew what it
-owned, which is offered as the strongest available evidence for option 2 over option 3
-without overstating how much of it this record can itself stand behind.
+**The lead's stated reasoning at the time, recorded as the lead's own framing — the
+reasoning itself is the lead's characterisation, but all three supporting examples are now
+independently verified against permanent, public artifacts, not relayed:** *"the write
+permission isn't where the risk is — what actually held today was charter."* Three
+examples, corrected from the first filing rather than repeated as given:
+
+- **The auditor did not file `FR-RATE-63`'s register row.** Commit `71d8ca5` (#319), body:
+  *"FR-RATE-63 was buildable inside W9's delivered scope and is a close gap, not an
+  orphan. Its register row is deliberately held until plan review 7 rules its owner, since
+  a row names an owner and filing one now would pre-empt the review."* `docs/audit/
+  register.md` has no `FR-RATE-63` row today, confirmed directly — but that absence alone
+  proves nothing (it is equally consistent with never having tried), which is exactly why
+  the commit message is the actual evidence and the grep is only corroboration.
+- **The executor filed rather than absorbed an out-of-scope finding.** Commit `d4bc394`
+  (#314), body: *"One further instance found outside this PR's scope and filed rather than
+  silently absorbed — OQ-RATE-2 carries the same stale figures in both its mirrors…"*
+- **This decision-maker declined task #17** (`docs/README.md`'s suite index gap) as outside
+  the decision-maker's charter, reported to the lead in this session's own transcript rather
+  than acted on.
+
+**Correction to the framing, not only to the sourcing: these are not three unpoliced
+instances.** The auditor's was **compliance with an explicit instruction** — the lead
+directed it to hold the row until plan review 7 ruled its owner, and `71d8ca5`'s body
+records that instruction being followed, not a boundary the auditor drew unprompted. Only
+the executor's and this decision-maker's are unpoliced restraint — a role holding a
+boundary nobody told it to hold in the moment. Two unpoliced instances plus one directed
+compliance is a different, and honestly weaker, evidentiary shape than "three instances of
+charter holding without policing," and the record says so rather than the stronger claim
+the first filing made.
 
 **Finding for the §15 step 5 audit, found while filing this append, not a ruling:** the `gh
 pr edit` GraphQL failure this record's own prior filing worked around (Part A2, above) was
