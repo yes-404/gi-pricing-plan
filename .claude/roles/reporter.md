@@ -10,6 +10,10 @@
 - **Never:** edits the repo, merges, audits — including `.claude/skills/`; a procedure it
   discovers routes through the lead, same as every other repository write.
 
+**Implementation:** `.claude/skills/reporter-cycle` — the three scripts, their env-var
+configuration, the outage flag, and why the nudge is detected there but sent here via
+`SendMessage`. This file states the WHAT and the numbers; that skill states the HOW.
+
 ## Mechanism: Lead freshness nudge
 
 **What it does:** Monitors the lead's status-line age. If stale >20 minutes, sends a nudge via SendMessage. If lead remains unresponsive after nudge, escalates to the external reporting channel (set at spawn; currently #claude-code-update) as a CRITICAL relay. A stale lead is treated as a dead member — the team cannot proceed without leadership direction.

@@ -43,7 +43,41 @@ target-version = "py312"
 src = ["packages/model-schema/src", "packages/pricing-core/src", "backend/src"]
 # Vendored third-party skills are kept exactly as upstream wrote them. Linting someone
 # else's code to our rules produces churn and breaks the promise that it is unmodified.
-exclude = [".claude/skills"]
+# Named individually, not the whole `.claude/skills` tree: a first-party skill's own
+# scripts (e.g. `reporter-cycle`) belong under the same directory and must lint normally.
+# Ruled 2026-08-29 (task #28): failing loud (ruff flags an unlisted vendored dir) is safer
+# than failing silent (a new first-party skill quietly never lints), so a newly vendored
+# skill must be added here explicitly rather than the reverse — add its path when vendored.
+exclude = [
+    ".claude/skills/brainstorming",
+    ".claude/skills/code-quality",
+    ".claude/skills/create-adaptable-composable",
+    ".claude/skills/dispatching-parallel-agents",
+    ".claude/skills/executing-plans",
+    ".claude/skills/finishing-a-development-branch",
+    ".claude/skills/graphify",
+    ".claude/skills/planning-with-files",
+    ".claude/skills/receiving-code-review",
+    ".claude/skills/reproducing-ci-locally",
+    ".claude/skills/requesting-code-review",
+    ".claude/skills/secret-hygiene",
+    ".claude/skills/security-audit",
+    ".claude/skills/subagent-driven-development",
+    ".claude/skills/systematic-debugging",
+    ".claude/skills/test-driven-development",
+    ".claude/skills/testing-strategy",
+    ".claude/skills/ui-ux-pro-max",
+    ".claude/skills/using-git-worktrees",
+    ".claude/skills/using-superpowers",
+    ".claude/skills/verification-before-completion",
+    ".claude/skills/vue-best-practices",
+    ".claude/skills/vue-debug-guides",
+    ".claude/skills/vue-pinia-best-practices",
+    ".claude/skills/vue-router-best-practices",
+    ".claude/skills/vue-testing-best-practices",
+    ".claude/skills/writing-plans",
+    ".claude/skills/writing-skills",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "N", "ANN", "PT"]
