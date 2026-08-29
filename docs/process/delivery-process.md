@@ -19,8 +19,8 @@ Phase and Project close, never at Slice close — see §2.** Everything else is 
 
 **Ruled 2026-08-29** (the rulings record, Part A1). The human checkpoint sits at **three**
 named layers — Work, Phase and Project close — with the maintainer deciding at each,
-verbatim: *"maintainer only makes decision on work, phase and project close but not slice
-close."* **Slice close is not the maintainer's**: a slice closes on a clean audit and the
+verbatim: *"close a work stream: maintainer only makes decision on work, phase and project
+close but not slice close."* **Slice close is not the maintainer's**: a slice closes on a clean audit and the
 lead's merge, exactly as it does today. NT-0010 §9's single checkpoint at Project close only
 is rejected, not amended — escalation-on-stuck and acceptance-of-done are different events,
 and every layer that currently waits on a human keeps one.
