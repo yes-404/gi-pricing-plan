@@ -32,7 +32,7 @@ import hashlib
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final, Literal, NamedTuple
+from typing import Any, Final, Literal, NamedTuple, cast
 from uuid import UUID
 
 import numpy as np
@@ -90,6 +90,7 @@ __all__ = [
     "GbmFitError",
     "apply_loss_treatment",
     "fit_gbm",
+    "load_gbm_booster",
     "objective_family",
     "predict_gbm",
     "tree_summary",
@@ -1182,9 +1183,37 @@ def _to_raw(predicted: np.ndarray, link: Literal["exp", "logistic"]) -> np.ndarr
     return np.asarray(np.log(np.clip(predicted, 1e-12, None)), dtype=np.float64)
 
 
+def load_gbm_booster(model_type: Literal["xgboost", "lightgbm"], booster: bytes) -> object:
+    """Deserialise `booster` once into a live, reusable native booster object.
+
+    W11 Task 1.3's loaded-booster seam (Ruling 8, `02` §5.2): `predict_gbm` re-loaded a
+    fresh booster on every call, which put a deserialisation inside a real-time scoring
+    request's latency budget. `predict_gbm`'s own `booster` parameter now accepts either
+    raw bytes (the historical behaviour — re-loads every call, unchanged for every
+    existing caller) or the object this function returns (skips the load entirely).
+    `pricing_core.rating.runtime.load_bundle` calls this once per pinned GBM at hydration
+    time and holds the result in `CompiledBundle.boosters`, so a warm worker scoring N
+    quotes against one bundle deserialises once, not N times.
+
+    The return type is `object`, not a `Booster` union, because XGBoost and LightGBM are
+    both optional, lazily-imported backends (ADR-0001) — the caller never needs to name
+    the concrete type, only to hand it back to `predict_gbm`.
+    """
+    if model_type == "xgboost":
+        import xgboost as xgb
+
+        loaded = xgb.Booster()
+        loaded.load_model(bytearray(booster))
+        return loaded
+
+    import lightgbm as lgb
+
+    return lgb.Booster(model_str=booster.decode())
+
+
 def predict_gbm(
     result: GbmFitResult,
-    booster: bytes,
+    booster: bytes | object,
     data: pl.DataFrame,
     factors: Sequence[Factor] = (),
     *,
@@ -1206,6 +1235,11 @@ def predict_gbm(
     columns, without them the frame is expected to carry each feature under its factor
     slug. Passing them is what a banded or grouped factor needs, since the transformation
     is part of the feature and not of the frame.
+
+    `booster` is either the raw persisted bytes (loaded fresh, here, on this call — the
+    original behaviour) or an object already returned by `load_gbm_booster` (Ruling 8):
+    passing the loaded form skips deserialisation entirely, which is what a real-time
+    `model_call` handler scoring many quotes against one `CompiledBundle` needs.
     """
     if factors:
         matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
@@ -1246,8 +1280,10 @@ def predict_gbm(
     if result.model_type == "xgboost":
         import xgboost as xgb
 
-        loaded = xgb.Booster()
-        loaded.load_model(bytearray(booster))
+        loaded = cast(
+            xgb.Booster,
+            load_gbm_booster("xgboost", booster) if isinstance(booster, bytes) else booster,
+        )
         frame = xgb.DMatrix(
             x, base_margin=margin, feature_names=list(result.feature_order),
             feature_types=["c" if slug in _native_categoricals(result) else "q"
@@ -1266,7 +1302,10 @@ def predict_gbm(
     else:
         import lightgbm as lgb
 
-        lgb_booster = lgb.Booster(model_str=booster.decode())
+        lgb_booster = cast(
+            lgb.Booster,
+            load_gbm_booster("lightgbm", booster) if isinstance(booster, bytes) else booster,
+        )
         raw = np.asarray(lgb_booster.predict(x, raw_score=True), dtype=np.float64)
         if margin is not None:
             raw = raw + margin
