@@ -534,8 +534,10 @@ W9 closed 2026-08-27 and W10 closed 2026-08-28, and `CLAUDE.md` §14's trigger i
 "at each workstream close" — so both were owed and neither had been filed before W11 was
 next in line. **The output is a proposal, never a change** — every recommendation below
 needs a dated maintainer acceptance line before it binds. Evidence derived at `origin/main`
-`07ae047`; the one commit since W10 closed (#313) touched only `.claude/notes/`, so nothing
-about `RATE` or the roadmap moved underneath this review.
+`07ae047`, rebased onto `d4bc394` while this PR was open (see review 8, Question 4: `d4bc394`
+is in fact one of this pair's own recommendations, landed independently before either review
+was filed). Nothing else moved underneath this review — `07ae047` (#313) touched only
+`.claude/notes/`, and `d4bc394` (#314) touched only the two lines review 8 names.
 
 **1. Completion — reused, not re-derived.** W9's own closure record already carries fresh
 completion evidence for its scope (`docs/audit/work/W9/README.md:26-29`), so it is cited
@@ -642,15 +644,17 @@ a date and a decision._
 
 `CLAUDE.md` §14's eighth run, filed retroactively on 2026-08-29 alongside review 7 — see
 review 7's opening for why both were owed. **The output is a proposal, never a change.**
-Findings about a later phase are spec changes only (§0's table). Evidence as review 7: derived
-at `origin/main` `07ae047`.
+Findings about a later phase are spec changes only (§0's table). Evidence as review 7:
+derived at `origin/main` `07ae047`, rebased onto `d4bc394` — see review 7's opening.
 
 **1. Completion — reused, not re-derived.** W10's own closure record already covers its
 scope in full (`docs/audit/work/W10/README.md:29-37`): FR-RATE-14..21 and FR-RATE-62, all
 "delivered and tested." Module-wide, current: **78 `RATE` requirements in scope, 34
 evidenced (44 %)** (`scope-audit.py RATE`, run this session at `main@74b1b10`, confirmed
-unchanged at `07ae047` since the only intervening commit touched `.claude/notes/` only).
-§3.7/§3.8's eleven W11 requirements are 0/11 evidenced — expected, W11 has not started. No
+unchanged through `07ae047` and `d4bc394` — both touched only prose (working notes; the
+FR-RATE-64/NFR-RATE-14 correction this review's own Question 4 discusses), no code, no
+markers). §3.7/§3.8's eleven W11 requirements are 0/11 evidenced — expected, W11 has not
+started. No
 disagreement between the roadmap's completion claim and the derived numbers.
 
 **2. Omission.** No new omission beyond what the register already carries with named
@@ -690,30 +694,32 @@ FR-RATE-35 and FR-RATE-36 in the spec's own document order) — the same mechani
 append-only id landed inside a section after the roadmap row naming that section's range was
 already written, and the row was never re-checked against the section's current membership.
 
-> **Recommendation, already accepted — recorded here for the formal record, not
-> re-litigated:** correct W11's row to `FR-RATE-34..42, FR-RATE-64 (§3.7, added 2026-08-18
-> with OQ-RATE-6 — the row's original "34..42" omitted it); NFR-RATE-1 is the hard target`,
-> mirroring W10's own correction. Lands before the W11 plan is filed, not in this review.
+> **Recommendation — landed while this review was being filed.** W11's row and NFR-RATE-14
+> both needed exactly the correction this review was about to propose, and PR #314
+> (`d4bc394`) shipped both before this PR opened: the row now reads `FR-RATE-34..42,
+> FR-RATE-64 (added 2026-08-18 with OQ-RATE-6 — the row's original "FR-RATE-34..42" omitted
+> it); NFR-RATE-1 is the hard target` (`docs/roadmap.md:376`), mirroring W10's own
+> correction exactly as recommended; and NFR-RATE-14 now carries a dated amendment
+> (`03-rating-engine.md:788`, amended 2026-08-27, W8) reconciling it to the 1.626 ms
+> figure the register already cited, the same treatment NFR-RATE-13 got. Recorded here as
+> confirmation, not as an open recommendation — updated in this branch after rebasing onto
+> the fix, so this document does not assert something main had already made false. No
+> action remains on either point.
 >
-> **The mechanical fix, proposed new:** a numeric range in a workstream row is a derived
-> summary of a spec section's membership, and it silently rots every time that section gains
-> an append-only id — which is guaranteed to keep happening, since append-only is the rule
-> (`CLAUDE.md` §5). The row should name the **section** (`§3.7`, `§3.8`) as the citation of
-> record, with the numeric range kept only as a human-readable gloss beside it, never as the
-> sole scope statement — so a check as cheap as "does every bolded FR- id in this section
-> appear in the row it maps to" can catch the omission mechanically instead of at the next
-> close. Whether that check belongs in `audit-docs.py` or `scope-audit.py` is an
-> implementation choice for whoever owns it, not decided here.
+> **The mechanical fix is still open, and is this review's actual proposal:** a numeric
+> range in a workstream row is a derived summary of a spec section's membership, and it
+> silently rots every time that section gains an append-only id — which is guaranteed to
+> keep happening, since append-only is the rule (`CLAUDE.md` §5). The row should name the
+> **section** (`§3.7`, `§3.8`) as the citation of record, with the numeric range kept only
+> as a human-readable gloss beside it, never as the sole scope statement — so a check as
+> cheap as "does every bolded FR- id in this section appear in the row it maps to" can catch
+> the omission mechanically instead of at the next close. Whether that check belongs in
+> `audit-docs.py` or `scope-audit.py` is an implementation choice for whoever owns it, not
+> decided here. Landing the two individual fixes (above) does not close this half — the same
+> mechanism will fire a third time on some future row unless the check exists.
 >
-> Separately, carried from review 7 unchanged: **NFR-RATE-14 still states spike S2's
-> original p99 1.09 ms** (`03:788`) while the register (`docs/audit/register.md:23`,
-> F-W9-1) and `docs/research/w8-spike-resolution.md` cite a W8 re-measurement of
-> **1.626 ms** — the same class of gap NFR-RATE-13 already got a dated amendment for
-> (`03:789`, amended 2026-08-27) and NFR-RATE-14 did not: an amendment stranding its
-> list-mate. Both figures are far under the 50 ms budget, so this is not a risk to
-> NFR-RATE-1, but it should not propagate into whatever measures the real path in W11.
->
-> **Maintainer acceptance:** _pending._
+> **Maintainer acceptance:** _pending on the mechanical-fix proposal; the two individual
+> corrections are already live and need no acceptance line to bind._
 
 **5. Shape — is the cut still right?**
 
@@ -785,9 +791,9 @@ holding it are the right ones.
 | # | Proposal | Kind |
 |---|---|---|
 | 3.1 | A short ZEN-evaluate-side concurrency spike, run at W11 evaluator-slice start | research |
-| 4.1 | W11's roadmap row corrected for FR-RATE-64 (already accepted; lands before the plan is filed) | docs |
+| 4.1 | W11's roadmap row corrected for FR-RATE-64 | docs — **landed, PR #314** |
 | 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only | tool or convention |
-| 4.3 | NFR-RATE-14 gains a dated amendment reconciling the 1.09 ms / 1.626 ms figures | spec |
+| 4.3 | NFR-RATE-14 gains a dated amendment reconciling the 1.09 ms / 1.626 ms figures | spec — **landed, PR #314** |
 | 5.1 | **No re-cut** of Phase 2's W11-W14 boundaries; FR-RATE-34/40 get named deferrals inside W11's own plan | plan — no change |
 
 **Maintainer acceptance:** _pending — no recommendation above binds until this line carries
@@ -797,7 +803,8 @@ a date and a decision._
 
 - `docs/audit/work/W9/README.md`, `docs/audit/work/W10/README.md` — closure records, reused
   per the skill's own guidance rather than re-derived.
-- `docs/specs/03-rating-engine.md` §3.1-§3.11, §4.3, §5.1 — read directly at `07ae047`.
+- `docs/specs/03-rating-engine.md` §3.1-§3.11, §4.3, §5.1 — read directly at `07ae047`;
+  NFR-RATE-14's amendment confirmed at `d4bc394` after rebasing.
 - `docs/workflows/wf-02-model-to-rating-version.md`, `wf-04-deploy-and-monitor.md` — read
   directly.
 - `docs/roadmap.md` §7 (workstream table, risk table) — read directly, plus a full-file grep
