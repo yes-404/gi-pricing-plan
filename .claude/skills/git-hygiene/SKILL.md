@@ -20,6 +20,16 @@ gh pr merge <n> --squash                      # CLAUDE.md §10
 
 **Always target `main`.** This is the rule that cost the most to learn.
 
+**A branch name containing the substring "git" can trip the worktree isolation guard.**
+The guard that keeps a worktree-isolated session's git commands inside its own tree counts
+occurrences of the literal text "git" across the whole command line, not just the leading
+command word — `git checkout -b skills/git-hygiene-<slug>` reads as two ("git" the command,
+"git" inside "git-hygiene") and is refused as unverifiable, even though it is one ordinary
+git invocation and the branch name is fine on its own. Recurs for anyone naming a branch
+after this skill specifically, since `git-hygiene` is the collision. Rename around it —
+`skills/hygiene-<slug>` passes, `skills/git-hygiene-<slug>` doesn't — rather than fight the
+guard; it has no override.
+
 > **The stranding trap.** PRs #8 and #10 were merged into an intermediate branch
 > (`chore/skills-library`) *after* that branch had already merged to `main`. Both looked
 > merged — green PR, closed, branch gone — and neither reached `main`. It happened twice
@@ -436,6 +446,15 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the branch-name "git"-substring guard trap added, found writing this
+file's own two entries above.** `git checkout -b skills/git-hygiene-failed-ff-only-trap`
+was refused by the worktree isolation guard, quoting "names git more than once in a single
+command" — a literal reading of that message, not yet a minimal-pair test: renaming to
+`skills/failed-ff-only-abandoned-trap` (dropping only the word "git-hygiene") passed on
+the identical, otherwise-unchanged command. Consistent with a substring count across the
+whole command line rather than a structural check of the git invocation itself; not
+independently isolated further than that one rename.
 
 **2026-08-29 — the fetch-updates-a-ref-not-a-working-tree line added.** Same day, a
 different session's local `HEAD` sat thirteen commits behind while `git log origin/main`
