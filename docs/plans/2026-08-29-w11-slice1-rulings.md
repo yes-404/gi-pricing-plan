@@ -1,4 +1,4 @@
-# W11 Slice 1 decision-point rulings — the six decisions that block Tasks 1.2 to 1.5 (2026-08-29)
+# W11 Slice 1 decision-point rulings — the seven decisions that block Tasks 1.2 to 1.5 (2026-08-29)
 
 **What this is.** `.claude/roles/decision-maker.md` requires every decision point to be
 pre-resolved *before* its slice starts. W11 Slice 1 is the pilot for the NT-0010/0011
@@ -24,7 +24,9 @@ an earlier document turned out to be wrong against that tree, this record says w
 is wrong in its own first sentence rather than hedging — `docs/process/delivery-process.md`
 §15.
 
-**Three of the six were not on anyone's list.** Rulings 7, 8 and 10's *subject* was named in
+**Three of the first six were on no list, and a seventh arrived after they were filed.**
+Ruling 12 was raised by the planner during execution, which is the honest shape of
+pre-resolution: it catches most of them early and not all of them. Rulings 7, 8 and 10's *subject* was named in
 the recovery document; Rulings 7 and 8 as filed are new decisions found by reading the
 shipped source that Tasks 1.2, 1.3 and 1.4 will actually build against. That is what
 pre-resolution is for, and it is also the honest state of the frozen plan: it carries an
@@ -445,6 +447,104 @@ mapping to `PlatformError` happens at the backend boundary in Slice 2.
 
 ---
 
+---
+
+## Ruling 12 — `QuoteContext.purpose`: the spec is right and the hand-authored contract is stale, and the fix belongs to Task 1.4
+
+**Raised by the planner during Slice 1 execution**, after Rulings 6–11 were filed — the case
+this record's own pre-resolution standard exists for, arriving late rather than not at all.
+
+**Correction to the report as received, first sentence per `docs/process/delivery-process.md`
+§15:** the enum is `docs/contracts/schemas/scoring.schema.json` **line 12**, not line 13.
+Everything else in the report holds.
+
+**The finding, verified independently rather than adopted.**
+`docs/contracts/schemas/scoring.schema.json:12` types the field with four members —
+`"purpose": {"enum": ["new_business", "renewal", "mid_term_adjustment", "what_if"]}` —
+omitting `cancellation`. `../specs/03-rating-engine.md` gives **five** in two separate
+places: §2's glossary row (`:63`) and §4's own `InputContract` example (`:240-241`,
+`"domain": ["new_business", "renewal", "mid_term_adjustment", "cancellation", "what_if"]`).
+
+**Ruled: the contract is the wrong side.** This is a `CLAUDE.md` §0 code-versus-spec
+question, and the answer is not close:
+
+- **Three spec locations say five, and the third is the dated record of the edit itself.**
+  `OQ-RATE-4` (`:807`): *"**DECIDED 2026-08-18**: the same algorithm for the risk price, with
+  pro-rata/refund/charge logic in a separately-versioned sub-graph mounted on `purpose` —
+  FR-RATE-63. §2's `purpose` gained `cancellation` in the same edit, because the answer keys
+  on a value that did not exist."* Dropping `cancellation` to match the contract would
+  silently reverse a maintainer decision, which is the outcome `CLAUDE.md` §0 forbids by
+  name.
+- **`FR-RATE-63` (`:87`) cannot be satisfied under the four-member enum.** It mounts the
+  sub-graph *"only when `purpose ∈ {mid_term_adjustment, cancellation}`"* and requires that
+  *"a version that mounts no such sub-graph **refuses** an MTA or cancellation quote rather
+  than pricing it as new business — pricing it as new business is the failure this
+  requirement exists to prevent, and it is silent."* A `QuoteContext` that cannot carry
+  `cancellation` cannot be built to be refused, so half the guard is unexpressible, not
+  merely untested.
+- **Provenance checked, not inferred.** `scoring.schema.json` has exactly two commits in its
+  whole history — `b452c78` (the Phase 0 draft) and `cb9dd78` (the remaining ten artifact
+  schemas) — and neither is `eb43022`, the 2026-08-18 commit that decided `OQ-RATE-4`. That
+  commit's own message records the gap as a CI-scope observation rather than a coverage one:
+  *"No file under `frontend/` or `docs/contracts/` changed, so the frontend workflow does not
+  run on this branch."* The contract was never disagreed with; it was never revisited.
+
+**The real decision here is who fixes it and when**, since which side is wrong was settled by
+the paragraph above.
+
+- **(a) Fix the contract in this ruling's own commit.**
+- **(b) Fix it in the PR that builds `QuoteContext` — Task 1.4.**
+- **(c) Amend the spec down to four.** Refused above.
+
+**Ruled: (b).**
+
+- **There is no authoritative shape to keep it consistent with yet.** `git grep -n
+  mid_term_adjustment` over `packages/`, `backend/`, `frontend/src` and `docs/contracts/`
+  returns **exactly one hit at `7b8473a`**: the stale schema line itself. `model-schema`
+  defines no purpose enum at all, which matches the frozen plan's own statement that
+  `QuoteContext`, `ScoringResult` and `Trace` have *"zero code exists for any of the three
+  today"*. Per `ADR-0002` and `CLAUDE.md` §2, `model-schema` is the single source of truth
+  and Task 1.4 is what creates it. Correcting the hand-authored contract now would fix the
+  only *existing* copy while the *authoritative* one is still unwritten — and open a second
+  window for the two to diverge again, which is the failure being fixed.
+- **`CLAUDE.md` §2 wants them in one commit**: a change spanning spec and code *"lands as
+  **one commit** — spec, code, tests, any skill update — or the audit reports a consistency
+  the repository does not have."* The `model-schema` enum, the contract line and
+  `FR-RATE-63`'s refusal test are one change.
+- **Charter boundary, named rather than routed around.**
+  `.claude/roles/decision-maker.md`'s Tools line grants writes to ruling records, the
+  open-questions log and `docs/specs/`. It does **not** name `docs/contracts/`. Ruling which
+  side is wrong is §0 and is this role's; editing a hand-authored contract file is not
+  granted to it. (b) is the disposition the charter permits *and* the better engineering, so
+  nothing is lost here — but see the finding below, because that will not always be true.
+
+**Binding on Task 1.4 — three obligations, all in one PR:**
+
+1. `QuoteContext.purpose` carries **five** members including `cancellation`, defined once in
+   `model-schema` (`ADR-0002`, `CLAUDE.md` §2 — nobody hand-writes a shape `model-schema`
+   owns).
+2. `docs/contracts/schemas/scoring.schema.json:12` is corrected to those five in the same
+   commit.
+3. **`FR-RATE-63`'s refusal test covers both members, not one.** The frozen plan's exit
+   criterion (`2026-08-29-w11-scoring.md:401-404`) specifies only *"a `QuoteContext` with
+   `purpose: mid_term_adjustment`"*. That is the half the stale contract can already express
+   — so the test as written would have gone green with this defect fully in place. The
+   contract gap and the test gap are **the same gap**: `cancellation` is
+   `mid_term_adjustment`'s stranded list-mate in the requirement, in the contract and in the
+   test, and fixing any one of the three alone leaves the guard half-proven.
+
+**Finding against this role's own charter file, reported per the lead's standing invitation
+and not worked around.** `.claude/roles/decision-maker.md` grants `docs/specs/` writes for
+"the spec changes its charter already owns", but a `CLAUDE.md` §0 ruling decides between
+*spec* and *code*, and one of the artifacts that can be the wrong side —
+`docs/contracts/schemas/` — is hand-authored (`docs/contracts/README.md`'s own table:
+`schemas/` is authored, `schemas/generated/` is not) and outside the grant. It did not bite
+here, because (b) is independently correct. It bites the first time a hand-authored contract
+is the wrong side and no code PR is in flight to carry the correction — at which point the
+answer must be to widen the charter or route the edit to a role that has the grant, never to
+edit it anyway. Not urgent; filed so the decision is made deliberately rather than under
+time pressure.
+
 ## Dispositions applied to `../specs/03-rating-engine.md` in this commit
 
 | Ruling | Edit | Section |
@@ -453,8 +553,9 @@ mapping to `PlatformError` happens at the backend boundary in Slice 2.
 | 9 | Dated amendment to `FR-RATE-39` — full evaluation, all firing codes collected, ladder always populated | §3 |
 | 11 | Append `MODEL_CALL_FAILED` to the owned-code block | §5.1 |
 
-Rulings 6, 8 and 10 apply no spec edit. Ruling 8's spec change is owed by the PR that builds
-the seam, for the reason its disposition gives.
+Rulings 6, 8, 10 and 12 apply no spec edit. Ruling 8's spec change is owed by the PR that
+builds the seam, and Ruling 12's contract correction by the PR that builds `QuoteContext`,
+each for the reason its own disposition gives.
 
 ## Queued, not ruled — decision points whose slices have not started
 
