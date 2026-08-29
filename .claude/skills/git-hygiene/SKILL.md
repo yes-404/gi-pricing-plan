@@ -296,6 +296,53 @@ and `git status` reports `[behind 1]`. Finish the job:
 git merge --ff-only origin/main
 ```
 
+## A worktree-pinned session cannot read a sibling's — or the primary checkout's — working directory, by design
+
+Both obvious routes are blocked, confirmed 6/6 across a real fanout (five sibling
+worktrees plus the primary checkout, W11 pre-stand-down audit, 2026-08-29): in every case
+zero commands executed against the target's actual files.
+
+- **`git -C <other-path>` or a bare `cd` into another worktree** — refused before running
+  anything, sibling or primary checkout alike, identical wording either way: *"This
+  session is isolated in the worktree \<yours\>... a worktree-isolated session's git
+  operations must target its own worktree."*
+- **`EnterWorktree({path: <sibling>})` is not a working substitute**, and fails three
+  different ways depending on the target:
+  - **Locked by a live session** — refused cleanly, naming the pid: *"\<worktree\> belongs
+    to another running Claude Code session (locked: claude session \<name\> (pid N start
+    T)). Wait for that session to finish or choose a different worktree."* The safe
+    outcome — nothing was attempted against that worktree's files. `ps -p <pid>` confirmed
+    the named session genuinely alive in two of two spot-checks.
+  - **Not locked** — the tool reports success (*"This agent's working directory... now
+    point at the worktree; the previous directory was left untouched"*) but the sandbox
+    enforcement layer does not follow: every command afterward, including a bare `pwd`, is
+    still refused with the same "isolated to your original worktree" error. **A success
+    report from `EnterWorktree` is not evidence the sandbox will actually permit what comes
+    next** — confirm with a no-op read before trusting the switch.
+  - **Target is the primary checkout** — a third, distinct refusal: *"Cannot enter
+    worktree: \<path\> is the main working tree, not a linked worktree."* Categorically
+    unreachable this way regardless of lock state.
+  - A subagent spawned from a pinned session inherits the same pin and hits the identical
+    three outcomes — delegating the attempt does not route around it.
+
+**What still works, from anywhere, without switching**: every worktree of one repository
+shares the same object and ref database, so anything addressed by branch name or SHA reads
+fine from your own pinned location — `git log --oneline origin/main..<branch>`,
+`git diff --stat origin/main..<branch>`, `git show --stat <sha>`, `git stash list` (one
+shared stack, not per-worktree), `git worktree list --porcelain`, `gh pr list --head
+<branch>`. That covers the **unmerged-commits** half of a cross-worktree check completely.
+It does not cover **uncommitted tracked edits or untracked files** — those exist only on
+the other worktree's disk with no ref, so nothing short of a session physically rooted
+there can see them.
+
+**The consequence for a cross-worktree audit** (ruled here, W11, 2026-08-29): gathering
+the working-directory half for every worktree but your own is structurally not a
+worktree-pinned member's job — the guard blocks both routes on purpose, to stop one
+session reaching into another's live files. That half belongs to a session actually
+rooted at the primary checkout, where `-C` and `cd` are unrestricted, or to each
+worktree's own occupant self-reporting. A pinned member can still gather the full
+ref-based half for every worktree safely, and should, since it needs no switch at all.
+
 ## What goes in `.gitignore` — and what must not
 
 Ignore build output, caches, environments and editor state. **Do not ignore:**
@@ -446,6 +493,18 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the worktree-isolation section above added, from a live pre-stand-down
+audit.** The lead ordered a read-only inventory of every worktree after a prior cleanup
+had destroyed 7 untracked files by deleting before reporting. A fanout of six subagents
+(five siblings, one for the primary checkout) tried both `-C`/`cd` and `EnterWorktree` and
+hit the three refusal shapes above in every single case — confirmed empirically, not
+inferred from the tool's docs, which describe the `EnterWorktree({path:...})` switch as
+working for a pinned agent without qualifying that the sandbox layer can still refuse
+everything after. The lead completed the actual audit from the primary checkout, where
+`-C` is unrestricted, and named that split — ref-based half safe from anywhere, working-
+directory half only from the primary checkout or the occupant itself — as the standing
+rule for who runs one of these next time.
 
 **2026-08-29 — the branch-name "git"-substring guard trap added, found writing this
 file's own two entries above.** `git checkout -b skills/git-hygiene-failed-ff-only-trap`
