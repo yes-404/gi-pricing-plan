@@ -18,6 +18,8 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 | `workflows/` | Cross-module end-to-end user journeys (wf-01 … wf-05) |
 | `contracts/` | JSON Schema for artifacts + OpenAPI stubs |
 | `adr/` | Architecture decision records (numbered, immutable once accepted) |
+| `process/` | Team execution process: layered workflow (Project→Phase→Work→Slice), roles, escalation, monitoring loop |
+| `research/` | Spike findings and dated research notes (track-a, w6b-6b, w8, zen-evaluate-concurrency) |
 | `skills-map.md` | Stack component → where used → skills to research → resources |
 | `open-questions.md` | Unresolved design questions, owner, status |
 | `phase-0-status.md` | Exit-criteria progress, requirement inventory, contract coverage, spikes |

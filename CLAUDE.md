@@ -213,6 +213,12 @@ section keeps no second list**
 - Monthly, or on "skill audit": re-run the gap analysis, propose additions and removals.
 - Never modify `~/.claude/skills/` (personal/global) as part of project work.
 
+**Team process.** How this repository's Claude Code team does the work — the Project →
+Phase → Work → Slice layering, roles, escalation guards, and the monitoring loop — is
+`docs/process/delivery-process.md` and its companion `docs/process/agent-settings.md`.
+Distinct from `docs/workflows/wf-01…05`, the cross-module *domain* journeys (§4) — one
+describes how the team works, the other what the platform does.
+
 **Evidence is delegated, verdicts are not.** A subagent runs in its own context and returns
 a conclusion — what §10 asks for — but **skills outrank agents on procedure** and the
 **verdict stays in the main thread**: §13's four verdicts, §14's proposals, §0's decision
