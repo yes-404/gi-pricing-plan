@@ -19,6 +19,25 @@ dev tools and **none of the workspace packages**. `mypy` and `pytest` then fail 
 `No module named 'pydantic'` in a venv that looks fine. A fresh worktree with no `.venv`
 reports ~690 phantom errors that read as real code defects.
 
+## A borrowed venv silently tests the wrong tree
+
+Pointing `uv run`/`pytest` at another worktree's (or the main checkout's) `.venv` to skip a
+sync — via `cd`, `UV_PROJECT_ENVIRONMENT`, or `--no-sync` — does not test the tree you think
+it does. This repo's packages are installed **editable**, and an editable install's `.pth`
+shim (`_editable_impl_gi_backend.pth` for the backend) hardcodes the **absolute path** it
+was synced from. Running from `/tmp/some-other-worktree` with that shim still imports
+`app` from wherever it was originally synced — silently; no error names the mismatch.
+
+Confirmed the hard way auditing PR #371 (2026-08-29): `backend/tests/test_rating_versions.py`
+run from an isolated worktree, reusing the main checkout's `.venv`, gave 2 failed / 5 passed
+(`POST /rating-versions` → 405, the pre-fix symptom) — the shim was resolving to the main
+checkout's code, not the worktree's, and the main checkout happened to be on an unrelated
+branch at the time. A real `uv sync --all-packages --dev` inside the worktree fixed it: 7/7
+passed. **A test run against borrowed tooling is not evidence about the tree under audit —
+sync fresh, every time, for any worktree whose code differs from wherever the venv was
+built.** Check a `.pth` file's target path (`grep -r . <venv>/lib/*/site-packages/*.pth`)
+before trusting a reused venv at all.
+
 ## The gate is two halves, and one of them is not Python
 
 This repository is polyglot and CI runs two workflows. **A "gate" that covers only Python
@@ -236,6 +255,12 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-29 — the borrowed-venv section above added, found auditing PR #371's task-brief
+regression fix. A false 2-failed/5-passed test result was traced, before being reported as
+a finding, to `_editable_impl_gi_backend.pth` hardcoding the main checkout's absolute path;
+re-run with a real `uv sync --all-packages --dev` inside the PR's own worktree gave the
+genuine 7/7 the PR itself claimed.
 
 2026-08-29 — the `--collect-only` reconciliation note and `req-coverage.py`'s three
 failure modes added (task #30, item 3), found by the auditor checking `close-workstream`,
