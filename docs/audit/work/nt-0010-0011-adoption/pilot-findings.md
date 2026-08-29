@@ -198,15 +198,23 @@ The planner moved #370's head three times while the auditor was reviewing it
 (`de4af3b` → `d41f379` → `6f893c6`). The auditor filed *"Ruling 12 is not reflected"* — true
 of the head it read, false by the time it wrote.
 
-**What makes this more than a scheduling accident**: `docs/plans/README.md` rule 4, added by
-the planner *in that same branch, that same hour*, says **name the commit you read**. That is
-the reader's half. The writer's half — **do not move a branch someone is reading** — was
+**What makes this more than a scheduling accident**: rule 4 of `docs/plans/README.md`'s
+**unenforced** list — "the conventions the audit cannot check", not the enforced list that has
+its own rule 4 about ADR files — added by the planner *in that same branch, that same hour*,
+says **name the commit you read**. That is the reader's half. The writer's half — **do not move a branch someone is reading** — was
 missing, and the planner demonstrated the gap in the branch that introduced the rule. Its own
 diagnosis is the right one: *"I had been treating 'the head moved' as the reader's problem to
 guard against, when the cheaper fix sits with whoever holds the push."*
 
 Neither `planner.md` nor `auditor.md` says a branch under audit is frozen, or that an audit
 report names the commit it read.
+
+*(Both of `docs/plans/README.md`'s rule 4s are unmerged context at the time of writing. On
+`main` the unenforced list still reads "these **three** are not"; #370's branch carries five,
+adding rule 4 and — as P9's remedy — rule 5. No line number is cited for either, because that
+branch is under active amendment and a line number on a moving branch is the defect P7 is
+about. Rule 4's later-added second half is still **reader**-side: "name the commit you read".
+The writer's half is what remains missing.)*
 
 **Correctly refused**: the planner declined to file the writer's-half rule while the audit was
 still open, on the grounds that opening a follow-up PR mid-audit *"would repeat the same
