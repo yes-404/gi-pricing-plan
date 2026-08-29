@@ -46,6 +46,7 @@ must say where it went.
 | [NT-0009](0009-slim-the-roadmap.md) | Slim the roadmap — split the forward-looking plan from the archive (closure records, plan reviews, retrofit list) | 2026-08-27 | `landed` | Archive moved 2026-08-27 via #274 — historical record in `docs/audit/`, roadmap forward-looking |
 | [NT-0010](0010-layered-slice-based-workflow.md) | A layered slice-based workflow — Project → Phase → Work → Slice, gated at every layer | 2026-08-29 | `landed` | `docs/process/delivery-process.md`, `.claude/roles/*.md`, `CLAUDE.md` §12; **no `docs/specs/` change and no product code**. Reconciled and ruled in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` |
 | [NT-0011](0011-per-agent-model-and-skill-settings.md) | Per-agent model, thinking effort and skill bindings for the seven roles | 2026-08-29 | `landed` | `.claude/roles/*.md`, `docs/process/agent-settings.md` (not `.claude/agents/` — this note's own text named the wrong directory; corrected during implementation) |
+| [NT-0012](0012-a-credential-is-borrowed-not-stored.md) | A credential in an ephemeral job directory is borrowed, not stored, and is found by its shape, not its container's name | 2026-08-29 | `open` | Rules only; lands in a role file's credential duty and a search-discipline skill, neither chosen yet |
 
 ## What a note must contain
 
