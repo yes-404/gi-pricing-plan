@@ -196,3 +196,72 @@ def test_an_unknown_rating_version_id_is_a_404_over_http(
     )
     assert response.status_code == 404, response.text
     assert response.json()["code"] == "NOT_FOUND"
+
+
+def test_create_rating_version_over_http(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    """POST /api/v1/rating-versions creates a draft rating version over HTTP."""
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(workspace_id),
+    }
+    model_ref = ArtifactRef(type="model", slug="fremtpl2-glm", version=1)
+    dataset_version_id = new_uuid7()
+    body = {
+        "slug": "fremtpl2-demo",
+        "dataset_version_id": str(dataset_version_id),
+        "model_ref": model_ref.model_dump(),
+    }
+
+    response = api_client.post("/api/v1/rating-versions", json=body, headers=headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data["slug"] == "fremtpl2-demo"
+    assert data["status"] == "draft"
+    assert data["model_ref"] == "model:fremtpl2-glm@1"
+    assert data["dataset_version_id"] == str(dataset_version_id)
+
+
+def test_submit_rating_version_over_http(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    """POST /api/v1/rating-versions/{id}/submit moves to review over HTTP."""
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
+
+    # Create a draft rating version
+    headers = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(workspace_id),
+    }
+    model_ref = ArtifactRef(type="model", slug="fremtpl2-glm", version=1)
+    dataset_version_id = new_uuid7()
+    create_body = {
+        "slug": "fremtpl2-demo",
+        "dataset_version_id": str(dataset_version_id),
+        "model_ref": model_ref.model_dump(),
+    }
+    create_response = api_client.post("/api/v1/rating-versions", json=create_body, headers=headers)
+    assert create_response.status_code == 201, create_response.text
+    rating_id = create_response.json()["id"]
+
+    # Submit for review
+    submit_body = {"change_summary": "demo rating version"}
+    submit_response = api_client.post(
+        f"/api/v1/rating-versions/{rating_id}/submit",
+        json=submit_body,
+        headers=headers,
+    )
+    assert submit_response.status_code == 200, submit_response.text
+    data = submit_response.json()
+    assert data["status"] == "review"
+    assert data["id"] == rating_id

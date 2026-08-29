@@ -73,6 +73,7 @@ from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from model_schema import (
     MODEL_SPEC_ADAPTER,
+    ArtifactRef,
     Backtest,
     Banding,
     BandingEvaluation,
@@ -259,6 +260,20 @@ class ModelCreate(BaseModel):
 
     spec: ModelSpec
     change_reason: str | None = None
+
+
+class RatingVersionCreate(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: str
+    dataset_version_id: UUID
+    model_ref: ArtifactRef
+
+
+class RatingVersionSubmit(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    change_summary: str
 
 
 @router.post(
@@ -1133,6 +1148,62 @@ async def get_rating_version(
         row = await rating_versions_service.load_rating_version(
             session, workspace_id=caller.workspace_id, rating_version_id=rating_version_id
         )
+        return rating_versions_service.to_schema(row)
+
+
+@router.post(
+    "/rating-versions",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a draft rating version",
+    responses=problems(401, 403, 422),
+)
+async def create_rating_version(
+    body: RatingVersionCreate,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_WRITE))],
+    database: DatabaseDep,
+) -> RatingVersion:
+    """Create a draft rating version with pins to a model (FR-RATE-22).
+
+    The draft version is editable until submitted for approval. It pins an approved
+    model for rating use.
+    """
+    async with database.unit_of_work() as session:
+        row = await rating_versions_service.create_rating_version(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            slug=body.slug,
+            dataset_version_id=body.dataset_version_id,
+            model_ref=body.model_ref,
+        )
+        return rating_versions_service.to_schema(row)
+
+
+@router.post(
+    "/rating-versions/{rating_version_id}/submit",
+    summary="Submit a rating version for approval",
+    responses=problems(401, 403, 404, 409),
+)
+async def submit_rating_version(
+    rating_version_id: UUID,
+    body: RatingVersionSubmit,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_SUBMIT))],
+    database: DatabaseDep,
+) -> RatingVersion:
+    """Move a rating version from draft to review, creating an approval request.
+
+    The version must be in draft status. The change summary describes the
+    modifications in this version.
+    """
+    async with database.unit_of_work() as session:
+        row, _ = await rating_versions_service.submit_for_review(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            rating_version_id=rating_version_id,
+            change_summary=body.change_summary,
+        )
+        await session.refresh(row)
         return rating_versions_service.to_schema(row)
 
 
