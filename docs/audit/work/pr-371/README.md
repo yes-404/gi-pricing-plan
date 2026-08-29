@@ -59,14 +59,36 @@ Tree: PR #371 branch (`pr371-review` locally), head commit `5b82b18`.
   last-task-in-a-slice boundary and a bare non-decimal task number that must NOT match a
   decimal one) and ran the current script against all of them — every case behaves
   correctly.
+- **The lead's second reported finding — FR-RATE-40's evidence gate — verified real,
+  by direct code read, at the same head (`5b82b18`).**
+  `docs/specs/03-rating-engine.md:515` attaches "evidence completeness checked
+  (FR-RATE-40)" to `POST /rating-versions/{id}/submit`. `submit_for_review`
+  (`backend/src/app/platform/rating_versions.py:141-176`, read in full, not a diff — this
+  function predates Slice 1 and PR #371 does not touch it) checks only RBAC and that the
+  version is `draft`; no evidence-completeness check exists anywhere in the call path.
+  **This is not fixed by 5b82b18 in the sense of the code now performing the check —
+  it isn't, and confirming that required reading the un-diffed function body, not the
+  PR's file list.** What changed at the PR-metadata level (not in any commit — a GitHub
+  description edit, not a `git` object) is that PR #371's body now carries a "## Known
+  gap, explicitly deferred — not fixed by this PR" section, added after the lead's
+  finding, stating the same facts this record just re-derived independently and citing
+  the correct owner: DP2 (`docs/plans/2026-08-29-w11-scoring.md:182-197`), Slice 2 Task
+  2.3, blocked on a decision-maker ruling not yet run. Given DP2 already assigns this
+  gap there, and Task 1.1's own "must not touch" boundary forbids editing
+  `submit_for_review`'s body, the correct disposition for *this* task is exactly what
+  happened: name the gap so the route's existence is never mistaken for FR-RATE-40
+  delivered, not silently implement it out of scope.
 
 ## Findings
 
 | Finding id | Concerns | Decision | Status |
 |---|---|---|---|
 | **pr371-task-brief-regression** | Vendored script's first patch (`9604fe3`) broke upstream's own heading format; the deviation note's "additive, unchanged for existing input" claim was false and unverified at the time it was written. | already fixed by the author same day (`5b82b18`), self-corrected in `.claude/skills/README.md` with root cause named; independently re-verified here with fresh test fixtures | resolved |
-| — | Routes, RBAC gating, the "must not touch" boundary, the `:513` citation, tests (7/7, genuinely), and the full gate — all independently verified with no further defect found | accept (proposed) | closed-with-findings (one, already resolved) |
+| **pr371-fr-rate-40-gap-reachable** | `submit_for_review` implements no evidence-completeness check; §5.1's route table already claims one for this endpoint. Pre-existing since Phase 1b/W7-3, but PR #371 makes the route reachable over real HTTP for the first time, so the gap is now live rather than moot. | accept — correctly out of Task 1.1's scope per DP2 (owned by Slice 2 Task 2.3); PR #371 now names it explicitly rather than leaving it implicit (proposed) | open, owner named (Task 2.3) |
+| — | Routes, RBAC gating, the "must not touch" boundary, the `:513` citation, tests (7/7, genuinely), and the full gate — all independently verified with no further defect found | accept (proposed) | closed-with-findings (two, both resolved/named) |
 
 ## Sign-off
 
 Not applicable — audit only. Verdict is the lead's, per `delivery-process.md` §6 step 6.
+Tree named throughout: PR #371 at `5b82b18` (unchanged since the first pass of this audit;
+only PR metadata, not code, moved between passes).
