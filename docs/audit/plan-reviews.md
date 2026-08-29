@@ -563,11 +563,9 @@ carries that finding rather than re-deriving a competing one.** FR-RATE-63 is a 
 gap**, not an orphan: nothing blocked it — FR-RATE-6 (sub-graphs) was W9-1's own delivery,
 and FR-RATE-63 is a `RatingVersion` pins-extension structurally identical to what W9-3 built
 for FR-RATE-60 in the *same* PR (#293). It was decided 2026-08-18, nine days before W9
-closed (2026-08-27) — not the one-day window first reported. #291, #292 and #293 all merged
-2026-08-27 (`git log`, converted to UTC — this repository's dates are UTC throughout, and a
-near-midnight commit's local-offset rendering reads as the next calendar day if taken at
-face value; caught here before filing, since a plan review's dates are exactly what later
-readers cite without rechecking). A week-plus window, not a same-day scramble: FR-RATE-60,
+closed (2026-08-27) — not the one-day window first reported (`git log`, UTC: #291 at
+2026-08-27T21:48Z, #292 at 22:42Z, #293 at 23:44Z, and W9's close commit `eb9b6a1` at 23:47Z
+the same day). A week-plus window, not a same-day scramble: FR-RATE-60,
 decided one day *before* FR-RATE-63, rode into #293 on that same merge, so the
 identical-shape sibling requirement had every opportunity to ride in beside it and did not.
 W9's own scope prose
@@ -766,6 +764,21 @@ already written, and the row was never re-checked against the section's current 
 > decided here. Landing the two individual fixes (above) does not close this half — the same
 > mechanism will fire a third time on some future row unless the check exists.
 >
+> **Reframed by the executor's reading of the mechanism, which sharpens the proposal rather
+> than replacing it:** a fact copied into free prose is corrected only where the tooling
+> structurally links the copy back to its source — the OQ mirror pair, which `audit-docs.py`
+> already enforces (check 4 proves a question is mirrored both ways; check 15 fixes the
+> register's own status vocabulary; check 23 requires each spec §10 row's status token to
+> match it). Everywhere a fact is merely *quoted* in passing rather than mirrored — a
+> requirement's rationale, a roadmap cell, a skills-map summary — nothing but a literal-text
+> grep across `docs/` can find every copy, so a correction fixes the location that prompted
+> it and every other copy survives, exactly as OQ-RATE-2's stale S2 figures did across six
+> locations. This repository has already built structural enforcement for exactly this
+> problem in one place; the fix is to extend that pattern to workstream-row ranges rather
+> than invent a new mechanism, or — short of that — to make a `docs/`-wide grep for the
+> figure or range a standing step of the correction procedure itself, not an ad hoc one this
+> review happened to run.
+>
 > **Maintainer acceptance:** _pending on the mechanical-fix proposal; the two individual
 > corrections are already live and need no acceptance line to bind._
 
@@ -840,7 +853,7 @@ holding it are the right ones.
 |---|---|---|
 | 3.1 | A short ZEN-evaluate-side concurrency spike, run at W11 evaluator-slice start | research |
 | 4.1 | W11's roadmap row corrected for FR-RATE-64 | docs — **landed, PR #314** |
-| 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only | tool or convention |
+| 4.2 | Workstream rows cite the spec section as the row of record, range as gloss only; extend the OQ-mirror pattern (`audit-docs.py` checks 4/15/23) to it, or make a `docs/`-wide grep a standing correction step (executor's reframing) | tool or convention |
 | 4.3 | NFR-RATE-14 gains a dated amendment reconciling the 1.09 ms / 1.626 ms figures | spec — **landed, PR #314** |
 | 5.1 | **No re-cut** of Phase 2's W11-W14 boundaries; FR-RATE-34/40 get named deferrals inside W11's own plan | plan — no change |
 
