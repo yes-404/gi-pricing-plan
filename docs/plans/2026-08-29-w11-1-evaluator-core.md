@@ -87,7 +87,8 @@ is accepted when **all five** hold, each by a command a fresh reviewer can run:
 
 1. **A real Rating Version can be created, submitted and compiled entirely over HTTP**, and
    the compiled `Bundle` — graph *and* resolved payloads, not only its metadata — is
-   retrievable afterwards from the blob store by its content hash.
+   retrievable afterwards from the blob store by its content hash, **with the payloads
+   carrying the artifacts themselves rather than references to them** (Ruling 7).
 2. **`score_one` prices that Bundle.** `await score_one(load_bundle(bundle), ctx)` returns a
    `ScoringResult` whose `premium_ladder` reconciles to `payable_premium_minor` to the
    penny, on generated contexts rather than one example (NFR-RATE-8).
@@ -853,6 +854,10 @@ silently drops its graph is exactly the failure this task exists to prevent, and
   header; polling the Job to completion yields a `JobResult(kind="blob", ...)`.
 - The persisted `Bundle` round-trips with a non-empty `graph` and `resolved_payloads`, and
   a `content_hash` equal to what `compile_bundle()` produced in-process.
+- **`resolved_payloads` carries each pinned artifact itself, JSON-round-trippable — never a
+  blob reference** (Ruling 7). Proven by parsing the persisted JSON back and finding the
+  booster content in it, not a `sha256`: Task 1.3's `load_bundle` performs no I/O, so a
+  reference here is unreachable there.
 - The "before" failure was observed with its documented detail string, per Step 2.
 
 **Must NOT touch.** `compile_bundle()` itself (`compile.py:387`). Ruling 3 already settled
@@ -1041,7 +1046,18 @@ covering both.
 - `load_bundle` on a `Bundle` from the real compile path yields a `CompiledBundle` whose
   handle evaluates the graph to a known expected result.
 - `CompiledBundle` is provably not serialisable, and is not a `BaseModel`.
-- NFR-RATE-4 measured and written down, both halves.
+- **Exactly one booster deserialisation across N scorings against one `CompiledBundle`, not
+  N** — and the test **written to fail first** against today's per-call load (Ruling 8).
+- **`CompiledBundle` exposes the `content_hash` of the `Bundle` it was loaded from**
+  (Ruling 10) — without it FR-RATE-51's "either the old or the new bundle, never a mix"
+  is unverifiable at runtime and W14 has no switch mechanism left.
+- **`load_bundle` is pure with respect to the cache** (Ruling 10): consults no cache,
+  registers itself in no global, starts no background task. `lint-imports` staying green is
+  the mechanical half — `pricing_core` may not import `redis` at all.
+- **The loader's signature appended to `../specs/02-modelling.md` §5.2 in the same commit**
+  (Ruling 8's standing obligation).
+- NFR-RATE-4 measured and written down, both halves, the size on the **serialised** form
+  (Ruling 7).
 - `to_jdm`/`JdmGraph` docstrings no longer claim to produce the engine's shape.
 
 **Must NOT touch.** `Bundle` itself. W9's DP1 settled what it is; this task builds the
@@ -1290,7 +1306,23 @@ prevents the service starting" since W9 and nothing has enforced it.
 
 - [ ] **Step 16: full gate, both halves, then commit.**
 
-**Acceptance** — every item above, plus: `NFR-RATE-1` measured *component-level only*.
+**Acceptance** — every item above. Five of them are ruling-derived and are named here rather
+than left for a reader to reconstruct from sixteen steps, because the acceptance block is
+what an audit checks against:
+
+- **Two** constraint declines give `outcome: "declined"`, `len(decline_reasons) == 2`, and a
+  ladder that still reconciles (Ruling 9 — a one-decline test passes under both readings).
+- FR-RATE-63's refusal parametrised over **both** `mid_term_adjustment` **and**
+  `cancellation` (Ruling 12).
+- The five-member `purpose` enum in `model-schema` **and** `scoring.schema.json:12`
+  corrected, in the same commit (Ruling 12).
+- **Four** codes in `RATING_ERROR_CODES`, and `score_one` raising a code-named `ValueError`
+  via `_raise_named` — **never `PlatformError`**, which `pricing-core` cannot import
+  (Ruling 11). `lint-imports` staying green is the mechanical proof.
+- NFR-RATE-14 measured **including DMatrix construction, on an already-loaded booster** —
+  W8's own shape, or the number is not comparable to the 1.626 ms it is checked against.
+
+Plus: `NFR-RATE-1` measured *component-level only*.
 `score_one`'s in-process latency is not a substitute for the sustained-load, ASGI-embedded
 measurement `NFR-RATE-1` actually names (`03:777` — p99 < 50 ms at **200 rps per replica**).
 That is Slice 2's Task 2.1, and `zen-evaluate-concurrency.md` is explicit that no such
@@ -1338,6 +1370,9 @@ measurement, including the separately-named sustained-200 rps test
   comfortably inside a budget and a number sitting on it are different findings, and only
   the distribution distinguishes them.
 - The result is a dated note in `docs/research/`, not terminal output that scrolls away.
+- **Not a CI gate**, and **no `locust`, `k6`, `hey` or `wrk` reaches any `pyproject.toml`,
+  `uv.lock`, CI workflow or setup instruction** — Ruling 6's own acceptance test, stated as
+  the violation that would override it.
 
 ---
 
@@ -1388,6 +1423,29 @@ Tasks 1.1–1.5 as **five sequential slices with the frozen map unedited** and r
 this applies the process's granularity to the plan's tasks rather than re-cutting them — so
 it is not a replan. A planner supplies options and a recommendation and rules none of them
 (`delivery-process.md` §3).
+
+**8. Re-derived against every ruling, and the second pass found a layer the first missed.**
+The first correction pass fixed six *operative sites* — Files lists and numbered Steps —
+after the decision-maker found one. The lead then asked for the full re-derivation rather
+than the sites found, which is what surfaced the real shape of the defect: **no
+ruling-derived check had reached any of the five Acceptance blocks.** Rulings 7, 8 and 10
+existed only in Task 1.3's obligations prose; an auditor checking that task against its
+Acceptance block would have passed a build that violated Rulings 8 and 10 outright, because
+neither the one-deserialisation test nor the cache-purity property was written where an
+audit looks.
+
+The method, so the next re-derivation is reproducible rather than re-invented: for each
+ruling, take its binding claims and grep **its own subject** — not the section that
+discusses it — across the whole document, then check the four site classes separately
+(narrative, **Files**, **Steps**, **Acceptance**), because a claim can be present in one and
+absent in the next three. Running that sweep is what produced the table above; reading the
+plan through would not have, since the plan agrees with itself by construction
+([`README.md`](README.md) rule 3, one level up).
+
+That is now `README.md` rule 5. It was written from the first pass, which is why it named
+Files and Steps and not Acceptance — the rule was itself an instance of the defect it
+describes, generalised from the sites in hand rather than from the class. The Acceptance
+layer is folded into it in this same commit.
 
 **7. Written against `7b8473a`, revised once before freeze.** The evidence sweep, every
 line number and the five live engine measurements are at `7b8473a`. PR #368 landed six

@@ -117,16 +117,24 @@ has no context to check it against.
 
 5. **Apply a ruling at every site it operates, not only where the plan discusses it.** A
    ruling that arrives mid-write gets revised into the paragraph explaining the design —
-   which is where you were already thinking about it — while the **Files** lists and
-   numbered **Steps** an executor actually works from keep saying what they said before.
-   Those are the half that gets implemented. Six sites in one plan on 2026-08-29: Ruling 7's
+   which is where you were already thinking about it — while the **Files** lists, the
+   numbered **Steps** an executor works from, and the **Acceptance** block an auditor checks
+   against all keep saying what they said before. Those three are the half that gets
+   implemented and the half that gets verified. **Check the four site classes separately** —
+   narrative, Files, Steps, Acceptance — because a claim can be present in one and absent in
+   the next three. Six sites in one plan on 2026-08-29: Ruling 7's
    *"the payload travels inside the `Bundle`, never as a reference"* landed in the task that
    summarised it, while the operative step one task earlier still said "the booster blob
    reference" — and Ruling 8's site still told the executor to tune the per-call booster load
    that ruling exists to delete. The two were mutually inconsistent and each looked fine in
    isolation. **Grep the ruling's own subject across the whole document; never re-read the
    section you just edited**, which agrees with itself by construction — rule 3, one level
-   up. The same test governs a measured figure: **a number carries the shape it was measured
+   up. **The first pass at this rule was itself an instance of it**: written from the six
+   sites in hand, it named Files and Steps and not Acceptance, and a second sweep then found
+   that *no* ruling-derived check had reached any of that plan's five Acceptance blocks —
+   an auditor would have passed a build violating two rulings outright. Generalise from the
+   class, not from the sites you happen to have found. The same test governs a measured
+   figure: **a number carries the shape it was measured
    in**, or the executor reproduces a different shape and compares it against your budget.
    The same plan cited `p99 1.626 ms` without saying it included DMatrix construction over an
    already-loaded booster; the predict-only figure beside it in the source is `0.308 ms`, and
