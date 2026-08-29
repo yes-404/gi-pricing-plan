@@ -14,6 +14,15 @@
     reporter; default cadence 30 minutes (proven reliable under current team size; faster
     cadences risk queue backlog if CronCreate serializes prompt execution; may be adjusted
     if the watcher can reliably meet it).
+    **UNIMPLEMENTED as of 2026-08-29 — build it or do not claim it (register F31).** The
+    script that occupied this slot derived nothing: it was a heredoc emitting a fixed roster
+    with only the timestamp substituted, so its last publish reported a member waiting on a
+    PR that had merged hours earlier and a `main` many commits stale, while looking fresher
+    the longer it was wrong. It has been removed rather than repaired, because it was a
+    placeholder that was never replaced, not a partial implementation. **A successor either
+    builds the derivation or amends this bullet — the one thing it must not do is inherit a
+    constant with a live timestamp**, and the reporter must not treat `roster-state.md` as a
+    source of truth until this says otherwise.
   - Poller silence watch (instance: balance poller; principle: silence is not success — a
     watch matching only the happy path is indistinguishable from a dead watch; failure
     paths must be part of the filter or the watch is broken). Report "poller silent" to
