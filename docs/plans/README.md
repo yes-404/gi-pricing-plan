@@ -64,7 +64,7 @@ Run `python3 scripts/audit-docs.py` before handing a plan off.
 
 ## The conventions the audit cannot check
 
-The four above are enforced; these four are not. The gate reads documents and never the
+The four above are enforced; these five are not. The gate reads documents and never the
 Python a document quotes, so every literal in a plan is taken on trust by an executor who
 has no context to check it against.
 
@@ -114,6 +114,23 @@ has no context to check it against.
    is unverifiable the moment it is sent"* — and a claim about an **open** PR is where it
    bites hardest, since that branch is moving while you read it. The rule was not missing
    here; it was not applied.
+
+5. **Apply a ruling at every site it operates, not only where the plan discusses it.** A
+   ruling that arrives mid-write gets revised into the paragraph explaining the design —
+   which is where you were already thinking about it — while the **Files** lists and
+   numbered **Steps** an executor actually works from keep saying what they said before.
+   Those are the half that gets implemented. Six sites in one plan on 2026-08-29: Ruling 7's
+   *"the payload travels inside the `Bundle`, never as a reference"* landed in the task that
+   summarised it, while the operative step one task earlier still said "the booster blob
+   reference" — and Ruling 8's site still told the executor to tune the per-call booster load
+   that ruling exists to delete. The two were mutually inconsistent and each looked fine in
+   isolation. **Grep the ruling's own subject across the whole document; never re-read the
+   section you just edited**, which agrees with itself by construction — rule 3, one level
+   up. The same test governs a measured figure: **a number carries the shape it was measured
+   in**, or the executor reproduces a different shape and compares it against your budget.
+   The same plan cited `p99 1.626 ms` without saying it included DMatrix construction over an
+   already-loaded booster; the predict-only figure beside it in the source is `0.308 ms`, and
+   reproducing the wrong one reads as five times the real headroom.
 
 **A missing neighbour is a scope finding.** Rule 3's fallback assumes there is something to
 mirror. Before writing sample tests for a module, grep its test file for the verb under

@@ -439,7 +439,7 @@ inside it — `../audit/plan-reviews.md` review 8 Q4 found that mechanism twice.
 | NFR-RATE-1 (component) | §9 | Tasks 1.4, 1.5 | Bare-metal p99 against the budget. The **full-path and sustained-load** halves are Slice 2's |
 | NFR-RATE-2 | §9 | Task 1.5 | Traced vs untraced p99 delta against the budget |
 | NFR-RATE-3 | §9 | Task 1.4 | DB and network blocked during `score_one`, and the test shown to fail with a deliberate DB call inserted |
-| NFR-RATE-4 | §9 | Task 1.3 | Compile time and Bundle size for a real large structure |
+| NFR-RATE-4 | §9 | Task 1.3 | Compile time and **serialised** Bundle size for a real large structure |
 | NFR-RATE-7 | §9 | Task 1.4 | Same hash + same context, twice, in-process and in a subprocess, byte-identical |
 | NFR-RATE-8 | §9 | Task 1.4 | `reconcile_ladder` over generated contexts, not one example |
 | NFR-RATE-14 | §9 | Task 1.4 | `nthread=1` on the real `model_call` path, p99 over ≥ 1000 calls. See F-W11-1-2 |
@@ -813,10 +813,16 @@ does — never a hardcoded `"approved"`.
 
 - [ ] **Step 4: replace the `model` branch's placeholder**
 
-Return the model's real content — coefficients for a GLM, the booster blob reference for a
-GBM — not `{"status": model.status}`. `ModelRow` is selected already; read what it stores
-and carry the fields `predict_glm`/`predict_gbm` need. Task 1.4 is the consumer; if a field
-it needs is missing here, that is this task's defect, not Task 1.4's.
+Return the model's real content — coefficients for a GLM, and for a GBM **the booster
+itself, carried inside the payload, never a reference to it** (Ruling 7). `resolved_payloads`
+is typed `dict[str, Any]` and the whole `Bundle` is persisted and cached as JSON, so the
+payload must survive a JSON round trip; raw `bytes` do not. The existing GBM path already
+produces a JSON-shaped artifact — `gbm.py:975` persists a booster as
+`bytes(booster.save_raw(raw_format="json"))` — so carry that, not a blob `sha256`.
+`ModelRow` is selected already; read what it stores and carry the fields
+`predict_glm`/`predict_gbm` need. **Task 1.3's `load_bundle` is the immediate consumer, and
+it performs no I/O** (Ruling 7), so anything it cannot reach from inside the `Bundle` is
+unreachable: a field missing here is this task's defect, not a later task's.
 
 - [ ] **Step 5: write the persistence round-trip test, then make it pass**
 
@@ -1023,7 +1029,11 @@ covering both.
 
 - [ ] **Step 6: measure NFR-RATE-4** — compile a real large motor structure once 1.1 and 1.2
       make one compilable, and record the wall time against the **< 60 s** budget and the
-      resulting `Bundle` size against **< 500 MB** (`03:780`).
+      **serialised** `Bundle` size against **< 500 MB** (`03:780`). Ruling 7 is explicit that
+      the budget is measured on the persisted form, not an in-memory estimate — and it flags
+      that text-encoding a booster spends headroom against Redis's own 512 MB value limit,
+      so a measurement landing near the cap is a finding against `NFR-RATE-4` rather than
+      against the ruling.
 
 - [ ] **Step 7: correct the two docstrings, run the full gate, commit.**
 
@@ -1136,11 +1146,23 @@ to `predict_gbm` or `predict_glm` on the booster hydrated by Task 1.3, with `nth
 - [ ] **Step 5: give `predict_gbm` a thread control (F-W11-1-2)**
 
 It has none today, and neither does `predict_glm`. Add a keyword-only
-`nthread: int | None = None` to `predict_gbm` and apply it to the booster it constructs —
-**not** a process-wide environment variable, which would silently change the fit path's
-behaviour too. Then measure: p99 over ≥ 1000 calls, against NFR-RATE-14's amended figure of
-**p99 1.626 ms** on the verification machine (the row's 2026-08-27 W8 amendment; the
-original S2 figure of 1.09 ms is superseded and citing it would be citing a struck number).
+`nthread: int | None = None` to `predict_gbm` and apply it **to the booster Task 1.3's
+loader hydrates once — never to a per-call construction.** Ruling 8 makes that per-call load
+the defect; this step must not re-entrench it. Not a process-wide environment variable
+either, which would silently change the fit path's behaviour too.
+
+**Then measure, in the shape the budget was measured in.** NFR-RATE-14's amended figure is
+**p99 1.626 ms, `nthread=1` *including* DMatrix construction**, over 1000 iterations of one
+**already-loaded** booster scoring a single row (`docs/research/w8-spike-resolution.md
+:70-79`; the row's 2026-08-27 W8 amendment — the original S2 figure of 1.09 ms is superseded
+and citing it would be citing a struck number). Reproduce that shape: booster loaded once
+outside the loop, DMatrix built inside it. Ruling 8's seam amortises the booster *load*;
+DMatrix construction is genuinely per-quote and stays in the number.
+
+**Two ways to get a meaningless number here, and each looks plausible.** Load the booster
+inside the loop and the p99 lands far above 1.626 ms — reading as a failure of a budget the
+shipped path meets, because W8's reference was measured with the load outside. Measure
+predict-only and it lands near W8's **0.308 ms** — reading as five times the real headroom.
 
 - [ ] **Step 6: the typed per-quote errors (FR-RATE-38)**
 
@@ -1294,7 +1316,8 @@ measurement, including the separately-named sustained-200 rps test
 (`docs/roadmap.md:146`), is **Slice 2's Task 2.1**.
 
 **Files**
-- Create: `scripts/bench-rating.py`, following `scripts/bench-model.py` and
+- Create: `scripts/bench-rating.py` — **stdlib-only** (Ruling 6), following
+  `scripts/bench-model.py` and
   `scripts/bench-data.py`. Their shared rule, verbatim from `bench-model.py:6-11`:
 
 > Not a CI gate. A timing assertion on a shared runner fails for reasons that have
