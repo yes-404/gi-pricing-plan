@@ -7,6 +7,12 @@ description: Audit a workstream (W1, W2, …) before declaring it closed in docs
 
 `CLAUDE.md` §13 is the standard. This is how to satisfy it.
 
+**This skill closes a workstream against §13; it does not by itself raise `CLAUDE.md`
+§14's phase review question.** That trigger is fixed, not discretionary — at each
+workstream close, and again before a phase's exit demo — and satisfying §13 here does
+not satisfy §14. Confirm with the planner whether a phase review (the
+[`phase-review`](../phase-review/SKILL.md) skill) is now due before signing off.
+
 The failure this guards against is not "we forgot a task". It is a roadmap that reports
 progress the repository does not have — which is worse than no roadmap, because the next
 workstream is planned against it.
