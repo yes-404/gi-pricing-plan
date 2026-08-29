@@ -55,7 +55,19 @@ Four conventions, each of them a check that will otherwise fail:
    the id a plan intends to *take*, which the audit accepts only after a `Next free:`
    marker, as in — "Highest ids in use: FR-DATA-52. Next free: `FR-DATA-53`". The exemption
    covers the rest of that line only; an undefined id before the marker, or on any other
-   line, still fails.
+   line, still fails. Two consequences that have each cost a red gate, both on
+   [`2026-08-29-w11-slices-2-4-planning-readiness.md`](2026-08-29-w11-slices-2-4-planning-readiness.md)
+   within one session:
+   - **"Rest of that line" means the *physical* line, so the marker and the ids it exempts
+     must not be separated by a wrap.** A paragraph that hard-wraps between `Next` and
+     `free:`, or right after `Next free:`, leaves the ids on a line carrying no marker and
+     the audit rejects them as undefined. Give the sentence its own line rather than
+     trusting the fill to land somewhere harmless.
+   - **A failure message naming an undefined id cannot be quoted literally.** The audit
+     prints the id it rejected, so pasting its output into the plan — a verification
+     section recording that the gate was seen to fail is the natural place — re-creates the
+     condition on a line with no marker on it. The fix for the first bullet re-broke the
+     gate this exact way. Describe what the message named; do not reproduce it.
 3. **Markdown table rows must match their header's cell count.** A literal `|` inside a cell
    shifts every column after it while still rendering, so escape it as `\|`.
 4. **Every `ADR-NNNN` you cite must have a file** in [`../adr/`](../adr/).
