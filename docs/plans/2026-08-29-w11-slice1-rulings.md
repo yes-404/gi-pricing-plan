@@ -621,10 +621,15 @@ contract on disk (`docs/contracts/schemas/rating-algorithm.schema.json`,
   expired when W9 and W10 built the types.
 
 So three shipped `model-schema` types have hand-authored contracts that **nothing has ever
-compared them against**, and the exclusion that permits it now misdescribes why. That is not
-a latent risk; it is the identical mechanism that produced the `purpose` divergence this
-ruling exists to correct, already in place three more times. `scoring` would have been the
-fourth had Task 1.4 landed without obligation 4.
+compared them against**, and the exclusion that permits it now misdescribes why. `scoring`
+becomes the fourth the moment Task 1.4 lands without obligation 4.
+
+**Corrected with the paragraph above, and for the same reason:** the first filing of this
+finding called it *"the identical mechanism that produced the `purpose` divergence, already
+in place three more times."* It is not identical. This is the **contract-versus-code** gap;
+`purpose` is the **spec-versus-contract** gap. They are siblings — the third finding below is
+the parent both belong to — and running them together is what made the overstated claim above
+sound reasonable when it was written.
 
 Not proposed for fixing here: whether W9's and W10's closes should be reopened for it, or
 whether it becomes a register row with an owner, is a scope question for the lead and the
