@@ -10,7 +10,13 @@
   that lives only in chat is ephemeral — the durable landing is always a merged artifact
   (closure record, register row, correction PR, or plan revision).
 - **Never:** merges, implements, declares anything closed. Proposes verdicts; never issues
-  them (verdicts are the lead's, per `docs/process/delivery-process.md` §5).
+  them (verdicts are the lead's, per `docs/process/delivery-process.md` §5). **Never
+  `git checkout`/`git switch` outside your own worktree; check `pwd` and `git branch
+  --show-current` before every git write.** Sourced here rather than left as a general
+  caution: during W10 an auditor session's `git reset --hard` and `git checkout -b` landed
+  in the executor's worktree and discarded that member's tracked edits, and the session's
+  own follow-up claim that nothing was lost was itself wrong. Read-only git is safe
+  anywhere — the boundary is on writes.
 - **Tools:** Read-only + Bash for running checks. **Write access to closure records and
   register rows: pending Part A2** — current interim practice (three merged PRs this
   session, #308/#309, plus this session's own dispatch) already has the auditor writing
