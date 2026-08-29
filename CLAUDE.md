@@ -197,8 +197,8 @@ pnpm --dir frontend test && pnpm --dir frontend build
 ## 12. Skills
 
 Project procedures live in `.claude/skills/`, versioned with the repo. **Its `README.md` is
-the index**, `.claude/agents/README.md` the same for the delegable specialists,
-`.claude/roles/` for the team roles. **This section keeps no second list**
+the index**, `.claude/agents/README.md` the same for the delegable specialists; team roles
+are the `.md` files directly under `.claude/roles/`. **This section keeps no second list**
 ([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md)).
 
 - **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
