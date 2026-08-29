@@ -191,6 +191,34 @@ the branch's own files as additions. That reads as "not merged" for a branch tha
 fails safe but for the wrong reason, and the next move after a misread is usually `-D`
 anyway.
 
+**A file count is ambiguous unless it names its measure, and a deletion decision needs the
+right one.** Checking whether a branch is safe to delete can produce three different file
+counts, disagreeing in both number and membership — found recovering a stranded commit
+(`c78a051`, #337, #340):
+
+- **Files the branch touches**, vs. its own merge-base: four.
+- **Files that still differ from the squash commit**, scoped to those same four: three —
+  one of the four landed clean and matches exactly, byte for byte.
+- **An unscoped diff against current `origin/main`**: four again, but a *different* four —
+  main had moved since the branch forked, so a file the branch never touched at all (a
+  `docs/plans/` record that grew afterward) shows up purely from drift.
+
+None of the three is interchangeable with the others, and only one answers the question a
+deletion decision is actually asking: **the file-scoped diff against the squash commit** —
+"is anything left over," not "what did the branch once touch" or "what differs from main
+today." Name that scope whenever a file count backs a deletion decision; an unnamed count
+means nothing (`CLAUDE.md` §13's rule for a reference — a count carries the corpus it
+counted over — applies here too, in the one place getting it wrong deletes work).
+
+**Even the right measure only tells you *that* the sides disagree, never *how much* of the
+branch's own content is missing.** Reading the three hunks in this case, two of the
+"differing" files turned out to carry nothing from this branch at all — an unrelated row
+changed by a different, later commit in one, an unrelated citation added by an earlier PR
+from this same session in the other. Only the third file, where the branch's own two
+commits happened to touch the identical row, carried this branch's real, still-missing
+change. **Read every hunk a file-scoped diff surfaces — a file's presence in the list
+proves something differs, never that the difference is this branch's own.**
+
 ### `ExitWorktree` refuses for the same reason, and says something scarier
 
 Removing a worktree whose branch was squash-merged is refused:
@@ -339,6 +367,16 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the file-count-measurement entry added, found recovering the stranded-push
+race's own actual casualty.** Checking whether the dead branch behind `c78a051` was safe to
+delete produced three different, all-correct file counts depending what was actually being
+measured (touched-by-branch, differing-from-squash-scoped, differing-from-current-main-
+unscoped) — a first framing treated two of these as a right-answer/wrong-answer pair before
+a second look showed neither was wrong, only unnamed. Corrected before landing rather than
+after: the measurement point survived, the "someone miscounted" framing did not — recording
+which number was wrong would have taught the next reader to check arithmetic instead of
+naming a measure, which is not what actually went missing here.
 
 **2026-08-29 — the stranded-push race added, found live during this same adoption's own
 filing.** A PR was merged by the reviewer while the author was still pushing a follow-up
