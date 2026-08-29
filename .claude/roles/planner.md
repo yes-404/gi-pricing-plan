@@ -39,4 +39,7 @@
   not extend to the rest of `docs/audit/` — `register.md`, `closure-records.md`, and the
   `checklists/`/`work/`/`phases/` trees are the auditor's or close-workstream's, not named
   here. A roadmap-row correction or other `docs/` edit surfaced inside a plan review is a
-  proposal in the review document, applied by the lead or decision-maker.
+  proposal in the review document, applied by the lead or decision-maker. **May create or
+  update a skill under `.claude/skills/`** — plan-writing and citation conventions most
+  often, the class `writing-plans` already exists to hold — per `CLAUDE.md` §12, with
+  `.claude/skills/README.md` updated in the same commit.

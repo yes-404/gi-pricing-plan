@@ -33,6 +33,10 @@
   disposition. A decision genuinely outside an identified decision point — a new capability,
   a phase question, anything `CLAUDE.md` §0's table does not already route to "inside the
   current phase's scope" — is still the planner's or the lead's, not this role's.
+  **May create or update a skill under `.claude/skills/`** — ruling-record and
+  citation-verification traps most often, the kind `adr-write` and `git-hygiene` already
+  exist to hold — per `CLAUDE.md` §12, with `.claude/skills/README.md` updated in the
+  same commit.
 - **Mandatory skills:** `.claude/skills/spec-change` before any `docs/specs/` edit;
   `.claude/skills/git-hygiene` for every branch, commit, and PR this role opens — the
   stranded-push and `gh pr edit` traps it documents were both hit by this role's own PRs

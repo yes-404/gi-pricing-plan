@@ -23,7 +23,8 @@
     output.
   - Does NOT nudge on staleness — that is the reporter's freshness mechanism alone.
 - **Owns (agent):** judgment on ambiguous anomalies and the written signal to the lead.
-- **Never:** dispatches stand-ins, touches the repo.
+- **Never:** dispatches stand-ins, touches the repo — including `.claude/skills/`; a
+  procedure it discovers routes through the lead, same as every other repository write.
 - **Built:** not by `docs/plans/2026-08-29-nt-0010-0011-adoption.md` — see
   `docs/process/delivery-process.md` §13 for the mechanism this file describes, and that
   plan's Task 6 for why the script itself is deliberately deferred.
