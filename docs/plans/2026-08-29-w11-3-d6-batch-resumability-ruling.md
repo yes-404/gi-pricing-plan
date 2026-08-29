@@ -334,3 +334,58 @@ The age-based sweep for orphaned scratch (§4) belongs with the same work.
   [`../open-questions.md`](../open-questions.md) mirror row and no
   [`../roadmap.md`](../roadmap.md) §10 gate row. **D6 is a decision point, not an open
   question** — the treatment DP1, DP2 and D2–D5 each received.
+
+---
+
+## Addendum to Ruling 31, filed 2026-08-29 after `9942800` — two citation errors in §1 and §6
+
+**The decision is unchanged. Two of its citations were wrong, and the correction to one of
+them strengthens the ruling rather than weakening it.** Raised by the lead as **F-W11-3-1**
+(`2026-08-29-w11-3-batch-scoring.md`, merged `02679d0`), which caught the first; the second is
+this role's own and was found while verifying the first. The original text above is left
+standing — this addendum is the correction, per `CLAUDE.md` §2.
+
+**Error 1 — the test precedent does not exist.** §6 says the resumability test drives the
+handler directly, *"which is both the level the manifest lives at and how
+`backend/tests/test_worker.py` already exercises handlers."* **It does not.** That file calls
+`execute_job(database, job.id)` throughout — 17 call sites at `9942800` — and never invokes a
+handler function itself. Its handlers are locally defined fakes registered into `HANDLERS` and
+then driven through the lifecycle.
+
+*How the error was made, since that is the reusable part.* The file's own docstring reads:
+*"`execute_job` is exercised **directly** rather than through a broker: the lifecycle is the
+behaviour worth testing."* **"Directly" there means without Celery and Redis — not at handler
+level.** The word was read on the wrong axis. A qualifier like "directly" only means something
+against a stated alternative, and that docstring states its alternative explicitly.
+
+**Error 2 — the guard was attributed one level too high.** §1 says *"`run_job` transitions the
+Job to `RUNNING` before calling the handler, and guards its own entry"*, and §6 says the test
+*"must not go through `run_job`"*. Both should name **`execute_job`**
+(`backend/src/app/worker/tasks.py:79`), which is where the `QUEUED` guard and the `RUNNING`
+transition actually live.
+
+`run_job` is not a phantom — it exists at `tasks.py:266`, but it is the **Celery task**,
+`@celery.task(name=TASK_RUN_JOB)`, whose own docstring calls it *"Adapter: bind the trace, then
+run the lifecycle"*, and the module docstring says *"the task is a five-line adapter and this is
+where the behaviour lives."* So §1's described behaviour is correct and reaches the guard
+transitively; only the attribution is wrong. **§6's instruction should read "must not go through
+`execute_job`"**, because that — not the Celery task — is the level a test would realistically
+call, and the level the existing suite does call.
+
+*How this error was made.* The body was read with `sed -n '80,140p'`, starting one line below
+the `def` at `:79`. **Reading a function's body without its signature line yields correct
+behaviour attached to a guessed name** — the guard's code was quoted exactly and its owner
+named wrongly in the same paragraph.
+
+**Why Error 1's correction strengthens §1.** The claim that failed was a *precedent* claim, and
+its failure is itself evidence. **There is no precedent in this repository for invoking a
+handler directly, because nothing in this platform has ever needed to run the same Job twice** —
+which is precisely what §1 ruled. The missing neighbour is corroboration, and by
+[`README.md`](README.md)'s *"a missing neighbour is a scope finding"* it belongs in the Slice 3
+plan's scope section: the resumability test is writing a new test shape, not following one.
+
+**What an executor should take from this.** §6's operative instruction stands unchanged in
+substance — the resumability test invokes the handler function itself, interrupts, and
+re-invokes with the same parameters, and must not route either call through `execute_job`,
+whose `QUEUED` guard would refuse the second. It is a new test shape for this suite. **The
+override conditions in §7 are untouched.**
