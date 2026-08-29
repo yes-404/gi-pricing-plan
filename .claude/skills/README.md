@@ -140,6 +140,22 @@ three conventions the audit cannot check. Nothing else in the four skills change
 `.superpowers/sdd/` nor `.planning/` moved, both still hold live scratch and both stay
 git-ignored.
 
+**Second deviation, 2026-08-29: `subagent-driven-development/scripts/task-brief` could not
+read this repo's own plan format.** Confirmed empirically (exit 3 on every task) before
+touching anything: this repo's `writing-plans` house pattern numbers tasks as `### 1.1 —
+Title` (`docs/plans/2026-08-29-w11-scoring.md`, citing `docs/plans/2026-08-22-w5-
+audit-remediation.md` as its precedent), grouping several tasks per `## Slice N` section in
+one file; upstream's script only recognised a heading containing the literal word "Task"
+followed by a bare integer, and had no rule to stop at a non-task heading, so the *last*
+task in a slice ran on into the next slice's content once the missing-word bug was fixed
+naively. Two changes to the vendored script, both additive (upstream's own `Task N` heading
+still matches unchanged): recognise `### N.M` headings too (regex-escaping the task
+number's `.` so `1.1` cannot match `1x1`), and end collection at any H1/H2 heading even when
+it is not itself a task heading — verified against Task 1.1 (stops before 1.2's heading),
+Task 1.5 (the last task in Slice 1; previously ran into `## Slice 2`, now stops at the `---`
+before it), and Task 2.1 (a task in a different slice section, to confirm the fix
+generalises rather than being fitted to one boundary).
+
 **Not installed: the SessionStart hook.** Upstream's plugin injects `using-superpowers`
 into every session through `hooks/hooks.json`. That is plugin configuration rather than a
 skill, it would run a command at the start of every session for anyone who clones this

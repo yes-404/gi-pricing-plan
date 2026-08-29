@@ -25,16 +25,33 @@ else
   out="$dir/task-${n}-brief.md"
 fi
 
-awk -v n="$n" '
+# This repo's own `writing-plans` house pattern (docs/plans/2026-08-29-w11-scoring.md
+# and its cited precedent docs/plans/2026-08-22-w5-audit-remediation.md) numbers tasks as
+# "### 1.1 — Title" rather than upstream's "# Task 1" — a heading with no literal word
+# "Task" at all. The original single-pattern match below silently exits 3 on every such
+# plan (confirmed empirically, not assumed, 2026-08-29). Recognise both conventions.
+# Regex metacharacters in the task number (the "." in "1.1") are escaped so they match
+# literally rather than "any character".
+n_re=$(printf '%s' "$n" | sed -e 's/[.[\*^$]/\\&/g')
+
+# A house-pattern plan groups several "### N.M" tasks under "## Slice N" sections in one
+# file (unlike a one-task-per-heading upstream plan), so the LAST task in a slice has no
+# following task heading to stop at — confirmed empirically: without the `##?[ \t]` rule
+# below, task 1.5's brief ran on through the "## Slice 2" boundary to the next slice
+# entirely. Any H1/H2 heading (never H3+, which is where tasks themselves live) ends
+# collection even when it is not itself a recognised task heading.
+awk -v n="$n_re" '
   /^```/ { infence = !infence }
-  !infence && /^#+[ \t]+Task[ \t]+[0-9]+/ {
-    intask = ($0 ~ ("^#+[ \t]+Task[ \t]+" n "([^0-9]|$)"))
+  !infence && (/^#+[ \t]+Task[ \t]+[0-9]/ || /^#+[ \t]+[0-9]+\.[0-9]+([ \t]|$)/) {
+    intask = ($0 ~ ("^#+[ \t]+Task[ \t]+" n "([^0-9]|$)")) \
+          || ($0 ~ ("^#+[ \t]+" n "([^0-9.]|$)"))
   }
+  !infence && /^##?[ \t]/ { intask = 0 }
   intask { print }
 ' "$plan" > "$out"
 
 if [ ! -s "$out" ]; then
-  echo "task ${n} not found in ${plan} (no heading matching 'Task ${n}')" >&2
+  echo "task ${n} not found in ${plan} (no heading matching 'Task ${n}' or '${n} —')" >&2
   exit 3
 fi
 
