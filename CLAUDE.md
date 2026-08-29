@@ -134,11 +134,12 @@ silent:
 
 ## 9. Roadmap — *the plan lives in `docs/roadmap.md`*
 
-**Phase 1b — Modelling Workbench is current.** Exit: `wf-01` end to end on freMTPL2.
-The phase list, workstream rows, closure records, decision gates, which workstreams are open
-and the retrofit-impossible list are written **only** there
-([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md) records the four times this
-file restated it). Two things change how you work rather than what is planned:
+The phase list, workstream rows, closure records, decision gates, the current phase and its
+exit criteria, which workstreams are open, and the retrofit-impossible list are written
+**only** there
+([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md) records this mechanism —
+this file restating phase or status content and the restatement going stale). Two things
+change how you work rather than what is planned:
 
 - **The retrofit-impossible foundations of `docs/roadmap.md` §5 landed in Phase 1a.** They
   are invariants to preserve, not work to schedule: regressing one is the same rewrite that
