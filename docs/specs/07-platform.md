@@ -113,7 +113,7 @@ The substrate every other module stands on:
 | **FR-PLAT-19** | Blobs are immutable and deduplicated: writing identical content is a no-op returning the existing reference (ID-4). |
 | **FR-PLAT-20** | Blob garbage collection is **reference-counted and conservative**: a blob is deletable only when no artifact references it and it is older than a configurable grace period (default 30 days). GC runs are audited and dry-runnable. |
 | **FR-PLAT-21** | Large uploads use presigned multipart URLs so dataset files do not transit the API process. |
-| **FR-PLAT-22** | **Redis** provides the Celery broker, the compiled rating bundle cache (`03` FR-RATE-51), and short-lived response caches. Nothing durable lives only in Redis — every cached value is reconstructible from PostgreSQL and the blob store. |
+| **FR-PLAT-22** | **Redis** provides the Celery broker, the rating `Bundle` cache (`03` FR-RATE-51, FR-RATE-65), and short-lived response caches. Nothing durable lives only in Redis — every cached value is reconstructible from PostgreSQL and the blob store. |
 | **FR-PLAT-23** | Backups: PostgreSQL continuous archiving with PITR (RPO ≤ 15 min, NFR-OVR-7); blob store versioning and replication. A documented, tested restore procedure is part of the deliverable, not an afterthought. |
 
 > *(Recorded 2026-08-27, W6b-23 — OQ-PLAT-11 decided 2026-08-26 (c).)* A stored artifact is

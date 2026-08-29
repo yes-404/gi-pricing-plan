@@ -344,6 +344,71 @@ the `model` branch and raises `NOT_FOUND` unconditionally for `rate_table` refs 
 Phase-2 comment. No realistic Rating Version compiles today regardless of sync/async or
 `CompiledBundle`. Same W11 slice-1 prerequisite named in Ruling 2; not a separate ruling.
 
+**Addendum, filed later the same day: Ruling 4's own disposition undersold itself, and its
+evidence search had a hole in it.** Found while checking, ahead of this team's stand-down,
+where a fresh session would actually find each ruling — the trigger and the standard are
+`CLAUDE.md` §13's "a reference that resolves only for the writer"
+(`.claude/notes/0004-a-reference-that-resolves-only-for-the-writer.md`).
+
+*The disposition gap.* "No spec change" (above) was correct about the bare name — `03` §5.2
+already said `CompiledBundle` before this ruling — but the bare name pre-existing is not the
+same as the *contract* pre-existing, and the contract (a distinct type, a hydration step,
+never itself serialised) existed only in this record. Corrected: **`FR-RATE-65`**, filed in
+`03-rating-engine.md` §3.4 alongside `Bundle`'s own `FR-RATE-24`/`FR-RATE-25`, not as a new
+§4 data contract — `Bundle` has no §4 entry either, so a `CompiledBundle` one would be a new
+pattern, not a fix.
+
+*The evidence-search gap.* This ruling's own search was `git grep -n CompiledBundle` — one
+word. `03-rating-engine.md:67`'s glossary spells the concept "Compiled Bundle" — two words —
+and could not have matched. That entry, and `:756`'s §8 tech-dependency row, both said the
+*loaded, execution* form is what Redis caches, keyed by content hash — the opposite of what
+this ruling concluded (Redis caches plain `Bundle`; the loaded form is per-worker only,
+never Redis-round-tripped, because a native engine handle does not usefully survive a
+round-trip into a different process). Both predate this ruling by two weeks
+(`f8704bb9`, 2026-08-14, the original spec-authoring commit) — read as "compiled" used as a
+plain adjective on "bundle," from before the two-tier split existed to need two names.
+
+**Ruled (lead, on the decision-maker's proposed reading): the glossary and §8 are wrong,
+Ruling 4 stands.** The engineering settles it independent of the dating evidence: serialising
+a loaded engine handle and boosters into Redis and reconstructing them in another process is
+precisely what `Bundle` already is for, so a spec describing Redis holding the loaded form
+describes a round trip with no purpose.
+
+**Condition on the fix, attached to the ruling and not optional: search the concept, not the
+identifier, before touching any one location.** A single fresh grep for the one-word
+identifier is exactly the search that missed this the first time. Swept `"compiled bundle"`
+(case-insensitive), `"execution form"`, `"cached in redis"`, and `"bundle cache"` across
+`docs/`. Found and fixed, both carrying the same claim as `:67`/`:756`:
+
+- `03-rating-engine.md:67` (glossary) — retargeted to the per-worker, not-Redis-cached
+  reading, citing `FR-RATE-65`.
+- `03-rating-engine.md:756` (§8) — "Compiled bundle cache" → `` `Bundle` cache ``.
+- `07-platform.md:116` (`FR-PLAT-22`) — a location outside `03-rating-engine.md` entirely,
+  which no version of the pre-swept location list named: "the compiled rating bundle cache"
+  → "the rating `` `Bundle` `` cache", citing `FR-RATE-65` alongside the existing
+  `FR-RATE-51`. Crosses into a second spec module because `07`'s own text had independently
+  picked up the same imprecision by citing `03`'s Redis row, not because this ruling reopens
+  anything about the platform module itself.
+
+Checked and left alone, because the claim they carry does not assert a caching location and
+so is not the contradiction being corrected: `FR-RATE-51`, `NFR-RATE-6` (`03`, both already
+say plain "bundle"), `03-rating-engine.md:722` and `07-platform.md:432` (both "bundle cache",
+not "compiled bundle"), `docs/skills-map.md:94`'s Redis row (names "500 MB bundles" —
+plain "bundle" throughout, already consistent with this ruling despite being the row the
+sweep was specifically asked to check). Also noticed and deliberately **not** fixed here,
+flagged rather than silently expanded into: `FR-RATE-24`/`NFR-RATE-3` say a `Bundle` "is
+sufficient to score with no database access," which conflates "contains everything scoring
+needs" (true) with "is itself what executes" (imprecise — `score_one` takes `CompiledBundle`,
+`FR-RATE-65`) — a real but softer, different imprecision than the Redis-caching claim this
+addendum corrects, and out of the scope the sweep was asked to close. Also left alone as
+either generated (`docs/contracts/**`, never hand-edited) or historical/frozen
+(`docs/audit/plan-reviews.md`, `docs/plans/2026-08-27-w9-rating-contract.md`, this record's
+own earlier text) — every remaining "compiled bundle" hit in `04-optimisation.md`,
+`07-platform.md:165/432` and `wf-04-deploy-and-monitor.md` uses the phrase as loose prose for
+plain `Bundle`, consistent with `FR-RATE-24`'s framing, not a Redis-location claim.
+
+`python3 scripts/audit-docs.py` re-run clean on this delta (below).
+
 ## Ruling 5 — `score_one`'s real-time path: `async_evaluate()`, not `evaluate()` + executor offload; and whether §5.2's sync convention is itself the defect
 
 **The finding, precisely, and its evidence.** `docs/research/zen-evaluate-concurrency.md`
@@ -463,3 +528,15 @@ in `scripts/audit-docs.py`'s FR-OVR-17 check), verified as a real positive/negat
 failed with the spec corrected and the old regex in place, and passed once the regex was
 fixed — never asserted clean without having first seen it red. One skill addition (Ruling
 5's verification-step rule in `.claude/skills/spec-change`).
+
+**Addendum verification, filed later the same day.** Four more spec edits, across two
+files, land with the addendum above: `03-rating-engine.md` §2 (glossary), §3.4 (new
+`FR-RATE-65`), §8 (Redis row), and `07-platform.md`'s `FR-PLAT-22`. This is the one `FR-`
+id the paragraph above said this record introduced none of — correct as written at the
+time, superseded by the addendum, not corrected in place, per this file's own dating
+convention. `FR-RATE-65` re-derived as the next free id immediately before filing
+(`git grep -oE "FR-RATE-[0-9]+" docs/specs/03-rating-engine.md | sort -t- -k3 -n -u | tail
+-1` → `FR-RATE-64`, then confirmed absent everywhere in `docs/` by a direct grep, then
+independently corroborated by `docs/plans/2026-08-28-w10-rate-tables.md:13`'s own "Next
+free: FR-RATE-65" marker, written the day before and agreeing without having been
+consulted first). `python3 scripts/audit-docs.py` run clean on this delta.

@@ -64,7 +64,7 @@ Terms from `00-overview.md` §2.3 are used unchanged. Additional terms owned her
 | **Derived Value** | A named intermediate produced by a step and consumable by downstream steps. The DAG's edges are these name references, not hand-drawn arrows. |
 | **Rate Table Version** | An immutable version of one rate table. Rate tables version independently of the algorithm so a pure rate change does not require touching structure. |
 | **Bundle** | The serialised, self-contained artifact a Rating Version compiles to: algorithm + tables + model artifacts + reference slices + input contract. What gets deployed and cached. |
-| **Compiled Bundle** | The bundle transformed into its execution form (a ZEN JDM graph plus loaded tables and boosters), cached in memory and in Redis, keyed by bundle content hash. |
+| **Compiled Bundle** | The bundle transformed into its execution form (a ZEN JDM graph plus loaded tables and boosters), held per worker process once pre-warmed (FR-RATE-65). Not itself cached in Redis or content-hash-keyed — only `Bundle` is (FR-RATE-24, FR-RATE-51). |
 | **Golden Quote** | A named quote context with an expected premium, stored with a Rating Version. Golden quotes must reproduce exactly before promotion. |
 | **Regression Suite** | A collection of golden quotes plus property assertions (monotonicity, no-negative-premium, bounded relativity) run against a candidate Rating Version. |
 | **Dislocation Run** | Batch re-rating of a fixed portfolio under two Rating Versions, producing the distribution of premium change. |
@@ -136,6 +136,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-RATE-25** | Bundle compilation validates the whole structure: DAG acyclic and fully connected, all references resolvable and at a sufficient maturity (FR-OVR-14), all types compatible, all constraints satisfiable, no `control`-intent factor in a rateable path (`02` FR-MODEL-3), no unapproved custom objective transitively reachable. |
 | **FR-RATE-26** | A Rating Version declares its `effective_from` business date and optional `effective_to`, independent of when it is deployed. Scoring uses the version bound to the environment; the effective date is metadata for governance and monitoring, not a runtime selector — unless the deployment explicitly uses date-based routing (FR-RATE-31). |
 | **FR-RATE-27** | Rating Versions carry a required **change summary**: what changed versus the previous version, why, and expected impact. It is generated as a draft from the structural and rate-table diffs and edited by the actuary. |
+| **FR-RATE-65** | **`CompiledBundle` is a distinct runtime type, produced from a `Bundle` by a hydration step, never a rename of `Bundle` and never itself serialised.** It holds whatever the ZEN engine binding needs to execute the graph and any GBM boosters loaded from `resolved_payloads` into live objects. `Bundle` stays the plain, serialisable, content-hashed form that is compiled once, distributed, and cached in Redis (FR-RATE-24, FR-RATE-51); `CompiledBundle` is what pre-warming (FR-RATE-51, NFR-RATE-6) produces, held per worker process, and what `score_one`/`score_batch`/`dislocate`/`run_regression` actually take (§5.2). (Ruled 2026-08-29, `docs/plans/2026-08-29-w11-prework-rulings.md` Ruling 4.) |
 
 ### 3.5 Expression grammar in rating
 
@@ -753,7 +754,7 @@ OPT → RATE and DEP-1 is respected.
 | **Python `decimal`** | All monetary arithmetic (R2, FR-RATE-29) | Contexts, `ROUND_HALF_EVEN`, integer minor units, avoiding float contamination through JSON serialisation |
 | **Polars** | Batch scoring driver, dislocation aggregation, rate table storage in memory | Chunked lazy evaluation; joining portfolio rows to rate tables at scale |
 | **DuckDB** | Dislocation slicing and segment aggregation over scored parquet | Window functions for change-band distributions |
-| **Redis** | Compiled bundle cache keyed by content hash; hot-path lookup | Cache warming before an atomic deployment switch (FR-RATE-51) |
+| **Redis** | `Bundle` cache keyed by content hash; hot-path lookup | Cache warming before an atomic deployment switch (FR-RATE-51) |
 | **FastAPI** | The scoring endpoint on the latency path | Async request handling, response model overhead, avoiding Pydantic re-validation on the hot path |
 | **XGBoost / LightGBM** | `model_call` in `exact` mode | Booster load time, single-row prediction latency, thread pinning to avoid contention at 200 rps |
 | **hypothesis** | Property assertion generation (FR-RATE-44) | Strategies derived from an input contract; shrinking counterexamples an actuary can read |
