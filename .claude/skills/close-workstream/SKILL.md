@@ -34,6 +34,28 @@ uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8 \
 `@pytest.mark.req` markers. Both are documents; neither is your memory. It exits non-zero
 while anything in scope lacks evidence.
 
+**`--extra`'s comma list does not inherit a shared prefix — write every id out in full.**
+The parser is a literal `args.extra.split(",")`: `--extra FR-PLAT-47,48` does **not**
+expand to `FR-PLAT-47, FR-PLAT-48`. It produces the two tokens `FR-PLAT-47` and `48`, and
+`48` alone matches no real requirement — so the intended `FR-PLAT-48` is silently never
+added to scope at all, while the report shows a `NO EVIDENCE` row labelled `48` that reads
+as if it were about the missing id. It is not: nothing checked `FR-PLAT-48` itself. This is
+the same *silent* shape as `req-coverage.py`'s bold-coupling and clause-conflation
+failures — a row that looks like a real verdict on the id you meant. The total in-scope
+*count* usually still comes out right (one bogus token swapped in for one dropped id), so
+the headline number will not tip you off; only the id column will. Verified at
+`9891be1` (2026-08-29) by reading `scope-audit.py`'s parser source at that tree and
+re-running the command there: `RATE --sections 3.7 --extra
+FR-RATE-40,41,42,NFR-RATE-1,13,14` — the command as inherited from the prior audit at
+`74b1b10`, a different tree than the one this verification ran against — parses to
+`{FR-RATE-40, "41", "42", NFR-RATE-1, "13", "14"}`, not the six ids it reads as.
+Re-running with every id spelled out
+(`FR-RATE-40,FR-RATE-41,FR-RATE-42,NFR-RATE-1,NFR-RATE-13,NFR-RATE-14`) landed on the same
+13-in-scope / 0-evidenced headline only because *nothing* in `RATE` §3.7/§3.8/NFR had any
+marker at all that day — the substitution happened to be inert, not proven safe in
+general. Confirm any inherited `--extra` string resolves to fully-qualified ids before
+trusting its count.
+
 **Map the workstream's named areas to spec sections yourself.** "Platform core: jobs, blobs,
 settings, OIDC auth, health, tracing" is `07` §3.1, §3.2, §3.3, §3.7, §3.8 — 33
 requirements — plus FR-PLAT-47/48 for the API conventions and the generated contract, which
@@ -357,6 +379,19 @@ mapping.
 ```
 
 ## Verified
+
+2026-08-29 — the `--extra` comma-prefix trap in §0, found re-deriving W11's own baseline
+at tree `9891be1` (`scripts/scope-audit.py RATE --sections 3.7 --extra
+FR-RATE-40,41,42,NFR-RATE-1,13,14`, a command inherited verbatim from the prior audit at
+`74b1b10` — that SHA names only where the command came from, not where this entry's own
+reading and re-run were done). Confirmed at `9891be1` against the parser
+(`scope-audit.py`'s `args.extra.split(",")`, a literal split with no prefix inheritance)
+and by running both the as-given string and a fully-qualified version side by side, both
+also at `9891be1`: same
+13-in-scope / 0-evidenced headline, different (and for the as-given string, wrong) token
+set underneath. The headline agreeing is what made this easy to carry forward unnoticed —
+recorded so the next `--extra` list is written fully qualified from the start rather than
+re-discovered.
 
 2026-08-24 (second entry, at W32's close) — the empty-output gate section. Written from the
 control script actually run before the closure record was accepted: live **0**, positive
