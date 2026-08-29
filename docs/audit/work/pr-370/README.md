@@ -69,31 +69,44 @@ in prose, and quotes plan line numbers with the step text, not just headings.
   reflected in Task 1.4's operative Steps and Acceptance block, not merely narrated —
   independently re-derived, not taken from the lead's say-so.
 - **New finding — Ruling 12's addendum (obligation 4) is missing, not narration-only,
-  absent.** The addendum (`002f4d8`) adds a fourth obligation: register
-  `QuoteContext`/`ScoringResult`/`Trace` in `scripts/generate-contracts.py`'s
-  `GENERATED_SHAPES`, and lift `"scoring"` from `backend/tests/test_contracts.py`'s
-  exclusion list. Searched the full 1485-line plan for `GENERATED_SHAPES`, "exclusion",
-  and "obligation 4": zero hits. See finding `pr370-ruling12-addendum-missing` below —
-  directly relevant to PR #371's own contract-drift CI failure (see `pr-371`'s record):
-  Task 1.1's Acceptance block (plan:682) *does* correctly require "the contract regenerated
-  and committed" (so the plan is right here), but nothing names the `GENERATED_SHAPES`
-  registration Task 1.4 will additionally need — the same class of gap one task early.
+  absent.** **Correction to how this was first reported to the lead:** obligation 4's
+  substance is lifting `"scoring"` from `backend/tests/test_contracts.py`'s exclusion dict
+  (reason on file today: `"later-phase — 03 rating"`) — a **forward guard** against the
+  contract-vs-generated-code drift that becomes possible the moment Task 1.4 creates
+  `QuoteContext`/`ScoringResult`/`Trace` in `model-schema` (`...rulings.md:586-594`, `002f4d8`).
+  Registering those three shapes in `scripts/generate-contracts.py`'s `GENERATED_SHAPES` is
+  the companion action the same paragraph names (`...rulings.md:596-598`) — necessary, but
+  not itself what the addendum is *about*; leading with `GENERATED_SHAPES` in my first report
+  put the mechanical half in front of the substantive one. Searched the full 1485-line plan
+  for `GENERATED_SHAPES`, `test_contracts.py`, "exclusion": zero hits — both halves of
+  obligation 4 are absent, not just the one I named first. Directly relevant to PR #371's own
+  contract-drift CI failure (see `pr-371`'s record): Task 1.1's Acceptance block (plan:682)
+  *does* correctly require "the contract regenerated and committed" (so the plan is right
+  there), but nothing in Task 1.4 names either half of obligation 4 — the same class of gap,
+  one task earlier. The rulings file separately reports (not rules — "the remedy is scope,
+  and scope is the lead's," `...rulings.md:607`) that three already-shipped `model-schema`
+  types (`RatingVersion`, `RatingAlgorithm`, `RateTable`) sit in the state obligation 4
+  prevents right now, unrelated to Task 1.4 — tracked elsewhere as F27 (task board #41), not
+  re-litigated here.
 - **Ruling 13 (`f318287`) correctly out of scope by timing**, not omission: it landed
   2026-08-29T15:27:56Z, 24 seconds after `786f21e` (2026-08-29T15:27:32Z). Noted without
   penalty; re-check once the plan has had a chance to incorporate it. The plan already
   names PR #375 for F-W11-1-5 ahead of that commit landing, which is itself worth a glance
   next pass, not asserted as a problem here.
-- **Discrepancy noted, not resolved here:** the plan's own self-review says **six** sites
-  were found narration-only-not-operative; the lead's message to this session said
-  **five**. Both cite the same underlying class of defect; which count is current/correct
-  is not something this pass adjudicates — flagged for reconciliation.
+- **Count mismatch, resolved by the lead, not by re-counting here:** "five" (the number
+  the lead first gave this session) was the lead's own count and had aged — the planner
+  found one more, filed as prose, after it was said. The plan's self-review's "six" is
+  current. Per the lead's own instruction following from this: **cite the enumeration
+  itself, never a bare count, for exactly this class of finding** — a number goes stale
+  the moment one more site is found or one is fixed, the list of sites does not. No site
+  is enumerated by number in this record for that reason.
 
 ## Findings
 
 | Finding id | Concerns | Decision | Status |
 |---|---|---|---|
 | **pr370-ruling12-not-reflected** | Task 1.4's `purpose`/`cancellation` handling (F-W11-1-1), found at `d40804d`: the plan named only Rulings 6-11 and Task 1.4 Step 1 said to leave `purpose` unresolved, even though Ruling 12 (same rulings file, same base commit) had already ruled it. | **fixed** between `d40804d` and `786f21e` (commits `d41f379`/`58e72a6`); re-verified at `786f21e` by reading Task 1.4's actual Steps/Acceptance, not by citation count | resolved |
-| **pr370-ruling12-addendum-missing** | Ruling 12's addendum (`002f4d8`, obligation 4 — register `QuoteContext`/`ScoringResult`/`Trace` in `generate-contracts.py`'s `GENERATED_SHAPES`, lift `"scoring"` from `test_contracts.py`'s exclusion) is not named anywhere in the 1485-line plan at `786f21e`. Directly relevant to PR #371's own contract-drift CI failure — the same class of gap, one task earlier: Task 1.1 correctly requires contract regeneration in its own Acceptance block (plan:682) and PR #371 skipped it anyway; Task 1.4 doesn't yet say the equivalent for `GENERATED_SHAPES`. | fix before merge (proposed — the lead's call) | open |
+| **pr370-ruling12-addendum-missing** | Ruling 12's addendum (`002f4d8`, `...rulings.md:586-598`) obligation 4 is lifting `"scoring"` from `test_contracts.py`'s exclusion dict — a forward guard against contract-vs-generated-code drift once Task 1.4 creates `QuoteContext`/`ScoringResult`/`Trace` in `model-schema`; registering those shapes in `generate-contracts.py`'s `GENERATED_SHAPES` is the companion action, not the obligation's substance (my first report to the lead named the companion action first — corrected here). Neither half is named anywhere in the 1485-line plan at `786f21e`. Directly relevant to PR #371's own contract-drift CI failure — the same class of gap, one task earlier: Task 1.1 correctly requires contract regeneration in its own Acceptance block (plan:682) and PR #371 skipped it anyway; Task 1.4 doesn't yet say the equivalent for either half of obligation 4. | fix before merge — the lead confirms this blocks #370 | open, blocking |
 | **pr370-s9-citation-shift** | Four `03-rating-engine.md` §9 NFR-budget citations used in Tasks 1.3-1.5 (`:777`, `:778`, `:780`, `:784`) shifted +4 lines when PR #368 edited §3/§5.1/§5.2 upstream of §9. The plan's own re-derivation disclaimer (plan:65-69) names only §3/§5.1/§5.2 as shifting, not §9 — an undisclosed casualty of the same edit. Each citation still sits beside its correct NFR- id and is re-derivable by grep (confirmed); no substance lost, pointer imprecise. | accept — re-derivable, not load-bearing (proposed) | open |
 | **pr370-fr-rate-22-cite-slip** | The *frozen* plan's own Task 1.1 text says to add the FR-RATE-22 citation at `03-rating-engine.md:512`; the citation already existed, at `:513` (verified directly — line 513 is the exact `POST /api/v1/rating-versions` row). Pre-existing in the frozen map, not introduced by PR #370; PR #371 (Task 1.1) correctly verified this directly rather than following the stale line number. | accept — pre-existing, not this PR's defect (proposed) | open, not owned by pr-370 |
 | **pr370-coldstart-provenance-nit** | The PR description's claim that "the 405/404 split... was verified against a running FastAPI app" is not evidenced inside the committed plan file itself, only in PR/GitHub metadata (which does not survive as a durable citation once the PR closes). The underlying causal reasoning (`models.py:1092` is the GET registration) is independently confirmed sound regardless. | accept — reasoning holds independently of where the empirical claim lives (proposed) | open |
