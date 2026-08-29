@@ -164,7 +164,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 | **FR-RATE-36** | **Batch scoring**: `POST /api/v1/score/batch` re-rates a Dataset Version against one or more Rating Versions as a Job, writing results to a new content-addressed parquet output with the quote key, ladder, and selected outputs per row. |
 | **FR-RATE-37** | Batch scoring is chunked, resumable, and progress-reporting, and uses the identical compiled bundle and code path as real-time scoring — never a separate "batch implementation" that could diverge. |
 | **FR-RATE-38** | Scoring errors are typed and per-quote: contract violation, reference miss, table miss, constraint decline, model failure. A batch run reports counts and samples per error type and does not abort on individual failures unless the failure rate exceeds a declared threshold. |
-| **FR-RATE-39** | A `decline` outcome from a `constraint` step is a **successful** scoring response with `outcome: declined` and reason codes — not an HTTP error. |
+| **FR-RATE-39** | A `decline` outcome from a `constraint` step is a **successful** scoring response with `outcome: declined` and reason codes — not an HTTP error. *(Amended 2026-08-29, W11 Slice 1: "reason codes" is plural because evaluation does not short-circuit. The whole DAG evaluates in topological order — FR-RATE-5 defines no early-exit primitive — so `decline_reasons` collects the `reason_code` of every firing constraint step and not only the first, which is what FR-RATE-11's "each ... appears ... in any decline response" requires; and `premium_ladder` stays populated through to `payable_premium`, reconciling under NFR-RATE-8, so a declined quote still reports what it would have cost. `docs/contracts/schemas/scoring.schema.json` already requires `premium_ladder` for every `outcome` including `declined` and types `decline_reasons` as `array<string>`; this amendment makes the requirement say what that contract already assumes. Ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 9.)* |
 
 ### 3.8 Trace, testing, and promotion evidence
 
@@ -537,7 +537,8 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 *(added 2026-08-28, W10-3C)*, `NO_RELATIVITIES`, `FILTER_UNKNOWN_KEY`,
 `FLOOR_ABOVE_CAP`, `REBASE_NO_MATCH`, `REBASE_AMBIGUOUS`, `REBASE_ZERO_REFERENCE`,
 `IMPORT_KEY_MISMATCH`, `IMPORT_TYPE_MISMATCH`, `IMPORT_PARSE_ERROR`
-*(added 2026-08-28, W10-3C)*.
+*(added 2026-08-28, W10-3C)*, `MODEL_CALL_FAILED`
+*(added 2026-08-29, W11 Slice 1 — FR-RATE-38's fifth category, model failure; ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 11)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version
@@ -594,6 +595,9 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-0004 translation layer
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
+
+# pricing_core/rating/runtime.py                      # added 2026-08-29 (W11 Slice 1)
+def load_bundle(bundle: Bundle) -> CompiledBundle     # FR-RATE-65's hydration step
 
 # pricing_core/rating/score.py
 async def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
