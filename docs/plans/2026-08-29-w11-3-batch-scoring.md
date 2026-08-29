@@ -41,8 +41,10 @@ Ruling **18**, whose answer this slice reuses — see C3; and
 [`2026-08-29-w11-slice-parallelism-ruling.md`](2026-08-29-w11-slice-parallelism-ruling.md)
 Ruling **33**, which governs when this slice may be built relative to Slices 2 and 4.
 
-**One correction to a ruling is filed here rather than followed** — F-W11-3-1, against Ruling
-31 §6's precedent citation. Its decision is followed in full; only its citation is wrong.
+**One correction to a ruling was filed from here** — F-W11-3-1, against Ruling 31 §6's precedent
+citation. It was **accepted, and answered by an addendum that also found a second error and
+rejected this plan's proposed workaround**. See *Corrections after filing* immediately below,
+which is the section an executor should read before Task 3B.
 
 **Process:** [`../process/delivery-process.md`](../process/delivery-process.md) §6, §8, §9.
 
@@ -52,6 +54,50 @@ Ruling **33**, which governs when this slice may be built relative to Slices 2 a
 Next free: `FR-RATE-66`, `NFR-RATE-15`, `OQ-RATE-8`.
 
 **This plan mints none of them** and registers no new error code.
+
+---
+
+## Corrections after filing (2026-08-29, after `9942800`; this plan merged at `02679d0`)
+
+**Two operative instructions in this plan were wrong and are corrected in place**, because a
+plan is an instruction set and an executor who reads a wrong step does the wrong thing. What was
+believed is preserved here rather than deleted, per [`README.md`](README.md).
+
+The source is the **addendum to Ruling 31** (`fb56dc6`, PR #424), filed in response to this
+plan's F-W11-3-1. **Ruling 31's decision is unchanged; two of its citations were wrong, and so
+was this plan's proposed way round the first.**
+
+**Error 1 — the test precedent does not exist. Raised here, confirmed, and this plan's
+workaround refused.** F-W11-3-1 correctly found that `backend/tests/test_worker.py` drives
+handlers through `execute_job` (17 call sites) and never invokes a handler function. The
+addendum explains how the original error was made — the file's docstring says `execute_job` is
+exercised *"directly rather than through a broker"*, and *"directly"* there means **without
+Celery and Redis, not at handler level**; the word was read on the wrong axis.
+
+**But this plan's proposed reconciliation was rejected.** Task 3B Step 1 first told the executor
+to submit two Jobs and call `execute_job` on each, reasoning that a *different* Job id leaves the
+row `QUEUED` so the guard never fires. That reasoning is factually correct and is **not** the
+route: the addendum's disposition is that the test *"invokes the handler function itself …
+and must not route either call through `execute_job`"*. Step 1 is corrected. **A planner does
+not settle a decision-maker's test-shape call by finding a defensible alternative** — which is
+what proposing that route amounted to, however well-evidenced.
+
+**Error 2 — the guard was attributed one level too high, and this plan inherited it.** Ruling 31
+§1 said *"`run_job` transitions the Job to `RUNNING` … and guards its own entry"*, and this plan
+repeated it. Both should name **`execute_job`** (`tasks.py:79`). Re-verified here at `fb56dc6`:
+`execute_job` is the `async def` at `:79` holding both guards (`:94`, `:103`); `run_job` is the
+Celery task at `:266`, nested inside `create_worker`, a *"five-line adapter"*. The described
+behaviour was right and reaches the guard transitively — only the name was wrong. The addendum
+records the mechanism, which is the reusable part: the body was read with `sed -n '80,140p'`,
+starting one line below the `def`, so **correct behaviour was attached to a guessed name**.
+
+**Gained, not just fixed: the absent precedent is a scope finding.** Because nothing in this
+platform has ever needed to run the same Job twice, there is no precedent for invoking a handler
+directly — which *corroborates* Ruling 31 §1 rather than undermining it. It is now recorded in
+*Verified facts* as scope: **Task 3B Step 1 writes a new test shape, it does not follow one.**
+
+*Not carried into this section:* Ruling 34 (`fa2257c`) lands on Slice 4's design, not this one.
+
 
 ---
 
@@ -172,11 +218,25 @@ the *handler* looping bundles, not a signature change. Do not widen this signatu
   while the same pattern with no pathspec hit five documents. The type is specified and has never
   been used here. **This is a scope fact, not a step** —
   [`README.md`](README.md)'s *"a missing neighbour is a scope finding"*.
-- **Nothing re-runs a crashed Job.** Ruling 31 §1, verified there against shipped code:
-  `run_job` guards on the row still being `QUEUED` and a crashed worker leaves it `RUNNING`;
-  `VALID_TRANSITIONS` (`model_schema/jobs.py:106-114`) gives `SUCCEEDED`, `FAILED` and
-  `CANCELLED` each `frozenset()`; there is no retry endpoint and no reaper; `Job.retries` is
-  never incremented and `JobError.retryable` is never read.
+- **Nothing re-runs a crashed Job.** Ruling 31 §1's behaviour, with its attribution corrected by
+  the addendum (see *Corrections after filing*, Error 2) and re-verified here at `fb56dc6`:
+  **`execute_job`** (`backend/src/app/worker/tasks.py:79`) makes the `RUNNING` transition and
+  holds both guards — `if row.status in TERMINAL_STATUSES` (`:94`) and
+  `if row.status is not JobStatus.QUEUED` (`:103`) — so a crashed worker leaves the row
+  `RUNNING` and the redelivered message is a no-op. **`run_job` is not where the guard lives**:
+  it is the Celery task at `:266`, nested inside `create_worker`, whose own docstring calls it
+  *"Adapter: bind the trace, then run the lifecycle."* `VALID_TRANSITIONS`
+  (`model_schema/jobs.py:106-114`) gives `SUCCEEDED`, `FAILED` and `CANCELLED` each
+  `frozenset()`; there is no retry endpoint and no reaper; `Job.retries` is never incremented
+  and `JobError.retryable` is never read.
+- **The resumability test has no precedent in this repository, and that is a scope fact.**
+  Nothing here has ever invoked a Job handler function directly: `backend/tests/test_worker.py`
+  drives handlers through `execute_job` at every one of its call sites. **Task 3B Step 1
+  therefore writes a new test shape for this suite rather than following one**, and should be
+  budgeted as such. Per the addendum, the missing neighbour is also *corroboration* for Ruling
+  31 §1 — there is no precedent for running a handler twice because nothing in this platform has
+  ever needed to run the same Job twice. [`README.md`](README.md)'s *"a missing neighbour is a
+  scope finding"*.
 
 ### What exists, and what does not
 
@@ -303,8 +363,14 @@ destroys the record of what was believed.
 
 ## Findings raised by this plan
 
-**F-W11-3-1 — Ruling 31 §6's precedent citation is inaccurate, and following it literally
-produces the error the same paragraph warns about.** The ruling says the resumability test
+**F-W11-3-1 — RESOLVED 2026-08-29 by the addendum to Ruling 31 (`fb56dc6`, PR #424).** Accepted
+on the citation; **the reconciling route this finding proposed was rejected**, and a second
+citation error was found while verifying it. The finding as filed is left standing below; read
+*Corrections after filing* for what changed, and Task 3B Step 1 for the instruction that now
+governs.
+
+**F-W11-3-1 as filed — Ruling 31 §6's precedent citation is inaccurate, and following it
+literally produces the error the same paragraph warns about.** The ruling says the resumability test
 *"drives the **handler** directly — invoke, interrupt, re-invoke with the same parameters — which
 is both the level the manifest lives at and **how `backend/tests/test_worker.py` already
 exercises handlers**."*
@@ -478,27 +544,31 @@ aborts, the Job records **both** the threshold in force and the observed failure
 
 **Steps**
 
-- [ ] **Step 1: Write the resumability test first. Submit two Jobs, and run each through
-      `execute_job`.** Invoke; interrupt mid-chunk; re-invoke with the same parameters **under a
-      different Job id**. Assert **(i)** the already-completed chunks are not re-scored — count
-      chunk invocations or rows scored on the resumed call, **never by inspecting the output** —
-      and **(ii)** the final parquet is byte-identical to an uninterrupted run. Mark
+- [ ] **Step 1: Write the resumability test first. Call the handler function itself.** Invoke it;
+      interrupt mid-chunk; re-invoke with the same parameters **under a different Job id**.
+      Assert **(i)** the already-completed chunks are not re-scored — count chunk invocations or
+      rows scored on the resumed call, **never by inspecting the output** — and **(ii)** the
+      final parquet is byte-identical to an uninterrupted run. Mark
       `@pytest.mark.req("FR-RATE-37")`.
 
-      **Read F-W11-3-1 below before writing this step.** Ruling 31 §6 says to drive the handler
-      *directly* and cites `backend/tests/test_worker.py` as the precedent; that citation is
-      inaccurate, and following it literally would leave you with no precedent to mirror. The
-      route that satisfies every binding clause of the ruling **and** the house pattern is: two
-      submitted Jobs, `execute_job(database, job.id)` on each. The ruling's own different-Job-id
-      requirement is what makes this safe — a fresh Job row is `QUEUED`, so the guard that
-      refuses a *same-id* second call never fires.
-- [ ] **Step 2: Run it and read the failure carefully.** Expected: `JOB_HANDLER_NOT_REGISTERED`,
-      because `JobKind.SCORE_BATCH` is queue-routed with no handler. **If instead the second
-      invocation returns early with a Job-status value and no handler ever runs, you reused the
-      first Job's id** — the guard in `execute_job` (`tasks.py:78-107`) returns on
-      `status in TERMINAL_STATUSES` and again on `status is not QUEUED`. That is the wrong test
-      construction, not a bug in the handler, and it is the failure Ruling 31 §6 predicts:
-      *"An executor who concludes the criterion is untestable has tested it at the wrong level."*
+      **Do not route either call through `execute_job`**, whose `QUEUED` guard would refuse the
+      second. This is Ruling 31 §6 as its addendum restates it, and it is **a new test shape for
+      this suite** — `backend/tests/test_worker.py` drives handlers through `execute_job` at
+      every call site and nothing in the repository invokes a handler function directly. You are
+      writing the first one; budget for that rather than looking for a neighbour to copy.
+
+      *An earlier version of this plan told you the opposite* — two submitted Jobs, `execute_job`
+      on each, on the reasoning that a fresh Job row is `QUEUED` so the guard never fires. That
+      reasoning is factually correct and was **rejected** as the route; see *Corrections after
+      filing*. Follow the paragraph above, not that one.
+- [ ] **Step 2: Run it and read the failure carefully.** Expected: the handler does not exist —
+      an import or attribute error for `_score_batch`. **If instead you see
+      `JOB_HANDLER_NOT_REGISTERED`, you went through the Job lifecycle rather than calling the
+      handler**, which is the wrong level; and **if the second invocation returns early with a
+      Job-status value and no handler body runs, you routed through `execute_job`** — its guards
+      at `tasks.py:94` and `:103` return before the handler is reached. Neither is a bug in the
+      handler, and both are the failure Ruling 31 §6 predicts: *"An executor who concludes the
+      criterion is untestable has tested it at the wrong level."*
 - [ ] **Step 3: Write the two threshold tests.** A request whose argument is **above** the
       resolved workspace setting is **refused**; a run crossing the effective threshold aborts
       with both numbers recorded on the Job. Add a third for the unset default: no rate-based
@@ -515,7 +585,7 @@ aborts, the Job records **both** the threshold in force and the observed failure
       input frame, since `ScoringResult` does not have one.
 - [ ] **Step 7: Run the gate, both halves. Commit.**
 
-**Must NOT touch.** `run_job`, `JobProgress`, or `VALID_TRANSITIONS`. The absence of a re-run
+**Must NOT touch.** `execute_job`, `run_job`, `JobProgress`, or `VALID_TRANSITIONS`. The absence of a re-run
 trigger is a finding already filed for the lead (Ruling 31's closing finding) — **do not build a
 reaper or a retry endpoint inside a rating slice.**
 
@@ -588,23 +658,28 @@ open PR will move line numbers — `compile.py` and `scripts/` — symbols are c
 re-derivation command instead.
 
 **5. Predicted failures are stated by cause**, and two of them are the traps this slice is most
-likely to hit: 3B Step 2 distinguishes "handler absent" from "you tested through `run_job`", the
+likely to hit: 3B Step 2 distinguishes "handler absent" from "you tested through `execute_job`", the
 error Ruling 31 §6 says makes an executor conclude the criterion is untestable; and 3C Step 3
 names the red that follows from the map's *"grant `Permission.SCORE_BATCH`"* wording, so it reads
 as the expected consequence rather than as a defect.
 
 **6. What this plan does not decide.** Nothing above its charter. The re-run trigger is a
 scheduling question already raised with the lead; the scratch sweep belongs with it; and the
-FR-RATE-37 register row is the lead's to write at the close. **F-W11-3-1 corrects a ruling's
-citation and is filed as a finding for the decision-maker rather than acted on unilaterally** —
-the ruling's decision is followed in full, and the plan states the one route that satisfies both
-its binding clauses and the repository's actual test convention.
+FR-RATE-37 register row is the lead's to write at the close. **F-W11-3-1 corrected a ruling's
+citation and was filed as a finding for the decision-maker rather than acted on unilaterally** —
+the right call on raising it, and the wrong call on what came next: this plan also *proposed a
+route round the defect*, and the addendum rejected it. Raising a citation error is a planner's;
+choosing the test shape that replaces it is not. Corrected in place; see *Corrections after
+filing*.
 
 **8. Every claim taken from a delegated sweep was re-run before it entered this plan**, and one
 of them did not survive. The sweep reported that `test_worker.py` never calls a handler directly;
 I read the file myself, found the `execute_job` convention stated in its own module docstring,
 and only then wrote F-W11-3-1 — because filing a correction against a decision-maker's record on
-a subagent's word would be the same defect the finding describes, one level up.
+a subagent's word would be the same defect the finding describes, one level up. **The finding was
+accepted and a second error found beside it.** What the verification discipline did not catch is
+the overreach in the same paragraph: having proved the precedent absent, this plan went on to
+pick the replacement route. Evidence quality does not widen a charter.
 
 **7. Corrections to this plan's own predecessor are recorded rather than folded in** — C5. The
 readiness document offered full-restart as the cheap baseline and described (c)'s row key as
