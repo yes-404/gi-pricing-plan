@@ -11,6 +11,13 @@ Name the record directory by the item's existing id — `docs/audit/work/<existi
 A PR record is `pr-NNN`; a slice record is the slice id; a workstream record is the
 workstream id (for example `W5`). No new id family is minted.
 
+**Closing a workstream also raises the `CLAUDE.md` §14 phase review question** — its
+trigger is fixed, not discretionary: at each workstream close, and again before a phase's
+exit demo. Nothing else in this checklist checks it, and this paragraph is the only place
+that does — confirm with the planner whether a phase review (the
+[`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill) is now due before
+signing off. A PR or slice close does not raise this question; only a workstream close does.
+
 ## The record
 
 Write `docs/audit/work/<existing-id>/README.md` with these sections.
