@@ -590,7 +590,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 ```python
 # pricing_core/rating/compile.py
 def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
-def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
+async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-0004 translation layer
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
 

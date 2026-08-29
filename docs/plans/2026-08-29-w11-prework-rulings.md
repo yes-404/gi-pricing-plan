@@ -1,11 +1,15 @@
 # W11 pre-work rulings — the rating-version route gap and the compile status code (2026-08-29)
 
-Two `CLAUDE.md` §0 code-vs-spec rulings, dispatched ahead of the §15 adoption record and
-independent of it. Both are ruled before W11's first slice touches the affected path, per
-the standing rule that when code and spec disagree the platform stops and resolves it rather
+`CLAUDE.md` §0 code-vs-spec rulings, dispatched ahead of the §15 adoption record and
+independent of it, ruled before W11's first slice touches the affected path — per the
+standing rule that when code and spec disagree the platform stops and resolves it rather
 than quietly making either side match the other. No plan is frozen for W11 yet; this record
-is not a decision point against a plan — it is the dated home for two blocking rulings the
-auditor found while running the endpoint axis over the whole RATE module.
+is not a decision point against a plan — it is the dated home for rulings the auditor,
+executor and planner found while reading the rating-engine surface ahead of that plan.
+Rulings 1 and 2 were the first pair, found by the auditor's endpoint-axis sweep. Rulings 3
+and 4, appended the same day, were found independently by the executor and planner while
+scoping W11 slice 1 and are the same kind of situation: code and spec disagreeing, or a type
+the spec relies on existing nowhere in code.
 
 Every identifier, route literal, status code, error code and requirement id below is grepped
 against `origin/main` `07ae047` before being written down (`CLAUDE.md` §12 — a ghost citation
@@ -179,7 +183,172 @@ compile any of them. This is not a code-vs-spec disagreement — the spec was al
 the comment is simply stale — so it needs no ruling, only a fix, and it lands in the same
 W11 slice as the two rulings above since none of the three is separable from the others.
 
+## Ruling 3 — `compile_bundle` is `async` in code, `def` (sync) in spec §5.2
+
+**The finding, restated precisely.** `03-rating-engine.md:593` declares
+`def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle` — a plain,
+synchronous signature. The implementation
+(`packages/pricing-core/src/pricing_core/rating/compile.py:387`) is
+`async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:`. The
+`ArtifactResolver` protocol it takes (`compile.py:298,305`) is itself declared
+`async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact: ...` — the deviation is not
+an isolated typo, it runs through the whole resolver contract.
+
+**Options:** (a) the spec is right — make the code (and the resolver protocol) synchronous;
+(b) the code is right — correct the spec's signature to `async def`.
+
+**Ruled: (b).** The spec's plain `def` is the thing that needs fixing.
+
+Rationale:
+
+- **The resolver has to be async because its real implementation does genuine async I/O,
+  and `pricing-core` cannot own that I/O itself.** `ArtifactResolver` exists specifically so
+  `compile_bundle` never touches a database (`compile.py:298-305`'s own docstring: "Resolves
+  a pinned artifact... the DB-backed half... This keeps `pricing-core` standalone
+  (ADR-0001)"). The backend's actual resolver
+  (`backend/src/app/platform/rating_versions.py:240-271`) does real `await
+  session.scalar(select(...))` calls against SQLAlchemy 2.x async sessions (`CLAUDE.md` §3's
+  stack). A sync `resolve()` calling into an async session would need its own event-loop
+  bridge inside every resolver implementation — pushed onto every caller, forever, to keep
+  one function signature nominally synchronous.
+- **`compile_bundle` is called from within an already-running event loop, not started
+  fresh.** The backend route (`backend/src/app/api/models.py:1144-1161`,
+  `compile_rating_version`) is itself `async def`, called by FastAPI inside its own loop.
+  Making `compile_bundle` synchronous would force it to either block that loop (defeating
+  the concurrency the async stack exists for) or spin up a nested loop via something like
+  `asyncio.run()` inside an already-running one, which raises at runtime. There is no clean
+  synchronous path available to the actual caller.
+- **This is not a hot-path performance concession that would also justify making `score_one`
+  async — it doesn't, and the spec is right to keep those synchronous.** `score_one` and
+  `score_batch` (`03-rating-engine.md:598,600`) score against an already-self-contained
+  `CompiledBundle` with, per `NFR-RATE-3`, "zero database or network access" — there is
+  nothing to `await`, and keeping the scoring hot path free of event-loop overhead matters
+  under `NFR-RATE-1`'s 50 ms budget. `compile_bundle` is the opposite case: it is
+  definitionally the function that resolves pinned artifacts from durable storage, it runs
+  rarely (compilation, not per-quote scoring), and per Ruling 2 it is about to become an
+  async platform Job anyway — async is not just tolerable there, it is the only shape that
+  matches what the function does.
+- **Every other §5.2 signature in the same code block is genuinely synchronous in code, so
+  this is not a wholesale mismatch.** `validate_algorithm` (`compile.py:260`), `to_jdm`
+  (`:325`), and `bundle_hash` (`:367`) are all plain `def` in the implementation, matching
+  the spec exactly. The deviation is narrow and specific to the one function that has to
+  cross the I/O boundary — which is exactly where a hand-written interface signature is most
+  likely to under-specify a mechanical Python detail the author did not need to think about
+  in prose, and exactly where the implementation had no choice once it met a real database.
+
+**Disposition.** Spec fix, made in this commit: `03-rating-engine.md:593` corrected to
+`async def compile_bundle(...)`. No code change — the implementation was already right.
+
+**A tooling gap this fix exposed, also fixed in this commit.** `scripts/audit-docs.py`'s
+journey-citation check (FR-OVR-17) extracts declared `pricing-core` functions with
+`re.finditer(r"^def ([a-z_][a-z0-9_]*)\(", ...)` — anchored on a bare `def `, with no
+`async def` case. Making the spec's signature accurate (above) silently dropped
+`compile_bundle` out of the declared-function set, which then failed
+`wf-02-model-to-rating-version.md:58`'s existing, correct citation of `compile_bundle()` as
+newly "undeclared." The check itself had never had to handle an async `pricing-core`
+signature before — nothing in `03` §5.2 needed one until this ruling. Fixed to
+`r"^(?:async )?def (...)\("`; re-run clean (`python3 scripts/audit-docs.py`: "journey
+citations: 31 endpoints, 8 functions, all declared"). Verified as a real positive/negative
+pair rather than asserted: the check failed with the old regex and the old (wrong, sync)
+spec line both absent — i.e. it failed **because** the spec line changed and the checker
+did not follow — and passed once the checker did.
+
+## Ruling 4 — `CompiledBundle` is spec-only; `Bundle` is the only thing that exists, and they are not the same type
+
+**The finding, restated precisely.** Every `03` §5.2 scoring-adjacent signature —
+`score_one`, `score_batch`, `dislocate` (twice: `baseline`, `candidate`), `run_regression`
+(`03-rating-engine.md:598,600,605,610`) — takes a `CompiledBundle`. `git grep -n
+CompiledBundle` across `packages/`, `backend/` and the spec returns **only** those four
+spec lines; zero code definitions, zero imports, zero references anywhere. The only real
+class is `Bundle` (`packages/pricing-core/src/pricing_core/rating/compile.py:350`), defined
+by the already-ruled `DP1` (`compile.py:280-283`, 2026-08-27): "the JDM graph plus the
+pinned artifacts' resolved payloads, wrapped by the pricing-core facade... self-contained:
+sufficient to score with no database access." This ruling does not reopen DP1 — `Bundle`
+stays exactly what DP1 said. The question DP1 never had to answer is whether the thing
+`score_one` actually executes against is the same object.
+
+**Options:**
+
+- **(a) Rename-only: `CompiledBundle` *is* `Bundle`.** The spec's four signatures are
+  corrected to say `Bundle`, and scoring takes the plain, JSON-shaped, persisted object
+  directly.
+- **(b) `CompiledBundle` is a distinct, new runtime type — a loaded wrapper around a
+  `Bundle`** — holding whatever the ZEN engine binding needs to actually execute the graph
+  (an initialised decision/engine handle built from `graph`) plus any GBM boosters loaded
+  from `resolved_payloads` into live `Booster` objects, produced by a new hydration function
+  (e.g. `load_bundle(bundle: Bundle) -> CompiledBundle`) that is never itself serialised.
+  `Bundle` stays exactly DP1's self-contained, cacheable, distributable data form;
+  `CompiledBundle` is what a warm worker process holds and what `score_one`/`score_batch`/
+  `dislocate`/`run_regression` actually take.
+- **(c) One mutable type**: keep only `Bundle`, but let it lazily populate and memoise an
+  engine handle / loaded boosters on first use as instance state.
+
+**Ruled: (b).** Grow the code to match the spec's existing name; do not rename the spec to
+match today's code.
+
+Rationale:
+
+- **(a) reintroduces, per request, exactly the cost this session's own W11 orientation
+  report already flagged as the central real-time-evaluator risk.** If `score_one` receives
+  the plain `Bundle` — a Pydantic model whose `graph` field is a JSON-shaped `dict[str,
+  dict[str, Any]]` — something has to turn that into whatever the `zen-engine` Python
+  binding needs to actually walk the DAG, and something has to turn any resolved booster
+  bytes into a live, `nthread=1`-pinned `Booster` object, on **every call**, unless a second,
+  hidden cache is invented inside `score_one` itself. That hidden cache would just be option
+  (b) again, minus the type system saying so — worse for testability (nothing distinguishes
+  "freshly deserialised" from "already loaded" at the type level) and worse for the exact
+  latency budget `NFR-RATE-1` sets (repeating graph-parse and booster-load work per request
+  that a warm process should only do once per deployment switch).
+- **(b) is what `FR-RATE-51` and `NFR-RATE-6` already describe, just without a name for the
+  loaded half.** `FR-RATE-51`: "Bundles are **pre-warmed into cache** before the switch."
+  `NFR-RATE-6`: switchover "completes within 30 s of the deploy command **including cache
+  warming**." Pre-warming is a *load* step — it only makes sense as a description of turning
+  a distributable `Bundle` into something already resident and ready to execute in a
+  process's memory. `Bundle` (DP1) is the thing that gets distributed and cached in Redis;
+  `CompiledBundle` is the thing pre-warming produces, held per-worker, never round-tripped
+  through Redis itself. This is the same two-tier shape this session's own W11 orientation
+  report recommended for the caching decision point, arrived at independently from the
+  executor's and planner's side and now given the concrete names the spec already committed
+  to.
+- **(c) blurs a distinction this codebase is otherwise careful to keep sharp.** `Bundle` is
+  a `BaseModel` — data, meant to be hashed (`content_hash`), serialised
+  (`bundle.model_dump_json()`, used for exactly that in
+  `rating_versions.py:285`), and compared for equality. Attaching mutable, unserialisable
+  runtime state (an engine handle, loaded boosters) to instances of that same class means a
+  `Bundle` can no longer be freely copied, diffed, or round-tripped through JSON without
+  first checking whether the loaded fields happen to be populated — exactly the kind of
+  boundary confusion `03` §3.11 already spent a spike (S1) correcting once for money at the
+  ZEN engine's Python binding. Keeping "the record" and "the loaded resource" as two named
+  types is the same discipline applied one layer up.
+- **Growing the spec's name rather than renaming the spec matches every ruling in this file
+  so far.** Rulings 1, 2 and 3 all found the spec's declared shape correct and the code
+  incomplete or mis-specified relative to it (a missing route, a wrong status code, an
+  under-specified signature) — not the reverse. `CompiledBundle` already exists in the one
+  place that gets to mint the name first; the code has not caught up yet, which is a
+  different situation from the code being wrong.
+
+**Disposition.** No spec change — `03` §5.2 already says `CompiledBundle` correctly.
+**Code, W11 slice 1**: add a `CompiledBundle` type to `pricing_core.rating` (or a sibling
+module, e.g. `pricing_core.rating.runtime`) and a hydration function from `Bundle` to it;
+retarget `score_one`/`score_batch` (and, when built, `dislocate`/`run_regression`) to take
+`CompiledBundle`; the in-process cache Ruling 2 and this session's own orientation report
+both anticipate holds `CompiledBundle` instances, loaded once per deployment-switch, not
+`Bundle` bytes re-parsed per request. Exact field shape and the engine-handle type are the
+executor's to design against this ruling, not fixed here.
+
+**Related, not re-ruled (already flagged in this record's own Ruling 2, now independently
+confirmed by the executor and planner too).** `CompiledBundle`'s hydration step is only as
+good as what `Bundle.resolved_payloads` actually contains, and today's resolver
+(`rating_versions.py:240-271`) puts a placeholder (`payload={"status": model.status}`) in
+the `model` branch and raises `NOT_FOUND` unconditionally for `rate_table` refs on a stale
+Phase-2 comment. No realistic Rating Version compiles today regardless of sync/async or
+`CompiledBundle`. Same W11 slice-1 prerequisite named in Ruling 2; not a separate ruling.
+
 ## Verification
 
-`python3 scripts/audit-docs.py` run clean before commit (the only spec edit is the one-line
-citation addition in Ruling 1; no new `FR-`/`NFR-`/`ADR-` id is introduced by either ruling).
+`python3 scripts/audit-docs.py` run clean before commit. Two spec edits total across all four
+rulings — the `FR-RATE-22` citation (Ruling 1) and the `async def` correction (Ruling 3) —
+neither introduces a new `FR-`/`NFR-`/`ADR-` id. One tooling fix (Ruling 3's `async def`
+regex gap in `scripts/audit-docs.py`'s FR-OVR-17 check), verified as a real positive/negative
+pair: it failed with the spec corrected and the old regex in place, and passed once the
+regex was fixed — never asserted clean without having first seen it red.
