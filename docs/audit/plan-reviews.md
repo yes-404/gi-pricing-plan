@@ -561,33 +561,57 @@ OQ-MODEL-11's own decided-narrative text (`:536`, `:567`), never inside a workst
 2026-08-29, `CLAUDE.md` §12 — verdicts stay in the main thread) say so precisely; this review
 carries that finding rather than re-deriving a competing one.** FR-RATE-63 is a **W9 close
 gap**, not an orphan: nothing blocked it — FR-RATE-6 (sub-graphs) was W9-1's own delivery,
-FR-RATE-63 is a `RatingVersion` pins-extension structurally identical to what W9-3 built for
-FR-RATE-60 in the *same* PR, and it was decided one day after FR-RATE-60 and the day before
-W9 closed. W9's own scope prose names four sections totalling 26 requirements; it verdicted
-24. **W9's closure record reports a completeness the repository does not have** —
-`CLAUDE.md` §13's own stated failure mode, on work already closed. FR-RATE-61, by contrast,
-genuinely could not have been built by W9: its own text needs a Dislocation Run (FR-RATE-46),
-which is W13's, so it is orphaned at birth rather than missed at a close.
+and FR-RATE-63 is a `RatingVersion` pins-extension structurally identical to what W9-3 built
+for FR-RATE-60 in the *same* PR (#293). It was decided 2026-08-18, nine days before W9
+closed (2026-08-27) — not the one-day window first reported and corrected before this filing
+(`git log`: #291/#292 merged 2026-08-27, #293 merged 2026-08-28, W9's own close commit
+`eb9b6a1` at 2026-08-28T00:47+01:00, which the roadmap's own accounting books as the
+2026-08-27 close). A week-plus window, not a same-day scramble: FR-RATE-60, decided one day
+*before* FR-RATE-63, rode into #293 on that same merge, so the identical-shape sibling
+requirement had every opportunity to ride in beside it and did not. W9's own scope prose
+names four sections totalling 26 requirements; it verdicted 24. **W9's closure record
+reports a completeness the repository does not have** — `CLAUDE.md` §13's own stated failure
+mode, on work already closed. FR-RATE-61, by contrast, genuinely could not have been built
+by W9: its own text needs a Dislocation Run (FR-RATE-46), which is W13's, so it is orphaned
+at birth rather than missed at a close.
 
 Why it matters going forward, not only as a retrospective correction: **FR-RATE-61
 specialises FR-RATE-40's approval gate for the approximation-mode case** — W11 builds the
 general gate, and W13 already owns the Dislocation Run that both need, making W13 the
 natural single owner of the specialisation rather than splitting one gate's logic across two
-workstreams. **FR-RATE-63 bears directly on W11's evaluator regardless of who owns the id**:
-it requires that a Quote Context with `purpose ∈ {mid_term_adjustment, cancellation}` mounts
-a separately-versioned sub-graph rather than being priced as new business, and its own text
-names silent mispricing as the exact failure it exists to prevent — the same universal shape
-as FR-RATE-57's null-output guard, provable only by a slice-1 test on deliberately broken
-input (a Quote Context naming a purpose whose sub-graph is not mounted must refuse, not
-silently price as new business).
+workstreams. **FR-RATE-63 bears directly on W11's evaluator regardless of who owns the id,
+and it itself splits in two.** `purpose` is not a hypothetical extension point — it is
+already a fully-typed `QuoteContext` field every scoring call reads unconditionally
+(`03-rating-engine.md:63` glossary: `new_business | renewal | mid_term_adjustment |
+cancellation | what_if`; `:389` shows it live in the request JSON example), so both halves
+below are properties of code W11 slice 1 is building regardless of FR-RATE-63's ownership:
+
+- **The refusal guard** — when `purpose ∈ {mid_term_adjustment, cancellation}` and the
+  Rating Version has no matching mounted sub-graph, `score_one` must refuse rather than
+  silently price as new business (`03:87`: "it is silent" is the failure named). This is a
+  `score_one` correctness property with the same universal shape as FR-RATE-57's
+  null-output guard — provable only by a slice-1 test on deliberately broken input — and has
+  no dependency on anything W9 did or did not build: even before any Rating Version can
+  mount such a sub-graph, the guard is meaningful, because it turns an unbuildable feature
+  into a loud, correct refusal instead of a silent wrong price. **Recommend: W11 slice 1,
+  unconditionally.**
+- **Sub-graph mounting and refund/pro-rata authoring** — declaring the separately-versioned
+  sub-graph itself, version-pinning it, and mounting it on a Rating Version — is algorithm
+  *definition* work, the same kind as W9's own scope (§3.1), not scoring/evaluation work.
+  Folding it into W11 would blur W11's boundary into authoring territory the same way pulling
+  Environment/Deployment forward would (Question 5, review 8) — for a capability nothing in
+  W11 needs in order to build the guard above. **Recommend: a small, separately-owned
+  catch-up slice, landing with or before W11 but not part of its plan** — matching the shape
+  of W9-3's own delivery of FR-RATE-60, since FR-RATE-63 is that requirement's structural
+  twin. This review does not name a workstream id for it; that is the maintainer's, the same
+  restraint plan review 2's Proposal B applied to naming W6b's split.
 
 > **Recommendation:** FR-RATE-61 gets a register row now with owner **W13** — it does not
 > depend on this review, since W11 was never a candidate owner for it. FR-RATE-63's id-level
 > ownership (a corrected W9 closure note, or a new row) is this review's to propose and the
-> maintainer's to accept; its *build* obligation is not contingent on that answer and belongs
-> in W11's evaluator slice regardless — build it there (recommended, since the alternative
-> ships a known silent-mispricing mode on day one), recorded as evidence for whichever id
-> ends up citing it. Not a roadmap edit on this review's own authority.
+> maintainer's to accept; its build obligation does not wait on that answer and splits as
+> above — the refusal guard in W11 slice 1 unconditionally, the authoring half in its own
+> small slice separate from W11. Not a roadmap edit on this review's own authority.
 >
 > **Maintainer acceptance:** _pending._
 
@@ -651,7 +675,8 @@ close is reached and W11 is next — carried into review 8 immediately below, wh
 | # | Proposal | Kind |
 |---|---|---|
 | 2.1 | FR-RATE-61: register row now, owner **W13** (specialises FR-RATE-40 for approximation mode; does not depend on this review) | decision |
-| 2.2 | FR-RATE-63: id-level ownership (corrected W9 note, or a new row) is this review's to propose; its refusal-guard *build* obligation sits in W11's evaluator slice regardless of that answer | decision |
+| 2.2 | FR-RATE-63: id-level ownership (corrected W9 note, or a new row) is this review's to propose | decision |
+| 2.3 | FR-RATE-63 splits: the refusal guard is W11 slice 1's, unconditionally; sub-graph mounting/authoring is a separate small catch-up slice, W9-shaped, not part of W11 | decision |
 | 3.1 | `phase-review` skill's Output section corrected to `docs/audit/plan-reviews.md` | skill (fixed in this commit) |
 | 4.1 | Compile-endpoint 202/200 divergence, the async/sync `compile_bundle` mismatch, and the `Bundle`/`CompiledBundle` question ruled by the decision-maker before W11 touches `compile_rating_version` or the evaluator | decision — queue reports complete as of this filing |
 | 4.2 | `POST /api/v1/rating-versions`'s missing FR- citation ruled | decision |
