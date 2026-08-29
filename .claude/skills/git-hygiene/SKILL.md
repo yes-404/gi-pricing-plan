@@ -100,6 +100,30 @@ half is the check above. **The reviewer's half is asking before merging a PR who
 may still be working**, rather than merging the moment CI goes green — a rule that
 disciplines only the pusher lets the merger repeat their half of it indefinitely.
 
+**Same family as the stranded-push race above, different mechanism: a reference correct
+when made can go silently wrong by the time it is used, caught only by re-checking state
+rather than trusting an earlier read.** Citing a document by line number
+(`ruling-record.md:203-226`, in a PR description or a report) is only accurate as of the
+commit it was read at. A `git fetch && git rebase` that pulls in commits touching that same
+file shifts every line after their edit — silently, since the rebase succeeds cleanly
+whenever the touched ranges don't textually conflict with the branch's own unrelated
+changes.
+
+**2026-08-29, caught before it shipped.** A PR description drafted six citations into
+`docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` by line range, correct
+against the commit the branch had forked from (`86ff7c1`). Before pushing, `origin/main`
+had moved to `625fe8c` — two of the three new commits touched that exact file (+71/-3, then
++6/-2), both inserting content *above* the cited ranges. Rebasing without re-deriving the
+citations would have shipped a PR description pointing at the wrong paragraphs while
+reading as fully checked.
+
+**Re-derive after, not before.** Check which files a pending rebase touches
+(`git show --stat --format="" <sha>` per new commit) before assuming a citation survives
+it, then re-read every line-anchored reference against the post-rebase content — never
+against what was read pre-rebase. The same discipline as re-verifying a `gh` write against
+the artifact rather than its exit code (above), applied to your own prose instead of a
+tool's report.
+
 ## The stash stack is shared by every worktree — never use bare `git stash`
 
 **There is one stash stack per repository, not one per worktree.** Every parallel session in
@@ -367,6 +391,14 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-29 — the rebase-invalidates-line-citations entry added, caught while preparing a
+PR description rather than after a bad citation was filed.** Checking each new upstream
+commit's diffstat (`git show --stat --format="" <sha>`) before rebasing, rather than
+assuming a prior read still held, is what caught it — the same "check state, don't trust
+an earlier read" discipline the stranded-push entry below states, applied to a citation
+instead of a branch ref. All six citations were re-derived against the post-rebase content
+and landed correctly.
 
 **2026-08-29 — the file-count-measurement entry added, found recovering the stranded-push
 race's own actual casualty.** Checking whether the dead branch behind `c78a051` was safe to
