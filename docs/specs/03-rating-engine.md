@@ -509,7 +509,7 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/csv` | Export cells to CSV (FR-RATE-20) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}/export/xlsx` | Export cells to XLSX (FR-RATE-20) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/import` | Import CSV/XLSX → returns a diff vs the addressed version for confirmation; `confirm: true` re-computes the diff and creates the version (FR-RATE-20) |
-| `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins |
+| `POST` | `/api/v1/rating-versions` | Create a draft Rating Version with pins (FR-RATE-22) |
 | `POST` | `/api/v1/rating-versions/{id}/compile` | **202** Compile + validate the bundle (FR-RATE-25) |
 | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; evidence completeness checked (FR-RATE-40) |
 | `POST` | `/api/v1/score` | Real-time single quote (FR-RATE-34) |
