@@ -751,8 +751,14 @@ inferred:
   review declined to name a workstream and today's acceptance names none either.
 - **2.3 — accepted.** The refusal guard is **W11 slice 1's**; the authoring half is its own
   small catch-up slice, **unowned** until 2.2's owner is named.
-- **3.1 — accepted, and already landed** in the commit that filed this review. **Owner:
-  discharged.**
+- **3.1 — accepted, and landed. Owner: discharged** — but not on the date the table claims,
+  and the divergence is recorded rather than smoothed. The row reads *"fixed in this commit"*,
+  i.e. review 7's own filing on 2026-08-27; `.claude/skills/phase-review/SKILL.md`'s `Verified`
+  block dates the Output correction to **2026-08-29** and says it was *"caught while filing
+  plan reviews 7 and 8"* — caught then, applied two days later. The skill now reads
+  *"Proposals land in `docs/audit/plan-reviews.md`"* (`:110`), so the proposal is discharged
+  either way; what was wrong was the parenthetical, checked here rather than restated on the
+  table's word.
 - **4.1 — accepted, and discharged** by prework Rulings 2, 3 and 4. **Owner: discharged.**
 - **4.2 — accepted, and discharged**: the FR-RATE-22 citation is on `03` §5.1's row at
   `:513`. **Owner: discharged.**
