@@ -42,7 +42,13 @@ practice, and four open items it asks to have confirmed.
 - **The decision-maker's hard boundary is correctly derived.** *No write access to any code
   worktree* is not a theoretical precaution: during W10 the decision-maker wrote into the
   executor's worktree three times despite a stop order, and the third write discarded the
-  executor's tracked files. The boundary should survive adoption unchanged.
+  executor's tracked files. Source: `w10-handover-2026-08-28/TEAM-STRUCTURE.md` (role table
+  and the worktree-collision-rule note), which records **two** such incidents — this one and
+  a separate, milder auditor incident — and names both. *(Corrected 2026-08-29, the §15 step
+  2b reconciliation: that file is outside this repository and not durable custody for the
+  fact — see `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` Part B10. The
+  boundary should survive adoption unchanged; the citation should not survive as an external
+  pointer once the decision-maker's own role file exists.)*
 - **The watcher and reporter are already mechanical in part.** Both run scripts under
   persistent monitors today; what the document proposes is removing the model from the
   steady state, not inventing the scripts.

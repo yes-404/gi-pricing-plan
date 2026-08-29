@@ -55,7 +55,10 @@ Three of the proposal's premises are **not** in force, and each is load-bearing:
 - **`docs/process/` does not exist.** The suite index at `docs/README.md` lists `specs/`,
   `workflows/`, `contracts/` and `adr/`. A process area is a new top-level category and the
   index is part of the contract.
-- **No role definitions exist.** `.claude/agents/` holds eight delegable specialists —
+- **No role definitions exist.** `.claude/agents/` holds seven delegable specialists
+  *(corrected 2026-08-29 — a directory listing that included its own `README.md` read as
+  eight; `.claude/agents/README.md:184` already states "all seven"; see
+  `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` Part B8)* —
   none of them a lead, planner, decision-maker, auditor or executor. The proposal's
   companion says existing role files are "amended at adoption, not recreated"; there are
   none to amend. Today's roles live in a handover file outside the repository and in
@@ -172,6 +175,22 @@ breach [`NT-0003`](0003-duplicated-status-goes-stale.md), since a process spec t
 **Recommendation: adopt §15 as the adoption plan, and require the reconciliation step to
 produce an explicit adopt/amend/reject verdict for every numbered section of both
 documents** — including the six items above.
+
+### 7. §2's own lead row disagrees with the companion document's, and neither note flags it
+
+*(Added 2026-08-29, found by the auditor during the §15 step 2b reconciliation — see
+[`docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`](../../docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md)
+Part B9 for the ruling.)*
+
+§2's Lead row gives its suggested tool scope as "Read-only (Read, Grep, Glob) + write access
+to plan/map files only" — no merge authority anywhere in it. [`NT-0011`](0011-per-agent-model-and-skill-settings.md)'s
+own per-agent lead specification gives it "full read; git merge authority; write to
+handover/status files only" — merge authority present, plan/map-file write absent. Both
+documents describe the same role and disagree with each other, and neither says so.
+NT-0011's version matches confirmed current practice (sole merge authority resting with the
+lead, plan-file writes belonging to the planner role); this note's §2 row is the one
+corrected. **Recommendation: ruled — NT-0011's version is authoritative**, folded into the
+same reconciliation pass rather than treated as a second open question.
 
 ## What this note does not decide
 
