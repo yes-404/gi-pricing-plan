@@ -34,6 +34,23 @@ bold for the row that defines them.
 A new ID may sit anywhere in the document — position is free, the number is not. Placing
 FR-MODEL-68 next to FR-MODEL-42 because they are topically related is correct.
 
+**A `pricing-core` interface signature's `def` vs `async def` is a fact to verify, never a
+default to assume.** Declare a signature `async def` exactly when it directly awaits an
+injected async dependency (a resolver doing real I/O) or a native async binding, from a
+caller context that is itself async — plain `def` otherwise. Two `03-rating-engine.md` §5.2
+signatures were declared synchronous and both turned out wrong once something checked what
+they actually call: `compile_bundle` awaits an `ArtifactResolver` doing genuine async
+SQLAlchemy I/O (ruled 2026-08-29, PR #315); `score_one` calls the ZEN engine's
+`async_evaluate()`, discovered only by a spike because sync `evaluate()` blocks the event
+loop and offloading it to a thread pool is *slower than not offloading it at all* — not
+merely unhelpful — because the native call holds the GIL for its full duration (ruled
+2026-08-29, `docs/research/zen-evaluate-concurrency.md`). Neither was a wrong default;
+both were an unverified one, caught only once an implementation or a spike checked what the
+wrapped call actually needed. Before writing a `pricing-core` interface signature that
+wraps a native library or a caller-injected dependency, check what that thing needs to be
+awaited from — a running instance, a `.pyi` stub, or a small throwaway spike — rather than
+defaulting to `def` and waiting for a mismatch to be found later.
+
 **Every spec keeps all ten sections**, in this order (`CLAUDE.md` §5 is the standard; this
 is the list it points at):
 
@@ -128,6 +145,13 @@ explicit status enums. Avoid "the system should handle…". Small illustrative s
 encouraged; full implementations are not.
 
 ## Verified
+
+2026-08-29 — the `def`/`async def` verification rule added after the second of two
+`03-rating-engine.md` §5.2 signatures was found declared wrong the same way in one day
+(`compile_bundle`, PR #315; `score_one`, `docs/plans/2026-08-29-w11-prework-rulings.md`
+Ruling 5). Diagnosed as a missing verification step, not a wrong default: sync-by-default is
+still correct for the other nine `pricing-core` interface signatures in the same block, and
+none of them is amended.
 
 2026-08-23 — the ten-section enumeration and the `skills-map.md` citation rule moved here
 from `CLAUDE.md` §5 and §10, and the custom-objective governance rules from §3, when that

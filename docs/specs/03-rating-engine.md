@@ -595,7 +595,7 @@ def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-0004 translation la
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
 
 # pricing_core/rating/score.py
-def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
+async def score_one(bundle: CompiledBundle, ctx: QuoteContext, *,
               trace: bool = False) -> ScoringResult
 def score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, *,
                 chunk_rows: int = 100_000,
