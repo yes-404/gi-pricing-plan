@@ -327,43 +327,85 @@ async def test_scoring_n_quotes_deserialises_the_booster_once_not_n(
 
 
 @pytest.mark.req("FR-RATE-65")
-def test_to_wire_refuses_a_constraint_step() -> None:
-    """A `constraint` step's decline/clamp semantics are Ruling 9's / Task 1.4's to
-    design; to_wire raises rather than guessing at untested business logic."""
+def test_to_wire_translates_a_constraint_step() -> None:
+    """W11 Task 1.4 resolves the scope cut this test used to assert: a `constraint` step
+    now translates (`_constraint_node`) rather than raising. Both an `on_violation="decline"`
+    step (Task 1.3's own fixture) and an `on_violation="clamp"` step that re-produces the
+    name it consumes (`RatingAlgorithm._graph_invariants`'s own "clamp in place" pattern,
+    `rating.py`'s comment on excluding the self-edge) wire and evaluate without error."""
     from model_schema.rating import RatingAlgorithm
     from pricing_core.rating.compile import to_jdm
 
     algo = RatingAlgorithm.model_validate(_algorithm_payload_with_constraint())
     graph = to_jdm(algo)
-    with pytest.raises(NotImplementedError, match="constraint"):
-        to_wire(graph)
+    wire = to_wire(graph, {"rate_table:motor-expense@1": _rate_table_payload()})
+
+    import zen
+
+    def handler(request: Any) -> dict[str, Any]:
+        return {"output": {"risk_premium_minor": 5000}}
+
+    decision = zen.ZenEngine({"customHandler": handler}).create_decision(json.dumps(wire))
+    decision.validate()
+    result = decision.evaluate({"driver_age": 34, "channel": "direct"})["result"]
+    assert result["s_guard__violated"] is False, "a positive office_premium should not decline"
+
+
+@pytest.mark.req("FR-RATE-65")
+def test_to_wire_refuses_a_clamp_constraint_with_nothing_to_clamp() -> None:
+    """`on_violation="clamp"` needs a source value (`consumes`) and a bound
+    (`clamp_bounds`) to clamp towards — `_constraint_node` raises naming the gap rather
+    than silently emitting only the violated flag for a step that declared a clamp."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.compile import to_jdm
+
+    payload = _algorithm_payload()
+    payload["steps"].append(
+        {"step_id": "s_bad_clamp", "type": "constraint", "label": "Bad clamp",
+         "condition": "office_premium_minor >= 0", "on_violation": "clamp",
+         "reason_code": "X", "consumes": ["office_premium_minor"],
+         "produces": ["office_premium_minor"]}
+        # no clamp_bounds
+    )
+    algo = RatingAlgorithm.model_validate(payload)
+    graph = to_jdm(algo)
+    with pytest.raises(NotImplementedError, match="clamp_bounds"):
+        to_wire(graph, {"rate_table:motor-expense@1": _rate_table_payload()})
 
 
 @pytest.mark.req("FR-RATE-65")
 async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     """`predict_glm` needs real Factor objects the Bundle does not carry (see
-    `runtime.py`'s `_raise_model_call_failed` docstring) — refused loudly, not silently
-    mis-scored. Through `async_evaluate()` this surfaces as `zen`'s own generic node-error
-    wrapper, not the handler's `MODEL_CALL_FAILED` message — a verified finding, not an
-    oversight (see `_raise_model_call_failed`'s docstring): the binding discards whatever a
-    `customHandler` raises. The handler itself, called directly, still raises the named
-    `ValueError` intact — asserted second, so this test would fail if a future change
-    stopped raising it internally even though `evaluate()` cannot show that from outside.
+    `runtime.py`'s `_model_call_failure` docstring) — refused loudly, not silently
+    mis-scored.
+
+    **Behaviour corrected by W11 Task 1.4.** Task 1.3 verified that a `customHandler`'s
+    raised exception is swallowed by the `zen` binding (the finding `_model_call_failure`'s
+    docstring records) and had this handler raise anyway, matching-but-losing that
+    exception. Task 1.4 replaced the raise with a sentinel in the handler's own returned
+    `output` (`MODEL_CALL_ERROR_KEY`) specifically so this information survives the engine
+    boundary — so `async_evaluate()` no longer raises for this case at all; the failure
+    surfaces as data in the normal `result`, which `score_one` (`pricing_core.rating.score`)
+    reads and turns into a `MODEL_CALL_FAILED` refusal. This test asserts the new contract:
+    no exception from the engine, and the sentinel's message intact.
     """
     resolver = _FakeResolver(glm=True)
     bundle = await compile_bundle(_version(glm=True), resolver)
     compiled = load_bundle(bundle)
 
-    with pytest.raises(RuntimeError, match="Failed to run custom node handler"):
-        await compiled.decision.async_evaluate({"driver_age": 34, "channel": "direct"})
+    from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY
+
+    out = await compiled.decision.async_evaluate({"driver_age": 34, "channel": "direct"})
+    assert MODEL_CALL_ERROR_KEY in out["result"], "a GLM model_call failure must not vanish"
+    assert "MODEL_CALL_FAILED" in out["result"][MODEL_CALL_ERROR_KEY]
 
     from pricing_core.rating.runtime import _model_call_handler
 
     handler = _model_call_handler(compiled.algorithm, bundle.resolved_payloads, compiled.boosters)
     fake_request = SimpleNamespace(node={"id": "s_risk"}, input={"driver_age": 34, "$nodes": {}})
 
-    with pytest.raises(ValueError, match="MODEL_CALL_FAILED"):
-        handler(fake_request)
+    direct = handler(fake_request)
+    assert "MODEL_CALL_FAILED" in direct["output"][MODEL_CALL_ERROR_KEY]
 
 
 @pytest.mark.req("FR-RATE-65")

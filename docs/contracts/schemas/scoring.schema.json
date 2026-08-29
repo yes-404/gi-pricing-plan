@@ -9,7 +9,7 @@
       "required": ["purpose", "quoted_at", "effective_date", "inputs"],
       "properties": {
         "quote_id": {"type": "string"},
-        "purpose": {"enum": ["new_business", "renewal", "mid_term_adjustment", "what_if"]},
+        "purpose": {"enum": ["new_business", "renewal", "mid_term_adjustment", "cancellation", "what_if"]},
         "quoted_at": {"type": "string", "format": "date-time"},
         "effective_date": {"type": "string", "format": "date"},
         "inputs": {"type": "object"},

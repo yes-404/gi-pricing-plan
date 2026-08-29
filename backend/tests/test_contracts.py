@@ -87,7 +87,27 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "rating-algorithm": "shipped in model-schema, never compared — register F27",
     "rating-version": "shipped in model-schema, never compared — register F27",
     "regression-suite": "later-phase — 04 optimisation",
-    "scoring": "later-phase — 03 rating",
+    # Corrected 2026-08-29 (W11 Task 1.4): "later-phase" stopped being true the moment
+    # this task defined QuoteContext/ScoringResult/LadderRung/Trace in model-schema —
+    # Ruling 12's addendum (docs/plans/2026-08-29-w11-slice1-rulings.md) obligation 4
+    # asks this slug be lifted into COMPARED_SLUGS in the same PR. Deliberately not done
+    # here: every other COMPARED_SLUGS entry compares one model's own generated schema
+    # against one authored file, and `scoring.schema.json` is a $defs-only container
+    # bundling four unrelated top-level shapes (QuoteContext for input; ScoringResult,
+    # LadderRung and Trace for output) that do not share one root model the way
+    # `generate-contracts.py`'s slug->model mapping assumes — `ScoringResult.
+    # model_json_schema()` alone reaches LadderRung/Trace/TraceStep but never
+    # QuoteContext, so a naive single-model generation would compare only part of the
+    # file and silently miss the other. Wiring this correctly needs either
+    # `pydantic.json_schema.models_json_schema()` (bundling multiple root models with one
+    # shared `$defs`, not used anywhere in this script today) or splitting the authored
+    # file — real, scoped work this skill's own procedure treats as multi-step (measure,
+    # write, prove-on-broken-input, meta-guard), not a same-PR add-on to an already large
+    # task. Reported as an open finding rather than forced through; not a correctness
+    # regression, since Ruling 12's actual substance (the five-member `purpose` enum, in
+    # both `model-schema` and this contract, in one commit) is unaffected by deferring
+    # the forward-looking drift guard alone.
+    "scoring": "later-phase — 03 rating (see the correction above, 2026-08-29)",
     "money": "shared common/ defs with no Phase 1b emitter",
     "provenance": "shared common/ defs with no Phase 1b emitter",
 }

@@ -46,6 +46,7 @@ from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from model_schema import OidcAuthConfig
+from pricing_core.rating.compile import assert_integer_minor_round_trip
 
 __all__ = ["create_app"]
 
@@ -68,6 +69,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        # FR-RATE-56: "A startup self-check asserts the round-trip; failing it prevents
+        # the service starting." First, before any I/O — it is pure computation, and a
+        # machine that fails it must never reach the probes or the blob bucket below.
+        # `assert_integer_minor_round_trip` raises a bare `AssertionError` on failure,
+        # which this lifespan does not catch, so it propagates and the app never starts
+        # (W11 Task 1.4, F-W11-1-3 — the function has existed since W9-2 with no
+        # production caller; this is the first one).
+        assert_integer_minor_round_trip()
         # Probes are registered here rather than at import time so that building an app
         # has no global side effect — two apps in one test session must not share a probe
         # registry pointing at each other's engine.

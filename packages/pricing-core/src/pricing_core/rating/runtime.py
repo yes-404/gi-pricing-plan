@@ -18,11 +18,11 @@ a node **list** plus an explicit **edge list**, verified live against `zen.ZenEn
 than assumed from any binding's docstring (`docs/plans/2026-08-29-w11-1-evaluator-core.md`,
 *Verified facts*). `to_wire` is that translation.
 
-**What this module does not yet translate.** A `constraint` step (`RatingConstraintStep`)
-has no wire form here: `on_violation`'s three modes and `clamp_bounds`' semantics are
-Ruling 9's decline-representation territory, which is `score_one`'s design (W11 Task 1.4),
-not this task's — `to_wire` raises `NotImplementedError` naming the step rather than
-guessing at untested business logic. A `lookup` step's `as_at` effective-dating window is
+**What this module does not yet translate.** A `constraint` step's wire translation was
+Task 1.3's own scope cut, resolved by Task 1.4 (`_constraint_node`, below) — the DAG-wide
+disposition (decline vs. clamp vs. error, collecting reason codes) is `score_one`'s, read
+from the `{step_id}__violated` flags this module computes, never decided inside the graph
+itself. A `lookup` step's `as_at` effective-dating window is
 translated as an **exact key match only**: ZEN's comparison operators refuse non-numeric
 operands (verified live — `'b' > 'a'` raises `vmError: Opcode Compare: Unsupported type`),
 so an ISO date string cannot be range-compared inside a decision table rule without first
@@ -37,7 +37,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, NoReturn
+from typing import Any
 
 import polars as pl
 import zen
@@ -47,19 +47,27 @@ from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
 from pricing_core.rating.compile import Bundle, JdmGraph
 
-__all__ = ["CompiledBundle", "load_bundle", "to_wire"]
+__all__ = ["MODEL_CALL_ERROR_KEY", "CompiledBundle", "load_bundle", "to_wire"]
 
 _INPUT_ID = "input"
 _OUTPUT_ID = "output"
 
+#: Reserved key a `model_call` handler uses to report a failure through normal engine data
+#: flow rather than an exception (W11 Task 1.4, resolving the finding below). `$`-prefixed
+#: to match the engine's own reserved `$nodes` key and stay clear of any user-declared
+#: `produces` name.
+MODEL_CALL_ERROR_KEY = "$model_call_error"
+
 #: The engine node `type` each `RatingAlgorithm` step type translates to (Task 1.3 Step 3,
-#: rules 3/5/6). `input` and `output` are handled separately — see `to_wire` — because the
-#: engine wants exactly one of each, not one per declared step (Step 3, rule 2).
+#: rules 3/5/6, widened by Task 1.4 for `constraint`). `input` and `output` are handled
+#: separately — see `to_wire` — because the engine wants exactly one of each, not one per
+#: declared step (Step 3, rule 2).
 _ENGINE_NODE_TYPE: Mapping[str, str] = {
     "expression": "expressionNode",
     "lookup": "decisionTableNode",
     "table": "decisionTableNode",
     "model_call": "customNode",
+    "constraint": "expressionNode",
 }
 
 #: A rate/reference table key's declared type, rendered as a ZEN literal (exact-match
@@ -68,33 +76,47 @@ _ENGINE_NODE_TYPE: Mapping[str, str] = {
 _QUOTED_KEY_TYPES = frozenset({"string", "date"})
 
 
-def _raise_model_call_failed(message: str) -> NoReturn:
-    """Ruling 11: `MODEL_CALL_FAILED` is `03` §5.1's registered code for FR-RATE-38's
-    "model failure" category. `pricing_core.rating`'s established convention for a runtime
-    refusal is a code-named bare `ValueError` (`compile.py`'s `_raise_named`), not an
-    exception class hierarchy — Ruling 11 states this explicitly for `score_one`'s own
-    refusals, and this handler's refusals follow the same convention rather than inventing
-    one, even though (see the finding below) the message does not survive this particular
-    path today.
+def _model_call_failure(step: RatingModelCallStep, message: str) -> dict[str, Any]:
+    """Resolves the Task 1.3 finding: report a `model_call` failure through data flow, not
+    an exception.
 
-    **Finding for Task 1.4, verified live and not assumed: a `customHandler`'s raised
-    exception is swallowed by the `zen` binding, not propagated.** Whatever a handler
-    raises — a bare `ValueError`, a custom exception subclass, any message — surfaces from
+    **The finding, verified live in Task 1.3 and not repeated here.** A `customHandler`'s
+    raised exception is swallowed by the `zen` binding: whatever a handler raises — a bare
+    `ValueError`, a custom exception subclass, any message — surfaces from
     `ZenDecision.evaluate()`/`async_evaluate()` as the *same* generic
     `RuntimeError: {"type":"NodeError","source":"Failed to run custom node handler",
-    "nodeId":"<id>"}`, with the original type, message and code all discarded. Verified by
-    raising three different exception shapes from a handler and observing an identical
-    wrapper each time. `score_one` (Task 1.4) therefore cannot recover *why* a `model_call`
-    failed by catching and reading the exception `async_evaluate()` raises — it will need
-    a different channel (a sentinel in the handler's own returned `output`, or a mutable
-    side-channel the handler and `score_one` share) if FR-RATE-38's caller-actionable
-    "model failure" category is to carry more than "a model_call node failed, this one".
-    This module still raises the code-named `ValueError` below, both because Ruling 11
-    prescribes it as the convention and because a test or caller invoking the handler
-    directly (bypassing `evaluate()`) still receives it intact — only the path through the
-    engine's own node execution loses it.
+    "nodeId":"<id>"}`, with the original type, message and code all discarded. `score_one`
+    cannot recover *why* a `model_call` failed by catching and reading that exception.
+
+    **Design chosen: a sentinel in the handler's own returned `output`** — the finding named
+    two candidate channels, this one and a mutable side-channel the handler and `score_one`
+    would share. **The side-channel is rejected, not merely left aside.** `CompiledBundle`
+    is held once and scored many times, including *concurrently* — `async_evaluate`'s own
+    throughput gain (Ruling 5) comes from releasing the GIL during native execution, and
+    Task 1.4's own concurrency smoke test runs many `score_one` calls against one shared
+    `CompiledBundle` via `asyncio.gather`. A mutable slot captured in this closure would be
+    shared by every one of those calls; nothing in this codebase has verified which OS
+    thread a `customHandler` callback actually runs on, so a slot written by one quote's
+    failing `model_call` could be read back by a different quote's `score_one` before its
+    own call completes — exactly the "corruption or cross-talk" that smoke test exists to
+    catch, and building a channel that could fail it would be reckless rather than merely
+    unverified. A sentinel key in the handler's returned `output` carries no such risk: it
+    travels through the identical mechanism every other produced value already uses
+    (`passThrough`, verified live in Task 1.3 and re-verified for this exact shape in Task
+    1.4 — a handler returning `{"output": {..., MODEL_CALL_ERROR_KEY: ...}}` puts that key
+    straight into `async_evaluate()`'s own `result`, no exception at all), which the engine
+    already isolates per call — the same isolation that keeps two concurrent quotes' own
+    computed values from crossing.
+
+    Also returns a zero for every name `step` declares in `produces`, so a downstream
+    `expression`/`constraint` step referencing this step's output does not hit the engine's
+    own *undefined variable* failure on top of this one — `score_one` checks
+    `MODEL_CALL_ERROR_KEY` before trusting any computed value, so the zero is never read as
+    a real prediction.
     """
-    raise ValueError(f"MODEL_CALL_FAILED: {message}")
+    output: dict[str, Any] = {str(name): 0 for name in _as_list(step.produces)}
+    output[MODEL_CALL_ERROR_KEY] = f"MODEL_CALL_FAILED: {message}"
+    return {"output": output}
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -236,6 +258,68 @@ def _decision_table_node(
     }
 
 
+def _constraint_node(step_id: str, node: dict[str, Any]) -> dict[str, Any]:
+    """A `constraint` step becomes an `expressionNode` (W11 Task 1.4, Ruling 9).
+
+    Resolves the scope cut this module's own docstring named: `on_violation`'s three modes
+    and `clamp_bounds`' semantics were left untranslated pending `score_one`'s design
+    (Ruling 9's decline representation). Two things are computed here, and nothing more —
+    the *disposition* (decline vs. clamp vs. error, and collecting reason codes) is
+    `score_one`'s, read from these values after one full evaluation, never decided inside
+    the graph:
+
+    1. `{step_id}__violated`: `!(condition)` — verified live that `!` negates a boolean in
+       this engine (`not(...)` also works; `!` is used for brevity).
+    2. For `on_violation="clamp"` only: the clamped replacement for the single name the step
+       `produces`, keyed to the *same* name so `passThrough` overrides the pre-clamp value
+       for every downstream consumer — verified live that a later node's `passThrough`
+       output for a key a prior node also produced is what survives to the terminal result.
+       Built from `clamp_bounds` (`{"min"|"max": "<expr>"}`, either or both) using the
+       ternary operator, **not** an `if(cond, a, b)` function — verified live that ZEN has
+       no such function (`zen.compile_expression` / decision creation both fail on it; this
+       is exactly `compile.py`'s `_check_vocabulary`'s own warning about functions the
+       spec's prose names that the engine does not have) — `cond ? a : b` is the form that
+       works.
+
+    A `decline`/`error` step (or a `clamp` step declaring no `produces`) emits only the
+    `__violated` flag; the pre-existing value it `consumes` is left untouched, which is
+    exactly FR-RATE-39's "the ladder stays fully populated" for a declined quote.
+    """
+    violated_key = f"{step_id}__violated"
+    expressions: list[dict[str, Any]] = [
+        {"id": f"{step_id}_v", "key": violated_key, "value": f"!({node['condition']})"}
+    ]
+
+    produced = _as_list(node.get("produces") or [])
+    if node["on_violation"] == "clamp" and produced:
+        consumed = _as_list(node.get("consumes") or [])
+        if not consumed:
+            raise NotImplementedError(
+                f"constraint step {step_id!r} declares on_violation='clamp' and produces "
+                f"{produced!r} but consumes nothing — to_wire has no source value to clamp."
+            )
+        bounds = node.get("clamp_bounds") or {}
+        if not bounds:
+            raise NotImplementedError(
+                f"constraint step {step_id!r} declares on_violation='clamp' but no "
+                "clamp_bounds — nothing to clamp towards."
+            )
+        value_expr = str(consumed[0])
+        if "min" in bounds:
+            value_expr = f"({value_expr} < ({bounds['min']}) ? ({bounds['min']}) : {value_expr})"
+        if "max" in bounds:
+            value_expr = f"({value_expr} > ({bounds['max']}) ? ({bounds['max']}) : {value_expr})"
+        expressions.append({"id": f"{step_id}_c", "key": str(produced[0]), "value": value_expr})
+
+    return {
+        "id": step_id,
+        "type": "expressionNode",
+        "name": step_id,
+        "position": {"x": 0, "y": 0},
+        "content": {"expressions": expressions, "passThrough": True},
+    }
+
+
 def _model_call_node(step_id: str) -> dict[str, Any]:
     """Step 3, rule 6: a `model_call` step becomes a `customNode`.
 
@@ -290,20 +374,11 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
         }
     )
     if unsupported:
-        raise NotImplementedError(
-            f"to_wire has no wire translation for step(s) {unsupported}. A 'constraint' "
-            "step's decline/clamp semantics are Ruling 9's and Task 1.4's to design, not "
-            "yet built here — see this module's docstring."
-        )
+        raise NotImplementedError(f"to_wire has no wire translation for step(s) {unsupported}.")
 
     interior_ids = [
         step_id for step_id, node in graph.nodes.items() if node["type"] in _ENGINE_NODE_TYPE
     ]
-
-    produced_by: dict[str, str] = {}
-    for step_id in interior_ids:
-        for name in _as_list(graph.nodes[step_id]["produces"]):
-            produced_by[str(name)] = step_id
 
     consumed_by_someone: set[str] = set()
     wire_nodes: list[dict[str, Any]] = [
@@ -311,20 +386,38 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
     ]
     edges: list[dict[str, Any]] = []
 
+    # `produced_by` is built **incrementally**, not as a full pre-pass, so that a step
+    # consuming a name it also produces (the "clamp in place" re-production chain
+    # `RatingAlgorithm._graph_invariants` already names and permits — `rating.py`'s own
+    # comment: "a step never depends on itself, even when it re-produces a name it
+    # consumed") resolves its *incoming* edge to whichever step produced that name
+    # *before* this one runs, never to itself. A full pre-pass (Task 1.3's original
+    # shape) would have every re-producer's own name already pointing at itself by the
+    # time its consumed-edge is computed, wiring a self-loop the engine refuses at
+    # decision-creation time (`cyclicGraph`) — verified live, not assumed. Every existing
+    # (non-reproducing) step type is unaffected: a name produced exactly once resolves
+    # identically whether `produced_by` is built all at once or incrementally.
+    produced_by: dict[str, str] = {}
     for step_id in interior_ids:
         node = graph.nodes[step_id]
         kind = node["type"]
-        if kind == "expression":
-            wire_nodes.append(_expression_node(step_id, node))
-        elif kind in ("table", "lookup"):
-            wire_nodes.append(_decision_table_node(step_id, node, payloads))
-        else:
-            wire_nodes.append(_model_call_node(step_id))
 
         for name in _as_list(node["consumes"]):
             name = str(name)
             consumed_by_someone.add(name)
             edges.append(_edge(produced_by.get(name, _INPUT_ID), step_id))
+
+        if kind == "expression":
+            wire_nodes.append(_expression_node(step_id, node))
+        elif kind in ("table", "lookup"):
+            wire_nodes.append(_decision_table_node(step_id, node, payloads))
+        elif kind == "constraint":
+            wire_nodes.append(_constraint_node(step_id, node))
+        else:
+            wire_nodes.append(_model_call_node(step_id))
+
+        for name in _as_list(node["produces"]):
+            produced_by[str(name)] = step_id
 
     for step_id in interior_ids:
         produced_names = {str(n) for n in _as_list(graph.nodes[step_id]["produces"])}
@@ -362,7 +455,7 @@ def _model_call_handler(
         step = steps_by_id[request.node["id"]]
         ref = step.model_ref if step.model_ref is not None else step.peril_structure_ref
         if ref is None:  # pragma: no cover — schema-refused (FR-RATE-10)
-            _raise_model_call_failed(f"model_call step {step.step_id!r} pins nothing.")
+            return _model_call_failure(step, f"model_call step {step.step_id!r} pins nothing.")
         ref_str = str(ref)
         payload = payloads[ref_str]
         fit_result = dict(payload["fit_result"])
@@ -381,10 +474,21 @@ def _model_call_handler(
             frame = pl.DataFrame([feature_row]) if feature_row else pl.DataFrame(
                 {slug: [context.get(slug)] for slug in gbm_result.feature_order}
             )
-            prediction = float(predict_gbm(gbm_result, booster, frame, factors=())[0])
+            # NFR-RATE-14: nthread=1 per request (F-W11-1-2). For LightGBM this is a
+            # genuine per-call argument (safe under concurrency). For XGBoost this call is
+            # a no-op by design — `booster` is already loaded (Ruling 8), and
+            # `predict_gbm` refuses to `set_param` a shared, already-loaded `Booster` on
+            # every call because that races a concurrent `predict()` on the same object
+            # and crashes (verified live — see `predict_gbm`'s own docstring).
+            # `_load_boosters`, below, is where nthread=1 is actually baked in for
+            # XGBoost, once, before any concurrent scoring begins.
+            prediction = float(
+                predict_gbm(gbm_result, booster, frame, factors=(), nthread=1)[0]
+            )
             value: int = round(prediction)
         else:
-            _raise_model_call_failed(
+            return _model_call_failure(
+                step,
                 f"model_call step {step.step_id!r} pins a {model_type!r} model. "
                 "Bundle.resolved_payloads carries the Model's own dump but not the "
                 "Factor/Banding/Grouping objects predict_glm requires (ModelSpecCommon."
@@ -392,7 +496,7 @@ def _model_call_handler(
                 "an empty sequence, so every non-intercept coefficient's term goes "
                 "unresolved). Scoring a GBM works because predict_gbm has a documented "
                 "fallback for factors=() that reads each feature off the frame directly; "
-                "predict_glm has no such fallback."
+                "predict_glm has no such fallback.",
             )
 
         return {"output": {str(name): value for name in _as_list(step.produces)}}
@@ -404,7 +508,15 @@ def _load_boosters(
     algorithm: RatingAlgorithm, payloads: Mapping[str, Any]
 ) -> dict[str, object]:
     """Deserialise every pinned GBM's booster once (Ruling 8). Not a cache: this runs once
-    per `load_bundle` call, and `load_bundle` itself consults no cache (Ruling 10)."""
+    per `load_bundle` call, and `load_bundle` itself consults no cache (Ruling 10).
+
+    **`nthread=1` (NFR-RATE-14, F-W11-1-2) is baked in here, once, and nowhere else for
+    XGBoost.** This runs synchronously, before `load_bundle` returns and before any
+    concurrent scoring against the resulting `CompiledBundle` can begin — the only point in
+    this object's life where mutating it (`Booster.set_param`) is safe. `predict_gbm`
+    deliberately does *not* repeat this on every call against an already-loaded booster;
+    see its own docstring for the crash that discipline avoids.
+    """
     boosters: dict[str, object] = {}
     for step in algorithm.steps:
         if not isinstance(step, RatingModelCallStep):
@@ -419,7 +531,9 @@ def _load_boosters(
         model_type = fit_result.get("model_type")
         if model_type in ("xgboost", "lightgbm"):
             booster_text = fit_result["booster_content"]
-            boosters[ref_str] = load_gbm_booster(model_type, booster_text.encode("utf-8"))
+            boosters[ref_str] = load_gbm_booster(
+                model_type, booster_text.encode("utf-8"), nthread=1
+            )
     return boosters
 
 

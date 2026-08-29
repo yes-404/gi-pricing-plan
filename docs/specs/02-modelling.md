@@ -2345,11 +2345,24 @@ def fit_gbm(data: pl.DataFrame, spec: GbmSpec, factors: Sequence[Factor], *,
 def predict_gbm(result: GbmFitResult, booster: bytes | object, data: pl.DataFrame,
                 factors: Sequence[Factor] = (), *,
                 bandings: Mapping[UUID, Banding] | None = None,
-                groupings: Mapping[UUID, Grouping] | None = None) -> pl.Series
+                groupings: Mapping[UUID, Grouping] | None = None,
+                nthread: int | None = None) -> pl.Series
                 # booster: bytes (loads fresh) or load_gbm_booster's return (Ruling 8)
-def load_gbm_booster(model_type: Literal["xgboost", "lightgbm"], booster: bytes) -> object
+                # nthread: added 2026-08-29 (W11 Task 1.4, F-W11-1-2) — NFR-RATE-14's
+                # thread-count control. Applied via set_param only when this call performs
+                # its own fresh load from bytes; a no-op against an already-loaded
+                # (shared) booster, because set_param racing a concurrent predict() on
+                # the same object crashes XGBoost (verified live) — nthread against a
+                # shared booster is load_gbm_booster's own parameter, below, applied once
+def load_gbm_booster(model_type: Literal["xgboost", "lightgbm"], booster: bytes,
+                     nthread: int | None = None) -> object
             # added 2026-08-29 (W11 Task 1.3, Ruling 8) — the loaded-booster seam:
             # deserialise once, hand the result to predict_gbm on every subsequent call
+            # nthread: added 2026-08-29 (W11 Task 1.4, F-W11-1-2) — set once here, at
+            # load time, before any concurrent scoring against the loaded object begins
+            # (XGBoost only; LightGBM's own thread count is predict_gbm's own per-call
+            # argument, never a mutation on this object, so this parameter is unused
+            # on that branch)
 def apply_loss_treatment(response: NDArray[float64], treatment: LossTreatment
                          ) -> NDArray[float64]
 
