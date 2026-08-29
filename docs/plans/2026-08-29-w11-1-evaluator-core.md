@@ -346,23 +346,42 @@ Each is verified at `7b8473a` by a full-class sweep, per `delivery-process.md` �
 fixed in passing; each carries a recommendation and a named owner.
 
 **F-W11-1-1 — `QuoteContext.purpose` disagrees between the spec and its own contract.
-Blocks Task 1.4.**
+RULED — Ruling 12, and the ruling corrected this finding as it was reported.**
 `03-rating-engine.md:63` defines five values — `new_business | renewal |
 mid_term_adjustment | cancellation | what_if` — and carries a dated note: *"`cancellation`
 was added 2026-08-18 with FR-RATE-63: OQ-RATE-4's answer mounts the refund sub-graph on
 `purpose`, and the value it keys on has to exist."*
-`docs/contracts/schemas/scoring.schema.json:13` defines four:
+`docs/contracts/schemas/scoring.schema.json:12` defines four:
 `["new_business", "renewal", "mid_term_adjustment", "what_if"]`. The hand-authored contract
 was never updated when §2 gained the value.
-This is not cosmetic. FR-RATE-63's refusal guard fires on
-`purpose ∈ {mid_term_adjustment, cancellation}`; if `QuoteContext` cannot express
-`cancellation`, one limb of that disjunction has no test that can even be written, and the
-guard would ship half-proven while looking complete.
-**Owner: the decision-maker** — `delivery-process.md` §3 makes spec-vs-code conflicts
-theirs, never the planner's. **Recommended resolution:** the spec is right and the contract
-is stale; add `"cancellation"` to `scoring.schema.json`'s enum. Task 1.4 does not start its
-`purpose` handling until this is ruled. Raised to the lead and the decision-maker
-2026-08-29, against task #34.
+
+**Correction to this finding as first written: the enum is line 12, not line 13.** The
+decision-maker checked the number rather than adopting it, and the number was mine and was
+wrong. Recorded rather than silently amended, because a finding whose own locator is wrong
+is the class that teaches a reader to stop checking locators.
+
+**Ruled: the contract is the wrong side** (Ruling 12, a `CLAUDE.md` §0 code-versus-spec
+question). Three spec locations say five and the third is the dated record of the edit
+itself: §2's glossary row (`:63`), §4.1's `InputContract` example (`:240-241`), and
+OQ-RATE-4's decision row (`:807`). Amending the spec down to four would silently reverse a
+maintainer decision. Provenance was checked, not inferred: `scoring.schema.json` has two
+commits in its whole history and neither is `eb43022`, the 2026-08-18 commit that decided
+OQ-RATE-4 — the contract was never disagreed with, it was never revisited.
+
+**Ruled (b): Task 1.4 fixes it, not the ruling's own commit** — `model-schema` defines no
+`purpose` enum at all, so correcting the contract now would fix the only *existing* copy
+while the *authoritative* one is still unwritten, opening a second window for the two to
+diverge. **Three obligations bind Task 1.4, all in one PR:** the five-member enum defined
+once in `model-schema`; `scoring.schema.json:12` corrected to match in the same commit; and
+FR-RATE-63's refusal test covering **both** members.
+
+**The third obligation is a correction to this plan, not only to the contract.** Task 1.4
+Step 9 as first written tested `purpose: "mid_term_adjustment"` alone — inherited from the
+frozen map's own exit criterion (`2026-08-29-w11-scoring.md:401-404`). That is precisely the
+half the stale contract *can* express, so the test as written **would have gone green with
+this defect fully in place**. `cancellation` is `mid_term_adjustment`'s stranded list-mate
+in the requirement, in the contract and in the test, and fixing any one of the three alone
+leaves the guard half-proven. Step 9 is corrected below.
 
 **F-W11-1-2 — NFR-RATE-14's `nthread=1` has no implementation surface.**
 `03-rating-engine.md` states GBM `model_call` steps execute with `nthread=1` per request.
@@ -411,7 +430,7 @@ inside it — `../audit/plan-reviews.md` review 8 Q4 found that mechanism twice.
 | FR-RATE-38 | §3.7 | Task 1.4 | One typed-error test per category, each fired by a deliberately malformed context |
 | FR-RATE-39 | §3.7 | Task 1.4 | A constraint decline returns `outcome: "declined"` with a populated ladder and a non-empty `decline_reasons` — never an HTTP error |
 | FR-RATE-41 | §3.7 | Task 1.4 | `trace=True` returns a `Trace` matching `scoring.schema.json`'s `$defs/Trace`; `trace=False` returns `None` |
-| FR-RATE-63 | §3.1 (`:87`) | Task 1.4 | Refusal-guard test on broken input — **blocked by F-W11-1-1 for the `cancellation` limb** |
+| FR-RATE-63 | §3.1 (`:87`) | Task 1.4 | Refusal-guard test on broken input, **parametrised over both `mid_term_adjustment` and `cancellation`** (Ruling 12) |
 | FR-RATE-64 | §3.7 | Task 1.4 | The `instalment_loading` rung appears in the ladder and reconciles |
 | FR-RATE-65 | §3.4 (`:139`) | Task 1.3 | `CompiledBundle` exists as a distinct type from `Bundle` and refuses serialisation |
 | FR-RATE-22 citation | §5.1 (`:512`) | Task 1.1 | `audit-docs.py` clean with the citation added |
@@ -439,16 +458,16 @@ NFR-RATE-9, 11, 13 → Slice 2. NFR-RATE-12 → Slice 4.
 | 1.1 Route wiring | — | — | Everything downstream needs a real, non-seed Rating Version to test against |
 | 1.2 Resolver, persistence, Job | 1.1 | — | Nothing compiles to a useful Bundle today, so 1.3 has nothing to load |
 | 1.3 `CompiledBundle` + `load_bundle` | 1.2 | — | `score_one`'s first parameter does not exist until this lands |
-| 1.4 `score_one` | 1.3 | **F-W11-1-1** (the `purpose` enum only) | The evaluator |
+| 1.4 `score_one` | 1.3 | — (**F-W11-1-1 ruled**, Ruling 12) | The evaluator |
 | 1.5 Latency harness | 1.4 | — (**DP3 ruled**, Ruling 6) | Measures 1.4 |
 
 Strictly sequential — `delivery-process.md` §8's "no two children of a layer at once" is
 satisfied by the dependency chain itself, not only by the rule. Read-only evidence fan-out
 inside a task is permitted by the same section.
 
-**F-W11-1-1 blocks only the `purpose` handling inside Task 1.4**, not the task. An executor
-can build and gate the ladder, the step types, the error typing and the trace before it is
-ruled, then add the guard. Do not guess the enum.
+**F-W11-1-1 is ruled** — Ruling 12: five members including `cancellation`, fixed by Task 1.4
+itself in one PR with the `model-schema` enum, the contract line and the two-member refusal
+test. **Nothing in this slice is blocked.**
 
 **DP3 (load-generation tooling) is ruled** — Ruling 6, PR #368: `scripts/bench-rating.py`
 is stdlib-only and follows `bench-model.py`'s shape; no new dependency, no `03` §8 row and
@@ -1033,8 +1052,11 @@ completely; thread-offloaded `evaluate()` is *worse than sequential* (0.90–0.9
 - Create: `packages/model-schema/src/model_schema/scoring.py` — `QuoteContext`,
   `LadderRung`, `ScoringResult`, `Trace`, `TraceStep`.
 - Create: `packages/pricing-core/src/pricing_core/rating/score.py`.
-- Modify: `backend/src/app/errors.py` — add `MODEL_CALL_FAILED`, `INPUT_CONTRACT_VIOLATION`
-  and `REFERENCE_LOOKUP_MISS` to `RATING_ERROR_CODES` (`:275-307`).
+- Modify: `docs/contracts/schemas/scoring.schema.json:12` — the five-member `purpose` enum
+  (Ruling 12, obligation 2), in the same commit as the `model-schema` enum.
+- Modify: `backend/src/app/errors.py` — add `MODEL_CALL_FAILED`, `INPUT_CONTRACT_VIOLATION`,
+  `REFERENCE_LOOKUP_MISS` **and `LADDER_RECONCILIATION_FAILED`** to `RATING_ERROR_CODES`
+  (`:275-307`) — four, not three; see Step 6.
 - Modify: `packages/pricing-core/src/pricing_core/modelling/gbm.py:1185` — `predict_gbm`
   gains a thread control (F-W11-1-2).
 - Modify: `backend/src/app/main.py:70` — call `assert_integer_minor_round_trip()` in
@@ -1070,9 +1092,14 @@ belongs; read `.claude/skills/contract-guard` before adding one — it records f
 that were in the guards rather than in the schemas, and why `required` is compared in one
 direction only.
 
-**`purpose` is blocked by F-W11-1-1.** The spec says five values, the contract says four.
-Do not pick one. Build every other field, leave `purpose` until it is ruled, and do not
-write the FR-RATE-63 guard against a guess.
+**`purpose` is ruled — Ruling 12 — and it is five members, `cancellation` included.** Three
+obligations land in this one PR, and they are one change, not three:
+1. The five-member enum defined **once**, in `model-schema` (ADR-0002, `CLAUDE.md` §2 —
+   nobody hand-writes a shape `model-schema` owns, and today nothing owns this one).
+2. `docs/contracts/schemas/scoring.schema.json:12` corrected to those five, **in the same
+   commit** — `CLAUDE.md` §2 requires a change spanning spec and code to land as one, or the
+   audit reports a consistency the repository does not have.
+3. FR-RATE-63's refusal test covering both members (Step 9).
 
 - [ ] **Step 2: write the golden test, and run it red**
 
@@ -1181,14 +1208,23 @@ is `{"type": "integer", "minimum": 0}` — parse it, do not pass it through.
 Test that explicitly: score the same context twice, traced and untraced, and compare the
 whole `ScoringResult` with `trace` excluded.
 
-- [ ] **Step 9: the FR-RATE-63 refusal guard, on broken input** *(the `cancellation` limb is
-      blocked by F-W11-1-1)*
+- [ ] **Step 9: the FR-RATE-63 refusal guard, on broken input — parametrised over *both*
+      members**
 
-A `QuoteContext` with `purpose: "mid_term_adjustment"` against a Rating Version that mounts
-no MTA sub-graph must refuse — never `outcome: "quoted"`. Write the test, confirm it fails
-against a first implementation that ignores `purpose`, then make it pass. The requirement's
-own words: pricing it as new business "is the failure this requirement exists to prevent,
-and it is silent".
+A `QuoteContext` with `purpose: "mid_term_adjustment"` **and** one with
+`purpose: "cancellation"`, each against a Rating Version that mounts no such sub-graph, must
+refuse — never `outcome: "quoted"`. Write both, confirm they fail against a first
+implementation that ignores `purpose`, then make them pass. The requirement's own words:
+pricing it as new business "is the failure this requirement exists to prevent, and it is
+silent".
+
+**Parametrise; do not write the `mid_term_adjustment` case alone.** Ruling 12 is explicit
+that the one-member version of this test is the half the stale contract can already express,
+so it **would have gone green with the enum defect fully in place** — the contract gap and
+the test gap are the same gap. An earlier draft of this step, inherited from the frozen map's
+own exit criterion, tested one member. `cancellation` is `mid_term_adjustment`'s stranded
+list-mate here, and a guard proven on one limb of a two-limb disjunction is half-proven while
+looking complete.
 
 - [ ] **Step 10: the FR-RATE-64 refusal guard (F-W11-1-4)**
 
@@ -1290,12 +1326,11 @@ individually with their owning slice or workstream, so the exclusion is visible 
 silent. FR-RATE-65 was added after checking the map's own list against `03` §3.4 — it was
 missing (C5).
 
-**2. Placeholder scan.** No bare TBD. **One** thing is genuinely unwritten and it says
-exactly what blocks it: `purpose` handling in Task 1.4 Step 1 (F-W11-1-1). That is the
-honest state of a blocked decision, not a placeholder — and it is why Task 1.4 cannot be
-declared complete before F-W11-1-1 is ruled. Two other items were open when this plan's
-evidence sweep ran and are not open now: Task 1.5's DP3 dependency and Task 1.4's decline
-representation, both ruled by PR #368 while this was being written. One design choice is
+**2. Placeholder scan.** No bare TBD, and — after Ruling 12 — **nothing in this slice is
+blocked**. Four items were open when this plan's evidence sweep ran and none is open now:
+Task 1.5's DP3 dependency, Task 1.4's decline representation, the `load_bundle` signature,
+and the `purpose` enum, all ruled by PR #368 while this was being written or immediately
+after. One design choice is
 deliberately left to the executor rather than pre-written — the loaded-booster seam's
 naming, per Ruling 8's own reasoning that naming a function before it is designed is how a
 spec acquires a signature nothing implements.
@@ -1322,16 +1357,24 @@ malformed-graph `RuntimeError` versus a wrong number in Task 1.3 Step 2. In each
 plan says what a *differently*-shaped failure would mean, because a matching status with a
 differing reason is a plan defect.
 
-**6. What this plan does not decide.** Three things, each named with its owner. F-W11-1-1
-and F-W11-1-5 are spec-vs-code conflicts and so the decision-maker's; whether Tasks 1.1–1.5
-are five slices or one slice of five PRs is the lead's replan call, raised separately. A
-planner supplies options and a recommendation and rules none of them
+**6. What this plan does not decide.** One thing is still open: **F-W11-1-5**, the `03` §5.2
+money-module divergence, which is a spec-vs-code conflict and so the decision-maker's. It
+blocks nothing — Task 1.4 imports from the real path either way. The other two are decided:
+F-W11-1-1 by Ruling 12, and the slice-granularity question by the lead, who accepted running
+Tasks 1.1–1.5 as **five sequential slices with the frozen map unedited** and recorded that
+this applies the process's granularity to the plan's tasks rather than re-cutting them — so
+it is not a replan. A planner supplies options and a recommendation and rules none of them
 (`delivery-process.md` §3).
 
 **7. Written against `7b8473a`, revised once before freeze.** The evidence sweep, every
 line number and the five live engine measurements are at `7b8473a`. PR #368 landed six
 rulings between the sweep and the commit, and this plan was revised rather than filed
 stale — the revision is named at each point it applies rather than folded in silently, so a
-reader can see which parts rest on evidence and which on a ruling. **F-W11-1-1 survives
-that revision**: PR #368's own "findings reported, not ruled" section names two findings and
-neither is the `purpose` enum, so it remains open and this plan is still its only record.
+reader can see which parts rest on evidence and which on a ruling. **F-W11-1-1 was
+then ruled too**, as Ruling 12 in the same record, after this plan raised it — and the ruling
+corrected the finding's own line number (12, not 13) and found a defect this plan had
+inherited from the frozen map: a one-member refusal test that would have passed with the
+enum gap in place. Both corrections are recorded where they apply rather than folded in.
+**The rule this cost is now `README.md`'s fourth unenforced convention**, added in this same
+branch: a plan's premises age faster than its literals, so re-check for rulings between the
+evidence sweep and the pull request. This plan has now applied it twice.
