@@ -319,6 +319,12 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # W14's. The branch is permanent, not a stub — after W14 it is what an
         # environment holding no Deployment answers. Owned by `03` §5.1.
         "NO_LIVE_RATING_VERSION",
+        # Scoring (W11 Slice 3 Task 3B, FR-RATE-38, Ruling 24). A `score.batch` Job
+        # argument may only lower `rating.batch_abort_failure_rate`'s resolved effective
+        # threshold, never raise it; a run whose observed failure rate crosses the
+        # effective threshold aborts. Owned by `03` §5.1.
+        "BATCH_ABORT_THRESHOLD_ABOVE_SETTING",
+        "BATCH_ABORTED",
     }
 )
 

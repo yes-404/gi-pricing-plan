@@ -617,7 +617,14 @@ column.
 `IMPORT_KEY_MISMATCH`, `IMPORT_TYPE_MISMATCH`, `IMPORT_PARSE_ERROR`
 *(added 2026-08-28, W10-3C)*, `MODEL_CALL_FAILED`
 *(added 2026-08-29, W11 Slice 1 — FR-RATE-38's fifth category, model failure; ruled in `docs/plans/2026-08-29-w11-slice1-rulings.md` Ruling 11)*, `NO_LIVE_RATING_VERSION`
-*(added 2026-08-29, W11 Slice 2 — **409**. FR-RATE-34's default path resolves the Rating Version live in the target environment, and `live` is a property of a Deployment (FR-RATE-23), which is W14's. A `POST /api/v1/score` omitting `rating_version_ref` is refused with this code rather than scored against a guessed version. The branch is permanent, not a stub: after W14 it is what an environment holding no Deployment answers. Ruled in `docs/plans/2026-08-29-w11-slice2-rulings.md` Ruling 14)*.
+*(added 2026-08-29, W11 Slice 2 — **409**. FR-RATE-34's default path resolves the Rating Version live in the target environment, and `live` is a property of a Deployment (FR-RATE-23), which is W14's. A `POST /api/v1/score` omitting `rating_version_ref` is refused with this code rather than scored against a guessed version. The branch is permanent, not a stub: after W14 it is what an environment holding no Deployment answers. Ruled in `docs/plans/2026-08-29-w11-slice2-rulings.md` Ruling 14)*,
+`BATCH_ABORT_THRESHOLD_ABOVE_SETTING`, `BATCH_ABORTED`
+*(added 2026-08-30, W11 Slice 3 Task 3B — FR-RATE-38, Ruling 24. The first: a `score.batch`
+Job argument may only lower `rating.batch_abort_failure_rate`'s resolved effective threshold,
+never raise it; a request whose argument is above it is refused with this code before any
+row is scored. The second: a run whose observed per-quote failure rate crosses the effective
+threshold aborts, recording both the threshold in force and the observed rate — never a
+silent partial result)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version
