@@ -16,7 +16,7 @@ data preparation → risk modelling → rating algorithm design → deployment/s
       → monitoring → governance
 ```
 
-It is positioned as an alternative to WTW Radar/Emblem and comparable commercial suites.
+It is positioned as an alternative to the established commercial pricing suites.
 Primary users are **pricing actuaries and analysts** who are technically capable
 (Python/notebooks) but expect a polished, interactive UI for day-to-day work.
 

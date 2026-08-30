@@ -167,7 +167,8 @@ Ordered by *risk × unfamiliarity*, not by build order:
    arithmetic is exact `rust_decimal`. The remaining risk is `arbitrary_precision` across
    the binding and `maths-nopanic` returning `0` (FR-RATE-56/57).
 3. **~~glum standard errors~~ ✔ confirmed** — the API exists. Remaining: reconciling its
-   numbers against Emblem, which is a domain task, not a library one.
+   numbers against an established commercial GLM implementation, which is a domain task,
+   not a library one.
 4. **Polars lazy execution at 10 M+ rows** — everything downstream inherits its
    performance.
 5. **~~Pydantic v2 discriminated unions~~ ✔ confirmed**, with one gap to close: `Decimal`
