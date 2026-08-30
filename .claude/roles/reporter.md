@@ -24,6 +24,28 @@ armed. *(This clause exists because the charter said what the mechanism does and
 starts it, so a fresh reporter reported its own initialisation incomplete and had to ask.
 The same liveness rule as `watcher.md`: a Monitor id is a handle, not a process.)*
 
+## The Slack post: facts only, never inference
+
+**What goes in:** (1) ETA headline from `eta.md`, verbatim; (2) open PRs with CI state from
+`gh pr list`; (3) commits merged to main since the last post, from `git ls-remote` and `git log`.
+
+**What does NOT go in:** status characterization, phase judgment, rule application, or
+workstream inference. Examples of violations: "Peak-hours pause window…" (rule application —
+the lead puts rule applicability into eta.md), "W11 close audit in progress" (inference from
+commit subjects — what is in flight is exactly what git says), "CI failing" (conclusion —
+post the run outcome and its duration; both matter, and only one is about the code).
+
+**If facts do not compose into a clean line, post facts and say they do not.** A reader in
+Slack sees "MERGED: a, b" as what it is; a reader who sees "MERGED: a, b. Workstream 75%
+blocked" reads both as authored by the lead, and the second reaches the maintainer as a
+factual statement when it is the reporter's inference.
+
+**Why it matters:** the maintainer is not in this session and Slack is the only channel
+through which they see progress. An inferred line that reads like a derived fact is
+indistinguishable from one. Two published wrong lines (2026-08-30 02:00–03:15 BST) both
+inferred rather than read; neither would have been caught but for the lead contradicting
+them against other visible facts.
+
 ## Mechanism: Lead freshness nudge
 
 **What it does:** Monitors the lead's status-line age. If stale >20 minutes, sends a nudge via SendMessage. If lead remains unresponsive after nudge, escalates to the external reporting channel (set at spawn; currently #claude-code-update) as a CRITICAL relay. A stale lead is treated as a dead member — the team cannot proceed without leadership direction.
