@@ -896,8 +896,20 @@
       },
       "BundleMetadata": {
         "additionalProperties": false,
-        "description": "The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash.",
+        "description": "The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash,\nand the blob key the serialised bundle was stored under.\n\n**`content_hash` and `blob_sha256` are hashes of different things, and their patterns\nkeep them apart on purpose.** `content_hash` is reproducible from the graph and pins\n(FR-RATE-24) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content\naddress for the serialised bundle and is bare hex, matching `BlobRef.sha256`. Neither\nvalue validates into the other's field, so passing one where the other belongs is\nrefused loudly at the boundary rather than warned about in a comment (Ruling 37 §3).",
         "properties": {
+          "blob_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blob Sha256"
+          },
           "bytes": {
             "minimum": 0.0,
             "title": "Bytes",
@@ -8647,6 +8659,89 @@
           "worst_gap"
         ],
         "title": "QuantileCrossing",
+        "type": "object"
+      },
+      "QuoteContext": {
+        "additionalProperties": false,
+        "description": "`QuoteContext` (`scoring.schema.json:7-24`, `03` §4.4).",
+        "properties": {
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QuoteContextOptions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purpose": {
+            "enum": [
+              "new_business",
+              "renewal",
+              "mid_term_adjustment",
+              "cancellation",
+              "what_if"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "quote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Id"
+          },
+          "quoted_at": {
+            "format": "date-time",
+            "title": "Quoted At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose",
+          "quoted_at",
+          "effective_date"
+        ],
+        "title": "QuoteContext",
+        "type": "object"
+      },
+      "QuoteContextOptions": {
+        "additionalProperties": false,
+        "description": "`QuoteContext.options` (`scoring.schema.json:16-22`).\n\n`trace` is **not** read by `score_one` — its own `trace: bool` keyword is the single\nsource (`03` §5.2's already-ruled signature, Ruling 5); this field exists because the\nwire contract declares it, for a caller (Slice 2's HTTP layer) that maps a request body\nonto the `trace=` argument. `rating_version_ref` is required in practice at this layer:\nSlice 1 builds no default-live resolution (DP1, Slice 2), so `score_one` refuses a\ncontext that omits it rather than guessing which version to report scoring against.",
+        "properties": {
+          "rating_version_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trace": {
+            "default": false,
+            "title": "Trace",
+            "type": "boolean"
+          }
+        },
+        "title": "QuoteContextOptions",
         "type": "object"
       },
       "RateTableDiff": {
@@ -25305,6 +25400,131 @@
         "summary": "Rows of a pinned version, optionally as at a date",
         "tags": [
           "reference data"
+        ]
+      }
+    },
+    "/api/v1/score": {
+      "post": {
+        "description": "Score one quote (FR-RATE-34/35).\n\nW11 imposes neither of FR-RATE-35's restrictions — approved-only versions, and a\nrewritten `what_if` purpose — because both sit inside that requirement's own `prod`\nclause and W11 has no environments (Ruling 14 clause 3). Scoring a `draft` version by\nexplicit reference is the \"what-if and testing\" the requirement permits.\n\nA decline is **not** an error: `build_scoring_result` sets `outcome = \"declined\"` with a\npopulated ladder, and FR-RATE-39 makes that a 200.",
+        "operationId": "score_api_v1_score_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteContext"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Score one Quote Context against an explicit Rating Version",
+        "tags": [
+          "rating"
         ]
       }
     },

@@ -33,6 +33,7 @@ from app.api import (
     rate_tables,
     rating_algorithms,
     reference_tables,
+    score,
     service_accounts,
     validation,
 )
@@ -45,6 +46,7 @@ from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
+from app.platform.bundle_slot import BundleSlot
 from model_schema import OidcAuthConfig
 from pricing_core.rating.compile import assert_integer_minor_round_trip
 
@@ -136,6 +138,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(dataset_versions.router, prefix=API_PREFIX)
     app.include_router(validation.router, prefix=API_PREFIX)
     app.include_router(reference_tables.router, prefix=API_PREFIX)
+    app.include_router(score.router, prefix=API_PREFIX)
     app.add_api_route(
         "/version",
         health.version_route(settings),
@@ -161,6 +164,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.oidc_verifier = oidc_verifier
     app.state.database = database
     app.state.blob_store = blob_store
+    # One slot per worker process, built once at startup and read per request — the same
+    # lifetime `blob_store` has. Deliberately *not* per request: a slot rebuilt per call
+    # holds nothing, which is the state option (a) was rejected for (Ruling 16).
+    app.state.bundle_slot = BundleSlot(capacity=settings.bundle_slot_capacity)
 
     _log.info(
         "application configured",

@@ -65,6 +65,11 @@ def requires(permission: Permission) -> Callable[..., Awaitable[Caller]]:
                 workspace_id=caller.workspace_id,
                 principal=caller.principal,
                 permission=permission,
+                # Ruling 38: the set this credential actually authenticated with, passed
+                # rather than re-derived. A Service Account's grants live on its own record
+                # and reach no role, so without this a permission only a Service Account may
+                # hold (FR-GOV-6) can never be satisfied.
+                credential_permissions=caller.permissions,
             )
         return caller
 

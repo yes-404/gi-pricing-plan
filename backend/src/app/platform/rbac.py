@@ -145,6 +145,7 @@ async def effective_permissions(
     workspace_id: UUID,
     principal: Principal,
     resource: ResourceRef | None = None,
+    credential_permissions: frozenset[str] = frozenset(),
 ) -> frozenset[Permission]:
     """Every permission the principal holds here, right now.
 
@@ -152,6 +153,21 @@ async def effective_permissions(
     frontend hides what a user cannot do; this is what it hides *by*, and it is the same
     computation the enforcement uses — a second implementation would let the UI offer a
     control the backend then refuses.
+
+    **`credential_permissions` is the set the presented credential actually authenticated
+    with** (Ruling 38). A Service Account's grants live on its own record, not in a role —
+    `score:execute` and `score:batch` are held by no builtin role, deliberately (FR-GOV-6) —
+    so a computation that reads only role assignments can never see them, and until this
+    parameter existed `Caller.permissions` was populated and consulted by nothing.
+
+    **Passed, never looked up.** A principal-id lookup would return what the account row says
+    *now*; this returns what the credential in hand authenticated with. Today they are equal
+    (`auth/service.py:230` copies the row straight through), but by coincidence of the current
+    implementation rather than by construction — and the day a credential carries a subset of
+    its account's grants, a re-derivation would silently enforce the larger set.
+
+    Defaulting to empty keeps every existing caller unchanged: only the paths holding a
+    `Caller` pass anything, so nothing that authenticates a user gains a permission.
     """
     if principal.id is None:
         return frozenset()
@@ -176,6 +192,13 @@ async def effective_permissions(
         if not _covers(assignment, resource):
             continue
         granted |= {Permission(p) for p in role.permissions}
+
+    # A credential's own grants are workspace-wide: a Service Account is scoped by
+    # environment and workspace, never to one dataset, and `ALLOWED_PERMISSIONS`
+    # (`api/service_accounts.py`) admits only `score:execute` and `score:batch`, neither of
+    # which is resource-scoped. If a resource-scoped permission is ever added there, this
+    # union has to learn `_covers`' question — Ruling 38 names that as its override.
+    granted |= {Permission(p) for p in credential_permissions}
     return frozenset(granted)
 
 
@@ -237,9 +260,14 @@ async def has_permission(
     principal: Principal,
     permission: Permission,
     resource: ResourceRef | None = None,
+    credential_permissions: frozenset[str] = frozenset(),
 ) -> bool:
     return permission in await effective_permissions(
-        session, workspace_id=workspace_id, principal=principal, resource=resource
+        session,
+        workspace_id=workspace_id,
+        principal=principal,
+        resource=resource,
+        credential_permissions=credential_permissions,
     )
 
 
@@ -250,6 +278,7 @@ async def require_permission(
     principal: Principal,
     permission: Permission,
     resource: ResourceRef | None = None,
+    credential_permissions: frozenset[str] = frozenset(),
 ) -> None:
     """Raise `PermissionDeniedError` unless the principal holds it here (FR-GOV-2)."""
     if not await has_permission(
@@ -258,6 +287,7 @@ async def require_permission(
         principal=principal,
         permission=permission,
         resource=resource,
+        credential_permissions=credential_permissions,
     ):
         _log.info(
             "permission denied",

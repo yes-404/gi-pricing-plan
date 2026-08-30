@@ -708,6 +708,13 @@ def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
         f"a first compile has no prior bundle, so `before` must say so: {first.before!r}"
     )
     assert first.after["bundle_hash"] == first_bundle.content_hash
+    assert first.after["blob_sha256"] == first_job.result["ref"], (
+        "the after-state must name the blob this compile actually wrote, not just the "
+        "content hash. `blob_sha256` was added to `BundleMetadata` by Ruling 37, so the "
+        "event describing the compile has to report it or the trail cannot answer 'which "
+        "stored artifact did this produce' — and these are two different hashes: "
+        f"{first.after!r} vs job result {first_job.result!r}"
+    )
 
     # Compile again: only a second compile can evidence the *before* half of the
     # requirement, because the first has nothing to be "before".
@@ -723,5 +730,16 @@ def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
     )
     assert second.after["bundle_hash"] == first_bundle.content_hash, (
         "the same pins must compile to the same hash (FR-RATE-24 reproducibility)"
+    )
+    assert second.after["blob_sha256"] != first.after["blob_sha256"], (
+        "the two compiles wrote the same blob, which they must not: `content_hash` is "
+        "computed over the graph and pins alone — `bundle_hash`'s docstring excludes "
+        "`compiled_at` because hashing a timestamp would break reproducibility — while the "
+        "*stored payload* is `bundle.model_dump_json()`, which carries `compiled_at`. So "
+        "identical pins give an identical `content_hash` and a different `blob_sha256`, and "
+        "equal keys mean `compiled_at` did not vary. That would make the reproducibility "
+        "assertion above far weaker than it reads: it would be comparing a bundle with "
+        "itself rather than with an independently recompiled one. Two hashes of two "
+        "different things — a hash certifies what it was computed over, and nothing else."
     )
     assert second.job_id == second_job.id

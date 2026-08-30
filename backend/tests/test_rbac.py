@@ -446,3 +446,68 @@ async def test_seeding_roles_is_idempotent(database: Database, workspace_id) -> 
         second = await rbac.seed_builtin_roles(session, workspace_id)
     assert len(first) == len(BUILTIN_ROLES)
     assert second == []
+
+
+@pytest.mark.req("FR-GOV-6")
+async def test_a_credentials_own_permissions_are_enforced(
+    database: Database, workspace_id, principal
+) -> None:
+    """Ruling 38: a permission no role can carry is still enforceable.
+
+    `score:execute` is held by no builtin role, deliberately (FR-GOV-6, asserted above), so
+    before this the only enforcement path could never satisfy it and `Caller.permissions`
+    was populated and read by nothing.
+    """
+    async with database.unit_of_work() as session:
+        await rbac.seed_builtin_roles(session, workspace_id)
+        assert not await rbac.has_permission(
+            session,
+            workspace_id=workspace_id,
+            principal=principal,
+            permission=Permission.SCORE_EXECUTE,
+        )
+        assert await rbac.has_permission(
+            session,
+            workspace_id=workspace_id,
+            principal=principal,
+            permission=Permission.SCORE_EXECUTE,
+            credential_permissions=frozenset({"score:execute"}),
+        )
+
+
+@pytest.mark.req("FR-GOV-6")
+async def test_enforcement_follows_the_credential_not_the_account_row(
+    database: Database, workspace_id, principal
+) -> None:
+    """Ruling 38's acceptance limb 2, and the whole reason the set is **passed**.
+
+    The account row here would say one thing and the presented credential another. What is
+    enforced must be the credential's set, because that is what was actually authenticated
+    with — not what the row happens to say at the moment of the check.
+
+    **A re-derived implementation cannot be made to fail this test**, which is why the
+    ruling refused one: a lookup by principal id has no way to disagree with the row, so
+    the design's safety would rest on an invariant nothing could observe. Here the two
+    disagree by construction, and enforcement demonstrably follows the credential.
+    """
+    async with database.unit_of_work() as session:
+        await rbac.seed_builtin_roles(session, workspace_id)
+
+        # The credential authenticated with `score:batch` only. `score:execute` must not be
+        # granted, however wide the account behind it may be.
+        assert not await rbac.has_permission(
+            session,
+            workspace_id=workspace_id,
+            principal=principal,
+            permission=Permission.SCORE_EXECUTE,
+            credential_permissions=frozenset({"score:batch"}),
+        )
+        # And the converse: a credential carrying `score:execute` grants it, and grants
+        # nothing else it did not carry.
+        assert not await rbac.has_permission(
+            session,
+            workspace_id=workspace_id,
+            principal=principal,
+            permission=Permission.SCORE_BATCH,
+            credential_permissions=frozenset({"score:execute"}),
+        )

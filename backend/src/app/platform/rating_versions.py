@@ -102,6 +102,67 @@ async def load_rating_version(
     return row
 
 
+async def resolve_rating_version_ref(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    ref: ArtifactRef,
+) -> RatingVersionRow:
+    """The row a `rating_version:slug@version` reference names, scoped to the workspace.
+
+    Scoring receives a reference rather than an id (Ruling 14), and until now the only
+    ref-to-row resolution in this module was inline in `apply_approval_decision` — a write
+    path, so it also took `FOR UPDATE`. This one deliberately does not: a read on the
+    scoring path must not take row locks that contend with approvals.
+    """
+    row = (
+        await session.execute(
+            select(RatingVersionRow).where(
+                RatingVersionRow.workspace_id == workspace_id,
+                RatingVersionRow.slug == ref.slug,
+                RatingVersionRow.version == ref.version,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise PlatformError(
+            "NOT_FOUND", "Rating version not found", 404, f"No rating version {ref}."
+        )
+    return row
+
+
+async def record_bundle_blob(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    rating_version_id: UUID,
+    blob_sha256: str,
+) -> None:
+    """Record the blob key the compiled bundle was stored under (Ruling 37).
+
+    Kept here rather than in the Job handler because `row.bundle`'s shape is this module's
+    to own — a handler assembling that dict itself would be the second place the shape is
+    written down, which is what `CLAUDE.md` §2 forbids.
+
+    Called *after* the `put`, inside the handler's existing `unit_of_work`: the key does not
+    exist when `compile_rating_version` writes the row, so the row is completed rather than
+    written twice. The alternative the ruling allows — moving the `put` inside
+    `compile_rating_version` — would change that function's contract for every caller,
+    including tests that compile without wanting a blob written.
+    """
+    row = await load_rating_version(
+        session, workspace_id=workspace_id, rating_version_id=rating_version_id
+    )
+    if row.bundle is None:  # pragma: no cover - compile_rating_version always writes it
+        raise PlatformError(
+            "BUNDLE_COMPILE_FAILED",
+            "Bundle metadata missing",
+            500,
+            "The compiled bundle's metadata was not written before its blob key.",
+        )
+    row.bundle = {**row.bundle, "blob_sha256": blob_sha256}
+
+
 async def create_rating_version(
     session: AsyncSession,
     *,

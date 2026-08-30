@@ -76,13 +76,41 @@ class Pins(BaseModel):
 
 
 class BundleMetadata(BaseModel):
-    """The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash."""
+    """The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash,
+    and the blob key the serialised bundle was stored under.
+
+    **`content_hash` and `blob_sha256` are hashes of different things, and their patterns
+    keep them apart on purpose.** `content_hash` is reproducible from the graph and pins
+    (FR-RATE-24) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content
+    address for the serialised bundle and is bare hex, matching `BlobRef.sha256`. Neither
+    value validates into the other's field, so passing one where the other belongs is
+    refused loudly at the boundary rather than warned about in a comment (Ruling 37 §3).
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     content_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
     bytes: int = Field(ge=0)
     compiled_at: datetime
+    #: The blob store key for the serialised `Bundle`, so a Rating Version resolves to its
+    #: compiled form through its own metadata rather than through Job history — which is an
+    #: operational record with its own pruning, and would make the version unresolvable the
+    #: day it is trimmed (Ruling 37 §2).
+    #:
+    #: **Nullable because of `to_schema`, not because legacy rows are tolerated**
+    #: (Ruling 37 §3). `rating_versions.to_schema` runs
+    #: `BundleMetadata.model_validate(row.bundle) if row.bundle else None` on *every* read of
+    #: a rating version — the list and get routes, and the create and submit paths. A required
+    #: field would turn one keyless row into a hard validation failure of all of them, not
+    #: merely a failed scoring attempt. Nullable keeps the blast radius at the one thing that
+    #: actually needs the key.
+    #:
+    #: That no such row exists is a *consequence*, not the reason: `row.bundle` has a single
+    #: writer, the compile path, so no keyless-but-compiled row exists today and no migration
+    #: or back-fill is owed. That does not license making the field required — a back-fill
+    #: would empty today's population, not remove the failure mode above, which returns for
+    #: any keyless row that ever appears.
+    blob_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None = None
 
 
 class RatingVersionEvidence(BaseModel):

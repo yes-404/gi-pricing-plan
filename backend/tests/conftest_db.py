@@ -39,6 +39,29 @@ def test_database_url() -> str:
     return os.environ.get("GIP_TEST_DATABASE_URL", DEFAULT_TEST_DSN)
 
 
+def test_blob_bucket() -> str:
+    """The bucket every test store uses — fixtures and API-backed apps alike.
+
+    **One resolver because a test that writes a blob through a fixture and reads it back
+    through a route needs both sides to agree**, and until `POST /api/v1/score` no test
+    crossed that boundary — so eleven sites went on holding **three different answers**
+    without anything noticing:
+
+    - `blob_store` here read `os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")`;
+    - `test_api_model_lifecycle` and `test_model_comparison` were bare literals, which
+      would *not* follow that variable;
+    - the eight `api_settings` fixtures (`conftest.py` and seven shadowing it) named no
+      bucket at all, so the app under test used the `gip-blobs` default while every fixture
+      wrote to `gip-test-blobs`.
+
+    **That last split needed no environment variable to be wrong** — it was already wrong,
+    and it is what `POST /api/v1/score` hit as the first route to *read* a blob a fixture
+    had *written*. Everything before it stayed on one side of the boundary. So the variable
+    and the default live here, once, and all eleven callers ask.
+    """
+    return os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
+
+
 @pytest_asyncio.fixture
 async def database() -> AsyncIterator[Database]:
     """An engine per test, against a database the migration has already been run on.
@@ -78,7 +101,7 @@ async def blob_store() -> AsyncIterator[BlobStore]:
     Skips when MinIO is unreachable, for the same reason the database fixture does — and
     CI runs a MinIO service so the skip never hides a regression there.
     """
-    store = BlobStore(Settings(blob_bucket=os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")))
+    store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
     try:
         await store.ensure_bucket()
     except Exception as exc:

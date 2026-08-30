@@ -56,6 +56,27 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
             )
             payload = bundle.model_dump_json().encode()
             ref = await progress.blob_store.put(session, payload, "application/json")
+            # Ruling 37: the key goes on the version's own metadata, in this same
+            # transaction. Without it the only record of where the bundle lives is this
+            # Job's result — an operational row with its own pruning, so a trimmed Job
+            # history would leave a compiled version unresolvable.
+            #
+            # **Before the audit write, deliberately**: the row reaches its final state
+            # first, so the event that records the compile describes a completed one. It is
+            # safe in either order — `prior_hash` and `entity_ref` were captured as values
+            # above, and `after` reads locals rather than the row — but "finish the row,
+            # then record what happened" is the sequence that stays correct if the audit
+            # payload ever widens to include the key.
+            #
+            # This re-loads the row through the service that owns `row.bundle`'s shape;
+            # within one session SQLAlchemy's identity map returns the object the handler
+            # already holds, so there is no second query and no second copy to diverge.
+            await rating_versions_service.record_bundle_blob(
+                session,
+                workspace_id=workspace_id,
+                rating_version_id=rating_version_id,
+                blob_sha256=ref.sha256,
+            )
 
             # NFR-RATE-10: compilations emit an Audit Event with before/after state.
             # Inside this `unit_of_work`, never its own: `06` R2 makes the audit write
@@ -75,7 +96,18 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
                 action="rating_version.compiled",
                 entity_ref=entity_ref,
                 before={"bundle_hash": prior_hash},
-                after={"bundle_hash": bundle.content_hash, "bytes": len(payload)},
+                # `blob_sha256` joins the after-state because Ruling 37 put it on the row
+                # this event describes: without it the trail can say a compile happened and
+                # what it hashed to, but not *which stored artifact* it produced — and
+                # "which blob did this compile write" is exactly the question an audit of a
+                # priced quote has to answer. Note it is the blob key, not
+                # `bundle.content_hash`: different hashes of different things, and the
+                # patterns keep them apart.
+                after={
+                    "bundle_hash": bundle.content_hash,
+                    "bytes": len(payload),
+                    "blob_sha256": ref.sha256,
+                },
                 job_id=progress.job_id,
             )
             return ref.sha256
