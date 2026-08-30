@@ -410,13 +410,13 @@ def test_comparing_over_the_api_answers_202_with_a_job(
 
     loop = asyncio.new_event_loop()
     try:
-        from backend.tests.conftest_db import test_database_url
+        from backend.tests.conftest_db import test_blob_bucket, test_database_url
 
         from app.config import Settings
         from app.platform.blobs import BlobStore
 
         db = Database(Settings(database_url=test_database_url()))
-        store = BlobStore(Settings(blob_bucket="gip-test-blobs"))
+        store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
         try:
             loop.run_until_complete(store.ensure_bucket())
         except Exception as exc:  # pragma: no cover - infrastructure

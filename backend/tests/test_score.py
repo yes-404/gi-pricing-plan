@@ -18,21 +18,32 @@ for the reason these tests are about.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
 import pytest_asyncio
 from backend.tests.test_bundle_slot import _compiled
+from backend.tests.test_rating_version_compile import (
+    _empty_pins,
+    _insert_version,
+    _minimal_algorithm,
+    _run_compile_job,
+)
 from fastapi.testclient import TestClient
 
 from app.api import score as score_module
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Settings
 from app.main import create_app
-from model_schema import ArtifactRef, LadderRung, ScoringResult
+from app.worker.rating_handlers import register_rating_handlers
+from model_schema import ArtifactRef, JobStatus, LadderRung, ScoringResult
 
 SCORE_URL = "/api/v1/score"
-SCORED_REF = "rating_version:fremtpl2-demo@1"
+#: The slug/version `_insert_version` creates. Read from that helper rather than chosen:
+#: a ref naming a version the fixture does not create would 404, and a 404 in the happy
+#: path reads like a broken resolver rather than a wrong constant.
+SCORED_REF = "rating_version:minimal-rv@1"
 
 
 @pytest.fixture
@@ -49,8 +60,16 @@ def client(api_settings: Settings) -> Any:
 
 @pytest_asyncio.fixture
 async def admin_headers(workspace_id: Any, principal: Any, grant: Any) -> dict[str, str]:
-    """A user who may create Service Accounts — not one who may score."""
+    """A user who may set the scoring fixtures up — and still may not score.
+
+    Two roles, because the setup spans two modules: `admin` creates the Service Account,
+    and `analyst` holds `rating:write` to create and compile the Rating Version. **Neither
+    grants `score:execute`**, which no builtin role grants at all (FR-GOV-6) — that is
+    precisely why the caller under test has to be a Service Account, and why this principal
+    can build the fixture but never use it.
+    """
     await grant("admin")
+    await grant("analyst")
     return {
         DEV_PRINCIPAL_HEADER: str(principal.id),
         "Workspace-Id": str(workspace_id),
@@ -162,9 +181,9 @@ def test_the_refusal_is_the_routes_own_not_score_ones(
 
 
 # --------------------------------------------------------------------------------------
-# NFR-RATE-11 — scoped credentials. Two of Ruling 18's three cases are refusals that land
-# before the route, so they are testable now; the third (a permitted account scoring
-# successfully) needs a resolved bundle and lands with the happy path.
+# NFR-RATE-11 — scoped credentials. Ruling 18's two refusal cases land before the route and
+# need no bundle; its first case (a permitted account scoring successfully) needs a real
+# compiled version and so sits with the real-path tests at the end of this file.
 # --------------------------------------------------------------------------------------
 
 
@@ -461,3 +480,164 @@ def test_an_unregistered_code_is_not_invented_into_a_problem(
     )
 
     assert response.status_code == 500, response.text
+
+
+# --------------------------------------------------------------------------------------
+# The real path. These compile a Rating Version for real and resolve it by reference, so
+# they exercise Ruling 37's linkage end to end: ref -> row -> `blob_sha256` -> bytes ->
+# `Bundle` -> `CompiledBundle`. Nothing is patched.
+# --------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def compiled_version(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> Any:
+    """A genuinely compiled Rating Version, reachable as `SCORED_REF`.
+
+    Mirrors `test_rating_version_compile.py`'s route rather than reimplementing it: the
+    compile runs as a `rating.compile` Job driven synchronously, because there is no live
+    worker in tests.
+    """
+    register_rating_handlers()
+    created = client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=admin_headers
+    )
+    assert created.status_code in (200, 201), created.text
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database,
+            workspace_id,
+            principal.id,
+            algorithm_ref="rating_algorithm:minimal@1",
+            pins=_empty_pins(),
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    return row
+
+
+@pytest.mark.req("FR-RATE-34")
+def test_a_quote_scores_over_http_against_an_explicit_ref(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
+) -> None:
+    """FR-RATE-34's **delivered limb** — the explicit-ref path, ladder and outputs.
+
+    This is the half W11 delivers. The *"currently live in the target environment"* half is
+    W14's and is refused with 409 in the meantime; the *"p99 < 50 ms server-side"* half the
+    same requirement carries is established by neither of those tests and is Task 2D's. The
+    marker on this test evidences the first only.
+
+    FR-RATE-35's `prod` restrictions are not imposed: this scores a **draft** version by
+    explicit reference, which is the "what-if and testing" the requirement permits (Ruling
+    14 clause 3).
+    """
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["outcome"] == "quoted"
+    assert body["rating_version_ref"] == SCORED_REF
+    assert body["premium_ladder"], "a quoted result must carry a populated ladder"
+
+    # The ladder reconciles to its terminal rung: the last rung is the payable premium and
+    # its value is the output the algorithm declared. A ladder whose rungs did not add up to
+    # what the caller is charged would be a presentation of the price rather than a
+    # derivation of it (FR-RATE-32).
+    terminal = body["premium_ladder"][-1]
+    assert terminal["rung"] == "payable_premium", body["premium_ladder"]
+    assert terminal["value_minor"] == body["outputs"]["payable_premium_minor"]
+
+
+@pytest.mark.req("NFR-RATE-11")
+def test_a_scoped_account_holding_the_permission_may_score(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    unpermissioned_headers: dict[str, str],
+    compiled_version: Any,
+) -> None:
+    """Ruling 18's first case, paired with its second in one test on purpose.
+
+    Asserting only that the permitted account succeeds would pass against a route with no
+    permission check at all. Asserting only that the unpermitted one is refused would pass
+    against a route that refuses everyone — which is precisely the state the suite was in
+    before Ruling 38, when all twelve of these tests were red for that reason. **The pair
+    is what distinguishes an enforced permission from an absent one.**
+    """
+    body = _quote({"rating_version_ref": SCORED_REF})
+
+    permitted = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    refused = client.post(SCORE_URL, json=body, headers=unpermissioned_headers)
+
+    assert permitted.status_code == 200, permitted.text
+    assert refused.status_code == 403, refused.text
+
+
+@pytest.mark.req("NFR-RATE-9")
+def test_an_already_served_ref_survives_metadata_storage_failing(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ruling 16's acceptance item 2 — the degraded read, end to end over HTTP.
+
+    NFR-RATE-9 requires degradation to *"the last-known-good cached bundle if metadata
+    storage is unavailable"*. The slot's ref-to-hash memo is what makes that reachable at
+    all: the request carries a ref, and ref to hash is itself a metadata read, so a slot
+    keyed only by `content_hash` could never be consulted under this failure.
+
+    The two halves must both hold, and the second is the one that matters: **a ref this
+    worker has never resolved is refused.** Serving that would not be degradation, it would
+    be invention.
+    """
+    body = _quote({"rating_version_ref": SCORED_REF})
+    assert client.post(SCORE_URL, json=body, headers=scoring_headers).status_code == 200
+
+    class _StorageDownError(RuntimeError):
+        """Not a `PlatformError`: the store failed to answer, rather than answering 'no'."""
+
+    async def _down(*_args: Any, **_kwargs: Any) -> Any:
+        raise _StorageDownError("metadata storage is unavailable")
+
+    monkeypatch.setattr(score_module.rating_versions_service, "resolve_rating_version_ref", _down)
+
+    served = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert served.status_code == 200, (
+        "a ref this worker already resolved must still score from the slot with metadata "
+        f"storage down: {served.text}"
+    )
+
+    unseen_ref = ArtifactRef.model_validate("rating_version:minimal-rv@2")
+    unseen = client.post(
+        SCORE_URL,
+        json=_quote({"rating_version_ref": str(unseen_ref)}),
+        headers=scoring_headers,
+    )
+
+    # **Not asserted as "== 500".** A 500 is what the storage failure surfacing *looks*
+    # like, but so is any other unhandled exception, and the two are indistinguishable in
+    # a green table — a right status for a wrong reason would read as success. What the
+    # requirement actually forbids is *serving* an unresolved ref, so that is what is
+    # asserted: no 200.
+    assert unseen.status_code != 200, (
+        "a ref this worker has never resolved must not be served from the slot — that "
+        f"would be invention, not degradation: {unseen.status_code} {unseen.text}"
+    )
+    # And the direct form of the same property, read off the slot rather than inferred
+    # from a status: the worker never learned a hash for this ref, so there was nothing it
+    # could have served even if the refusal above had been reached some other way.
+    slot = client.app.state.bundle_slot  # type: ignore[attr-defined]
+    assert slot.hash_for(unseen_ref) is None
+    assert slot.hash_for(ArtifactRef.model_validate(SCORED_REF)) is not None, (
+        "the served ref must still be memoed — otherwise the 200 above proves nothing "
+        "about the memo and the degraded read was reached by some other path"
+    )

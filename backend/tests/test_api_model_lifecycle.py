@@ -45,12 +45,12 @@ def _fitted(workspace_id: UUID) -> tuple[Principal, UUID, str, Principal]:
     loop is a model row inserted by hand, and then the test proves the routes work on a
     shape the fit path never produces.
     """
-    from backend.tests.conftest_db import test_database_url
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
 
     loop = asyncio.new_event_loop()
     try:
         database = Database(Settings(database_url=test_database_url()))
-        store = BlobStore(Settings(blob_bucket="gip-test-blobs"))
+        store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
         try:
             loop.run_until_complete(store.ensure_bucket())
         except Exception as exc:  # pragma: no cover - infrastructure, not behaviour

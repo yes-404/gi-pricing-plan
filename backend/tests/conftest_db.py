@@ -39,6 +39,23 @@ def test_database_url() -> str:
     return os.environ.get("GIP_TEST_DATABASE_URL", DEFAULT_TEST_DSN)
 
 
+def test_blob_bucket() -> str:
+    """The bucket every test store uses — fixtures and API-backed apps alike.
+
+    **One resolver because a test that writes a blob through a fixture and reads it back
+    through a route needs both sides to agree**, and until `POST /api/v1/score` no test
+    crossed that boundary, so four sites could disagree in silence. They were all
+    hard-coded to the same literal, which hid it: identical constants cannot diverge, so
+    the defect was latent rather than absent.
+
+    Making one of them read `GIP_TEST_BUCKET` is what would have armed it — set the
+    variable and the env-aware sites move while the hard-coded ones stay, which is the
+    app-versus-fixture split again in a new place. So the variable and the literal live
+    here, once, and every caller asks.
+    """
+    return os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
+
+
 @pytest_asyncio.fixture
 async def database() -> AsyncIterator[Database]:
     """An engine per test, against a database the migration has already been run on.
@@ -78,7 +95,7 @@ async def blob_store() -> AsyncIterator[BlobStore]:
     Skips when MinIO is unreachable, for the same reason the database fixture does — and
     CI runs a MinIO service so the skip never hides a regression there.
     """
-    store = BlobStore(Settings(blob_bucket=os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")))
+    store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
     try:
         await store.ensure_bucket()
     except Exception as exc:

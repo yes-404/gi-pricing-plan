@@ -43,13 +43,19 @@ def api_settings() -> Settings:
     health and error tests want that, and making every client DB-backed would make them
     slower for nothing.
     """
-    from backend.tests.conftest_db import test_database_url
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
 
     return Settings(
         environment=Environment.LOCAL,
         version="test",
         dev_auth_enabled=True,
         database_url=SecretStr(test_database_url()),
+        # The same bucket every fixture store uses. Without this the app reads and writes
+        # the default `gip-blobs` while the fixtures use the test bucket, so an object
+        # written by a fixture is invisible to a route and vice versa — which is what
+        # `POST /api/v1/score` hit as the first route to *read* a blob a fixture had
+        # *written*. Everything before it stayed on one side of that boundary.
+        blob_bucket=test_blob_bucket(),
     )
 
 

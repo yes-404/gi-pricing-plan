@@ -17,13 +17,16 @@ from model_schema import new_uuid7
 
 @pytest.fixture
 def api_settings() -> Settings:
-    from backend.tests.conftest_db import test_database_url
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
 
     return Settings(
         environment=Environment.LOCAL,
         version="test",
         dev_auth_enabled=True,
         database_url=SecretStr(test_database_url()),
+        # Shadows conftest's `api_settings`, so it inherits no bucket — set defensively,
+        # not because this file reads a blob today (`conftest_db.test_blob_bucket`).
+        blob_bucket=test_blob_bucket(),
     )
 
 

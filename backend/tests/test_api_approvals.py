@@ -51,7 +51,7 @@ RESOLVABLE = (
 
 @pytest.fixture
 def api_settings() -> Settings:
-    from backend.tests.conftest_db import test_database_url
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
     from pydantic import SecretStr
 
     return Settings(
@@ -59,6 +59,12 @@ def api_settings() -> Settings:
         version="test",
         dev_auth_enabled=True,
         database_url=SecretStr(test_database_url()),
+        # Shadows conftest's `api_settings`, so it inherits no bucket — without this the
+        # app it builds runs on the production default while every fixture store uses the
+        # test bucket. **Set defensively, not because this file reads a blob today**: the
+        # line must not read as conditional on that, because the day someone adds a blob
+        # path here the 404 they get would have its cause two files away.
+        blob_bucket=test_blob_bucket(),
     )
 
 

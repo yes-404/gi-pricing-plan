@@ -96,7 +96,18 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
                 action="rating_version.compiled",
                 entity_ref=entity_ref,
                 before={"bundle_hash": prior_hash},
-                after={"bundle_hash": bundle.content_hash, "bytes": len(payload)},
+                # `blob_sha256` joins the after-state because Ruling 37 put it on the row
+                # this event describes: without it the trail can say a compile happened and
+                # what it hashed to, but not *which stored artifact* it produced — and
+                # "which blob did this compile write" is exactly the question an audit of a
+                # priced quote has to answer. Note it is the blob key, not
+                # `bundle.content_hash`: different hashes of different things, and the
+                # patterns keep them apart.
+                after={
+                    "bundle_hash": bundle.content_hash,
+                    "bytes": len(payload),
+                    "blob_sha256": ref.sha256,
+                },
                 job_id=progress.job_id,
             )
             return ref.sha256
