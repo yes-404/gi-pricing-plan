@@ -1230,7 +1230,27 @@ does not rule its own proposals.
 
 ---
 
-### Plan review 9 — at W11's close, drafted 2026-08-30 — **DRAFT, not filed**
+### Plan review 9 — at W11's close, 2026-08-30 — **FILED, with its drafting history intact**
+
+> **Status header, added on filing 2026-08-30.** This review was drafted against `origin/main`
+> at `19eaabc` **while W11's close was in doubt** — the maintainer had stopped the run at the
+> end of Slice 2, and for several hours no close was going to happen. The planner's own verdict
+> at that point was *abandon, do not land it*, on the sound ground that filing a §14 review of a
+> workstream that never closed would misstate the record.
+>
+> **W11 then closed**, at `1da81cd`, under a delegation from the maintainer to the lead. That
+> voids the reason for abandoning it, so it is filed rather than discarded.
+>
+> **Two things a reader must hold, and they are not the same.** The **operative** §14 review for
+> W11's close is the closure record's §7 (`docs/audit/work/W11/README.md`) — short, and written
+> against the closed state. **This is the fuller working analysis**, kept for its evidence and
+> its derivations, several of which the closure record cites rather than repeats.
+>
+> **Its forward-looking statements are superseded by the close.** Where it says Slices 2–4 have
+> not landed, or that a tally cannot yet be final: Slice 2 landed in full, Slices 3 and 4 never
+> ran, and the final verdicts are in the closure record. Nothing here is edited to hide that —
+> a review is a dated artifact, and rewriting its predictions after the fact destroys the record
+> of what was believed when the plan was being tested, which is the whole point of §14.
 
 `CLAUDE.md` §14's ninth run, triggered by W11's close (`docs/roadmap.md` §7). **This section is
 not the filed review.** Slice 1 is complete (`c1a0dde`, all five tasks merged), but Slices 2–4 are
