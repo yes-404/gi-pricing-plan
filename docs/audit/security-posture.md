@@ -11,6 +11,10 @@ a git repo, never pushed, nothing here is a record."* A security decision that s
 in operational scratch is not recorded at all. `CLAUDE.md` §12: every decision lands as a dated
 artifact.
 
+**Public face.** [`SECURITY.md`](../../SECURITY.md) at the repository root is the outward
+one-pager for reporters; this document stays the internal record and is cited from there,
+never restated into it.
+
 **Scope note.** This is the *repository platform's* posture — GitHub settings, rulesets,
 workflow trust. It is not the *product's* security requirements, which are numbered NFRs in
 `docs/specs/` and are audited as requirements.
