@@ -444,3 +444,36 @@ acceptance.
 Proposed verdicts above are the auditor's; acceptance under the maintainer's conditional
 delegation (`docs/plans/2026-08-30-w11-reopen-direction.md` §4) is the lead's to record here
 with a dated line, per Ruling 39 §5's supersession.
+
+**Accepted by the lead, 2026-08-30.** The auditor's six proposed verdicts in 10.9 are
+**adopted unamended**: FR-RATE-36, FR-RATE-37 and FR-RATE-42 delivered and tested;
+NFR-RATE-12 measured and **FAILING** at ~2.58× over, conservative; NFR-RATE-5 split —
+throughput PASS at 5.09×, linearity **NOT MEASURED**; NFR-RATE-1 discharged architecturally
+with its verdict **unchanged and still failing**, carried to W14.
+
+**Both preconditions were tested, not assumed.** Every reopened slice is complete — 10.8
+verifies all eight tasks by merge commit rather than by plan status. The auditor's
+satisfaction is stated in its own words in 10.9. **Neither is waivable by the lead**, and the
+route on an unresolved auditor objection would have been escalation to the maintainer, never
+a lead override — recorded because a lead holding both the verdict pen and the acceptance pen
+could otherwise satisfy the second condition by amending the verdict that caused the
+objection.
+
+**What this close does not claim.** W11's own hard target is **not met**: NFR-RATE-1 remains
+measured and failing, and Ruling 41 discharged the *architectural question* it was carried
+for without making the requirement pass. NFR-RATE-12 is over budget on a **conservative**
+basis, so the real figure is worse. NFR-RATE-13 stays owed, NFR-RATE-2's latency clause stays
+failing, and F52, F53, F54 and F55 are open and unowned. **This is a complete close of the
+reopened scope, not a clean bill of health for the workstream.**
+
+**One disposition the audit left to the lead (10.6), decided here.** NFR-RATE-2's remedy
+precondition — Ruling 35's off-path capture — is met by Task 4B, while the measured clause
+itself is untouched. **F35's row should record that the gate is now open**, because a
+carried finding whose blocker has silently cleared is one nobody re-examines. It shares its
+remediation lever with **F55**, and the two should be considered together rather than
+separately. Filed as an instruction to the auditor, not applied here — the register is the
+auditor's.
+
+**The §14 plan review and the NT-0014…NT-0017 reconciliation are separate artifacts on this
+same trigger** (`docs/roadmap.md`; `efe04b4`), and the reconciliation's acceptance line is
+the **maintainer's**, not this one (`1407e09`).
