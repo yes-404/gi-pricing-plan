@@ -32,6 +32,31 @@ git commit -m "Stop tracking <file>; add to .gitignore"
 
 `--cached` is the important flag — plain `git rm` deletes the working copy too.
 
+## A credential in a job directory is borrowed, not stored (NT-0012)
+
+**A value a later session must reuse is not "stored" by putting it in a job directory, a
+handover file, or a session's own memory.** All three are ephemeral *relative to the
+credential's lifetime*: the container is cleaned on its own schedule, not the credential's,
+and the loss is silent — nothing fails at the moment it goes.
+
+The instance: a Slack posting token lived only inside a W10 job directory. When that job was
+cleaned the token was gone, and nothing reported it — the reporter simply stopped posting.
+
+**So:** a credential that must outlive one job goes to a durable path **outside the
+repository, outside `.claude/jobs/` or any directory a cleanup routine owns, and outside any
+handover directory** — a handover is itself rewritten or deleted at each handover.
+
+**State the *path*, never the value** — not in a note, not in a handover, not in a commit.
+Two live examples, recorded as locations only: the DeepSeek poller reads its token from
+`~/claude-deepseek.sh`, and the Slack reporter from `~/.slack-token` (mode 0600). Both sit in
+`$HOME` deliberately and were **not** moved when the project's local files were restructured
+on 2026-08-30, because both are addressed by absolute path by a running process that opens
+its target per write — a move breaks them, and breaks them silently.
+
+**Before declaring a credential unrecoverable, read the next section.** The first search for
+that Slack token was by the job directory's *name*, which had just stopped existing; the token
+was recoverable by its *shape* the whole time.
+
 ## Audit what a repo actually tracks
 
 Don't trust `.gitignore` to tell you what's clean — read the index directly:

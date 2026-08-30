@@ -307,6 +307,28 @@ Four rules, each learned by getting it wrong here:
 Keep the script. When the gate is discharged, keep its design note too — delete the gate, not
 the reasoning, or the next person writing one starts from nothing.
 
+### Search for the thing's shape, not its container's name (NT-0012)
+
+The failure one step earlier than a false zero: **the query manufactures the zero.**
+
+Something is not gone because the container it was last seen in is gone. It is gone only when
+nothing that ever held or produced it survives anywhere. **Before declaring anything
+unrecoverable — a credential, a file, a fact, a requirement's evidence — search for what the
+thing itself looks like**: a value's prefix, a function's signature, a concept's description.
+Not only the name of the place it was expected to be.
+
+Three instances from one day, all the same substitution:
+
+- A Slack token searched for by its job directory's name — the directory had just been
+  cleaned, so the search could only fail. The token was findable by its value's prefix.
+- A signature-sync ruling grepped the one-word identifier `CompiledBundle` and missed the
+  concept spelled **"Compiled Bundle"**, two words apart, in the glossary it existed to check.
+- A file-count check trusted a filename list over reading what each file's content changed.
+
+**Naming the container is most tempting exactly where it is least reliable** — at the moment
+the container has stopped existing. That is also the moment the null result is about to become
+an argument, which is what the section below is about.
+
 ### A false zero argues — and two wrong methods agreeing is not corroboration
 
 Worked example, 2026-08-30, and the rule it breaks is the one directly above, added to this
