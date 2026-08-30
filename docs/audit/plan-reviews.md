@@ -2302,6 +2302,27 @@ which of mechanism, conclusion and principle it is carrying, and re-checks the e
 premise against the new corpus. Home is the decision-maker's conventions, not this review's to
 place.
 
+**3e. A turn that ends while waiting on a delegated agent cannot receive that agent's report,
+and this review is one of the occurrences.** Recorded against itself rather than about others,
+because it is the reason question 4 above has a gap.
+
+Two agents were dispatched for this review's evidence. Both were sent a direct request to
+report; **the turn then ended while they were outstanding**, which is precisely the state in
+which their reports could not arrive. The endpoint axis was recovered by re-running the command
+directly — three seconds of work — after fifty minutes of waiting produced nothing. The
+signature axis was not.
+
+**The finding is not "the agents failed."** It is that the waiting party had a cheap
+non-delegated route to the same answer and did not take it, and that ending a turn is what
+made the wait unrecoverable rather than merely slow. This is reported as the **sixth occurrence
+today across five mechanisms**, the earlier ones against executors; **this one is against a
+role**, which is why it did not pattern-match to the same failure while it was happening.
+**Proposal 3.5**: a delegated evidence request states, at dispatch, the direct command that
+answers the same question, and the dispatcher runs that command rather than waiting once the
+delegation is outstanding and the work is cheap. `CLAUDE.md` §10's delegate-noisy-investigation
+rule is about **context cost**, not latency; a three-second command is not noisy investigation
+and delegating it buys nothing.
+
 ---
 
 **4. Document drift.**
@@ -2318,11 +2339,31 @@ queue.
 as much as an omission, in the direction §14 cares about most (the spec describing something the
 code does not implement, rather than the reverse).
 
-**No `03` §5.1 endpoint drift is claimed by this review.** The §13 audit's `--endpoints` run
-confirms `POST /api/v1/score/batch` is published in the generated contract, and `GET
-/api/v1/traces` landed with Task 4C. A fuller two-direction signature pass was delegated and had
-not returned when this was filed; **stated as a gap in this review's evidence rather than as a
-clean result**, because a silent question cannot be told apart from one nobody asked.
+**4c. The §5.1 endpoint axis is clean for W11's scope; the §5.2 signature axis is unrun.** The
+two are separate questions and this review answers only one of them.
+
+`uv run python scripts/scope-audit.py RATE --endpoints`, run for this review on this branch
+(`7fa1326`, a docs-only commit on `b749acb`) and independently at `7b490b3` with identical
+figures: **22 declared, 14 published, 8 not published.** All eight belong to later
+workstreams — `GET`/`POST /api/v1/dislocation-runs` and `/{}` (W13, FR-RATE-46–49),
+`POST /api/v1/environments/{}/deployments` and `/rollback` plus
+`PUT /api/v1/environments/{}/shadow` (W14, FR-RATE-50–55),
+`POST /api/v1/rate-tables/{}/versions`,
+`POST /api/v1/rating-versions/{}/regression-runs` (W12, FR-RATE-43–45), and
+`POST /api/v1/score/compare`. **None is a W11 gap**, and the published count moved 13 → 14 with
+Task 4C's `GET /api/v1/traces`, which is the direction this workstream should have moved it.
+
+**One relay check that changed nothing and is recorded because it could have.** An
+intermediate enumeration of this same result listed seven paths under a count of eight; the
+omitted one was `PUT /api/v1/environments/{}/shadow`. Re-run here rather than transcribed, and
+its owner checked (`FR-RATE-54`, named by W14's row), which is what confirms the conclusion
+rather than assuming the missing item was harmless.
+
+**The signature axis — `03` §5.2 shapes with no implementation, and implemented shapes `03`
+does not declare — remains unrun.** It was delegated and the delegation did not return. Stated
+as an open gap with a named owner rather than left silent, because a silent question cannot be
+told apart from one nobody asked. **Proposal 4.2**: run the §5.2 direction before W12 opens,
+since W12 builds against those shapes.
 
 ---
 
@@ -2384,7 +2425,9 @@ tautological test rather than merely unaddressed.
 | 3.2 | A plan's id block speaks only to ids it can reserve; an error-code expectation goes in the register-rows section with an owner, or is not stated | convention (`writing-plans`) |
 | 3.3 | A filed plan names its own correction records where a reader enters it; a dispatch to a plan enumerates them | convention (`writing-plans` / dispatch) |
 | 3.4 | A ruling citing an earlier one states whether it carries its mechanism, its conclusion or its principle, and re-checks the earlier premise against the new corpus | convention — decision-maker's records |
+| 3.5 | A delegated evidence request names, at dispatch, the direct command answering the same question; the dispatcher runs it rather than waiting once the delegation is outstanding and the work is cheap | convention — dispatch discipline |
 | 4.1 | Fix `FR-RATE-26`'s `FR-RATE-31` → `FR-RATE-53` citation, with an owner rather than a queue | spec change (two characters) |
+| 4.2 | Run the `03` §5.2 signature direction before W12 opens, since W12 builds against those shapes | evidence — owner needed |
 | 5.1 | Record on both `F35` and `F55` that they share one remediation lever, and scope trace-payload trimming as one piece of work | register amendment — the auditor's |
 | 5.2 | Put plan review 9 to the maintainer alongside this one, as a separate acceptance | process |
 | DP-1 | The gate-coverage cluster (`F27(c)`, `F29`, `F33`) is still undecided, now in changed terms — see 3a | **decision, the lead's — not a proposal** |
@@ -2392,7 +2435,9 @@ tautological test rather than merely unaddressed.
 #### What this review did not do
 
 - **It did not re-derive question 1**, by design; the §13 audit at the same tree is its source.
-- **It did not complete a two-direction `03` §5.1/§5.2 signature pass** (question 4).
+- **It answered the `03` §5.1 endpoint axis and not the §5.2 signature axis** (question 4c).
+  The endpoint result is clean for W11's scope with its command and tree named; the signature
+  direction is unrun and carried as proposal 4.2 rather than reported as absent drift.
 - **It did not re-argue review 9's proposals**, which stand as filed.
 - **It did not edit the Slice 4 plan again.** All four of its tasks have merged, so it is a
   finished record; its correction section was written while three tasks were unrun and was
@@ -2416,6 +2461,11 @@ accepting this review accepts none of its four dispositions.
   hits; and `git grep` for the same over `packages`, `scripts`.
 - `git log --oneline 25c5688..b749acb -- backend/src/app/errors.py` — run at `b749acb`, one
   commit (`003f9d4`).
+- `uv run python scripts/scope-audit.py RATE --endpoints` — run for question 4c on this branch
+  (`7fa1326`), and independently at `7b490b3`, with identical figures.
+- `docs/specs/03-rating-engine.md:197,602` (FR-RATE-54 and the shadow endpoint row) and
+  `docs/roadmap.md`'s W14 row (`FR-RATE-50..55`) — read directly, to place the eighth
+  unpublished endpoint.
 - `docs/audit/register.md` rows F29, F35, F52, F55 — read directly at `b749acb`.
 - `docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md` Ruling 50 §1–§2 — read directly.
 - `.claude/skills/fastapi-service/SKILL.md:328-338`, `.claude/skills/phase-review/SKILL.md` —
