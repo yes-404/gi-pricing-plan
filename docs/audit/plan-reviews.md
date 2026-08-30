@@ -1227,3 +1227,384 @@ now reads **fixed** for that reason (PR #390). Nothing rides with a rule-6 propo
 §14: a review's output is a proposal with a dated maintainer acceptance line, never a change.
 Landing either rule now would decide the thing the review exists to test — and the planner
 does not rule its own proposals.
+
+---
+
+### Plan review 9 — at W11's close, drafted 2026-08-30 — **DRAFT, not filed**
+
+`CLAUDE.md` §14's ninth run, triggered by W11's close (`docs/roadmap.md` §7). **This section is
+not the filed review.** Slice 1 is complete (`c1a0dde`, all five tasks merged), but Slices 2–4 are
+not: Slice 2 Task 2A is delivered as PR #435 with a second PR (#436, register row `F41`) open
+behind it, both gate-in-flight as of this draft's base tree, and Slices 3–4 have plans but no code.
+The §13 closure audit this review would normally reuse for question 1 has not itself finished.
+Written now, at the lead's request, so it can be reviewed and extended as the remaining slices land
+rather than started from nothing once they do. **Nothing below binds anything** until a maintainer
+acceptance line is dated (§14's own rule); the status table after question 5 says which findings
+are already stable and which need reconfirming.
+
+**Base tree:** `origin/main` at `19eaabc` (this branch's parent, confirmed identical to
+`origin/main` at the time of writing). Every citation below is to a file at that tree, a commit
+reachable from it, or a reproducible command — not to the session-local working notes that first
+surfaced several of these findings (`~/w11-handover-2026-08-29/*.md`), which will not outlive this
+session (handover directories are not repository artifacts here). Where one of those notes first
+found something, it is credited by name in prose; the finding itself is restated with its own
+durable citation so this review does not depend on a path a future reader cannot open.
+
+One correction made while drafting, recorded beside the finding rather than instead of it, per this
+skill's own guidance for when a review's inputs turn out wrong: the evidence handed to this draft
+reported a finding as **"Registered F42."** Verified directly against `docs/audit/register.md` at
+`19eaabc`: no F42 exists. The finding itself (`req-coverage.py`'s occurrence-count mislabel, at a
+scale of 238 of 326 rows wrong) was **withdrawn before filing** because it duplicates `F36`
+(`register.md:42`) and will amend that row instead of opening a new one — not yet landed as of this
+tree. Question 3 below cites `F36` as it stands today, not the amendment.
+
+---
+
+**1. Completion — reused where a fresh derivation exists, and provisional as a whole.**
+
+Two independent, same-night derivations exist, and this review reuses rather than re-runs them:
+`scope-audit.py RATE --sections 3.7,3.8 --extra 'FR-RATE-64,NFR-RATE-1,NFR-RATE-13,NFR-RATE-14'`
+(pinned `6e548f8`), and a full read of `03` §3.7, §3.8 and §9 against every W11 leaf plan's own
+coverage table (pinned `28ec778`, six commits behind this review's own base). Both recorded the
+exact commands that produced them; re-running now would confirm, not discover.
+
+The row (`docs/roadmap.md:376`) names **13 ids**: `FR-RATE-34..42, 64` and `NFR-RATE-1, 13, 14`.
+The section sweep returns 16 in scope, over-including three W12 ids (`FR-RATE-43/44/45`, confirmed
+excluded by name in every W11 leaf plan) — net of that, section and row agree at 13. **Beyond that
+13, evidenced or engaged but named by no workstream row anywhere in `docs/roadmap.md`:**
+
+- `NFR-RATE-2, 3, 4, 5, 7, 8, 9, 10, 11, 12` — ten of `03` §9's fourteen `NFR-RATE` rows (the other
+  four are 1, 6, 13, 14; 6 is properly W14's — deployment cache warming, Ruling 16 clause 4 — and
+  1/13/14 are the three the row already names).
+- `NFR-OVR-5` and `NFR-OVR-6` — two overview-level ids. `NFR-OVR-5` is recorded, but only inside
+  `F22`'s `NFR-OVR-1..8` range (`register.md:13`), whose stated owner — "the later-phase
+  workstreams named in the roadmap" — resolves to nothing (`git grep -n "NFR-OVR-5"
+  docs/roadmap.md` returns zero). `NFR-OVR-6` is not recorded anywhere.
+- `FR-RATE-63` (`03:87`, §3.1) — evidenced (three markers,
+  `packages/pricing-core/tests/test_rating_score.py:414,425,433`, landed with W11 Task 1.4) and
+  claimed by no row. Unlike its neighbours `FR-RATE-62` (W10's, `03:310`) and `FR-RATE-64` (W11's,
+  corrected into the row by PR #314), nothing has ruled which workstream owns it — and unlike the
+  next item, there is no argument that ownership can't be assigned retroactively: it was minted
+  2026-08-18, before W9 closed.
+- `FR-RATE-65` (`03:139`, §3.4) — evidenced (nine markers,
+  `packages/pricing-core/tests/test_rating_runtime.py`) and **already ruled** W11's (Ruling 30,
+  `docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:33-47`, 2026-08-29). The mechanical row edit
+  is outstanding — see question 5.
+
+**Not counted above, deliberately:** `FR-RATE-22, 24, 25, 56` also surface in a per-plan coverage
+sweep, but W9's row (`docs/roadmap.md:374`) already claims them through a bare-number continuation
+(`FR-RATE-1..13, 22..27, 56/57/58/59`) that a per-id search does not match — a known grep trap, not
+a row omission. One of the four, `FR-RATE-25`, is separately tracked in full as `F-W9-3`
+(`register.md:25`); it is not a new finding here.
+
+**A correction to the evidence this drew on, made while restating it rather than instead of
+restating it:** the working note that first ran this derivation reported the gap as "sixteen
+requirements, all on the NFR side." Sixteen was the raw count of everything a per-plan sweep
+returned beyond the row, before separating already-claimed-elsewhere (the four just above) from
+genuinely unclaimed, and it included two `FR-` ids (63, 65) that "all NFR" drops. The list
+enumerated above — ten `NFR-RATE`, two `NFR-OVR`, two `FR-RATE` — is what this review stands
+behind; no single replacement number is asserted in its place, per this same review's own
+question-5 proposal that a count is not load-bearing (Candidate B, taken up below).
+
+**Since the pinned derivation (`28ec778`), Slice 1 Task 1.5 has merged (`c1a0dde`)**, converting
+three of the above from a leaf plan's stated intent into register rows: `NFR-RATE-2`'s correctness
+limb tested-but-mismarked and latency limb measured failing (`F35`, `register.md:41`),
+`NFR-RATE-1`'s without-GBM half not established across five runs (`F38`, `register.md:44`),
+`NFR-RATE-12`'s missing storage format (`F37`, `register.md:43`). Slice 1 is complete in the sense
+this review can check today, not merely planned complete.
+
+**What this question cannot yet answer:** a final tally for the close, because Slices 2–4 have not
+landed and the §13 closure audit that owns the final verdict-per-id has not run. `FR-RATE-37`
+(three limbs) and `NFR-RATE-9` (`F41`, PR #436, open) are named only to flag that this review has
+deliberately not analysed them — both depend on Slice 2 outcomes not yet on `main`.
+
+**Two PRs are moving under this review as it is written.** PR #435 (Slice 2 Task 2A) and PR #436
+(`F41`, `NFR-RATE-9`) are both open at this base SHA, gate reported in flight. If either merges
+before this draft is finalised, the list above should be re-checked against the new tree before
+filing — deliberately not re-checked here, rather than guess at an outcome not yet on `main`.
+
+**2. Omission — beyond the row-naming gap already covered under question 1.**
+
+- **`NFR-RATE-10`** (`03` §9: audit events on "algorithm edits, rate table versions, bulk
+  operations, **compilations**, approvals, deployments, rollbacks, and routing changes") is engaged
+  by name — W11 Task 1.2 built the `RATING_COMPILE` Job — and built without the audit event:
+  `backend/src/app/worker/rating_handlers.py`'s `_rating_compile` calls `compile_rating_version`
+  then `blob_store.put`, no `audit.record`; every other rating platform module returns zero calls
+  to it, against a positive control of 20 `platform/*` modules that do call it
+  (`app/platform/audit.py:52`). Named in no plan, ruling or register row before this evidence pass.
+  This is a real gap, not a deferred-and-tracked one, and needs one of the four verdicts at the
+  close — which this review does not give; §13's verdicts are the lead's (`CLAUDE.md` §12).
+- **`NFR-OVR-5`**, as under question 1: recorded inside `F22`'s range, owner-clause resolving to
+  nothing. Distinct from `NFR-RATE-10` — `F22` carries no `RATE` ids at all (`register.md:13`), so
+  the two are separate gaps that happen to share a shape.
+- **`FR-RATE-63`**, as under question 1: evidenced, unclaimed, and — unlike `FR-RATE-65` — not yet
+  put in front of anyone to rule. Recommend the same treatment Ruling 30 gave `FR-RATE-65` (a
+  short, dated attribution ruling) before the close; this review does not make that call itself.
+- **No new instance of `wf-01…05` evidenced by nothing** (review 2's finding): `wf-02` and `wf-04`
+  are both cited by name in W11 rulings and register rows this pass touched. Not re-checked
+  exhaustively; flagged "no change" per this skill's own rule that a silent question cannot be
+  told apart from one nobody asked.
+- **The gate-coverage cluster** (`F27(c)` + `F29` + `F33`) and `F-W9-3`'s clauses (4), (5), (6) are
+  a different kind of omission — not undiscovered, but pre-designated by Ruling 29
+  (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:156-225`) to be decided **at this review**,
+  and still undecided. See the decision point after question 5.
+
+**3. Skills and research — one shape, four instances, and a fifth once this review's own trigger
+is counted.**
+
+- **`delivery-process.md` §8's gate-in-flight control** ("announce an expensive verification…and
+  check for one already in flight before starting," `delivery-process.md:170-172`) has no live
+  mechanism carrying its announce half: `watcher.md:11-24`'s roster-state publication was meant to
+  be the visible, shared state the rule itself says coordination needs ("coordination state must be
+  visible, not relayed pairwise," `delivery-process.md:173`), and the one script that attempted it
+  was a heredoc emitting a constant with a live timestamp, now withdrawn (`F31`, `register.md:37`).
+  Three real contention incidents resulted, one producing a spurious `403 UNAUTHENTICATED` against
+  the shared Postgres that did not reproduce on a quiet re-run. The compensating manual check
+  (`pgrep -af 'bin/pytest'`) could not return a negative — it matches its own invocation string —
+  and was not a discipline failure so much as a check broken from the moment it was written and
+  never run against a quiet box to notice. The corrected form
+  (`ps -eo pid,args | grep -E '[b]in/pytest'`) is known; **no mechanical replacement for the
+  announce half has been built.**
+- **The 50-word message rule** (`delivery-process.md:310-314`, landed 2026-08-29) was breached
+  within hours of landing, by two different authors, each self-caught — nothing checked it at the
+  point of sending.
+- **The §14 trigger itself** has fired on time for none of the three workstream closes it has been
+  due at: W9 and W10 were both reviewed retroactively, together, after the fact (reviews 7 and 8,
+  both filed 2026-08-29 for closes on 2026-08-27 and 2026-08-28); this review, for W11, exists only
+  because the lead explicitly tasked it, not because anything noticed the close and asked for it.
+- **These are one shape, not three unrelated notes**: a rule stated in prose with nothing making
+  compliance visible at the moment of the action it governs. **Recommendation (3.1):** for the
+  gate-in-flight control specifically, a lock file or equivalent wrapper around any full-gate
+  invocation, written to a path every role can read, so the state is true by construction rather
+  than announced and trusted. **Recommendation (3.2), same shape, no design proposed here:** either
+  the §14 trigger and the 50-word rule get an equivalent mechanical check, or the maintainer accepts
+  that both remain enforced only by memory and says so rather than leaving the gap implicit.
+- **A measurement-methodology gap, distinct from the process-control shape above.** `F38`
+  (`register.md:44`, `NFR-RATE-1`'s without-GBM half) shows a single quiet run can pass while five
+  runs under varied load reveal the true verdict is *not established* (two of five breach a 15 ms
+  bound) — and shows why printing that one run's own distribution would not have caught it: a
+  single run's spread is necessarily narrow near its own mean, so the criterion as written was
+  satisfiable by exactly the run that got the verdict wrong. **Recommendation (3.3):** an NFR
+  acceptance criterion measured near its bound should require repetition under varied load, not a
+  reported distribution from one run — the leaf plan asked for the distribution and got exactly
+  that, correctly, and it was not enough. This is a convention gap (a testing or `dev-commands`
+  skill, or the leaf-plan-writing convention itself), not a spec gap; this review does not pick
+  which document carries it.
+- **No change** on review 8's ZEN-evaluate-side research recommendation (its 3.1) — discharged,
+  with its own named follow-up (the `model_call` node re-test) not yet due.
+
+**4. Document drift.**
+
+- **Three `03` §9 requirements leave their deciding variable unstated, found together because W11
+  is the first workstream chartered to *measure* rather than build against them** (`03:797-798,
+  807-808`):
+  - `NFR-RATE-2` ("Tracing adds ≤ 20 % to scoring latency…") names no statistic — mean, p99, or
+    otherwise. Its neighbour, `NFR-RATE-1`, states "p99" twice in the same table. Measured failing
+    regardless of which statistic is meant (`F35`), but the margin depends on it.
+  - `NFR-RATE-11` — **resolved.** Ruling 36 (`03:807`, 2026-08-30) settled what "logged" reaches
+    (persistence, not only log lines) and reconciled it against `FR-RATE-43`'s Golden Quote store.
+    No further action.
+  - `NFR-RATE-12` — no storage format named, and format is what decides the verdict (2.6× over
+    budget uncompressed, 4 % of budget under gzip). Already registered (`F37`, `register.md:43`)
+    with its own remedy (a spec amendment plus a Slice 4 measurement obligation). No new action
+    beyond what `F37` already carries.
+  - **Recommendation (4.1):** state the statistic, the population it is measured over, and — where
+    storage is involved — the encoding, in the same sentence as any numbered NFR's budget. Ruling
+    34 (`docs/plans/2026-08-29-w11-nfr-rate-2-sampling-structural-ruling.md:112-130`) already states
+    the population-scoping half directly for `NFR-RATE-1` ("if [the population] is ever narrowed…
+    the narrowing must be written into the requirement"); `F37`'s own remedy is the encoding half
+    for `NFR-RATE-12`. The statistic half has no precedent yet; this review adds it. **Predicted,
+    not asserted:** every other module's §9 table has been read but not yet measured against —
+    expect the same yield when each module's turn comes.
+- **`lead.md`'s self-description is contradicted by this workstream's own record.** It states the
+  lead is "the only role that mostly relays rather than derives." Self-reported or caught in flight
+  this workstream: the planner (four citation errors, self-caught), the scope-derivation pass (a
+  range false-zero it had just warned about, and an overstated contract finding, self-corrected),
+  the decision-maker (two citation errors from reading a fragment), and the lead (five, by its own
+  count). **Recommendation (4.2):** correct or drop the parenthetical — the charter is a document
+  like any other, and this is drift between what it claims and what the record shows, even though
+  the artifact is a role file rather than a spec.
+- **No role file names the specific trigger this workstream's evidence names for the authority
+  boundary**: a correctly-proved finding is exactly when choosing the remedy too is hardest to
+  resist, evidenced twice each by the planner and the lead, and by the clean counter-example (the
+  decision-maker's refusal to rule the Quote Context governance question, which is why a second
+  viewpoint caught the `NFR-RATE-11` access-control question at all). **Recommendation (4.3):**
+  name that trigger explicitly in every role file rather than a generic "stay in your lane." This
+  review does not draft the wording — role-file edits are outside this charter's grant
+  (`planner.md`'s Tools line names `docs/plans/` and `docs/audit/plan-reviews.md`, not
+  `.claude/roles/`).
+- **`docs/roadmap.md`'s W11 row is missing `FR-RATE-65`** (Ruling 30, mechanical edit outstanding)
+  **and the fourteen ids enumerated under question 1.** See question 5 for the recurring mechanism
+  this instantiates.
+- **W12's row (`docs/roadmap.md:377`, `FR-RATE-43..45`) disagrees with its own charter text in both
+  directions.** The charter names "regression runs"; no requirement defines one as such —
+  `FR-RATE-44` presupposes a Regression Suite defined elsewhere, and the run itself exists only as
+  a route (`03` §5.1:519) and a `pricing-core` signature (§5.2), neither cited by any requirement's
+  own text. `FR-RATE-45` (the Quote Sandbox, `03` §5.1:518) is in the range and outside the
+  three-item charter, and is separately claimed by W15's row ("quote sandbox + ladder
+  waterfall") — double-homed. `RegressionRun` is documented only in the hand-authored contract tier
+  (`docs/contracts/schemas/regression-suite.schema.json`), not in `03` §4's own text — a drift
+  between the spec and its own contract, on the side `contract-guard`'s drift check does not reach.
+  `GOLDEN_QUOTE_MISMATCH` is declared at `03` §5.1 (error codes owned by this module) and confirmed
+  absent from `backend/src/app/errors.py`'s `RATING_ERROR_CODES` — not yet a live defect (nothing
+  raises it today) but the same shape as `F29`, one workstream early. See question 5 for whether
+  any of this should hold up W12's start.
+
+**5. Shape.**
+
+- **No re-cut of the W11–W14 boundary.** Review 8 already asked this and answered it (accepted
+  2026-08-29): `FR-RATE-34`'s live-default path and `FR-RATE-40`'s two preconditions are
+  domain-inherent dependencies on W13/W14, not artifacts of the cut. Nothing in this pass's
+  evidence disturbs that finding; this review reaffirms it rather than reopening it.
+- **Review 8's own binding condition on this boundary is still unmet.** Its 5.1 acceptance bound
+  W11's close to a named, dated register deferral each for `FR-RATE-34` and `FR-RATE-40` — "not
+  silence, and not a plan that quietly ships a stub and calls the requirement done" (review 8,
+  question 5). Verified directly at this review's own base SHA: `git grep -n
+  "FR-RATE-34\|FR-RATE-40" docs/audit/register.md` at `19eaabc` returns exactly one line,
+  `F-W9-2`'s prose mention of `FR-RATE-40` inside a different row — **neither id has a row of its
+  own.** Not a new finding; review 8 already found it and gave it an owner ("W11's close").
+  Restated because §14's own rule is that nothing proceeds while an earlier review's finding lacks
+  a resolution, and this one is still open at the moment this draft is written. `FR-RATE-34`'s own
+  limb split (explicit-ref path delivered; live-default path deferred to W14, the 409
+  `NO_LIVE_RATING_VERSION` standing in as the interim refusal) has reportedly been ruled since this
+  evidence was gathered; the register row itself is not yet written, and this review does not write
+  it — that is the closure record's artifact, not this one's.
+- **W12 is not ready to build as currently scoped, independent of the W11–W14 boundary question.**
+  Its row and its own charter text disagree in both directions (question 4), and two spec-level
+  gaps sit under it (`RegressionRun` undeclared in `03` §4's own text; `GOLDEN_QUOTE_MISMATCH`
+  unregistered). None of this is a boundary problem — the row's text is wrong about what W12 is,
+  discoverable and fixable now, independent of anything W11 still owes. **Recommendation (4.4):**
+  correct W12's row and close the two spec-level gaps before or as part of its opening slice.
+  `CLAUDE.md` §0's table already treats "a capability not yet specified" as spec-change-first work;
+  this is that case for the workstream about to start, not a later phase, and this review surfaces
+  it rather than mandating a specific slice shape.
+- **Review 8's proposal 4.2** (a workstream row cites the spec section as its scope of record, a
+  numeric range only as a human-readable gloss) **was accepted 2026-08-29, left unowned, and has
+  since fired on `FR-RATE-65` alone and now on this review's own fourteen-id enumeration under
+  question 1** — a repeat firing at a much larger scale than either single-id instance it has
+  already been checked against. Ruling 30 additionally found the proposal needs a temporal
+  qualifier before it can be built as a mechanical check: "the section is the row of record as of
+  the owning workstream's close; a requirement appended after that workstream closed belongs to
+  whoever builds it" (`docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:63-66`) — recorded here
+  for whoever eventually owns 4.2, since nothing in that acceptance line disturbs it.
+  **Recommendation (5.1):** given four firings (`FR-RATE-60`→W9 and `FR-RATE-64`→W11, both already
+  fixed; `FR-RATE-65`→W11, ruled; this review's fourteen-id NFR gap) at a growing and now much
+  larger cost each time, 4.2 needs an assigned owner rather than continuing unowned — this review
+  does not choose who.
+- **A related, narrower proposal, its own owner already named.** Ruling 30 separately proposed
+  that `.claude/skills/spec-change` require a new `FR-`/`NFR-` to name its workstream row in the
+  same commit that mints it, symmetric with the existing rule for a new `OQ-`
+  (`docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:75-91`), naming "the same §14 review that
+  owns 4.2" as its owner. **Recommendation (5.2):** adopt it — the preventive form of 5.1's
+  reactive check, costing one sentence in an existing skill, within any role's standing grant to
+  write a skill (`CLAUDE.md` §12). This review proposes the wording exist before W13 or W14 mint
+  their own first append; it does not draft the sentence itself, on the same logic review 8 used
+  for its own unowned proposals.
+- **`F31`'s charter correction is drafted and ready, not decided here.** `watcher.md:11-24`'s
+  roster-derivation clause has no live implementation; the withdrawal notice already states the
+  honest replacement text in full. **Recommendation (5.3):** apply it — a role-file edit outside
+  this charter's grant to make directly, but costing nothing further to draft.
+- **No new instance of "a row nothing can be said to have closed"** (review 8's own smell) for W11
+  itself — it spans several features but one technology layer, unlike W6b's Vue-view/OIDC/
+  database-trigger span. W12's row, on today's evidence, is heading toward the same smell before it
+  has even started (three named deliverables, a range that both under- and over-counts them) —
+  flagged under question 4, not asserted here as a re-cut.
+- **No new instance of "a phase exit criterion the phase cannot meet."** Phase 2's exit criterion
+  (`docs/roadmap.md:365-367`) needs a live quote inside the latency budget; `NFR-RATE-1`'s
+  without-GBM half is *not established*, not *failing*, and its own remedy is already scheduled
+  (Slice 2 Task 2D, per `F38`'s register row) — the roadmap's own risk mitigation
+  (`docs/roadmap.md:392`, "build the latency harness in W11 alongside the evaluator") did exactly
+  what it was for. Worth watching at Phase 2's exit demo, not a finding now.
+- **Candidates A and B, from the unnumbered "Pending proposals" section above, formally taken up
+  here** — that section's own text anticipated this ("the review at W11's close folds these in").
+  **Candidate A** (do not push to a branch someone is reading while reviewing or auditing it) and
+  **Candidate B** (a count is not load-bearing unless stated at the granularity it was counted at)
+  are both **recommended for adoption (5.4)** into `delivery-process.md` §15, alongside its
+  existing five rules. Per that section's own stated rule, **numbering happens at acceptance** —
+  this review does not assign either a rule number; that is the maintainer's action alongside the
+  acceptance line, as it was left.
+
+---
+
+**Decision point, not a recommendation — Ruling 29 named this review as where it is decided, and
+`CLAUDE.md` §12 reserves the decision itself to the lead.** The gate-coverage cluster (`F27(c)` +
+`F29` + `F33`, `register.md:33,35,39`) and `F-W9-3`'s clauses (4), (5) and (6) (`register.md:25`) —
+one mechanism comparing a spec-declared shape against its implementation on four separate axes —
+are due a placement now: "decide whether it becomes a workstream row or a maintainer task"
+(Ruling 29). Options, not a pick:
+
+(a) **A dedicated slice**, bundled as Ruling 29's own author argued (one mechanism answers all
+    four; a partial fix on any single row is not the target shape), landing inside a Phase 2
+    workstream still to open (W12's own spec-change slice, or W15/W30).
+(b) **A maintainer task outside the workstream ladder**, since none of the four blocks any
+    requirement's own delivery today.
+(c) **Split by cost** — the `mypy` `files` widening (`F33`) is closer to a config change than the
+    other three; taking it alone first and bundling the remaining three later trades the "one
+    mechanism" argument for faster partial progress.
+
+This review's own reading favours (a), for the reason Ruling 29 already gave — but the choice, and
+which workstream if (a), is the lead's to rule, not this document's.
+
+---
+
+#### Status of this draft, by question
+
+| Question | Status | What would change it |
+|---|---|---|
+| 1. Completion | **Provisional** | Final per-id tally needs Slices 2–4 landed and the §13 closure audit run; PRs #435/#436 may also land before filing |
+| 2. Omission | **Settled**, except the gate-coverage cluster (open, see decision point) | Slices 2–4 could surface more; none expected to remove what is listed here |
+| 3. Skills and research | **Settled** | Process-control findings do not depend on the unbuilt slices |
+| 4. Document drift | **Settled** for what is found; more likely once Slices 2–4's own spec sections get read as closely as Slice 1's was here | A fresh drift pass once Slices 2–4's plans exist on `main` |
+| 5. Shape | **Mostly settled** — no-re-cut and W12-readiness stand on their own; the gate-coverage placement and `F31`'s charter fix are open by design (the lead's and a role-file owner's, respectively) | The lead's ruling on the decision point; Slices 2–4 landing does not itself change this question |
+
+#### Proposals, consolidated — review 9 (draft)
+
+| # | Proposal | Kind |
+|---|---|---|
+| 2.1 | `FR-RATE-63` gets a Ruling-30-style attribution ruling before the close | ruling needed |
+| 3.1 | A lock-file/wrapper mechanism for the gate-in-flight control, replacing the announce-and-trust pattern §8 currently relies on | process/tooling |
+| 3.2 | Either the §14 trigger and the 50-word rule get a mechanical check, or the maintainer accepts and states that both are enforced only by memory | process — maintainer to weigh |
+| 3.3 | NFR acceptance criteria measured near their bound require repetition under varied load, not a one-run distribution alone | convention (skill or leaf-plan template) |
+| 4.1 | A numbered NFR budget states its statistic, population, and (where storage is involved) encoding, in the same sentence as the number | spec-writing convention |
+| 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
+| 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
+| 4.4 | Correct W12's row against its own charter; declare `RegressionRun` in `03` §4; register `GOLDEN_QUOTE_MISMATCH` before or at W12's opening slice | docs + spec-change |
+| 5.1 | Assign review 8's proposal 4.2 an owner, now that it has fired a fourth time at a much larger scale, carrying Ruling 30's temporal-qualifier refinement | tool or convention — unowned since 2026-08-29 |
+| 5.2 | Amend `.claude/skills/spec-change` so a new `FR-`/`NFR-` names its workstream row in the same commit that mints it, symmetric with the existing `OQ-` rule (Ruling 30's own proposal) | skill amendment |
+| 5.3 | Apply `F31`'s charter correction to `watcher.md` — text already drafted in the withdrawal notice | role-file edit |
+| 5.4 | Adopt Candidates A and B (branch-freeze while under review; a count states its own granularity) into `delivery-process.md` §15 | process rule — numbered at acceptance |
+| DP-1 | Decide the gate-coverage cluster's placement (options a/b/c above) | **decision, the lead's — not a proposal** |
+
+**Maintainer acceptance:** _pending._ This is a draft circulated to the lead ahead of the
+maintainer, not yet presented for acceptance. Before it can be filed: Slices 2–4 land (or are far
+enough along that question 1's tally is real rather than provisional), the §13 closure audit
+completes, review 8's still-open binding condition (the `FR-RATE-34`/`FR-RATE-40` register rows)
+is met, and the decision point above is ruled by the lead. Everything in questions 2 through 5 is
+not expected to change on those events, but will be re-read against whatever tree is current
+before filing, per this document's own rule that a claim names the tree it was checked at.
+
+#### Sources
+
+- `docs/roadmap.md` §7 (workstream table, risk table, Phase 2 demo-able outcome) — read directly at
+  `19eaabc`.
+- `docs/audit/register.md`, in full — read directly at `19eaabc`.
+- `docs/specs/03-rating-engine.md` §3.1, §3.4, §3.7–§3.9, §5.1, §9 — read directly at `19eaabc`.
+- `docs/process/delivery-process.md` §8, §15 — read directly at `19eaabc`.
+- `backend/src/app/errors.py` — read directly to confirm `GOLDEN_QUOTE_MISMATCH`'s absence from
+  `RATING_ERROR_CODES`.
+- `.claude/roles/watcher.md`, `.claude/roles/planner.md` — read directly.
+- Rulings 29, 30, 34, 36 — `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`,
+  `2026-08-29-w11-fr-rate-65-attribution.md`,
+  `2026-08-29-w11-nfr-rate-2-sampling-structural-ruling.md` — read directly; Ruling 36 as amended
+  into `03-rating-engine.md:807`.
+- `git log`, `git grep`, `git merge-base --is-ancestor` against `origin/main` at `19eaabc` — run
+  this session to confirm the ancestry and absence claims above, not assumed from the working notes
+  that first reported them.
+- `gh pr view 436` — run this session to confirm `F41`'s content and open status.
+- Review 8 and the unnumbered "Pending proposals" section, both above in this document — read
+  directly here rather than re-derived.
+- Session-local working notes that first surfaced several of the above, credited by name in prose
+  and not cited as resolvable paths: `phase-review-inputs.md`, `w11-scope-derivation.md`,
+  `close-audit-baseline.md`, `register-rows-owed.md`, `eta.md` (all
+  `~/w11-handover-2026-08-29/`, 2026-08-30). None of this review's findings depends on a reader
+  having access to them.
