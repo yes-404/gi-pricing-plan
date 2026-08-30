@@ -52,8 +52,8 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
 This section first read **"Both halves PASS"** on the strength of a single run. The no-GBM
 half does not reproduce, and the correction is a verdict change rather than a wording fix.
 Every run is tabulated below with its load: the evidence for the corrected verdict is here,
-not in a document elsewhere. Unlike NFR-RATE-2's failure (`docs/audit/register.md`, **F35**)
-this instability carries no register row of its own as at `6e548f8`.*
+and the finding itself is **F38** in `docs/audit/register.md`, beside NFR-RATE-2's separate
+failure at **F35**.*
 
 - **Without a GBM call (p99 < 15 ms): measured; verdict unstable across runs — not
   established.** This note first recorded 9.410 ms and a "~1.6x" margin. Three re-runs of
