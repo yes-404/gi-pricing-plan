@@ -1258,6 +1258,14 @@ scale of 238 of 326 rows wrong) was **withdrawn before filing** because it dupli
 (`register.md:42`) and will amend that row instead of opening a new one — not yet landed as of this
 tree. Question 3 below cites `F36` as it stands today, not the amendment.
 
+**Re-read after the evidence base itself changed mid-draft**, per the lead's note. Two changes:
+a new §I (a leaf-plan Files-block gap, verified at `7952f76`, taken up under question 3 below), and
+a correction to §F's own headline figure ("sixteen requirements, all on the NFR side" corrected to
+"ten NFRs and six FRs"). The second one is not simply adopted — question 1 below re-derives it
+directly against the row and the leaf plans, because the corrected figure and this draft's own
+independent first pass disagreed with each other in a way neither fully explained, and both turn
+out right for differently-scoped questions rather than one being simply wrong.
+
 ---
 
 **1. Completion — reused where a fresh derivation exists, and provisional as a whole.**
@@ -1265,46 +1273,53 @@ tree. Question 3 below cites `F36` as it stands today, not the amendment.
 Two independent, same-night derivations exist, and this review reuses rather than re-runs them:
 `scope-audit.py RATE --sections 3.7,3.8 --extra 'FR-RATE-64,NFR-RATE-1,NFR-RATE-13,NFR-RATE-14'`
 (pinned `6e548f8`), and a full read of `03` §3.7, §3.8 and §9 against every W11 leaf plan's own
-coverage table (pinned `28ec778`, six commits behind this review's own base). Both recorded the
-exact commands that produced them; re-running now would confirm, not discover.
+coverage table (pinned `28ec778`). Both recorded the exact commands that produced them; re-running
+now would confirm, not discover.
 
 The row (`docs/roadmap.md:376`) names **13 ids**: `FR-RATE-34..42, 64` and `NFR-RATE-1, 13, 14`.
 The section sweep returns 16 in scope, over-including three W12 ids (`FR-RATE-43/44/45`, confirmed
-excluded by name in every W11 leaf plan) — net of that, section and row agree at 13. **Beyond that
-13, evidenced or engaged but named by no workstream row anywhere in `docs/roadmap.md`:**
+excluded by name in every W11 leaf plan) — net of that, section and row agree at 13.
 
-- `NFR-RATE-2, 3, 4, 5, 7, 8, 9, 10, 11, 12` — ten of `03` §9's fourteen `NFR-RATE` rows (the other
-  four are 1, 6, 13, 14; 6 is properly W14's — deployment cache warming, Ruling 16 clause 4 — and
-  1/13/14 are the three the row already names).
-- `NFR-OVR-5` and `NFR-OVR-6` — two overview-level ids. `NFR-OVR-5` is recorded, but only inside
-  `F22`'s `NFR-OVR-1..8` range (`register.md:13`), whose stated owner — "the later-phase
-  workstreams named in the roadmap" — resolves to nothing (`git grep -n "NFR-OVR-5"
-  docs/roadmap.md` returns zero). `NFR-OVR-6` is not recorded anywhere.
-- `FR-RATE-63` (`03:87`, §3.1) — evidenced (three markers,
-  `packages/pricing-core/tests/test_rating_score.py:414,425,433`, landed with W11 Task 1.4) and
-  claimed by no row. Unlike its neighbours `FR-RATE-62` (W10's, `03:310`) and `FR-RATE-64` (W11's,
-  corrected into the row by PR #314), nothing has ruled which workstream owns it — and unlike the
-  next item, there is no argument that ownership can't be assigned retroactively: it was minted
-  2026-08-18, before W9 closed.
-- `FR-RATE-65` (`03:139`, §3.4) — evidenced (nine markers,
-  `packages/pricing-core/tests/test_rating_runtime.py`) and **already ruled** W11's (Ruling 30,
-  `docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:33-47`, 2026-08-29). The mechanical row edit
-  is outstanding — see question 5.
+**Beyond that 13, two different questions each have a correct, different-sized answer — kept
+separate here because this draft's own first pass, and the evidence base it drew on, both
+collapsed them into one number and disagreed with each other as a result (`phase-review-inputs.md`
+§F was itself corrected mid-session, from "sixteen, all NFR" to "ten NFRs and six FRs," while this
+draft's own first pass had independently reached fourteen — neither of those two prior numbers was
+wrong so much as each answered a different question without saying so).**
 
-**Not counted above, deliberately:** `FR-RATE-22, 24, 25, 56` also surface in a per-plan coverage
-sweep, but W9's row (`docs/roadmap.md:374`) already claims them through a bare-number continuation
-(`FR-RATE-1..13, 22..27, 56/57/58/59`) that a per-id search does not match — a known grep trap, not
-a row omission. One of the four, `FR-RATE-25`, is separately tracked in full as `F-W9-3`
-(`register.md:25`); it is not a new finding here.
+**Question A — what does a W11 leaf plan claim that the row's text never says?** **Sixteen ids**,
+matching the evidence base's corrected figure exactly: `FR-RATE-22, 24, 25, 56, 63, 65` (six —
+each with markers in a W11 leaf plan's own Requirement Coverage table, enumerated per-id in the
+scope-derivation pass) and `NFR-RATE-2, 3, 4, 5, 7, 8, 9, 11, 12` plus `NFR-OVR-6` (ten), none of
+which appear inside the row's `FR-RATE-34..42, 64`.
 
-**A correction to the evidence this drew on, made while restating it rather than instead of
-restating it:** the working note that first ran this derivation reported the gap as "sixteen
-requirements, all on the NFR side." Sixteen was the raw count of everything a per-plan sweep
-returned beyond the row, before separating already-claimed-elsewhere (the four just above) from
-genuinely unclaimed, and it included two `FR-` ids (63, 65) that "all NFR" drops. The list
-enumerated above — ten `NFR-RATE`, two `NFR-OVR`, two `FR-RATE` — is what this review stands
-behind; no single replacement number is asserted in its place, per this same review's own
-question-5 proposal that a count is not load-bearing (Candidate B, taken up below).
+**Question B — what is claimed by no row anywhere in `docs/roadmap.md`, full stop?** A narrower
+**fourteen**, because four of Question A's six `FR-` ids are *also* named by **W9's** row
+(`docs/roadmap.md:374`, `FR-RATE-1..13, 22..27, 56/57/58/59`) — just through a bare-number
+continuation that a per-id search does not match, not through any text a naive reader would
+recognise:
+
+- `FR-RATE-22, 24, 56` are W9's, and W11's own tests re-exercise rather than newly discharge them
+  — except `FR-RATE-56` is a deeper case than the other two: per independent corroboration, W11
+  Task 1.4's test is *"the first proving the check is wired into the running service,"* i.e. real
+  completion work on a requirement W9 had booked on weaker evidence. That is exactly why Question
+  A, not Question B, is the one that should decide whether W11's own row mentions it — the row
+  can be silent about *owning* `FR-RATE-56` while still being wrong to hide that W11's own plan
+  did something to it.
+- `FR-RATE-25` is also W9's by the same continuation, and **already tracked in full** as `F-W9-3`
+  (`register.md:25`) — not a new finding under either question.
+- `FR-RATE-63` (`03:87`, §3.1) and `FR-RATE-65` (`03:139`, §3.4) are claimed by **no** row at all.
+  `FR-RATE-65` is already ruled W11's (Ruling 30,
+  `docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:33-47`, 2026-08-29; the mechanical row edit
+  is outstanding, see question 5). `FR-RATE-63` is not yet ruled by anyone — see question 2.
+- `NFR-RATE-10` and `NFR-OVR-5` sit **outside Question A's sixteen entirely** — no W11 plan claims
+  either of them, which is a worse gap than "claimed by a plan, absent from the row" (see question
+  2 for both). Question B's fourteen is Question A's sixteen, minus the four `FR-` ids W9's row
+  already covers, plus these two.
+
+**Both totals are correct, for the question each answers, and neither replaces the other** — the
+practice this review's own Candidate B recommends below (a count states the granularity it was
+taken at), applied to its own headline number rather than only proposed for someone else's.
 
 **Since the pinned derivation (`28ec778`), Slice 1 Task 1.5 has merged (`c1a0dde`)**, converting
 three of the above from a leaf plan's stated intent into register rows: `NFR-RATE-2`'s correctness
@@ -1349,8 +1364,7 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:156-225`) to be decided **at this review**,
   and still undecided. See the decision point after question 5.
 
-**3. Skills and research — one shape, four instances, and a fifth once this review's own trigger
-is counted.**
+**3. Skills and research — one shape, five instances of it now.**
 
 - **`delivery-process.md` §8's gate-in-flight control** ("announce an expensive verification…and
   check for one already in flight before starting," `delivery-process.md:170-172`) has no live
@@ -1372,13 +1386,24 @@ is counted.**
   due at: W9 and W10 were both reviewed retroactively, together, after the fact (reviews 7 and 8,
   both filed 2026-08-29 for closes on 2026-08-27 and 2026-08-28); this review, for W11, exists only
   because the lead explicitly tasked it, not because anything noticed the close and asked for it.
-- **These are one shape, not three unrelated notes**: a rule stated in prose with nothing making
+- **A fifth instance, and it is the sharpest one, because it is the fix for the other four.**
+  `close-workstream` §5a (`.claude/skills/close-workstream/SKILL.md:340-368`) was written hours
+  before this draft, by the same person who had just diagnosed this whole shape, to catch exactly
+  it — a binding plan-review condition (review 8's 5.1, the `FR-RATE-34`/`FR-RATE-40` register
+  rows discussed under question 5) whose demanded artifact nobody was checking for. §5a is
+  **prose plus a suggested `grep`**: nothing in `audit-docs.py` verifies that an accepted
+  condition's artifact actually exists. The remedy for "a rule with no check" was itself a rule
+  with no check. Not worthless — a checklist step inside a procedure read start-to-finish is
+  stronger than a rule floating loose in a process document — but the weaker of the two available
+  instruments, chosen without the stronger one being ruled out.
+- **These are one shape, not four unrelated notes**: a rule stated in prose with nothing making
   compliance visible at the moment of the action it governs. **Recommendation (3.1):** for the
   gate-in-flight control specifically, a lock file or equivalent wrapper around any full-gate
   invocation, written to a path every role can read, so the state is true by construction rather
   than announced and trusted. **Recommendation (3.2), same shape, no design proposed here:** either
-  the §14 trigger and the 50-word rule get an equivalent mechanical check, or the maintainer accepts
-  that both remain enforced only by memory and says so rather than leaving the gap implicit.
+  the §14 trigger, the 50-word rule and §5a's condition-artifact check get an equivalent mechanical
+  check, or the maintainer accepts that all three remain enforced only by memory and says so rather
+  than leaving the gap implicit.
 - **A measurement-methodology gap, distinct from the process-control shape above.** `F38`
   (`register.md:44`, `NFR-RATE-1`'s without-GBM half) shows a single quiet run can pass while five
   runs under varied load reveal the true verdict is *not established* (two of five breach a 15 ms
@@ -1390,6 +1415,25 @@ is counted.**
   that, correctly, and it was not enough. This is a convention gap (a testing or `dev-commands`
   skill, or the leaf-plan-writing convention itself), not a spec gap; this review does not pick
   which document carries it.
+- **A leaf-plan convention gap, found by the process working rather than failing.** Every W11
+  route-adding leaf plan (Task 2B's `w11-2`; Slice 3's `w11-3-batch-scoring`; Slice 4's
+  `w11-4-trace-sampling-persistence`) omits the regenerated OpenAPI contract
+  (`docs/contracts/openapi/generated.json`) from its own **Files** block, despite adding a route
+  that forces its regeneration (`scripts/generate-contracts.py:163`, `FR-PLAT-48`) — verified
+  directly: `docs/plans/2026-08-29-w11-2-realtime-scoring-endpoint.md` has four `**Files**`
+  headings and none names it. Two of the three plans do name `generate-contracts.py --check`
+  inside a boilerplate gate-block, which is worse than silence in one respect — it reads as
+  coverage while naming the detector, not the deliverable. The knock-on a plan reader would not
+  predict: `frontend.yml`'s path filter includes `docs/contracts/openapi/**`
+  (`.github/workflows/frontend.yml:21,29`, confirmed), so a route-adding backend PR arms a
+  **second** CI workflow, and a red frontend job on it is a real failure, not a stray. Caught by
+  the executor surveying integration points *before* writing any code (`delivery-process.md` §6's
+  own ordering) — an instance of the process paying for itself, not the reverse.
+  **Recommendation (3.4):** a plan step that adds or changes a route states the regenerated
+  contract as a deliverable in its own Files block, and names the second CI workflow it arms —
+  `writing-plans` is this charter's own mandatory skill and the natural home for the convention,
+  but this review proposes rather than lands it, consistent with how it has treated every other
+  skill-amendment finding above.
 - **No change** on review 8's ZEN-evaluate-side research recommendation (its 3.1) — discharged,
   with its own named follow-up (the `model_call` node re-test) not yet due.
 
@@ -1434,8 +1478,8 @@ is counted.**
   (`planner.md`'s Tools line names `docs/plans/` and `docs/audit/plan-reviews.md`, not
   `.claude/roles/`).
 - **`docs/roadmap.md`'s W11 row is missing `FR-RATE-65`** (Ruling 30, mechanical edit outstanding)
-  **and the fourteen ids enumerated under question 1.** See question 5 for the recurring mechanism
-  this instantiates.
+  **and the sixteen ids question 1's Question A enumerates** — what W11's own plans claim that the
+  row's text does not. See question 5 for the recurring mechanism this instantiates.
 - **W12's row (`docs/roadmap.md:377`, `FR-RATE-43..45`) disagrees with its own charter text in both
   directions.** The charter names "regression runs"; no requirement defines one as such —
   `FR-RATE-44` presupposes a Regression Suite defined elsewhere, and the run itself exists only as
@@ -1480,7 +1524,7 @@ is counted.**
   it rather than mandating a specific slice shape.
 - **Review 8's proposal 4.2** (a workstream row cites the spec section as its scope of record, a
   numeric range only as a human-readable gloss) **was accepted 2026-08-29, left unowned, and has
-  since fired on `FR-RATE-65` alone and now on this review's own fourteen-id enumeration under
+  since fired on `FR-RATE-65` alone and now on this review's own Question-A sixteen under
   question 1** — a repeat firing at a much larger scale than either single-id instance it has
   already been checked against. Ruling 30 additionally found the proposal needs a temporal
   qualifier before it can be built as a mechanical check: "the section is the row of record as of
@@ -1488,9 +1532,9 @@ is counted.**
   whoever builds it" (`docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:63-66`) — recorded here
   for whoever eventually owns 4.2, since nothing in that acceptance line disturbs it.
   **Recommendation (5.1):** given four firings (`FR-RATE-60`→W9 and `FR-RATE-64`→W11, both already
-  fixed; `FR-RATE-65`→W11, ruled; this review's fourteen-id NFR gap) at a growing and now much
-  larger cost each time, 4.2 needs an assigned owner rather than continuing unowned — this review
-  does not choose who.
+  fixed; `FR-RATE-65`→W11, ruled; this review's sixteen-id gap, six `FR` and ten `NFR`) at a
+  growing and now much larger cost each time, 4.2 needs an assigned owner rather than continuing
+  unowned — this review does not choose who.
 - **A related, narrower proposal, its own owner already named.** Ruling 30 separately proposed
   that `.claude/skills/spec-change` require a new `FR-`/`NFR-` to name its workstream row in the
   same commit that mints it, symmetric with the existing rule for a new `OQ-`
@@ -1563,8 +1607,9 @@ which workstream if (a), is the lead's to rule, not this document's.
 |---|---|---|
 | 2.1 | `FR-RATE-63` gets a Ruling-30-style attribution ruling before the close | ruling needed |
 | 3.1 | A lock-file/wrapper mechanism for the gate-in-flight control, replacing the announce-and-trust pattern §8 currently relies on | process/tooling |
-| 3.2 | Either the §14 trigger and the 50-word rule get a mechanical check, or the maintainer accepts and states that both are enforced only by memory | process — maintainer to weigh |
+| 3.2 | Either the §14 trigger, the 50-word rule and `close-workstream` §5a's condition-artifact check get a mechanical check, or the maintainer accepts and states that all three are enforced only by memory | process — maintainer to weigh |
 | 3.3 | NFR acceptance criteria measured near their bound require repetition under varied load, not a one-run distribution alone | convention (skill or leaf-plan template) |
+| 3.4 | A route-adding plan states the regenerated OpenAPI contract as a Files-block deliverable and names the second CI workflow it arms | convention (`writing-plans`) |
 | 4.1 | A numbered NFR budget states its statistic, population, and (where storage is involved) encoding, in the same sentence as the number | spec-writing convention |
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
@@ -1593,6 +1638,11 @@ before filing, per this document's own rule that a claim names the tree it was c
 - `backend/src/app/errors.py` — read directly to confirm `GOLDEN_QUOTE_MISMATCH`'s absence from
   `RATING_ERROR_CODES`.
 - `.claude/roles/watcher.md`, `.claude/roles/planner.md` — read directly.
+- `.claude/skills/close-workstream/SKILL.md:340-368` (§5a) — read directly at `19eaabc`.
+- `.github/workflows/frontend.yml:10,18-29` — read directly to confirm the `docs/contracts/
+  openapi/**` path filter.
+- `docs/plans/2026-08-29-w11-2-realtime-scoring-endpoint.md` — read directly (`grep -c
+  '\*\*Files\*\*'` returns 4, none naming `generated.json`), at `19eaabc`.
 - Rulings 29, 30, 34, 36 — `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`,
   `2026-08-29-w11-fr-rate-65-attribution.md`,
   `2026-08-29-w11-nfr-rate-2-sampling-structural-ruling.md` — read directly; Ruling 36 as amended
