@@ -97,9 +97,19 @@ class BundleMetadata(BaseModel):
     #: operational record with its own pruning, and would make the version unresolvable the
     #: day it is trimmed (Ruling 37 §2).
     #:
-    #: `None` both for metadata written before this field existed and for a version never
-    #: compiled. Both mean *not resolvable — recompile*, which is the path an uncompiled
-    #: version already takes, so no migration and no back-fill are owed.
+    #: **Nullable because of `to_schema`, not because legacy rows are tolerated**
+    #: (Ruling 37 §3). `rating_versions.to_schema` runs
+    #: `BundleMetadata.model_validate(row.bundle) if row.bundle else None` on *every* read of
+    #: a rating version — the list and get routes, and the create and submit paths. A required
+    #: field would turn one keyless row into a hard validation failure of all of them, not
+    #: merely a failed scoring attempt. Nullable keeps the blast radius at the one thing that
+    #: actually needs the key.
+    #:
+    #: That no such row exists is a *consequence*, not the reason: `row.bundle` has a single
+    #: writer, the compile path, so no keyless-but-compiled row exists today and no migration
+    #: or back-fill is owed. That does not license making the field required — a back-fill
+    #: would empty today's population, not remove the failure mode above, which returns for
+    #: any keyless row that ever appears.
     blob_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None = None
 
 
