@@ -48,6 +48,7 @@ must say where it went.
 | [NT-0011](0011-per-agent-model-and-skill-settings.md) | Per-agent model, thinking effort and skill bindings for the seven roles | 2026-08-29 | `superseded` | `.claude/roles/*.md`, `docs/process/agent-settings.md` (not `.claude/agents/` — this note's own text named the wrong directory; corrected during implementation) |
 | [NT-0012](0012-a-credential-is-borrowed-not-stored.md) | A credential in an ephemeral job directory is borrowed, not stored, and is found by its shape, not its container's name | 2026-08-29 | `open` | Rules only; lands in a role file's credential duty and a search-discipline skill, neither chosen yet |
 | [NT-0013](0013-the-lead-is-the-highest-error-node.md) | The lead is the highest-error node — eight relay-error instances evidencing the claim `lead.md` now states, and what actually caught each | 2026-08-29 | `open` | Evidence only; the receiving-half mitigation already landed in `delivery-process.md` §15, "remove the relay" not yet landed anywhere |
+| [NT-0014](0014-machine-readable-process-core.md) | A machine-readable core for the delivery process — a JSON extract, a runtime state file and four deterministic scripts, closing three enforcement gaps the process spec names in its own text | 2026-08-30 | `open` | Nothing yet — proposed, not adopted. Its §5 impact matrix names 22 targets if adopted; the companion JSON is a draft in the note's appendix, deliberately not filed at `docs/process/`. Trigger: not before W11 closes |
 
 ## What a note must contain
 
