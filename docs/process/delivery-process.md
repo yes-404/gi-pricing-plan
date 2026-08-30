@@ -306,6 +306,16 @@ accept something.**
   auditor's Tools line minutes after that same file had been assigned to the planner in the
   same conversation — caught by running `git log` against the file itself and finding every
   commit on it was already a plan review, not by remembering the earlier assignment.
+- **Remove the relay, do not merely distrust it** (`NT-0013`). The bullet above says do not
+  *trust* a relay; this says do not *create* one. **Members send artifacts directly to whoever
+  needs them. The lead is addressed for a decision or a verdict — the one thing that cannot be
+  delegated — and not as a conduit for everything else.** The two are one rule, and the reason
+  they are stated together is that the weaker half landed alone first: a reader who finds only
+  "verify the relay" concludes the remedy is more careful reading, which is exactly what
+  `NT-0013`'s eight instances refute — the relay was reading carefully each time, and still
+  restated things wrongly. Routing is the fix; attention is not. This practice was adopted
+  mid-session on 2026-08-29 and decayed within the hour because it was announced and never
+  written down, which is why it is written here.
 - **A gate or check result names its corpus — the command, the totals, and the tree**
   (pilot finding P11). Two roles independently reported a PR's gate "clean" while its CI was
   failing on a named invariant. Neither lied: one had run its own new test file (7/7), the
