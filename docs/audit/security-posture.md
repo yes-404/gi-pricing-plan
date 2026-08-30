@@ -77,6 +77,7 @@ several of these accept a write and silently keep the old value.
 | `default_workflow_permissions` | `read` | **Already correct** before the review — it had been carried on a to-do list as outstanding, wrongly |
 | `can_approve_pull_request_reviews` | `false` | Already correct |
 | Action refs | **SHA-pinned** | All seven refs across three workflows |
+| `allowed_actions` | **`selected`** | Restricted 2026-08-30 from `all`: GitHub-owned + verified creators, plus explicit patterns `astral-sh/setup-uv@*` and `pnpm/action-setup@*`. **Both third-party actions proven green under the restriction at their pinned SHAs**, by re-running each workflow after it was applied |
 | `allow_forking` | `true` | Normal for a public repo |
 | `web_commit_signoff_required` | `false` | Not required |
 
@@ -93,12 +94,38 @@ almost certainly they require GitHub Advanced Security rather than being availab
   the rest. Those PRs would therefore accumulate unmerged by rule. Vulnerability *alerts* are
   enabled, so detection is not lost. If the updates are wanted, `dependabot[bot]` needs an
   explicit carve-out from the merge rule.
-- **`sha_pinning_required` is not enabled.** The pins in §3 are the prerequisite and are now in
-  place; enforcing it is a further, separate change.
-- **`allowed_actions` is `all`.** Any action from any author may run. Restricting it to
-  GitHub-owned, verified creators plus explicit patterns for the two third-party actions in use
-  (`astral-sh/setup-uv`, `pnpm/action-setup`) is real hardening and is scheduled, deliberately,
-  for a gap between slices — a wrong pattern breaks every workflow at once.
+- **`sha_pinning_required` is not enabled.** Now *possible* — the pins landed 2026-08-30 —
+  but it is a further, separate change and has not been made.
+
+## 4b. Restricting `allowed_actions` has a window, and it broke CI for ninety seconds
+
+Recorded because the failure is structural rather than careless, and the next person will hit
+it the same way. **Setting this is two API calls with no atomic form:** the mode
+(`allowed_actions=selected`) and then the allowlist (`selected-actions`). **Between them the
+repository sits at `selected` with an empty allowlist, which means GitHub-owned only.** Any
+workflow whose `Set up job` step evaluates inside that window fails:
+
+```
+##[error]The action pnpm/action-setup@b906aff… is not allowed in yes-404/gi-pricing-plan
+because all actions must be from a repository owned by yes-404 or created by GitHub.
+```
+
+That happened on `main` on 2026-08-30 and was fixed by re-running the job once the allowlist
+was set. **The mitigation is ordering: write the allowlist first, then flip the mode** — the
+`selected-actions` endpoint refuses with `409 Conflict` while the mode is still `all`, so the
+gap cannot be closed entirely, but it can be made much smaller by having the payload ready and
+issuing the two calls back to back, and by doing it when no run is in flight.
+
+**Two things this also taught, both about proving rather than assuming:**
+
+- **A probe built on an empty commit proves nothing here.** All three workflows are
+  `paths:`-filtered, so a commit that changes no file triggers no run — a green probe would
+  have meant only that nothing ran. **Re-running an existing run is the correct test**: it
+  re-evaluates the current allowlist against a real workflow with no junk commit.
+- **A green run is not evidence unless you know which configuration it evaluated under.** The
+  `python` workflow's `Set up job` passed on a run that *started* before the restriction, which
+  proves nothing about the restriction. It was re-run afterwards, and only that second result
+  is cited above.
 
 ## 5. The standing rule this posture depends on
 
