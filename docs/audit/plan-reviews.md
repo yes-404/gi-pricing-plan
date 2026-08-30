@@ -1371,7 +1371,7 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:156-225`) to be decided **at this review**,
   and still undecided. See the decision point after question 5.
 
-**3. Skills and research — one shape, six instances of it now.**
+**3. Skills and research — one shape, seven instances of it now.**
 
 - **`delivery-process.md` §8's gate-in-flight control** ("announce an expensive verification…and
   check for one already in flight before starting," `delivery-process.md:170-172`) has no live
@@ -1415,11 +1415,29 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   check. Where the other five instances leave room to read the gap as an execution shortfall, this
   one does not: the person with the most reason to comply, right after writing the rule down, still
   needed a second reader to catch it.
-- **These are one shape, not five unrelated notes**: a rule stated in prose with nothing making
-  compliance visible at the moment of the action it governs. **Recommendation (3.1):** for the
-  gate-in-flight control specifically, a lock file or equivalent wrapper around any full-gate
-  invocation, written to a path every role can read, so the state is true by construction rather
-  than announced and trusted. **Recommendation (3.2), same shape, no design proposed here:** either
+- **A seventh instance, and a different failure inside the same family: a control that was
+  adopted and followed, aimed at the wrong property.** §8's own justification for serialising gate
+  runs is CPU/load contention — "two suites at once drove load average past 11 and both read as
+  stalled agents" (`delivery-process.md:166`). But `backend/tests/conftest_db.py`'s
+  `_empty_the_database_after_the_session` fixture (`scope="session", autouse=True`,
+  `conftest_db.py:251-252`) truncates the whole shared Postgres at teardown **regardless of
+  load** — so two pytest sessions running at the same time against it can mutually destroy each
+  other's fixtures with zero CPU contention at all. Following §8's own stated reasoning (avoid
+  contending for CPU) does not by itself prevent this, because the hazard the rule argues from and
+  the hazard that actually bites are different properties — compliance and safety came apart, not
+  because anyone was careless but because the rule's own justification pointed at the wrong thing.
+  **This sharpens Recommendation 3.1 below**, rather than adding a new one: a lock keyed on "an
+  expensive verification is running" protects against the CPU hazard and not the database one — a
+  lighter, non-gate pytest invocation that still touches this fixture is exactly as dangerous as a
+  full gate. The wrapper needs to key on shared-database access, not on verification cost.
+- **These are one shape, not six unrelated notes**: a rule stated in prose with nothing making
+  compliance visible at the moment of the action it governs, or (this section's seventh instance)
+  visible but aimed at a proxy for the real hazard rather than the hazard itself.
+  **Recommendation (3.1), revised to name the resource rather than the proxy:** a lock file or
+  equivalent wrapper keyed on **any session that will touch the shared test database**, not on
+  "a full-gate invocation," written to a path every role can read, so the state is true by
+  construction rather than announced and trusted. **Recommendation (3.2), same shape, no design
+  proposed here:** either
   the §14 trigger, the 50-word rule and §5a's condition-artifact check get an equivalent mechanical
   check, or the maintainer accepts that all three remain enforced only by memory and says so rather
   than leaving the gap implicit.
@@ -1625,7 +1643,7 @@ which workstream if (a), is the lead's to rule, not this document's.
 | # | Proposal | Kind |
 |---|---|---|
 | 2.1 | `FR-RATE-63` gets a Ruling-30-style attribution ruling before the close | ruling needed |
-| 3.1 | A lock-file/wrapper mechanism for the gate-in-flight control, replacing the announce-and-trust pattern §8 currently relies on | process/tooling |
+| 3.1 | A lock-file/wrapper mechanism for the gate-in-flight control, keyed on shared-database access rather than "a full gate is running" | process/tooling |
 | 3.2 | Either the §14 trigger, the 50-word rule and `close-workstream` §5a's condition-artifact check get a mechanical check, or the maintainer accepts and states that all three are enforced only by memory | process — maintainer to weigh |
 | 3.3 | NFR acceptance criteria measured near their bound require repetition under varied load, not a one-run distribution alone | convention (skill or leaf-plan template) |
 | 3.4 | A route-adding plan states the regenerated OpenAPI contract as a Files-block deliverable and names the second CI workflow it arms | convention (`writing-plans`) |
@@ -1658,6 +1676,8 @@ before filing, per this document's own rule that a claim names the tree it was c
   `RATING_ERROR_CODES`.
 - `.claude/roles/watcher.md`, `.claude/roles/planner.md` — read directly.
 - `.claude/skills/close-workstream/SKILL.md:340-368` (§5a) — read directly at `19eaabc`.
+- `backend/tests/conftest_db.py:12,251-252` — read directly to confirm the fixture's scope and
+  autouse status.
 - `.github/workflows/frontend.yml:10,18-29` — read directly to confirm the `docs/contracts/
   openapi/**` path filter.
 - `docs/plans/2026-08-29-w11-2-realtime-scoring-endpoint.md` — read directly (`grep -c
