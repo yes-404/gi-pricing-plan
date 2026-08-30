@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, and every spec §10 mirror row's status — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, and the process core extract's § citations against the process spec — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -125,6 +125,37 @@ row: the token must follow the id on the same row, so a neighbouring row's statu
 satisfies it. The row is read whole rather than first-word, because a decided row's
 question text can contain a stray "open".
 
+### The process core's citations (check 26)
+
+`docs/process/delivery-process.core.json` is the machine-readable extract of
+`docs/process/delivery-process.md` (NT-0014). **The markdown is authoritative and the
+extract is derived**, so the check runs one way only: an extract citing a section that does
+not exist means the extract is wrong, never the spec.
+
+Four things are checked, and the numbering deliberately skips 25 — that number is claimed
+by other in-flight work, and a check number is permanent under `CLAUDE.md` §5 the way a
+requirement id is.
+
+- **Every `source` value cites at least one `§`**, and every section it names has a
+  `## N.` heading.
+- **`§N.M` is a *step*, not a subsection.** `delivery-process.md` has no `###` headings at
+  all, so `§5.4` means step 4 of §5's numbered list. A reader who assumed subsections would
+  report all eleven step citations as dangling.
+- **`meta.authoritative` is `false`.** The authority rule enforced on the artifact that
+  claims it, rather than only stated in the prose beside it.
+- **`meta.derived_from` names a file that exists.**
+
+**It does not skip silently when the extract is missing.** If the file is gone while
+`delivery-process.md` §10 still lists it as a required artifact, that is a failure — a check
+that quietly passes when its subject is deleted is one anyone can disarm by deleting it.
+
+**What it cannot do.** A citation that resolves is not proof the cited text still says what
+the citer thought (`NT-0006`: verify the claim, not just the citation). Only the mechanical
+half is here, because only the mechanical half needs no judgement. The half it does catch is
+the one that motivated the whole proposal: at `6f77abb` the process spec's own
+back-reference named `CLAUDE.md` §12 for a pointer that lives in §15, and no gate in the
+repository could see it.
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -205,6 +236,8 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-30 — Check 26 added (the process core extract's § citations) and this skill updated with it in the same commit. Proven on deliberately broken input rather than asserted: six mutations run through `scripts/audit-docs.py` itself — a `§99` section, a `§5.99` step past §5's eight, `authoritative: true`, a `derived_from` naming no file, a `source` citing nothing, and the extract deleted while §10 still requires it. Each produced its own distinct failure, and the unmutated tree stayed silent. `.claude/skills/README.md`'s cell said "23 checks" while the code had 24; the count is now removed from that cell rather than bumped, because a restated count is `NT-0003` by construction.
 
 2026-08-29 — The module docstring's own numbered list, the code's check-numbering
 comments, and this skill's description had drifted three ways: docstring stopped at 22,
