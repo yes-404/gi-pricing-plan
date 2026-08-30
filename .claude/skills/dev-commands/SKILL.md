@@ -272,6 +272,12 @@ originally scoped the rule to `pytest` and phrased it as "poll". Both were wrong
   that *did* poll — it wrote a poller, **backgrounded the poller**, and ended its turn. The
   wait loop must block the agent's **own turn**, in the foreground. A backgrounded waiter is
   the same bug wearing the waiter's clothes.
+- **Delegating the wait is the same bug again.** The fifth stall came from an executor that
+  handed the gate to a `gate-runner` subagent and ended its turn to await the result. **A
+  nested agent's completion notification reaches the session that is still running, not an
+  agent whose turn has ended.** Five occurrences on 2026-08-30 across four mechanisms — a
+  backgrounded command, a background poller, a `Monitor` task, and a delegated subagent. The
+  invariant is the turn, not the mechanism.
 
 The dispatching lead's half: **say this in the dispatch**, and if a subagent reports it is
 waiting on a background run, **resume it and tell it the result** — do not re-dispatch the
