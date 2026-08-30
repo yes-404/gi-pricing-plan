@@ -199,7 +199,7 @@ did not run establish it:
   bytes at ≈1:1** (payload 9.88x, cost 9.63x) and does **not** track node count (entries
   3.54x, the engine's own per-node sum 2.65x).
 
-A mid-graph trace entry is `input` 2,965 B + `output` 2,992 B ≈ **5,859 B per node** — the
+A mid-graph trace entry is `input` 2,965 B + `output` 2,992 B = **5,957 B**, against a **mean of 5,859 B per node** across the 191 entries (1,119,097 B / 191). Those are two different quantities and the 5,859 figure is the mean, not the sum — the
 accumulated context, copied into all 191 entries, twice.
 
 **Where the added time is actually spent, measured rather than assumed:** a follow-up
