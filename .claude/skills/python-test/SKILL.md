@@ -314,9 +314,29 @@ markdown file — zero Python — and the suite still failed three different way
 **Serialise, or give each session its own database.** `test_database_url()` reads
 `GIP_TEST_DATABASE_URL` before falling back to `DEFAULT_TEST_DSN`, so the override already
 exists; `createdb gipricing_$USER_$SLOT` and point at that. Serialising is the cheaper
-answer for two or three sessions, and it needs an actual check rather than an intention —
-`pgrep -af 'pytest'` before starting, and say in the channel when you take and release the
-slot.
+answer for two or three sessions, and it needs an actual check rather than an intention.
+
+**The criterion is database exclusivity, not low load.** What must be true before you start
+is that **no other pytest is *executing* tests** — not that the box is quiet. A 4-core box
+at load 1.0 with someone else's suite running is far more dangerous than load 8 with none.
+
+```bash
+ps -eo pid,etimes,args | grep -E '[b]in/pytest'      # must print nothing
+```
+
+**Do not use `pgrep -af 'pytest'` for this, though earlier versions of this section did.**
+`pgrep` matches its own wrapper's command line, so the pattern is always present in the
+process table and the check *can never return empty* — on a genuinely idle box it still
+reports hits. A guard that always fires teaches the reader to disregard it, which is worse
+than no guard. Measured 2026-08-30 during a live gate: `pgrep -af 'pytest'` returned four
+hits, two of them the wrapper of the `pgrep` itself. The bracket trick above (`[b]in` never
+matches the literal `[b]in` in grep's own argv) is what makes the check answerable.
+
+**`--collect-only` needs no window.** Verified 2026-08-30 by experiment rather than
+inference: a sentinel row was inserted, `uv run pytest --collect-only -q` run, and the row
+**survived**. A session-scoped autouse fixture is instantiated at the first test's *setup*,
+and collection never enters setup, so the teardown never fires. Only a run that executes
+tests needs exclusivity — take and release the slot for those, and say so in the channel.
 
 **A gate result taken while a second run was live is void in both directions.** It can fail
 on someone else's teardown, and it can pass because the run that would have caught something
@@ -385,7 +405,9 @@ sibling checkouts, but a second session in *this* directory shows up nowhere —
 Ask about the database in the same breath. A peer who moves nothing in your tree still voids
 your run if they are running the suite, because the two share one DSN and one session-scoped
 teardown — see "that teardown makes two concurrent runs mutually destructive" above.
-`pgrep -af pytest` answers it, and unlike `git worktree list` it does see the other session.
+`ps -eo pid,etimes,args | grep -E '[b]in/pytest'` answers it, and unlike `git worktree list`
+it does see the other session. Not `pgrep -af pytest`, which matches its own wrapper and so
+never returns empty — see the section above.
 
 ## Assert on a metric that responds to what the fixture changed
 
@@ -606,8 +628,10 @@ Two habits that keep it away:
   lazy attribute re-enters the session machinery.
 
 **Diagnosing it:** a run with zero output for minutes is this until proven otherwise. Do not
-wait it out — `pgrep -af "bin/pytest"` confirms the process is alive, then kill it and read
-the fixture for a nested `unit_of_work`.
+wait it out — `ps -eo pid,etimes,args | grep -E '[b]in/pytest'` confirms the process is alive
+(and `etimes` says for how long, which `pgrep -af` does not; `pgrep` also matches its own
+wrapper, so it cannot tell you the box is clear), then kill it and read the fixture for a
+nested `unit_of_work`.
 
 ## Counting calls in a worker handler: patch the source module, not the handler
 
@@ -691,6 +715,16 @@ does not return freed arenas to the OS — a peak-RSS reading taken after an ear
 the same process is that earlier phase's high-water mark, not this one's.
 
 ## Verified
+
+2026-08-30 — W11 correction batch (PR #438). The concurrent-run section's own guard was
+inert: it prescribed `pgrep -af 'pytest'`, which matches its own wrapper and so can never
+return empty — measured live at four hits, two of them the `pgrep`. All three occurrences
+replaced with `ps -eo pid,etimes,args | grep -E '[b]in/pytest'`, and the criterion restated
+as **database exclusivity** — no other pytest *executing* — rather than serialisation
+hygiene or low load. `--collect-only` established by sentinel row as needing no window: it
+never enters test setup, so the session-scoped teardown never fires. The section had been
+right since 2026-08-24 and was breached again on 2026-08-30 between two live sessions, which
+is what sent someone to read the guard it recommends.
 
 2026-08-24 — W6b. The concurrent-run section, from a live incident rather than a thought
 experiment: three overlapping runs from two sessions, three disjoint failure sets, every
