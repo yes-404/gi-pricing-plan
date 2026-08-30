@@ -277,6 +277,8 @@ reconciliation-rulings.md` Part B4 (adopted as written) and `docs/plans/2026-08-
 
 ## 15. Correction and message discipline
 
+**No `claude.ai/code/session_…` link ever reaches GitHub** — not a commit message, not a PR body, not a comment. The `🤖 Generated with Claude Code` attribution footer is a product link and stays. A session URL resolves for nobody reading the repository and points a governed record outward at something the project does not control. Enforced at the merge, which is the only point where one person controls what lands: strip the trailer from the squash body (`.claude/skills/git-hygiene`, *Commit messages*). Recorded as **F49**, accepted with that instrument on 2026-08-30 after 73 commits had already reached a now-public `main`.
+
 Failures that put wrong content into filed artifacts on 2026-08-29, enumerated below rather
 than counted — this line said "three" while listing four, because a bullet was appended and
 the number was not. **None was caught by a check; each was caught by someone declining to

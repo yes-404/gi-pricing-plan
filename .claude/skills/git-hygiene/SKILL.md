@@ -385,6 +385,37 @@ If a secret is ever committed, **rotate it** — removing the commit does not un
 
 ## Commit messages
 
+### Never let a `claude.ai/code/session_…` link reach GitHub
+
+The agent runtime emits a `Claude-Session:` trailer by default. **It is configured nowhere in
+this repository** — no `commit.template`, no `.claude/` setting — so you cannot switch it off
+at the repo level, and a member spawned before the rule existed will emit it while believing
+it is complying.
+
+**So the guard belongs at the merge, not at the commit.** That is the only point where one
+person controls what lands:
+
+```bash
+git log <head-sha> -1 --format=%B | grep -v 'Claude-Session:' > /tmp/body.txt
+gh pr merge <N> --squash --subject "<title> (#N)" --body-file /tmp/body.txt
+git log -1 origin/main --format=%B | grep -c 'claude.ai/code/session'   # must print 0
+```
+
+The last line is the point. **Re-read the merged commit** — the same discipline as every other
+`gh` write here, and the reason this one is trustworthy: it was verified on `98eca40` and
+`c8d3c81`, which reached `main` clean from branches carrying three links between them.
+
+For a multi-commit branch, pipe every commit's body through the filter, not just the tip.
+
+**What is banned** is the session URL. **What stays** is
+`🤖 Generated with [Claude Code](https://claude.com/claude-code)` — a product link, not a
+session handle.
+
+**Do not try to clean history.** 73 commits on `main` already carry one; they are accepted with
+this instrument as register row **F49**, and rewriting a public `main` would invalidate every
+SHA cited across the register, the plans and the closure records.
+
+
 Conventional Commits (`CLAUDE.md` §10). Because PRs are squash-merged, **the squash body is
 the permanent record** — write it as the thing a reader finds in `git log` two years later,
 not as a note to the reviewer. State what changed, why, and what it cost.
