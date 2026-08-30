@@ -26,6 +26,21 @@ are unconstrained, verified by pushing and deleting one under it.
 the ruleset will accept the merge, and the two are easy to confuse. The check that settles it
 is a completed merge.
 
+## Keep commit messages and PR bodies plain
+
+**Maintainer's instruction, 2026-08-30**, once the repository went public: keep them low-key.
+Commit messages and PR bodies are now public artifacts, read by people with none of the
+session's context.
+
+State what changed and why. Skip the emphasis — heavy bolding, rhetorical framing, and
+narrative reconstruction of how a defect was found read as noise in a public log. Where the
+reasoning is genuinely load-bearing it belongs in the artifact the commit lands (a ruling
+record, a register row, a note), not in the commit message pointing at it.
+
+Length follows the change. A two-line fix does not need twenty lines of justification, and a
+ruling that inverts a previous one does — the test is whether a reader needs it to understand
+the diff, not whether it was interesting to write.
+
 ## The repository is public: merge only the maintainer's own pull requests
 
 **Standing maintainer instruction, 2026-08-30**, when `yes-404/gi-pricing-plan` went public:
