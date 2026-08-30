@@ -43,6 +43,7 @@ import random
 import statistics
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -86,6 +87,22 @@ FEATURE_ORDER = [f"f{i}" for i in range(8)]
 N_EXPR_STEPS = 187
 
 
+def loadavg() -> float:
+    """The 1-minute load average, read at the moment of the call.
+
+    Read per measured block rather than once at startup. NFR-RATE-1 states its budget
+    "at 200 rps per replica", so the contention the box was under is part of the
+    measurement's meaning, not context for it — and a single reading taken before a run
+    that then trains a booster and issues 3,000 timed calls describes a machine that no
+    longer exists by the time the first sample is taken. The audit of PR #416 found
+    NFR-RATE-1's without-GBM half PASSing at load 0.39 and OVER on re-runs at load
+    1.6-6.4; nothing in this script's output had recorded which condition produced which
+    number.
+    """
+    with open("/proc/loadavg") as handle:
+        return float(handle.read().split()[0])
+
+
 def machine() -> str:
     """`bench-model.py`'s own reader, replicated: the load average is part of the
     measurement, not colour, on a development machine shared between concurrent
@@ -99,11 +116,9 @@ def machine() -> str:
             if line.startswith("model name"):
                 model = line.split(":", 1)[1].strip()
                 break
-    with open("/proc/loadavg") as handle:
-        load = handle.read().split()[0]
     return (
         f"{model}, {cores} cores, {total_kb / 1e6:.1f} GB RAM, "
-        f"1-minute load average {load}"
+        f"1-minute load average {loadavg():.2f} at startup"
     )
 
 
@@ -327,34 +342,66 @@ def _percentile(samples: list[float], p: float) -> float:
     return ordered[index]
 
 
+@dataclass(frozen=True)
+class Measurement:
+    """A block of timed calls together with the load the box carried while it ran.
+
+    The load is part of the measurement, not metadata about it: the same block of this
+    harness has returned both a PASS and an OVER against NFR-RATE-1's 15 ms bound on this
+    machine, and the load average is the variable that moved. A `Measurement` cannot be
+    reported without its condition because the two travel together.
+    """
+
+    samples: list[float]
+    load_start: float
+    load_end: float
+
+    @property
+    def load_span(self) -> str:
+        """`0.39` when the load held, `1.63 → 6.42` when it moved during the block."""
+        if abs(self.load_end - self.load_start) < 0.005:
+            return f"{self.load_start:.2f}"
+        return f"{self.load_start:.2f} → {self.load_end:.2f}"
+
+
 async def _measure(
     bundle: CompiledBundle, ctx: QuoteContext, *, trace: bool, warmup: int, iterations: int
-) -> list[float]:
+) -> Measurement:
     """Sequential `await score_one(...)` calls on one event loop — a single-caller latency
     distribution, not a concurrency or throughput measurement (Task 1.4's own research note
-    already covers `async_evaluate()`'s concurrency behaviour)."""
+    already covers `async_evaluate()`'s concurrency behaviour).
+
+    The 1-minute load average is read either side of the timed block, so every reported
+    figure carries the condition it was taken under rather than one startup reading shared
+    by every block in the run.
+    """
     for _ in range(warmup):
         await score_one(bundle, ctx, trace=trace)
+    load_start = loadavg()
     samples: list[float] = []
     for _ in range(iterations):
         start = time.perf_counter()
         await score_one(bundle, ctx, trace=trace)
         samples.append((time.perf_counter() - start) * 1000)
-    return samples
+    return Measurement(samples=samples, load_start=load_start, load_end=loadavg())
 
 
-def _report(label: str, samples: list[float], *, budget_ms: float | None) -> None:
+def _report(label: str, run: Measurement, *, budget_ms: float | None) -> None:
+    samples = run.samples
     p50, p90, p99 = (_percentile(samples, p) for p in (0.50, 0.90, 0.99))
     mean = statistics.fmean(samples)
     stdev = statistics.pstdev(samples)
-    print(f"\n{label} — {len(samples)} calls")
+    print(f"\n{label} — {len(samples)} calls at 1-min load {run.load_span}")
     print(
         f"    mean {mean:7.3f} ms   stdev {stdev:6.3f} ms   "
         f"p50 {p50:7.3f} ms   p90 {p90:7.3f} ms   p99 {p99:7.3f} ms   max {max(samples):7.3f} ms"
     )
     if budget_ms is not None:
         verdict = "PASS" if p99 <= budget_ms else "OVER"
-        print(f"    p99 {p99:.3f} ms / {budget_ms:.1f} ms budget — {verdict}")
+        print(
+            f"    p99 {p99:.3f} ms / {budget_ms:.1f} ms budget — {verdict} "
+            f"at 1-min load {run.load_span}"
+        )
 
 
 def main() -> int:
@@ -391,47 +438,54 @@ def main() -> int:
     step_count_no_gbm = len(bundle_no_gbm.algorithm.steps)
     print(f"  {step_count_no_gbm} steps")
 
-    samples_gbm = asyncio.run(
+    run_gbm = asyncio.run(
         _measure(bundle_gbm, ctx, trace=False, warmup=args.warmup, iterations=args.iterations)
     )
     _report(
         f"NFR-RATE-1 with GBM ({step_count_gbm} steps, one exact model_call, trace=False)",
-        samples_gbm, budget_ms=BUDGET_WITH_GBM_P99_MS,
+        run_gbm, budget_ms=BUDGET_WITH_GBM_P99_MS,
     )
 
-    samples_no_gbm = asyncio.run(
+    run_no_gbm = asyncio.run(
         _measure(
             bundle_no_gbm, ctx, trace=False, warmup=args.warmup, iterations=args.iterations
         )
     )
     _report(
         f"NFR-RATE-1 without GBM ({step_count_no_gbm} steps, trace=False)",
-        samples_no_gbm, budget_ms=BUDGET_WITHOUT_GBM_P99_MS,
+        run_no_gbm, budget_ms=BUDGET_WITHOUT_GBM_P99_MS,
     )
 
-    samples_traced = asyncio.run(
+    run_traced = asyncio.run(
         _measure(bundle_gbm, ctx, trace=True, warmup=args.warmup, iterations=args.iterations)
     )
     _report(
         f"NFR-RATE-2 with GBM, trace=True ({step_count_gbm} steps)",
-        samples_traced, budget_ms=None,
+        run_traced, budget_ms=None,
     )
 
-    p99_untraced = _percentile(samples_gbm, 0.99)
-    p99_traced = _percentile(samples_traced, 0.99)
+    p99_untraced = _percentile(run_gbm.samples, 0.99)
+    p99_traced = _percentile(run_traced.samples, 0.99)
     overhead = (p99_traced - p99_untraced) / p99_untraced if p99_untraced else float("nan")
     verdict = "PASS" if overhead <= BUDGET_TRACE_OVERHEAD else "OVER"
     print(
         f"\nNFR-RATE-2 — trace overhead at p99: {p99_traced:.3f} ms vs {p99_untraced:.3f} ms "
         f"untraced = {overhead:+.1%} / {BUDGET_TRACE_OVERHEAD:.0%} budget — {verdict}"
     )
-    mean_untraced = statistics.fmean(samples_gbm)
-    mean_traced = statistics.fmean(samples_traced)
+    # The two blocks being subtracted ran minutes apart. Naming both loads keeps a reader
+    # from reading a difference in contention as a difference in tracing cost.
+    print(
+        f"    (traced block at 1-min load {run_traced.load_span}, untraced at "
+        f"{run_gbm.load_span})"
+    )
+    mean_untraced = statistics.fmean(run_gbm.samples)
+    mean_traced = statistics.fmean(run_traced.samples)
     mean_overhead = (mean_traced - mean_untraced) / mean_untraced if mean_untraced else float("nan")
     print(
         f"    (at the mean, informational only — the budget is stated at p99: "
         f"{mean_traced:.3f} ms vs {mean_untraced:.3f} ms untraced = {mean_overhead:+.1%})"
     )
+    print(f"\n1-minute load average at exit: {loadavg():.2f}")
 
     return 0
 
