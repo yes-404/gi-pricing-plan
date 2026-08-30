@@ -1570,22 +1570,50 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   `writing-plans` is this charter's own mandatory skill and the natural home for the convention,
   but this review proposes rather than lands it, consistent with how it has treated every other
   skill-amendment finding above.
-- **A frozen leaf plan's line-number citations go stale under any insertion above them, and this
-  is a plan-format defect rather than a personal slip.** Verified directly: `submit_for_review`
-  (`backend/src/app/platform/rating_versions.py:153` at `c1a98b1`) calls `approvals.submit(` at
-  `:178` — a real, correct locator at that tree, and exactly the coordinate a later merge inserting
-  lines above it (Task 2B's, 61 lines) would silently invalidate for anyone who read it beforehand.
-  Self-reported: the lead checked this exact locator, merged the change that moved it, then
-  dispatched the pre-merge number — correct when written, wrong when read, the same shape as this
-  document's own tree-mislabelling class (3.6) but for a plan's line numbers rather than a measured
-  figure. A sweep across frozen leaf plans found **4 wrong across 88** such citations. **The
-  failure is silent, not loud**: a stale line number does not point out of the file's bounds, it
-  lands inside some other, plausible-looking function, so a reader acts on the wrong target with
-  no signal anything is wrong. **Recommendation (3.10):** a frozen leaf plan cites the **symbol**
-  as the primary locator and the line number only as a hint — `submit_for_review`, not
-  `rating_versions.py:178` — since a function or method name survives an insertion that a bare
-  line number does not. Squarely a `writing-plans` convention, proposed rather than landed, per
-  this review's standing practice above.
+- **A frozen leaf plan's line-number citations go stale under any insertion above them — and the
+  repository already has the rule that would have prevented it, unfired.** Three forms of the same
+  locator behave differently under edit: a **symbol** (`approvals.submit` inside
+  `submit_for_review`) stays stable under any edit that does not rename it; a **line stated with
+  its tree** (`:178` at `e16c459`) ages into a historical statement that still resolves, forever,
+  with no maintenance; a **bare line** (`:178`, no tree) rots silently on the next edit above it and
+  gives no signal when it does.
+
+  **A controlled comparison, not an argument, settles which form to prefer.** The same fact was
+  cited twice, hours apart. `docs/audit/register.md`'s `F44` row (confirmed directly at
+  `origin/main`) writes: "at `e16c459`… `rating_versions.submit_for_review` (`:153`) calls
+  `approvals.submit` at `:178`" — the tree is stated once and covers both numbers. The lead's own
+  dispatch cited the same call as a bare `:178`, no tree. Verified directly, both sides: at
+  `e16c459` the citation is exactly right; at `origin/main`'s current tip, `submit_for_review` is
+  now at `:214` and the call to `approvals.submit(` at `:239` — a real 61-line shift from Task 2B's
+  merge, landing between the two citations being written. F44's form still resolves correctly,
+  unmaintained, because it never claimed to describe an undated present; the bare form now points
+  at whatever else occupies `:178` today, silently.
+
+  **The rule that would have caught this already exists.** `CLAUDE.md` §13: "a reference carries
+  its scope and its measurement… a `Verified` date carries the tree"
+  ([NT-0004](../../.claude/notes/0004-a-reference-that-resolves-only-for-the-writer.md)). The
+  auditor's F44 row followed it; the lead's dispatch did not, and the lead is the one who cites §13
+  at other people. **Three instances tonight of an existing rule failing to fire on someone who
+  already knew it**: this locator (§13's own scope rule, against its own author); the 3h22m
+  notification stall two bullets above (the lead's own standing 15-minute check, not run); and the
+  reporter's charter, which — independently, and now confirmed landed at `origin/main`
+  (`.claude/roles/reporter.md`, "The Slack post: facts only, never inference") — went from silent
+  on inference to an explicit two-sided rule: a named whitelist of permitted sources paired with
+  the concrete violating lines as examples, which this review's own 4.6 below independently
+  proposed and can now mark discharged rather than pending. **The recommendation this supports is
+  not "add a rule."** All three rules already existed. It is that **a rule which can only be
+  honoured by remembering fails precisely when the person invoking it is busy and confident — which
+  is when it matters** — and the reporter's own fix is the model: it did not add a reminder, it
+  changed the artifact from silent to enforcing, so the next reader inherits a structure rather
+  than an absence.
+
+  **Recommendation (3.10):** a frozen leaf plan (and, by the same rule, a dispatch or a register
+  row) cites a locator as **symbol, or line stated with its tree** — never a bare line number — so
+  the citation either survives the edit that would break it or names the point at which it stopped
+  being current. A sweep across frozen leaf plans found **4 wrong across 88** such citations under
+  the bare form. Squarely a `writing-plans` convention, proposed rather than landed, per this
+  review's standing practice above. **Credit:** the auditor designed the F44-vs-dispatch comparison
+  that settles the form; this review generalises it.
 
   **A related class, three instances tonight, only this one developed elsewhere in the review**:
   the locator above; a re-plan the lead performed around a quota constraint without first testing
@@ -1787,6 +1815,14 @@ as the open question it is, for the maintainer to settle.
   **Recommendation (4.5):** the rule's list of durable homes should say a member-facing dispatch
   cites a **filesystem path**, not a task id — paths resolve between agents that cannot share a
   board, which is the audience the rule is written for.
+
+  **A second gap the rule does not state: citing a path presumes the path already exists.** A
+  compliant dispatch requires the artifact to be written **before** the dispatch that cites it, not
+  after. Task #82's F42 quantification message ran to roughly 140 words because its durable home
+  was that task itself, which the auditor cannot open; faced with a choice between breaching the
+  50-word rule and stopping to write a file first, the author carried the reasoning inline instead.
+  The rule should state the sequencing it currently only implies: the artifact exists first, the
+  dispatch cites it second, or the dispatch waits.
 - **The reporter published two wrong lines to the team's external Slack channel in one hour, both
   inferences presented as fact** — "a peak-hours pause was in effect" when the pause is
   weekday-scoped and it was Sunday, and "W11 close audit in progress" before it had started.
@@ -1797,10 +1833,17 @@ as the open question it is, for the maintainer to settle.
   information a role needed was unreachable by that role, and one of the two closed the gap by
   inference while the other refused and asked — the same contrast question 4's `NFR-RATE-11`
   counter-example already makes for a governance question, here for an information-access one.
-  **Recommendation (4.6), narrower than 4.3 and specific to reporting roles:** rather than
-  enumerate what a role may not infer, state the positive rule — publish only what a named
-  artifact says, and name it. That is checkable by the reader of the post; a list of forbidden
-  inferences never is, because the next inference is always a new one nobody enumerated.
+  **Recommendation (4.6), narrower than 4.3 and specific to reporting roles — already landed,
+  verified at `origin/main`, not merely proposed.** `.claude/roles/reporter.md`'s "The Slack post:
+  facts only, never inference" section now states a positive whitelist of three named, verbatim
+  sources ("What goes in") — the core of what this recommendation asked for, and checkable by the
+  reader of the post in a way a list of forbidden inferences never is, because the next inference
+  is always a new one nobody enumerated. It also keeps named violation examples ("What does NOT go
+  in," quoting these exact two lines) rather than dropping them — an addition this recommendation's
+  original framing did not call for but does not conflict with; the whitelist, not the examples, is
+  what makes a future post checkable. **Owner: discharged**, by the reporter itself rather than by
+  this review; recorded here because this review's own reconciliation caught it only on a fresh
+  read of the current tree (cross-referenced from 3.10 above).
 - **`docs/roadmap.md`'s W11 row is missing `FR-RATE-65`** (Ruling 30, mechanical edit outstanding)
   **and the sixteen ids question 1's Question A enumerates** — what W11's own plans claim that the
   row's text does not. See question 5 for the recurring mechanism this instantiates.
@@ -1833,6 +1876,25 @@ as the open question it is, for the maintainer to settle.
   citing it, not merely confirms the ruling exists — the same discipline this document has
   applied throughout to its own citations, here proposed as a standing step rather than a
   one-off habit.
+
+  **The same false claim has an earlier, compressed sighting, and its coverage was partial.**
+  `docs/plans/2026-08-29-w11-slices-3-4-rulings.md:8-9` — the readiness sweep itself — already
+  wrote "Recovery items 1, 3 and 5 are already ruled (Rulings 10, 5 and 9 respectively)." Item 3 is
+  `docs/plans/2026-08-29-w11-decision-points-recovery.md:106`'s "Batch chunk/resume" — confirmed
+  directly — the same D6 the leaf plan's own title later names as still open. The claim was not
+  made once: it originated compressed in the sweep, then was carried forward and quoted, expanded,
+  into the leaf plan, uncaught at either step. Per the decision-maker's own count (attributed, not
+  re-derived here): the sweep consulted only **3 of the 9** ruling-record documents that existed —
+  consistent with a sweep that never reached Ruling 5's own disclaiming sentence.
+
+  **It also undercuts a conclusion filed outside this review's own sources.** A session-local
+  working note (`process-instrumentation.md` — not a repository artifact, not otherwise cited in
+  this review) draws a cross-task conclusion that fix-loop count correlates with whether a task
+  was pre-resolved rather than with its size, counting Task 1.2 as pre-resolved on the strength of
+  exactly the reading just shown false. This review does not edit that note — it is neither a
+  repository file nor within this charter's grant (`docs/plans/`, `docs/audit/plan-reviews.md`) —
+  but the conclusion should carry this qualification, or be re-checked against which inputs were
+  genuinely pre-resolved, before anyone reads it as settled.
 
 **5. Shape.**
 
@@ -1975,8 +2037,8 @@ which workstream if (a), is the lead's to rule, not this document's.
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
 | 4.4 | Correct W12's row against its own charter; declare `RegressionRun` in `03` §4; register `GOLDEN_QUOTE_MISMATCH` before or at W12's opening slice | docs + spec-change |
-| 4.5 | `delivery-process.md`'s durable-homes rule names a filesystem path, not a task id, for a member-facing dispatch | process-rule correction |
-| 4.6 | The reporter's brief states the positive rule — publish only what a named artifact says, and name it — rather than enumerate forbidden inferences | role-file amendment (reporter) |
+| 4.5 | `delivery-process.md`'s durable-homes rule names a filesystem path, not a task id, for a member-facing dispatch — and states the sequencing: artifact first, dispatch second | process-rule correction |
+| 4.6 | The reporter's brief states the positive rule — publish only what a named artifact says, and name it | role-file amendment (reporter) — **already landed**, `.claude/roles/reporter.md`, owner: discharged |
 | 4.7 | A readiness or planning sweep reads a cited ruling's own scope clause before booking an item as "ruled" | methodology — standing step, proposed |
 | 4.8 | A future instance of "is this act inside the interest I just named?" gets a mechanical, act-local check, not a restated reminder | methodology — question posed, not answered |
 | 5.1 | Assign review 8's proposal 4.2 an owner, now that it has fired a fourth time at a much larger scale, carrying Ruling 30's temporal-qualifier refinement | tool or convention — unowned since 2026-08-29 |
@@ -2043,6 +2105,21 @@ before filing, per this document's own rule that a claim names the tree it was c
   scope (new `_Resolver` branches, `Bundle` persistence, a new `rating_handlers.py` module).
 - `docs/process/delivery-process.md:107-109` (§6, steps 2-3) — read directly to confirm the
   red-before-green ordering the open question above turns on.
+- `docs/audit/register.md`'s `F44` row — read directly at `origin/main` (`6f77abb`, fetched this
+  session; the row itself states it was filed against `e16c459`) to confirm its tree-anchored
+  locator and cross-check it against the bare-line citation in 3.10.
+- `backend/src/app/platform/rating_versions.py` at `origin/main` (`6f77abb`) — read directly
+  (`git show origin/main:...`) to confirm `submit_for_review` now at `:214` and `approvals.submit(`
+  at `:239`, a 61-line shift from the `:153`/`:178` both F44 and this review's own earlier citation
+  recorded at `e16c459`/`c1a98b1`.
+- `.claude/roles/reporter.md` at `origin/main` (`6f77abb`) — read directly, "The Slack post: facts
+  only, never inference," to confirm Recommendation 4.6 is already landed.
+- `docs/plans/2026-08-29-w11-slices-3-4-rulings.md:8-9` and
+  `docs/plans/2026-08-29-w11-decision-points-recovery.md:106` — read directly to confirm the
+  readiness sweep's own compressed mis-citation and that its "item 3" is batch chunk/resume (D6).
+- `CLAUDE.md` §13 — read directly (this file's own governing text, present in every session) for
+  "a reference carries its scope and its measurement… a `Verified` date carries the tree," cited in
+  3.10.
 - Session-local working notes that first surfaced several of the above, credited by name in prose
   and not cited as resolvable paths: `phase-review-inputs.md`, `w11-scope-derivation.md`,
   `close-audit-baseline.md`, `register-rows-owed.md`, `eta.md` (all
