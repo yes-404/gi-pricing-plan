@@ -238,7 +238,7 @@ and treat a non-zero exit as failure even when the summary says otherwise. Grep 
 for `Errors ` as well as `Tests `; the two are different counters and only one of them is
 in the line most readers stop at.
 
-### The full suite outlives a foreground turn, and backgrounding it strands a subagent
+### Never end a turn with a command still running — the suite, a benchmark, anything
 
 `uv run pytest -q` collects **2,347 tests** and routinely runs past the **10-minute
 foreground limit**, so the tool backgrounds it. That is fine for the main thread, which is
@@ -262,9 +262,21 @@ Two ways that loop lies, both of which have happened here:
 - **It exits instantly** when the run has already finished — which is indistinguishable from
   never having started. Confirm against the output before concluding anything.
 
+**Corrected 2026-08-30, after this section failed to prevent two further stalls.** It
+originally scoped the rule to `pytest` and phrased it as "poll". Both were wrong:
+
+- **The scope is any long-running command.** The third stall was a *benchmark*
+  (`scripts/bench-score-batch.py`), not the suite. An executor reading a `pytest`-specific
+  rule has no reason to apply it to a benchmark.
+- **"Poll" is not the rule; "do not end your turn" is.** The third stall came from an agent
+  that *did* poll — it wrote a poller, **backgrounded the poller**, and ended its turn. The
+  wait loop must block the agent's **own turn**, in the foreground. A backgrounded waiter is
+  the same bug wearing the waiter's clothes.
+
 The dispatching lead's half: **say this in the dispatch**, and if a subagent reports it is
-waiting on a background run, resume it and tell it to poll — do not re-dispatch the task,
-which throws away a completed implementation.
+waiting on a background run, **resume it and tell it the result** — do not re-dispatch the
+task, which throws away completed work. In all three cases on 2026-08-30 the work was
+finished and correct; only the agent was unreachable.
 
 ### A pytest total is only honest against `--collect-only`
 
