@@ -32,9 +32,25 @@ under the memo; only whether the bundle is still held can.
 
 **What this deliberately does not have: refresh, poll, pub/sub, or an environment
 pointer.** All four are W14's (Ruling 16 clause 4, and Ruling 10 before it). A slot that
-acquires any of them has overridden the ruling. `backend/tests/test_bundle_slot.py` holds
-that structurally — none of the four can be built without a broker client, a scheduler, a
-thread, or the metadata store, and this module imports none of them.
+acquires any of them has overridden the ruling.
+
+**Two of the four are held structurally; two are not, and that is the limit rather than a
+gap to close here.** `backend/tests/test_bundle_slot.py` asserts this module's import roots
+against an allowlist. That catches **poll** (a clock plus a task or thread) and **pub/sub**
+(a broker client), because neither can be built without a dependency the check can see. It
+does not catch the other two, and both escape for the same reason — they are pure data and
+method surface, needing no import at all:
+
+- **An environment pointer** is `dict[str, str]`, structurally identical to `_resolved`.
+  The difference is entirely in what the key means, so no dependency-keyed check can
+  separate a memo of a resolution already performed from a pointer to what should be live.
+- **A refresh**, in the form the ruling itself expects, is a method a caller invokes.
+  Clause 4's own note says *"W14 starts from a deploy-time push and argues its way to poll,
+  not the reverse"* — which makes the push form the live one rather than a hypothetical,
+  and a push is a call, not an import.
+
+For those two the ruling is held by review, not by a check. Whoever adds a public method
+here owes an answer to which of the four it is not.
 
 **Failure posture: there is none to degrade to.** Unlike `DiffCache`, whose Redis outage
 falls back to a recompute, this slot cannot fail independently of the process that owns
@@ -59,6 +75,22 @@ class BundleSlot:
     Synchronous on purpose: `load_bundle` is synchronous and pure (Ruling 10), and the
     slot itself does no I/O, so an `async` surface here would only add await points to a
     path NFR-RATE-1 budgets in milliseconds.
+
+    **Confined to one worker's event loop, and not safe under concurrent mutation from
+    threads.** Every mutation is a plain dict write with no lock, so two threads calling
+    `put` can leave `_forget` walking `_resolved` while the other mutates it — reproduced
+    at 8 threads x 20k puts as `RuntimeError: OrderedDict mutated during iteration`.
+
+    The blast radius is a failed request, never a wrong premium: the worst a torn `_forget`
+    can leave behind is a memo entry whose bundle is already evicted, and that resolves to
+    a `get` miss, which the caller must refuse. A lock is not taken because it would cost
+    every request on a path NFR-RATE-1 budgets at 50 ms p99, to remove a race that cannot
+    arise on a single event loop.
+
+    **The precondition that makes that true is that callers are `async`.** FastAPI runs a
+    plain `def` route handler in a threadpool, so a synchronous caller would put two
+    threads on this object and reach the race above. Task 2B's route is `async def`; a
+    later sync caller needs a lock added here first, and this paragraph is the notice.
     """
 
     def __init__(self, capacity: int = 1) -> None:
