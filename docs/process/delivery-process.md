@@ -241,7 +241,11 @@ plan's Task 6. This section describes the mechanism `.claude/roles/watcher.md` a
   hygiene checks — deterministic, no LLM. Publishes `roster-state.md` (the single source
   of team state) and computes a rolling mechanical ETA from per-slice durations. Re-arms
   one-shot triggers on confirmed recovery. Spawns the watcher agent only when an anomaly
-  needs judgment or a written signal.
+  needs judgment or a written signal. Also maintains the runtime state file (NT-0014
+  artifact B, `.claude/skills/watcher-runtime-state`): position and the in-flight
+  expensive-verifications list, **re-derived each cycle rather than compared against a
+  separate tally** — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 47, a
+  comparison cannot tell a dead writer from a genuinely idle one.
 - **Reporter (mechanical first):** routine summaries template-filled from the state
   files; the reporter agent is invoked only for critical relays and the stale-lead
   nudge. Watch-the-watcher: also flags when `roster-state.md` itself is stale.

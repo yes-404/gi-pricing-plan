@@ -46,6 +46,16 @@
   - Hygiene checks (uncommitted changes, lock files, status failures); anomaly-only
     output.
   - Does NOT nudge on staleness — that is the reporter's freshness mechanism alone.
+  - **Runtime state file (NT-0014 artifact B)**: writes `position` and
+    `in_flight_expensive_verifications` to `$RUNTIME_STATE_FILE` (default
+    `~/gi-pricing-plan.local/handover/runtime-state.json`) each cycle. **Re-derives, does
+    not compare** — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 47: a
+    mismatch detector cannot detect a dead writer, since a dead writer and a healthy zero
+    read the same. `retry_counters` is not part of this file yet (ships with NT-0014
+    script C2, not built) and is never written as an empty or zero placeholder in the
+    meantime — absent, not zero. Stays **report-only**: this bullet writes descriptive
+    state, the same class as roster/balance/hygiene above; it enforces nothing and blocks
+    no action, unlike the hooks (C2/C3) that remain out of scope until adoption slices F/G.
 - **Owns (agent):** judgment on ambiguous anomalies and the written signal to the lead.
 - **Never:** dispatches stand-ins, touches the repo — including `.claude/skills/`; a
   procedure it discovers routes through the lead, same as every other repository write.
@@ -53,7 +63,8 @@
 **Implementation:** `.claude/skills/balance-watch` — the poller script, its env-var
 configuration, the thresholds and why each, and the re-arm procedure. This file states
 the WHAT and the numbers; that skill states the HOW, mirroring `.claude/skills/
-reporter-cycle` (task #33).
+reporter-cycle` (task #33). `.claude/skills/watcher-runtime-state` is the same split for
+the runtime state file bullet above.
 
 **Precedence — the skill wins** (pilot finding P2). A handover directory may hold a copy of
 a script, or a procedure that predates the skill. **The skill is authoritative; a handover
