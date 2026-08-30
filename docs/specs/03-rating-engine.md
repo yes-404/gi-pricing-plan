@@ -624,7 +624,13 @@ Job argument may only lower `rating.batch_abort_failure_rate`'s resolved effecti
 never raise it; a request whose argument is above it is refused with this code before any
 row is scored. The second: a run whose observed per-quote failure rate crosses the effective
 threshold aborts, recording both the threshold in force and the observed rate — never a
-silent partial result)*.
+silent partial result)*,
+`TRACE_RETENTION_FLOOR`
+*(added 2026-08-30, W11 Task 4A — **409**. FR-RATE-42's sampled traces are persisted for
+≥ 13 months (NFR-OVR-6), a preservation floor rather than an expiry (Ruling 23's
+correction). Deleting a `scoring_traces` row while it is still inside that floor is refused
+with this code; outside the floor it is permitted. `app.platform.traces.delete_trace` is
+the only raiser)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version

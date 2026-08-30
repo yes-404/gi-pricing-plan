@@ -325,6 +325,11 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # effective threshold aborts. Owned by `03` §5.1.
         "BATCH_ABORT_THRESHOLD_ABOVE_SETTING",
         "BATCH_ABORTED",
+        # Trace persistence (W11 Task 4A, `00` NFR-OVR-6, Ruling 23). Deleting a sampled
+        # trace row while it is still inside the ≥ 13-month retention floor is refused;
+        # outside the floor it is permitted. `app.platform.traces.delete_trace` is the
+        # only raiser.
+        "TRACE_RETENTION_FLOOR",
     }
 )
 

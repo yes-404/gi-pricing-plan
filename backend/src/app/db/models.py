@@ -2028,3 +2028,74 @@ class RateTableCellRow(Base):
         UniqueConstraint("version_id", "key", name="uq_rate_table_cells_version_key"),
         Index("ix_rate_table_cells_version", "version_id"),
     )
+
+
+class ScoringTraceRow(Base):
+    """A sampled scoring trace: a thin queryable row beside its blob body.
+
+    `03` §4.5's `Trace`, `03` FR-RATE-41/42, `00` NFR-OVR-6, W11 Task 4A (Ruling 23).
+
+    **The row is a projection of the blob and is written from the same serialised `Trace`
+    object, in one operation** — never assembled separately, which is what would let the
+    two diverge. `quote_id`, `rating_version_ref` and `bundle_hash` are copied out of the
+    body purely for querying; `sample_reason` is the one field the body does not carry at
+    all. `app.platform.traces.write_trace` is the single writer.
+
+    **`environment` is a plain string, not a Deployment FK** (C2): `Deployment` does not
+    exist before W14, so there is nothing to reference yet. A row written for the
+    real-time production path (Slice 2 / Task 4B) carries the environment it was scored
+    in; a row written on request for a batch Job (FR-RATE-41's "on request", Ruling 25)
+    carries no environment at all, because a batch run has no live environment the way a
+    real-time quote does. `GET /api/v1/traces` (`03` §5.1, "**production** traces") reads
+    that absence as its exclusion signal — a batch-produced trace never has one to match.
+
+    **No FK to `blobs`.** The reference-counted `retain`/`release` pair
+    (`app/platform/blobs.py`) is how every other row in this platform keeps a blob alive;
+    `write_trace` calls `blobs.retain` in the same transaction as this insert, which is
+    what keeps `ref_count > 0` and makes the row's blob invisible to GC's
+    `ref_count == 0` selector (Ruling 23's claim, verified rather than assumed — see
+    `backend/tests/test_traces.py`'s GC-survival test).
+    """
+
+    __tablename__ = "scoring_traces"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    quote_id: Mapped[str | None] = mapped_column(String(128))
+    #: The canonical `rating_version:{slug}@{version}` string (ID-3), copied from the body.
+    rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    #: Why this trace was persisted: `rate` (the configured sampling rate rolled sample),
+    #: `decline` or `error` (FR-RATE-42's 100 % floors). Task 4B decides which.
+    sample_reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: Null for a batch-produced trace (see class docstring); set by the real-time path.
+    environment: Mapped[str | None] = mapped_column(String(32))
+    #: The blob body's digest — `app.platform.blobs.blob_key`/`BlobStore.read` resolve it.
+    blob_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    #: What the ≥ 13-month retention floor (NFR-OVR-6) is measured from.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "bundle_hash ~ '^sha256:[a-f0-9]{64}$'",
+            name="bundle_hash_format",
+        ),
+        CheckConstraint(
+            "blob_sha256 ~ '^[a-f0-9]{64}$'",
+            name="blob_sha256_format",
+        ),
+        CheckConstraint(
+            "sample_reason IN ('rate', 'decline', 'error')",
+            name="sample_reason_known",
+        ),
+        Index(
+            "ix_scoring_traces_workspace_rating_version",
+            "workspace_id",
+            "rating_version_ref",
+        ),
+        Index("ix_scoring_traces_created_at", "created_at"),
+    )
