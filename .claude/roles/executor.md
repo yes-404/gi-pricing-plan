@@ -26,6 +26,13 @@
     an auditor session — not chance: a structural hazard of being the role every other
     write-access role's mistakes land on.
   - **Silently amends after review has started** — name the delta instead.
+- **Running the full suite: poll, never wait for a notification.** `uv run pytest -q`
+  outruns the 10-minute foreground limit, so it gets backgrounded — and **a backgrounded
+  command does not notify a subagent that has ended its turn.** An executor that stops to
+  wait for one waits forever, holding a finished implementation. Poll in the foreground
+  instead; `.claude/skills/dev-commands` carries the loop and the two ways it lies. Filed
+  as a finding against this file (`CLAUDE.md` §15) after W11 Task 3A stalled exactly this
+  way on 2026-08-30 with a green gate and a made commit.
 - **Tools:** full read/write + Bash, scoped to the current slice's worktree. Not affected by
   Part A2: `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` (lines 356–357)
   states this explicitly — the executor's write scope is code and tests, not `docs/` policy

@@ -216,6 +216,34 @@ and treat a non-zero exit as failure even when the summary says otherwise. Grep 
 for `Errors ` as well as `Tests `; the two are different counters and only one of them is
 in the line most readers stop at.
 
+### The full suite outlives a foreground turn, and backgrounding it strands a subagent
+
+`uv run pytest -q` collects **2,347 tests** and routinely runs past the **10-minute
+foreground limit**, so the tool backgrounds it. That is fine for the main thread, which is
+re-invoked when the command exits. **It is a trap for a subagent**: a backgrounded command
+does not notify an agent that has already ended its turn, so the agent stops "waiting for
+the completion notification" and waits forever. Seen 2026-08-30, W11 Task 3A — the executor
+had a green gate and a finished commit and sat idle on a run that was healthy the whole time.
+
+**So a subagent running the full suite polls in the foreground**, keeping its turn open:
+
+```bash
+until ! pgrep -f 'bin/pytest -q' >/dev/null; do sleep 20; done
+```
+
+Two ways that loop lies, both of which have happened here:
+
+- **It never exits** if the pattern also matches the wrapper shell running the loop —
+  `pgrep -f 'pytest'` matches its own command line. Match `bin/pytest`, and verify with one
+  `pgrep -af` before trusting it. Same family as the `--jq` exit-code trap above: *can this
+  check ever come back negative?*
+- **It exits instantly** when the run has already finished — which is indistinguishable from
+  never having started. Confirm against the output before concluding anything.
+
+The dispatching lead's half: **say this in the dispatch**, and if a subagent reports it is
+waiting on a background run, resume it and tell it to poll — do not re-dispatch the task,
+which throws away a completed implementation.
+
 ### A pytest total is only honest against `--collect-only`
 
 A pass count from a run that silently collected fewer tests than exist reads as clean —
