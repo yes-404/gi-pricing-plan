@@ -644,3 +644,50 @@ def test_an_already_served_ref_survives_metadata_storage_failing(
         "the served ref must still be memoed — otherwise the 200 above proves nothing "
         "about the memo and the degraded read was reached by some other path"
     )
+
+
+@pytest.mark.req("NFR-RATE-1")
+def test_a_repeat_request_does_not_re_read_the_blob_store(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ruling 41
+    (`docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`): the content
+    hash `row.bundle` already carries is checked against the slot **before** the blob is
+    touched at all, so a worker that has already resolved this exact hash never re-reads
+    the object store for it — the `_fetch_bundle`/blob primary-key lookup/`Bundle.
+    model_validate_json` path Ruling 41 §1 measured at ~60% of the handler's own cost.
+
+    **The wrapper delegates to the real `read` rather than raising**, and deliberately so:
+    an earlier version of this test raised from the patch, which `_compiled_for`'s own
+    `except Exception` degradation branch (NFR-RATE-9) silently caught and served from the
+    **ref**-keyed memo instead — a real 200, for a real reason, but not the one this test
+    means to prove, and it passed unchanged against the pre-Ruling-41 code too. Counting a
+    delegating call isolates the **content-hash** shortcut this fix adds from that
+    pre-existing, unrelated fallback.
+    """
+    body = _quote({"rating_version_ref": SCORED_REF})
+    first = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert first.status_code == 200, first.text
+
+    blob_store = client.app.state.blob_store  # type: ignore[attr-defined]
+    original_read = type(blob_store).read
+    calls = 0
+
+    async def _counting_read(self: Any, *args: Any, **kwargs: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        return await original_read(self, *args, **kwargs)
+
+    monkeypatch.setattr(type(blob_store), "read", _counting_read)
+
+    second = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert second.status_code == 200, second.text
+    assert second.json()["outcome"] == "quoted"
+    assert calls == 0, (
+        "the slot hit did not short-circuit the blob read (Ruling 41): blob_store.read "
+        f"was called {calls} time(s) on a request the content-hash shortcut should have "
+        "made unnecessary"
+    )

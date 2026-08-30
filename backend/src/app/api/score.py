@@ -108,22 +108,37 @@ def _required_ref(ctx: QuoteContext) -> ArtifactRef:
 async def _fetch_bundle(
     database: Database,
     blob_store: BlobStore,
+    slot: BundleSlot,
     *,
     workspace_id: UUID,
     ref: ArtifactRef,
-) -> Bundle:
-    """Resolve a ref to its compiled `Bundle`: one metadata read, then the blob store.
+) -> CompiledBundle:
+    """Resolve a ref to its hydrated `CompiledBundle`: one metadata read, then either a
+    slot hit or the blob store (Ruling 41,
+    `docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`).
 
     The blob key lives on the version's own metadata (Ruling 37), so this is a single
     keyed read rather than a scan of Job history for the latest successful compile — which
     would put an un-indexed JSONB lookup inside NFR-RATE-1's budget and, worse, decide
     *which* compiled artifact a version is inside a query nobody had to defend.
+
+    **The content hash is read from that same row and checked against the slot before the
+    blob is touched at all.** Ruling 41 found `compile_rating_version` already writes
+    `content_hash` into `row.bundle` and this function used to discard it, paying the blob
+    primary-key lookup, a ~2 MB object-store read and a full `Bundle.model_validate_json`
+    on every request even when this worker already holds the exact bundle that hash names.
+    **This carries zero staleness window** — unlike `slot.hash_for(ref)` (used only in
+    `_compiled_for`'s degradation branch below), the hash checked here was re-derived from
+    the authoritative row on *this* call, never served from a memo of an earlier one. A
+    slot hit still calls `slot.put` to refresh the ref→hash memo `_compiled_for`'s
+    degradation path depends on; a miss falls through to the blob read exactly as before.
     """
     async with database.session() as session:
         row = await rating_versions_service.resolve_rating_version_ref(
             session, workspace_id=workspace_id, ref=ref
         )
         metadata = row.bundle or {}
+        content_hash = metadata.get("content_hash")
         blob_sha256 = metadata.get("blob_sha256")
         if not blob_sha256:
             raise PlatformError(
@@ -132,6 +147,13 @@ async def _fetch_bundle(
                 409,
                 f"{ref} has no compiled bundle to score against. Compile it first.",
             )
+
+        if content_hash is not None:
+            compiled = slot.get(content_hash)
+            if compiled is not None:
+                slot.put(ref, compiled)
+                return compiled
+
         blob_row = await session.get(BlobRow, blob_sha256)
         if blob_row is None:
             raise PlatformError(
@@ -141,7 +163,13 @@ async def _fetch_bundle(
                 f"{ref}'s compiled bundle is no longer in the blob store.",
             )
         payload = await blob_store.read(to_ref(blob_row))
-    return Bundle.model_validate_json(payload)
+
+    bundle = Bundle.model_validate_json(payload)
+    compiled = slot.get(bundle.content_hash)
+    if compiled is None:
+        compiled = load_bundle(bundle)
+    slot.put(ref, compiled)
+    return compiled
 
 
 async def _compiled_for(
@@ -166,8 +194,8 @@ async def _compiled_for(
     way: serving one would not be degradation, it would be invention.
     """
     try:
-        bundle = await _fetch_bundle(
-            database, blob_store, workspace_id=workspace_id, ref=ref
+        return await _fetch_bundle(
+            database, blob_store, slot, workspace_id=workspace_id, ref=ref
         )
     except PlatformError:
         raise
@@ -177,12 +205,6 @@ async def _compiled_for(
         if compiled is None:
             raise
         return compiled
-
-    compiled = slot.get(bundle.content_hash)
-    if compiled is None:
-        compiled = load_bundle(bundle)
-    slot.put(ref, compiled)
-    return compiled
 
 
 def _as_platform_error(exc: ValueError) -> PlatformError | None:
