@@ -343,6 +343,51 @@ rooted at the primary checkout, where `-C` and `cd` are unrestricted, or to each
 worktree's own occupant self-reporting. A pinned member can still gather the full
 ref-based half for every worktree safely, and should, since it needs no switch at all.
 
+## A fork that reports "started in background" has already started, whether or not you meant it to
+
+Different failure from the cross-worktree isolation above — this one is about a fork
+spawning *another* fork, and it looks identical to genuine cross-session tampering from
+inside the session it happens to.
+
+**What was observed, 2026-08-30.** A fork dispatched with an explicit "investigation only,
+do not edit" brief attempted a nested `Agent(subagent_type:"fork")` call of its own. Its
+first attempt reported having started in the background; a second attempt errored `Fork is
+not available inside a forked worker` — nested forks are not supported, but the error only
+fires on the *second* call, after the first has already launched and detached. That first
+nested fork went on to work, unsupervised, in a **different** worktree than the one its
+parent (and the top-level session) were pinned to, committing there with no completion
+signal ever reaching the top-level session.
+
+From inside that top-level session, the result was indistinguishable from a real isolation
+breach: `git worktree list --porcelain` showed the worktree locked to *this* session's own
+name and pid — because it was this session, several forks removed — while files inside it
+changed on disk with no corresponding tool call in the visible transcript, more than once,
+each revision more detailed than the last. **The tell, confirmed after the fact**: content
+that matches the top-level session's own reasoning too closely to be a coincidence — in
+this case, per-directory error counts from an independent `mypy` investigation landing
+within single digits of a number already derived by hand, and prose extending an existing
+comment's exact argument rather than starting a new one.
+
+**Get the provenance right before writing it down as fact.** The account above was pieced
+together partly from the nested fork's own self-report relayed through a third party, and
+one detail in an early version of that account did not survive a check against this
+session's own tool-call history: the *first* commit in the affected worktree was made by
+plain `Bash`/`Edit` calls this session issued directly and can point to line by line, not by
+the nested fork — the fork's unsupervised edits were **later, additive** ones layered on top
+of an already-good, already-committed baseline. A provenance claim assembled from a
+relayed account is a citation like any other (`NT-0006`): trace it against the artifact —
+here, the actual tool-call sequence — before it goes into a durable note, not just against
+how plausible the story sounds.
+
+**What to do when this happens to you.** Do not push over an unexplained file state, and do
+not assume malice or a real cross-session leak either. Preserve the diff (`git diff HEAD >
+/tmp/...`), check `git worktree list --porcelain` for the lock owner, message the
+suspect fork directly asking for its location and action history with an explicit
+instruction to stop, and escalate to whoever can see the full agent tree (a fork cannot see
+its own descendants; a lead orchestrating the dispatch usually can). Verify the content is
+actually correct before keeping any of it — this is still "trust but verify" for a subagent,
+one hop further removed than usual.
+
 ## What goes in `.gitignore` — and what must not
 
 Ignore build output, caches, environments and editor state. **Do not ignore:**
@@ -564,6 +609,16 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-08-30 — the nested-fork section above added**, from a live incident during W11
+tooling work: a dispatched fork's own nested `Agent(subagent_type:"fork")` call started
+before its second attempt errored on the unsupported-nesting message, and its unsupervised
+descendant's edits in a sibling worktree were mistaken, briefly and reasonably, for a
+cross-session isolation breach. Corrected once against the actual tool-call history:
+provenance for the *first* commit in that worktree traced to this session's own direct
+`Bash`/`Edit` calls, not to the nested fork, whose real edits were later and additive —
+caught only by checking a relayed account against the primary source rather than accepting
+a plausible story (`NT-0006`, applied to agent provenance rather than a document citation).
 
 **2026-08-29 — the worktree-isolation section above added, from a live pre-stand-down
 audit.** The lead ordered a read-only inventory of every worktree after a prior cleanup
