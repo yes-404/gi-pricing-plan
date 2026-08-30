@@ -35,6 +35,7 @@ from app.api import (
     reference_tables,
     score,
     service_accounts,
+    traces,
     validation,
 )
 from app.api import settings as settings_api
@@ -139,6 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(validation.router, prefix=API_PREFIX)
     app.include_router(reference_tables.router, prefix=API_PREFIX)
     app.include_router(score.router, prefix=API_PREFIX)
+    app.include_router(traces.router, prefix=API_PREFIX)
     app.add_api_route(
         "/version",
         health.version_route(settings),
