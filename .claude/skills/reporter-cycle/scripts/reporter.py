@@ -134,7 +134,7 @@ def get_prs(repo_dir: Path) -> tuple[int, list[dict[str, object]]]:
         return 0, []
 
 
-def get_eta(eta_file: Path) -> tuple[str | None, bool | None]:
+def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
     """Read the lead-owned ETA file: the Headline paragraph, verbatim, and its staleness.
 
     The reporter never computes its own ETA — that judgement sits with the lead, and a
@@ -142,10 +142,15 @@ def get_eta(eta_file: Path) -> tuple[str | None, bool | None]:
     stands behind. This only relays what `eta.md` already says. Maintainer instruction,
     2026-08-29.
 
+    `now` is the current time in UTC, read once by the caller at the start of this cycle,
+    so all staleness checks use the same moment. Drift between reading the clock and
+    computing staleness is a source of false positives (stale flag set moments after a
+    reading, wrong when reported minutes later). Maintainer instruction, 2026-08-30.
+
     Returns `(headline, stale)`. `headline` is `None` if the file is missing, unreadable,
     or has no parseable `**Headline:**` paragraph — the caller says so plainly rather than
     silently omitting the ETA section. `stale` is `True`/`False` once the `**Updated:**`
-    stamp parses and is compared against now; it is `None` when a headline was found but
+    stamp parses and is compared against `now`; it is `None` when a headline was found but
     the stamp was not, so the caller can say staleness is unknown instead of guessing.
     """
     try:
@@ -174,7 +179,7 @@ def get_eta(eta_file: Path) -> tuple[str | None, bool | None]:
     except ValueError:
         return headline, None
 
-    return headline, (datetime.now(UTC) - updated) > timedelta(hours=2)
+    return headline, (now - updated) > timedelta(hours=2)
 
 
 def get_remote_main_sha(repo_dir: Path) -> str | None:
@@ -364,6 +369,12 @@ def format_routine_post(
 
 def main() -> int:
     """Run one reporter cycle. Exit 0 on a token outage — the cycle keeps running."""
+    # Read the clock once at the start of this cycle, so all staleness checks use the
+    # same moment. Drift between reading the clock and computing staleness is a source
+    # of false positives (stale flag set moments after a reading, wrong when reported
+    # minutes later). Maintainer instruction, 2026-08-30.
+    now = datetime.now(UTC)
+
     handover_dir = _handover_dir()
     log_path = handover_dir / "slack-reporter.log"
 
@@ -372,7 +383,7 @@ def main() -> int:
         return 0
 
     repo_dir = _repo_dir()
-    eta_headline, eta_stale = get_eta(handover_dir / "eta.md")
+    eta_headline, eta_stale = get_eta(handover_dir / "eta.md", now)
     pr_count, prs = get_prs(repo_dir)
 
     last_sha = get_last_reported_sha(handover_dir)
