@@ -1524,6 +1524,45 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   skill-amendment finding above.
 - **No change** on review 8's ZEN-evaluate-side research recommendation (its 3.1) — discharged,
   with its own named follow-up (the `model_call` node re-test) not yet due.
+- **`CLAUDE.md` §13's four verdicts have no slot for what `NFR-RATE-2` actually produced: adverse
+  evidence, not absent evidence.** All four verdicts ("delivered but untested," "deferred with an
+  owner," "reassigned," "not started") presuppose a gap in evidence; `NFR-RATE-2` was measured
+  properly and found failing, and "deferred with an owner" is the closest fit only by discarding
+  the number, which is the most valuable thing Task 1.5 produced. Two further mismatches:
+  a workstream can fully discharge its *own* scope (W11 committed to *measure* `NFR-RATE-2`, not
+  meet it) while the requirement's own state is "failing" — both true at once, which §13 has no
+  way to say without conflating them — and `NFR-RATE-2` itself needs two verdicts, one per limb
+  (`FR-RATE-37` needs three), where §13 assumes one verdict per id. **The perverse incentive
+  this leaves in place**: an NFR nobody measures books cleanly as "delivered but untested," and an
+  NFR someone measures and finds failing has no clean verdict at all — the standard rewards not
+  looking. **Recommendation (3.7), not drafted here**: `CLAUDE.md` §13 needs a fifth verdict (or a
+  qualifier on the existing four) for measured-and-failing, and an explicit rule for how many
+  verdicts a multi-limb requirement takes. This is a `CLAUDE.md` §13 amendment — the maintainer's
+  alone (`CLAUDE.md` §12) — and this review surfaces it rather than proposing wording.
+- **The one constructive recommendation in this workstream's evidence, and it reframes everything
+  above rather than adding to it: prefer the design whose safety property has a failing case.**
+  Every finding in this question — §8's inert control, the seven-then-reframed instances, the
+  tree-mislabelling class, the retrieval-failure table — is, at bottom, **a check that could not
+  fail**: each reported (or would have reported) green because of what it did not look at. This
+  names the general form and turns it from a diagnosis into a selection criterion, arrived at from
+  a live choice between two implementations of the same authorisation repair — re-derive a
+  `Caller`'s permissions from its account row, or pass the authenticated set as a parameter. They
+  behave identically today (`backend/src/app/auth/service.py:230` populates identity permissions
+  straight from the account row — verified directly), so the choice looked cosmetic. **It is not**:
+  a re-derived implementation cannot be made to fail the test that would separate them (*"a
+  `Caller` whose permissions differ from its account row must be enforced on the `Caller`'s"*) —
+  it has no way to disagree with the row it derives from. Its defining flaw is not being wrong
+  today; it is that nothing could ever tell you when it became wrong. **Why this belongs in a plan
+  review rather than only in the ruling it came from**: it lifts `CLAUDE.md` §13's existing
+  enforcement standard — "proven on deliberately broken input" — from *checking a check* to
+  *choosing a design*, which is a standing decision-making criterion, not a one-off fix. It also
+  retires a weaker remedy this evidence base tried first: a prose tripwire proposed for this exact
+  hazard, withdrawn once the acceptance test above was shown to do the same work mechanically —
+  the general lesson being that "document the danger" should first be tested against "can the
+  danger be given a failing case instead." **Recommendation (3.8), alongside 3.7 and for the
+  same reason not drafted here**: extend `CLAUDE.md` §13's deliberately-broken-input standard, in
+  words, to design selection as well as check verification — again the maintainer's call, since it
+  reaches the same section.
 
 **4. Document drift.**
 
@@ -1729,6 +1768,8 @@ which workstream if (a), is the lead's to rule, not this document's.
 | 3.4 | A route-adding plan states the regenerated OpenAPI contract as a Files-block deliverable and names the second CI workflow it arms | convention (`writing-plans`) |
 | 3.5 | For each mechanical-check proposal above, ask whether a one-command grep tied to a specific act of writing would catch more, more cheaply, than a general enforcement mechanism | methodology — question posed, not answered |
 | 3.6 | A figure quoted in a durable artifact prints `git rev-parse HEAD` in the same invocation; a file quoted as evidence carries its `mtime` | mechanical — citation discipline |
+| 3.7 | `CLAUDE.md` §13 gains a fifth verdict (or a qualifier) for measured-and-failing evidence, and a rule for multi-limb requirements | `CLAUDE.md` §13 amendment — maintainer's |
+| 3.8 | `CLAUDE.md` §13's "proven on deliberately broken input" standard extended from checking a check to choosing a design | `CLAUDE.md` §13 amendment — maintainer's |
 | 4.1 | A numbered NFR budget states its statistic, population, and (where storage is involved) encoding, in the same sentence as the number | spec-writing convention |
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
