@@ -81,6 +81,28 @@ here more than once. The same trap in other clothes: a `✓` echoed on `head`'s 
 than the command's, and a `\echo` in `psql` that printed unconditionally and read as success
 while the `ERROR` line above it proved the opposite.
 
+### `gh --jq` always exits 0, whatever the predicate says
+
+`gh`'s built-in `--jq` filters the output but **does not adopt jq's exit code**, so a
+boolean predicate prints `false` and still succeeds. Verified 2026-08-30 against a merged
+PR #438:
+
+```bash
+gh pr view 438 --json state --jq '.state == "OPEN"'   # prints: false   exit: 0
+gh pr view 438 --json state | jq -e '.state == "OPEN"' # prints: false   exit: 1
+```
+
+**This silently breaks every loop and `&&` built on it.** `until gh pr view N --json … --jq
+'<done?>'; do sleep 60; done` exits on the first iteration regardless of the answer, because
+the condition is always true. A CI watcher written that way reports "terminal" the moment it
+starts. Pipe through real `jq -e` when the exit code is load-bearing; `--jq` is fine for
+formatting output a human or a later command will read.
+
+Same family as the two above, and as `pgrep -af 'pytest'` matching its own wrapper
+(`python-test`): **a check whose exit code is decoupled from the thing it checks.** The
+question to ask of any guard is not "is it the right command" but "can this ever come back
+negative" — run it once against a case you know is false, and see.
+
 ### vitest exits 1 while printing every test as passed
 
 The worst form of the trap above, because here the command's **own** exit code is the honest
@@ -255,6 +277,13 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-30 — the `gh --jq` section added, found by a CI watcher on PR #438 whose polling
+loop terminated immediately. Reproduced directly against that PR once merged, so the
+predicate had a known-false answer: `--jq '.state == "OPEN"'` printed `false` and exited 0,
+while the same predicate through `jq -e` exited 1. Filed here rather than in `python-test`
+because it is a property of `gh`, not of the suite — and beside the exit-code pitfall
+because it is the same defect, a check whose exit code cannot report what it checked.
 
 2026-08-29 — the borrowed-venv section above added, found auditing PR #371's task-brief
 regression fix. A false 2-failed/5-passed test result was traced, before being reported as

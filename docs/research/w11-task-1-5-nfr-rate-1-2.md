@@ -106,11 +106,12 @@ to compare — is the table below, and the qualification that follows it.
 
 What they were — and why one run's distribution is not *the* distribution:
 
-| | stdev | p50 | p99 | budget |
-|---|---|---|---|---|
-| without GBM, under load (audit re-runs, load 1.6–8.5) | **3.5–4.0 ms** | ≈10 ms | 14.076–26.725 ms | 15 ms |
-| without GBM, quiet box (fifth run, load 1.16→1.38) | **0.706 ms** | 6.858 ms | 10.162 ms | 15 ms |
-| with GBM, quiet box (fifth run, load 1.10→1.16) | 1.445 ms | 9.207 ms | 14.763 ms | 50 ms |
+| | mean | stdev | p50 | p99 | max | budget |
+|---|---|---|---|---|---|---|
+| without GBM, run 1 (load 0.39) | 6.915 ms | *not recorded* | — | 9.410 ms | 12.959 ms | 15 ms |
+| without GBM, under load (audit re-runs, load 1.6–8.5) | — | **3.5–4.0 ms** | ≈10 ms | 14.076–26.725 ms | — | 15 ms |
+| without GBM, quiet box (run 5, load 1.16→1.38) | 7.039 ms | **0.706 ms** | 6.858 ms | 10.162 ms | 12.894 ms | 15 ms |
+| with GBM, quiet box (run 5, load 1.10→1.16) | 9.562 ms | 1.445 ms | 9.207 ms | 14.763 ms | 35.860 ms | 50 ms |
 
 A stdev of 3.5–4.0 ms on a 15 ms budget with p50 ≈ 10 ms describes a distribution whose
 tail sits *on* the bound. 0.706 ms with p50 6.858 ms describes one that does not. **The
@@ -126,9 +127,10 @@ wrong, and this note's own first run is the counterexample. Its recorded mean is
 and its recorded maximum 12.959 ms, putting the largest of 1,000 samples just 6.044 ms
 above the mean; a stdev of 3.5–4.0 ms would place that maximum only **1.5–1.7 standard
 deviations out**, which no latency distribution does. So the first run's spread was
-necessarily narrow — as the fifth run's **0.706 ms** is, whose mean and max sit within
-2 % and 0.5 % of the first run's. Had run 1 printed its own distribution it would have read
-as *reassuring*, not fragile.
+necessarily narrow — as the fifth run's **0.706 ms** is, whose mean (7.039 ms) and max
+(12.894 ms) land 1.8 % and 0.5 % from run 1's 6.915 and 12.959, both now in the table
+above. Had run 1 printed its own distribution it would have read as *reassuring*, not
+fragile.
 
 **What establishes this verdict is repetition under varied load. The distribution is what
 explains the result once you have both — not the trigger that reveals it.** The acceptance

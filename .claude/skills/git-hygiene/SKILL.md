@@ -414,6 +414,46 @@ The count matters in both directions. `main` also carries `… partial-dependenc
 path composes it differently. Read the landed subject rather than reasoning about which
 path appends what.
 
+### `gh pr edit --body-file` silently leaves the old body in place
+
+Editing a PR body on this repository fails, prints an unrelated-looking error, and **exits
+without changing anything**:
+
+```
+$ gh pr edit 436 --body-file new-body.md
+GraphQL: Projects (classic) is being deprecated in favor of the new Projects experience …
+  (repository.pullRequest.projectCards)
+```
+
+`gh pr edit` fetches `projectCards` as part of the mutation it builds, that field is
+deprecated here, and the whole call aborts — so the body is untouched while the message says
+nothing about the body. **This is a lost update that reads as a schema warning.** It cost a
+correction PR here: the body still asserted a claim the commit had already retracted, and it
+was caught only by reading the body back.
+
+**The form that works** — the REST endpoint takes the body directly and never touches
+projects:
+
+```bash
+gh api repos/<owner>/<repo>/pulls/<n> -X PATCH -F body=@new-body.md --jq '.number'
+```
+
+`-F body=@file` reads the file; `-f body=@file` would send the literal string `@file`.
+
+**Then read it back, whichever form you used** — this is the role practice in
+[`../../roles/auditor.md`](../../roles/auditor.md) generalised, and the reason it exists:
+
+```bash
+gh pr view <n> --json body -q '.body' | grep -c '<a phrase only the NEW body has>'   # expect 1
+gh pr view <n> --json body -q '.body' | grep -c '<a phrase only the OLD body had>'   # expect 0
+```
+
+Grep for **both** phrases. Checking only that the new text is present passes when the API
+appended rather than replaced; checking only that the old text is gone passes when the body
+was emptied. **Verify a `gh` write against the artifact it claims to have changed, never
+against its exit code** — and here not even against its exit code, which was non-zero while
+the operation both failed and reported a reason that pointed elsewhere.
+
 ## A date read from `git log`'s default rendering is not UTC, and neither is `--date=iso-strict`
 
 `git log`'s default format, and `--date=iso-strict`, both render a commit's **author-local**

@@ -19,9 +19,11 @@ from backend.tests.test_custom_objectives_api import _advance, _create
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
 from backend.tests.test_rate_tables_service import _seed as _seed_rate_table
 from backend.tests.test_rate_tables_service import _table_slug as _rate_table_slug
+from sqlalchemy import select
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.db.models import (
+    AuditEventRow,
     BlobRow,
     JobRow,
     ModelRow,
@@ -35,7 +37,7 @@ from app.platform.blobs import BlobStore, to_ref
 from app.platform.rating_versions import compile_rating_version
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
-from model_schema import JobStatus, ModelStatus, ObjectiveStatus
+from model_schema import JobSource, JobStatus, ModelStatus, ObjectiveStatus
 from pricing_core.rating.compile import _APPROVED_OR_BETTER, Bundle
 
 
@@ -624,3 +626,102 @@ def test_the_compiled_bundle_survives_persistence(
     # The proof Ruling 7 asks for: real serialised booster content, not a blob sha256.
     assert len(fit_result["booster_content"]) > 100
     assert fit_result["booster_content"] != fit_result["booster_blob"]["sha256"]
+
+
+def _compile_audit_events(database: Database, workspace_id: UUID) -> list[AuditEventRow]:
+    """Every `rating_version.compiled` event for the workspace, oldest first.
+
+    Ordered by `id` rather than `at`: `id` is a uuid7 and so monotonic, while `at` defaults
+    to `func.now()` — transaction time — and two compiles in one test can tie on it.
+    """
+
+    async def _run() -> list[AuditEventRow]:
+        async with database.session() as session:
+            rows = (
+                await session.execute(
+                    select(AuditEventRow)
+                    .where(
+                        AuditEventRow.workspace_id == workspace_id,
+                        AuditEventRow.action == "rating_version.compiled",
+                    )
+                    .order_by(AuditEventRow.id)
+                )
+            ).scalars()
+            return list(rows)
+
+    return asyncio.get_event_loop().run_until_complete(_run())
+
+
+@pytest.mark.req("NFR-RATE-10")
+def test_a_compile_emits_an_audit_event_carrying_before_and_after_bundle_hashes(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """NFR-RATE-10: compilations "emit Audit Events with before/after state".
+
+    W11 Task 1.2 built the `rating.compile` Job with no audit event at all, so the one
+    governed operation this workstream added left no trace in the chain `06` §4.5 exists
+    to keep. The requirement names *before/after state*, not merely that something was
+    recorded — so this compiles **twice** and asserts the second event's `before` carries
+    the first compile's hash. A single compile can only ever show `before: None`, which
+    would satisfy a weaker test while leaving the before/after half unevidenced.
+    """
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
+    assert created.status_code == 201, created.text
+
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database,
+            workspace_id,
+            principal.id,
+            algorithm_ref="rating_algorithm:minimal@1",
+            pins=_empty_pins(),
+        )
+    )
+
+    first_job = _run_compile_job(api_client, headers, database, blob_store, row.id)
+    assert first_job.status is JobStatus.SUCCEEDED, first_job.error
+    first_bundle = Bundle.model_validate_json(
+        _read_blob(database, blob_store, first_job.result["ref"])
+    )
+
+    events = _compile_audit_events(database, workspace_id)
+    assert len(events) == 1, (
+        "a successful compile emitted no `rating_version.compiled` audit event — found "
+        f"{len(events)}. NFR-RATE-10 requires compilations to emit Audit Events with "
+        "before/after state."
+    )
+    first = events[0]
+    assert first.entity_ref == "rating_version:minimal-rv@1"
+    assert first.source is JobSource.API, (
+        "`JobSource` records the request's origin, not its executor — its members are UI, "
+        "API, SCHEDULE and SYSTEM, and there is no WORKER. A compile submitted through "
+        "the 202 route is `API` even though the worker runs it, matching "
+        "`dataset_version.ingested`, which is emitted from inside a worker handler."
+    )
+    assert first.job_id == first_job.id, "the event must name the Job that produced it"
+    assert first.before == {"bundle_hash": None}, (
+        f"a first compile has no prior bundle, so `before` must say so: {first.before!r}"
+    )
+    assert first.after["bundle_hash"] == first_bundle.content_hash
+
+    # Compile again: only a second compile can evidence the *before* half of the
+    # requirement, because the first has nothing to be "before".
+    second_job = _run_compile_job(api_client, headers, database, blob_store, row.id)
+    assert second_job.status is JobStatus.SUCCEEDED, second_job.error
+
+    events = _compile_audit_events(database, workspace_id)
+    assert len(events) == 2, "the second compile emitted no event"
+    second = events[1]
+    assert second.before == {"bundle_hash": first_bundle.content_hash}, (
+        "the second compile's `before` must carry the hash the first one left, not None — "
+        f"got {second.before!r}. Without it the chain cannot show what changed."
+    )
+    assert second.after["bundle_hash"] == first_bundle.content_hash, (
+        "the same pins must compile to the same hash (FR-RATE-24 reproducibility)"
+    )
+    assert second.job_id == second_job.id
