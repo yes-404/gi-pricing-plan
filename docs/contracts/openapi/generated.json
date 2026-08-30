@@ -799,6 +799,67 @@
         "title": "BandingProposalRequest",
         "type": "object"
       },
+      "BatchScoreRequest": {
+        "additionalProperties": false,
+        "description": "`POST /score/batch`'s body (`03` §5.1:517, FR-RATE-36).\n\n`rating_version_refs` accepts **one or more** refs (FR-RATE-36) — `score_batch`'s own\nsignature (`03` §5.2) takes exactly one `CompiledBundle`, so multiple versions is this\nroute/handler looping bundles, never a widened `score_batch` signature (Ruling 43 §3\nforbids that). `chunk_rows` and `abort_failure_rate` are left unset by default so the\nhandler's own default (Ruling 24's workspace-setting resolution) applies rather than a\nroute-level guess.",
+        "properties": {
+          "abort_failure_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abort Failure Rate"
+          },
+          "chunk_rows": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Rows"
+          },
+          "dataset_version_id": {
+            "format": "uuid",
+            "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "rating_version_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "minItems": 1,
+            "title": "Rating Version Refs",
+            "type": "array"
+          },
+          "table_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table Name"
+          }
+        },
+        "required": [
+          "dataset_version_id",
+          "rating_version_refs"
+        ],
+        "title": "BatchScoreRequest",
+        "type": "object"
+      },
       "BelowRangePolicy": {
         "description": "What a value below the first boundary does (FR-MODEL-8).\n\nExplicit rather than defaulted: silently clamping a driver age of 3 into the 17-20 band\nis how a data defect becomes a price.",
         "enum": [
@@ -25538,6 +25599,133 @@
           }
         },
         "summary": "Score one Quote Context against an explicit Rating Version",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/score/batch": {
+      "post": {
+        "description": "**202** with a Job (`03` §5.1:517, FR-RATE-36/37/38; W11 Task 3C).\n\nSubmits a `JobKind.SCORE_BATCH` Job — chunked, progress-reporting, resumable\n(`app.worker.scoring_handlers`) — never scores inline. Polling the returned Job to\ncompletion yields a `JobResult(kind=\"blob\")` whose `ref` is a small JSON summary\nnaming, per Rating Version, the content-addressed output parquet's own blob ref, row\nand outcome counts, per-error-type counts and samples, and whether that ref's run\naborted.\n\nThis route resolves nothing itself: bundle resolution, the manifest, the abort\nthreshold and the output are all the handler's (`docs/plans/2026-08-29-w11-3-batch-\nscoring.md` Task 3B). Widening this route to score inline would duplicate that\nmachinery, exactly what `CLAUDE.md` §2 forbids.",
+        "operationId": "score_batch_api_v1_score_batch_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchScoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Batch re-rate a Dataset Version against one or more Rating Versions",
         "tags": [
           "rating"
         ]

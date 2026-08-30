@@ -1,4 +1,5 @@
-"""`POST /api/v1/score` — real-time scoring (03 §5.1, FR-RATE-34/35/38/39; W11 Task 2B).
+"""`POST /api/v1/score` — real-time scoring (03 §5.1, FR-RATE-34/35/38/39; W11 Task 2B) and
+`POST /api/v1/score/batch` — batch re-rating (03 §5.1:517, FR-RATE-36/37/38; W11 Task 3C).
 
 **`async def`, and not incidentally.** `BundleSlot` is unsynchronised and confined to one
 worker's event loop; FastAPI runs a plain `def` handler in a threadpool, which would put two
@@ -18,25 +19,34 @@ precisely what this requirement forbids — an annotated route filters extra key
 codes are parsed off the front and mapped here. Deliberately *not* mapped: a firing
 `on_violation="error"` constraint raises a plain `NotImplementedError`, which is undesigned and
 must stay visible as a 500 rather than be dressed as a typed per-quote error.
+
+**`/score/batch` submits a Job and nothing else.** It carries no bundle-resolution logic of
+its own — that lives in `_compiled_for`/`_fetch_bundle` above, reused (not duplicated,
+Ruling 42) by `app.worker.scoring_handlers`. The route's only responsibilities are to
+authorise the caller against `Permission.SCORE_BATCH` (granted by no builtin role, deliberately
+— FR-GOV-6, C3 of `docs/plans/2026-08-29-w11-3-batch-scoring.md`) and to translate the request
+body into the `score.batch` handler's parameter shape.
 """
 
 from __future__ import annotations
 
-from typing import Annotated, Final
+from typing import Annotated, Any, Final
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response, status
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
-from app.api.deps import Caller
+from app.api.deps import Caller, job_identity
 from app.api.responses import problems
 from app.db.models import BlobRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import jobs as job_service
 from app.platform import rating_versions as rating_versions_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
-from model_schema import ArtifactRef, Permission, QuoteContext
+from model_schema import ArtifactRef, Job, JobKind, Permission, QuoteContext
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_one
@@ -78,6 +88,7 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
 ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE))]
+ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
 
 
 def _required_ref(ctx: QuoteContext) -> ArtifactRef:
@@ -267,3 +278,78 @@ async def score(
         raise problem from exc
 
     return Response(content=result.model_dump_json(), media_type="application/json")
+
+
+class BatchScoreRequest(BaseModel):
+    """`POST /score/batch`'s body (`03` §5.1:517, FR-RATE-36).
+
+    `rating_version_refs` accepts **one or more** refs (FR-RATE-36) — `score_batch`'s own
+    signature (`03` §5.2) takes exactly one `CompiledBundle`, so multiple versions is this
+    route/handler looping bundles, never a widened `score_batch` signature (Ruling 43 §3
+    forbids that). `chunk_rows` and `abort_failure_rate` are left unset by default so the
+    handler's own default (Ruling 24's workspace-setting resolution) applies rather than a
+    route-level guess.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_version_id: UUID
+    rating_version_refs: list[ArtifactRef] = Field(min_length=1)
+    table_name: str | None = None
+    chunk_rows: int | None = Field(default=None, gt=0)
+    #: A request-supplied threshold may only *lower* the resolved workspace setting
+    #: (`rating.batch_abort_failure_rate`, Ruling 24) — enforced by the handler
+    #: (`BATCH_ABORT_THRESHOLD_ABOVE_SETTING`), not here.
+    abort_failure_rate: float | None = Field(default=None, ge=0, le=1)
+
+
+@router.post(
+    "/score/batch",
+    summary="Batch re-rate a Dataset Version against one or more Rating Versions",
+    status_code=202,
+    # 404: the Dataset Version, its scoring table, or a named `rating_version_ref` does not
+    # resolve — raised inside the handler (`app.worker.scoring_handlers`), not this route;
+    # listed because a client polling the Job can observe it as the terminal failure. 409:
+    # `BUNDLE_COMPILE_FAILED`, also handler-side. 422:
+    # `BATCH_ABORT_THRESHOLD_ABOVE_SETTING` (Ruling 24) and request-body validation.
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def score_batch(
+    body: BatchScoreRequest,
+    caller: ScoreBatchDep,
+    database: DatabaseDep,
+    response: Response,
+) -> Job:
+    """**202** with a Job (`03` §5.1:517, FR-RATE-36/37/38; W11 Task 3C).
+
+    Submits a `JobKind.SCORE_BATCH` Job — chunked, progress-reporting, resumable
+    (`app.worker.scoring_handlers`) — never scores inline. Polling the returned Job to
+    completion yields a `JobResult(kind="blob")` whose `ref` is a small JSON summary
+    naming, per Rating Version, the content-addressed output parquet's own blob ref, row
+    and outcome counts, per-error-type counts and samples, and whether that ref's run
+    aborted.
+
+    This route resolves nothing itself: bundle resolution, the manifest, the abort
+    threshold and the output are all the handler's (`docs/plans/2026-08-29-w11-3-batch-
+    scoring.md` Task 3B). Widening this route to score inline would duplicate that
+    machinery, exactly what `CLAUDE.md` §2 forbids.
+    """
+    parameters: dict[str, Any] = {
+        **job_identity(caller),
+        "dataset_version_id": str(body.dataset_version_id),
+        "rating_version_refs": [str(ref) for ref in body.rating_version_refs],
+        "table_name": body.table_name,
+        "chunk_rows": body.chunk_rows,
+        "abort_failure_rate": body.abort_failure_rate,
+    }
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.SCORE_BATCH,
+            parameters,
+            caller.principal,
+            workspace_id=caller.workspace_id,
+        )
+    response.status_code = status.HTTP_202_ACCEPTED
+    response.headers["Location"] = f"/api/v1/jobs/{job.id}"
+    return job
