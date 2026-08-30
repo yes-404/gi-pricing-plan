@@ -307,6 +307,60 @@ Four rules, each learned by getting it wrong here:
 Keep the script. When the gate is discharged, keep its design note too — delete the gate, not
 the reasoning, or the next person writing one starts from nothing.
 
+### A false zero argues — and two wrong methods agreeing is not corroboration
+
+Worked example, 2026-08-30, and the rule it breaks is the one directly above, added to this
+file the same day by the person who then broke it.
+
+**The question was one of precedent.** A test delivered a requirement whose marker was
+missing, and the cheap remedy was to stack a second `@pytest.mark.req` beside the first. Before
+recommending it, the auditor asked whether stacked markers were an existing convention.
+The sweep returned **none**, so the recommendation flipped to the expensive option: a whole
+separate test. The lead's counter-sweep found **69** stacked pairs at `origin/main`, including
+a three-deep stack that is itself the centrepiece of a §14 finding.
+
+**Two defects, and finding the harmless one hid the fatal one.**
+
+```bash
+# BOTH of these return 0 on a tree with 69 stacked pairs.
+git grep -n -A1 'pytest\.mark\.req(' <rev> -- <paths> | grep -cE '^[^:]+-[0-9]+-@pytest\.mark\.req\('
+git grep -n -A1 'pytest\.mark\.req(' <rev> -- <paths> | grep -cE '[-:][0-9]+-@pytest\.mark\.req\('
+```
+
+- **Cosmetic:** `^[^:]+-` cannot match a line from `git grep <rev>`, whose `origin/main:` prefix
+  contains colons. Real, and irrelevant.
+- **Fatal:** `git grep -A1` emits **adjacent matches as match lines** (`:`), never as context
+  lines (`-`). The context line under a stack is always the `def`. So a pattern hunting for
+  *"a match line followed by a context line containing a marker"* **cannot fire on a stack at
+  all** — the thing it is looking for does not exist in the output format.
+
+The second command fixes the cosmetic defect and inherits the fatal one. Its zero was
+**structurally guaranteed**, so its agreement with the first carried no information — and read
+as confirmation. **Two wrong methods agreeing is not corroboration**; when a second attempt
+repeats a null, check whether it repaired the part that produced the null.
+
+**Correct detection ignores `-A1` and looks for consecutive line *numbers* within one file:**
+
+```bash
+git grep -n 'pytest\.mark\.req(' <rev> -- <paths> \
+  | awk -F: '{f=$2; n=$3; if (f==pf && n==pn+1) c++; pf=f; pn=n} END {print c+0}'
+```
+
+**Why this class deserves its own rule.** Most null results invite more looking. A null on a
+**precedent** question closes the question instead, because *"no precedent exists"* is a
+positive claim with a decision attached — it argues, and it argues for the more expensive
+option. A false positive gets challenged by the next person to read the artifact; a false zero
+is agreed with.
+
+**The control cost one command** — run the pattern against a case known to exist — and it
+scored **0 against a three-deep stack sitting in plain view**. It was run only after challenge.
+
+That is the whole argument for running one, and the fact that this file's own author skipped it
+hours after writing *"running it and seeing nothing proves nothing"* is recorded deliberately:
+a rule its author forgets under load is evidence about the rule's ergonomics, not about the
+author. **Bind the control to the act, not to the intention** — a sweep whose answer will change
+a recommendation gets a positive control in the same command block, before the answer is read.
+
 ### Do not re-derive a metric a script already computes — run the script
 
 Auditing `req-coverage.py` by reimplementing its walk returned **261** against the script's
