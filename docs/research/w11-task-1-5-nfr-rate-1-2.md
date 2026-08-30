@@ -75,12 +75,18 @@ The first four loads are single readings taken at run start. The fifth is this b
 `bench-rating.py` after it was changed to read the load either side of each timed block —
 one span per block, in the column's own order (with-GBM / without-GBM / traced).
 
-**Load is the variable that visibly moved, but it does not order the results**: re-run 3
-passed at load 8.50 while re-run 1 breached at 1.63. So the finding is not "the box was
-busy"; it is that **a single run cannot establish this half**, whatever the load. The
-0.39-load run that produced the original PASS is the exceptional condition — over ~40
-minutes the audit observed the 1-minute load ranging 1.6–8.7, median ≈6 — and it is the
-*least* representative condition for a requirement stated at 200 rps.
+**Load drives the volatility without determining the verdict.** It does not order the
+results — re-run 3 passed at load 8.50 while re-run 1 breached at 1.63 — so the finding is
+not "the box was busy", and **a single run cannot establish this half whatever the load**.
+But load does set the *spread*: the distribution table below shows it roughly five times
+wider under load than on a quiet box.
+
+The two together are the trap. **A quiet run's narrow spread makes a single run look more
+trustworthy than it is** — which is exactly how one run at load 0.39 came to be written
+down here as a PASS with a "~1.6x margin". Over ~40 minutes the audit observed the
+1-minute load ranging 1.6–8.7, median ≈6. 0.39 is the least representative condition
+available for a requirement stated at 200 rps, and it is simultaneously the condition that
+produces the most convincing-looking evidence.
 
 **The distribution — the acceptance criterion that would have caught all of this, and the
 one that was not met.** The leaf plan
@@ -107,6 +113,21 @@ instability restated as a distribution rather than as a disagreement between ver
 it is why the p99 alone flips. Quoting only the quiet-box figures here would repeat this
 note's original mistake in a new place. The with-GBM maximum is 2.4x its own p99, so that
 half's tail is long too, even where the verdict holds.
+
+**This qualifies the "report the distribution" criterion rather than vindicating it.** The
+tempting conclusion — that printing stdev would by itself have caught the bad verdict — is
+wrong, and this note's own first run is the counterexample. Its recorded mean is 6.915 ms
+and its recorded maximum 12.959 ms, putting the largest of 1,000 samples just 6.044 ms
+above the mean; a stdev of 3.5–4.0 ms would place that maximum only **1.5–1.7 standard
+deviations out**, which no latency distribution does. So the first run's spread was
+necessarily narrow — as the fifth run's **0.706 ms** is, whose mean and max sit within
+2 % and 0.5 % of the first run's. Had run 1 printed its own distribution it would have read
+as *reassuring*, not fragile.
+
+**What establishes this verdict is repetition under varied load. The distribution is what
+explains the result once you have both — not the trigger that reveals it.** The acceptance
+criterion asks for one of the two. Reporting the distribution of a single quiet run
+satisfies it and still gets the verdict wrong.
 
 *Limits of this evidence:* one machine, five runs per configuration, load observed but not
 controlled; the under-load distribution is a range across three runs rather than one run's
