@@ -269,3 +269,178 @@ audited under `close-workstream` against the reopened scope only (FR-RATE-36, 37
 NFR-RATE-12, and NFR-RATE-1's disposition), re-verdicting none of the seven requirements
 closed on 2026-08-30, and accepted by the maintainer with a fresh dated line — the 2026-08-30
 delegation does not reach it (Ruling 39 §5).
+
+## 10. Second close
+
+**Audited against `origin/main` `b749acb`** (Ruling 39/42's reopened scope: FR-RATE-36,
+FR-RATE-37, FR-RATE-42, NFR-RATE-12, and NFR-RATE-1's disposition). §§1–9 above are not
+edited by this section (Ruling 39 §2, Ruling 42 §6) — verified: the only two commits ever to
+touch this file are the original close (`1da81cd`) and the §9 reopen append (`8fd48b7`), and
+their diff adds a banner line and appends §9 with zero removed lines.
+
+This audit ran the `close-workstream` checklist as carried in this tree at `b749acb`. Per
+the constraint given for this task, the full `pytest` suite was not re-run — CI is green on
+every merged commit in the range; the targeted suites below were run directly instead.
+
+### 10.1 Scope, derived from the specification first
+
+`scripts/scope-audit.py RATE --sections 3.7,3.8 --extra
+FR-RATE-36,FR-RATE-37,FR-RATE-42,NFR-RATE-12` confirms Ruling 39 §1's four-item list against
+`03-rating-engine.md` directly: 14 requirements in scope under that section/extra
+combination, all four reopened ids evidenced by marker. The three `NO EVIDENCE` ids the same
+run reports (FR-RATE-43/44/45) are W12's, per §1 above — correctly outside this scope, not a
+gap in it.
+
+### 10.2 Requirement verdicts
+
+| Requirement | Verdict | Evidence |
+|---|---|---|
+| **FR-RATE-36** (batch scoring route) | **delivered and tested** | `POST /api/v1/score/batch` (`backend/src/app/api/score.py:394`, Task 3C, `3dc8d6b`/#475) submits a `score.batch` Job and nothing else. 1 marker, `backend/tests/test_score_batch_api.py:143`. `--endpoints` confirms the route is published in the generated contract (absent from the missing-endpoint list) |
+| **FR-RATE-37** (chunked, resumable, progress-reporting batch) | **delivered and tested** | `score_batch` (`packages/pricing-core/src/pricing_core/rating/score.py:979`, Task 3A, `59407f2`/#465) is a pure chunked transform taking a `ProgressCallback`; the `score.batch` worker handler (Task 3B, `eda70d6`/#471) drives it. 4 markers: `packages/pricing-core/tests/test_rating_score_batch.py:156,203`, `backend/tests/test_scoring_handlers.py:193,397` |
+| **FR-RATE-42** (production trace sampling) | **delivered and tested** | `decide_sampling` (100 % of declines/errors, configured rate otherwise) and off-path trace production per Ruling 35's correction (Task 4B, `003f9d4`/#485); trace rows and migration (Task 4A, `25c5688`/#480); `GET /api/v1/traces` and its access control (Task 4C, `87dd4b7`/#490). 20 markers across `backend/tests/test_traces.py`, `test_traces_api.py`, `test_score.py` |
+
+**Targeted suites re-run this audit, not taken from CI history**: `backend/tests/test_score_batch_api.py`,
+`test_scoring_handlers.py`, `test_traces.py`, `test_traces_api.py` — 53 passed; `packages/pricing-core/tests/test_rating_score_batch.py` — 11 passed. Zero failures, zero skips.
+
+**All three of the reopen's FRs: delivered and tested.**
+
+### 10.3 NFR-RATE-12 — measured, not asserted
+
+| | measured | budget | verdict |
+|---|---|---|---|
+| NFR-RATE-12, blob storage at the ~200-step reference structure | 516.07 GB/year | 200 GB/year | **PROJECTED OVER, ~2.58×** |
+| NFR-RATE-12, row storage (upper-bounded) | 0.23 GB/year | — | negligible, does not change the verdict |
+
+Task 4D (`docs/research/w11-task-4d-nfr-rate-12.md`, `dc451d5`/#501, `scripts/bench-trace-size.py`)
+measures real serialised `Trace` bytes (no estimate) at five step counts and multiplies the
+~200-step reference figure (1,032,137 B) by NFR-RATE-12's own stated volume (500,000 sampled
+quotes/year). **The projection is conservative, not an upper bound**: it excludes
+FR-RATE-42's 100 % decline/error sampling floor, so real persisted volume is higher than
+this figure, not lower. 1 marker, `backend/tests/test_traces.py:316`.
+
+**One correction owed, folded in below rather than opened as a separate PR** (the lead's
+relayed instruction called it non-blocking): the note states the exclusion, and therefore
+that 2.58× is conservative, only in a §5 caveat-list bullet, thirteen lines below the
+headline and result table. A reader who stops at §0 or §4 can misread 2.58× as an upper
+bound. **Fixed in this PR** — see 10.7.
+
+**Register disposition — F55, largest driver of the overage.** `TraceStep.consumed`/
+`.produced` (`pricing_core/rating/score.py:660`) carry the zen-engine's full accumulated
+per-node context, not each step's own declared `consumes`/`produces` — found by Task 4D
+(§2 of its note) and filed as its own row (F55) rather than fixed, since trimming it is a
+schema/semantics change outside Task 4D's measurement scope. **Verdict: NFR-RATE-12 is
+measured and FAILING, with its largest remediation lever (F55) identified but not applied,
+and the projection is a lower bound on real production volume rather than a worst case.**
+
+### 10.4 NFR-RATE-5 — its first verdict, split at both clauses (F52)
+
+Absent from §3.1/§3.2 above because Slice 3 had not run at the first close — its first
+verdict anywhere in this record:
+
+| | measured | budget | verdict |
+|---|---|---|---|
+| NFR-RATE-5, throughput/worker | 5,093,947 risks/hour/worker | ≥ 1,000,000 | **PASS, 5.09×** |
+| NFR-RATE-5, linear in workers | — | — | **NOT MEASURED** — one worker ran |
+
+Task 3D (`docs/research/w11-task-3d-nfr-rate-5.md`, `7b4f603`/#478, real Postgres/MinIO I/O,
+300,000 rows) measured the throughput clause directly against the handler and left the
+linearity clause honestly unattempted, per its own acceptance standard's instruction to
+"mark the linearity untested rather than implying it." Register row **F52**
+(`9f116ea`/#479): carry forward, unowned — no later workstream names an owner for a
+multi-worker run. This section discharges the register row's own request that "the W11
+second close... needs to add NFR-RATE-5 to its NFR table for the first time, split at its
+two clauses" — done above; F52 itself stays open, unowned, per its filed disposition.
+
+### 10.5 NFR-RATE-1 — discharged, not passing
+
+Ruling 41 answers §6's architectural question (a `ref` may not be served from the memo
+without a metadata read, and does not need to be — the content hash is already read and
+discarded on `_fetch_bundle`'s first statement) and Ruling 42 rules the resulting code
+change **into** the reopen while explicitly ruling NFR-RATE-1's verdict **out** of it.
+Verified against Task 3B's landing (`eda70d6`/#471) and its measurement note
+(`docs/research/w11-3b-compiled-for-content-hash-delta.md`):
+
+- The code change lands: `_fetch_bundle` checks a freshly re-read `content_hash` against the
+  slot before touching the blob store, removing the blob PK lookup, the ~2 MB object-store
+  read and the full `model_validate_json` on a hit.
+- The component delta is measured with tree, host, pass count and ref cardinality all
+  named, exactly as Ruling 42 §4/§6 requires: hit mean 3.657 ms vs. full-path mean
+  11.637 ms, on `feat/w11-3b-batch-handler` off `59407f2`, one run, one ref, a shared 4-core
+  box — explicitly **not** an NFR-RATE-1 re-measurement, on a minimal no-GBM fixture not
+  comparable to NFR-RATE-1's own budget.
+- **NFR-RATE-1's verdict does not move: measured and FAILING.** The without-GBM limb's own
+  component re-measure (Ruling 41 §4, unchanged by Task 3B) reads p99 **23.027 ms against a
+  15 ms budget**, with the fetch already excluded — over. No artifact produced this reopen
+  describes NFR-RATE-1 as passing, improved to passing, or re-measured; `bundle_slot_capacity`
+  is not raised. Ruling 41 §4's 15 ms trigger — the condition that would put NFR-RATE-1 itself
+  in further question — is **not** treated as fired by this delta, per Ruling 42 §4's explicit
+  prohibition.
+- **Carry forward, owner W14**: the requirement re-measurement on a dedicated host, more than
+  one pass, and any `bundle_slot_capacity`/TTL/refresh-channel change (Ruling 16 clause 4),
+  unchanged from §6 except that the *architectural* question §6 named an owner for now has an
+  answer — the *measurement* question does not.
+
+**Register — F50 and F51, both resolved.** F50 (`bundle_slot.py:28-31`'s false immutability
+argument) and F51 (`w11-task-2d-nfr-rate-1-full-path.md:74-75`'s false premise) were both
+assigned to this same task by Ruling 42 §7 and both closed by `eda70d6`/#471 — verified
+against the diff, not the commit message: the docstring now states the true safety argument
+(safe because the memo is read only on the NFR-RATE-9 degradation branch, never the happy
+path), and the research note carries a dated, quoting annotation at `:76-89` correcting the
+premise while leaving its measured figures untouched.
+
+### 10.6 Carried items from §6, revisited
+
+None of these are in the reopen's requirement scope; each is checked for whether anything
+in this reopen's work changed its state.
+
+| Item | §6 disposition | This audit |
+|---|---|---|
+| **NFR-RATE-13** owed | carry forward, same owner | **Unchanged.** No instrumentation for isolating it landed this reopen; still owed |
+| **NFR-RATE-2 latency, +723 %** (F35) | carry forward, remedy gated on Ruling 35's off-path capture landing | **Its blocking precondition is now met** — Ruling 35's off-path capture landed with Task 4B (`003f9d4`), for the production/sampled stream. **The latency clause itself is unchanged and still failing**: the explicit `ctx.options.trace=True` synchronous path (FR-RATE-41's, which is what F35 measured) is untouched by Task 4B — the commit message states this directly ("FR-RATE-41's caller-requested `ctx.options.trace` is unchanged"). Flagged rather than re-verdicted: the remedy (trimming what a trace records per node) is now unblocked and shares its lever with F55 (10.3) — nobody has connected the two, and the lead should decide whether to note the now-open gate in F35's row |
+| **NFR-RATE-11 rate limit** (F48) | carry forward, provisionally W14 | **Unchanged.** `rate_limit_rps` is still accepted, persisted and returned, and consulted by nothing; `RATE_LIMITED` is still raised nowhere under `src/` |
+| **F27(c), F29** (gate-coverage bundle with F33) | open, owner: the §14 review at W11's close | **Unchanged.** F33's partial landing (`3edd75a`, mypy `files` widened) predates the reopen (2026-08-29, before `8fd48b7`); nothing in this reopen's work touches error-code cross-checking (F29) or the `03` shape-vs-contract comparison (F27(c)) |
+
+### 10.7 New findings from this audit
+
+| Finding | Concerns | Decision | Status |
+|---|---|---|---|
+| **`w11-task-4d-nfr-rate-12.md`'s conservative caveat is buried** | Readability of the NFR-RATE-12 research note | fix before close | closed — one sentence added to §0's headline verdict line, cross-referencing §5's existing caveat rather than duplicating it; §5's bullet is unchanged |
+
+No other new register rows are filed by this audit. F53 (`scoring_traces` `UPDATE`
+revocation untested against `gip_app`) and F54 (Service Account key issuance mints only
+`environments[0]`) were both filed earlier today against work this reopen's scope touches
+or is adjacent to (Task 4A and Task 4B respectively) and are unchanged by this audit:
+F53 stays **delivered but untested, carry forward unowned**; F54 stays **not started,
+unowned**, attributed to `main` rather than to any W11 task.
+
+### 10.8 Preconditions
+
+`docs/roadmap.md`'s W11 row states two, neither waivable by the lead: every reopened slice
+complete, and the auditor satisfied. On the first: Slice 3's four tasks (3A `59407f2`, 3B
+`eda70d6`, 3C `3dc8d6b`, 3D `7b4f603`) and Slice 4's four tasks (4A `25c5688`, 4B `003f9d4`,
+4C `87dd4b7`, 4D `dc451d5`) are all merged to `origin/main` as of `b749acb` — verified by
+commit, not by plan status. On the second, see 10.9.
+
+### 10.9 Auditor's proposed verdicts and satisfaction
+
+**Proposed verdicts** (for the lead to adopt, amend or reject, per `CLAUDE.md` §12):
+FR-RATE-36 delivered and tested; FR-RATE-37 delivered and tested; FR-RATE-42 delivered and
+tested; NFR-RATE-12 measured and FAILING (~2.58× over, conservative); NFR-RATE-5 measured
+and split — throughput PASS at 5.09×, linearity NOT MEASURED (F52, unowned); NFR-RATE-1
+discharged architecturally, verdict unchanged — measured and FAILING, carried to W14.
+
+**I am satisfied.** Every reopened requirement has a verdict backed by re-run tests or a
+measurement note read to its own numbers, §§1–9 are unedited, Ruling 42's five prohibitions
+all hold (no artifact in this reopen's work claims NFR-RATE-1 passing, the 15 ms trigger is
+not treated as fired, `bundle_slot_capacity` is untouched, the delta measurement carries its
+host/pass-count/ref-cardinality, F50/F51 are closed against the diff rather than the commit
+message), and every register row this scope touches — F50, F51 (closed), F52, F53, F54, F55
+(open, each with a stated disposition) — has one of §14's three resolutions rather than
+silence. The one paper cut found (10.7) is fixed in this PR. Nothing found here bars
+acceptance.
+
+### Sign-off
+
+Proposed verdicts above are the auditor's; acceptance under the maintainer's conditional
+delegation (`docs/plans/2026-08-30-w11-reopen-direction.md` §4) is the lead's to record here
+with a dated line, per Ruling 39 §5's supersession.

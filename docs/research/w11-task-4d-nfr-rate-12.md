@@ -13,7 +13,15 @@ against NFR-RATE-12's own stated volume (50 M quotes/year, 1 % sampling). The mu
 is the projection; the byte count feeding it is the measurement.
 
 **Verdict: OVER budget — 2.58× the 200 GB/year figure, at the actual ~200-step reference
-structure.** Not tuned to pass; reported as measured. See §5.
+structure.** Not tuned to pass; reported as measured. **This is a lower bound, not a worst
+case**: it excludes FR-RATE-42's 100 % decline/error sampling floor, so real persisted
+volume is higher than this figure — see §5. See §5 for the rest of what this projection
+does and does not show.
+
+***Corrected 2026-08-30*** — this headline previously stated the 2.58× verdict without the
+lower-bound qualification above, which lived only in a §5 caveat-list bullet. A reader
+stopping at the headline or at §4's result table could take 2.58× as an upper bound; it is
+not one. No figure in this note changes — only where the qualification is stated.
 
 ## 1. Method
 
