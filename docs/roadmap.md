@@ -380,6 +380,37 @@ dislocation, and serves a live quote inside the latency budget.
 | **W15** | Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project |
 | **W30** | **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-GOV-39 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-MODEL-1's decision, which moved this work out of W5 rather than deleting it: `02` FR-MODEL-40/41, FR-MODEL-75, §4.6, and `wf-05` Route B. It depends on nothing in W9–W15 and could equally be pulled into 1b if W5 finishes early — but it must not start before the certification machinery it fronts (FR-MODEL-76) has run for a phase, which is the whole point of the decision |
 
+### Proposals pending reconciliation — NT-0014 … NT-0017
+
+**A note decides nothing** (`.claude/notes/README.md`). Four working notes are filed and
+`open` — proposed, not adopted — and each proposes work large enough that adopting it would
+change this page. They are recorded here so a reader cannot mistake "filed" for "planned",
+and so the reconciliation has a fixed moment rather than happening whenever someone
+remembers.
+
+**The rule, three clauses:**
+
+1. **All four are reconciled at the W11 close, in its `CLAUDE.md` §14 plan review** — the
+   same review whose trigger is already fixed at every workstream close. This is the natural
+   moment: §14 asks whether the plan still says the right thing now that some of the work is
+   real, and an unadopted proposal is precisely a claim about what the plan is missing.
+2. **An adopted note converts to a Work row** — here, under the phase that will carry it,
+   with a workstream id and dependencies like any other row. Adoption is not a status change
+   on the note; it is a row on this page. Until that row exists, nothing is scheduled.
+3. **A note that is neither adopted nor rejected keeps a named owner and a next trigger.**
+   Silence is not an outcome, the same rule `CLAUDE.md` §13 applies to an unevidenced
+   requirement. A rejected note is recorded as rejected, with its date and reason, and its
+   number is retired with it.
+
+**Nothing here is committed work.** The table is the reconciliation's agenda, not a plan.
+
+| Note | Proposes | State entering the reconciliation |
+|---|---|---|
+| [`NT-0014`](../.claude/notes/0014-machine-readable-process-core.md) | A machine-readable core for the delivery process — a checkable extract of the rules that are prose today | **Partly adopted, and the only one that is.** Slices A–D merged 2026-08-30 (`33b5ef1`, `0be9c3c`, `97965be`): the process core is filed and drift-checked by `audit-docs` check 26, and NT-0012's and NT-0013's rules landed. **Slices E, F and G are not started**; Ruling 40 re-cut G to its hook alone and left it blocked on E. The reconciliation covers the remainder, not the whole — and the note's own `Status` row still reads `open`, which the reconciliation should correct |
+| [`NT-0015`](../.claude/notes/0015-the-register-is-a-ledger-evidence-is-a-file.md) | Naming the register's decision grammar, a decay rule for unowned rows, a linter for what is named, splitting ledger from evidence, and generating the owed list a close compiles by hand | Filed 2026-08-30, `open`. Bears directly on `docs/audit/register.md`, which every close reads |
+| [`NT-0016`](../.claude/notes/0016-file-taxonomy-reference-coding-and-custody-investigation.md) | A closed file taxonomy across `docs/` and `.claude/`, a reference-coding standard, an ownership map per category, and an audit of whether each category is genuinely created-read-retired | Filed 2026-08-30, `open`. Includes a proposed relocation of the notes themselves, so its adoption would move the other three |
+| [`NT-0017`](../.claude/notes/0017-a-public-repository-needs-a-public-face.md) | A root `README`, a `SECURITY.md` with a private reporting channel, a `CONTRIBUTING.md` and intake templates | Filed 2026-08-30, `open`. **The repository went public on 2026-08-30 with none of these**, so this one has a live exposure behind it rather than a tidiness argument — see [`docs/audit/security-posture.md`](audit/security-posture.md) |
+
 ### Requirement coverage
 
 ≈ **67 `RATE` + ~25 remaining `PLAT`** requirements, plus the `MODEL` requirements W30 carries over (FR-MODEL-6, FR-MODEL-40/41/75 and the `expression` half of §4.6/§4.7). **FR-MODEL-6 added 2026-08-19, accepted by the maintainer 2026-08-22**: `expression` factors are an expression feature, and the verdict on file sends them to “the slice OQ-MODEL-1 gates”, which is this row — but the list named only the objective half, leaving the requirement owned by a slice that did not list it.
