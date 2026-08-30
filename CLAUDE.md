@@ -34,8 +34,8 @@ Three rules survive every phase change:
 
 ## 1. Project Mission
 
-An open-source general insurance pricing platform for the UK/EU market — an alternative to
-WTW Radar/Emblem. Full lifecycle: data preparation → risk modelling (GLM/ML) → rating
+An open-source general insurance pricing platform for the UK/EU market — an open alternative
+to the established commercial pricing suites. Full lifecycle: data preparation → risk modelling (GLM/ML) → rating
 algorithm design → deployment/scoring → monitoring → governance. Primary users: pricing
 actuaries and analysts — technical (Python/notebooks) but expecting a polished UI. Every
 design decision favours reproducibility, auditability, and transparency of the maths.

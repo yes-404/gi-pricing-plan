@@ -1,7 +1,8 @@
 # GI Pricing Plan
 
-An open-source general insurance pricing platform for the UK/EU market — an alternative
-to WTW Radar/Emblem. It covers the full pricing lifecycle: data preparation, risk
+An open-source general insurance pricing platform for the UK/EU market — an open
+alternative to the established commercial pricing suites. It covers the full pricing
+lifecycle: data preparation, risk
 modelling (GLM/ML), rating algorithm design, deployment/scoring, monitoring, and
 governance. It is built for pricing actuaries and analysts — technical users who work in
 Python and notebooks but expect a polished UI — and every design decision favours
