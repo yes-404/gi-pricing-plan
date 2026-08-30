@@ -26,20 +26,26 @@ are unconstrained, verified by pushing and deleting one under it.
 the ruleset will accept the merge, and the two are easy to confuse. The check that settles it
 is a completed merge.
 
-## Keep commit messages and PR bodies plain
+## A corrective change is titled by what it changes, not by the error it corrects
 
-**Maintainer's instruction, 2026-08-30**, once the repository went public: keep them low-key.
-Commit messages and PR bodies are now public artifacts, read by people with none of the
-session's context.
+**Maintainer's instruction, 2026-08-30**, on a fix that removed named commercial products
+from the project description. The first title was *"stop naming a competitor's products, now
+that the repository is public"* — which announces the prior state as a fault in the one line
+every reader sees. Retitled to *"describe the platform by category rather than by named
+products"*: same change, stated as what it does.
 
-State what changed and why. Skip the emphasis — heavy bolding, rhetorical framing, and
-narrative reconstruction of how a defect was found read as noise in a public log. Where the
-reasoning is genuinely load-bearing it belongs in the artifact the commit lands (a ruling
-record, a register row, a note), not in the commit message pointing at it.
+**Titles are permanent and public.** A squash title lands in `main`'s history and cannot be
+rewritten afterwards without a force-push that `main-protection` forbids — the PR title and
+body can be edited later, the commit cannot. So the caution belongs at write time.
 
-Length follows the change. A two-line fix does not need twenty lines of justification, and a
-ruling that inverts a previous one does — the test is whether a reader needs it to understand
-the diff, not whether it was interesting to write.
+This is about **framing, not disclosure**. The body still says plainly what changed and why,
+and a register row or ruling record still records a defect as a defect. What the title should
+not do is lead with the error.
+
+**A secondary reading, adopted on its own merits rather than as instruction:** keep bodies
+plain generally. They are read by people with none of the session's context, so state what
+changed and why, and leave load-bearing reasoning in the artifact the commit lands rather than
+in the message pointing at it.
 
 ## The repository is public: merge only the maintainer's own pull requests
 
