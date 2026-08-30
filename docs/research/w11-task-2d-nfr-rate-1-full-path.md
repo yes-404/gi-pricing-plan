@@ -76,6 +76,20 @@ ref's content hash is to fetch the bundle. So every happy-path request performs 
 a full MinIO object read, and `Bundle.model_validate_json` over the whole payload — booster
 included — and the slot saves `load_bundle` and nothing upstream of it.
 
+> **Corrected 2026-08-30 (F51,
+> `docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md` Ruling 41 §2).**
+> The sentence above — *"the slot is keyed on `content_hash`, and the only way to learn a
+> ref's content hash is to fetch the bundle"* — is **false at this tree and still false at
+> `daa6fbe`/`e882727`**. `compile_rating_version` writes `content_hash` into `row.bundle`
+> (`backend/src/app/platform/rating_versions.py:440-444`), the same dict `_fetch_bundle`
+> already reads for `blob_sha256` (`:126-127`) — the hash is in hand after the version-row
+> read and was simply discarded. This annotation does not touch the measurements above,
+> which Ruling 41 §1 re-read at source and found holding; only this premise sentence, and
+> the "correctness/latency trade, no way around the fetch" conclusion it was built on, are
+> wrong. `backend/src/app/api/score.py`'s `_fetch_bundle` now checks the freshly read hash
+> against the slot before the blob read this section measures — see that function's own
+> docstring for the fix Ruling 41 §2 ordered.
+
 | condition | bundle | mean | stdev | p50 | p99 | max | 1-min load |
 |---|---|---|---|---|---|---|---|
 | with GBM | 2,039,114 B | **36.574 ms** | 10.938 | 33.894 | **66.294** | 107.760 | 4.90 → 4.83 |

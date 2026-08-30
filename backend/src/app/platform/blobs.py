@@ -276,6 +276,80 @@ class BlobStore:
             upload_id=upload_id, key=staging_key, urls=tuple(urls), expires_in_s=expires_in_s
         )
 
+    # -- scratch (Ruling 31 §4, `docs/plans/2026-08-29-w11-3-d6-batch-resumability-
+    # ruling.md`): a `score.batch` chunk part, and the manifest that keys it, share one
+    # object — the key's own existence is the manifest entry. Deliberately **not**
+    # content-addressed and never a `BlobRow`: a chunk part is reproducible from
+    # (bundle content hash, Dataset Version reference, chunk index) rather than identified
+    # by its bytes, so hashing it would buy nothing `blob_key` already buys for a real
+    # artifact, and putting it under `blob/` would make FR-PLAT-20's GC hold it for the
+    # 30-day grace period after every crashed run. `staging/` above is the same idea for a
+    # different reason (bytes with no digest yet); this is bytes that never get one. ------
+
+    async def write_scratch(self, key: str, content: bytes) -> None:
+        """Write (or overwrite) one scratch object at `scratch/{key}`.
+
+        No transaction, no row: unlike `put`, there is no accounting to keep in step with
+        anything else, which is exactly what makes a scratch part safe to write from
+        outside a `unit_of_work`.
+        """
+        await asyncio.to_thread(
+            self._client.put_object,
+            Bucket=self._bucket,
+            Key=f"scratch/{key}",
+            Body=content,
+            ContentType="application/octet-stream",
+        )
+
+    async def read_scratch(self, key: str) -> bytes | None:
+        """The scratch object at `scratch/{key}`, or `None` if it does not exist.
+
+        `None` rather than a raised `PlatformError` (contrast `open`/`read`, which serve a
+        client's request and must refuse loudly): a caller checking a chunk's manifest
+        entry needs to distinguish "not done yet" from every other failure, and a missing
+        key is the expected, common case on every chunk this run has not reached before.
+        """
+        try:
+            response = await asyncio.to_thread(
+                self._client.get_object, Bucket=self._bucket, Key=f"scratch/{key}"
+            )
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code in ("NoSuchKey", "404"):
+                return None
+            raise
+        body: bytes = await asyncio.to_thread(response["Body"].read)
+        return body
+
+    async def delete_scratch(self, key: str) -> None:
+        """Remove one scratch object. A missing key is not an error — deleting an already-
+        deleted part is what a retried cleanup sweep does."""
+        await asyncio.to_thread(
+            self._client.delete_object, Bucket=self._bucket, Key=f"scratch/{key}"
+        )
+
+    async def list_scratch(self, prefix: str) -> list[str]:
+        """Every scratch key under `scratch/{prefix}`, without the `scratch/` prefix
+        itself — so a caller can round-trip a returned key straight back into
+        `read_scratch`/`delete_scratch`. Paginated: a run with many chunks must not be
+        capped at S3's 1,000-key page.
+        """
+        keys: list[str] = []
+        continuation: str | None = None
+        full_prefix = f"scratch/{prefix}"
+        while True:
+            kwargs: dict[str, Any] = {"Bucket": self._bucket, "Prefix": full_prefix}
+            if continuation is not None:
+                kwargs["ContinuationToken"] = continuation
+            page = await asyncio.to_thread(self._client.list_objects_v2, **kwargs)
+            keys.extend(
+                obj["Key"].removeprefix("scratch/") for obj in page.get("Contents", [])
+            )
+            if not page.get("IsTruncated"):
+                break
+            continuation = page.get("NextContinuationToken")
+        return keys
+
     async def collect_garbage(
         self,
         session: AsyncSession,

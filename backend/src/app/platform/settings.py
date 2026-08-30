@@ -169,6 +169,22 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         constraints={"min": 0.0},
     ),
     SettingDefinition(
+        key="rating.batch_abort_failure_rate",
+        type=SettingType.FLOAT,
+        default=None,
+        description="Above what per-quote failure rate a `score.batch` run aborts rather "
+        "than continuing (`03` FR-RATE-38, Ruling 24: "
+        "`docs/plans/2026-08-29-w11-slices-3-4-rulings.md`). **Unset by default** — "
+        "FR-RATE-38's own construction, 'does not abort … unless the failure rate exceeds "
+        "a declared threshold', makes an undeclared threshold mean no rate-based abort, "
+        "with the counts-and-samples half still accruing. A batch request may carry its "
+        "own value as a Job argument, never a fourth resolution tier here, and it may "
+        "only *lower* the effective threshold — never raise it (`01` FR-DATA-54's "
+        "`severity_override` precedent). When a run aborts it records both the threshold "
+        "in force and the observed failure rate.",
+        constraints={"min": 0.0, "max": 1.0},
+    ),
+    SettingDefinition(
         key="observability.trace_sample_rate",
         type=SettingType.FLOAT,
         default=1.0,

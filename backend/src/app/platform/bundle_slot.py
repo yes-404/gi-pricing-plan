@@ -25,10 +25,32 @@ call, and NFR-RATE-1 allows 50 ms p99 for a ~200-step structure with one `exact`
   `environment → current hash` pointer Ruling 10 reserves for W14 — nothing about an
   environment appears here, and environments select nothing in W11.
 
-Recording the ref is safe against staleness for a structural reason rather than a timing
-one: artifacts are immutable (FR-OVR-1), so a given `rating_version` ref names one
-immutable version and compiles to one `Bundle` content hash. The mapping cannot change
-under the memo; only whether the bundle is still held can.
+**Corrected 2026-08-30 (F50, Ruling 41 §3,
+`docs/plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md`) — the memo's
+safety does not rest on the mapping being immutable, because it is not.** This paragraph
+used to argue *"artifacts are immutable (FR-OVR-1), so a given `rating_version` ref names
+one immutable version and compiles to one `Bundle` content hash. The mapping cannot change
+under the memo."* **That is false**: `row.bundle` is mutable, and
+`compile_rating_version` (`backend/src/app/platform/rating_versions.py:440-444`) rewrites
+`content_hash` on every recompile of an already-compiled version — nothing refuses a
+recompile, and `_rating_compile` (`backend/src/app/worker/rating_handlers.py:41-48`)
+captures `prior_hash` **before** compiling precisely because the call is about to
+overwrite it, then audits `before`/`after`. The system already treats *"a changed content
+hash under an unchanged pinned ref"* as a normal, audited event — the sentence above denied
+that this ever happens.
+
+**The memo is safe today for a narrower, real reason: `hash_for(ref)` is read from exactly
+one call site, inside the NFR-RATE-9 degradation branch** (`backend/src/app/api/score.py`,
+`_compiled_for`'s `except Exception:` clause) — never on the happy path. Serving a
+last-known-good bundle there is the specified behaviour even if the ref has since been
+recompiled to a different hash elsewhere, because the alternative is refusing the request
+outright while metadata storage is down. **This safety does not generalise**: a caller
+that reads `hash_for(ref)` on the happy path, without a fresh metadata read confirming the
+hash still matches, would serve a stale bundle under a window bounded by nothing — exactly
+the shortcut Ruling 41 refuses. The hot-path shortcut Ruling 41 §2 does authorise
+(`_compiled_for`) re-reads the version row on every call and checks the *freshly read*
+hash against `get(content_hash)`, never `hash_for(ref)` — see that function's own
+docstring.
 
 **What this deliberately does not have: refresh, poll, pub/sub, or an environment
 pointer.** All four are W14's (Ruling 16 clause 4, and Ruling 10 before it). A slot that
