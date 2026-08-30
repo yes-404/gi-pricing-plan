@@ -1182,7 +1182,12 @@ async def create_rating_version(
 @router.post(
     "/rating-versions/{rating_version_id}/submit",
     summary="Submit a rating version for approval",
-    responses=problems(401, 403, 404, 409),
+    # 422 is the eighth instance of the class `api/responses.py`'s `problems` docstring
+    # names. This route returns one for two independent reasons — a `rating_version_id`
+    # that is not a UUID, and `approvals.submit`'s blank-change-summary guard (FR-GOV-10),
+    # which `test_a_blank_change_summary_cannot_submit_a_rating_version` exercises — and
+    # published neither, so a client saw FastAPI's `HTTPValidationError` instead of ours.
+    responses=problems(401, 403, 404, 409, 422),
 )
 async def submit_rating_version(
     rating_version_id: UUID,
