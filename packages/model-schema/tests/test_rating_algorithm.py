@@ -184,8 +184,17 @@ def test_a_model_call_declares_exactly_one_reference() -> None:
 
 
 @pytest.mark.req("FR-RATE-1")
+@pytest.mark.req("FR-RATE-25")
 def test_a_cycle_is_refused() -> None:
-    """T2: FR-RATE-1 — a cyclic graph fails."""
+    """T2: FR-RATE-1 — a cyclic graph fails.
+
+    Also FR-RATE-25's own clause (1) ("the DAG is acyclic") — F-W9-3's cheap half
+    (`docs/audit/register.md`). `compile_bundle` calls `RatingAlgorithm.model_validate`
+    on the resolved payload before anything else, so this shape-level check is already
+    the mechanism FR-RATE-25 relies on for the acyclic half of clause (1), and this test
+    is pointed at the umbrella requirement rather than a new one being written
+    (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`).
+    """
     data = valid_algorithm()
     # s_office consumes cycle_val (produced by the constraint) while the constraint
     # consumes office_premium_minor (produced by s_office): a genuine two-step cycle
@@ -226,8 +235,14 @@ def test_a_missing_output_step_is_refused() -> None:
 
 
 @pytest.mark.req("FR-RATE-1")
+@pytest.mark.req("FR-RATE-25")
 def test_an_orphaned_step_is_refused() -> None:
-    """T2: FR-RATE-1 — a step neither reachable from an input nor feeding an output."""
+    """T2: FR-RATE-1 — a step neither reachable from an input nor feeding an output.
+
+    Also FR-RATE-25's own clause (1) ("the DAG is ... fully connected") — F-W9-3's cheap
+    half (`docs/audit/register.md`), pointing the already-run mechanism at the umbrella
+    requirement (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`).
+    """
     data = valid_algorithm()
     data["steps"].append({
         "step_id": "s_orphan", "type": "expression", "label": "Orphan",

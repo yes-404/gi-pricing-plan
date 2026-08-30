@@ -151,6 +151,7 @@ async def test_an_unpinned_version_is_refused() -> None:
 
 
 @pytest.mark.req("FR-OVR-14")
+@pytest.mark.req("FR-RATE-25")
 async def test_an_unapproved_pin_is_refused() -> None:
     """FR-OVR-14: a pin whose artifact is not approved fails, naming the pin.
 
@@ -158,6 +159,11 @@ async def test_an_unapproved_pin_is_refused() -> None:
     (`docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md`) exempts
     `rate_table` from this floor (`_MATURITY_CHECK_EXEMPT`), so it can no longer be the
     example that proves the gate fires.
+
+    Also FR-RATE-25's own clause (2) ("references resolvable and at a sufficient
+    maturity") — F-W9-3's cheap half (`docs/audit/register.md`), pointing the
+    already-run mechanism at the umbrella requirement rather than writing a new test for
+    it (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`).
     """
     resolver = _resolver()
     resolver._statuses["model:motor-ad-frequency@7"] = "draft"
@@ -181,6 +187,47 @@ async def test_a_rate_table_pin_compiles_regardless_of_status() -> None:
     resolver._statuses["rate_table:motor-expense@3"] = "no_maturity_concept"
     bundle = await compile_bundle(_version(), resolver)
     assert "rate_table:motor-expense@3" in bundle.resolved_payloads
+
+
+@pytest.mark.req("FR-RATE-25")
+async def test_a_rating_algorithm_pin_compiles_regardless_of_status() -> None:
+    """Ruling 28 (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`): `rating_algorithm`
+    is exempt from the FR-OVR-14 floor for the same shape of reason Ruling 22 exempted
+    `rate_table` — `RatingAlgorithmRow` has no status column to read a real maturity from
+    (`test_rating_algorithm_row_has_no_status_column`,
+    `backend/tests/test_rating_version_compile.py`), so the real resolver reports the
+    `"no_maturity_concept"` sentinel rather than inventing `"approved"`. Proves the
+    exemption is real rather than incidental, the same way
+    `test_a_rate_table_pin_compiles_regardless_of_status` does for `rate_table`: the
+    resolver reports a status no member of `_APPROVED_OR_BETTER` would ever admit, and the
+    pin still compiles.
+    """
+    resolver = _resolver()
+    resolver._statuses["rating_algorithm:motor-gb@14"] = "no_maturity_concept"
+    bundle = await compile_bundle(_version(), resolver)
+    assert bundle.algorithm_ref == "rating_algorithm:motor-gb@14"
+
+
+@pytest.mark.req("FR-RATE-25")
+async def test_the_algorithm_maturity_check_would_be_caught_if_removed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Proves Ruling 28's algorithm-maturity check is live code, not a declared-and-inert
+    control (`06` FR-GOV-39's own language for exactly this defect — a member of an
+    exemption set that nothing reads).
+
+    Removing `rating_algorithm` from `_MATURITY_CHECK_EXEMPT` must turn an unapproved
+    algorithm status into the same `PIN_NOT_APPROVED` refusal the loop below already
+    raises for every other pin kind — proving the check, not merely a test that has never
+    been seen to fail (`CLAUDE.md` §13).
+    """
+    import pricing_core.rating.compile as compile_module
+
+    monkeypatch.setattr(compile_module, "_MATURITY_CHECK_EXEMPT", frozenset({"rate_table"}))
+    resolver = _resolver()
+    resolver._statuses["rating_algorithm:motor-gb@14"] = "draft"
+    with pytest.raises(ValueError, match="PIN_NOT_APPROVED"):
+        await compile_bundle(_version(), resolver)
 
 
 @pytest.mark.req("FR-RATE-60")

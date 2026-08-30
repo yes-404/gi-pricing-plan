@@ -77,8 +77,14 @@ def test_a_valid_algorithm_has_no_save_time_issues() -> None:
 
 
 @pytest.mark.req("FR-RATE-13")
+@pytest.mark.req("FR-RATE-25")
 def test_a_result_type_mismatch_is_refused() -> None:
-    """FR-RATE-13: an output declared money_minor fed by a string value fails."""
+    """FR-RATE-13: an output declared money_minor fed by a string value fails.
+
+    Also FR-RATE-25's own clause (3) ("all types compatible") — F-W9-3's cheap half
+    (`docs/audit/register.md`), pointing the already-run mechanism at the umbrella
+    requirement (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`).
+    """
     data = valid_algorithm()
     data["input_contract"].append(
         {"name": "customer_name", "type": "string", "nullable": False}

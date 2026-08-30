@@ -21,14 +21,22 @@ from backend.tests.test_rate_tables_service import _seed as _seed_rate_table
 from backend.tests.test_rate_tables_service import _table_slug as _rate_table_slug
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
-from app.db.models import BlobRow, JobRow, ModelRow, RateTableVersionRow, RatingVersionRow
+from app.db.models import (
+    BlobRow,
+    JobRow,
+    ModelRow,
+    RateTableVersionRow,
+    RatingAlgorithmRow,
+    RatingVersionRow,
+)
 from app.db.session import Database
+from app.platform import rating_versions
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.rating_versions import compile_rating_version
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
 from model_schema import JobStatus, ModelStatus, ObjectiveStatus
-from pricing_core.rating.compile import Bundle
+from pricing_core.rating.compile import _APPROVED_OR_BETTER, Bundle
 
 
 @pytest.fixture(autouse=True)
@@ -243,6 +251,189 @@ def test_rate_table_version_row_has_no_status_column() -> None:
         "exemption (docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md) and "
         "OQ-RATE-7 must be revisited: the resolver should report this real status "
         "instead of staying exempt from the FR-OVR-14 floor."
+    )
+
+
+@pytest.mark.req("FR-OVR-14")
+def test_rating_algorithm_row_has_no_status_column() -> None:
+    """Self-invalidating guard for Ruling 28's `rating_algorithm` maturity exemption.
+
+    `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md`: the resolver above cannot
+    report `rating_algorithm`'s real maturity because `RatingAlgorithmRow` has none to
+    read, so `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` exempts the type from
+    the FR-OVR-14 floor rather than inventing `"approved"`. That exemption is only sound
+    while the premise holds. This test is the tripwire: the day a migration adds a
+    `status` column to `rating_algorithms`, it fails and names this record — the
+    exemption must be revisited rather than carried forward silently.
+    """
+    assert "status" not in RatingAlgorithmRow.__table__.columns, (
+        "RatingAlgorithmRow gained a status column — Ruling 28's rating_algorithm "
+        "maturity exemption (docs/plans/2026-08-29-w11-algorithm-pin-maturity.md) must "
+        "be revisited: the resolver should report this real status instead of staying "
+        "exempt from the FR-OVR-14 floor."
+    )
+
+
+def _statuses_the_backend_resolver_reported(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+    rating_version_id: UUID,
+) -> dict[str, str]:
+    """Compile a Rating Version and return `{ref: status}` for every ref the **backend**
+    resolver reported to `compile_bundle`.
+
+    The two tripwires below need the value `rating_versions._Resolver` *produces*, not one
+    a test supplies. The suite's only other uses of the sentinel are the two
+    `_statuses[...] = "no_maturity_concept"` assignments in pricing-core's **fake** resolver
+    (`packages/pricing-core/tests/test_rating_compile_bundle.py`), which *set* the value and
+    so cannot notice the backend handing back something else. This wraps the real resolver
+    on its way into `compile_bundle` and records what it returned.
+    """
+    captured: dict[str, str] = {}
+    real_compile_bundle = rating_versions.compile_bundle
+
+    async def _recording_compile_bundle(version, resolver):
+        class _Recorder:
+            async def resolve(self, ref):
+                resolved = await resolver.resolve(ref)
+                captured[str(ref)] = resolved.status
+                return resolved
+
+        return await real_compile_bundle(version, _Recorder())
+
+    monkeypatch.setattr(rating_versions, "compile_bundle", _recording_compile_bundle)
+
+    async def _run() -> None:
+        async with database.unit_of_work() as session:
+            await compile_rating_version(
+                session,
+                workspace_id=workspace_id,
+                rating_version_id=rating_version_id,
+                blob_store=blob_store,
+            )
+
+    asyncio.get_event_loop().run_until_complete(_run())
+    return captured
+
+
+@pytest.mark.req("FR-OVR-14")
+def test_the_resolver_reports_the_algorithm_sentinel_not_an_invented_approval(
+    api_client, workspace_id, principal, grant, database, blob_store, monkeypatch
+) -> None:
+    """Ruling 28 part 1's tripwire: the `rating_algorithm` branch must keep failing closed.
+
+    `docs/plans/2026-08-29-w11-algorithm-pin-maturity.md` replaced an invented
+    `status="approved"` with the `"no_maturity_concept"` sentinel because the invented
+    value put a constant where `compile_bundle`'s gate reads a discriminator: it is
+    `_MATURITY_CHECK_EXEMPT` that admits this pin past the FR-OVR-14 floor, and the
+    sentinel is deliberately not a member of `_APPROVED_OR_BETTER`, so the pin still fails
+    **closed** on the day the exemption is lifted. Reverting
+    `rating_versions.py`'s `rating_algorithm` branch to `"approved"` left the whole backend
+    suite green before this test existed (audit of PR #416, finding ③) — a regression that
+    lands green, sits dormant, and then silently admits every algorithm as approved the
+    moment someone removes the exemption expecting enforcement to start.
+
+    Both halves are asserted: the sentinel is what the resolver produces, *and* it is
+    outside `_APPROVED_OR_BETTER`. Asserting only the first would pass if
+    `"no_maturity_concept"` were later added to the approved set.
+    """
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
+    assert created.status_code == 201, created.text
+
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database,
+            workspace_id,
+            principal.id,
+            algorithm_ref="rating_algorithm:minimal@1",
+            pins=_empty_pins(),
+        )
+    )
+
+    statuses = _statuses_the_backend_resolver_reported(
+        database, blob_store, workspace_id, monkeypatch, row.id
+    )
+
+    assert statuses.get("rating_algorithm:minimal@1") == "no_maturity_concept", (
+        "the backend resolver no longer reports the `no_maturity_concept` sentinel for a "
+        "rating_algorithm pin — it reported "
+        f"{statuses.get('rating_algorithm:minimal@1')!r}. Ruling 28 part 1 "
+        "(docs/plans/2026-08-29-w11-algorithm-pin-maturity.md) forbids inventing a "
+        "maturity `RatingAlgorithmRow` has no column to back. If this is deliberate, the "
+        "row now has a real status to read and the `_MATURITY_CHECK_EXEMPT` membership "
+        "must go with it."
+    )
+    assert "no_maturity_concept" not in _APPROVED_OR_BETTER, (
+        "the sentinel joined `_APPROVED_OR_BETTER`, so an algorithm pin would now pass "
+        "the FR-OVR-14 floor on the sentinel itself rather than on the exemption — the "
+        "fail-closed property Ruling 28 part 1 was written for is gone."
+    )
+
+
+@pytest.mark.req("FR-OVR-14")
+def test_the_resolver_reports_the_rate_table_sentinel_not_an_invented_approval(
+    api_client, workspace_id, principal, grant, database, blob_store, monkeypatch
+) -> None:
+    """Ruling 22's list-mate of the tripwire above — the same hole, same shape.
+
+    `docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md` states the safety
+    property in terms: *"the sentinel below is deliberately not a member of
+    `_APPROVED_OR_BETTER`, so a pin still fails closed if the exemption is ever removed
+    without this branch being updated to match."* That property had no test either
+    (audit of PR #416, finding ③), and Ruling 22's exemption is the *provisional* one —
+    OQ-RATE-7 may remove it — so it is the likelier of the two to be lifted.
+    """
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
+    assert created.status_code == 201, created.text
+
+    family = f"mf-{uuid4().hex[:8]}"
+    slug = _rate_table_slug()
+    seeded = asyncio.get_event_loop().run_until_complete(
+        _seed_rate_table(database, workspace_id, principal, family, slug, blob_store)
+    )
+    ref_key = f"rate_table:{seeded.slug}@{seeded.version}"
+
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database,
+            workspace_id,
+            principal.id,
+            algorithm_ref="rating_algorithm:minimal@1",
+            pins={
+                "rate_tables": [ref_key],
+                "models": [],
+                "reference_tables": [],
+                "custom_objectives": [],
+            },
+        )
+    )
+
+    statuses = _statuses_the_backend_resolver_reported(
+        database, blob_store, workspace_id, monkeypatch, row.id
+    )
+
+    assert statuses.get(ref_key) == "no_maturity_concept", (
+        "the backend resolver no longer reports the `no_maturity_concept` sentinel for a "
+        f"rate_table pin — it reported {statuses.get(ref_key)!r}. Ruling 22 "
+        "(docs/plans/2026-08-29-w11-1-2-rate-table-maturity-ruling.md) refused inventing "
+        "a maturity `RateTableVersionRow` has no column to back; see also OQ-RATE-7."
+    )
+    assert "no_maturity_concept" not in _APPROVED_OR_BETTER, (
+        "the sentinel joined `_APPROVED_OR_BETTER`, so a rate_table pin would now pass "
+        "the FR-OVR-14 floor on the sentinel itself rather than on the exemption — the "
+        "fail-closed property Ruling 22 states in terms is gone."
     )
 
 

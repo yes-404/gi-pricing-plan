@@ -268,7 +268,12 @@ async def compile_rating_version(
                 )
                 if algo is None:
                     raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
-                return ResolvedArtifact(status="approved", payload=algo.content)
+                # Ruling 28 (docs/plans/2026-08-29-w11-algorithm-pin-maturity.md):
+                # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an
+                # invented maturity rather than a read one. `"no_maturity_concept"` is
+                # the sentinel `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT`
+                # reads for a pin kind with nothing to report.
+                return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
             if ref.type == "model":
                 model = await session.scalar(
                     select(ModelRow).where(
