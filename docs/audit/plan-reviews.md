@@ -1371,7 +1371,7 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:156-225`) to be decided **at this review**,
   and still undecided. See the decision point after question 5.
 
-**3. Skills and research — one shape, seven instances of it now.**
+**3. Skills and research — one shape, seven instances, reframed by an eighth.**
 
 - **`delivery-process.md` §8's gate-in-flight control** ("announce an expensive verification…and
   check for one already in flight before starting," `delivery-process.md:170-172`) has no live
@@ -1426,21 +1426,50 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   contending for CPU) does not by itself prevent this, because the hazard the rule argues from and
   the hazard that actually bites are different properties — compliance and safety came apart, not
   because anyone was careless but because the rule's own justification pointed at the wrong thing.
-  **This sharpens Recommendation 3.1 below**, rather than adding a new one: a lock keyed on "an
-  expensive verification is running" protects against the CPU hazard and not the database one — a
-  lighter, non-gate pytest invocation that still touches this fixture is exactly as dangerous as a
-  full gate. The wrapper needs to key on shared-database access, not on verification cost.
+  **This was not a fresh discovery — it was already documented**, `.claude/skills/python-test/
+  SKILL.md:284-319`, "That teardown makes two concurrent runs mutually destructive," measured
+  2026-08-24 across three overlapping runs, six days before this workstream re-hit it. The skill
+  gives two remedies, and the first shares this section's own instance 2's defect: *"Serialise…
+  `pgrep -af 'pytest'` before starting"* is the identical self-matching check, so retrieving this
+  documented remedy would not by itself have helped. The second — **"give each session its own
+  database"** (`test_database_url()` already reads `GIP_TEST_DATABASE_URL` before falling back to
+  a shared default, `conftest_db.py:35,39`; `createdb gipricing_$USER_$SLOT` and point at that) —
+  sidesteps the coordination problem entirely rather than requiring a working check.
+  **Recommendation 3.1 is therefore not to build anything**: adopt the already-documented,
+  already-scoped per-session-database remedy the skill names, rather than design a new lock file
+  against a hazard whose fix already exists and does not need one.
 - **These are one shape, not six unrelated notes**: a rule stated in prose with nothing making
   compliance visible at the moment of the action it governs, or (this section's seventh instance)
   visible but aimed at a proxy for the real hazard rather than the hazard itself.
-  **Recommendation (3.1), revised to name the resource rather than the proxy:** a lock file or
-  equivalent wrapper keyed on **any session that will touch the shared test database**, not on
-  "a full-gate invocation," written to a path every role can read, so the state is true by
-  construction rather than announced and trusted. **Recommendation (3.2), same shape, no design
-  proposed here:** either
+  **Recommendation (3.2), no design proposed here:** either
   the §14 trigger, the 50-word rule and §5a's condition-artifact check get an equivalent mechanical
   check, or the maintainer accepts that all three remain enforced only by memory and says so rather
   than leaving the gap implicit.
+- **An eighth item that is not an eighth instance — it reframes the seven above, and the lead
+  called it the strongest input of the night.** Raised by the decision-maker, of its own work:
+  *"Every ruling that improved on its own first draft did so by finding something already in the
+  repository… The failure mode wasn't insufficient thinking; it was answering before reading the
+  artifact that already had the answer."* Three of its eight tabled instances are independently
+  verifiable from this document alone: the `F42`/`F36` duplicate this draft's own opening already
+  corrects; the elided-prefix trap this draft's question 1 re-derived, which (per the
+  decision-maker's finding) the lead had already written down on 2026-08-25 before repeating it on
+  `roadmap.md:374` five days later; and this section's own seventh instance, whose remedy —
+  per-session databases — was sitting in `python-test/SKILL.md` the whole time. **The claim that
+  matters is sharper than §A's**: §A says rules exist and nothing enforces them, which argues for
+  building enforcement. This says the *answer* already existed, indexed and searchable, for every
+  instance checked — so a new control would not have helped where a `git grep` before writing
+  would have. **The proposal explicitly warns against the obvious response**: "read more before
+  writing" is §A-shaped and fails the same way, because a general intention is exactly what these
+  instances show does not survive the moment of writing. What worked instead, every time (per the
+  same finding), was **one grep command attached to a specific act** — before allocating a finding
+  id, before writing a literal into a spec, before filing a defect as new. **Recommendation
+  (3.5):** wherever this review has proposed a mechanical check above (3.1's per-session database
+  aside, since that removes the need to check anything), consider whether a one-command grep tied
+  to the specific writing act would catch more of this class more cheaply than a general
+  enforcement mechanism — this review flags the question rather than answering it for each case.
+  **One caution carried forward rather than dropped**: every instance in this class was caught, by
+  a second person reading the artifact — so the table is a *lower bound*, and says nothing about
+  how many were not caught.
 - **A measurement-methodology gap, distinct from the process-control shape above.** `F38`
   (`register.md:44`, `NFR-RATE-1`'s without-GBM half) shows a single quiet run can pass while five
   runs under varied load reveal the true verdict is *not established* (two of five breach a 15 ms
@@ -1643,10 +1672,11 @@ which workstream if (a), is the lead's to rule, not this document's.
 | # | Proposal | Kind |
 |---|---|---|
 | 2.1 | `FR-RATE-63` gets a Ruling-30-style attribution ruling before the close | ruling needed |
-| 3.1 | A lock-file/wrapper mechanism for the gate-in-flight control, keyed on shared-database access rather than "a full gate is running" | process/tooling |
+| 3.1 | Adopt `python-test`'s already-documented per-session-database remedy (not a new lock file) for the shared-database hazard | adopt existing doc, no new mechanism |
 | 3.2 | Either the §14 trigger, the 50-word rule and `close-workstream` §5a's condition-artifact check get a mechanical check, or the maintainer accepts and states that all three are enforced only by memory | process — maintainer to weigh |
 | 3.3 | NFR acceptance criteria measured near their bound require repetition under varied load, not a one-run distribution alone | convention (skill or leaf-plan template) |
 | 3.4 | A route-adding plan states the regenerated OpenAPI contract as a Files-block deliverable and names the second CI workflow it arms | convention (`writing-plans`) |
+| 3.5 | For each mechanical-check proposal above, ask whether a one-command grep tied to a specific act of writing would catch more, more cheaply, than a general enforcement mechanism | methodology — question posed, not answered |
 | 4.1 | A numbered NFR budget states its statistic, population, and (where storage is involved) encoding, in the same sentence as the number | spec-writing convention |
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
@@ -1676,8 +1706,11 @@ before filing, per this document's own rule that a claim names the tree it was c
   `RATING_ERROR_CODES`.
 - `.claude/roles/watcher.md`, `.claude/roles/planner.md` — read directly.
 - `.claude/skills/close-workstream/SKILL.md:340-368` (§5a) — read directly at `19eaabc`.
-- `backend/tests/conftest_db.py:12,251-252` — read directly to confirm the fixture's scope and
-  autouse status.
+- `backend/tests/conftest_db.py:12,35,39,251-252` — read directly to confirm the fixture's scope,
+  autouse status, and the `GIP_TEST_DATABASE_URL` override.
+- `.claude/skills/python-test/SKILL.md:284-319` — read directly to confirm the mutual-truncation
+  finding, its 2026-08-24 measurement, and both remedies (serialise via `pgrep`; per-session
+  database).
 - `.github/workflows/frontend.yml:10,18-29` — read directly to confirm the `docs/contracts/
   openapi/**` path filter.
 - `docs/plans/2026-08-29-w11-2-realtime-scoring-endpoint.md` — read directly (`grep -c
