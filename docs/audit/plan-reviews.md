@@ -1410,8 +1410,12 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   (`ps -eo pid,args | grep -E '[b]in/pytest'`) is known; **no mechanical replacement for the
   announce half has been built.**
 - **The 50-word message rule** (`delivery-process.md:310-314`, landed 2026-08-29) was breached
-  within hours of landing, by two different authors, each self-caught — nothing checked it at the
-  point of sending.
+  **four times, after a remedy for it had been formally adopted** — not merely observed as broken
+  once. That is a sharper claim than "the rule was breached": adopting a remedy is not the same as
+  the remedy holding, which bears directly on how much confidence this section's own
+  "adopt a mechanical check" recommendations should carry if any of them stop short of mechanical.
+  Nothing checked it at the point of sending, before or after adoption; each breach was caught by a
+  different teammate reading the message, never by the author and never by a check.
 - **The §14 trigger itself** has fired on time for none of the three workstream closes it has been
   due at: W9 and W10 were both reviewed retroactively, together, after the fact (reviews 7 and 8,
   both filed 2026-08-29 for closes on 2026-08-27 and 2026-08-28); this review, for W11, exists only
@@ -1429,7 +1433,8 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
 - **A sixth instance, self-reported, and the strongest of the six because it controls for
   knowledge and motivation, which the other five do not.** In one night, and immediately after
   diagnosing this exact class, the lead broke three rules it had itself just written down: the
-  50-word message rule (above); the elided-prefix continuation trap
+  50-word message rule (above — by then already a case of a formally adopted remedy breached
+  anyway); the elided-prefix continuation trap
   (`w11-scope-derivation.md`'s own "Method notes" — "before reporting any id as absent, search the
   range and slash forms," which is precisely what a first pass over `FR-RATE-22/24/25/56` skipped);
   and the rule that a bare count is not load-bearing (Candidate B, question 5 — restating "sixteen"
@@ -1565,6 +1570,34 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   `writing-plans` is this charter's own mandatory skill and the natural home for the convention,
   but this review proposes rather than lands it, consistent with how it has treated every other
   skill-amendment finding above.
+- **A frozen leaf plan's line-number citations go stale under any insertion above them, and this
+  is a plan-format defect rather than a personal slip.** Verified directly: `submit_for_review`
+  (`backend/src/app/platform/rating_versions.py:153` at `c1a98b1`) calls `approvals.submit(` at
+  `:178` — a real, correct locator at that tree, and exactly the coordinate a later merge inserting
+  lines above it (Task 2B's, 61 lines) would silently invalidate for anyone who read it beforehand.
+  Self-reported: the lead checked this exact locator, merged the change that moved it, then
+  dispatched the pre-merge number — correct when written, wrong when read, the same shape as this
+  document's own tree-mislabelling class (3.6) but for a plan's line numbers rather than a measured
+  figure. A sweep across frozen leaf plans found **4 wrong across 88** such citations. **The
+  failure is silent, not loud**: a stale line number does not point out of the file's bounds, it
+  lands inside some other, plausible-looking function, so a reader acts on the wrong target with
+  no signal anything is wrong. **Recommendation (3.10):** a frozen leaf plan cites the **symbol**
+  as the primary locator and the line number only as a hint — `submit_for_review`, not
+  `rating_versions.py:178` — since a function or method name survives an insertion that a bare
+  line number does not. Squarely a `writing-plans` convention, proposed rather than landed, per
+  this review's standing practice above.
+
+  **A related class, three instances tonight, only this one developed elsewhere in the review**:
+  the locator above; a re-plan the lead performed around a quota constraint without first testing
+  whether the constraint was removable (a rerun request — which a quota-exhausted repository
+  refuses outright — resolved it in ten minutes, run last rather than first, after inverting §8
+  for two agents and escalating a 40-minute infrastructure question to the maintainer); and an
+  executor's own storage-bucket reasoning error, self-reported as the same shape. **The class, not
+  any one instance, is what is worth naming**: an argument or inference stood in for a cheap,
+  direct test that was available the whole time. This review does not attempt one mechanical fix
+  for a class this varied — a locator, an infrastructure assumption and a storage error share no
+  single instrument — and names the shape once so a future instance is recognised faster than
+  these three were.
 - **No change** on review 8's ZEN-evaluate-side research recommendation (its 3.1) — discharged,
   with its own named follow-up (the `model_call` node re-test) not yet due.
 - **`CLAUDE.md` §13's four verdicts have no slot for what `NFR-RATE-2` actually produced: adverse
@@ -1633,6 +1666,30 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   words, to design selection as well as check verification — again the maintainer's call, since it
   reaches the same section.
 
+**An open question, distinct from every recommendation above — no recommendation number, because
+this review is not proposing a remedy.** `delivery-process.md` §6 step 2 requires the test
+written first, red before green, before step 3's implementation (`delivery-process.md:107-109`,
+verified directly). Task 1.2 (`docs/plans/2026-08-29-w11-1-evaluator-core.md:692-740`) built the
+`_Resolver`'s new branches, `Bundle` persistence of `graph`/`resolved_payloads`, and a wholly new
+`rating_handlers.py` Job-handler module (mirroring `rate_table_handlers.py`'s shape) — the types
+and the module under test did not exist yet, so a test written first would not have imported. The
+compensation was writing the tests immediately after, in the same PR, against the implementation
+as built.
+
+Two readings are both defensible and this review takes neither side:
+- **§6 gains an explicit carve-out** for a slice task that introduces a wholly new type or module:
+  red-green governs behaviour added to something that already exists, and a task that scaffolds
+  the thing itself writes its test immediately after, same PR — a documented exception, not a
+  silent deviation each time it recurs.
+- **§6's general rule was already wrong and this is what it should have said from the start**:
+  not "test before implementation" but "test in the same PR, never a later one" — satisfied by
+  Task 1.2 as executed, and it would cover the ordinary case too without naming an exception.
+
+**This is a maintainer decision, not a planner's**: choosing between them is re-planning a
+governance document this charter does not extend to, and recording it as resolved either way here
+would erase the record of which reading was open when the question was raised. It is written down
+as the open question it is, for the maintainer to settle.
+
 **4. Document drift.**
 
 - **Three `03` §9 requirements leave their deciding variable unstated, found together because W11
@@ -1681,6 +1738,40 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   review does not draft the wording — role-file edits are outside this charter's grant
   (`planner.md`'s Tools line names `docs/plans/` and `docs/audit/plan-reviews.md`, not
   `.claude/roles/`).
+- **A sharper, distinct failure sits behind the authority-boundary material above, raised by the
+  decision-maker against its own error, and it pairs with 4.3 rather than restating it.** 4.3 is
+  about whether a role decides something outside its lane; this is about whether a **correctly
+  named** rule was actually checked against the **specific act**, which can fail entirely inside a
+  role's own lane. In the decision-maker's own words: *"Identifying a rule's interest is necessary
+  but not sufficient; you still have to check whether the act is inside it."* Its own instance is
+  self-refuting: Ruling 33's entire point was that a proposed test measured the wrong interest,
+  yet the same author, having correctly named resource contention as §8's interest, then applied
+  it to a merge — an act that starts no local process. Three more instances the same night, one
+  self-reported by the lead: a parameters-carrier field checked against its stated purpose but not
+  against whether *this* field is a returned API surface; a `test_worker.py` "directly" qualifier
+  read without the alternative its own sentence names; and the lead's own "holding the merge until
+  the gate clears," announced, then superseded by a merge three minutes later without correcting
+  the announcement — during which the decision-maker cited the withdrawn rule back approvingly, so
+  the wrong claim outran its own correction.
+
+  **The datum that decides the remedy, not just illustrates it.** Minutes after naming this exact
+  pattern for the third time in an hour, the decision-maker raised a scope objection to a table it
+  had not seen, inferring from the lead's phrasing that its own observation had already been
+  tabled there — the same tell, committed while describing the tell: *"Awareness of the pattern
+  did not defeat the pattern. I had named it three times in the preceding hour. It still fired on
+  the next assertion I made."* That rules out the obvious fix: "check the scope before asserting"
+  is a remembered discipline, and a remembered discipline is what just failed under stated
+  awareness. What worked, that same night, worked mechanically every time and required nobody to
+  remember anything — `audit-docs.py` catching an unescaped pipe, a positive control catching a
+  `GoldenQuote` zero, re-reading `origin/main` catching a tree that had moved, the memory file's
+  own duplicate guard catching a repeat write. **Recommendation (4.8):** this pattern needs a
+  mechanical check local to each act, not a restated instruction to check the scope — and this
+  review does not propose one check to cover all four instances above, because a merge's
+  disturbance, a field's API-surface status, a qualifier's alternative and a role's authority
+  boundary (4.3) share no single instrument. Where 4.3 is landable as a role-file amendment now,
+  this recommendation is narrower: a future instance of this shape gets a mechanical, act-local
+  check before anyone proposes a reminder — a reminder is the thing this section's own evidence
+  just falsified.
 - **`delivery-process.md:310-315`'s own list of durable homes for reasoning is wrong for its
   stated audience — a document-drift finding that names itself while being written.** The rule
   names "a task" as an acceptable durable home for reasoning a 50-word message cannot carry. But
@@ -1726,6 +1817,22 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   absent from `backend/src/app/errors.py`'s `RATING_ERROR_CODES` — not yet a live defect (nothing
   raises it today) but the same shape as `F29`, one workstream early. See question 5 for whether
   any of this should hold up W12's start.
+- **A planning artifact asserted a decision existed when it did not, verified directly against
+  the ruling it cites.** `docs/plans/2026-08-29-w11-3-batch-readiness-and-d6.md:72` states
+  "`score_batch` stays plain `def` (Ruling 5, restated in the module docstring)" — but Ruling 5
+  (`docs/plans/2026-08-29-w11-prework-rulings.md:431-474`) rules `score_one`'s real-time path
+  specifically, and its own text says so: "`score_batch`… is **not** ruled here and its own `def`
+  signature… is untouched." The citation names a ruling that explicitly disclaims the thing it is
+  cited for. **This is a stronger defect than an omission**, and the same document's own title —
+  "W11 Slice 3 — still held, on one unruled decision; and D6, the decision that releases it" —
+  shows the cost directly: `D6` (batch resumability) was the actual open decision, and it sat
+  behind this false "already ruled" reading until a later, dedicated ruling addressed it. An
+  omission gets noticed when someone goes looking for the answer; a false positive does not,
+  because the reader has no reason to look again. **Recommendation (4.7):** a readiness or
+  planning sweep that books an item as "ruled" reads the cited ruling's own scope clause before
+  citing it, not merely confirms the ruling exists — the same discipline this document has
+  applied throughout to its own citations, here proposed as a standing step rather than a
+  one-off habit.
 
 **5. Shape.**
 
@@ -1863,12 +1970,15 @@ which workstream if (a), is the lead's to rule, not this document's.
 | 3.9 | Whoever owns `dev-commands`/testing-strategy decides whether a query's own scope stated beside its result is worth a checklist item | methodology — question posed, not answered |
 | 3.7 | `CLAUDE.md` §13 gains a fifth verdict (or a qualifier) for measured-and-failing evidence, and a rule for multi-limb requirements | `CLAUDE.md` §13 amendment — maintainer's |
 | 3.8 | `CLAUDE.md` §13's "proven on deliberately broken input" standard extended from checking a check to choosing a design | `CLAUDE.md` §13 amendment — maintainer's |
+| 3.10 | A frozen leaf plan cites a symbol as its primary locator and a line number only as a hint | convention (`writing-plans`) |
 | 4.1 | A numbered NFR budget states its statistic, population, and (where storage is involved) encoding, in the same sentence as the number | spec-writing convention |
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
 | 4.4 | Correct W12's row against its own charter; declare `RegressionRun` in `03` §4; register `GOLDEN_QUOTE_MISMATCH` before or at W12's opening slice | docs + spec-change |
 | 4.5 | `delivery-process.md`'s durable-homes rule names a filesystem path, not a task id, for a member-facing dispatch | process-rule correction |
 | 4.6 | The reporter's brief states the positive rule — publish only what a named artifact says, and name it — rather than enumerate forbidden inferences | role-file amendment (reporter) |
+| 4.7 | A readiness or planning sweep reads a cited ruling's own scope clause before booking an item as "ruled" | methodology — standing step, proposed |
+| 4.8 | A future instance of "is this act inside the interest I just named?" gets a mechanical, act-local check, not a restated reminder | methodology — question posed, not answered |
 | 5.1 | Assign review 8's proposal 4.2 an owner, now that it has fired a fourth time at a much larger scale, carrying Ruling 30's temporal-qualifier refinement | tool or convention — unowned since 2026-08-29 |
 | 5.2 | Amend `.claude/skills/spec-change` so a new `FR-`/`NFR-` names its workstream row in the same commit that mints it, symmetric with the existing `OQ-` rule (Ruling 30's own proposal) | skill amendment |
 | 5.3 | Apply `F31`'s charter correction to `watcher.md` — text already drafted in the withdrawal notice | role-file edit |
@@ -1923,6 +2033,16 @@ before filing, per this document's own rule that a claim names the tree it was c
 - `gh pr view 436` — run this session to confirm `F41`'s content and open status.
 - Review 8 and the unnumbered "Pending proposals" section, both above in this document — read
   directly here rather than re-derived.
+- `docs/plans/2026-08-29-w11-3-batch-readiness-and-d6.md:72` — read directly to confirm the
+  "`score_batch` stays plain `def` (Ruling 5…)" citation.
+- `docs/plans/2026-08-29-w11-prework-rulings.md:431-474` — read directly to confirm Ruling 5 rules
+  `score_one` and its own text disclaims `score_batch`.
+- `backend/src/app/platform/rating_versions.py` at `c1a98b1` (`git show c1a98b1:...`) — read
+  directly to confirm `submit_for_review` (def at `:153`) calls `approvals.submit(` at `:178`.
+- `docs/plans/2026-08-29-w11-1-evaluator-core.md:692-740` — read directly to confirm Task 1.2's
+  scope (new `_Resolver` branches, `Bundle` persistence, a new `rating_handlers.py` module).
+- `docs/process/delivery-process.md:107-109` (§6, steps 2-3) — read directly to confirm the
+  red-before-green ordering the open question above turns on.
 - Session-local working notes that first surfaced several of the above, credited by name in prose
   and not cited as resolvable paths: `phase-review-inputs.md`, `w11-scope-derivation.md`,
   `close-audit-baseline.md`, `register-rows-owed.md`, `eta.md` (all
