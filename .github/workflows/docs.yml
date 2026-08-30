@@ -29,9 +29,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      # 23 checks: requirement IDs, cross-references, dependency direction, glossary
+      # 25 checks: requirement IDs, cross-references, dependency direction, glossary
       # single-sourcing, money discipline, JSON Schema validity and $ref resolution over
       # docs/ (1-15), the working notes in .claude/notes/ (16-20), every endpoint and
       # pricing-core function a workflow journey cites (21, FR-OVR-17), every table row's
-      # cell count (22), and every spec §10 mirror row's status (23).
+      # cell count (22), every spec §10 mirror row's status (23), §5.3/§5.6 canonical-route
+      # agreement (24), and F-id citations against the findings register (25).
       - run: python3 scripts/audit-docs.py

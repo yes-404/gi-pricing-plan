@@ -31,6 +31,9 @@ Checks (all non-destructive, exit 1 on any failure):
      findings register's status for that question, not just a bare, unstatused mirror.
  24. Every route `00` §5.6 declares as canonical for a module appears in that module's
      own §5.3 view table (FR-OVR-22); §5.6 is canonical, so a mismatch is a §5.3 error.
+ 25. Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in docs/research/, docs/plans/ or
+     .claude/notes/ resolves against docs/audit/register.md, an archived phase register, or
+     a docs/audit/work/*/README.md (or closure-records.md) work-item closure record.
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
      real section, or numbered step, of docs/process/delivery-process.md (NT-0014 §3).
 
@@ -390,6 +393,132 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
                     f"table row has {cells} cells, its header has {header_cells} "
                     f"({where}){detail}"
                 )
+
+
+#: `F6`, `F26`, or the workstream-scoped `F-W9-1` / `F-W10-1-1` a phase-boundary carry-forward
+#: uses — the findings register's own id shape, confirmed against every row in
+#: `docs/audit/register.md` and `docs/audit/phases/*/register.md`.
+_FINDING_ID = r"F(?:-W\d+-\d+(?:-\d+)?|\d+)"
+#: The register's own citation convention: a finding id in parentheses, immediately after the
+#: text it concerns — `` `Ruling 16's acceptance-test premise (F32)` ``. See
+#: `check_finding_citations`'s docstring for why a bare `F1` is deliberately not matched.
+_FINDING_CITED = re.compile(r"\((" + _FINDING_ID + r")\)")
+#: A file defining its own local, private findings — a heading (`## F1 — …`), a ledger
+#: table's own first cell (`| F1 | … |`, the shape both `track-a-findings.md` and every
+#: archived phase register use), or a bold paragraph lead-in (`**F-W11-1-2 — … .**`, the
+#: shape `docs/plans/2026-08-29-w11-1-evaluator-core.md` uses for its own four findings).
+_FINDING_HEADING = re.compile(r"^#{1,6}\s+(" + _FINDING_ID + r")\b", re.M)
+_FINDING_TABLE_CELL = re.compile(r"^\|\s*(" + _FINDING_ID + r")\s*\|", re.M)
+_FINDING_BOLD_LEAD = re.compile(r"^\*\*(" + _FINDING_ID + r")\b", re.M)
+
+
+def check_finding_citations() -> None:
+    r"""25. Every finding id cited outside the register resolves to a row there.
+
+    `docs/audit/register.md` is the single register of open findings (`CLAUDE.md` §13), and
+    until now nothing checked it from the *citing* side: a plan, a research spike or a working
+    note can write `(F42)` for a withdrawn finding, or `(F45)` for one a tombstone note had
+    just promised but no row yet existed for, and nothing complained. Both happened for real
+    on 2026-08-29, caught only because someone happened to remember the register's actual
+    contents rather than by anything mechanical.
+
+    **Scope is deliberately narrow: `docs/research/`, `docs/plans/` and `.claude/notes/` only**
+    — where a citation is *made*. Not `docs/audit/` itself, where findings are *filed* and a
+    retired id or a not-yet-filed one is legitimately named in the prose explaining exactly
+    that (the F42 tombstone note names both F42 and F45 in plain, unparenthesised text for
+    this reason). Not `docs/roadmap.md` or `docs/phase-0-status.md` either, though both carry
+    `(F..)` tokens: building this check found `phase-0-status.md`'s `(F13)` citing
+    `docs/research/track-a-findings.md`'s own local F13 (`FR-MODEL-72`) — a real collision
+    with the register's *unrelated* F13 (`FR-OVR-22`) that a wider scan would have silently
+    resolved against the wrong row instead of catching. Narrowing to where the incident this
+    check answers actually happened is what keeps that kind of false confidence out.
+
+    **Only the register's own citation form is matched**: an id in parentheses immediately
+    after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
+    itself, and how every genuine cross-document citation found while writing this check was
+    written (`docs/plans/2026-08-29-w11-3-batch-scoring.md` and its W11 siblings). A bare
+    `F1` with no parentheses is deliberately never matched: dozens of unrelated documents
+    number their *own* local findings from one — every W5 and W6b task plan's own "Findings"
+    section, `track-a-findings.md`'s spike log, the phase 1b predecision plan before it became
+    that phase's register — and a bare-token scan over `docs/plans/` and `docs/research/`
+    flagged several hundred of those as dangling register references against the corpus this
+    check was actually written against. Parenthesising is the one marker that survived contact
+    with the real corpus; the cost is a real citation written some other way (a comma-separated
+    list, a bare id) is not checked, which is preferred over a check that cries wolf.
+
+    **A file citing its own locally-defined finding is not citing the register.** A plan that
+    opens `### F1 — …` (a heading), or `**F-W11-1-2 — … .**` (a bold paragraph lead-in, the
+    form `docs/plans/2026-08-29-w11-1-evaluator-core.md` uses for its own four findings), and
+    later writes `(F1)` or `(F-W11-1-2)` again further down, refers to itself, not to
+    `docs/audit/register.md`. `_FINDING_HEADING`, `_FINDING_TABLE_CELL` and
+    `_FINDING_BOLD_LEAD` collect a file's own local ids (all three defining forms seen in the
+    real corpus), same-file only: a citation resolved by a *different* file's local heading
+    (the `phase-0-status.md` collision above) is exactly the false match this check must not
+    make, which is a second, independent reason that file sits outside this check's scope.
+
+    **A finding resolves against the live register, an archived phase register, or a closure
+    record — never only the first.** `docs/audit/register.md`'s own header states the
+    contract: one row per *open* finding, removed when a close resolves it. A finding can
+    therefore be real, correctly resolved, and correctly cited, while having never had a row
+    in the live register at all — the ordinary case for one closed during a slice's own audit
+    rather than carried forward. `F-W9-3-2` is exactly this shape: resolved the same day it
+    was raised (`docs/audit/work/W9-3/README.md`'s Findings table), cited from the spec
+    sentence it corrected (`03-rating-engine.md:671`), never filed to `register.md` because
+    filing a *closed* finding there would violate the header's own contract. Ruling, 2026-08-30
+    (relayed from the lead, who cannot reach this script directly): treating that citation as
+    dangling — the check's first version did — is a worse defect than the gap the check exists
+    to catch, since it fires on correct behaviour. Resolution therefore checks three sources in
+    order: `register.md` (open findings, parenthesised `(F<n>)` form), every
+    `docs/audit/phases/*/register.md` (archived-phase snapshots, bare-id table-cell form), and
+    every `docs/audit/work/*/README.md` plus `docs/audit/closure-records.md` (ordinary work-item
+    closure records, the same bare-id table-cell form — confirmed against `W9-3`'s own Findings
+    table before relying on it, not assumed from the name).
+
+    **The reverse direction — a register row citing a document that does not exist — is
+    deliberately not built here.** A genuine `[text](path)` link inside `docs/audit/
+    register.md` is already covered by check 1, which scans all of `docs/` including
+    `docs/audit/`. Past that, the register's backtick spans are not reliably file paths: one
+    row alone mixes a real path, a code symbol, a `file.py:NNN` citation, a shell command and
+    an error-code name with no syntactic marker telling them apart — the same false-positive
+    risk the citation side above was narrowed to avoid, not yet worth the same risk twice in
+    one check.
+    """
+    registered: set[str] = set()
+    register_file = ROOT / "audit" / "register.md"
+    if register_file.is_file():
+        registered |= set(_FINDING_CITED.findall(register_file.read_text(encoding="utf-8")))
+    for phase_register in sorted((ROOT / "audit" / "phases").glob("*/register.md")):
+        registered |= set(
+            _FINDING_TABLE_CELL.findall(phase_register.read_text(encoding="utf-8"))
+        )
+    # Work-item closure records: a finding closed during its own slice's audit never gets a
+    # register.md row at all (the register holds only open findings) but is no less real, no
+    # less resolved, and no less a legitimate thing to cite -- confirmed against W9-3's own
+    # Findings table, whose id is the bare first cell, the same shape a phase register uses.
+    closure_sources = sorted((ROOT / "audit" / "work").glob("*/README.md"))
+    closure_records = ROOT / "audit" / "closure-records.md"
+    if closure_records.is_file():
+        closure_sources.append(closure_records)
+    for source in closure_sources:
+        registered |= set(_FINDING_TABLE_CELL.findall(source.read_text(encoding="utf-8")))
+
+    scan_dirs = [ROOT / "research", ROOT / "plans", NOTES]
+    scanned = sorted({f for d in scan_dirs if d.is_dir() for f in d.rglob("*.md")})
+    for f in scanned:
+        text = f.read_text(encoding="utf-8")
+        cited = set(_FINDING_CITED.findall(text))
+        local = (
+            set(_FINDING_HEADING.findall(text))
+            | set(_FINDING_TABLE_CELL.findall(text))
+            | set(_FINDING_BOLD_LEAD.findall(text))
+        )
+        for fid in sorted(cited - registered - local):
+            fail(
+                f"{f.relative_to(REPO)}: cites finding {fid}, which resolves nowhere -- "
+                "not docs/audit/register.md, not an archived phase register, not a "
+                "docs/audit/work/*/README.md or closure-records.md closure record, and not "
+                "defined locally in this file"
+            )
 
 
 PROCESS_SPEC = REPO / "docs" / "process" / "delivery-process.md"
@@ -963,6 +1092,10 @@ def main() -> int:
 
     # 23. every spec §10 mirror row carries the register's status for that question
     check_open_question_mirror_status(specs)
+
+    # 25. every F-nn finding id cited in docs/research/, docs/plans/ or a working note
+    # resolves against the register, an archived phase register, or a closure record
+    check_finding_citations()
 
     # 26. the process core extract's citations resolve in the process spec
     check_process_core_drift()

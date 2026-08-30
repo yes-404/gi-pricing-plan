@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, and the process core extract's § citations against the process spec — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, every F-id citation against the findings register or a closure record, and the process core extract's § citations against the process spec — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -125,6 +125,56 @@ row: the token must follow the id on the same row, so a neighbouring row's statu
 satisfies it. The row is read whole rather than first-word, because a decided row's
 question text can contain a stray "open".
 
+### Canonical routes (check 24)
+
+| # | Check | The defect it catches |
+|---|---|---|
+| 24 | Every route `00` §5.6 declares canonical for a module appears in that module's own §5.3 view table (FR-OVR-22) | A module's §5.3 drops or rewrites a canonical route — drift nothing else sees, since §5.3 legitimately carries detail routes §5.6 does not list |
+
+One-directional: `00` §5.6 is canonical, so a mismatch is always a §5.3 error, never the
+other way round. Landed 2026-08-27 and had no section in this file until the 2026-08-30
+pass below found the gap — the same drift this skill exists to prevent, in its own body.
+
+### The findings register (check 25)
+
+| # | Check | The defect it catches |
+|---|---|---|
+| 25 | Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in `docs/research/`, `docs/plans/` or `.claude/notes/` resolves against `docs/audit/register.md`, an archived phase register, **or a work-item closure record** (`docs/audit/work/*/README.md`, `docs/audit/closure-records.md`) | A citation to a withdrawn or not-yet-filed finding — `(F42)`, `(F45)` — reads as a real reference and nothing complains |
+
+**Resolves against three sources, not one — a register-only first version fired on correct
+behaviour, ruled wrong 2026-08-30.** `docs/audit/register.md`'s own header states its
+contract: one row per *open* finding, removed when a close resolves it. A finding closed
+during its own slice's audit — `F-W9-3-2`, resolved the day it was raised, recorded in
+`docs/audit/work/W9-3/README.md`'s Findings table, cited from the exact spec sentence it
+corrected (`03-rating-engine.md:671`) — therefore never gets a register row at all, and
+treating that citation as dangling is a worse defect than the gap the check exists to catch:
+it fires on every properly-closed finding cited this way. **Swept 2026-08-30** against the
+real corpus: of 14 distinct F-ids cited in `docs/research/`/`docs/plans/`/`.claude/notes/`,
+13 resolve via the register and exactly **1** (`F-W9-3-2`) resolves only via a closure
+record — the false-positive rate a register-only design would have had, and the incident
+that forced this fix.
+
+Deliberately narrow on two further axes, both found necessary against the real corpus
+rather than assumed. Only the register's own parenthesised citation form is matched — a
+bare `F1` is a document's own private numbering far more often than a register reference:
+several hundred hits across the W5 and W6b task plans' own "Findings" sections alone. And
+only `docs/research/`, `docs/plans/` and `.claude/notes/` are scanned, never `docs/audit/`
+itself (where a retired or not-yet-filed id is legitimately named in prose) or
+`docs/roadmap.md`/`docs/phase-0-status.md` (a live check found the latter's `(F13)` citing
+`track-a-findings.md`'s own local F13, which collides with the register's unrelated F13 —
+a wider scan would have silently resolved it against the wrong row). A file citing its own
+locally-defined finding — by heading, ledger-table cell, or bold paragraph lead-in, all
+three seen in the real corpus — is exempt; that is self-reference, not a register citation.
+The full reasoning is in the check's own docstring, `check_finding_citations` in
+`scripts/audit-docs.py` — not duplicated here.
+
+**The reverse direction — a register row citing a document that does not exist — is
+deliberately not built.** A genuine markdown link inside `docs/audit/register.md` is
+already check 1's, which scans all of `docs/`. Past that, the register's backtick spans
+mix real paths, code symbols, `file.py:NNN` citations and error-code names with no
+syntactic marker telling them apart — the same false-positive risk the citation side was
+narrowed to avoid, not yet worth the same risk twice in one check.
+
 ### The process core's citations (check 26)
 
 `docs/process/delivery-process.core.json` is the machine-readable extract of
@@ -237,7 +287,57 @@ real defects; fix the document.
 
 ## Verified
 
-2026-08-30 — Check 26 added (the process core extract's § citations) and this skill updated with it in the same commit. Proven on deliberately broken input rather than asserted: six mutations run through `scripts/audit-docs.py` itself — a `§99` section, a `§5.99` step past §5's eight, `authoritative: true`, a `derived_from` naming no file, a `source` citing nothing, and the extract deleted while §10 still requires it. Each produced its own distinct failure, and the unmutated tree stayed silent. `.claude/skills/README.md`'s cell said "23 checks" while the code had 24; the count is now removed from that cell rather than bumped, because a restated count is `NT-0003` by construction.
+2026-08-30 (third entry, same day) — Check 26 added (the process core extract's § citations) and this skill updated with it in the same commit. Proven on deliberately broken input rather than asserted: six mutations run through `scripts/audit-docs.py` itself — a `§99` section, a `§5.99` step past §5's eight, `authoritative: true`, a `derived_from` naming no file, a `source` citing nothing, and the extract deleted while §10 still requires it. Each produced its own distinct failure, and the unmutated tree stayed silent. `.claude/skills/README.md`'s cell said "23 checks" while the code had 24; the count is now removed from that cell rather than bumped, because a restated count is `NT-0003` by construction.
+
+2026-08-30 (second entry, same day, correcting the first) — **Check 25's first version was
+itself wrong**: register-only resolution fired on `F-W9-3-2`, a real, closed, correctly-cited
+finding recorded only in its slice's closure record. Ruled by the lead: resolve against the
+register, an archived phase register, OR a work-item closure record
+(`docs/audit/work/*/README.md`, `docs/audit/closure-records.md`) — never register-only.
+**Proven both ways**: `tests/test_audit_docs_finding_citations.py` asserts a synthetic
+`F999999` still fails loudly, and asserts `F-W9-3-2` stays silent — pinned against the real
+tree, since that citation is the incident, not a stand-in for it. **Swept**: 1 of 14 real
+citations in the scanned corpus resolves only via a closure record — the false-positive rate
+the register-only version would have had.
+
+2026-08-30 — Extended with **check 25**, F-nn citations against the findings register
+(dispatched: "an F-nn cited outside the register... resolves to no row there"). Real
+incident behind it: a draft cited a withdrawn F42, and F45 sat unfiled for hours after a
+tombstone note first promised it, both 2026-08-29, both caught only because someone
+remembered the register's actual contents rather than by anything mechanical.
+
+Scope was narrowed twice against the real corpus, not assumed. First: a bare `F1` is not
+matched, only the register's own `(F<n>)` form — a bare-token scan over `docs/plans/` and
+`docs/research/` flagged several hundred false positives, every W5 and W6b task plan's own
+locally-numbered "Findings" section among them. Second: `docs/roadmap.md` and
+`docs/phase-0-status.md` are excluded from the scanned set even though both carry `(F..)`
+tokens — a live check found `phase-0-status.md`'s `(F13)` citing
+`docs/research/track-a-findings.md`'s own local F13, which collides with the register's
+*unrelated* F13 and would have silently "resolved" against the wrong row rather than been
+caught. A file citing its own locally-defined finding — by heading, ledger-table cell, or
+bold paragraph lead-in — is exempt from the register check; the first two forms were
+anticipated, the third (`docs/plans/2026-08-29-w11-1-evaluator-core.md`'s own four
+findings) was found only by running the check against the real tree and reading what
+failed rather than trusting the design by inspection alone.
+
+**Proven on deliberately broken input**: a scratch file under `docs/plans/` citing a
+nonexistent `(F999)` produced exactly one targeted failure naming the file and the id; the
+scratch file removed, the suite passed again (module has no CLI surface of its own to test
+via subprocess the way `scope-audit.py` does, so the proof is the audit-docs.py run
+itself, before and after, quoted in the PR). Running the check against the real,
+unmodified tree — a second, independent proof, of the check finding a genuine defect
+rather than a synthetic one — surfaced a live gap: `03-rating-engine.md:598,671` cites
+`(F-W9-3-2)` twice with no register row for it (only its apparent parent, `F-W9-3`,
+exists), quoted once more in `docs/plans/2026-08-29-w11-slice1-rulings.md`. Not resolved
+by this entry — filing a register row or correcting a citation is outside an executor's
+authority — see the PR for the ruling once made.
+
+**Two other gaps found and fixed in the same pass, both this file's own staleness**: check
+24 (§5.3/§5.6 canonical routes, landed 2026-08-27) had no section here at all — added,
+retroactively, from the check's own code rather than from memory. And the "number of
+checks lives in three places" note further down was itself one of the three drifted
+counts it was warning about, unnoticed since the 2026-08-29 entry below removed this
+frontmatter's own count — corrected to two.
 
 2026-08-29 — The module docstring's own numbered list, the code's check-numbering
 comments, and this skill's description had drifted three ways: docstring stopped at 22,
@@ -299,9 +399,12 @@ with them. **It found a real defect on its first run**: wf-01 cited `profile_ver
 following.
 
 Also worth knowing before the next check is added: **the number of checks is stated in
-three places** — this skill's frontmatter, `.claude/skills/README.md`, and `docs.yml`'s
-comment — and every one of them has to be edited. It used to be six, until `CLAUDE.md`'s
-three mentions were removed: §0's own rule is that counts which change do not belong in it.
+two places** — `.claude/skills/README.md` and `docs.yml`'s comment — and both have to be
+edited. A third, this skill's own frontmatter, used to carry a bare count too, until the
+2026-08-29 entry below removed it outright rather than keep bumping it — a bare figure
+with no link to what keeps it current is the exact pattern that had already drifted three
+ways twice. It used to be six places in total, until `CLAUDE.md`'s three mentions were
+removed: §0's own rule is that counts which change do not belong in it.
 
 2026-08-15 — Extended with checks 16–20 over `.claude/notes/`. **All five were proven
 against deliberately broken input**, twelve breakages in total, each producing exactly one
