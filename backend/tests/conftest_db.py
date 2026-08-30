@@ -44,14 +44,20 @@ def test_blob_bucket() -> str:
 
     **One resolver because a test that writes a blob through a fixture and reads it back
     through a route needs both sides to agree**, and until `POST /api/v1/score` no test
-    crossed that boundary, so four sites could disagree in silence. They were all
-    hard-coded to the same literal, which hid it: identical constants cannot diverge, so
-    the defect was latent rather than absent.
+    crossed that boundary — so eleven sites went on holding **three different answers**
+    without anything noticing:
 
-    Making one of them read `GIP_TEST_BUCKET` is what would have armed it — set the
-    variable and the env-aware sites move while the hard-coded ones stay, which is the
-    app-versus-fixture split again in a new place. So the variable and the literal live
-    here, once, and every caller asks.
+    - `blob_store` here read `os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")`;
+    - `test_api_model_lifecycle` and `test_model_comparison` were bare literals, which
+      would *not* follow that variable;
+    - the eight `api_settings` fixtures (`conftest.py` and seven shadowing it) named no
+      bucket at all, so the app under test used the `gip-blobs` default while every fixture
+      wrote to `gip-test-blobs`.
+
+    **That last split needed no environment variable to be wrong** — it was already wrong,
+    and it is what `POST /api/v1/score` hit as the first route to *read* a blob a fixture
+    had *written*. Everything before it stayed on one side of the boundary. So the variable
+    and the default live here, once, and all eleven callers ask.
     """
     return os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
 

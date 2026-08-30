@@ -524,6 +524,7 @@ def compiled_version(
 
 
 @pytest.mark.req("FR-RATE-34")
+@pytest.mark.req("FR-RATE-35")
 def test_a_quote_scores_over_http_against_an_explicit_ref(
     client: TestClient, scoring_headers: dict[str, str], compiled_version: Any
 ) -> None:
@@ -536,7 +537,9 @@ def test_a_quote_scores_over_http_against_an_explicit_ref(
 
     FR-RATE-35's `prod` restrictions are not imposed: this scores a **draft** version by
     explicit reference, which is the "what-if and testing" the requirement permits (Ruling
-    14 clause 3).
+    14 clause 3). Its marker evidences that unconditional limb only — the approved-only and
+    `what_if`-purpose limbs are scoped to `prod`, which W11 has no environments to have, so
+    `req-coverage.py` reporting FR-RATE-35 covered from here says nothing about them.
     """
     response = client.post(
         SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
