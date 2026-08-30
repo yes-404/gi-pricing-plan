@@ -85,7 +85,7 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # LightGBM's Linux wheel links against the OpenMP runtime and does **not** vendor
       # it: `import lightgbm` fails with `OSError: libgomp.so.1: cannot open shared object
@@ -101,7 +101,7 @@ jobs:
           dpkg -s libgomp1 >/dev/null 2>&1 \
             || (sudo apt-get update && sudo apt-get install -y --no-install-recommends libgomp1)
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with: {enable-cache: true}
       - run: uv sync --all-packages --dev
 
