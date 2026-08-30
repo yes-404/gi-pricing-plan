@@ -60,3 +60,63 @@ reader can tell a deliberate exclusion from an oversight. **Note that removing t
 not make NFR-RATE-1 pass**: the 15 ms without-GBM limb already reads component p99 23.027 ms
 with the fetch excluded, and Ruling 41 declines to amend the requirement or to call it
 reachable.
+
+---
+
+## 4. Amendment, 2026-08-30 — the re-close is delegated to the lead, under two conditions
+
+**This section supersedes exactly one sentence of §2**, which is left standing verbatim above
+so a reader can see what was believed: *"It does not authorise the lead to accept the
+re-close."* That was correct when written. The maintainer has since delegated the re-close,
+and this section records the delegation and its limits. **It supersedes Ruling 39 §5** on the
+same point.
+
+### The instruction
+
+Received 2026-08-30, later the same day, in reply to the lead's report that the re-close would
+return to the maintainer:
+
+> *"point 1: yes delagated to close W11 again but only approve after all the slices completed
+> and the auditor happy with the W11 closure"*
+
+### What it authorises, and the two conditions
+
+The lead may accept W11's second close and write the dated acceptance line. **The delegation is
+conditional, and both conditions are preconditions on the acceptance itself — not
+considerations to weigh.** Neither may be waived by the lead, since a delegate cannot relax the
+terms of its own delegation.
+
+**Condition 1 — all the slices completed.** Read as the reopened scope: **W11 Slice 3 (tasks
+3A, 3B, 3C, 3D) and W11 Slice 4 (tasks 4A, 4B, 4C, 4D)**, delivering FR-RATE-36, FR-RATE-37,
+FR-RATE-42 and NFR-RATE-12 — the scope Ruling 39 §1 fixed and §9 of the closure record
+restates. Two boundaries follow, and both are recorded rather than assumed:
+
+- **Adoption slices E, F and G are not among them.** They are a separate Work under a separate
+  delegation (Ruling 39 §1). W11's close does not wait on them and is not entitled to claim
+  them.
+- **If a further slice is ruled into the reopen it joins this condition automatically.** At the
+  time of writing, the decision-maker holds an open ruling on whether NFR-RATE-1's remediation
+  belongs inside the reopen. If it rules the remediation in, that work is part of "all the
+  slices" and the condition is not met until it too is complete.
+
+**Condition 2 — the auditor happy with the W11 closure.** The §13 closure audit must be clean
+in the auditor's own judgement, and the lead may not accept over the auditor's dissatisfaction.
+
+**This is stronger than `CLAUDE.md` §13's default and the difference is deliberate.** Under
+§13 the auditor *proposes* verdicts and the lead adopts, amends or rejects them; the lead's
+verdict authority is unchanged and is not transferred by this condition. What changes is the
+**close**: an unresolved auditor objection is a bar to acceptance, not an input to it. **The
+resolution when the lead and the auditor disagree is to escalate to the maintainer — never to
+overrule the auditor and accept.** Recorded explicitly because the failure mode is silent: a
+lead holding both the verdict pen and the acceptance pen can satisfy this condition by
+amending the verdict that troubled the auditor, which would meet the words while defeating the
+instruction.
+
+### What it does not authorise
+
+**It reaches W11's second close and nothing else.** Not the adoption's close, not W12, not
+Phase 2, not any later close of W11 should it be reopened again. `CLAUDE.md` §12's default —
+acceptance of a Work, Phase or Project close is the maintainer's — resumes the moment this one
+is written. The lesson §2 records still stands: a delegation to decide one close is not a
+standing licence for the next, and this record is dated so that the next reader must check
+rather than infer.
