@@ -113,6 +113,15 @@ class BundleSlot:
         #: canonical ref string -> the hash this worker resolved it to. Every entry
         #: points at a *held* bundle: `_forget` drops a hash's refs when it is evicted,
         #: so the index cannot accumulate entries that could only ever produce a refusal.
+        #:
+        #: **Bounded by the refs pointing at held hashes, not by `capacity`.** Identical
+        #: rating-version content compiles to one `Bundle` hash (FR-RATE-24), so several
+        #: refs can share one held entry — a reader who sees `capacity` and assumes it
+        #: caps this index too would be wrong. Each entry is two short strings and dies
+        #: with its bundle, so this is a bound worth stating rather than a leak worth
+        #: fixing. Capping it separately at `capacity` was rejected: at capacity 1 that
+        #: would drop the first caller's degraded read while the bundle was still held
+        #: (`test_two_refs_may_memo_the_same_bundle`).
         self._resolved: OrderedDict[str, str] = OrderedDict()
 
     @property

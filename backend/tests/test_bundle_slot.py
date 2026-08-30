@@ -2,9 +2,11 @@
 
 The slot is the first in-process cache in this backend, so these tests pin the four
 properties the ruling names and nothing else: it holds a hydrated `CompiledBundle` so a
-second request for the same bundle does not re-hydrate; it is bounded by a **count**,
-evicting least-recently-used; it memoises the ref → hash resolution this worker itself
-performed, which is what makes NFR-RATE-9's degraded read reachable at all; and it
+second request for the same bundle does not re-hydrate; the **held index** is bounded by a
+**count**, evicting least-recently-used — the memo is bounded differently, and
+`test_evicting_a_bundle_forgets_the_refs_that_pointed_at_it` says how; it memoises the
+ref → hash resolution this worker itself performed, which is what makes NFR-RATE-9's
+degraded read reachable at all; and it
 acquires none of the four mechanisms Ruling 16 clause 4 reserves for W14.
 
 The end-to-end degraded read — a second request for an already-served ref answered 200
@@ -204,8 +206,16 @@ def test_an_unserved_ref_resolves_to_nothing() -> None:
 def test_evicting_a_bundle_forgets_the_refs_that_pointed_at_it() -> None:
     """A resolvable ref always has its bundle: `hash_for` and `get` never disagree.
 
-    A memo outliving its bundle would be an entry that can only ever produce a refusal,
-    and an unbounded one — the slot is bounded by a count in both indices or in neither.
+    A memo outliving its bundle would be an entry that can only ever produce a refusal.
+    That is what this forbids, and it is *all* it forbids.
+
+    **The two indices are not bounded the same way, and an earlier version of this
+    docstring claimed they were.** `_held` is capped at `capacity`; `_resolved` is not.
+    Several refs can point at one held hash — identical content compiles to one hash
+    (FR-RATE-24) — so at capacity 1 the memo can hold many entries at once: 50,000
+    distinct refs resolving to one held bundle keeps 50,000 memo entries, every one of
+    them valid and none of them capped. What this test pins is the property that does
+    hold — every entry dies with its bundle — not a symmetry that does not.
     """
     slot = BundleSlot(capacity=1)
     slot.put(_ref(1), _compiled("hash-a"))
