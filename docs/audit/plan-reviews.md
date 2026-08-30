@@ -1254,7 +1254,9 @@ One correction made while drafting, recorded beside the finding rather than inst
 skill's own guidance for when a review's inputs turn out wrong: the evidence handed to this draft
 reported a finding as **"Registered F42."** Verified directly against `docs/audit/register.md` at
 `19eaabc`: no F42 exists. The finding itself (`req-coverage.py`'s occurrence-count mislabel, at a
-scale of 238 of 326 rows wrong) was **withdrawn before filing** because it duplicates `F36`
+large-fraction scale still being re-measured — this draft deliberately does not quote the exact
+count, since it moved once already between two of this evidence base's own passes and is not
+load-bearing to anything below) was **withdrawn before filing** because it duplicates `F36`
 (`register.md:42`) and will amend that row instead of opening a new one — not yet landed as of this
 tree. Question 3 below cites `F36` as it stands today, not the amendment.
 
@@ -1481,6 +1483,26 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   that, correctly, and it was not enough. This is a convention gap (a testing or `dev-commands`
   skill, or the leaf-plan-writing convention itself), not a spec gap; this review does not pick
   which document carries it.
+- **A distinct measurement-practice gap: five instances tonight of a figure labelled with a tree
+  it was not taken on** — self-named by the batch executor after producing one, having caught two
+  others earlier the same session; three of the five are the lead's own, by the lead's own count.
+  One is this draft's own opening correction above (the withdrawn-finding's scale, first quoted
+  from a figure re-measured on a moving tree, now stated without the number rather than repeated).
+  **Why this earns its own entry rather than folding into question 4's citation-error discussion**:
+  every instance is *correctly formatted* by `CLAUDE.md` §13's own standard — each names a tree, a
+  PR state, or a file, which is exactly what makes a citation survive review on a first read.
+  **Naming a tree is not the same as having measured on it**, and nothing in the current standard
+  distinguishes the two: a figure taken on a working tree and labelled with the branch's base SHA,
+  a `gh` read reported as current after a push landed behind it, a gate's own stale result file
+  from three hours earlier read as the current run's — caught only by an `mtime` check. **The
+  fifth is the sharpest of the five because no reasoning error was involved at all**: correct
+  extraction, correct arithmetic, wrong source file. **Recommendation (3.6), mechanical rather
+  than a discipline reminder:** a figure quoted in a durable artifact is produced by a command that
+  prints its own tree in the same invocation — `git rev-parse HEAD` beside the number, so the
+  label cannot drift from the measurement because both come from one run; a file read as evidence
+  is quoted with its `mtime` beside it. Both are one flag each, and both fail loudly rather than
+  silently — the same "true by construction" standard 3.1's per-session-database fix meets, applied
+  to citation rather than coordination.
 - **A leaf-plan convention gap, found by the process working rather than failing.** Every W11
   route-adding leaf plan (Task 2B's `w11-2`; Slice 3's `w11-3-batch-scoring`; Slice 4's
   `w11-4-trace-sampling-persistence`) omits the regenerated OpenAPI contract
@@ -1706,6 +1728,7 @@ which workstream if (a), is the lead's to rule, not this document's.
 | 3.3 | NFR acceptance criteria measured near their bound require repetition under varied load, not a one-run distribution alone | convention (skill or leaf-plan template) |
 | 3.4 | A route-adding plan states the regenerated OpenAPI contract as a Files-block deliverable and names the second CI workflow it arms | convention (`writing-plans`) |
 | 3.5 | For each mechanical-check proposal above, ask whether a one-command grep tied to a specific act of writing would catch more, more cheaply, than a general enforcement mechanism | methodology — question posed, not answered |
+| 3.6 | A figure quoted in a durable artifact prints `git rev-parse HEAD` in the same invocation; a file quoted as evidence carries its `mtime` | mechanical — citation discipline |
 | 4.1 | A numbered NFR budget states its statistic, population, and (where storage is involved) encoding, in the same sentence as the number | spec-writing convention |
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
