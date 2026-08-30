@@ -55,6 +55,28 @@ uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on d
 Use `generate-contracts.py --check` rather than the plain regenerate when auditing: the
 plain form *writes* the drift away instead of reporting it.
 
+**`pytest -q` needs the compose stack up, and nothing in the command says so.** CI starts
+Postgres and Redis as `services:` and **MinIO as an explicit step** (`python.yml:125-129` —
+a `services:` entry cannot express it, because `minio/minio` needs `server /data`). Locally
+that infrastructure is yours to start, from the *Local infrastructure* section far below:
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --wait   # BEFORE the gate, not just the demo
+```
+
+**Without it the suite does not error usefully — it comes back mostly green with a handful
+of failures**, which is the dangerous shape. Seen 2026-08-30 on W11 Task 3A: 2,347 collected,
+**5 failed**, and **255 `botocore.EndpointConnectionError`** entries that were only visible
+because the run was piped through `tail`. Most infra-dependent tests skip when the stack is
+absent; a few fail instead. **A test that fails rather than skips on missing infrastructure is
+indistinguishable from a real regression**, and on that occasion the lead misdiagnosed it as
+F45 contention and the executor agreed — while the refuting `botocore` line sat in the
+executor's own report. F45 needs a database that exists and gets truncated; there was no
+database at all.
+
+So: **bring the stack up before the gate, and if the suite is red, check `docker ps` before
+diagnosing anything.**
+
 ### `mypy`'s `files` list, and why it cannot be one flat list covering everything
 
 Since 2026-08-30 the bare `uv run mypy` above also covers the repo-level `tests/` root, the
