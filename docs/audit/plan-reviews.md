@@ -1543,10 +1543,12 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   safety property has a failing case.** This did not arrive by generalising it across everything
   above — that generalisation was tried and withdrawn as asserted rather than enumerated, twice,
   before this draft could adopt it. **Checked directly against this section's own bullets rather
-  than carried from that count**: exactly two qualify as "a check that exists and is structurally
-  incapable of reporting the failure it is asked about," as opposed to being merely related to
-  that shape — the `pgrep` self-match (instance 2, duplicated verbatim inside instance 7's
-  "serialise" remedy, so one defect with two sightings rather than two instances) and the
+  than carried from that count, and the corpus is stated because a count without one is the same
+  defect a third time**: **two, within this section's own bullets** — not a claim about this
+  document as a whole or about the wider evidence base — qualify as "a check that exists and is
+  structurally incapable of reporting the failure it is asked about," as opposed to being merely
+  related to that shape: the `pgrep` self-match (instance 2, duplicated verbatim inside instance
+  7's "serialise" remedy, so one defect with two sightings rather than two instances) and the
   authorisation example below. **The rest of this section is a different, adjacent shape each
   time, worth telling apart rather than folding in**: the announce half, the §14 trigger and
   §5a's suggested `grep` are *absent* checks, not defective ones — there is no mechanism to be
@@ -1555,11 +1557,18 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   nothing. §J's table is explicitly, in its own words, a *retrieval* failure and "something
   cheaper and more damning" than "nothing enforces this," not a restatement of it. The
   tree-mislabelling class is a *provenance* defect on an otherwise correctly computed number.
-  Four adjacent shapes, and a count of two for this one — enumerated against this document, not
-  the evidence base's own count, per the instruction that produced this correction. **The
-  proposal stands on the two instances it actually has**, arrived at from a live choice between
-  two implementations of the same authorisation repair — re-derive a `Caller`'s permissions from
-  its account row, or pass the authenticated set as a parameter. They
+  **Two named candidates sit outside that stated corpus, checked by neither this count nor its
+  predecessor, and are left there rather than folded in without the same rigor**: `F31`'s roster
+  freshness indicator (cited above under instance 1, but not previously examined from this
+  angle) and Ruling 34's finding that sampling would hide `NFR-RATE-1`/`2`'s violation below the
+  metric's own resolution. Both are already tied, by their own source documents, to
+  [`NT-0007`](../../.claude/notes/0007-context-bound-measures-cap-not-discipline.md)'s "a boundary metric
+  reads zero by construction" — plausible third and fourth instances of this section's narrow
+  shape, or possibly a related-but-distinct family of their own; this review does not decide
+  which, only declines to count them before checking either with the care the six above got.
+  **The proposal stands on the two instances it has been checked against**, arrived at from a live
+  choice between two implementations of the same authorisation repair — re-derive a `Caller`'s
+  permissions from its account row, or pass the authenticated set as a parameter. They
   behave identically today (`backend/src/app/auth/service.py:230` populates identity permissions
   straight from the account row — verified directly), so the choice looked cosmetic. **It is not**:
   a re-derived implementation cannot be made to fail the test that would separate them (*"a
