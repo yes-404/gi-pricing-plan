@@ -40,6 +40,7 @@
         "rating.regression",
         "rate_table.diff",
         "score.batch",
+        "score.trace_produce",
         "dislocation.run",
         "optimisation.run",
         "gipp.check",

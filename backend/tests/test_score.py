@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from uuid import UUID
 
 import pytest
 import pytest_asyncio
@@ -31,13 +32,27 @@ from backend.tests.test_rating_version_compile import (
     _run_compile_job,
 )
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.api import score as score_module
-from app.api.deps import DEV_PRINCIPAL_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER, Caller
 from app.config import Settings
+from app.db.models import JobRow, ScoringTraceRow
 from app.main import create_app
+from app.platform import jobs as job_service
+from app.platform import settings as settings_service
+from app.platform import traces
 from app.worker.rating_handlers import register_rating_handlers
-from model_schema import ArtifactRef, JobStatus, LadderRung, ScoringResult
+from app.worker.tasks import execute_job
+from app.worker.trace_handlers import register_trace_handlers
+from model_schema import (
+    ArtifactRef,
+    JobKind,
+    JobStatus,
+    LadderRung,
+    QuoteContext,
+    ScoringResult,
+)
 
 SCORE_URL = "/api/v1/score"
 #: The slug/version `_insert_version` creates. Read from that helper rather than chosen:
@@ -691,3 +706,374 @@ def test_a_repeat_request_does_not_re_read_the_blob_store(
         f"was called {calls} time(s) on a request the content-hash shortcut should have "
         "made unnecessary"
     )
+
+
+# --------------------------------------------------------------------------------------
+# W11 Task 4B — FR-RATE-42's sampling decision, wired into the route. Ruling 35
+# (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`): the route
+# scores untraced and, on a sampled outcome, writes a pending `scoring_traces` row and
+# submits a `score.trace_produce` Job — never captures a trace inline.
+# --------------------------------------------------------------------------------------
+
+
+def _run(coro: Any) -> Any:
+    return asyncio.get_event_loop().run_until_complete(coro)
+
+
+async def _rows_for(database: Any, workspace_id: Any) -> list[ScoringTraceRow]:
+    async with database.session() as session:
+        result = await session.execute(
+            select(ScoringTraceRow).where(ScoringTraceRow.workspace_id == workspace_id)
+        )
+        return list(result.scalars().all())
+
+
+async def _trace_produce_jobs(database: Any, workspace_id: Any) -> list[JobRow]:
+    async with database.session() as session:
+        result = await session.execute(
+            select(JobRow).where(
+                JobRow.workspace_id == workspace_id,
+                JobRow.kind == JobKind.SCORE_TRACE_PRODUCE,
+            )
+        )
+        return list(result.scalars().all())
+
+
+async def _set_trace_sample_rate(database: Any, workspace_id: Any, rate: float) -> None:
+    async with database.unit_of_work() as session:
+        await settings_service.set_workspace_setting(
+            session, workspace_id, "rating.trace_sample_rate", rate
+        )
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """FR-RATE-42's 100 % decline floor, wired end to end — no rate override needed, since
+    `decide_sampling` never consults the rate for a decline."""
+    declined = _scored(outcome="declined", decline_reasons=["driver_age below minimum"])
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return declined
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert response.status_code == 200, response.text
+
+    rows = _run(_rows_for(database, workspace_id))
+    assert len(rows) == 1
+    assert rows[0].status == "pending"
+    assert rows[0].sample_reason == "decline"
+    # `scoring_headers`' Service Account is scoped to `["uat"]` (Ruling 14's own fixture) —
+    # a single-environment account, so this does not discriminate the fix from the defect
+    # it replaced (both a stamped `caller.environment` and `min(caller.environments)` agree
+    # here). `test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environment`
+    # below is the one that does.
+    assert rows[0].environment == "uat"
+
+    jobs = _run(_trace_produce_jobs(database, workspace_id))
+    assert len(jobs) == 1
+    assert jobs[0].parameters["scoring_trace_id"] == str(rows[0].id)
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environment(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Ruling 44 part 3, test 1 — the discriminating case.
+
+    A Service Account created `["uat", "dev"]` mints a key for `environments[0]`
+    (`service_accounts.py:180`), which is `uat` — the environment the quote is actually
+    served in. The old `_environment_for` stamped `min(caller.environments)` instead, which
+    is `dev` (`"dev" < "uat"` lexicographically): a caller scoped to more than one
+    environment discriminates the fix from the defect, where a single-environment account
+    (the test above) cannot — `min()` of a one-element set always agrees with the element.
+    """
+    created = client.post(
+        "/api/v1/service-accounts",
+        json={
+            "slug": "quote-engine-multi-env",
+            "environments": ["uat", "dev"],
+            "permissions": ["score:execute"],
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    headers = {
+        "X-API-Key": created.json()["key"],
+        "Workspace-Id": str(workspace_id),
+    }
+
+    declined = _scored(outcome="declined", decline_reasons=["driver_age below minimum"])
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return declined
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=headers
+    )
+    assert response.status_code == 200, response.text
+
+    rows = _run(_rows_for(database, workspace_id))
+    assert len(rows) == 1
+    assert rows[0].environment == "uat"
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_caller_with_no_environment_writes_no_trace_and_still_serves_the_quote(
+    database: Any,
+    workspace_id: Any,
+    principal: Any,
+    api_settings: Settings,
+) -> None:
+    """Ruling 44 part 3, test 2 — the impossible-state guard.
+
+    `caller.environment is None` on the real-time sampling path is unreachable through the
+    API today (`score:execute` is granted to no builtin role and no roles API exists to
+    grant it to a custom one — Ruling 44 part 3), so this calls `_maybe_sample_trace`
+    directly rather than through a request: there is no key or bearer token that produces
+    this `Caller`. The guard must raise rather than stamp a row that would be
+    indistinguishable from Correction 2's batch marker (Task 4A) — and `_maybe_sample_trace`
+    already degrades any raise here to "logged, not raised" (its own `except Exception`,
+    the same guarantee `test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500`
+    proves for a different failure), which is what "the quote is still served 200" reduces
+    to for a route this call never reaches.
+    """
+    caller = Caller(
+        principal=principal,
+        workspace_id=workspace_id,
+        environments=frozenset({"uat"}),
+        environment=None,
+        permissions=frozenset({"score:execute"}),
+    )
+    ctx = QuoteContext.model_validate(_quote({"rating_version_ref": SCORED_REF}))
+    declined = _scored(outcome="declined", decline_reasons=["driver_age below minimum"])
+
+    # No exception escapes: the internal `try` catches the guard's raise, exactly as it
+    # catches any other trace-sampling failure.
+    _run(
+        score_module._maybe_sample_trace(
+            database, api_settings, caller, ctx, declined
+        )
+    )
+
+    assert _run(_rows_for(database, workspace_id)) == []
+    assert _run(_trace_produce_jobs(database, workspace_id)) == []
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_quoted_outcome_at_rate_zero_persists_no_trace(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    quoted = _scored(outcome="quoted")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return quoted
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    _run(_set_trace_sample_rate(database, workspace_id, 0.0))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert response.status_code == 200, response.text
+    assert _run(_rows_for(database, workspace_id)) == []
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_quoted_outcome_at_rate_one_is_sampled(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    quoted = _scored(outcome="quoted")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return quoted
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert response.status_code == 200, response.text
+
+    rows = _run(_rows_for(database, workspace_id))
+    assert len(rows) == 1
+    assert rows[0].sample_reason == "rate"
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Negative for `_maybe_sample_trace`'s own guarantee: a sampled outcome whose
+    `bundle_hash` cannot possibly be persisted (the same malformed value NFR-RATE-13's own
+    acceptance test above uses) fails the trace write, not the response — the caller still
+    gets the 200 for the quote the platform already correctly priced."""
+    malformed = ScoringResult.model_construct(
+        outcome="quoted",
+        rating_version_ref=ArtifactRef.model_validate(SCORED_REF),
+        bundle_hash=12345,  # declared `str`; `write_pending_trace` cannot insert this
+        premium_ladder=[],
+        outputs={},
+        decline_reasons=[],
+        trace=None,
+        timing_ms={},
+    )
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return malformed
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))  # force sampling
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["bundle_hash"] == 12345
+    # The write failed (wrong type) and was caught — nothing persisted, but the caller was
+    # never told so.
+    assert _run(_rows_for(database, workspace_id)) == []
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_sampled_trace_is_completed_by_the_off_path_job(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """End to end: a real compiled bundle, a real `POST /score`, a real off-path
+    `score.trace_produce` Job driven synchronously (no live worker in tests), reproducing
+    the served quote exactly (Ruling 35 §8.2 condition (b))."""
+    register_trace_handlers()
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+    served_response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert served_response.status_code == 200, served_response.text
+    served_body = served_response.json()
+
+    rows = _run(_rows_for(database, workspace_id))
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.status == "pending"
+
+    jobs = _run(_trace_produce_jobs(database, workspace_id))
+    assert len(jobs) == 1
+    job_id = jobs[0].id
+
+    async def _run_job() -> tuple[JobStatus, ScoringTraceRow]:
+        job_status = await execute_job(database, job_id, blob_store)
+        async with database.session() as session:
+            completed = await session.get(ScoringTraceRow, row.id)
+        assert completed is not None
+        return job_status, completed
+
+    job_status, completed = _run(_run_job())
+    assert job_status is JobStatus.SUCCEEDED, "the off-path re-score Job did not succeed"
+    assert completed.status == "complete"
+    assert completed.blob_sha256 is not None
+
+    async def _read_body() -> Any:
+        async with database.session() as session:
+            return await traces.read_trace(session, blob_store, completed)
+
+    body = _run(_read_body())
+    assert str(body.rating_version_ref) == served_body["rating_version_ref"]
+    assert body.bundle_hash == served_body["bundle_hash"]
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_pinned_bundle_that_no_longer_resolves_is_refused_not_silently_rescored(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+    principal: Any,
+) -> None:
+    """Ruling 35 §8.2 condition (a): a pending row pinned to a `bundle_hash` that no
+    longer matches what `rating_version_ref` resolves to is never scored against the live
+    bundle in its place — the Job records a bodyless `mismatch` instead."""
+    register_trace_handlers()
+
+    async def _write_stale_and_submit() -> tuple[UUID, UUID]:
+        async with database.unit_of_work() as session:
+            pending = await traces.write_pending_trace(
+                session,
+                workspace_id=workspace_id,
+                quote_id="quote-stale-pin",
+                rating_version_ref=SCORED_REF,
+                bundle_hash="sha256:" + "0" * 64,  # deliberately not what SCORED_REF compiles to
+                sample_reason="rate",
+                environment="uat",
+                quote_context=_quote({"rating_version_ref": SCORED_REF}),
+                served_summary={
+                    "outcome": "quoted",
+                    "decline_reasons": [],
+                    "premium_ladder": [],
+                    "outputs": {},
+                },
+            )
+            job = await job_service.submit(
+                session,
+                JobKind.SCORE_TRACE_PRODUCE,
+                {
+                    "workspace_id": str(workspace_id),
+                    "actor": principal.model_dump(mode="json"),
+                    "scoring_trace_id": str(pending.id),
+                },
+                principal,
+                workspace_id=workspace_id,
+            )
+        return pending.id, job.id
+
+    trace_id, job_id = _run(_write_stale_and_submit())
+
+    async def _run_job() -> tuple[JobStatus, ScoringTraceRow]:
+        job_status = await execute_job(database, job_id, blob_store)
+        async with database.session() as session:
+            completed = await session.get(ScoringTraceRow, trace_id)
+        assert completed is not None
+        return job_status, completed
+
+    job_status, completed = _run(_run_job())
+    assert job_status is JobStatus.SUCCEEDED
+    assert completed.status == "mismatch"
+    assert completed.blob_sha256 is None

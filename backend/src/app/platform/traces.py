@@ -14,12 +14,30 @@ which is what keeps the row from diverging from the body it claims to summarise 
 preservation floor. Nothing in this module runs on a schedule. The only way NFR-OVR-6 can
 be breached is an early row deletion, so `delete_trace` is the one guard this slice owes —
 refusing while the floor still covers the row, permitting once it does not.
+
+**The sampling decision (W11 Task 4B) is `decide_sampling`, a pure function.** FR-RATE-42:
+100 % of declines and 100 % of errors, regardless of the configured rate, plus that rate for
+everything else. It takes the roll as an argument rather than calling `random.random()`
+itself, so it stays pure and the statistical boundary is testable with a fixed seed — the
+caller (the scoring route) supplies the roll.
+
+**Trace production is decoupled from the serving request** (Ruling 35,
+`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`): always capturing a
+trace inline pinned the traced fraction at 1 and put every real-time request over
+NFR-RATE-1's budget. The quoting path scores untraced and, on a sampled outcome, calls
+`write_pending_trace` — a row with no body yet, carrying the Quote Context an off-path Job
+needs to reproduce it. `app.worker.trace_handlers` re-scores the *pinned* bundle and calls
+`complete_pending_trace`, which fills in the body and records whether the re-score
+reproduced the served result (Ruling 35 §8.2's two safety conditions). `write_trace` is
+unchanged and still the single-shot path for a producer that already holds a full `Trace`
+(a batch Job's on-request trace, FR-RATE-41/Ruling 25 — there is no serving-request budget
+to protect there, so no pending phase is needed).
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Final, Literal
+from typing import Any, Final, Literal
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,9 +46,22 @@ from app.db.models import BlobRow, ScoringTraceRow
 from app.errors import PlatformError
 from app.platform import blobs
 from app.platform.blobs import BlobStore, to_ref
-from model_schema import Trace
+from model_schema import ScoringOutcome, ScoringResult, Trace
 
-__all__ = ["SampleReason", "delete_trace", "read_trace", "write_trace"]
+__all__ = [
+    "SampleReason",
+    "complete_pending_trace",
+    "decide_sampling",
+    "delete_trace",
+    "read_trace",
+    "summarise_result",
+    "write_pending_trace",
+    "write_trace",
+]
+
+#: The fields `summarise_result` compares a re-score against (Ruling 35 §8.2 condition
+#: (b)) — never quote inputs, only what was actually served.
+_SUMMARY_FIELDS: Final[set[str]] = {"outcome", "decline_reasons", "premium_ladder", "outputs"}
 
 #: FR-RATE-42's three sampling reasons. Task 4B decides which applies to a given quote;
 #: this module only persists the answer.
@@ -42,6 +73,31 @@ SampleReason = Literal["rate", "decline", "error"]
 #: A plain constant, not a workspace setting: NFR-OVR-6 states a fixed minimum, never
 #: "configurable" the way FR-RATE-42's sampling *rate* is.
 _RETENTION_FLOOR_DAYS: Final = 396
+
+
+def decide_sampling(
+    outcome: ScoringOutcome, rate: float, *, roll: float
+) -> tuple[bool, SampleReason | None]:
+    """FR-RATE-42's sampling policy, as a pure function (W11 Task 4B).
+
+    A declined or errored quote is sampled at 100 % **regardless of `rate`**, including
+    `rate == 0.0` — that is the floor the requirement states, not an additional condition on
+    it. Everything else (`outcome == "quoted"`) is sampled iff `roll < rate`: at `rate ==
+    0.0` no roll satisfies that (`roll` is drawn from `[0.0, 1.0)`, so it is never `< 0.0`),
+    and at `rate == 1.0` every roll does.
+
+    `roll` is the caller's concern, not this function's — passing it in rather than calling
+    `random.random()` here is what keeps this pure and lets the statistical boundary test
+    fix a seed. The two 100 % floors need no roll at all, so they are decided before it is
+    even inspected.
+    """
+    if outcome == "declined":
+        return True, "decline"
+    if outcome == "error":
+        return True, "error"
+    if roll < rate:
+        return True, "rate"
+    return False, None
 
 
 async def write_trace(
@@ -82,6 +138,136 @@ async def write_trace(
     session.add(row)
     await session.flush()
     return row
+
+
+def summarise_result(result: ScoringResult) -> dict[str, Any]:
+    """What a re-score is checked against (Ruling 35 §8.2 condition (b)): `outcome`,
+    `decline_reasons`, `premium_ladder` and `outputs` — the served answer, never the raw
+    quote inputs that produced it (those travel separately, in `pending_quote_context`).
+
+    Every one of these fields is already JSON-exact — `premium_ladder`'s `value_minor` is
+    an `int`, and `outputs`' values are `int`/`str`/`bool` by construction
+    (`_coerce_output_value`, `pricing_core.rating.score` — nothing here is a `float`), so
+    comparing two dicts built this way is an exact comparison, not an approximate one.
+    Shared by the serving route (the *served* summary) and the off-path Job (the
+    *reproduced* one) so the two are computed the same way — a summary function that
+    diverged between the two call sites could pass a broken reproduction.
+    """
+    return result.model_dump(mode="json", include=_SUMMARY_FIELDS)
+
+
+async def write_pending_trace(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    quote_id: str | None,
+    rating_version_ref: str,
+    bundle_hash: str,
+    sample_reason: SampleReason,
+    environment: str | None,
+    quote_context: dict[str, Any],
+    served_summary: dict[str, Any],
+) -> ScoringTraceRow:
+    """Serve time (W11 Task 4B, Ruling 35): record a sampled outcome before any trace body
+    exists — no `Trace` to serialise yet, so no blob write and no I/O beyond the insert.
+
+    `quote_context` is the `QuoteContext` the off-path Job will re-score, as an
+    already-JSON-safe dict (`QuoteContext.model_dump(mode="json")`) — Ruling 35 §8.4's
+    access-controlled carrier, kept on this row rather than in `JobRow.parameters`, which
+    a workspace member holding no scoring permission can already read. `served_summary` is
+    `summarise_result`'s output for the result actually served, compared against the
+    re-score's own summary by `complete_pending_trace`.
+    """
+    row = ScoringTraceRow(
+        workspace_id=workspace_id,
+        quote_id=quote_id,
+        rating_version_ref=rating_version_ref,
+        bundle_hash=bundle_hash,
+        sample_reason=sample_reason,
+        environment=environment,
+        status="pending",
+        pending_quote_context=quote_context,
+        served_summary=served_summary,
+        blob_sha256=None,
+    )
+    session.add(row)
+    await session.flush()
+    return row
+
+
+async def complete_pending_trace(
+    session: AsyncSession,
+    blob_store: BlobStore,
+    trace_id: UUID,
+    trace: Trace | None,
+    *,
+    reproduced_summary: dict[str, Any] | None,
+) -> ScoringTraceRow:
+    """Off-path (W11 Task 4B, Ruling 35): resolve a pending row from a re-score attempt.
+
+    **Never an `UPDATE`.** `835988d1de4c` revokes `UPDATE` on `scoring_traces` outright, so
+    this deletes the pending row and inserts the finished one at the same id — and the
+    same `created_at`, explicitly carried across, because NFR-OVR-6's retention floor is
+    measured from it and completion must not reset the clock for a row that, from the
+    floor's point of view, has not moved. Both statements run inside the caller's open
+    transaction, so a crash between them leaves no orphaned state on commit.
+
+    **Two distinct call shapes, for Ruling 35 §8.2's two safety conditions:**
+
+    - `trace=None` (condition (a)): the caller could not resolve the *pinned* bundle — it
+      refused to score the live one in its place, so no re-score was even attempted. The
+      row completes `"mismatch"` with no body; `reproduced_summary` is ignored (pass
+      `None`).
+    - `trace` given (condition (b)): a re-score *was* produced against the pinned bundle.
+      `reproduced_summary == row.served_summary` decides `"complete"` (reproduced) versus
+      `"mismatch"` (did not) — the body is written and kept either way, because a trace
+      that failed to reproduce is still evidence of what the re-score actually did, and
+      the ruling requires the mismatch *recorded*, not the trace discarded.
+    """
+    row = await session.get(ScoringTraceRow, trace_id)
+    if row is None:
+        raise PlatformError(
+            "NOT_FOUND", "Trace not found", 404, f"No scoring trace with id {trace_id}."
+        )
+    if row.status != "pending":
+        raise PlatformError(
+            "TRACE_NOT_PENDING",
+            "Trace is not pending",
+            409,
+            f"scoring_traces row {trace_id} has status {row.status!r}, not 'pending' — it "
+            "was already completed, or was never a pending row to begin with.",
+        )
+
+    if trace is None:
+        # Condition (a): the pinned bundle was unresolvable. No re-score, no body.
+        blob_sha256: str | None = None
+        status = "mismatch"
+    else:
+        payload = trace.model_dump_json().encode()
+        ref = await blob_store.put(session, payload, "application/json")
+        await blobs.retain(session, ref.sha256)
+        blob_sha256 = ref.sha256
+        status = "complete" if reproduced_summary == row.served_summary else "mismatch"
+
+    completed = ScoringTraceRow(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        quote_id=row.quote_id,
+        rating_version_ref=row.rating_version_ref,
+        bundle_hash=row.bundle_hash,
+        sample_reason=row.sample_reason,
+        environment=row.environment,
+        status=status,
+        pending_quote_context=None,
+        served_summary=row.served_summary,
+        blob_sha256=blob_sha256,
+        created_at=row.created_at,
+    )
+    await session.delete(row)
+    await session.flush()
+    session.add(completed)
+    await session.flush()
+    return completed
 
 
 async def read_trace(session: AsyncSession, blob_store: BlobStore, row: ScoringTraceRow) -> Trace:
@@ -131,5 +317,8 @@ async def delete_trace(
             f"{eligible_at.isoformat()}.",
         )
 
-    await blobs.release(session, row.blob_sha256)
+    # A pending row (Task 4B) has no blob yet — nothing to release. Every other status
+    # does, and `write_trace`/`complete_pending_trace` both `retain` on the way in.
+    if row.blob_sha256 is not None:
+        await blobs.release(session, row.blob_sha256)
     await session.delete(row)

@@ -193,6 +193,21 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         constraints={"min": 0.0, "max": 1.0},
     ),
     SettingDefinition(
+        key="rating.trace_sample_rate",
+        type=SettingType.FLOAT,
+        default=0.01,
+        description="`03` FR-RATE-42's sampled-production-traces rate: the fraction of "
+        "*quoted* real-time scoring outcomes persisted as a `ScoringTrace` (`03` §4.5, W11 "
+        "Task 4B). Default 1 %, per the requirement's own text. **Not the same setting as "
+        "`observability.trace_sample_rate` above** — that one is R4's distributed-tracing "
+        "`trace_id` sample rate, an unrelated concept the name collides with; this one "
+        "governs FR-RATE-42's persisted `Trace` artifacts and feeds `05-monitoring.md`. "
+        "Declines and errors are always persisted regardless of this rate (FR-RATE-42's "
+        "100 % floor) — `app.platform.traces.decide_sampling` applies that floor before "
+        "this fraction is even consulted.",
+        constraints={"min": 0.0, "max": 1.0},
+    ),
+    SettingDefinition(
         key="governance.approval_policy_ref",
         type=SettingType.STRING,
         default="",

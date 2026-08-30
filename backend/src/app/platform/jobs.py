@@ -73,6 +73,9 @@ DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
     JobKind.RATING_REGRESSION: JobQueue.COMPUTE,
     JobKind.RATE_TABLE_DIFF: JobQueue.COMPUTE,
     JobKind.SCORE_BATCH: JobQueue.SCORING,
+    # `scoring`, same as `score.batch`: many, thin, and off the request path (Task 4B,
+    # Ruling 35) but still part of the quoting pipeline's own pool, not `compute`'s.
+    JobKind.SCORE_TRACE_PRODUCE: JobQueue.SCORING,
     JobKind.DISLOCATION_RUN: JobQueue.COMPUTE,
     JobKind.OPTIMISATION_RUN: JobQueue.COMPUTE,
     JobKind.GIPP_CHECK: JobQueue.COMPUTE,

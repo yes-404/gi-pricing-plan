@@ -63,6 +63,10 @@ class Caller:
     principal: Principal
     workspace_id: UUID
     environments: frozenset[str] = frozenset()
+    #: The environment the presented credential was scoped to (Ruling 44) — `None` for a
+    #: bearer or development caller. `environments` above is unchanged: the account's
+    #: granted set, still the field authorisation reads.
+    environment: str | None = None
     permissions: frozenset[str] = frozenset()
 
 
@@ -294,6 +298,7 @@ def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) ->
         principal=identity.principal,
         workspace_id=chosen,
         environments=identity.environments,
+        environment=identity.environment,
         permissions=identity.permissions,
     )
 

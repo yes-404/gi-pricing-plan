@@ -630,7 +630,14 @@ silent partial result)*,
 ≥ 13 months (NFR-OVR-6), a preservation floor rather than an expiry (Ruling 23's
 correction). Deleting a `scoring_traces` row while it is still inside that floor is refused
 with this code; outside the floor it is permitted. `app.platform.traces.delete_trace` is
-the only raiser)*.
+the only raiser)*,
+`TRACE_NOT_PENDING`
+*(added 2026-08-30, W11 Task 4B — **409**. Ruling 35 moves trace production off the
+serving request: a sampled real-time outcome is first persisted `pending`, and an
+off-path Job re-scores the pinned bundle and fills in the body. This code is refused when
+that completion is attempted against a row that is not `pending` — already completed, or
+never a pending row — so a re-delivered Job stops rather than re-running the re-score and
+orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raiser)*.
 
 > **RATE_TABLE_PARQUET_UNBUILT (2026-08-28, W10-2).** A diff touching a `parquet`-stored
 > version is refused with **501** until W10-3 delivers the 202-with-Job form. No version

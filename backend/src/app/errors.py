@@ -330,6 +330,13 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # outside the floor it is permitted. `app.platform.traces.delete_trace` is the
         # only raiser.
         "TRACE_RETENTION_FLOOR",
+        # Trace persistence (W11 Task 4B, Ruling 35 — trace production moved off the
+        # serving request). `app.platform.traces.complete_pending_trace` refuses to fill
+        # in a row that is not `pending` — already completed, or never a pending row at
+        # all — rather than silently re-running the re-score and orphaning a blob. The
+        # only raiser is that function; a re-delivered off-path Job finds the row already
+        # `complete`/`mismatch` and this is how it stops rather than doubling the work.
+        "TRACE_NOT_PENDING",
     }
 )
 
