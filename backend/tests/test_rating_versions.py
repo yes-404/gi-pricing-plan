@@ -265,3 +265,97 @@ def test_submit_rating_version_over_http(
     data = submit_response.json()
     assert data["status"] == "review"
     assert data["id"] == rating_id
+
+
+@pytest.mark.req("FR-RATE-40")
+def test_a_blank_change_summary_cannot_submit_a_rating_version(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    """FR-RATE-40 limb 3 — the change summary, which the requirement delegates to FR-RATE-27.
+
+    FR-RATE-40 (`03` §5, line 173) names **four** conditions a Rating Version must meet before
+    `approved`: a passing Regression Suite, a Dislocation Run against the live version, *"a
+    change summary (FR-RATE-27)"*, and a GIPP check where the insurer has enabled it. This
+    marker evidences the third only. The other three are W12's and W13's and are recorded in
+    register row F44, so `req-coverage.py` reporting FR-RATE-40 covered from here says nothing
+    about them — the close audit takes FR-RATE-40's verdict from F44, never the coverage table.
+
+    **The summary is `"   "` rather than `""` on purpose, and the code is asserted as well as
+    the status.** `RatingVersionSubmit` (`api/models.py:276`) declares `change_summary: str`
+    with no `min_length` — unlike `SubmitApproval` in `api/approvals.py`, which has
+    `Field(min_length=1)` — so on *this* route both `""` and `"   "` clear Pydantic and reach
+    `approvals.submit`'s guard. Asserting the code pins which guard refused: were anyone to add
+    `min_length` to the model, a status-only assertion would silently start testing Pydantic's
+    422 instead of the platform's, and go on passing while the thing it was written to prove
+    stopped being exercised.
+    """
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
+    headers = {
+        DEV_PRINCIPAL_HEADER: str(principal.id),
+        "Workspace-Id": str(workspace_id),
+    }
+    create_response = api_client.post(
+        "/api/v1/rating-versions",
+        json={
+            "slug": "fremtpl2-demo",
+            "dataset_version_id": str(new_uuid7()),
+            "model_ref": ArtifactRef(type="model", slug="fremtpl2-glm", version=1).model_dump(),
+        },
+        headers=headers,
+    )
+    assert create_response.status_code == 201, create_response.text
+    rating_id = create_response.json()["id"]
+
+    # `submit_for_review` refuses a non-draft version with 409 *before* reaching the change
+    # summary, so the version must be draft for this test to be testing what it says.
+    assert create_response.json()["status"] == "draft"
+
+    response = api_client.post(
+        f"/api/v1/rating-versions/{rating_id}/submit",
+        json={"change_summary": "   "},
+        headers=headers,
+    )
+
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED", problem
+    assert problem["title"] == "A change summary is required", problem
+    # `PlatformError(code, title, status, detail)` — the FR-GOV-10 sentence is the *detail*,
+    # and asserting on it pins this raise site rather than merely the code, which four other
+    # guards in `platform/approvals.py` also use.
+    assert "FR-GOV-10" in problem["detail"], problem
+
+    # The version is still submittable: the guard refused the submission, it did not consume it.
+    ok = api_client.post(
+        f"/api/v1/rating-versions/{rating_id}/submit",
+        json={"change_summary": "widened the NCD ladder above 5 years"},
+        headers=headers,
+    )
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["status"] == "review"
+
+
+@pytest.mark.req("FR-PLAT-47")
+def test_the_submit_route_documents_the_422_it_returns(app) -> None:
+    """A client cannot handle a status the contract does not mention.
+
+    `test_contracts.py`'s `test_every_operation_documents_the_problems_it_returns` asserts that
+    401 is documented and that *something* beyond 200/201 is — which this route satisfied on
+    409 alone, so its missing 422 survived that check. `api/responses.py`'s `problems`
+    docstring names the class: *"Any route taking a path or query parameter can return 422 …
+    seven routes omitted it and published FastAPI's `HTTPValidationError` instead, which is a
+    second error shape a client would have to branch on."* This route is the eighth, and it
+    returns 422 for two independent reasons — a non-UUID `rating_version_id`, and the blank
+    change summary the test above proves.
+    """
+    responses = app.openapi()["paths"]["/api/v1/rating-versions/{rating_version_id}/submit"][
+        "post"
+    ]["responses"]
+
+    assert "422" in responses, sorted(responses)
+    # Ours, not FastAPI's `HTTPValidationError` — the second shape is the actual defect.
+    assert "application/problem+json" in responses["422"]["content"], responses["422"]
