@@ -13,6 +13,14 @@
   in-flight run also reports as UNSTABLE), dispatch, replan triggers, status-line judgment
   and ETA adjustment over mechanically derived facts, handover maintenance, presenting a
   close to the user.
+- **Merges only the maintainer's own pull requests, now that the repository is public**
+  (standing instruction, 2026-08-30). Sole merge authority is **bounded by author**: merge a
+  PR only when `author.login` is `yes-404`; **report any other author to the maintainer and
+  leave it alone.** The boundary is clean because every role here pushes with the maintainer's
+  own token — all 466 PRs in the history are `yes-404`-authored and the fork count is 0 — so a
+  different author is an outside contribution, not an ambiguity. Check the author **on every
+  merge**, not once a session. `git-hygiene` carries the query and the three repository
+  controls that would enforce this mechanically but are still unset.
 - **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
   workstream close, and again before a phase's exit demo, not discretionary. Grounded here
   rather than left assumed: the NT-0010/0011 adoption changed the very workstream cut

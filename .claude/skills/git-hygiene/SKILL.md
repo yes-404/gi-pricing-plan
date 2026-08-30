@@ -5,6 +5,42 @@ description: Git and GitHub working discipline for this repo — what belongs in
 
 # Git hygiene
 
+## The repository is public: merge only the maintainer's own pull requests
+
+**Standing maintainer instruction, 2026-08-30**, when `yes-404/gi-pricing-plan` went public:
+
+> *"keep an eye on PR not created by maintainer, as the project is public now, plz keep merge
+> PR only from the maintainer and report the others"*
+
+**Merge a PR only when `author.login` is `yes-404`. Any other author is reported to the
+maintainer and left alone** — not merged, not closed, not reviewed into a state that invites
+merging.
+
+**Why the boundary is clean here and would not be in most repositories**: every agent on this
+team pushes with the *maintainer's own* token, so a team PR and a maintainer PR are the same
+author by construction. Measured 2026-08-30 rather than assumed — **all 466 PRs in the
+repository's history are authored by `yes-404`, with no exceptions**, and the fork count is
+**0**. So a non-`yes-404` author is not an edge case to adjudicate; it is, today, definitionally
+an outside contribution.
+
+```bash
+gh pr list --state open --json number,author,title --jq '.[] | select(.author.login != "yes-404")'
+```
+
+**Check the author before every merge, not once per session.** A PR that was absent when you
+listed open PRs an hour ago is exactly the one this rule exists for.
+
+**This is a merge rule, not a review rule.** An outside PR may be read, and reading it is how it
+gets reported usefully. What is forbidden is landing it.
+
+**Three repository controls that would enforce this mechanically are still unset**, and all
+three return **403 to this token** (verified again 2026-08-30 — it can read Actions runs but
+not repository administration): **branch protection on `main`**, **fork-PR workflow approval**,
+and the **read-only default `GITHUB_TOKEN`**. Until the maintainer sets them, this rule is
+enforced by a person reading an author field, which is exactly the class of control
+`CLAUDE.md` §13 says has never been tested until it has printed a failure. Treat it
+accordingly.
+
 ## Branch and PR flow
 
 ```bash
