@@ -82,15 +82,35 @@ busy"; it is that **a single run cannot establish this half**, whatever the load
 minutes the audit observed the 1-minute load ranging 1.6–8.7, median ≈6 — and it is the
 *least* representative condition for a requirement stated at 200 rps.
 
-**The distribution, which the first four runs did not record and which would have made this
-legible without a re-run** (the leaf plan's acceptance block asks for it precisely because
-a number comfortably inside a budget and a number sitting on it are different findings).
-From the fifth run: without GBM, **stdev 0.706 ms, p50 6.858, p90 7.776, p99 10.162, max
-12.894 ms**; with GBM, **stdev 1.445 ms, p50 9.207, p90 10.786, p99 14.763, max 35.860 ms**.
-The with-GBM maximum is 2.4x its own p99 — the tail this budget is stated at is long.
+**The distribution — the acceptance criterion that would have caught all of this, and the
+one that was not met.** The leaf plan
+(`docs/plans/2026-08-29-w11-1-evaluator-core.md:1416`) requires *"the distribution, not
+only the p99 against the bound. A single number comfortably inside a budget and a number
+sitting on it are different findings, and only the distribution distinguishes them."*
+`bench-rating.py` **already printed** stdev, p50 and p90 beside every p99. This note
+recorded p99, mean and max only. Nothing was missing from the instrument — the numbers
+were dropped on the way to the page, and they are exactly the ones that make the no-GBM
+half's fragility visible without re-running anything.
+
+What they were — and why one run's distribution is not *the* distribution:
+
+| | stdev | p50 | p99 | budget |
+|---|---|---|---|---|
+| without GBM, under load (audit re-runs, load 1.6–8.5) | **3.5–4.0 ms** | ≈10 ms | 14.076–26.725 ms | 15 ms |
+| without GBM, quiet box (fifth run, load 1.16→1.38) | **0.706 ms** | 6.858 ms | 10.162 ms | 15 ms |
+| with GBM, quiet box (fifth run, load 1.10→1.16) | 1.445 ms | 9.207 ms | 14.763 ms | 50 ms |
+
+A stdev of 3.5–4.0 ms on a 15 ms budget with p50 ≈ 10 ms describes a distribution whose
+tail sits *on* the bound. 0.706 ms with p50 6.858 ms describes one that does not. **The
+spread is roughly five times wider under load than on a quiet box** — that is the
+instability restated as a distribution rather than as a disagreement between verdicts, and
+it is why the p99 alone flips. Quoting only the quiet-box figures here would repeat this
+note's original mistake in a new place. The with-GBM maximum is 2.4x its own p99, so that
+half's tail is long too, even where the verdict holds.
 
 *Limits of this evidence:* one machine, five runs per configuration, load observed but not
-controlled, and the first four runs recorded no distribution. The claim is that **the
+controlled; the under-load distribution is a range across three runs rather than one run's
+figures, and this note's own first run recorded none at all. The claim is that **the
 verdict is unstable**, not that the true p99 is any particular number.
 These are also **warm-slot** figures: `compile_bundle` and `load_bundle` — including
 XGBoost booster deserialisation and the `nthread=1` baking — run once, outside the timed

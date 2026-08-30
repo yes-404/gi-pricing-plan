@@ -285,10 +285,11 @@ def _statuses_the_backend_resolver_reported(
     resolver reported to `compile_bundle`.
 
     The two tripwires below need the value `rating_versions._Resolver` *produces*, not one
-    a test supplies. Every other occurrence of `"no_maturity_concept"` in the suite is
-    `_statuses[...] = "no_maturity_concept"` in pricing-core's **fake** resolver, which
-    sets the sentinel and so cannot notice the backend handing back something else. This
-    wraps the real resolver on its way into `compile_bundle` and records what it returned.
+    a test supplies. The suite's only other uses of the sentinel are the two
+    `_statuses[...] = "no_maturity_concept"` assignments in pricing-core's **fake** resolver
+    (`packages/pricing-core/tests/test_rating_compile_bundle.py`), which *set* the value and
+    so cannot notice the backend handing back something else. This wraps the real resolver
+    on its way into `compile_bundle` and records what it returned.
     """
     captured: dict[str, str] = {}
     real_compile_bundle = rating_versions.compile_bundle
