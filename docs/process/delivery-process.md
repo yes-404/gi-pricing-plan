@@ -2,7 +2,7 @@
 
 Adopted 2026-08-29 from NT-0010 (`.claude/notes/0010-layered-slice-based-workflow.md`),
 reconciled and ruled in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`
-("the rulings record"). This document is the process specification `CLAUDE.md` §12 points
+("the rulings record"). This document is the process specification `CLAUDE.md` §15 points
 at. It governs how a Claude Code team does the work in this repository — a distinct concept
 from `docs/workflows/wf-01…05`, the cross-module *domain* journeys (`CLAUDE.md` §4): one
 describes how the team works, the other what the platform does.
@@ -209,6 +209,13 @@ rows relevant to it before finalizing (§11 obligation 7).
   B11).
 - Runtime/ops state (roster state, balance log, reporter state) stays in the
   handover/ops area outside this repository — operational state, not a plan artifact.
+- The **machine-readable core** (`docs/process/delivery-process.core.json`): the state
+  machine, guards, vocabularies and runtime-state schema of this document, extracted so a
+  script can check what prose cannot. **This document is authoritative and the extract is
+  derived** — on any disagreement the markdown wins and the extract is wrong by definition,
+  which is why its own `meta` records `"authoritative": false`. Each block cites the section
+  it came from, and a drift check compares the two (NT-0014 §3). One source with enforcement,
+  never a second source.
 
 ## 11. Plan file obligations
 

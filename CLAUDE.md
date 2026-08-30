@@ -296,5 +296,10 @@ brief** — the file is the charter; a brief dies with its session. **A role fil
 proves insufficient is a finding against the file**: fix the file, do not paste a brief
 back in.
 
+**Its machine-readable core is `docs/process/delivery-process.core.json`** — the same process,
+extracted so a script can check it. **The markdown is authoritative; the extract is derived**,
+and a drift check fails the gate when they disagree. Read the markdown to know the process;
+the extract exists so a rule that can be checked mechanically is not left to prose.
+
 Distinct from `docs/workflows/wf-01…05`, the domain journeys (§4): one is how the team
 works, the other what the platform does.
