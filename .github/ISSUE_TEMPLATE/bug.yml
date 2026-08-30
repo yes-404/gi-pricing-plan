@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in the codebase, docs, or CI does not behave as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. See `SECURITY.md` instead if this is
+        a security vulnerability — please don't file those here.
+  - type: input
+    id: version
+    attributes:
+      label: Version / tree
+      description: The commit SHA or branch you observed this on.
+      placeholder: e.g. a commit SHA, or "main" as of a given date
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: What you ran or did, in enough detail to repeat it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, spec section references, or anything else relevant.
+    validations:
+      required: false

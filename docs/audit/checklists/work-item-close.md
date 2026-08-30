@@ -18,6 +18,10 @@ that does — confirm with the planner whether a phase review (the
 [`phase-review`](../../../.claude/skills/phase-review/SKILL.md) skill) is now due before
 signing off. A PR or slice close does not raise this question; only a workstream close does.
 
+**Every close also checks root `README.md`'s pointer freshness.** Does this close change
+what the README's pointers resolve to (roadmap phase, process spec location)? If yes,
+update the pointer — never the copied content, which the README must not contain.
+
 ## The record
 
 Write `docs/audit/work/<existing-id>/README.md` with these sections.
