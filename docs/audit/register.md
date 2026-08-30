@@ -52,6 +52,26 @@ A carried finding is written here by the work-item close checklist
 ([`checklists/work-item-close.md`](checklists/work-item-close.md)) and by the phase close
 checklist ([`checklists/phase-close.md`](checklists/phase-close.md)).
 
+## F42 is retired, recorded 2026-08-30
+
+**F42 names no finding and never will.** It was allocated for the `req-coverage.py`
+mislabel, then withdrawn before it was ever filed here: **F36** already registered that
+defect, in nearly the same words. The number is a tombstone, not a gap — a reader who finds
+F41 followed by F43 has found this note, not an omission.
+
+**Why it is tombstoned rather than re-used.** After the withdrawal the number was briefly
+re-allocated to a second, unrelated finding — the concurrent-`pytest` truncation that is
+`F40`'s sibling, where two runs collide with no interruption involved. That finding is
+**F45**. Re-using a withdrawn number left one artifact carrying `F42` in two incompatible
+senses at once, so a citation to it could not be resolved without knowing the allocation
+history. `CLAUDE.md` §5 forbids exactly this for requirement ids and section numbers, and
+the register's finding ids are held to the same rule: **never renumber, never re-use;
+append, mark superseded, or leave a tombstone.**
+
+The renumber cost one file and one task. The precedent — a register that breaks §5 while
+the phase review argues from §5 — would have cost more, which is the ground the decision
+was taken on.
+
 ## NT-0005 discharges, recorded 2026-08-27
 
 Two deferred NT-0005 items are discharged rather than filed. They are recorded here so
