@@ -7786,6 +7786,42 @@
         "title": "Page[PerilStructure]",
         "type": "object"
       },
+      "Page_TraceView_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TraceView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[TraceView]",
+        "type": "object"
+      },
       "Page_ValidationRule_": {
         "additionalProperties": false,
         "properties": {
@@ -11025,6 +11061,188 @@
           "key_columns"
         ],
         "title": "TableCreate",
+        "type": "object"
+      },
+      "Trace": {
+        "additionalProperties": false,
+        "description": "`Trace` (FR-RATE-41, `scoring.schema.json:64-90`). Real-time and batch share the\nidentical structure (`03:172`).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "ladder_reconciled": {
+            "title": "Ladder Reconciled",
+            "type": "boolean"
+          },
+          "quote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Id"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "bundle_hash",
+          "steps",
+          "ladder_reconciled"
+        ],
+        "title": "Trace",
+        "type": "object"
+      },
+      "TraceStep": {
+        "additionalProperties": false,
+        "description": "One node of a `Trace` (FR-RATE-41, `scoring.schema.json:71-86`).\n\n`consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,\npassed through rather than re-derived — `03` does not specify a narrower shape than\n\"consumed values, produced value\" and the engine's own record already satisfies it.",
+        "properties": {
+          "consumed": {
+            "additionalProperties": true,
+            "title": "Consumed",
+            "type": "object"
+          },
+          "elapsed_us": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Elapsed Us",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "matched": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched"
+          },
+          "produced": {
+            "additionalProperties": true,
+            "title": "Produced",
+            "type": "object"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "input",
+              "lookup",
+              "table",
+              "expression",
+              "model_call",
+              "constraint",
+              "output"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "violation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Violation"
+          }
+        },
+        "required": [
+          "step_id",
+          "type"
+        ],
+        "title": "TraceStep",
+        "type": "object"
+      },
+      "TraceView": {
+        "additionalProperties": false,
+        "description": "One item of `GET /api/v1/traces` — the row's queryable fields plus the\nreconstructed `Trace` body (`03` §4.5).",
+        "properties": {
+          "bundle_hash": {
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "quote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Id"
+          },
+          "rating_version_ref": {
+            "title": "Rating Version Ref",
+            "type": "string"
+          },
+          "sample_reason": {
+            "title": "Sample Reason",
+            "type": "string"
+          },
+          "trace": {
+            "$ref": "#/components/schemas/Trace"
+          }
+        },
+        "required": [
+          "id",
+          "quote_id",
+          "rating_version_ref",
+          "bundle_hash",
+          "sample_reason",
+          "environment",
+          "created_at",
+          "trace"
+        ],
+        "title": "TraceView",
         "type": "object"
       },
       "TransitionRequest": {
@@ -26610,6 +26828,186 @@
         "summary": "Preview a source without creating a version",
         "tags": [
           "datasets"
+        ]
+      }
+    },
+    "/api/v1/traces": {
+      "get": {
+        "description": "Filtered, cursor-paginated (`00` §5.2), workspace-scoped, excluding anything not a\ncomplete real-time production trace (see module docstring for both exclusions).",
+        "operationId": "list_traces_api_v1_traces_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "rating_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rating Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-PLAT-65); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TraceView_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Sampled production traces",
+        "tags": [
+          "rating"
         ]
       }
     },

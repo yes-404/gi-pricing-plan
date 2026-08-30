@@ -39,9 +39,8 @@ pytestmark = pytest.mark.usefixtures("database")
 def api_settings() -> Settings:
     """Settings with development identity on, pointed at the *test* database and bucket —
     same reasoning as `test_api_jobs.py`'s fixture of the same name."""
-    from pydantic import SecretStr
-
     from backend.tests.conftest_db import test_blob_bucket, test_database_url
+    from pydantic import SecretStr
 
     return Settings(
         environment=Environment.LOCAL,
