@@ -56,6 +56,24 @@ marker at all that day — the substitution happened to be inert, not proven saf
 general. Confirm any inherited `--extra` string resolves to fully-qualified ids before
 trusting its count.
 
+**Fixed 2026-08-29.** `scope-audit.py`'s `_extra_ids` now validates every `--extra` token
+against the module's own parsed requirement ids (`requirements_by_section`'s flattened
+set) before any of them reaches scope, and refuses the **whole** list — naming every bad
+token, with a "did you mean `FR-RATE-41`?" hint whenever a bare number looks like it
+dropped the previous token's prefix — rather than silently accepting whichever tokens
+happen to look like something. Re-running the incident's own string verbatim,
+`--extra FR-RATE-40,41,42,NFR-RATE-1,13,14`, now exits non-zero naming all four bad tokens
+instead of quietly parsing to a wrong six with a right-looking count. Deliberately **no**
+shorthand syntax was added to auto-expand a bare number against the previous token's
+prefix: that would reintroduce a second, silently-successful way to get this wrong, and
+the failure here was ambiguity, not verbosity. Validation is scoped to the module under
+audit, matching every `--extra` invocation on record including this file's own
+`FR-PLAT-47,FR-PLAT-48` example above — none of them cross a module boundary.
+`tests/test_scope_audit.py` proves both directions on the real ids: the incident's exact
+string refused with the right per-token hints, a fully-qualified version of the same six
+ids still accepted with byte-identical output to the pre-fix parser (diffed against the
+genuine pre-fix script run in place, not assumed).
+
 **Map the workstream's named areas to spec sections yourself.** "Platform core: jobs, blobs,
 settings, OIDC auth, health, tracing" is `07` §3.1, §3.2, §3.3, §3.7, §3.8 — 33
 requirements — plus FR-PLAT-47/48 for the API conventions and the generated contract, which
@@ -319,6 +337,48 @@ This is the section most worth writing, because "W1 closed" reads as "the retrof
 handled" unless something says otherwise, and that list is the one thing this project
 cannot fix cheaply later.
 
+## 5a. Every binding plan-review condition has its artifact
+
+**A §14 plan review's maintainer acceptance can put an obligation on this close, and
+accepting a recommendation is what puts it in force — it does not discharge it.** Read
+[`docs/audit/plan-reviews.md`](../../../docs/audit/plan-reviews.md), find every dated
+acceptance whose condition names this workstream's close, and check the artifact each one
+demands actually exists. Quote the clause and name the artifact; a date is not evidence.
+
+```bash
+grep -n "Maintainer acceptance" docs/audit/plan-reviews.md    # then read each one's clause
+```
+
+**Why this is its own step rather than part of §5.** §5 asks what was not delivered, which
+is answered from the build. This asks what an earlier decision *promised* would be recorded,
+which is answered only from `plan-reviews.md` — and nobody rereads a review at closing time,
+because by then it reads as settled. The failure is silent in both directions: the review
+looks accepted, and the closure record looks complete.
+
+**The instance this step was written from.** Plan review 8 §5.1 recommended no re-cut of
+Phase 2's W11–W14 boundaries and was accepted 2026-08-29. The acceptance says, in the
+maintainer's own words, *"Acceptance makes the paragraph above binding. It does not meet
+it"* — FR-RATE-34 and FR-RATE-40 must **each** get an explicit, named, dated deferral in
+[`register.md`](../../../docs/audit/register.md) when W11 closes, *"not silence, and not a
+stub shipped and called done"*, and *"reading this date as having satisfied it would invert
+the clause"*.
+
+Two traps that entry also records:
+
+- **A ruling is not a register row.** W11's DP1 and DP2 were both ruled, and the acceptance
+  says plainly that this does not write the rows: *"a ruling settles what the code does, a
+  register row records what the workstream did not deliver, and those are different
+  artifacts."*
+- **A mention inside another row is not a row.** Checking the obligation by grepping the id
+  returns F-W9-2's prose *"specialises FR-RATE-40's general approval-evidence gate, which W11
+  builds"* — the id appears, and the deferral does not exist. Grep for the id, then read
+  every hit to see whether it is a row *about* that requirement or a row that merely names it.
+
+**The precedent for taking this seriously:** F-W9-1 carried NFR-RATE-13/14 forward with a
+register row that did exist, and the roadmap still lost them for two workstreams — W11's row
+records them as *"omitted from this row until now"*. A row is necessary and has not been
+sufficient.
+
 ## 6. Update the plan docs in the same commit
 
 - `docs/roadmap.md` — status table, closure evidence with dates, the §5 mapping
@@ -376,9 +436,38 @@ docs audit 15/15 · req-coverage N requirements
 **Not delivered by W<n>:** every unevidenced requirement with a verdict — delivered but
 untested / deferred with an owner / reassigned / not started — plus the §5 retrofit
 mapping.
+
+**Binding plan-review conditions:** each dated acceptance conditioning this close, the
+artifact it demanded, and where that artifact now is. *None* is a valid answer only after
+looking.
 ```
 
 ## Verified
+
+2026-08-30 — §5a, written at W11's close from an obligation that was live and unmet while
+this skill had no step that would have found it. Plan review 8 §5.1's acceptance
+(`docs/audit/plan-reviews.md:987-1005`) requires named, dated register deferrals for
+FR-RATE-34 and FR-RATE-40; `git grep -n "FR-RATE-34\|FR-RATE-40" docs/audit/register.md`
+returns exactly one line, F-W9-2's prose about FR-RATE-61, and neither id has a row. The
+acceptance had itself verified this and said so — the gap was that nothing in the closing
+procedure sends a reader back to it. Same class as the §14 trigger that fired for neither
+the W9 nor the W10 close.
+
+2026-08-29 (second entry, the tool fix for the trap immediately below) — `_extra_ids`
+validates every `--extra` token against `by_section`'s own flattened id set for the module
+under audit before any of them reaches scope, and refuses the whole list naming each bad
+token. Confirmed both directions by hand, in `scope-audit.py`'s own worktree: the
+incident's own `FR-RATE-40,41,42,NFR-RATE-1,13,14` now exits non-zero naming `41`, `42`,
+`13`, `14`, each with a "did you mean" hint against the correct prefix (`FR-RATE-41` etc.);
+a version with all six ids spelled out
+(`FR-RATE-40,FR-RATE-41,FR-RATE-42,NFR-RATE-1,NFR-RATE-13,NFR-RATE-14`) produces
+byte-identical output to the pre-fix parser on the same input — diffed against the genuine
+pre-fix script swapped back into its own path (`git checkout --` on a backed-up copy, per
+this skill's testing sibling `python-test`'s "never `git checkout --` a file you are
+working on"), not assumed from reading the source. `tests/test_scope_audit.py` pins both
+directions plus a cross-module id (`FR-PLAT-47`, real but not RATE's) and a leading bare
+number with nothing valid before it to guess a prefix from — each proven to fail against
+the pre-fix parser before being trusted.
 
 2026-08-29 — the `--extra` comma-prefix trap in §0, found re-deriving W11's own baseline
 at tree `9891be1` (`scripts/scope-audit.py RATE --sections 3.7 --extra

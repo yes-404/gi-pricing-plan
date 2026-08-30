@@ -303,6 +303,57 @@ def report_endpoints(module: str) -> int:
     return 0
 
 
+#: A token that lost its prefix to a comma split, e.g. the `41` in `FR-RATE-40,41`.
+_BARE_NUMBER = re.compile(r"^\d+$")
+
+
+def _extra_ids(raw: str, known: set[str], module: str) -> set[str] | None:
+    """Parse `--extra`'s comma list, refusing any token that names no real requirement.
+
+    The parser is a literal `raw.split(",")` with no shared-prefix inheritance: a comma
+    reads to a human as "and repeat the prefix", but the parser reads it as a plain
+    separator. `--extra FR-RATE-40,41,42` is not three requirement ids, it is
+    `FR-RATE-40`, `"41"` and `"42"`. Before this check existed, `main` folded every token
+    straight into scope regardless, and an unmatched one still got a `NO EVIDENCE` row
+    printed for it — indistinguishable from a real requirement lacking a test, and with one
+    bogus token swapped in for the id it silently replaced, the in-scope *count* still came
+    out looking right (`.claude/skills/close-workstream/SKILL.md`, incident of 2026-08-29,
+    PR #395). This validates every token against `module`'s own requirement ids — already
+    parsed by `requirements_by_section` into `known` — before any of them reaches scope,
+    and refuses the whole list rather than silently accepting the good ones and burying the
+    bad ones in the report.
+
+    Returns the parsed set, or `None` after printing the diagnostic (the caller returns 1).
+    A bare-number token is given a targeted hint — the one shape this has actually failed
+    in — naming the prefix it most likely dropped; anything else gets the plain refusal.
+    """
+    tokens = [token.strip() for token in raw.split(",")]
+    bad: list[str] = []
+    last_prefix: str | None = None
+    for token in tokens:
+        if token in known:
+            last_prefix = token.rsplit("-", 1)[0]
+            continue
+        if _BARE_NUMBER.match(token) and last_prefix is not None:
+            guess = f"{last_prefix}-{token}"
+            bad.append(
+                f"      {token!r} — comma-splitting does not repeat the {last_prefix!r} "
+                f"prefix from the id before it; did you mean {guess!r}?"
+            )
+        else:
+            bad.append(f"      {token!r} — no {module} requirement has this id")
+    if bad:
+        print(f"\n  --extra names {len(bad)} token(s) matching no requirement:\n")
+        for line in bad:
+            print(line)
+        print(
+            "\n  Write every id out in full — a comma-separated list does not inherit a\n"
+            "  shared prefix the way it reads to a human."
+        )
+        return None
+    return set(tokens)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("module", help="Module code, e.g. PLAT, DATA, MODEL")
@@ -311,7 +362,10 @@ def main() -> int:
         help="Comma-separated section numbers to treat as in scope, e.g. 3.1,3.2",
     )
     parser.add_argument(
-        "--extra", help="Comma-separated requirement ids also in scope, e.g. FR-PLAT-47"
+        "--extra",
+        help="Comma-separated requirement ids also in scope, each written out in full, "
+        "e.g. FR-PLAT-47,FR-PLAT-48 (NOT FR-PLAT-47,48 — the comma does not repeat "
+        "the prefix)",
     )
     parser.add_argument(
         "--endpoints",
@@ -333,7 +387,13 @@ def main() -> int:
     wanted = (
         {s.strip() for s in args.sections.split(",")} if args.sections else None
     )
-    extra = {r.strip() for r in args.extra.split(",")} if args.extra else set()
+    extra: set[str] = set()
+    if args.extra:
+        known = {rid for ids in by_section.values() for rid in ids}
+        parsed = _extra_ids(args.extra, known, args.module)
+        if parsed is None:
+            return 1
+        extra = parsed
     claimed = evidence()
 
     in_scope: list[str] = []

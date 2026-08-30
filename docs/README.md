@@ -19,7 +19,7 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 | `contracts/` | JSON Schema for artifacts + OpenAPI stubs |
 | `adr/` | Architecture decision records (numbered, immutable once accepted) |
 | `process/` | Team execution process: layered workflow (Project→Phase→Work→Slice), roles, escalation, monitoring loop |
-| `research/` | Spike findings and dated research notes (track-a, w6b-6b, w8, zen-evaluate-concurrency) |
+| `research/` | Spike findings and dated research notes. Not enumerated here — the parenthetical list this row used to carry named four notes while six existed, and would have gone stale again on the next one. `ls docs/research/` is the index |
 | `skills-map.md` | Stack component → where used → skills to research → resources |
 | `open-questions.md` | Unresolved design questions, owner, status |
 | `phase-0-status.md` | Exit-criteria progress, requirement inventory, contract coverage, spikes |
