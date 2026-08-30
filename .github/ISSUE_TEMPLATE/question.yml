@@ -1,0 +1,23 @@
+name: Question or suggestion
+description: A question about the specs or process, or a suggestion for the project.
+labels: ["question"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Question about a spec (docs/specs/)
+        - Question about the delivery process
+        - Suggestion / feature idea
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: body
+    attributes:
+      label: Details
+      description: Ask your question or describe your suggestion. Link to the relevant
+        spec section, requirement id, or file where you can.
+    validations:
+      required: true
