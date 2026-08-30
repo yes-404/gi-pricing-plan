@@ -297,9 +297,16 @@ proves insufficient is a finding against the file**: fix the file, do not paste 
 back in.
 
 **Its machine-readable core is `docs/process/delivery-process.core.json`** — the same process,
-extracted so a script can check it. **The markdown is authoritative; the extract is derived**,
-and a drift check fails the gate when they disagree. Read the markdown to know the process;
-the extract exists so a rule that can be checked mechanically is not left to prose.
+extracted so a script can check it. **The markdown is authoritative; the extract is derived.**
+**Which gate checks hold it to that is `delivery-process.md` §10's to state, not this file's**
+— read it there. This file said *"a drift check fails the gate when they disagree"*, which was
+**false**: the check that exists resolves each block's *citations*, and nothing compared the
+content, so the extract fell two commits behind its source with the gate green throughout
+(Ruling 45). Corrected 2026-08-30 to a pointer rather than a second description, because a
+restated enforcement is how one of the two statements goes stale
+([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md)) — which is what happened
+here. Read the markdown to know the process; the extract exists so a rule that can be checked
+mechanically is not left to prose.
 
 Distinct from `docs/workflows/wf-01…05`, the domain journeys (§4): one is how the team
 works, the other what the platform does.
