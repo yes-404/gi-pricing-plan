@@ -178,3 +178,65 @@ returns.
 - Amends no requirement and mints no id, so it owes no
   [`../open-questions.md`](../open-questions.md) mirror row and no
   [`../roadmap.md`](../roadmap.md) §10 gate row.
+
+---
+
+## Addendum, filed 2026-08-29 after `fdbcb90` — §7's suggested carrier is withdrawn
+
+**§7 suggested the wrong carrier and an implementer would have built it.** That section reads
+*"A Job payload is the natural carrier and `rating.compile` is the shape. This persists a Quote
+Context in `JobRow.parameters`"*, and flags the governance question as the lead's. The lead
+answered it, and the answer is that **the Quote Context must not go in `JobRow.parameters` at
+all.** A **pending trace row** carries it instead. The ruling itself is unchanged; only §7's
+mechanism suggestion is withdrawn.
+
+**The ground, verified here rather than taken on report.** Two facts at `fdbcb90`:
+
+- `Job.parameters` is a **returned API field** —
+  `packages/model-schema/src/model_schema/jobs.py:220`, `parameters: dict[str, Any] =
+  Field(default_factory=dict)` on the `Job` schema the jobs routes return.
+- **Job reads scope by workspace and nothing else.**
+  `backend/src/app/api/jobs.py:91`'s `_load_scoped` raises 404 only when
+  `row is None or row.workspace_id != caller.workspace_id`. There is no per-resource or
+  role check beyond workspace membership.
+
+So a Quote Context in a Job's parameters is readable by any caller in the workspace who can
+read jobs. NFR-RATE-11 (`03`:807) requires that *"quote inputs are never logged in full outside
+sampled traces, **which are access-controlled**"*. Routing the input through a Job would give
+quote inputs a read path that the trace access control does not govern — **the control would be
+bypassed by a field nobody thought of as a trace.**
+
+**A second ground was drafted here and is withdrawn before it landed.** The same requirement
+says quote inputs *"are never logged in full outside sampled traces"*, and the draft argued
+that on the reading where this governs *where a quote input may exist in full* — not merely
+what reaches application logs — a trace row is **the only permitted carrier** rather than the
+better one.
+
+**That reading cannot be asserted, because FR-RATE-43 stores a Quote Context.** If *"logged"*
+reached persisted state, every Golden Quote would breach NFR-RATE-11, and this ruling relies on
+FR-RATE-43 (§4) as settled behaviour. So one of three holds, and the suite does not say which:
+
+- **NFR-RATE-11 is scoped to its own subject, the scoring API.** Its sentence opens *"the
+  scoring API authenticates…"*, and the second clause plausibly inherits that subject — in
+  which case FR-RATE-43's deliberately authored test artifact is simply out of scope, and the
+  clause still binds the **live scoring-path** input this remedy carries. On this reading the
+  withdrawn ground survives *for the data this ruling actually moves*.
+- ***"logged"* means written to logs.** FR-RATE-43 is untroubled and the ground falls entirely.
+- **The two requirements conflict** and one is wrong.
+
+**The access-control ground above depends on none of them and is sufficient on its own**, which
+is why the ruling does not rest on this. **Recorded rather than resolved**: the disposition
+belongs with the lead's separately filed finding on the NFR-RATE-11 / FR-RATE-43 tension, not
+to an addendum whose subject is a carrier.
+
+**A pattern worth the §14 review rather than two nits.** This is the second requirement in the
+same `03` §9 table whose predicate cannot be applied without an interpretive step:
+NFR-RATE-2 names no statistic (filed separately by the lead), and NFR-RATE-11's *"logged"* is
+ambiguous between *written to logs* and *persisted anywhere*. Both are governed requirements
+that an implementer must guess at, and in both cases the guess decides whether an
+implementation conforms.
+
+**How the error was made.** §7 reasoned from an existing shape — `rating.compile` passes its
+inputs as Job parameters — without checking whether *this* payload was one the field may
+legally hold. **A precedent establishes that a mechanism works, never that it is permitted for
+new content.** The check that was missing is a one-line read of what the Job schema returns.
