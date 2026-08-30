@@ -1294,10 +1294,19 @@ scope-derivation pass) and `NFR-RATE-2, 3, 4, 5, 7, 8, 9, 11, 12` plus `NFR-OVR-
 which appear inside the row's `FR-RATE-34..42, 64`.
 
 **Question B — what is claimed by no row anywhere in `docs/roadmap.md`, full stop?** A narrower
-**fourteen**, because four of Question A's six `FR-` ids are *also* named by **W9's** row
-(`docs/roadmap.md:374`, `FR-RATE-1..13, 22..27, 56/57/58/59`) — just through a bare-number
-continuation that a per-id search does not match, not through any text a naive reader would
-recognise:
+**fourteen, enumerated rather than left as arithmetic** (the arithmetic below is shown once, as
+the derivation, not as a substitute for the list — restating only "sixteen minus four plus two"
+is exactly the kind of bare count Candidate B warns against, and was not enough for this figure
+to be checked without a second round-trip):
+
+> `FR-RATE-63, FR-RATE-65` (two) · `NFR-RATE-2, 3, 4, 5, 7, 8, 9, 10, 11, 12` (ten) ·
+> `NFR-OVR-5, NFR-OVR-6` (two). **2 + 10 + 2 = 14.**
+
+That is Question A's sixteen, minus four `FR-` ids *also* named by **W9's** row
+(`docs/roadmap.md:374`, `FR-RATE-1..13, 22..27, 56/57/58/59`) through a bare-number continuation a
+per-id search does not match, plus two ids (`NFR-RATE-10`, `NFR-OVR-5`) that sit **outside**
+Question A entirely, because no W11 plan claims them either — a worse gap than the other twelve's
+"claimed by a plan, absent from the row," and the reason the addition is not optional:
 
 - `FR-RATE-22, 24, 56` are W9's, and W11's own tests re-exercise rather than newly discharge them
   — except `FR-RATE-56` is a deeper case than the other two: per independent corroboration, W11
@@ -1312,10 +1321,8 @@ recognise:
   `FR-RATE-65` is already ruled W11's (Ruling 30,
   `docs/plans/2026-08-29-w11-fr-rate-65-attribution.md:33-47`, 2026-08-29; the mechanical row edit
   is outstanding, see question 5). `FR-RATE-63` is not yet ruled by anyone — see question 2.
-- `NFR-RATE-10` and `NFR-OVR-5` sit **outside Question A's sixteen entirely** — no W11 plan claims
-  either of them, which is a worse gap than "claimed by a plan, absent from the row" (see question
-  2 for both). Question B's fourteen is Question A's sixteen, minus the four `FR-` ids W9's row
-  already covers, plus these two.
+- `NFR-RATE-10` and `NFR-OVR-5` are the two ids named above that sit outside Question A entirely
+  (see question 2 for both).
 
 **Both totals are correct, for the question each answers, and neither replaces the other** — the
 practice this review's own Candidate B recommends below (a count states the granularity it was
@@ -1364,7 +1371,7 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   (`docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:156-225`) to be decided **at this review**,
   and still undecided. See the decision point after question 5.
 
-**3. Skills and research — one shape, five instances of it now.**
+**3. Skills and research — one shape, six instances of it now.**
 
 - **`delivery-process.md` §8's gate-in-flight control** ("announce an expensive verification…and
   check for one already in flight before starting," `delivery-process.md:170-172`) has no live
@@ -1396,7 +1403,19 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   with no check. Not worthless — a checklist step inside a procedure read start-to-finish is
   stronger than a rule floating loose in a process document — but the weaker of the two available
   instruments, chosen without the stronger one being ruled out.
-- **These are one shape, not four unrelated notes**: a rule stated in prose with nothing making
+- **A sixth instance, self-reported, and the strongest of the six because it controls for
+  knowledge and motivation, which the other five do not.** In one night, and immediately after
+  diagnosing this exact class, the lead broke three rules it had itself just written down: the
+  50-word message rule (above); the elided-prefix continuation trap
+  (`w11-scope-derivation.md`'s own "Method notes" — "before reporting any id as absent, search the
+  range and slash forms," which is precisely what a first pass over `FR-RATE-22/24/25/56` skipped);
+  and the rule that a bare count is not load-bearing (Candidate B, question 5 — restating "sixteen"
+  and then "ten NFRs and six FRs" without the enumerated list underneath either figure, corrected
+  above under question 1). Each was caught by a different teammate reading the artifact, none by a
+  check. Where the other five instances leave room to read the gap as an execution shortfall, this
+  one does not: the person with the most reason to comply, right after writing the rule down, still
+  needed a second reader to catch it.
+- **These are one shape, not five unrelated notes**: a rule stated in prose with nothing making
   compliance visible at the moment of the action it governs. **Recommendation (3.1):** for the
   gate-in-flight control specifically, a lock file or equivalent wrapper around any full-gate
   invocation, written to a path every role can read, so the state is true by construction rather
