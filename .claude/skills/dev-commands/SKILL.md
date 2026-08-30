@@ -110,6 +110,26 @@ MYPYPATH="packages/model-schema/src:packages/pricing-core/src:backend/src" uv ru
 `no-untyped-call`, `index`…) are not. Large enough that fixing it is its own PR (or several),
 not a config edit.
 
+**A reused `async with ... as session:` name can make mypy misresolve an unrelated overload,
+not just look untidy.** `examples/fremtpl2/seed.py`'s `run()` rebinds the name `session`
+nine times across the function body and two nested closures — ordinary here, since each
+`async with database.unit_of_work() as session:` / `database.session() as session:` block
+scopes cleanly at runtime. Under `--strict` with the `explicit_package_bases`/`mypy_path`
+pair this file now needs, one specific occurrence (`session.get(DatasetVersionRow, first)`,
+guarding the "was the failed version left mid-run" check) resolved `AsyncSession.get()`'s
+generic overload against `ValidationRuleRow` — the entity type an *earlier, unrelated*
+`row = ValidationRuleRow(...)` binds `row` to, nothing to do with this call — and reported a
+real-looking `arg-type` error (`type[DatasetVersionRow]` "incompatible" with what `.get()`
+expected) for a line that was correct as written. A same-shaped fix already in this file
+(renaming the *result* to `version_row`, adding `assert version_row is not None`) narrowed a
+genuine `X | None` correctly but left this one standing, because it renamed the wrong
+binding — the risk is `session`'s reuse, not `row`/`version_row`'s. Renaming *this*
+occurrence's `session` to `verify_session`, nothing else, took the file from 4 errors to 0.
+No other reused `session` binding in the file triggers it, so the fix is the one rename, not
+a repo-wide rule against the pattern — but the shape (many `async with X as <name>:` blocks
+sharing one name in a long function, one `.get()`/generic call among them) is worth
+recognising before re-diagnosing it as a real type bug a second time.
+
 ### Frontend (`.github/workflows/frontend.yml`)
 
 ```bash
@@ -332,6 +352,18 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-30 (third entry, the reused-`session` note immediately above) — `225c0dd`'s own
+message claimed the extension's 8 surfaced errors fixed, `examples/fremtpl2/seed.py`
+included. Re-running `uv run mypy` fresh against that commit found 4 of the 8 still
+present, all in `seed.py`, all at the `session.get(DatasetVersionRow, first)` call the
+commit's diff had touched — its fix (renaming the *result* to `version_row`, adding
+`assert version_row is not None`) narrowed a real `X | None` correctly but never renamed
+`session` itself, so the actual cause (above) survived it. The claim was not re-verified
+against a clean run before being written; this entry is that verification, done the second
+time. Confirmed both ways, directly: `uv run mypy` against `225c0dd`'s own committed
+`seed.py` reproduces exactly those 4; the one-line rename on top, nothing else, gives
+`Success: no issues found in 163 source files`.
 
 2026-08-30 (second entry, the mypy-coverage section immediately above) — extended `files`
 to `tests/`, `examples/fremtpl2` and the two skill script dirs; documented why

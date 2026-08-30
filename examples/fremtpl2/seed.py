@@ -540,11 +540,18 @@ async def run(rows: int | None) -> int:
     except Exception as exc:
         code = getattr(exc, "code", type(exc).__name__)
         print(f"    promotion refused: {code}")
-        async with database.session() as session:
-            # Named distinctly from the `ValidationRuleRow` bound to `row` above: the same
-            # local name across both would let mypy infer `row`'s type from whichever
-            # assignment runs first and flag the other as incompatible.
-            version_row = await session.get(DatasetVersionRow, first)
+        async with database.session() as verify_session:
+            # Named `verify_session`, not `session`: this function rebinds `session` via
+            # `async with database.X() as session:` nine times, including inside the nested
+            # `ingest`/`validate` closures above. Under --strict with the mypy_path/
+            # explicit_package_bases pair this module now needs (pyproject.toml's [tool.mypy]
+            # comment), that reuse made mypy resolve `.get()`'s overload for THIS call against
+            # `ValidationRuleRow` — the entity type bound to `row` earlier in the function,
+            # nothing to do with `first`'s actual type — misreporting a real bug
+            # (`type[DatasetVersionRow]` "incompatible" with the entity type `.get()` expected)
+            # where none exists. Confirmed empirically: this rename alone, nothing else,
+            # takes the file from 4 errors to 0.
+            version_row = await verify_session.get(DatasetVersionRow, first)
             assert version_row is not None, f"dataset version {first} vanished mid-run"
             print(f"    version 1 is {version_row.status} — not left mid-run (FR-DATA-43)\n")
 
