@@ -1,5 +1,8 @@
 # Work-item record — W11 (Scoring)
 
+**Re-opened in part 2026-08-30 — see §9. §§1–8 are the record as at close and are not
+amended.**
+
 **Closed 2026-08-30 as a reduced-scope close.** Scope and evidence audited against
 `origin/main` `97965be`.
 
@@ -204,3 +207,65 @@ delivered and tested, three not started and reassigned, and its named hard targe
 failing with the failure carried forward to an architectural ruling.
 
 Accepted by the lead under the maintainer's delegation of 2026-08-30.
+
+## 9. Reopened 2026-08-30
+
+**This section is a change of scope, not a correction of belief.** §§1–8 above are the record
+of what was believed and evidenced at the 2026-08-30 close and are neither corrected nor
+withdrawn by anything below.
+
+**The direction, quoted and dated.** Received by the maintainer in the message opening this
+session, 2026-08-30, recorded verbatim in
+[`docs/plans/2026-08-30-w11-reopen-direction.md`](../../../plans/2026-08-30-w11-reopen-direction.md)
+§1 (filed by the decision-maker, because the dispatch that requested the governing rulings
+asserted the direction as fact and no artifact in the tree carried it until that record):
+
+> *"read handover in /home/puzhenhao1989/gi-pricing-plan.local, spawn the team; landing
+> NT0012, 13 and 14; reopen the uncompleted W11, follow the process to the end of W11"*
+
+**Scope of the reopen**, fixed by
+[Ruling 39](../../../plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md#ruling-39--w11-is-reopened-under-its-own-id-the-closure-record-is-appended-to-never-amended-and-the-roadmaps-status-marker-moves-while-its-close-note-stays-verbatim)
+§1: **FR-RATE-36, FR-RATE-37, FR-RATE-42**, and — riding with FR-RATE-42 — **NFR-RATE-12**,
+which §6 above tied to it. **Adoption slices E, F and G are not part of this reopen**; they
+continue under `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md`, a separate Work with its
+own filed record and its own bounded delegation.
+
+**§6's resolutions superseded, named exactly.** For the four rows above — FR-RATE-36, 37, 42
+and NFR-RATE-12 — §6's *"reassigned — a future batch-scoring slice (36, 37) and a future
+sampling slice (42)"* (and, for NFR-RATE-12, *"reassigned with FR-RATE-42; it cannot be
+evidenced before sampling exists"*) is **superseded**: the work is back under W11 rather than
+awaiting a future slice's workstream row. No other row of §6 is touched by this section.
+
+**§6's NFR-RATE-1 carry-forward row is discharged, not resolved as passing.** §6 recorded:
+*"carry forward, owner: an architectural ruling before W14 deployment. The question is whether
+a `ref` may be served from a memo without a metadata read, and what staleness window that
+admits."*
+[Ruling 41](../../../plans/2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md#ruling-41--a-ref-may-not-be-served-from-the-memo-without-a-metadata-read-and-it-does-not-need-to-be-the-content-hash-is-already-in-hand-after-the-first-read-and-is-discarded)
+answers that question — **a `ref` may not be served from the memo without a metadata read, and
+it does not need to be**, because the version row's `content_hash` is already read and
+discarded on the very first statement of `_fetch_bundle`, before the expensive blob read and
+2 MB parse the measurement's cost sits in. That discharges this carry-forward row: the
+architectural question §6 named an owner for has an answer.
+
+**Read honestly: this is not a fix and NFR-RATE-1 is not shown reachable.** Ruling 41 mints no
+requirement id, amends nothing in `docs/specs/`, and is explicit that its own shape *"does not
+establish that NFR-RATE-1 passes."* With the fetch's dominant cost already excluded, the
+without-GBM limb's own component re-measure reads **p99 23.027 ms against a 15 ms budget** —
+over. Ruling 41 §4 names this as "the requirement's own half" still in the dock, and states
+that if a re-measurement with the blob read actually removed still fails that 15 ms limb, that
+failure is the trigger for a further decision on NFR-RATE-1 itself — not answered here, not
+assumed here. NFR-RATE-1's remediation (the code change Ruling 41 §2 describes) is, per
+`docs/plans/2026-08-30-w11-reopen-direction.md` §3, explicitly **not** decided as part of this
+reopen's scope; that is a maintainer question, raised and not settled.
+
+**Register rows filed alongside this reopen**, both concerning code and a research artifact
+this record's own evidence rests on, neither superseding anything in §§1–8:
+[`docs/audit/register.md`](../../register.md) F50 (the `bundle_slot.py:28-31`
+immutability argument Ruling 41 §3 found wrong as stated) and F51 (a false premise in
+`docs/research/w11-task-2d-nfr-rate-1-full-path.md:74-75` that Ruling 41 §2 refutes).
+
+**The re-close, when the reopened work finishes, is `## 10. Second close`, appended here** —
+audited under `close-workstream` against the reopened scope only (FR-RATE-36, 37, 42,
+NFR-RATE-12, and NFR-RATE-1's disposition), re-verdicting none of the seven requirements
+closed on 2026-08-30, and accepted by the maintainer with a fresh dated line — the 2026-08-30
+delegation does not reach it (Ruling 39 §5).
