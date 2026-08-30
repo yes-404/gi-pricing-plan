@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import random
 import statistics
@@ -59,6 +60,7 @@ from model_schema.refs import ArtifactRef  # noqa: E402
 from model_schema.scoring import QuoteContext, QuoteContextOptions  # noqa: E402
 from pricing_core.rating.compile import (  # noqa: E402
     ArtifactResolver,
+    Bundle,
     ResolvedArtifact,
     compile_bundle,
 )
@@ -308,11 +310,24 @@ def _version(*, with_gbm: bool) -> RatingVersion:
     })
 
 
-async def _compiled(*, with_gbm: bool, n_expr: int, rounds: int, rows: int) -> CompiledBundle:
+async def _serialisable(*, with_gbm: bool, n_expr: int, rounds: int, rows: int) -> Bundle:
+    """The `Bundle` *before* `load_bundle` — the artifact the blob store holds.
+
+    Split out of `_compiled` for Task 2D: the full-path measurement must score the **same**
+    bundle the component measurement scores, or the layer-by-layer subtraction that
+    attributes latency between fetch, framework and `score_one` is comparing four numbers
+    taken on four different fixtures.
+    """
     resolver: ArtifactResolver = _FakeResolver(
         with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows
     )
-    bundle = await compile_bundle(_version(with_gbm=with_gbm), resolver)
+    return await compile_bundle(_version(with_gbm=with_gbm), resolver)
+
+
+async def _compiled(*, with_gbm: bool, n_expr: int, rounds: int, rows: int) -> CompiledBundle:
+    bundle = await _serialisable(
+        with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows
+    )
     return load_bundle(bundle)
 
 
@@ -484,6 +499,376 @@ def _ratio_ladder(label: str, numerator: Measurement, denominator: Measurement) 
     print("    " + "   ".join(cells))
 
 
+# -- the full HTTP path at a sustained offered rate — W11 Slice 2 Task 2D ------------------
+#
+# Everything above measures `score_one` directly. NFR-RATE-1 says **"p99 < 50 ms server-side
+# at 200 rps per replica"**, which is two clauses the section above cannot reach: it runs
+# sequentially on one event loop, and it never enters the route. Both untested dimensions of
+# the requirement are untested *by construction*, not by oversight.
+#
+# Ruling 6 reserved `asyncio` + `httpx` for exactly this measurement and drew its forbidden
+# line at *load-generation dependencies* — `locust`/`k6`/`hey`/`wrk` in a `pyproject.toml`,
+# `uv.lock`, CI workflow or setup instruction. `httpx` is already a workspace dependency.
+#
+# Reaching into `backend/src` is new for this file and is confined to this section: the
+# component half above stays a `pricing-core` client (ADR-0001), and the full-path half
+# cannot, because the backend's route is the thing under measurement.
+# `scripts/generate-contracts.py:30` is the precedent for a script doing this.
+
+#: Offered rates for the sweep. NFR-RATE-1 names 200; the rungs below it are why this is a
+#: sweep rather than a point. A single measurement at 200 rps cannot separate "the code is
+#: slow" from "the box saturates near here", and those have different owners. Latency
+#: against offered rate has a knee, and **where the knee sits is the finding**.
+RATE_RUNGS = (25, 50, 100, 150, 200)
+
+#: Seconds of offered load per rung, after a warmup rung that is measured and discarded.
+RUNG_SECONDS = 20
+
+
+def _backend_on_path() -> None:
+    """Put `backend/src` on `sys.path`, as `scripts/generate-contracts.py:30` does."""
+    backend = str(Path(__file__).resolve().parent.parent / "backend" / "src")
+    if backend not in sys.path:
+        sys.path.insert(0, backend)
+
+
+@dataclass(frozen=True)
+class Rung:
+    """One offered rate, with everything needed to read its result honestly.
+
+    `offered` is what the generator scheduled; `achieved` is what it managed to issue. They
+    diverge when the generator itself falls behind, which is a **void rung** rather than a
+    slow server — the distinction the `load_*` fields exist to make, and the reason a rung
+    carries its condition rather than being reported bare.
+    """
+
+    offered_rps: int
+    achieved_rps: float
+    samples: list[float]
+    errors: int
+    load_start: float
+    load_end: float
+
+    @property
+    def load_span(self) -> str:
+        if abs(self.load_end - self.load_start) < 0.005:
+            return f"{self.load_start:.2f}"
+        return f"{self.load_start:.2f} → {self.load_end:.2f}"
+
+    @property
+    def mean_ms(self) -> float:
+        return statistics.fmean(self.samples) if self.samples else float("nan")
+
+    def implied_ceiling_rps(self, speedup: float) -> float:
+        """Capacity implied by **this rung's own** mean service time.
+
+        A ceiling computed once from a prior quiet run is circular: mean service time rises
+        with load, so the number needed to compute utilisation is the thing being measured.
+        Recomputed per rung, the three readings separate — a mean that stays flat while the
+        p99 blows up is tail behaviour in the code; a mean climbing toward the rung's own
+        service budget is saturation; a mean climbing at a low offered rate means something
+        else on the box is competing, and the rung is void.
+        """
+        mean_s = self.mean_ms / 1000.0
+        return speedup / mean_s if mean_s > 0 else float("nan")
+
+
+async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
+    """Insert exactly what `POST /api/v1/score` reads, and return `(workspace_id, api_key)`.
+
+    Deliberately **not** `compile_rating_version`: that path compiles from a stored
+    `RatingAlgorithmRow` through the real resolver, which would need Model and RateTable rows
+    and would produce a *different* bundle from the one the component half measured. The
+    layer-by-layer subtraction below is only legitimate if every layer scores the same
+    artifact, so the bundle is built once, in-process, and persisted as-is.
+
+    `resolve_rating_version_ref` has no status predicate (`rating_versions.py:105-132`), so a
+    `draft` row is scoreable and no submit/approve cycle is needed. `score:execute` is
+    granted by no builtin role (FR-GOV-6), so the credential is a Service Account whose own
+    `permissions` satisfy the check through Ruling 38's `credential_permissions` union.
+    """
+    _backend_on_path()
+    from datetime import UTC, datetime, timedelta
+
+    from pydantic import SecretStr
+
+    from app.auth.api_keys import generate_key
+    from app.config import Environment, Settings
+    from app.db.models import ApiKeyRow, RatingVersionRow, ServiceAccountRow
+    from app.db.session import Database
+    from app.platform.blobs import BlobStore
+
+    settings = Settings(
+        environment=Environment.LOCAL,
+        version="bench",
+        database_url=SecretStr(dsn),
+        blob_bucket=bucket,
+    )
+    database = Database(settings)
+    blob_store = BlobStore(settings)
+    await blob_store.ensure_bucket()
+
+    workspace_id = uuid4()
+    created_by = uuid4()
+    payload = bundle.model_dump_json().encode()
+
+    # One transaction: `BlobStore.put` refuses outside one, and the `blobs` row it adds must
+    # commit with the `rating_versions` row that names it or the route resolves a key to
+    # nothing.
+    async with database.unit_of_work() as session:
+        ref = await blob_store.put(session, payload, "application/json")
+        session.add(
+            RatingVersionRow(
+                workspace_id=workspace_id,
+                slug=_RATING_VERSION_REF.slug,
+                version=_RATING_VERSION_REF.version,
+                status="draft",
+                dataset_version_id=uuid4(),
+                model_ref="model:bench-freq@1",
+                created_by=created_by,
+                algorithm_ref=f"rating_algorithm:{_RATING_VERSION_REF.slug}@1",
+                pins={
+                    "rate_tables": [],
+                    "models": [],
+                    "reference_tables": [],
+                    "custom_objectives": [],
+                },
+                bundle={
+                    "content_hash": bundle.content_hash,
+                    "bytes": len(payload),
+                    "compiled_at": datetime.now(UTC).isoformat(),
+                    "blob_sha256": ref.sha256,
+                },
+            )
+        )
+
+    generated = generate_key("uat")
+    async with database.unit_of_work() as session:
+        account = ServiceAccountRow(
+            workspace_id=workspace_id,
+            slug="bench-scorer",
+            description=None,
+            environments=["uat"],
+            permissions=["score:execute"],
+            rate_limit_rps=None,
+        )
+        session.add(account)
+        await session.flush()
+        session.add(
+            ApiKeyRow(
+                service_account_id=account.id,
+                prefix=generated.prefix,
+                secret_hash=generated.secret_hash,
+                environment=generated.environment,
+                expires_at=datetime.now(UTC) + timedelta(days=1),
+            )
+        )
+
+    await database.dispose()
+    print(f"  seeded workspace {workspace_id}, bundle blob {ref.sha256[:12]}…, "
+          f"{len(payload):,} B")
+    return str(workspace_id), generated.value
+
+
+async def _measure_fetch(
+    *, dsn: str, bucket: str, workspace_id: str, iterations: int
+) -> Measurement:
+    """`_fetch_bundle` alone — the per-request cost the slot does **not** avoid.
+
+    `_compiled_for` (`api/score.py:181`) consults the slot only *after* `_fetch_bundle` has
+    returned, because the slot is keyed on `content_hash` and the only way to learn a ref's
+    content hash is to fetch the bundle. So every happy-path request pays two SELECTs, a full
+    object read and `Bundle.model_validate_json` of the whole booster; the slot saves
+    `load_bundle` and nothing else. The ref-to-hash memo that would break that circularity
+    exists (Task 2A) but is reachable only from the `except Exception` degradation branch.
+    Measured separately here so the full-path figure can be attributed rather than asserted.
+    """
+    _backend_on_path()
+    from uuid import UUID
+
+    from pydantic import SecretStr
+
+    from app.api.score import _fetch_bundle
+    from app.config import Environment, Settings
+    from app.db.session import Database
+    from app.platform.blobs import BlobStore
+
+    settings = Settings(
+        environment=Environment.LOCAL,
+        version="bench",
+        database_url=SecretStr(dsn),
+        blob_bucket=bucket,
+    )
+    database = Database(settings)
+    blob_store = BlobStore(settings)
+    ws = UUID(workspace_id)
+
+    for _ in range(20):
+        await _fetch_bundle(database, blob_store, workspace_id=ws, ref=_RATING_VERSION_REF)
+    load_start = loadavg()
+    samples: list[float] = []
+    for _ in range(iterations):
+        start = time.perf_counter()
+        await _fetch_bundle(database, blob_store, workspace_id=ws, ref=_RATING_VERSION_REF)
+        samples.append((time.perf_counter() - start) * 1000)
+    load_end = loadavg()
+    await database.dispose()
+    return Measurement(samples=samples, load_start=load_start, load_end=load_end)
+
+
+def _serve(*, dsn: str, bucket: str, log_path: Path, port: int) -> Any:
+    """`uvicorn app.main:create_app --factory` in its own process — one replica.
+
+    A subprocess rather than an in-process ASGI transport because NFR-RATE-1 measures a
+    *replica*, and an in-process server would have the load generator's own work competing
+    for the same event loop and counting inside the latency it is trying to measure.
+    `scripts/demo.py:237` launches it exactly this way.
+    """
+    import subprocess
+
+    root = Path(__file__).resolve().parent.parent
+    env = {
+        **os.environ,
+        "GIP_ENVIRONMENT": "local",
+        "GIP_VERSION": "bench",
+        "GIP_DATABASE_URL": dsn,
+        "GIP_BLOB_BUCKET": bucket,
+    }
+    handle = log_path.open("wb")
+    return subprocess.Popen(
+        [
+            "uv", "run", "uvicorn", "app.main:create_app", "--factory",
+            "--host", "127.0.0.1", "--port", str(port),
+            "--log-level", "warning", "--no-access-log",
+        ],
+        cwd=str(root),
+        env=env,
+        stdout=handle,
+        stderr=subprocess.STDOUT,
+    )
+
+
+async def _await_ready(url: str, *, seconds: float = 60.0) -> None:
+    import httpx
+
+    deadline = time.perf_counter() + seconds
+    async with httpx.AsyncClient(timeout=2.0) as client:
+        while time.perf_counter() < deadline:
+            try:
+                if (await client.get(url)).status_code == 200:
+                    return
+            except Exception:
+                pass
+            await asyncio.sleep(0.25)
+    raise RuntimeError(f"server did not become ready at {url} within {seconds:.0f}s")
+
+
+async def _drive(
+    url: str, headers: dict[str, str], body: dict[str, Any], *, rate: int, seconds: int
+) -> Rung:
+    """Issue requests on the clock at `rate`/s — **open loop**, and that is load-bearing.
+
+    A closed-loop generator (N workers each looping request → await → request) throttles
+    itself when the server slows: it issues fewer requests, and the ones that would have been
+    slowest are never sent at all. That is coordinated omission, and its effect is to make a
+    saturating system return a *passing* p99. At an offered rate near this box's measured
+    ceiling that is not a theoretical risk, it is the likely outcome.
+
+    NFR-RATE-1 also says "at 200 rps" — an **offered** rate, not an achieved one — so
+    scheduling on the clock is the literal reading as well as the honest one. When the server
+    cannot keep up, the queue grows and the tail records it, which is the signal wanted.
+    """
+    import httpx
+
+    interval = 1.0 / rate
+    total = rate * seconds
+    samples: list[float] = []
+    errors = 0
+
+    limits = httpx.Limits(max_connections=1024, max_keepalive_connections=1024)
+    async with httpx.AsyncClient(timeout=60.0, limits=limits) as client:
+
+        async def one() -> None:
+            nonlocal errors
+            start = time.perf_counter()
+            try:
+                response = await client.post(url, json=body, headers=headers)
+            except Exception:
+                errors += 1
+                return
+            elapsed = (time.perf_counter() - start) * 1000
+            if response.status_code == 200:
+                samples.append(elapsed)
+            else:
+                errors += 1
+
+        load_start = loadavg()
+        begin = time.perf_counter()
+        tasks: list[asyncio.Task[None]] = []
+        for index in range(total):
+            target = begin + index * interval
+            delay = target - time.perf_counter()
+            if delay > 0:
+                await asyncio.sleep(delay)
+            tasks.append(asyncio.create_task(one()))
+        issued_for = time.perf_counter() - begin
+        await asyncio.gather(*tasks)
+        load_end = loadavg()
+
+    return Rung(
+        offered_rps=rate,
+        achieved_rps=total / issued_for if issued_for > 0 else float("nan"),
+        samples=samples,
+        errors=errors,
+        load_start=load_start,
+        load_end=load_end,
+    )
+
+
+def _handler_ms(log_path: Path, *, path: str = "/api/v1/score") -> list[float]:
+    """Server-side handler time, from the request middleware's own `duration_ms`.
+
+    The app already logs one JSON line per completed request. Reading it costs no production
+    change and gives the other half of the attribution: client round-trip minus handler time
+    is queue wait plus loopback, which is what separates a slow handler from a saturated one.
+    """
+    import json
+
+    out: list[float] = []
+    for line in log_path.read_text(errors="replace").splitlines():
+        if '"duration_ms"' not in line or path not in line:
+            continue
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if record.get("path") == path and record.get("status") == 200:
+            out.append(float(record["duration_ms"]))
+    return out
+
+
+def _report_rung(rung: Rung, handler: list[float], *, budget_ms: float, speedup: float) -> None:
+    if not rung.samples:
+        print(f"  {rung.offered_rps:>4} rps — no successful responses ({rung.errors} errors)")
+        return
+    p99 = _percentile(rung.samples, 0.99)
+    verdict = "PASS" if p99 < budget_ms else "OVER"
+    handler_p99 = _percentile(handler, 0.99) if handler else float("nan")
+    handler_mean = statistics.fmean(handler) if handler else float("nan")
+    print(
+        f"  {rung.offered_rps:>4} rps offered / {rung.achieved_rps:6.1f} issued  "
+        f"load {rung.load_span:>13}  "
+        f"mean {rung.mean_ms:7.3f}  p50 {_percentile(rung.samples, 0.50):7.3f}  "
+        f"p99 {p99:8.3f} / {budget_ms:.0f} ms — {verdict}"
+    )
+    print(
+        f"        handler mean {handler_mean:7.3f}  p99 {handler_p99:8.3f}   "
+        f"queue+loopback at p99 {p99 - handler_p99:8.3f}   "
+        f"implied ceiling {rung.implied_ceiling_rps(speedup):6.1f} rps   "
+        f"errors {rung.errors}   n={len(rung.samples)}"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--warmup", type=int, default=WARMUP_CALLS)
@@ -499,6 +884,33 @@ def main() -> int:
         help="Rounds for the A/B/C decomposition. Each round runs all three "
              "configurations, so this costs roughly 3x its own count in calls; 200 is "
              "the count the PR #416 audit used.",
+    )
+    parser.add_argument(
+        "--http", action="store_true",
+        help="Task 2D: also measure the full route at a sustained offered rate. Needs the "
+             "compose stack up (PostgreSQL and MinIO) and holds it exclusively.",
+    )
+    parser.add_argument(
+        "--rates", default=",".join(str(r) for r in RATE_RUNGS),
+        help="Comma-separated offered rates for the --http sweep.",
+    )
+    parser.add_argument("--rung-seconds", type=int, default=RUNG_SECONDS)
+    parser.add_argument("--port", type=int, default=8099)
+    parser.add_argument(
+        "--speedup", type=float, default=2.10,
+        help="Concurrent speedup used to turn a rung's mean service time into an implied "
+             "ceiling. 2.10-2.25x measured in zen-evaluate-concurrency.md:65,:75 on this "
+             "box; the low end is used so the implied ceiling is not flattered.",
+    )
+    parser.add_argument(
+        "--dsn",
+        default=os.environ.get(
+            "GIP_TEST_DATABASE_URL",
+            "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
+        ),
+    )
+    parser.add_argument(
+        "--bucket", default=os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
     )
     args = parser.parse_args()
 
@@ -605,9 +1017,85 @@ def main() -> int:
             "trace costs before we touch it — the share that a payload change addresses."
         )
 
+    if args.http:
+        _run_http_sweep(args)
+
     print(f"\n1-minute load average at exit: {loadavg():.2f}")
 
     return 0
+
+
+def _run_http_sweep(args: Any) -> None:
+    """The full-path, sustained-rate half of NFR-RATE-1 — both GBM conditions.
+
+    Each condition gets its own server process, its own seeded workspace and its own bundle,
+    because the two have materially different capacity on this box and a shared ceiling would
+    misattribute a breach on whichever half it did not come from.
+    """
+    import shutil
+    import signal
+
+    rates = [int(r) for r in str(args.rates).split(",") if r.strip()]
+    logs = Path(__file__).resolve().parent.parent / ".bench-logs"
+    if logs.exists():
+        shutil.rmtree(logs)
+    logs.mkdir()
+
+    for with_gbm, budget in (
+        (True, BUDGET_WITH_GBM_P99_MS),
+        (False, BUDGET_WITHOUT_GBM_P99_MS),
+    ):
+        label = "with GBM" if with_gbm else "without GBM"
+        print(f"\n=== NFR-RATE-1 full path, {label} (budget p99 < {budget:.0f} ms) ===")
+
+        bundle = asyncio.run(
+            _serialisable(
+                with_gbm=with_gbm, n_expr=args.expr_steps, rounds=args.rounds, rows=args.rows
+            )
+        )
+        workspace_id, api_key = asyncio.run(
+            _seed(bundle, dsn=args.dsn, bucket=args.bucket)
+        )
+
+        fetch = asyncio.run(
+            _measure_fetch(
+                dsn=args.dsn, bucket=args.bucket, workspace_id=workspace_id, iterations=200
+            )
+        )
+        _report(f"_fetch_bundle alone, {label} (every request pays this)", fetch,
+                budget_ms=None)
+
+        log_path = logs / f"server-{'gbm' if with_gbm else 'nogbm'}.log"
+        proc = _serve(dsn=args.dsn, bucket=args.bucket, log_path=log_path, port=args.port)
+        base = f"http://127.0.0.1:{args.port}"
+        try:
+            asyncio.run(_await_ready(f"{base}/healthz"))
+            headers = {"X-API-Key": api_key, "Workspace-Id": workspace_id}
+            body = json.loads(_ctx().model_dump_json())
+
+            # A measured-and-discarded warmup rung: the first requests pay connection setup,
+            # the empty bundle slot and the first `load_bundle`, none of which the steady
+            # state pays. Reporting them would blend a cold cost into a warm figure, which is
+            # the shape confusion the plan's own acceptance calls out.
+            asyncio.run(_drive(f"{base}/api/v1/score", headers, body, rate=25, seconds=4))
+            log_path.write_bytes(b"")
+
+            for rate in rates:
+                before = len(_handler_ms(log_path))
+                rung = asyncio.run(
+                    _drive(
+                        f"{base}/api/v1/score", headers, body,
+                        rate=rate, seconds=args.rung_seconds,
+                    )
+                )
+                handler = _handler_ms(log_path)[before:]
+                _report_rung(rung, handler, budget_ms=budget, speedup=args.speedup)
+        finally:
+            proc.send_signal(signal.SIGINT)
+            try:
+                proc.wait(timeout=20)
+            except Exception:
+                proc.kill()
 
 
 if __name__ == "__main__":

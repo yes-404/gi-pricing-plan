@@ -120,3 +120,6 @@ frontend/coverage/
 # `graphify update .`. Derived, machine-sized, and stale the moment code changes; the
 # skill that produces it IS committed (.claude/skills/graphify/).
 graphify-out/
+
+# Task 2D bench harness server logs (`scripts/bench-rating.py --http`) — a run artifact.
+.bench-logs/
