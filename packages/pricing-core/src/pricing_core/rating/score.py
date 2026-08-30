@@ -5,8 +5,9 @@ NFR-RATE-3/7/8/14, W11 Task 1.4).
 `CompiledBundle.decision.async_evaluate()` — never `evaluate()` plus a thread-pool
 offload, measured twice to be strictly worse than doing nothing
 (`docs/research/zen-evaluate-concurrency.md`). `score_one` is therefore `async def`;
-`score_batch` (Slice 3, `03` §5.2) stays plain `def` and is **not built here** — see
-"What this module deliberately does not build", below.
+`score_batch` (Slice 3, `03` §5.2, W11 Task 3A) stays plain `def` and drives
+`CompiledBundle.decision.evaluate()`, the engine's synchronous path — see "What
+`score_batch` is, and what it deliberately does not do", below.
 
 ## Three design choices this module resolves — two flagged findings from Task 1.3, and
 ## one found while building this task's own test suite
@@ -112,27 +113,80 @@ still today — inventing a disposition here would silently answer a `CLAUDE.md`
 this module has no authority to decide. A step *declaring* `on_violation="error"` that
 never fires scores normally; only a firing one raises.
 
-## What this module deliberately does not build
+## What `score_batch` is, and what it deliberately does not do
 
-`score_batch` itself — Slice 3's, per the frozen map and the requirement-coverage table
-(FR-RATE-36/37 → Slice 3). What Slice 3 needs from this task, per the Global Constraints'
-"keep per-step evaluation in a function `score_batch` can call directly, not inline it
-inside `score_one`'s own body" (FR-RATE-37), is `build_scoring_result` below: the shared
-tail that turns one already-evaluated engine `result` (and, optionally, its `trace`) into
-a `ScoringResult`. `score_one` calls it after `await ...async_evaluate(...)`; `score_batch`
-is expected to call the identical function after its own (batched, likely synchronous)
-evaluation of the same compiled graph — the byte-identity Slice 3 proves is exactly this
-function producing the same output from the same input, not two implementations that
-happen to agree.
+**`score_batch` (W11 Task 3A) reuses `build_scoring_result` below** — the shared tail that
+turns one already-evaluated engine `result` into a `ScoringResult` — after its own
+row-by-row, **synchronous** evaluation of the same compiled graph (`bundle.decision.
+evaluate()`, never `async_evaluate()` — Ruling 5). It also reuses `score_one`'s own
+pre-evaluation checks (`_validate_inputs`, `_check_purpose_mount`, `_check_billing_surface`)
+and its engine-failure translation (`_reraise_engine_failure`), unmodified, so the two
+paths diverge nowhere except the method used to reach the engine — which is exactly what
+FR-RATE-37's byte-identity proves is safe to diverge on.
+
+**The frame contract `score_batch` reads and writes is this task's own design** — `03`
+§5.2 fixes the function's signature (`bundle`, `frame`, `chunk_rows`, `progress`) but not
+a row schema, and no precedent exists anywhere in this repository for one (Verified facts,
+the plan's own). **Input row**, one column per reserved key below plus one column per
+name in `bundle.algorithm.input_contract` (extra columns are tolerated, exactly as
+`_validate_inputs` already tolerates extra `ctx.inputs` keys):
+
+- `quote_id` (nullable) — FR-RATE-36's "quote key". Carried straight into the output row;
+  never read off `ScoringResult`, which has no such field (Ruling 31 §3).
+- `purpose` — one of `QuotePurpose`'s five members.
+- `effective_date` — an ISO date string.
+- `rating_version_ref` — the canonical `ArtifactRef` string (`"{type}:{slug}@{version}"`).
+  Constant for one `score_batch` call in practice (one call scores against one compiled
+  `bundle`), but read per row rather than taken as a fifth keyword argument, so the
+  signature above stays exactly what `03` publishes — widening it was ruled out (the plan's
+  own "Do not widen this signature").
+
+**Output row** carries `quote_id`, `outcome` (`"quoted"`, `"declined"`, or the batch-only
+sentinel `"error"`), `rating_version_ref`, `bundle_hash`, the premium ladder and the
+selected outputs each **pre-serialised to JSON** (`_ladder_json`/`_outputs_json` below —
+this is what Task 3A's byte-identity test compares: the *serialised* ladder, not a
+polars-native nested column), `decline_reasons`, and — populated only on an `"error"`
+row — `error_code`/`error_message`. The handler (Task 3B) reassembles the final parquet
+from this, and aggregates `error_code` into FR-RATE-38's per-category counts and samples;
+neither is this task's to build.
+
+**One failing row does not raise out of `score_batch`.** Everything `_validate_inputs`,
+`_check_purpose_mount`, `_check_billing_surface` and the engine itself can raise for a row
+is a `ValueError` (the `_raise_named` convention) or, from `_reraise_engine_failure`'s
+final `raise exc`, a bare untyped `RuntimeError` — both are caught per row and turned into
+an `"error"` output row rather than aborting the chunk, which is the structural half of
+FR-RATE-38 ("does not abort on individual failures") that a chunked transform has to
+provide regardless of who is charged with the requirement id; **the threshold policy that
+decides whether the *run* aborts is explicitly not built here** (3B's). **`NotImplementedError`
+is deliberately excluded from that catch** — it is a Python subclass of `RuntimeError`, but
+it marks a genuinely undesigned case (an `on_violation="error"` constraint firing, or a
+non-zero-dp output step) that `score_one` does not catch either; catching it here would
+silently paper over a design gap `CLAUDE.md` §0 reserves for a spec change, not a batch
+row.
+
+**Chunking is an eager loop wrapped in `.lazy()` at the end, not genuine polars
+streaming.** `frame.slice(offset, chunk_rows).collect()` per chunk, `bundle.decision.
+evaluate()` has no vectorised form to exploit, and there is no `scan_parquet` precedent in
+this repository for the input side to stream from either (Verified facts). `progress.
+check_cancelled()` is checked once per chunk boundary, before that chunk's rows are
+scored — a signalled cancellation therefore lets `JobCancelled` propagate having scored
+every *complete* chunk before it and none after, matching every other `check_cancelled()`
+call site in this package (`modelling/*.py`): the exception is not caught here: cooperative
+cancellation is a hand-off to whichever caller can make the platform-level Job transition
+(FR-PLAT-9), and `pricing-core` cannot import what makes it durable (ADR-0001).
 """
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from collections.abc import Mapping, Sequence
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, NoReturn
+
+import polars as pl
 
 from model_schema.rating import (
     RatingAlgorithm,
@@ -148,15 +202,17 @@ from model_schema.scoring import (
     LadderRung,
     LadderRungName,
     QuoteContext,
+    QuoteContextOptions,
     ScoringOutcome,
     ScoringResult,
     Trace,
     TraceStep,
 )
 from pricing_core.money import ROUNDING_MODES, RoundingMode, apply_factor, reconcile_ladder
+from pricing_core.progress import ProgressCallback
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, CompiledBundle
 
-__all__ = ["build_scoring_result", "score_one"]
+__all__ = ["build_scoring_result", "score_batch", "score_one"]
 
 #: FR-RATE-31/64's fixed rung sequence — `scoring.schema.json`'s own `LadderRung.rung`
 #: enum order, which post-dates and supersedes FR-RATE-31's prose order by adding
@@ -199,6 +255,30 @@ _BILLING_SURFACE_KEYS = frozenset(
 _ELAPSED_UNITS: tuple[tuple[str, float], ...] = (
     ("µs", 1.0), ("us", 1.0), ("ms", 1_000.0), ("ns", 0.001), ("s", 1_000_000.0),
 )
+
+#: `score_batch`'s own frame contract (module docstring, "What `score_batch` is"). Every
+#: other column in an input row is an algorithm input, forwarded into `ctx.inputs`
+#: verbatim — the same tolerance `_validate_inputs` already gives extra `QuoteContext`
+#: keys.
+_BATCH_RESERVED_COLUMNS = frozenset({"quote_id", "purpose", "effective_date", "rating_version_ref"})
+
+#: `score_batch`'s output row schema, fixed so an empty chunk and a scored chunk always
+#: concatenate cleanly (`pl.concat` requires matching dtypes, not just matching names).
+#: `polars`' own stubs do not export a top-level name for "a dtype or a dtype class"
+#: (`DataTypeClass` is a deprecated, unstubbed top-level attribute), so this stays `Any`
+#: rather than fighting the third-party surface for a nine-entry constant.
+_BATCH_OUTPUT_COLUMNS: list[tuple[str, Any]] = [
+    ("quote_id", pl.Utf8),
+    ("outcome", pl.Utf8),
+    ("rating_version_ref", pl.Utf8),
+    ("bundle_hash", pl.Utf8),
+    ("premium_ladder_json", pl.Utf8),
+    ("outputs_json", pl.Utf8),
+    ("decline_reasons", pl.List(pl.Utf8)),
+    ("error_code", pl.Utf8),
+    ("error_message", pl.Utf8),
+]
+_BATCH_OUTPUT_SCHEMA: pl.Schema = pl.Schema(_BATCH_OUTPUT_COLUMNS)
 
 
 def _raise_named(code: str, message: str) -> NoReturn:
@@ -694,3 +774,172 @@ async def score_one(
     )
     total_ms = (time.perf_counter() - t_start) * 1000
     return scored.model_copy(update={"timing_ms": {"total": total_ms, "evaluate": eval_ms}})
+
+
+# ---------------------------------------------------------------------------
+# `score_batch` (W11 Task 3A). See the module docstring, "What `score_batch` is, and what
+# it deliberately does not do", for the frame contract and the design decisions below.
+# ---------------------------------------------------------------------------
+
+
+def _ladder_json(ladder: Sequence[LadderRung]) -> str:
+    """The canonical serialised form Task 3A's byte-identity criterion compares. Each
+    `LadderRung`'s own `model_dump_json()` — deterministic given the same field values, the
+    same way every other byte-identity precedent in this repository (`test_blobs.py`,
+    `test_data_nfrs.py`) compares stored bytes against freshly serialised ones rather than
+    inventing a bespoke comparison."""
+    return "[" + ",".join(rung.model_dump_json() for rung in ladder) + "]"
+
+
+def _outputs_json(outputs: Mapping[str, Any]) -> str:
+    return json.dumps(outputs, default=str)
+
+
+def _batch_error_code(exc: Exception) -> tuple[str, str]:
+    """Parse the `_raise_named` convention (`f"{code}: {message}"`) back into its parts, so
+    an `"error"` output row carries the same typed code FR-RATE-38 names — `test_worker.py`
+    and `runtime.py`'s `MODEL_CALL_FAILED` sentinel both already follow it. An exception
+    that does not (should not occur for anything this catches, but a fallback is cheap and
+    honest) is reported under its own class name rather than mis-parsed."""
+    message = str(exc)
+    code, sep, rest = message.partition(": ")
+    if sep and code.replace("_", "").isalnum() and code == code.upper():
+        return code, rest
+    return type(exc).__name__, message
+
+
+def _row_to_ctx(row: Mapping[str, Any]) -> QuoteContext:
+    """One input row -> the identical `QuoteContext` shape `score_one`'s own checks expect.
+    `quoted_at` is not read by anything downstream of this call (`build_scoring_result`'s
+    `ScoringResult` has no such field, and `score_batch` never requests an engine trace —
+    Ruling 25 — so `_build_trace` is never reached); it is derived from `effective_date` at
+    midnight only because `QuoteContext` requires *some* value, never because batch scoring
+    means anything by it."""
+    effective_date = date.fromisoformat(row["effective_date"])
+    inputs = {k: v for k, v in row.items() if k not in _BATCH_RESERVED_COLUMNS}
+    rating_version_ref = ArtifactRef.model_validate(row["rating_version_ref"])
+    return QuoteContext(
+        quote_id=row.get("quote_id"),
+        purpose=row["purpose"],
+        quoted_at=datetime.combine(effective_date, datetime.min.time()),
+        effective_date=effective_date,
+        inputs=inputs,
+        options=QuoteContextOptions(rating_version_ref=rating_version_ref),
+    )
+
+
+def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str, Any]:
+    """Score one row, reusing `score_one`'s own pre-checks and `build_scoring_result`
+    unmodified (the module docstring's "What `score_batch` is"). Never lets a `ValueError`
+    (the `_raise_named` convention) or the untyped `RuntimeError` `_reraise_engine_failure`
+    can re-raise escape past this row — an `"error"` output row instead, which is the
+    structural half of FR-RATE-38 a chunked transform has to provide regardless of who is
+    charged with the requirement id. `NotImplementedError` (a `RuntimeError` subclass) is
+    deliberately let through: it marks a genuinely undesigned case `score_one` does not
+    catch either, not a per-quote data error."""
+    quote_id = row.get("quote_id")
+    rating_version_ref_str = row.get("rating_version_ref")
+    algorithm = bundle.algorithm
+    try:
+        ctx = _row_to_ctx(row)
+        _validate_inputs(algorithm, ctx.inputs)
+        _check_purpose_mount(algorithm, ctx)
+        _check_billing_surface(ctx)
+
+        context = {
+            "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
+        }
+        try:
+            out = bundle.decision.evaluate(context)
+        except RuntimeError as exc:
+            _reraise_engine_failure(algorithm, exc)
+
+        assert ctx.options is not None
+        assert ctx.options.rating_version_ref is not None
+        scored = build_scoring_result(
+            bundle, ctx, ctx.options.rating_version_ref, out["result"], None,
+        )
+    except NotImplementedError:
+        raise
+    except (ValueError, RuntimeError) as exc:
+        code, message = _batch_error_code(exc)
+        return {
+            "quote_id": quote_id,
+            "outcome": "error",
+            "rating_version_ref": rating_version_ref_str,
+            "bundle_hash": bundle.content_hash,
+            "premium_ladder_json": None,
+            "outputs_json": None,
+            "decline_reasons": [],
+            "error_code": code,
+            "error_message": message,
+        }
+
+    return {
+        "quote_id": quote_id,
+        "outcome": scored.outcome,
+        "rating_version_ref": rating_version_ref_str,
+        "bundle_hash": scored.bundle_hash,
+        "premium_ladder_json": _ladder_json(scored.premium_ladder),
+        "outputs_json": _outputs_json(scored.outputs),
+        "decline_reasons": list(scored.decline_reasons),
+        "error_code": None,
+        "error_message": None,
+    }
+
+
+def _score_batch_chunk(bundle: CompiledBundle, chunk: pl.DataFrame) -> pl.DataFrame:
+    rows = [_score_batch_row(bundle, row) for row in chunk.iter_rows(named=True)]
+    return pl.DataFrame(rows, schema=_BATCH_OUTPUT_SCHEMA)
+
+
+def score_batch(
+    bundle: CompiledBundle,
+    frame: pl.LazyFrame,
+    *,
+    chunk_rows: int = 100_000,
+    progress: ProgressCallback | None = None,
+) -> pl.LazyFrame:
+    """Re-rate every row of `frame` against `bundle` (FR-RATE-36/37, `03` §5.2). A pure,
+    chunked transform: it takes a frame and returns a frame, holds no durable state across
+    or within calls, and reaches the identical `build_scoring_result` tail `score_one` does
+    (Ruling 32) — see the module docstring for the frame contract and every design decision
+    below.
+
+    **This is not genuine polars streaming.** `bundle.decision.evaluate()` has no vectorised
+    form, so each chunk is collected eagerly (`frame.slice(offset, chunk_rows).collect()`),
+    scored row by row, and the concatenated result is wrapped in `.lazy()` only to satisfy
+    the published return type — there is no `scan_parquet` precedent in this repository for
+    the input side to stream from either (Verified facts, the plan's own).
+
+    **Resumability, an output location, a Job identity and an abort threshold are not
+    here** (Rulings 31 §3/§5) — `score_batch` may not acquire any of them, and
+    `.importlinter`'s `core-has-no-infrastructure` makes that structural. The `score.batch`
+    handler (Task 3B) owns all four.
+    """
+    if chunk_rows < 1:
+        raise ValueError(f"score_batch: chunk_rows must be >= 1, got {chunk_rows}")
+
+    total_rows = frame.select(pl.len()).collect().item()
+    if total_rows == 0:
+        return pl.DataFrame(schema=_BATCH_OUTPUT_SCHEMA).lazy()
+
+    scored_chunks: list[pl.DataFrame] = []
+    rows_done = 0
+    chunk_index = 0
+    while rows_done < total_rows:
+        if progress is not None:
+            progress.check_cancelled()
+
+        chunk = frame.slice(rows_done, chunk_rows).collect()
+        scored_chunks.append(_score_batch_chunk(bundle, chunk))
+        rows_done += chunk.height
+        chunk_index += 1
+
+        if progress is not None:
+            progress.update(
+                rows_done / total_rows, "scoring",
+                rows_scored=rows_done, chunk_index=chunk_index,
+            )
+
+    return pl.concat(scored_chunks).lazy()
