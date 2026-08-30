@@ -120,3 +120,28 @@ def test_problem_response_survives_middleware_ordering() -> None:
     install_error_handlers(app)
     body = TestClient(app, raise_server_exceptions=False).get("/nope").json()
     assert TRACE_ID_PATTERN.match(body["trace_id"])
+
+
+@pytest.mark.req("FR-PLAT-47")
+def test_no_live_rating_version_is_registered_at_409() -> None:
+    """Ruling 14's refusal code, registered before the branch that raises it.
+
+    `POST /api/v1/score` with no `options.rating_version_ref` answers *"this platform
+    has no live Rating Version to score you against"* rather than guessing one, and
+    `live` is a property of a Deployment (FR-RATE-23), which is W14's. 409 because this
+    backend already answers "the artifact is not in a state that permits this" at 409
+    (`platform/datasets.py`, `jobs.py`, `rating_versions.py`, `approvals.py`), and the
+    caller's operator resolves it by deploying a version and retrying.
+
+    `PlatformError.__init__` refuses an unenumerated code, so the route's branch cannot
+    be written before this registration exists — the mechanism that stops Ruling 14
+    being half-applied.
+    """
+    error = PlatformError(
+        "NO_LIVE_RATING_VERSION",
+        "No live Rating Version",
+        409,
+        "Supply options.rating_version_ref.",
+    )
+    assert error.code == "NO_LIVE_RATING_VERSION"
+    assert error.status_code == 409
