@@ -313,6 +313,12 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "REFERENCE_LOOKUP_MISS",
         "MODEL_CALL_FAILED",
         "LADDER_RECONCILIATION_FAILED",
+        # Scoring (W11 Slice 2, Ruling 14). 409: `POST /api/v1/score` with no
+        # `options.rating_version_ref` refuses rather than guessing which version is
+        # live, because `live` is a property of a Deployment (FR-RATE-23) and that is
+        # W14's. The branch is permanent, not a stub — after W14 it is what an
+        # environment holding no Deployment answers. Owned by `03` §5.1.
+        "NO_LIVE_RATING_VERSION",
     }
 )
 

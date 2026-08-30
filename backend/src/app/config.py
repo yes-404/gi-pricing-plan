@@ -159,6 +159,18 @@ class Settings(BaseSettings):
     # NFR-PLAT-3 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
+    # How many hydrated bundles one worker holds (`platform.bundle_slot`, Ruling 16
+    # clause 3). A **count**, never a byte budget: NFR-RATE-4 permits a bundle of up to
+    # 500 MB including boosters and nothing here measures a hydrated `CompiledBundle`'s
+    # footprint, so a byte bound would be an estimate wearing a number's clothes.
+    #
+    # 1 is the only default that cannot regress a worker's memory against holding none at
+    # all; raising it cites a measurement from the latency harness. The ceiling is a typo
+    # guard rather than a tuned maximum — at 500 MB a bundle, a fat-fingered value should
+    # fail at startup with a field-level message instead of exhausting the worker under
+    # load.
+    bundle_slot_capacity: Annotated[int, Field(ge=1, le=64)] = 1
+
 
     @field_validator("database_url")
     @classmethod
