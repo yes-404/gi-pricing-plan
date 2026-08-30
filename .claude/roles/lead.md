@@ -21,6 +21,18 @@
   different author is an outside contribution, not an ambiguity. Check the author **on every
   merge**, not once a session. `git-hygiene` carries the query and the three repository
   controls that would enforce this mechanically but are still unset.
+- **Dispatch a fresh agent per task, not one resumed across a slice** (maintainer
+  instruction, 2026-08-30, for W11 Slice 4). **The reason is structural, not stylistic: an
+  agent reads its role file at spawn, so a charter correction cannot reach an agent already
+  running.** On 2026-08-30 one failure mode — ending a turn while a command was still
+  running — recurred **four times through three different mechanisms** (a backgrounded shell
+  command, a background poller, a `Monitor` task). The corrected rule landed mid-flight in
+  `6d59963` and could not reach the agent it was written for; only a direct message could.
+  A fresh agent per task guarantees each one picks up the current charter, and bounds context
+  growth as a side effect — the Slice 3 executor reached ~300k tokens by its fourth task.
+  **The cost is real and is accepted**: a fresh agent re-reads the plan and rulings from disk
+  instead of holding them. Measured against it, W11 Task 3C ran on a fresh agent in ~28
+  minutes, so the re-read is cheaper than it looks.
 - **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
   workstream close, and again before a phase's exit demo, not discretionary. Grounded here
   rather than left assumed: the NT-0010/0011 adoption changed the very workstream cut
