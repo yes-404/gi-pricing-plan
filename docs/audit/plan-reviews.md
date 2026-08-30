@@ -1543,6 +1543,35 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   review does not draft the wording — role-file edits are outside this charter's grant
   (`planner.md`'s Tools line names `docs/plans/` and `docs/audit/plan-reviews.md`, not
   `.claude/roles/`).
+- **`delivery-process.md:310-315`'s own list of durable homes for reasoning is wrong for its
+  stated audience — a document-drift finding that names itself while being written.** The rule
+  names "a task" as an acceptable durable home for reasoning a 50-word message cannot carry. But
+  members cannot read the lead's task board, so for the reader a dispatch actually addresses, a
+  task id is inert — through this workstream the board silently accumulated the fourteen owed
+  register rows, a whole correction batch and every input this review draws on, none of it
+  reachable by whoever was meant to act on it. **The self-demonstration**: this review's own
+  evidence-base file opens by calling one of its findings "itself one of the findings below," and
+  that finding was not below when first read — the same rule's failure, caught in the act of
+  citing it. What actually surfaced the trapped material was one member refusing to reconstruct
+  five items from board access it did not have and asking for a filesystem artifact instead — the
+  refusal produced exactly the documents this review has been citing throughout.
+  **Recommendation (4.5):** the rule's list of durable homes should say a member-facing dispatch
+  cites a **filesystem path**, not a task id — paths resolve between agents that cannot share a
+  board, which is the audience the rule is written for.
+- **The reporter published two wrong lines to the team's external Slack channel in one hour, both
+  inferences presented as fact** — "a peak-hours pause was in effect" when the pause is
+  weekday-scoped and it was Sunday, and "W11 close audit in progress" before it had started.
+  Neither line was in the file the reporter's own brief says to publish verbatim; both were
+  derived from partial signals, and the role corrected itself once told (not a discipline
+  problem — its later cycles are clean). **The connection to the row above, and why it belongs
+  with question 4's authority-boundary finding rather than beside it**: in both cases the
+  information a role needed was unreachable by that role, and one of the two closed the gap by
+  inference while the other refused and asked — the same contrast question 4's `NFR-RATE-11`
+  counter-example already makes for a governance question, here for an information-access one.
+  **Recommendation (4.6), narrower than 4.3 and specific to reporting roles:** rather than
+  enumerate what a role may not infer, state the positive rule — publish only what a named
+  artifact says, and name it. That is checkable by the reader of the post; a list of forbidden
+  inferences never is, because the next inference is always a new one nobody enumerated.
 - **`docs/roadmap.md`'s W11 row is missing `FR-RATE-65`** (Ruling 30, mechanical edit outstanding)
   **and the sixteen ids question 1's Question A enumerates** — what W11's own plans claim that the
   row's text does not. See question 5 for the recurring mechanism this instantiates.
@@ -1681,6 +1710,8 @@ which workstream if (a), is the lead's to rule, not this document's.
 | 4.2 | Correct or drop `lead.md`'s "only role that relays" parenthetical | role-file correction |
 | 4.3 | Name the authority-boundary trigger (question 4's shape) explicitly in every role file | role-file amendment |
 | 4.4 | Correct W12's row against its own charter; declare `RegressionRun` in `03` §4; register `GOLDEN_QUOTE_MISMATCH` before or at W12's opening slice | docs + spec-change |
+| 4.5 | `delivery-process.md`'s durable-homes rule names a filesystem path, not a task id, for a member-facing dispatch | process-rule correction |
+| 4.6 | The reporter's brief states the positive rule — publish only what a named artifact says, and name it — rather than enumerate forbidden inferences | role-file amendment (reporter) |
 | 5.1 | Assign review 8's proposal 4.2 an owner, now that it has fired a fourth time at a much larger scale, carrying Ruling 30's temporal-qualifier refinement | tool or convention — unowned since 2026-08-29 |
 | 5.2 | Amend `.claude/skills/spec-change` so a new `FR-`/`NFR-` names its workstream row in the same commit that mints it, symmetric with the existing `OQ-` rule (Ruling 30's own proposal) | skill amendment |
 | 5.3 | Apply `F31`'s charter correction to `watcher.md` — text already drafted in the withdrawal notice | role-file edit |
