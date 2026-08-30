@@ -493,6 +493,84 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
 }
 ```
 
+### 4.8 `score_batch`'s frame contract
+
+*(Added 2026-08-30, W11 Task 3A follow-up — Ruling 43,
+`docs/plans/2026-08-30-w11-reopen-scope-and-batch-frame-contract-rulings.md`. Mints no
+requirement id: it documents a shape FR-RATE-36, FR-RATE-37 and `05-monitoring.md`
+FR-MON-11 already reach, not a new capability.)*
+
+§5.2's `score_batch(bundle: CompiledBundle, frame: pl.LazyFrame, ...) -> pl.LazyFrame`
+fixes the function's signature only. Nothing else in this suite fixes a row shape for it,
+and this is the first of the four `pl.LazyFrame`-taking/returning signatures §5.2
+publishes (`score_batch`'s `frame`, `dislocate`'s `portfolio`, `attribute`'s `portfolio`,
+`score_batch`'s own return) to become real — `dislocate` and `attribute` are unbuilt. This
+subsection is written so it can hold the portfolio frame's schema when W13 designs it; it
+does not design that schema now.
+
+**Not a `model-schema` artifact.** No document under `docs/contracts/` defines a tabular
+row schema, and Polars column layouts have no generator, no `scripts/generate-contracts.py
+--check` drift check, and no frontend consumer — the seam ADR-0002 defines does not carry
+this. Publishing it here, and guarding it with a test asserting every `ScoringResult` field
+is either a mapped column or a named exclusion
+(`packages/pricing-core/tests/test_rating_score_batch.py`), is `CLAUDE.md` §2's "a shape
+defined twice will diverge" enforced by a test rather than by a generator, because there is
+no generator to enforce it and inventing one is an ADR-scale decision this subsection does
+not make.
+
+**Input row.** One column per reserved name below, plus one column per name in
+`bundle.algorithm.input_contract` (`model_schema.rating.InputContractField.name`) —
+forwarded into `QuoteContext.inputs` verbatim, tolerating extra columns the algorithm does
+not declare, exactly as `_validate_inputs` already tolerates extra `ctx.inputs` keys.
+
+| Column | Type | Notes |
+|---|---|---|
+| `quote_id` | string, nullable | FR-RATE-36's "quote key"; `ScoringResult` carries no such field (Ruling 31 §3), so this is carried through rather than read off the result |
+| `purpose` | string | one of `QuotePurpose`'s five members |
+| `effective_date` | string | ISO date |
+| `rating_version_ref` | string | the canonical `ArtifactRef` string (`"{type}:{slug}@{version}"`) |
+
+**`rating_version_ref` is a `score_batch` input column, and Task 3B stamps it — never
+carries it through from the input dataset.** `CompiledBundle` (`pricing_core.rating.
+runtime`) carries `content_hash`, `decision`, `algorithm`, `boosters`, never a Rating
+Version reference, so `score_batch` cannot itself verify a row's `rating_version_ref`
+against the `bundle` it is scoring with. For `score_one` this never diverges: the caller
+resolves one ref into one bundle for one call, so the two agree by construction. For
+`score_batch`, the frame and the bundle are supplied independently, so that construction is
+gone unless the handler restores it. **Task 3B resolves the reference once per Rating
+Version it loops (FR-RATE-36's "one or more") and stamps that resolved ref into every row
+of the frame it builds for that bundle — it does not read `rating_version_ref` from the
+Dataset Version being scored.** A build that accepts the ref from the input dataset
+produces a parquet attributing premiums to a Rating Version that did not compute them.
+
+**Output row.** A projection of `ScoringResult`
+(`packages/model-schema/src/model_schema/scoring.py`), plus `quote_id` and two error
+columns; `trace` and `timing_ms` are excluded.
+
+| Column | Type | `ScoringResult` field | Notes |
+|---|---|---|---|
+| `quote_id` | string, nullable | — | carried through from the input row |
+| `outcome` | string | `outcome` | `"quoted"`, `"declined"`, or `"error"` — all three are `ScoringOutcome`'s own members, `"error"` included; `score_batch` is simply the first caller to produce it |
+| `rating_version_ref` | string | `rating_version_ref` | the resolved ref Task 3B stamped (above) |
+| `bundle_hash` | string | `bundle_hash` | |
+| `premium_ladder_json` | string, nullable | `premium_ladder` | the rung list, pre-serialised to JSON text (a nested `LadderRung` list has no flat columnar form); `null` on an `"error"` row |
+| `outputs_json` | string, nullable | `outputs` | pre-serialised to JSON text, total over every `AlgorithmOutput.type` this path can produce (`money_minor` as a JSON number, `decimal` as a JSON string — never a JSON number, so an exact `Decimal` and a lossy `float` cannot be confused reading the column back) and refusing, not stringifying, anything else; `null` on an `"error"` row |
+| `decline_reasons` | list of strings | `decline_reasons` | empty on an `"error"` row |
+| `error_code` | string, nullable | — | populated only on an `"error"` row, the `_raise_named` convention's code (`INPUT_CONTRACT_VIOLATION`, `MODEL_CALL_FAILED`, …) |
+| `error_message` | string, nullable | — | populated only on an `"error"` row |
+
+**Two `ScoringResult` fields are deliberately excluded, and no third:** `trace` (batch
+requests no engine trace — Ruling 25 gives `score_batch` no sampling parameter, so this is
+always absent) and `timing_ms` (a per-call wall-clock breakdown that means nothing
+aggregated across a chunk).
+
+**One failing row becomes an `"error"` output row rather than aborting the chunk it is
+in** — the structural half of FR-RATE-38 ("does not abort on individual failures") a
+chunked transform has to provide regardless of which task is charged with the requirement
+id. The threshold policy that decides whether the *run* aborts, and the per-category
+counting and sampling FR-RATE-38 also names, are Task 3B's, reading `error_code` off this
+column.
+
 ---
 
 ## 5. Interfaces
