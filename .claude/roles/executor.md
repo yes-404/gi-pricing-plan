@@ -26,13 +26,15 @@
     an auditor session — not chance: a structural hazard of being the role every other
     write-access role's mistakes land on.
   - **Silently amends after review has started** — name the delta instead.
-- **Never end your turn while a command you started is still running.** Not "poll" — the
+- **Never end your turn while work you started is still outstanding.** Not "poll" — the
   rule is about your *turn*, because a backgrounded command **cannot notify an agent whose
   turn has ended**. The wait must block your own turn:
   `until ! pgrep -f '<specific pattern>' >/dev/null; do sleep 20; done`, run in the
   foreground. `.claude/skills/dev-commands` carries the loop and the two ways it lies.
-  **This applies to every long-running command — the suite, a benchmark, a CI wait — not
-  only `pytest`.** Filed as a finding against this file (`CLAUDE.md` §15) and **superseding
+  **This applies to everything you start, not only a command you run**: the suite, a
+  benchmark, a CI wait, a `Monitor` task, a background poller — **and a subagent you
+  delegate to.** Delegation is not an exception; a nested agent's completion notification
+  reaches the session still running, never an agent whose turn has ended. Filed as a finding against this file (`CLAUDE.md` §15) and **superseding
   an earlier, narrower version of this bullet that said "running the full suite: poll,
   never wait for a notification"**. That wording failed twice more the same day: it named
   `pytest` when the third stall was a *benchmark*, and it said "poll" when the executor
