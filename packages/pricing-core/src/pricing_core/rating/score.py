@@ -141,14 +141,18 @@ name in `bundle.algorithm.input_contract` (extra columns are tolerated, exactly 
   signature above stays exactly what `03` publishes — widening it was ruled out (the plan's
   own "Do not widen this signature").
 
-**Output row** carries `quote_id`, `outcome` (`"quoted"`, `"declined"`, or the batch-only
-sentinel `"error"`), `rating_version_ref`, `bundle_hash`, the premium ladder and the
+**Output row** carries `quote_id`, `outcome` — one of `ScoringOutcome`'s own three members
+(`model_schema.scoring.ScoringOutcome = Literal["quoted", "declined", "error"]`; `"error"` is
+a contract member already, not a batch-only invention — `_score_batch_row` is simply the
+first caller to produce it), `rating_version_ref`, `bundle_hash`, the premium ladder and the
 selected outputs each **pre-serialised to JSON** (`_ladder_json`/`_outputs_json` below —
 this is what Task 3A's byte-identity test compares: the *serialised* ladder, not a
 polars-native nested column), `decline_reasons`, and — populated only on an `"error"`
 row — `error_code`/`error_message`. The handler (Task 3B) reassembles the final parquet
 from this, and aggregates `error_code` into FR-RATE-38's per-category counts and samples;
-neither is this task's to build.
+neither is this task's to build. The full column set, its dtypes and the two `ScoringResult`
+fields it deliberately excludes are published at `03` §4.8 — a cross-module data contract,
+not only this docstring (Ruling 43).
 
 **One failing row does not raise out of `score_batch`.** Everything `_validate_inputs`,
 `_check_purpose_mount`, `_check_billing_surface` and the engine itself can raise for a row
@@ -279,6 +283,26 @@ _BATCH_OUTPUT_COLUMNS: list[tuple[str, Any]] = [
     ("error_message", pl.Utf8),
 ]
 _BATCH_OUTPUT_SCHEMA: pl.Schema = pl.Schema(_BATCH_OUTPUT_COLUMNS)
+
+#: `ScoringResult`'s own fields, mapped to the batch output column that carries them, or
+#: named on the exclusion list (`03` §4.8, Ruling 43 §4). A field of `ScoringResult` that is
+#: neither a value in this mapping nor in `_SCORING_RESULT_BATCH_EXCLUDED_FIELDS` has
+#: appeared with no batch column to carry it — the drift `test_rating_score_batch.py`'s own
+#: guard exists to catch (`CLAUDE.md` §2: "a shape defined twice will diverge").
+_SCORING_RESULT_TO_BATCH_COLUMN: dict[str, str] = {
+    "outcome": "outcome",
+    "rating_version_ref": "rating_version_ref",
+    "bundle_hash": "bundle_hash",
+    "premium_ladder": "premium_ladder_json",
+    "outputs": "outputs_json",
+    "decline_reasons": "decline_reasons",
+}
+
+#: The two `ScoringResult` fields a batch run has no use for: `trace` (batch takes no
+#: sampling parameter — Ruling 25 — and `score_batch` never requests an engine trace, so
+#: this is always `None`) and `timing_ms` (per-call wall-clock timing that means nothing
+#: aggregated across a chunk, and `score_batch` does not set it the way `score_one` does).
+_SCORING_RESULT_BATCH_EXCLUDED_FIELDS = frozenset({"trace", "timing_ms"})
 
 
 def _raise_named(code: str, message: str) -> NoReturn:
@@ -791,8 +815,67 @@ def _ladder_json(ladder: Sequence[LadderRung]) -> str:
     return "[" + ",".join(rung.model_dump_json() for rung in ladder) + "]"
 
 
-def _outputs_json(outputs: Mapping[str, Any]) -> str:
-    return json.dumps(outputs, default=str)
+#: `AlgorithmOutput.type` names shapes this serialiser knows how to write losslessly
+#: (FR-RATE-13). Anything else is refused rather than stringified — Ruling 43 §5(i): a
+#: silent `default=str` catch-all put a `Decimal` output and an `int` output in the same
+#: JSON column with no way to tell which was which by reading the text back.
+_KNOWN_OUTPUT_TYPES = frozenset({"money_minor", "decimal", "bool", "string", "date"})
+
+
+def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
+    """One declared output value -> its canonical, JSON-lossless form, by the algorithm's
+    own declared `type` (FR-RATE-13) rather than by the value's incidental Python type —
+    `_build_outputs` (unmodified, per the module docstring) hands back whatever the engine's
+    raw evaluated result happened to be, which for a `decimal`-typed non-rung output is a
+    Python `float` today (verified: nothing converts it, the same way `_build_ladder`'s own
+    `raw = float(result[source_key])` treats every non-money-minor engine value as untyped
+    until something here gives it a type). `money_minor` values already arrive as `int`
+    (`_round_minor`, ladder-derived) and are checked, not re-derived. `decimal` values are
+    converted via `Decimal(repr(value))` — `_round_minor`'s own established idiom in this
+    module, `repr()` rather than the raw float constructor, because `Decimal(1.15)` exposes
+    the float's exact binary expansion — and serialised as a **string**, never a JSON
+    number: `CLAUDE.md` §7, money is integer minor units or `Decimal`, never float, and a
+    JSON number column cannot distinguish an exact `Decimal` from a lossy `float`."""
+    if declared_type not in _KNOWN_OUTPUT_TYPES:
+        raise ValueError(f"score_batch: cannot serialise a declared output type {declared_type!r}")
+    if declared_type == "money_minor":
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(
+                f"score_batch: a money_minor output must be int, got {type(value).__name__}"
+            )
+        return value
+    if declared_type == "decimal":
+        as_decimal = value if isinstance(value, Decimal) else Decimal(repr(value))
+        return str(as_decimal)
+    if declared_type == "bool":
+        if not isinstance(value, bool):
+            raise ValueError(
+                f"score_batch: a bool output must be bool, got {type(value).__name__}"
+            )
+        return value
+    if declared_type in ("string", "date"):
+        if not isinstance(value, str):
+            raise ValueError(
+                f"score_batch: a {declared_type} output must be str, "
+                f"got {type(value).__name__}"
+            )
+        return value
+    raise AssertionError(f"unreachable: {declared_type!r} is in _KNOWN_OUTPUT_TYPES with no branch")
+
+
+def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str:
+    """`ScoringResult.outputs` -> a JSON object, total over every declared output type this
+    module recognises (`_KNOWN_OUTPUT_TYPES`) and refusing — never silently stringifying —
+    anything else, so a type this function does not know about fails loudly instead of
+    reaching `05` FR-MON-11's A/E computation as data of an unknown shape (Ruling 43 §5(i))."""
+    declared_types = {output.name: output.type for output in algorithm.outputs}
+    coerced: dict[str, int | str | bool] = {}
+    for name, value in outputs.items():
+        declared_type = declared_types.get(name)
+        if declared_type is None:
+            raise ValueError(f"score_batch: output {name!r} is not declared on the algorithm")
+        coerced[name] = _coerce_output_value(declared_type, value)
+    return json.dumps(coerced)
 
 
 def _batch_error_code(exc: Exception) -> tuple[str, str]:
@@ -881,7 +964,7 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
         "rating_version_ref": rating_version_ref_str,
         "bundle_hash": scored.bundle_hash,
         "premium_ladder_json": _ladder_json(scored.premium_ladder),
-        "outputs_json": _outputs_json(scored.outputs),
+        "outputs_json": _outputs_json(algorithm, scored.outputs),
         "decline_reasons": list(scored.decline_reasons),
         "error_code": None,
         "error_message": None,

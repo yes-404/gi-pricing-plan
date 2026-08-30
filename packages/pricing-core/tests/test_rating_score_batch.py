@@ -13,15 +13,29 @@ docstring states it as an invariant `score_batch` introduces.
 
 from __future__ import annotations
 
+import copy
+import json
+from decimal import Decimal
 from typing import Any
 
 import polars as pl
 import pytest
-from test_rating_score import _compiled, _ctx
+from test_rating_runtime import _gbm_model_payload, _rate_table_payload, _train_tiny_booster
+from test_rating_score import _algorithm_payload, _compiled, _ctx, _version
 
-from model_schema.scoring import QuoteContext
+from model_schema.refs import ArtifactRef
+from model_schema.scoring import QuoteContext, ScoringResult
 from pricing_core.progress import JobCancelled
-from pricing_core.rating.score import _ladder_json, score_batch, score_one
+from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, compile_bundle
+from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.rating.score import (
+    _BATCH_OUTPUT_SCHEMA,
+    _SCORING_RESULT_BATCH_EXCLUDED_FIELDS,
+    _SCORING_RESULT_TO_BATCH_COLUMN,
+    _ladder_json,
+    score_batch,
+    score_one,
+)
 
 
 def _ctx_to_row(ctx: QuoteContext) -> dict[str, Any]:
@@ -53,6 +67,58 @@ def _contexts(n: int) -> list[QuoteContext]:
         )
         for i in range(n)
     ]
+
+
+def _decimal_output_algorithm_payload() -> dict[str, Any]:
+    """Task 1.4's own fixture (`_algorithm_payload`), plus one non-money `decimal` output —
+    the ladder and every existing assertion are untouched, since `driver_age * 1.5` neither
+    matches a ladder rung name nor consumes anything the ladder does (module docstring's
+    "Ladder construction" note: only an `output` step named `f"{rung}_minor"` is a rung, and
+    `_build_outputs` reads every declared output independently of the ladder). Exists to
+    prove `_outputs_json` handles a genuine `Decimal`-typed output (Ruling 43 §5(i)) —
+    nothing in Task 1.4's own fixture declares one, `03` FR-RATE-13's *"decimal or
+    money_minor"* being the only two monetary result types and `payable_premium_minor`
+    already covering the second."""
+    payload = copy.deepcopy(_algorithm_payload())
+    payload["outputs"].append({"name": "age_factor", "type": "decimal", "required": False})
+    payload["steps"].append(
+        {
+            "step_id": "s_age_factor", "type": "expression", "label": "Age factor (decimal)",
+            "expr": "driver_age * 1.5", "result_type": "decimal",
+            "consumes": ["driver_age"], "produces": "age_factor_raw",
+        }
+    )
+    payload["steps"].append(
+        {
+            "step_id": "s_out_age_factor", "type": "output", "label": "Age factor output",
+            "output_name": "age_factor", "rounding": {"mode": "half_even", "dp": 2},
+            "consumes": ["age_factor_raw"],
+        }
+    )
+    return payload
+
+
+class _DecimalOutputResolver:
+    """Mirrors `test_rating_score._FakeResolver` (GBM-only), swapping in the augmented
+    algorithm payload above — not a subclass, since `_FakeResolver` builds its payload
+    internally and gives no seam to inject a different one."""
+
+    def __init__(self) -> None:
+        booster = _train_tiny_booster()
+        self._payloads: dict[str, dict[str, Any]] = {
+            "rating_algorithm:score-fixture@1": _decimal_output_algorithm_payload(),
+            "rate_table:motor-expense@1": _rate_table_payload(),
+            "model:motor-freq@1": _gbm_model_payload(booster),
+        }
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
+
+
+async def _compiled_with_decimal_output() -> CompiledBundle:
+    resolver: ArtifactResolver = _DecimalOutputResolver()
+    bundle = await compile_bundle(_version(), resolver)
+    return load_bundle(bundle)
 
 
 class _RecordingProgress:
@@ -89,7 +155,12 @@ class _CancelAfter:
 
 @pytest.mark.req("FR-RATE-37")
 async def test_score_batch_and_score_one_produce_byte_identical_ladders() -> None:
-    compiled = await _compiled()
+    # `_compiled_with_decimal_output` (Task 1.4's fixture plus one non-money `decimal`
+    # output — see its own docstring) so this test also covers Ruling 43 §5(i): a
+    # money-minor output and a genuinely `Decimal`-typed one must both round-trip through
+    # `outputs_json` losslessly, which the plain fixture cannot exercise on its own since
+    # its only declared output is `payable_premium_minor` (money-minor).
+    compiled = await _compiled_with_decimal_output()
     contexts = _contexts(6)
     frame = pl.DataFrame([_ctx_to_row(c) for c in contexts]).lazy()
 
@@ -105,6 +176,23 @@ async def test_score_batch_and_score_one_produce_byte_identical_ladders() -> Non
         assert batch_row["premium_ladder_json"] == _ladder_json(one_result.premium_ladder)
         assert batch_row["decline_reasons"] == one_result.decline_reasons
         assert batch_row["error_code"] is None
+
+        # Ruling 43 §5(i): `outputs_json` was asserted nowhere before this. Both output
+        # types this fixture declares are checked, not just that the column is non-null.
+        assert one_result.outcome == "quoted", "a decline skips the outputs this asserts"
+        outputs = json.loads(batch_row["outputs_json"])
+        assert set(outputs) == {"payable_premium_minor", "age_factor"}
+
+        money = outputs["payable_premium_minor"]
+        assert isinstance(money, int)
+        assert not isinstance(money, bool)
+        assert money == one_result.outputs["payable_premium_minor"]
+
+        decimal_value = outputs["age_factor"]
+        # A Decimal output must be a JSON string, never a number.
+        assert isinstance(decimal_value, str)
+        driver_age = ctx.inputs["driver_age"]
+        assert Decimal(decimal_value) == Decimal(repr(driver_age)) * Decimal("1.5")
 
 
 # ---------------------------------------------------------------------------
@@ -248,3 +336,52 @@ async def test_empty_frame_scores_nothing_and_calls_no_progress() -> None:
     out = score_batch(compiled, frame, progress=progress).collect()
     assert out.height == 0
     assert progress.updates == []
+
+
+# ---------------------------------------------------------------------------
+# Ruling 43 §4: the drift guard. `CLAUDE.md` §2's "a shape defined twice will diverge"
+# only holds if something notices when it does — a field added to `ScoringResult` with no
+# batch column and no exclusion must fail the build, not be silently dropped.
+# ---------------------------------------------------------------------------
+
+
+def _assert_scoring_result_covered() -> None:
+    fields = set(ScoringResult.model_fields)
+    covered = set(_SCORING_RESULT_TO_BATCH_COLUMN) | _SCORING_RESULT_BATCH_EXCLUDED_FIELDS
+
+    missing = fields - covered
+    assert not missing, (
+        f"ScoringResult field(s) {sorted(missing)} have no batch output column and are not "
+        "on the named exclusion list — 03 §4.8 and score.py's "
+        "_SCORING_RESULT_TO_BATCH_COLUMN/_SCORING_RESULT_BATCH_EXCLUDED_FIELDS have diverged "
+        "from model_schema.scoring.ScoringResult"
+    )
+    stale = covered - fields
+    assert not stale, (
+        f"mapping/exclusion names field(s) {sorted(stale)} ScoringResult no longer has"
+    )
+
+
+def test_every_scoring_result_field_is_a_batch_column_or_a_named_exclusion() -> None:
+    _assert_scoring_result_covered()
+    # The mapping's targets must themselves be real batch columns, not just plausible names.
+    assert set(_SCORING_RESULT_TO_BATCH_COLUMN.values()) <= set(_BATCH_OUTPUT_SCHEMA.names())
+
+
+def test_the_drift_guard_fails_when_scoring_result_gains_an_unmapped_field() -> None:
+    """`CLAUDE.md` §13: 'enforcement is proven on deliberately broken input.' A field the
+    mapping and the exclusion list do not know about is added to `ScoringResult.model_
+    fields` for the duration of this test only (restored in `finally`, verified restored
+    below) — the exact shape a real new field on the model would take — and the guard
+    above is shown to fail on it, not merely to exist."""
+    original = dict(ScoringResult.model_fields)
+    assert "a_field_the_mapping_does_not_know" not in original
+    try:
+        ScoringResult.model_fields["a_field_the_mapping_does_not_know"] = original["outcome"]
+        with pytest.raises(AssertionError, match="a_field_the_mapping_does_not_know"):
+            _assert_scoring_result_covered()
+    finally:
+        ScoringResult.model_fields.clear()
+        ScoringResult.model_fields.update(original)
+    assert "a_field_the_mapping_does_not_know" not in ScoringResult.model_fields
+    _assert_scoring_result_covered()  # restored cleanly — the guard passes again
