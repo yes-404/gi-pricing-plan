@@ -1539,14 +1539,27 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   qualifier on the existing four) for measured-and-failing, and an explicit rule for how many
   verdicts a multi-limb requirement takes. This is a `CLAUDE.md` §13 amendment — the maintainer's
   alone (`CLAUDE.md` §12) — and this review surfaces it rather than proposing wording.
-- **The one constructive recommendation in this workstream's evidence, and it reframes everything
-  above rather than adding to it: prefer the design whose safety property has a failing case.**
-  Every finding in this question — §8's inert control, the seven-then-reframed instances, the
-  tree-mislabelling class, the retrieval-failure table — is, at bottom, **a check that could not
-  fail**: each reported (or would have reported) green because of what it did not look at. This
-  names the general form and turns it from a diagnosis into a selection criterion, arrived at from
-  a live choice between two implementations of the same authorisation repair — re-derive a
-  `Caller`'s permissions from its account row, or pass the authenticated set as a parameter. They
+- **The one constructive recommendation in this workstream's evidence: prefer the design whose
+  safety property has a failing case.** This did not arrive by generalising it across everything
+  above — that generalisation was tried and withdrawn as asserted rather than enumerated, twice,
+  before this draft could adopt it. **Checked directly against this section's own bullets rather
+  than carried from that count**: exactly two qualify as "a check that exists and is structurally
+  incapable of reporting the failure it is asked about," as opposed to being merely related to
+  that shape — the `pgrep` self-match (instance 2, duplicated verbatim inside instance 7's
+  "serialise" remedy, so one defect with two sightings rather than two instances) and the
+  authorisation example below. **The rest of this section is a different, adjacent shape each
+  time, worth telling apart rather than folding in**: the announce half, the §14 trigger and
+  §5a's suggested `grep` are *absent* checks, not defective ones — there is no mechanism to be
+  structurally blind, only none built yet. §8's CPU justification for the database-truncation
+  hazard *measures correctly at the wrong target*, which is a different defect from measuring
+  nothing. §J's table is explicitly, in its own words, a *retrieval* failure and "something
+  cheaper and more damning" than "nothing enforces this," not a restatement of it. The
+  tree-mislabelling class is a *provenance* defect on an otherwise correctly computed number.
+  Four adjacent shapes, and a count of two for this one — enumerated against this document, not
+  the evidence base's own count, per the instruction that produced this correction. **The
+  proposal stands on the two instances it actually has**, arrived at from a live choice between
+  two implementations of the same authorisation repair — re-derive a `Caller`'s permissions from
+  its account row, or pass the authenticated set as a parameter. They
   behave identically today (`backend/src/app/auth/service.py:230` populates identity permissions
   straight from the account row — verified directly), so the choice looked cosmetic. **It is not**:
   a re-derived implementation cannot be made to fail the test that would separate them (*"a
