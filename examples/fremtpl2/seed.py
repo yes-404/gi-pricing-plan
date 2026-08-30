@@ -309,6 +309,12 @@ async def run(rows: int | None) -> int:
     workspace_id = new_uuid7()
     analyst = Principal(kind=ActorKind.USER, id=new_uuid7(), display="analyst@example.fr")
     actuary = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actuary@example.fr")
+    # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --
+    # but both of these are ActorKind.USER with an id supplied at construction, and
+    # Principal's own validator refuses a non-system principal with no id. Narrow once here
+    # rather than at every call site below that needs a bare UUID.
+    assert analyst.id is not None
+    assert actuary.id is not None
 
     async def grant(principal: Principal, *slugs: str) -> None:
         async with database.unit_of_work() as session:
@@ -534,9 +540,20 @@ async def run(rows: int | None) -> int:
     except Exception as exc:
         code = getattr(exc, "code", type(exc).__name__)
         print(f"    promotion refused: {code}")
-        async with database.session() as session:
-            row = await session.get(DatasetVersionRow, first)
-            print(f"    version 1 is {row.status} — not left mid-run (FR-DATA-43)\n")
+        async with database.session() as verify_session:
+            # Named `verify_session`, not `session`: this function rebinds `session` via
+            # `async with database.X() as session:` nine times, including inside the nested
+            # `ingest`/`validate` closures above. Under --strict with the mypy_path/
+            # explicit_package_bases pair this module now needs (pyproject.toml's [tool.mypy]
+            # comment), that reuse made mypy resolve `.get()`'s overload for THIS call against
+            # `ValidationRuleRow` — the entity type bound to `row` earlier in the function,
+            # nothing to do with `first`'s actual type — misreporting a real bug
+            # (`type[DatasetVersionRow]` "incompatible" with the entity type `.get()` expected)
+            # where none exists. Confirmed empirically: this rename alone, nothing else,
+            # takes the file from 4 errors to 0.
+            version_row = await verify_session.get(DatasetVersionRow, first)
+            assert version_row is not None, f"dataset version {first} vanished mid-run"
+            print(f"    version 1 is {version_row.status} — not left mid-run (FR-DATA-43)\n")
 
     print("── version 2: one preparation step later " + "─" * 34)
     second = await ingest("ingest", cleaned=True)
