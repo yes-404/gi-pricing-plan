@@ -404,6 +404,13 @@ remembers.
 2. **An adopted note converts to a Work row** — here, under the phase that will carry it,
    with a workstream id and dependencies like any other row. Adoption is not a status change
    on the note; it is a row on this page. Until that row exists, nothing is scheduled.
+   **The reconciliation's acceptance line is the maintainer's** (instruction, 2026-08-30),
+   which is the same rule `CLAUDE.md` §12 applies to a Work close and for the same reason:
+   adopting a note **schedules work**, and scheduling is not a lead's to decide. So the
+   reconciliation is written as a **proposal** — each note carried to a recommended
+   disposition with its reasoning, and the acceptance line left **undated** until the
+   maintainer signs it. **No adoption is implemented before that signature**, and no Work row
+   is added on the strength of a recommendation alone.
 3. **A note that is neither adopted nor rejected keeps a named owner and a next trigger.**
    Silence is not an outcome, the same rule `CLAUDE.md` §13 applies to an unevidenced
    requirement. A rejected note is recorded as rejected, with its date and reason, and its
