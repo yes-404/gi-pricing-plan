@@ -35,7 +35,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.api import score as score_module
-from app.api.deps import DEV_PRINCIPAL_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER, Caller
 from app.config import Settings
 from app.db.models import JobRow, ScoringTraceRow
 from app.main import create_app
@@ -45,7 +45,14 @@ from app.platform import traces
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
 from app.worker.trace_handlers import register_trace_handlers
-from model_schema import ArtifactRef, JobKind, JobStatus, LadderRung, ScoringResult
+from model_schema import (
+    ArtifactRef,
+    JobKind,
+    JobStatus,
+    LadderRung,
+    QuoteContext,
+    ScoringResult,
+)
 
 SCORE_URL = "/api/v1/score"
 #: The slug/version `_insert_version` creates. Read from that helper rather than chosen:
@@ -766,12 +773,106 @@ def test_a_decline_is_persisted_as_a_pending_trace_and_a_job_is_submitted(
     assert rows[0].status == "pending"
     assert rows[0].sample_reason == "decline"
     # `scoring_headers`' Service Account is scoped to `["uat"]` (Ruling 14's own fixture) —
-    # the environment `_environment_for` reads off `Caller.environments`.
+    # a single-environment account, so this does not discriminate the fix from the defect
+    # it replaced (both a stamped `caller.environment` and `min(caller.environments)` agree
+    # here). `test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environment`
+    # below is the one that does.
     assert rows[0].environment == "uat"
 
     jobs = _run(_trace_produce_jobs(database, workspace_id))
     assert len(jobs) == 1
     assert jobs[0].parameters["scoring_trace_id"] == str(rows[0].id)
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environment(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Ruling 44 part 3, test 1 — the discriminating case.
+
+    A Service Account created `["uat", "dev"]` mints a key for `environments[0]`
+    (`service_accounts.py:180`), which is `uat` — the environment the quote is actually
+    served in. The old `_environment_for` stamped `min(caller.environments)` instead, which
+    is `dev` (`"dev" < "uat"` lexicographically): a caller scoped to more than one
+    environment discriminates the fix from the defect, where a single-environment account
+    (the test above) cannot — `min()` of a one-element set always agrees with the element.
+    """
+    created = client.post(
+        "/api/v1/service-accounts",
+        json={
+            "slug": "quote-engine-multi-env",
+            "environments": ["uat", "dev"],
+            "permissions": ["score:execute"],
+        },
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    headers = {
+        "X-API-Key": created.json()["key"],
+        "Workspace-Id": str(workspace_id),
+    }
+
+    declined = _scored(outcome="declined", decline_reasons=["driver_age below minimum"])
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return declined
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=headers
+    )
+    assert response.status_code == 200, response.text
+
+    rows = _run(_rows_for(database, workspace_id))
+    assert len(rows) == 1
+    assert rows[0].environment == "uat"
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_caller_with_no_environment_writes_no_trace_and_still_serves_the_quote(
+    database: Any,
+    workspace_id: Any,
+    principal: Any,
+    api_settings: Settings,
+) -> None:
+    """Ruling 44 part 3, test 2 — the impossible-state guard.
+
+    `caller.environment is None` on the real-time sampling path is unreachable through the
+    API today (`score:execute` is granted to no builtin role and no roles API exists to
+    grant it to a custom one — Ruling 44 part 3), so this calls `_maybe_sample_trace`
+    directly rather than through a request: there is no key or bearer token that produces
+    this `Caller`. The guard must raise rather than stamp a row that would be
+    indistinguishable from Correction 2's batch marker (Task 4A) — and `_maybe_sample_trace`
+    already degrades any raise here to "logged, not raised" (its own `except Exception`,
+    the same guarantee `test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500`
+    proves for a different failure), which is what "the quote is still served 200" reduces
+    to for a route this call never reaches.
+    """
+    caller = Caller(
+        principal=principal,
+        workspace_id=workspace_id,
+        environments=frozenset({"uat"}),
+        environment=None,
+        permissions=frozenset({"score:execute"}),
+    )
+    ctx = QuoteContext.model_validate(_quote({"rating_version_ref": SCORED_REF}))
+    declined = _scored(outcome="declined", decline_reasons=["driver_age below minimum"])
+
+    # No exception escapes: the internal `try` catches the guard's raise, exactly as it
+    # catches any other trace-sampling failure.
+    _run(
+        score_module._maybe_sample_trace(
+            database, api_settings, caller, ctx, declined
+        )
+    )
+
+    assert _run(_rows_for(database, workspace_id)) == []
+    assert _run(_trace_produce_jobs(database, workspace_id)) == []
 
 
 @pytest.mark.req("FR-RATE-42")

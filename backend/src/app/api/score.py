@@ -134,25 +134,6 @@ def _required_ref(ctx: QuoteContext) -> ArtifactRef:
     return ref
 
 
-def _environment_for(caller: Caller) -> str | None:
-    """The environment a sampled real-time trace is stamped with (W11 Task 4B).
-
-    `Caller.environments` is FR-PLAT-3's Service Account scope — the same field Ruling 14
-    already reasoned is *"the target environment of a call [...] already derivable"*.
-    `score:execute` is granted to no builtin role (FR-GOV-6), so the only realistic caller
-    here is a Service Account, and account creation requires at least one environment
-    (`ServiceAccountCreate.environments: Field(min_length=1)`); the lexicographically first
-    is used when a key is scoped to more than one, which W11's lack of per-environment
-    Deployment resolution makes an arbitrary-but-harmless tie-break rather than a routing
-    decision. `None` only for a caller with no environment scope at all — which
-    `ScoringTraceRow.environment`'s own convention already reads as "not real-time"
-    (Task 4A), so a row for such a caller would be indistinguishable from a batch one; that
-    is a real gap for a non-Service-Account caller, and none is expected to reach this
-    route under the current permission model.
-    """
-    return min(caller.environments) if caller.environments else None
-
-
 async def _fetch_bundle(
     database: Database,
     blob_store: BlobStore,
@@ -348,6 +329,19 @@ async def _maybe_sample_trace(
             )
             if not sampled or reason is None:
                 return
+            if caller.environment is None:
+                # Ruling 44 part 3: `None` here is an impossible state, not a value to
+                # stamp — it is indistinguishable from Correction 2's batch marker
+                # (Task 4A), and a mislabelled row is permanent (`TRACE_RETENTION_FLOOR`,
+                # `UPDATE` revoked). Unreachable under the current permission model
+                # (`score:execute` has no builtin role and no roles API grants it), but
+                # raising rather than stamping keeps it unreachable by construction. The
+                # enclosing `try` degrades this to "logged, quote still served" — the
+                # correct outcome for a caller this should never happen to.
+                raise RuntimeError(
+                    "sampled real-time trace has no caller.environment; refusing to write "
+                    "a row indistinguishable from a batch-produced one"
+                )
             row = await traces_service.write_pending_trace(
                 session,
                 workspace_id=caller.workspace_id,
@@ -355,7 +349,7 @@ async def _maybe_sample_trace(
                 rating_version_ref=str(result.rating_version_ref),
                 bundle_hash=result.bundle_hash,
                 sample_reason=reason,
-                environment=_environment_for(caller),
+                environment=caller.environment,
                 quote_context=ctx.model_dump(mode="json"),
                 served_summary=traces_service.summarise_result(result),
             )

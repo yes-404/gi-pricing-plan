@@ -40,7 +40,7 @@ _UNKNOWN = Principal(kind=ActorKind.SYSTEM, display="unauthenticated")
 class AuthenticatedIdentity:
     """A verified principal and the workspaces it may act in."""
 
-    __slots__ = ("environments", "permissions", "principal", "workspaces")
+    __slots__ = ("environment", "environments", "permissions", "principal", "workspaces")
 
     def __init__(
         self,
@@ -48,11 +48,16 @@ class AuthenticatedIdentity:
         workspaces: frozenset[UUID],
         *,
         environments: frozenset[str] = frozenset(),
+        environment: str | None = None,
         permissions: frozenset[str] = frozenset(),
     ) -> None:
         self.principal = principal
         self.workspaces = workspaces
         self.environments = environments
+        #: The environment the *presented credential* was scoped to (Ruling 44) — never a
+        #: derivation from `environments`, the account's granted set. `None` for a bearer or
+        #: development caller, and for any credential type minted before this field existed.
+        self.environment = environment
         self.permissions = permissions
 
 
@@ -227,5 +232,9 @@ async def authenticate_api_key(
         ),
         workspaces=frozenset({account.workspace_id}),
         environments=frozenset(account.environments),
+        # Ruling 44: the environment *this key was presented for* (already verified above,
+        # `:212`), not a tie-break over the granted set — `environments` keeps its existing
+        # meaning and use in authorisation; this is a separate, single-valued fact.
+        environment=parsed.environment,
         permissions=frozenset(account.permissions),
     )
