@@ -48,7 +48,8 @@ sys.path.insert(0, str(_PACKAGES / "pricing-core" / "src"))
 sys.path.insert(0, str(_PACKAGES / "model-schema" / "src"))
 
 _spec = importlib.util.spec_from_file_location("_bench_rating", _SCRIPTS / "bench-rating.py")
-assert _spec is not None and _spec.loader is not None
+assert _spec is not None
+assert _spec.loader is not None
 _bench_rating = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = _bench_rating  # dataclasses needs the module in sys.modules
 _spec.loader.exec_module(_bench_rating)
@@ -77,7 +78,7 @@ TRAIN_ROUNDS = 20
 
 
 def machine() -> str:
-    return _bench_rating.machine()
+    return str(_bench_rating.machine())
 
 
 async def _trace_bytes_for(n_expr: int) -> tuple[int, int]:

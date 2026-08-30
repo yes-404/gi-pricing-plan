@@ -47,11 +47,15 @@ structure.** Not tuned to pass; reported as measured. See §5.
   (`bench-rating.py`'s own default of 5,000 rows / 300 rounds) would only slow this script
   down for no effect on the number being measured.
 - **One scored quote per step count** — the fixture's inputs are fixed
-  (`bench-rating.py`'s `_ctx()`, seed `20260829`), so the byte size for a given structure
-  is deterministic, not sampled. Repeating the run at a fixed `n_expr` reproduces the same
-  byte count exactly; it is not a distribution to average over the way a latency figure is.
-  What *does* vary, and is reported as a distribution rather than a mean, is size **against
-  step count** (§4).
+  (`bench-rating.py`'s `_ctx()`, seed `20260829`), so byte size for a given structure is
+  effectively deterministic, not sampled. It is *not* bit-exact run to run: three repeat
+  runs of the reference (`n_expr=187`) fixture measured 1,032,135 / 1,032,136 / 1,032,137
+  bytes — a 2-byte spread on a >1 MB payload (< 0.0002%), traced to XGBoost's own
+  floating-point non-determinism across runs (thread-scheduling-dependent summation order
+  occasionally shifts a trailing significant digit in a serialised risk-premium value by
+  one character), not to this script or to `Trace` serialisation. Immaterial to every
+  figure below. What *does* vary in a way that matters, and is reported as a distribution
+  rather than a mean, is size **against step count** (§4).
 - **Machine.** `x86_64`, 4 cores, 16.4 GB RAM — a shared development machine, not a
   dedicated benchmark host. 1-minute load average 0.41–0.77 across the session (not
   relevant to this measurement's correctness, since nothing here is timed).
@@ -65,9 +69,10 @@ structure.** Not tuned to pass; reported as measured. See §5.
   docs-only). This worktree's branch adds only `scripts/bench-trace-size.py` and this note
   on top of it; no scored code differs from that tree.
 - **Pass count.** One run of the script (one scored quote per step count, five step
-  counts). Not repeated: the byte size at a fixed structure is deterministic (see above),
-  so a second run would reproduce identical figures rather than add information — the
-  "repeat near a bound" rule applies to a statistical measurement, and this one is not.
+  counts). Run four times total across this note's preparation (the number in §3/§4 is
+  one of them); the reference figure varied by at most 2 bytes across runs (see above) —
+  the "repeat near a bound" rule applies to a statistical measurement, and a 0.0002% float-
+  formatting wobble is not one worth averaging over.
 - **Ref cardinality.** One `RatingAlgorithm` structure per step count; one workspace; one
   `QuoteContext`.
 
@@ -161,8 +166,10 @@ way.
 - **Compression or any storage-layer size reduction.** None exists in this platform's blob
   store; `BlobStore.put` stores bytes verbatim (§1). A compressed-at-rest store (if ever
   added) would change this projection; this note measures the shipped store.
-- **Multi-run variance.** Byte size at a fixed structure is deterministic (§1); one run is
-  what there is to measure, not one of several samples.
+- **Multi-run variance beyond the ~2-byte float-formatting wobble already measured (§1).**
+  Four runs all landed within 2 bytes of each other at the reference structure — enough to
+  rule out the variance mattering to this projection, not enough runs to characterise a
+  distribution beyond that.
 
 ## 6. Disposition
 
