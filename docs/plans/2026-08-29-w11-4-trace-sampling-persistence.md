@@ -47,6 +47,93 @@ code.
 
 ---
 
+## Corrections after filing (2026-08-30, at `25c5688`)
+
+**One statement in this plan is wrong, and it appears twice.** Task 4A, merged at `25c5688`
+(PR #480), falsified it. What was believed is preserved above rather than deleted, per
+[`README.md`](README.md): no Steps, Files or Acceptance text in this file has been edited to
+agree with the repository, and this section is additive only.
+
+**Why in the plan rather than beside it.** [`README.md`](README.md)'s rule — *"a filed plan is
+a record, not an instruction"* — governs a plan whose execution is finished. Tasks 4B, 4C and
+4D have not run, so this file is still being read as an instruction set, and
+[`2026-08-29-w11-3-batch-scoring.md`](2026-08-29-w11-3-batch-scoring.md)'s own corrections
+section gives the reason: *"a plan is an instruction set and an executor who reads a wrong step
+does the wrong thing"*. This slice's other correction —
+[`2026-08-30-w11-4-always-capture-correction.md`](2026-08-30-w11-4-always-capture-correction.md),
+resolved the same day by Ruling 35 — was filed as a sibling document instead. **Both are live
+and an executor must read both**; that record carries a binding constraint on Task 4B which
+this section does not repeat.
+
+### Correction 1 — this slice does register a new error code
+
+The header block above says this plan *"cites ids that already exist and registers no new error
+code"*, and the F29 row in *The register rows this slice must honour* repeats it. **Both are
+wrong.** Task 4A registered `TRACE_RETENTION_FLOOR` (409) in both places a code must appear:
+`backend/src/app/errors.py:332`, and `03`'s owned-code block at
+[`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) `:628`. It is raised by
+`app.platform.traces.delete_trace` (`traces.py:126`) when a delete falls inside NFR-OVR-6's
+≥ 13-month floor.
+
+**It is a wrong prediction, not a broken rule, and Task 4A is not a deviation.** Three reasons,
+in the order that decides it:
+
+1. **The plan requires the behaviour that requires the code.** Acceptance criterion 4 and Task
+   4A's *Interfaces — Produces* both demand a deletion path that *refuses* inside the floor. In
+   this codebase a typed refusal is a `PlatformError` carrying a registered code — the precedent
+   Task 4A followed is `DATASET_VERSION_IMMUTABLE` (`backend/src/app/platform/datasets.py:537`)
+   and `MODEL_IMMUTABLE` (`backend/src/app/platform/modelling.py:816`), both 409 refusals of an
+   immutability rule. Read as a rule, the sentence forbids what this plan's own acceptance
+   standard mandates; read as a prediction, it is simply mistaken. Only the second reading is
+   internally consistent.
+2. **It is stated in the indicative, inside a derivation, not as a prohibition.** The F29 row
+   uses it as a premise — *"so it neither worsens nor discharges it"* — and this plan states its
+   real prohibitions imperatively (*"Must NOT touch"*, *"the budget must not assume it"*, *"Do
+   not let that serialise the whole slice"*).
+3. **Nothing reserves an error code the way an id is reserved.** The id half of the same
+   sentence is a rule because `scripts/audit-docs.py` enforces the `Next free:` marker; error
+   codes have no equivalent machinery, which is F29's substance.
+
+**The F29 row's conclusion survives its premise.** F29 is that nothing checks error-code
+registration in either direction — a code owned by a spec and absent from `errors.py`, or a code
+in `errors.py` owned by no spec. Task 4A registered both sides, so it creates no instance of
+either failure mode: the row still neither worsens nor discharges F29, for a different reason
+than the one given. **No new register row is owed for this.** What Task 4A did not do is make
+anything *check* that registration — nothing does, and that is F29, already open and owned.
+
+### Correction 2 — Task 4C's exclusion signal is a null environment, not a batch parent
+
+Task 4C Step 3 tells its executor to *"construct the row directly with a batch parent"*. **The
+row Task 4A built has no parent field to set.** `ScoringTraceRow`
+(`backend/src/app/db/models.py:2033`) carries `workspace_id`, `quote_id`, `rating_version_ref`,
+`bundle_hash`, `sample_reason`, `environment`, `blob_sha256` and `created_at` — and no Job
+reference. The signal Ruling 25's exclusion must be written against is a **null `environment`**:
+the real-time path sets it, and a trace written on request for a `score.batch` Job carries none.
+Step 3's test is still the right test and still writable before Slice 3's traces exist —
+construct the row with no environment and assert `GET /api/v1/traces` does not return it.
+
+### Not corrected, because they are right as written
+
+- **C2's owed register row.** The `Deployment` parent is still W14's, Task 4A stored the
+  environment as a plain string exactly as C2 says, and the row remains owed at the close.
+- **Task 4A's *Interfaces — Produces* line.** `write_trace` takes more than a `Trace` and a
+  `sample_reason`: also the session, the `BlobStore`, `workspace_id` and `environment`
+  (`backend/src/app/platform/traces.py:47-55`). That is a wider interface than the plan
+  sketched, not a different one — but a Task 4B caller needs the full signature.
+
+### Filed against a second plan, and deliberately not corrected there
+
+[`2026-08-29-w11-3-batch-scoring.md`](2026-08-29-w11-3-batch-scoring.md) carries the same
+sentence and is falsified the same way: its Task 3B (`eda70d6`) registered
+`BATCH_ABORT_THRESHOLD_ABOVE_SETTING` and `BATCH_ABORTED`, and that plan's Task 3B likewise
+required a *refusal*. All four of its tasks have merged, so it is a finished record and
+[`README.md`](README.md)'s rule applies to it without the executor-safety exception used above.
+**Both of the two plans that used the sentence were wrong**, which makes it a plan-writing
+finding rather than a slip: it is carried to the [`CLAUDE.md`](../../CLAUDE.md) §14 plan review
+due at W11's close, not edited into that file.
+
+---
+
 ## Acceptance standard for the slice as a whole
 
 `delivery-process.md` §3 requires one that is explicit and testable. Slice 4 is accepted when
