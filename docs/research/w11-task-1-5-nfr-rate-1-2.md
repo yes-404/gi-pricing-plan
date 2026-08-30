@@ -5,15 +5,15 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
 (`compile_bundle`), on the CI-equivalent `.venv` this worktree built with
 `uv sync --all-packages`, using `scripts/bench-rating.py`
 (`uv run python scripts/bench-rating.py`). `docs/specs/03-rating-engine.md` §9
-(`:784-785`):
+(`:797-798`):
 
-- **NFR-RATE-1** (`:784`): "Real-time scoring p99 < 50 ms server-side at 200 rps per
+- **NFR-RATE-1** (`:797`): "Real-time scoring p99 < 50 ms server-side at 200 rps per
   replica for a ~200-step motor structure with one `exact` GBM call (NFR-OVR-1). Without a
   GBM call, p99 < 15 ms." — this note measures the **component** half only (`score_one`
   called directly, no HTTP, no FastAPI, no database); the sustained-200-rps and
   full-HTTP-path halves are Slice 2's Task 2.1 per this task's own plan
   (`docs/plans/2026-08-29-w11-1-evaluator-core.md`).
-- **NFR-RATE-2** (`:785`): "Tracing adds ≤ 20 % to scoring latency and never changes the
+- **NFR-RATE-2** (`:798`): "Tracing adds ≤ 20 % to scoring latency and never changes the
   result (R3)."
 
 ## Method
@@ -41,13 +41,19 @@ Measured 2026-08-29 on this branch's `packages/pricing-core/src/pricing_core/rat
   has since been changed to read the load either side of every timed block and print it
   beside the figure, so a future run records the condition it was taken under rather than
   one startup reading shared across all three blocks.
-- Tree: `w11-1-5-bench-and-ruling28` branch, off `origin/main` at `d6505e9`.
+- Tree: the first four runs were taken on the `w11-1-5-bench-and-ruling28` branch off
+  `origin/main` at `d6505e9`; the fifth on the same branch after this note's corrections,
+  and the branch has since merged `origin/main` at `6e548f8`. Nothing on the scored path
+  changed between them.
 
 ## Result — NFR-RATE-1 (component)
 
-*Verdict corrected 2026-08-30. This section first read **"Both halves PASS"** on the
-strength of a single run. The no-GBM half does not reproduce, and the correction is a
-verdict change rather than a wording fix — see the PR #416 audit, §A2.*
+*Verdict corrected 2026-08-30, after three independent re-runs during the audit of PR #416.
+This section first read **"Both halves PASS"** on the strength of a single run. The no-GBM
+half does not reproduce, and the correction is a verdict change rather than a wording fix.
+Every run is tabulated below with its load: the evidence for the corrected verdict is here,
+not in a document elsewhere. Unlike NFR-RATE-2's failure (`docs/audit/register.md`, **F35**)
+this instability carries no register row of its own as at `6e548f8`.*
 
 - **Without a GBM call (p99 < 15 ms): measured; verdict unstable across runs — not
   established.** This note first recorded 9.410 ms and a "~1.6x" margin. Three re-runs of
@@ -88,15 +94,15 @@ down here as a PASS with a "~1.6x margin". Over ~40 minutes the audit observed t
 available for a requirement stated at 200 rps, and it is simultaneously the condition that
 produces the most convincing-looking evidence.
 
-**The distribution — the acceptance criterion that would have caught all of this, and the
-one that was not met.** The leaf plan
+**The distribution — the acceptance criterion that was not met, and the one that explains
+the instability once you have it.** The leaf plan
 (`docs/plans/2026-08-29-w11-1-evaluator-core.md:1416`) requires *"the distribution, not
 only the p99 against the bound. A single number comfortably inside a budget and a number
 sitting on it are different findings, and only the distribution distinguishes them."*
 `bench-rating.py` **already printed** stdev, p50 and p90 beside every p99. This note
-recorded p99, mean and max only. Nothing was missing from the instrument — the numbers
-were dropped on the way to the page, and they are exactly the ones that make the no-GBM
-half's fragility visible without re-running anything.
+recorded p99, mean and max only. Nothing was missing from the instrument; the numbers were
+dropped on the way to the page. What they show — once there are runs at more than one load
+to compare — is the table below, and the qualification that follows it.
 
 What they were — and why one run's distribution is not *the* distribution:
 
@@ -179,8 +185,8 @@ copy of that context **per node**, so the total trace payload grows faster than 
 in the step count.
 
 **That mechanism was offered here as the most likely one rather than a verified one. It is
-now verified** — by the audit of PR #416 (2026-08-30, §D3), by two levers this note did not
-run:
+now verified**, and registered as **F35** (`docs/audit/register.md`). Two levers this note
+did not run establish it:
 
 - **Causation.** Adding **one** declared `string` input carrying 4 KB that **no step
   consumes**, to the same 200-step structure, left the node count unchanged and the trace
@@ -210,7 +216,7 @@ Of the ~68 ms added by tracing, **~60 ms (88 %) is inside `async_evaluate()` its
 **~8 ms (12 %)** is `pricing-core`'s own `_build_trace`/`build_scoring_result`
 post-processing (which does its own per-node `dict(entry.get("input") or {})`/`dict(output)`
 copies over the engine's returned trace, `score.py:582-583`). The split reproduced exactly
-under independent measurement (PR #416 audit, §A5). A second decomposition run on the
+under independent re-measurement during the PR #416 audit. A second decomposition run on the
 shipped code path — untraced eval, then traced eval with `engine_trace=None`, then traced
 eval with the trace built — put our own share at **25 %** rather than 12 % (audit §D2);
 the two decompositions are not like-for-like (different booster size, and the second
