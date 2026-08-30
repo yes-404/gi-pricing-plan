@@ -63,7 +63,7 @@ from pricing_core.rating.compile import (  # noqa: E402
     compile_bundle,
 )
 from pricing_core.rating.runtime import CompiledBundle, load_bundle  # noqa: E402
-from pricing_core.rating.score import score_one  # noqa: E402
+from pricing_core.rating.score import build_scoring_result, score_one  # noqa: E402
 
 _RATING_VERSION_REF = ArtifactRef(type="rating_version", slug="bench-rating", version=1)
 
@@ -386,22 +386,102 @@ async def _measure(
     return Measurement(samples=samples, load_start=load_start, load_end=loadavg())
 
 
+#: The ladder `_report` prints and `_ratio_ladder` compares across. Wide enough to show
+#: whether an effect is distribution-wide or lives only in the tail — a ratio that holds
+#: from p10 to p99 is multiplicative; one that appears only at p99 is a tail artifact, and
+#: the p99 alone cannot tell them apart.
+QUANTILES = (0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99)
+
+
+async def _measure_abc(
+    bundle: CompiledBundle, ctx: QuoteContext, *, warmup: int, iterations: int
+) -> tuple[Measurement, Measurement, Measurement]:
+    """Split traced overhead into the engine's share and ours, on the shipped code path.
+
+    `score_one` evaluates and then calls `build_scoring_result(..., engine_trace)`, which
+    gates `_build_trace` on that argument being non-`None`. Varying the two independently
+    is what separates the costs:
+
+      **A** untraced eval + `engine_trace=None`   — the baseline
+      **B** *traced* eval + `engine_trace=None`   — engine-side share is **B - A**
+      **C** traced eval + the trace              — our own share is **C - B**
+
+    B is the load-bearing one: it pays for the engine to build and marshal the trace
+    payload and then throws it away, so B - A is the cost of asking for a trace at all,
+    before `_build_trace` copies anything.
+
+    **Interleaved round-robin, reported at the median.** The three configurations are
+    measured one call each per iteration rather than in three blocks, so drift on a shared
+    machine hits all three equally instead of landing on whichever ran last. Absolute p99s
+    cannot be compared across blocks minutes apart; interleaved medians can.
+    """
+    rating_version_ref = ctx.options.rating_version_ref if ctx.options is not None else None
+    assert rating_version_ref is not None, "_ctx() must set options.rating_version_ref"
+    context = {
+        "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
+    }
+
+    async def one(*, trace: bool, keep_trace: bool) -> float:
+        start = time.perf_counter()
+        out = await bundle.decision.async_evaluate(context, {"trace": trace})
+        build_scoring_result(
+            bundle, ctx, rating_version_ref, out["result"],
+            out.get("trace") if keep_trace else None,
+        )
+        return (time.perf_counter() - start) * 1000
+
+    for _ in range(warmup):
+        await one(trace=False, keep_trace=False)
+        await one(trace=True, keep_trace=False)
+        await one(trace=True, keep_trace=True)
+
+    load_start = loadavg()
+    a: list[float] = []
+    b: list[float] = []
+    c: list[float] = []
+    for _ in range(iterations):
+        a.append(await one(trace=False, keep_trace=False))
+        b.append(await one(trace=True, keep_trace=False))
+        c.append(await one(trace=True, keep_trace=True))
+    load_end = loadavg()
+    return tuple(  # type: ignore[return-value]
+        Measurement(samples=s, load_start=load_start, load_end=load_end) for s in (a, b, c)
+    )
+
+
 def _report(label: str, run: Measurement, *, budget_ms: float | None) -> None:
     samples = run.samples
-    p50, p90, p99 = (_percentile(samples, p) for p in (0.50, 0.90, 0.99))
     mean = statistics.fmean(samples)
     stdev = statistics.pstdev(samples)
     print(f"\n{label} — {len(samples)} calls at 1-min load {run.load_span}")
-    print(
-        f"    mean {mean:7.3f} ms   stdev {stdev:6.3f} ms   "
-        f"p50 {p50:7.3f} ms   p90 {p90:7.3f} ms   p99 {p99:7.3f} ms   max {max(samples):7.3f} ms"
+    print(f"    mean {mean:7.3f} ms   stdev {stdev:6.3f} ms")
+    ladder = "   ".join(
+        f"p{int(q * 100)} {_percentile(samples, q):7.3f}" for q in QUANTILES
     )
+    print(f"    min {min(samples):7.3f}   {ladder}   max {max(samples):7.3f}  (ms)")
     if budget_ms is not None:
+        p99 = _percentile(samples, 0.99)
         verdict = "PASS" if p99 <= budget_ms else "OVER"
         print(
             f"    p99 {p99:.3f} ms / {budget_ms:.1f} ms budget — {verdict} "
             f"at 1-min load {run.load_span}"
         )
+
+
+def _ratio_ladder(label: str, numerator: Measurement, denominator: Measurement) -> None:
+    """Print the ratio at every quantile, not only at the one the budget names.
+
+    NFR-RATE-2's overhead was reported at p99 alone, which cannot distinguish a cost that
+    multiplies the whole distribution from one that only fattens the tail. If the ratios
+    below are flat across the ladder the effect is multiplicative; if they climb, it is not.
+    """
+    print(f"\n{label}")
+    cells = []
+    for q in QUANTILES:
+        num = _percentile(numerator.samples, q)
+        den = _percentile(denominator.samples, q)
+        cells.append(f"p{int(q * 100)} {num / den:5.2f}x" if den else f"p{int(q * 100)}   n/a")
+    print("    " + "   ".join(cells))
 
 
 def main() -> int:
@@ -414,6 +494,12 @@ def main() -> int:
         "NFR-RATE-4 fixture used 300)"
     )
     parser.add_argument("--rows", type=int, default=5_000, help="Synthetic training rows")
+    parser.add_argument(
+        "--abc-iterations", type=int, default=200,
+        help="Rounds for the A/B/C decomposition. Each round runs all three "
+             "configurations, so this costs roughly 3x its own count in calls; 200 is "
+             "the count the PR #416 audit used.",
+    )
     args = parser.parse_args()
 
     print(f"machine: {machine()}")
@@ -485,6 +571,40 @@ def main() -> int:
         f"    (at the mean, informational only — the budget is stated at p99: "
         f"{mean_traced:.3f} ms vs {mean_untraced:.3f} ms untraced = {mean_overhead:+.1%})"
     )
+
+    _ratio_ladder(
+        "NFR-RATE-2 — traced / untraced at each quantile (flat = multiplicative and "
+        "distribution-wide; climbing = a tail effect the p99 alone would misreport)",
+        run_traced, run_gbm,
+    )
+
+    print(
+        f"\ncompiling the A/B/C decomposition ({args.abc_iterations} interleaved rounds)..."
+    )
+    run_a, run_b, run_c = asyncio.run(
+        _measure_abc(bundle_gbm, ctx, warmup=args.warmup, iterations=args.abc_iterations)
+    )
+    _report("A — untraced eval + engine_trace=None", run_a, budget_ms=None)
+    _report("B — traced eval + engine_trace=None", run_b, budget_ms=None)
+    _report("C — traced eval + the trace built", run_c, budget_ms=None)
+
+    med_a, med_b, med_c = (statistics.median(r.samples) for r in (run_a, run_b, run_c))
+    engine_side, ours = med_b - med_a, med_c - med_b
+    added = engine_side + ours
+    print(
+        f"\nNFR-RATE-2 — where the added cost sits (medians, interleaved): "
+        f"A {med_a:.3f} ms, B {med_b:.3f} ms, C {med_c:.3f} ms"
+    )
+    if added > 0:
+        print(
+            f"    engine-side (B-A) {engine_side:7.3f} ms = {engine_side / added:.1%}   "
+            f"ours (C-B) {ours:7.3f} ms = {ours / added:.1%}   of {added:.3f} ms added"
+        )
+        print(
+            "    'Ours' is `_build_trace`'s copying. 'Engine-side' is what asking for a "
+            "trace costs before we touch it — the share that a payload change addresses."
+        )
+
     print(f"\n1-minute load average at exit: {loadavg():.2f}")
 
     return 0

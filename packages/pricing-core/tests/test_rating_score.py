@@ -492,6 +492,7 @@ async def test_the_billing_surface_guard_would_be_caught_if_removed(
 
 
 @pytest.mark.req("FR-RATE-41")
+@pytest.mark.req("NFR-RATE-2")
 async def test_trace_true_returns_a_populated_trace_and_the_identical_premium() -> None:
     compiled = await _compiled()
     ctx = _ctx()
