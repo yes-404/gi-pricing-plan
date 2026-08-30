@@ -1,6 +1,17 @@
 """`POST /api/v1/score` — real-time scoring (03 §5.1, FR-RATE-34/35/38/39; W11 Task 2B) and
 `POST /api/v1/score/batch` — batch re-rating (03 §5.1:517, FR-RATE-36/37/38; W11 Task 3C).
 
+**`/score` scores untraced and never sets `trace=True` for FR-RATE-42's sake** (W11 Task
+4B; Ruling 35, `docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`).
+`ctx.options.trace` is unchanged and still what decides whether `score_one` captures a
+trace *for FR-RATE-41's on-request return* — a caller who asks for one gets one inline and
+knowingly pays for it. FR-RATE-42's *sampled, persisted* trace is a different thing: after
+scoring, `decide_sampling(result.outcome, ...)` decides whether this outcome is sampled,
+and a sampled one is recorded as a **pending** `scoring_traces` row and handed to an
+off-path `score.trace_produce` Job (`app.worker.trace_handlers`) to reproduce and persist —
+never captured inline, because always capturing pinned the traced fraction at 1 and put
+every request over NFR-RATE-1's 50 ms budget.
+
 **`async def`, and not incidentally.** `BundleSlot` is unsynchronised and confined to one
 worker's event loop; FastAPI runs a plain `def` handler in a threadpool, which would put two
 threads on that object and reach the race its docstring documents. A synchronous handler here
@@ -30,6 +41,7 @@ body into the `score.batch` handler's parameter shape.
 
 from __future__ import annotations
 
+import random
 from typing import Annotated, Any, Final
 from uuid import UUID
 
@@ -37,19 +49,25 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.authz import requires
-from app.api.deps import Caller, job_identity
+from app.api.deps import Caller, SettingsDep, job_identity
 from app.api.responses import problems
+from app.config import Settings
 from app.db.models import BlobRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.observability.logging import get_logger
 from app.platform import jobs as job_service
 from app.platform import rating_versions as rating_versions_service
+from app.platform import settings as settings_service
+from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
-from model_schema import ArtifactRef, Job, JobKind, Permission, QuoteContext
+from model_schema import ArtifactRef, Job, JobKind, Permission, QuoteContext, ScoringResult
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_one
+
+_log = get_logger("app.api.score")
 
 router = APIRouter(tags=["rating"])
 
@@ -114,6 +132,25 @@ def _required_ref(ctx: QuoteContext) -> ArtifactRef:
             "options.rating_version_ref explicitly.",
         )
     return ref
+
+
+def _environment_for(caller: Caller) -> str | None:
+    """The environment a sampled real-time trace is stamped with (W11 Task 4B).
+
+    `Caller.environments` is FR-PLAT-3's Service Account scope — the same field Ruling 14
+    already reasoned is *"the target environment of a call [...] already derivable"*.
+    `score:execute` is granted to no builtin role (FR-GOV-6), so the only realistic caller
+    here is a Service Account, and account creation requires at least one environment
+    (`ServiceAccountCreate.environments: Field(min_length=1)`); the lexicographically first
+    is used when a key is scoped to more than one, which W11's lack of per-environment
+    Deployment resolution makes an arbitrary-but-harmless tie-break rather than a routing
+    decision. `None` only for a caller with no environment scope at all — which
+    `ScoringTraceRow.environment`'s own convention already reads as "not real-time"
+    (Task 4A), so a row for such a caller would be indistinguishable from a batch one; that
+    is a real gap for a non-Service-Account caller, and none is expected to reach this
+    route under the current permission model.
+    """
+    return min(caller.environments) if caller.environments else None
 
 
 async def _fetch_bundle(
@@ -253,6 +290,7 @@ async def score(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
     slot: BundleSlotDep,
+    settings: SettingsDep,
 ) -> Response:
     """Score one quote (FR-RATE-34/35).
 
@@ -277,7 +315,62 @@ async def score(
             raise
         raise problem from exc
 
+    await _maybe_sample_trace(database, settings, caller, ctx, result)
+
     return Response(content=result.model_dump_json(), media_type="application/json")
+
+
+async def _maybe_sample_trace(
+    database: Database,
+    settings: Settings,
+    caller: Caller,
+    ctx: QuoteContext,
+    result: ScoringResult,
+) -> None:
+    """FR-RATE-42's sampling decision, and the pending-row write it leads to (W11 Task 4B,
+    Ruling 35). `result` is already untraced — this never sets `trace=True`; a sampled
+    outcome is completed off the request path by `score.trace_produce`
+    (`app.worker.trace_handlers`), not here.
+
+    **Failures here are logged, never raised.** A caller who received a correctly-priced,
+    already-serialised quote must not see it turn into a 500 because an unrelated audit
+    write failed — FR-RATE-42's persistence is a monitoring concern (`03`:175), and losing
+    one sample is a smaller failure than refusing to answer a quote the platform already
+    successfully priced.
+    """
+    try:
+        async with database.unit_of_work() as session:
+            rate = await settings_service.resolve(
+                session, settings, caller.workspace_id, "rating.trace_sample_rate"
+            )
+            sampled, reason = traces_service.decide_sampling(
+                result.outcome, rate.effective_value, roll=random.random()
+            )
+            if not sampled or reason is None:
+                return
+            row = await traces_service.write_pending_trace(
+                session,
+                workspace_id=caller.workspace_id,
+                quote_id=ctx.quote_id,
+                rating_version_ref=str(result.rating_version_ref),
+                bundle_hash=result.bundle_hash,
+                sample_reason=reason,
+                environment=_environment_for(caller),
+                quote_context=ctx.model_dump(mode="json"),
+                served_summary=traces_service.summarise_result(result),
+            )
+            await job_service.submit(
+                session,
+                JobKind.SCORE_TRACE_PRODUCE,
+                {**job_identity(caller), "scoring_trace_id": str(row.id)},
+                caller.principal,
+                workspace_id=caller.workspace_id,
+            )
+    except Exception:
+        _log.exception(
+            "trace sampling failed; the quote was still served",
+            extra={"workspace_id": str(caller.workspace_id), "outcome": result.outcome},
+        )
 
 
 class BatchScoreRequest(BaseModel):

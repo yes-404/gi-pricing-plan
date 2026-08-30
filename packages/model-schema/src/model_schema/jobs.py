@@ -54,6 +54,12 @@ class JobKind(enum.StrEnum):
     RATING_REGRESSION = "rating.regression"
     RATE_TABLE_DIFF = "rate_table.diff"
     SCORE_BATCH = "score.batch"
+    #: W11 Task 4B, Ruling 35 (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-
+    #: ruling.md`): the off-path re-score that fills in a sampled real-time trace's body.
+    #: `app.worker.trace_handlers`. Parameters carry only the pending `scoring_traces` row
+    #: id — never the Quote Context, which is an access-controlled carrier the trace row
+    #: is, and `JobRow.parameters` is not (Ruling 35 §8.4).
+    SCORE_TRACE_PRODUCE = "score.trace_produce"
     DISLOCATION_RUN = "dislocation.run"
     OPTIMISATION_RUN = "optimisation.run"
     GIPP_CHECK = "gipp.check"

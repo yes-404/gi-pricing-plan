@@ -2055,6 +2055,25 @@ class ScoringTraceRow(Base):
     what keeps `ref_count > 0` and makes the row's blob invisible to GC's
     `ref_count == 0` selector (Ruling 23's claim, verified rather than assumed — see
     `backend/tests/test_traces.py`'s GC-survival test).
+
+    **`status`, `pending_quote_context` and `served_summary`** (W11 Task 4B, Ruling 35 —
+    `docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`): trace
+    *production* is decoupled from the serving request, so a sampled real-time outcome is
+    first persisted `pending` — no body yet — with the Quote Context it will be re-scored
+    from and the served result's summary to verify reproduction against. An off-path Job
+    (`app.worker.trace_handlers`) re-scores the *pinned* bundle, and
+    `app.platform.traces.complete_pending_trace` turns the row `complete` (reproduced,
+    body written) or `mismatch` — either the re-score ran and did not reproduce the
+    served result (condition (b), body kept as evidence) or the pinned bundle no longer
+    resolves at all (condition (a), no re-score attempted, no body) — recorded either way,
+    never swallowed. A row `write_trace` writes directly (a batch Job's on-request trace,
+    FR-RATE-41/Ruling 25) is `complete` from the start — there is no pending phase when
+    the caller already holds the full `Trace`.
+
+    **Still no `UPDATE` grant** (`d3b955a63d6a`). Completing a pending row is a `DELETE`
+    of the pending row and an `INSERT` of the finished one at the same id, inside one
+    transaction — never an `UPDATE` statement, so `835988d1de4c`'s revocation is
+    unaffected.
     """
 
     __tablename__ = "scoring_traces"
@@ -2072,9 +2091,27 @@ class ScoringTraceRow(Base):
     #: Null for a batch-produced trace (see class docstring); set by the real-time path.
     environment: Mapped[str | None] = mapped_column(String(32))
     #: The blob body's digest — `app.platform.blobs.blob_key`/`BlobStore.read` resolve it.
-    blob_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    #: Null while `status == "pending"`; every other status requires it (Task 4B).
+    blob_sha256: Mapped[str | None] = mapped_column(String(64))
+    #: `pending` (awaiting off-path re-score), `complete` (reproduced and blobbed),
+    #: `mismatch` (the re-score ran but did not reproduce the served result, or the
+    #: pinned bundle no longer resolves). A row `write_trace` writes directly is always
+    #: `complete`. Task 4B.
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="complete")
+    #: The `QuoteContext` the off-path Job re-scores from, as JSON — the access-controlled
+    #: carrier Ruling 35 §8.4 requires in place of `JobRow.parameters`. `None` once a row
+    #: is `complete`/`mismatch` and no longer needed (or for a `write_trace`-direct row,
+    #: which never has a pending phase at all).
+    pending_quote_context: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    #: `outcome`/`decline_reasons`/`premium_ladder`/`outputs` of the result actually
+    #: served — never raw quote inputs — what the re-score's own summary is compared
+    #: against for Ruling 35's condition (b) reproduction check.
+    served_summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
-    #: What the ≥ 13-month retention floor (NFR-OVR-6) is measured from.
+    #: What the ≥ 13-month retention floor (NFR-OVR-6) is measured from. Preserved across
+    #: a pending row's completion (the delete-and-reinsert passes the original value
+    #: through explicitly) — completion must not reset this, or it would silently shorten
+    #: the floor for a row that, from NFR-OVR-6's point of view, has not moved.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -2091,6 +2128,18 @@ class ScoringTraceRow(Base):
         CheckConstraint(
             "sample_reason IN ('rate', 'decline', 'error')",
             name="sample_reason_known",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'complete', 'mismatch')",
+            name="status_known",
+        ),
+        CheckConstraint(
+            # `complete` always has a body; `pending` never does. `mismatch` may go
+            # either way — condition (b) keeps the body as evidence, condition (a) has
+            # none because no re-score was attempted against an unresolvable bundle.
+            "(status <> 'pending' OR blob_sha256 IS NULL) "
+            "AND (status <> 'complete' OR blob_sha256 IS NOT NULL)",
+            name="blob_required_unless_pending",
         ),
         Index(
             "ix_scoring_traces_workspace_rating_version",

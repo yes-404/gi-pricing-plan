@@ -3,10 +3,14 @@
 FR-RATE-41/42, `00` NFR-OVR-6, W11 Task 4A. Against real PostgreSQL and real MinIO, like
 `test_blobs.py`: the retention guard and the GC-survival claim are both database
 behaviours a double cannot exercise.
+
+**Task 4B's pure `decide_sampling` tests are plain, synchronous and need no database** —
+they are at the top of this file, separate from everything below that does.
 """
 
 from __future__ import annotations
 
+import random
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -17,7 +21,110 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import traces
 from app.platform.blobs import BlobStore
-from model_schema import Trace, TraceStep, new_uuid7
+from model_schema import LadderRung, ScoringResult, Trace, TraceStep, new_uuid7
+
+# ----------------------------------------------------------------------------------------
+# W11 Task 4B — `decide_sampling`, a pure function. No fixtures, no database.
+# ----------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-RATE-42")
+@pytest.mark.parametrize("rate", [0.0, 0.5, 1.0])
+@pytest.mark.parametrize("roll", [0.0, 0.5, 0.999999])
+def test_a_decline_is_always_sampled_regardless_of_rate_or_roll(rate: float, roll: float) -> None:
+    """FR-RATE-42's 100 % floor: a decline is sampled at every rate, including `0.0`, and
+    whatever the roll happens to be — the roll is not even inspected."""
+    sampled, reason = traces.decide_sampling("declined", rate, roll=roll)
+    assert (sampled, reason) == (True, "decline")
+
+
+@pytest.mark.req("FR-RATE-42")
+@pytest.mark.parametrize("rate", [0.0, 0.5, 1.0])
+@pytest.mark.parametrize("roll", [0.0, 0.5, 0.999999])
+def test_an_error_is_always_sampled_regardless_of_rate_or_roll(rate: float, roll: float) -> None:
+    sampled, reason = traces.decide_sampling("error", rate, roll=roll)
+    assert (sampled, reason) == (True, "error")
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_quoted_outcome_at_rate_zero_is_never_sampled() -> None:
+    """Negative: the boundary at the bottom. `roll` is drawn from `[0.0, 1.0)`, so `roll <
+    0.0` never holds — no roll can force a sample at a `0.0` rate."""
+    for roll in (0.0, 0.001, 0.5, 0.999999):
+        assert traces.decide_sampling("quoted", 0.0, roll=roll) == (False, None)
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_quoted_outcome_at_rate_one_is_always_sampled() -> None:
+    """The boundary at the top: every roll in `[0.0, 1.0)` is `< 1.0`."""
+    for roll in (0.0, 0.001, 0.5, 0.999999):
+        assert traces.decide_sampling("quoted", 1.0, roll=roll) == (True, "rate")
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_a_quoted_outcome_is_sampled_iff_the_roll_is_below_the_rate() -> None:
+    assert traces.decide_sampling("quoted", 0.5, roll=0.4) == (True, "rate")
+    assert traces.decide_sampling("quoted", 0.5, roll=0.5) == (False, None)
+    assert traces.decide_sampling("quoted", 0.5, roll=0.6) == (False, None)
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_the_one_percent_default_is_correct_over_a_large_n_with_a_fixed_seed() -> None:
+    """The statistical test, not eyeballed: 20 000 draws at `rate=0.01` is a Binomial(n=
+    20000, p=0.01), mean 200, standard deviation `sqrt(20000 * 0.01 * 0.99)` ~= 14.07. The
+    tolerance below is 6 standard deviations (~85), which a fair implementation fails by
+    chance roughly once in a billion runs — fixed seed `1234` makes this exact run
+    reproducible regardless, so a real regression is the only thing that can fail it."""
+    rng = random.Random(1234)
+    n = 20_000
+    rate = 0.01
+    sampled_count = sum(
+        1 for _ in range(n) if traces.decide_sampling("quoted", rate, roll=rng.random())[0]
+    )
+    mean = n * rate
+    std_dev = (n * rate * (1 - rate)) ** 0.5
+    tolerance = 6 * std_dev
+    assert abs(sampled_count - mean) < tolerance, (
+        f"{sampled_count} sampled of {n} at rate {rate}; expected {mean} +/- {tolerance:.1f}"
+    )
+
+
+def _served_scoring_result(**overrides: object) -> ScoringResult:
+    body: dict[str, object] = {
+        "outcome": "quoted",
+        "rating_version_ref": "rating_version:motor-gb@12",
+        "bundle_hash": f"sha256:{new_uuid7().hex.ljust(64, '0')[:64]}",
+        "premium_ladder": [
+            LadderRung(rung="risk_premium", value_minor=10_000),
+            LadderRung(rung="payable_premium", value_minor=12_000),
+        ],
+        "outputs": {"payable_premium_minor": 12_000},
+        "decline_reasons": [],
+        "trace": None,
+        "timing_ms": {"total": 1.5},
+    }
+    body.update(overrides)
+    return ScoringResult(**body)
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_summarise_result_carries_only_the_served_answer() -> None:
+    """`summarise_result` is the served/reproduced comparison Ruling 35 condition (b)
+    checks — it must carry the four served-answer fields and nothing quote-input-shaped."""
+    summary = traces.summarise_result(_served_scoring_result())
+    assert set(summary) == {"outcome", "decline_reasons", "premium_ladder", "outputs"}
+    assert summary["outcome"] == "quoted"
+    assert summary["outputs"] == {"payable_premium_minor": 12_000}
+
+
+@pytest.mark.req("FR-RATE-42")
+def test_summarise_result_is_exact_for_two_results_built_the_same_way() -> None:
+    """Money stays exact: two results built with identical ladder/outputs values produce
+    byte-identical summaries, so `==` is an exact comparison rather than an approximate
+    one (Ruling 35 condition (b))."""
+    a = traces.summarise_result(_served_scoring_result())
+    b = traces.summarise_result(_served_scoring_result())
+    assert a == b
 
 
 def _trace(*, quote_id: str, rating_version: str, bundle_hash: str) -> Trace:
@@ -264,3 +371,155 @@ async def test_write_requires_a_transaction(database: Database, blob_store: Blob
                 workspace_id=new_uuid7(),
                 sample_reason="rate",
             )
+
+
+# ------------------------------------------------------------------------------------
+# W11 Task 4B — the pending row and its off-path completion (Ruling 35,
+# `docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md`).
+# ------------------------------------------------------------------------------------
+
+
+async def _write_pending(
+    database: Database, workspace_id, *, served_summary: dict | None = None
+) -> ScoringTraceRow:
+    summary = served_summary or traces.summarise_result(_served_scoring_result())
+    async with database.unit_of_work() as session:
+        row = await traces.write_pending_trace(
+            session,
+            workspace_id=workspace_id,
+            quote_id="quote-pending",
+            rating_version_ref="rating_version:motor-gb@12",
+            bundle_hash=_bundle_hash(),
+            sample_reason="rate",
+            environment="uat",
+            quote_context={"purpose": "new_business"},
+            served_summary=summary,
+        )
+        row_id = row.id
+    async with database.session() as session:
+        refetched = await session.get(ScoringTraceRow, row_id)
+        assert refetched is not None
+        return refetched
+
+
+@pytest.mark.req("FR-RATE-42")
+async def test_write_pending_trace_has_no_body_yet(database: Database, workspace_id) -> None:
+    row = await _write_pending(database, workspace_id)
+    assert row.status == "pending"
+    assert row.blob_sha256 is None
+    assert row.pending_quote_context == {"purpose": "new_business"}
+
+
+@pytest.mark.req("FR-RATE-42")
+async def test_completing_a_pending_trace_that_reproduces_marks_it_complete(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    summary = traces.summarise_result(_served_scoring_result())
+    pending = await _write_pending(database, workspace_id, served_summary=summary)
+    reproduced_trace = _trace(
+        quote_id="quote-pending",
+        rating_version=pending.rating_version_ref,
+        bundle_hash=pending.bundle_hash,
+    )
+    async with database.unit_of_work() as session:
+        completed = await traces.complete_pending_trace(
+            session, blob_store, pending.id, reproduced_trace, reproduced_summary=summary
+        )
+    assert completed.id == pending.id
+    assert completed.status == "complete"
+    assert completed.blob_sha256 is not None
+    assert completed.pending_quote_context is None
+    assert completed.created_at == pending.created_at
+
+    async with database.session() as session:
+        body = await traces.read_trace(session, blob_store, completed)
+    assert body == reproduced_trace
+
+
+@pytest.mark.req("FR-RATE-42")
+async def test_completing_a_pending_trace_that_does_not_reproduce_keeps_the_body(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """Ruling 35 §8.2 condition (b): a reproduction that does not match is `mismatch`, and
+    the body is still written — recorded as evidence, not discarded."""
+    served_summary = traces.summarise_result(_served_scoring_result())
+    pending = await _write_pending(database, workspace_id, served_summary=served_summary)
+    different_summary = traces.summarise_result(
+        _served_scoring_result(outputs={"payable_premium_minor": 99_999})
+    )
+    reproduced_trace = _trace(
+        quote_id="quote-pending",
+        rating_version=pending.rating_version_ref,
+        bundle_hash=pending.bundle_hash,
+    )
+    async with database.unit_of_work() as session:
+        completed = await traces.complete_pending_trace(
+            session,
+            blob_store,
+            pending.id,
+            reproduced_trace,
+            reproduced_summary=different_summary,
+        )
+    assert completed.status == "mismatch"
+    assert completed.blob_sha256 is not None
+
+
+@pytest.mark.req("FR-RATE-42")
+async def test_completing_a_pending_trace_with_no_reproduction_leaves_no_body(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """Ruling 35 §8.2 condition (a): the pinned bundle was unresolvable, so no re-score was
+    attempted — `trace=None` — and the row still lands `mismatch`, with no body to keep."""
+    pending = await _write_pending(database, workspace_id)
+    async with database.unit_of_work() as session:
+        completed = await traces.complete_pending_trace(
+            session, blob_store, pending.id, None, reproduced_summary=None
+        )
+    assert completed.status == "mismatch"
+    assert completed.blob_sha256 is None
+
+
+@pytest.mark.req("FR-RATE-42")
+async def test_completing_an_already_completed_trace_is_refused(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """Negative: a re-delivered `score.trace_produce` Job must not silently re-run the
+    re-score against an already-settled row."""
+    summary = traces.summarise_result(_served_scoring_result())
+    pending = await _write_pending(database, workspace_id, served_summary=summary)
+    reproduced_trace = _trace(
+        quote_id="quote-pending",
+        rating_version=pending.rating_version_ref,
+        bundle_hash=pending.bundle_hash,
+    )
+    async with database.unit_of_work() as session:
+        await traces.complete_pending_trace(
+            session, blob_store, pending.id, reproduced_trace, reproduced_summary=summary
+        )
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await traces.complete_pending_trace(
+                session, blob_store, pending.id, reproduced_trace, reproduced_summary=summary
+            )
+    assert exc.value.code == "TRACE_NOT_PENDING"
+    assert exc.value.status_code == 409
+
+
+@pytest.mark.req("NFR-OVR-6")
+async def test_deleting_a_pending_trace_does_not_try_to_release_a_missing_blob(
+    database: Database, workspace_id
+) -> None:
+    """Negative: a pending row has `blob_sha256 IS NULL`; `delete_trace` must not try to
+    release it (`blobs.release` on `None` would be the bug this guards)."""
+    pending = await _write_pending(database, workspace_id)
+    async with database.unit_of_work() as session:
+        await session.execute(
+            update(ScoringTraceRow)
+            .where(ScoringTraceRow.id == pending.id)
+            .values(created_at=datetime.now(UTC) - timedelta(days=400))
+        )
+    async with database.unit_of_work() as session:
+        await traces.delete_trace(session, pending.id)
+    async with database.session() as session:
+        assert await session.get(ScoringTraceRow, pending.id) is None
