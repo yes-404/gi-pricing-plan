@@ -5,6 +5,27 @@ description: Git and GitHub working discipline for this repo — what belongs in
 
 # Git hygiene
 
+## `main` is governed by a ruleset: squash is the only merge method, and nobody can bypass
+
+Set by the maintainer **2026-08-30 14:04Z** as ruleset **`main-protection`** (id 21860967),
+replacing the earlier two-rule `Rule1`. It targets `~DEFAULT_BRANCH` only — feature branches
+are unconstrained, verified by pushing and deleting one under it.
+
+| Rule / parameter | What it means here |
+|---|---|
+| `deletion`, `non_fast_forward` | `main` cannot be deleted or force-pushed. Already forbidden by `lead.md`. |
+| `required_linear_history` | Squash merges satisfy this; a merge commit would not. |
+| `allowed_merge_methods: ["squash"]` | **`--squash` is now the only accepted form.** `gh pr merge --merge` or `--rebase` will be refused. |
+| `required_approving_review_count: 0` | **No approval needed — this is what keeps the pipeline moving.** Every PR here is authored by the same account the token belongs to, and GitHub does not let an account approve its own PR, so any non-zero count would deadlock every merge. |
+| `required_review_thread_resolution: true` | An unresolved inline review thread **blocks the merge**. The auditor reports through messages, not PR comments, so this bites only when someone posts an inline comment — resolve it before merging. |
+| `require_extra_approval_for_unattributed_changes: true` | Would demand an approval nobody here can give. Empirically **not** triggered by our commits — a probe PR carrying the usual author and `Co-Authored-By: Claude Opus 5` trailer reported `reviewDecision: ""` and merged cleanly. |
+| `bypass_actors: []`, `current_user_can_bypass: "never"` | **No exceptions, including for this token.** Correct, and worth keeping. |
+
+**Verify the merge path empirically after any ruleset change, not by reading the JSON.**
+`mergeStateStatus: CLEAN` means *no conflict and no failing required check* — it does not mean
+the ruleset will accept the merge, and the two are easy to confuse. The check that settles it
+is a completed merge.
+
 ## The repository is public: merge only the maintainer's own pull requests
 
 **Standing maintainer instruction, 2026-08-30**, when `yes-404/gi-pricing-plan` went public:
