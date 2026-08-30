@@ -95,10 +95,47 @@ ignore = ["ANN401"]
 "backend/migrations/versions/*.py" = ["E501"]
 
 # ---- mypy --strict on packages/ (CLAUDE.md §3) ----
+#
+# `files` covers everything that combines into ONE invocation without a module-name
+# collision: the three src trees, the repo-level `tests/` root, the demo seed
+# (`examples/fremtpl2`), and the two live operational skill scripts. It deliberately does
+# NOT include `packages/*/tests` or `backend/tests` — each package's own test directory has
+# no `__init__.py` (by design, matching pytest's `--import-mode=importlib`: two packages
+# each own a `conftest.py`/`test_money.py`), and mypy's module model has no equivalent of
+# importlib mode. Combining two such directories in one invocation is not a size problem,
+# it is a hard failure: `Duplicate module named "conftest"`. Checking those three directories
+# needs one scoped invocation each — see `.claude/skills/dev-commands` for the commands and
+# the current per-directory debt (`backend/tests` alone is >1000 errors; not attempted here).
+#
+# `explicit_package_bases` is required the moment any of the above namespace-style
+# directories (no `__init__.py`) enters `files` at all. It is not optional once one is
+# present: without it, mypy's fallback namespace-package inference is what produces the
+# duplicate-module collision above, even for a single non-colliding directory.
+#
+# `mypy_path` is required BY `explicit_package_bases`, and for all four bases named — this
+# was found the hard way: passing `backend/src` alone, with the flag on but `backend/src`
+# itself absent from `mypy_path`, made mypy unable to resolve backend's OWN internal imports
+# (`app.errors` etc., 536 bogus `import-untyped` errors) — it looked exactly like a real
+# defect in `backend/src` until `mypy_path` was set correctly and the count went to zero.
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["packages/model-schema/src", "packages/pricing-core/src", "backend/src"]
+explicit_package_bases = true
+mypy_path = [
+    "packages/model-schema/src",
+    "packages/pricing-core/src",
+    "backend/src",
+    "examples/fremtpl2",
+]
+files = [
+    "packages/model-schema/src",
+    "packages/pricing-core/src",
+    "backend/src",
+    "tests",
+    "examples/fremtpl2",
+    ".claude/skills/balance-watch/scripts",
+    ".claude/skills/reporter-cycle/scripts",
+]
 warn_unreachable = true
 disallow_any_explicit = false
 

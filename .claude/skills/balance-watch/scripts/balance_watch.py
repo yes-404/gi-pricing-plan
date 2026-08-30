@@ -39,7 +39,12 @@ CEILING_METER_DIR = os.environ.get("CEILING_METER_DIR", "")
 if CEILING_METER_DIR:
     sys.path.insert(0, CEILING_METER_DIR)
 try:
-    import ceiling_meter as m
+    # F30 (registered, unfiled): ceiling_meter has no committed source and no stub, so mypy
+    # can never resolve it statically -- it only exists at CEILING_METER_DIR at runtime, an
+    # env-supplied path this script must not hardcode (the exact problem F30 tracks). This
+    # ignore documents that gap rather than silently working around it; suppressing it is
+    # not the same as fixing it, and it stays until F30 gives the module a real home.
+    import ceiling_meter as m  # type: ignore[import-not-found]
 except ImportError:
     m = None
 
@@ -81,7 +86,14 @@ def read_balance() -> dict[str, object]:
         },
     )
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.loads(r.read().decode())
+        parsed = json.loads(r.read().decode())
+    if not isinstance(parsed, dict):
+        # json.loads returns Any; a non-object top level (e.g. the API answering with a
+        # bare list or string) used to reach the caller silently and crash later, outside
+        # the try/except in main() that exists precisely to turn this into a handled
+        # "BALANCE MALFORMED" relay rather than an unguarded stack trace.
+        raise ValueError(f"balance response was not a JSON object: {parsed!r}")
+    return parsed
 
 
 def main() -> None:
@@ -108,9 +120,13 @@ def main() -> None:
                 emit(f"BALANCE UNAVAILABLE: is_available=false response={json.dumps(data)[:200]}")
             else:
                 cny = None
-                for entry in data.get("balance_infos", []):
-                    if entry.get("currency") == "CNY":
-                        cny = float(entry.get("total_balance"))
+                balance_infos = data.get("balance_infos", [])
+                if isinstance(balance_infos, list):
+                    for entry in balance_infos:
+                        if isinstance(entry, dict) and entry.get("currency") == "CNY":
+                            total = entry.get("total_balance")
+                            if isinstance(total, (int, float, str)):
+                                cny = float(total)
                 if cny is None:
                     emit(f"BALANCE NO-CNY: {json.dumps(data)[:200]}")
                 else:

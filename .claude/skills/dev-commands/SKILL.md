@@ -55,6 +55,61 @@ uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on d
 Use `generate-contracts.py --check` rather than the plain regenerate when auditing: the
 plain form *writes* the drift away instead of reporting it.
 
+### `mypy`'s `files` list, and why it cannot be one flat list covering everything
+
+Since 2026-08-30 the bare `uv run mypy` above also covers the repo-level `tests/` root, the
+demo seed (`examples/fremtpl2`), and the two live operational skill scripts
+(`.claude/skills/balance-watch/scripts`, `.claude/skills/reporter-cycle/scripts`) — before
+that, nothing under `.claude/` and no test file anywhere was type-checked at all, and both
+gaps had already concealed real defects (a wrong import path in a test, and three real bugs
+in `balance_watch.py`).
+
+**It still does not cover `packages/model-schema/tests`, `packages/pricing-core/tests` or
+`backend/tests`, and cannot by adding them to `files`.** Every test directory lacks
+`__init__.py` (deliberate — `python-test`'s own note explains why: it mirrors pytest's
+`--import-mode=importlib`, which is what lets two packages each own a `conftest.py` and a
+`test_money.py`). mypy has no equivalent of importlib mode: combining any two such
+directories in **one invocation** is not a size problem, it is a hard failure —
+
+```
+error: Duplicate module named "conftest" (also at "packages/model-schema/tests/conftest.py")
+```
+
+— confirmed by actually trying it, not assumed. Each test directory needs its **own**
+scoped invocation, one src tree combined with only its own tests — the same shape this
+skill already uses for `bench-model.py --only curve`, one phase at a time.
+
+Two settings make even the *current* `files` list work, and both are load-bearing:
+`explicit_package_bases = true` is required the moment any `__init__.py`-less directory is
+in `files` at all (without it, mypy's own fallback inference is what produces the
+duplicate-module collision above, even for a single directory). And `mypy_path` must then
+name every source root explicitly, `backend/src` included — leaving it out made `backend/src`
+unable to resolve its own internal imports (`app.errors` etc.) once the flag was on, 536
+bogus `import-untyped` errors that looked exactly like a real defect until `mypy_path` was
+corrected and the count went to zero.
+
+**Real per-directory debt, measured 2026-08-30** (`--strict --explicit-package-bases`, own
+`mypy_path`, `--no-incremental` so concurrent runs don't race the cache) — not yet reduced,
+reported so the next PR knows the shape rather than re-deriving it:
+
+```bash
+MYPYPATH="packages/model-schema/src" uv run mypy --strict --explicit-package-bases \
+  packages/model-schema/src packages/model-schema/tests           # 144 errors / 14 files
+
+MYPYPATH="packages/model-schema/src:packages/pricing-core/src" uv run mypy --strict \
+  --explicit-package-bases packages/model-schema/src packages/pricing-core/src \
+  packages/pricing-core/tests                                     # 107 errors / 23 files
+
+MYPYPATH="packages/model-schema/src:packages/pricing-core/src:backend/src" uv run mypy \
+  --strict --explicit-package-bases packages/model-schema/src packages/pricing-core/src \
+  backend/src backend/tests                                       # 1243 errors / 82 files
+```
+
+`backend/tests`' 1243 is dominated by `no-untyped-def` (769 of them — mechanical, a missing
+`-> None` or parameter type), but the remaining ~470 (`arg-type`, `union-attr`,
+`no-untyped-call`, `index`…) are not. Large enough that fixing it is its own PR (or several),
+not a config edit.
+
 ### Frontend (`.github/workflows/frontend.yml`)
 
 ```bash
@@ -277,6 +332,16 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-30 (second entry, the mypy-coverage section immediately above) — extended `files`
+to `tests/`, `examples/fremtpl2` and the two skill script dirs; documented why
+`packages/*/tests` and `backend/tests` cannot join the same invocation. The
+"structural blocker" a first dry-run reported for `backend/src` under
+`--explicit-package-bases` (536 errors, even checking it completely alone) was re-run with
+`mypy_path` naming `backend/src` itself and went to zero — not a defect in `backend/src`,
+a missing one-line config the flag requires. The duplicate-module collision, by contrast,
+was re-verified as genuine: combining any two test directories in one invocation fails the
+same way every time, with or without `mypy_path` set correctly.
 
 2026-08-30 — the `gh --jq` section added, found by a CI watcher on PR #438 whose polling
 loop terminated immediately. Reproduced directly against that PR once merged, so the

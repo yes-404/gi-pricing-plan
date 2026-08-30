@@ -37,6 +37,7 @@ from model_schema import (
     GlmSpec,
     JobKind,
     JobStatus,
+    MonotonicDirection,
     OffsetSpec,
     Principal,
     SplitRef,
@@ -149,7 +150,7 @@ async def _create_factor(
                 type=FactorType.IDENTITY,
                 source_columns=(column,),
                 intent=FactorIntent.RISK,
-                monotonic_direction="none",
+                monotonic_direction=MonotonicDirection.NONE,
             ),
         )
         return row.id

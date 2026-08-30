@@ -309,6 +309,12 @@ async def run(rows: int | None) -> int:
     workspace_id = new_uuid7()
     analyst = Principal(kind=ActorKind.USER, id=new_uuid7(), display="analyst@example.fr")
     actuary = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actuary@example.fr")
+    # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --
+    # but both of these are ActorKind.USER with an id supplied at construction, and
+    # Principal's own validator refuses a non-system principal with no id. Narrow once here
+    # rather than at every call site below that needs a bare UUID.
+    assert analyst.id is not None
+    assert actuary.id is not None
 
     async def grant(principal: Principal, *slugs: str) -> None:
         async with database.unit_of_work() as session:
@@ -535,8 +541,12 @@ async def run(rows: int | None) -> int:
         code = getattr(exc, "code", type(exc).__name__)
         print(f"    promotion refused: {code}")
         async with database.session() as session:
-            row = await session.get(DatasetVersionRow, first)
-            print(f"    version 1 is {row.status} — not left mid-run (FR-DATA-43)\n")
+            # Named distinctly from the `ValidationRuleRow` bound to `row` above: the same
+            # local name across both would let mypy infer `row`'s type from whichever
+            # assignment runs first and flag the other as incompatible.
+            version_row = await session.get(DatasetVersionRow, first)
+            assert version_row is not None, f"dataset version {first} vanished mid-run"
+            print(f"    version 1 is {version_row.status} — not left mid-run (FR-DATA-43)\n")
 
     print("── version 2: one preparation step later " + "─" * 34)
     second = await ingest("ingest", cleaned=True)
