@@ -76,13 +76,31 @@ class Pins(BaseModel):
 
 
 class BundleMetadata(BaseModel):
-    """The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash."""
+    """The compiled Bundle's identity (03 §4.3, FR-RATE-24): a reproducible content hash,
+    and the blob key the serialised bundle was stored under.
+
+    **`content_hash` and `blob_sha256` are hashes of different things, and their patterns
+    keep them apart on purpose.** `content_hash` is reproducible from the graph and pins
+    (FR-RATE-24) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content
+    address for the serialised bundle and is bare hex, matching `BlobRef.sha256`. Neither
+    value validates into the other's field, so passing one where the other belongs is
+    refused loudly at the boundary rather than warned about in a comment (Ruling 37 §3).
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     content_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
     bytes: int = Field(ge=0)
     compiled_at: datetime
+    #: The blob store key for the serialised `Bundle`, so a Rating Version resolves to its
+    #: compiled form through its own metadata rather than through Job history — which is an
+    #: operational record with its own pruning, and would make the version unresolvable the
+    #: day it is trimmed (Ruling 37 §2).
+    #:
+    #: `None` both for metadata written before this field existed and for a version never
+    #: compiled. Both mean *not resolvable — recompile*, which is the path an uncompiled
+    #: version already takes, so no migration and no back-fill are owed.
+    blob_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None = None
 
 
 class RatingVersionEvidence(BaseModel):

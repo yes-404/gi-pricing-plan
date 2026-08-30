@@ -113,6 +113,12 @@ async def get_me(caller: CallerDep, database: DatabaseDep) -> Me:
             session,
             workspace_id=caller.workspace_id,
             principal=caller.principal,
+            # The same set the enforcement uses (Ruling 38). `effective_permissions` is
+            # deliberately one computation for both the UI and the gate — omitting the
+            # credential's own grants here would have `/me` under-report what its caller
+            # may actually do, which is the mirror of the control-then-refused defect the
+            # function's docstring exists to prevent.
+            credential_permissions=caller.permissions,
         )
         rows = (
             await session.execute(

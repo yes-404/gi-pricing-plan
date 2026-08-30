@@ -356,7 +356,7 @@ Values are stored as decimal strings, never JSON floats (R2).
   },
   "model_reference_mode": "exact",
   "effective_from": "2026-10-01", "effective_to": null,
-  "bundle": {"content_hash": "sha256:…", "bytes": 84_112_904, "compiled_at": "2026-08-14T12:00:00Z"},
+  "bundle": {"content_hash": "sha256:…", "bytes": 84_112_904, "compiled_at": "2026-08-14T12:00:00Z", "blob_sha256": "…"},
   "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
   "evidence": {
     "regression_suite_run_id": "uuid",

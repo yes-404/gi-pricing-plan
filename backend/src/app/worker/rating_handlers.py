@@ -44,6 +44,16 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
             )
             payload = bundle.model_dump_json().encode()
             ref = await progress.blob_store.put(session, payload, "application/json")
+            # Ruling 37: the key goes on the version's own metadata, in this same
+            # transaction. Without it the only record of where the bundle lives is this
+            # Job's result — an operational row with its own pruning, so a trimmed Job
+            # history would leave a compiled version unresolvable.
+            await rating_versions_service.record_bundle_blob(
+                session,
+                workspace_id=workspace_id,
+                rating_version_id=rating_version_id,
+                blob_sha256=ref.sha256,
+            )
             return ref.sha256
 
     sha256 = progress.run_on_loop(work())
