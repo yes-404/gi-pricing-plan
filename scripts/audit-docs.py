@@ -31,6 +31,8 @@ Checks (all non-destructive, exit 1 on any failure):
      findings register's status for that question, not just a bare, unstatused mirror.
  24. Every route `00` §5.6 declares as canonical for a module appears in that module's
      own §5.3 view table (FR-OVR-22); §5.6 is canonical, so a mismatch is a §5.3 error.
+ 26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
+     real section, or numbered step, of docs/process/delivery-process.md (NT-0014 §3).
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -388,6 +390,141 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
                     f"table row has {cells} cells, its header has {header_cells} "
                     f"({where}){detail}"
                 )
+
+
+PROCESS_SPEC = REPO / "docs" / "process" / "delivery-process.md"
+PROCESS_CORE = REPO / "docs" / "process" / "delivery-process.core.json"
+
+#: `§7`, or `§5.4` for step 4 of §5's numbered list. `§N.M` is a *step*, not a `###`
+#: subsection — `delivery-process.md` has no `###` headings at all, so a reader who assumed
+#: subsections would report every step citation as dangling.
+_CITATION = re.compile(r"§(\d+)(?:\.(\d+))?")
+
+
+def check_process_core_drift() -> None:
+    """26. Every `source` citation in the process core extract resolves in the process spec.
+
+    `docs/process/delivery-process.core.json` is the machine-readable extract of
+    `delivery-process.md` (NT-0014). **The markdown is authoritative and the extract is
+    derived**, so an extract citing a section that does not exist means the extract is
+    wrong — never the spec. The check is one-directional for that reason.
+
+    This is the cheap half of a drift check, and it is the half that catches the failure
+    which motivated the whole proposal: at `6f77abb` the process spec's own back-reference
+    named `CLAUDE.md` §12 for a pointer that lives in §15, and no gate in the repository
+    could see it. A citation that *resolves* is not proof the cited text still says what the
+    citer thinks (`NT-0006`); a citation that does **not** resolve is proof of drift, with
+    no judgement required. Only the second is mechanised here.
+
+    Numbered 26, not 25: 25 is claimed by in-flight work, and a check number is permanent
+    under `CLAUDE.md` §5 for the same reason a requirement id is.
+    """
+    if not PROCESS_SPEC.is_file():
+        notes.append("no docs/process/delivery-process.md — check 26 skipped")
+        return
+
+    spec_text = PROCESS_SPEC.read_text(encoding="utf-8")
+
+    if not PROCESS_CORE.is_file():
+        # Not a silent skip. §10 lists the extract as a required artifact, so its absence
+        # while that line stands is drift in the other direction — and a check that quietly
+        # passes when its subject is deleted is a check anyone can disarm by deleting it.
+        if "delivery-process.core.json" in spec_text:
+            fail(
+                "docs/process/delivery-process.core.json is missing, but "
+                "delivery-process.md still lists it as a required artifact (§10) — "
+                "restore the extract, or remove the §10 bullet that requires it"
+            )
+        else:
+            notes.append("no process core extract, and §10 does not require one — check 26 skipped")
+        return
+
+    raw = PROCESS_CORE.read_text(encoding="utf-8")
+    try:
+        core = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        fail(f"docs/process/delivery-process.core.json is not valid JSON: {exc}")
+        return
+
+    # The authority rule (NT-0014 §3) enforced on the artifact that claims it, rather than
+    # only stated in the prose beside it.
+    meta = core.get("meta", {})
+    if meta.get("authoritative") is not False:
+        fail(
+            "process core `meta.authoritative` must be `false` — the markdown spec is "
+            f"authoritative and the extract is derived (NT-0014 §3); found "
+            f"{meta.get('authoritative')!r}"
+        )
+    derived = meta.get("derived_from")
+    if not derived or not (REPO / derived).is_file():
+        fail(
+            f"process core `meta.derived_from` names {derived!r}, which is not a file in "
+            "this repository — the extract must say what it is derived from"
+        )
+
+    # `## 7. Escalation guards …` → section "7"; the largest `N. ` item under it → its step
+    # count, which is what a `§7.N` citation is checked against.
+    steps: dict[str, int] = {}
+    current: str | None = None
+    for line in spec_text.splitlines():
+        head = re.match(r"^## (\d+)\.", line)
+        if head:
+            current = head.group(1)
+            steps.setdefault(current, 0)
+            continue
+        if current is not None:
+            item = re.match(r"^(\d+)\. ", line)
+            if item:
+                steps[current] = max(steps[current], int(item.group(1)))
+
+    def _sources(node: object) -> collections.abc.Iterator[str]:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key == "source" and isinstance(value, str):
+                    yield value
+                else:
+                    yield from _sources(value)
+        elif isinstance(node, list):
+            for value in node:
+                yield from _sources(value)
+
+    checked = 0
+    uncited = 0
+    for src in _sources(core):
+        found = _CITATION.findall(src)
+        if not found:
+            uncited += 1
+            fail(
+                f"process core: `source` value {src!r} cites no § section — every block "
+                "must name the spec section it was extracted from (NT-0014 §3)"
+            )
+            continue
+        for section, step in found:
+            checked += 1
+            if section not in steps:
+                fail(
+                    f"process core cites §{section} (in {src!r}), but delivery-process.md "
+                    f"has no `## {section}.` heading — the extract is derived, so fix the "
+                    "extract, not the spec"
+                )
+            elif step and int(step) > steps[section]:
+                fail(
+                    f"process core cites §{section}.{step} (in {src!r}), but §{section} "
+                    f"has only {steps[section]} numbered steps — `§N.M` means step M of "
+                    "that section's list, and the spec has no `###` subsections"
+                )
+
+    if not checked and not uncited:
+        fail(
+            "process core carries no `source` citations at all — every block must cite the "
+            "spec section it came from, which is what makes drift detectable (NT-0014 §3)"
+        )
+        return
+
+    notes.append(
+        f"{checked} process-core § citations, resolved against "
+        f"{len(steps)} sections of delivery-process.md"
+    )
 
 
 def main() -> int:
@@ -826,6 +963,9 @@ def main() -> int:
 
     # 23. every spec §10 mirror row carries the register's status for that question
     check_open_question_mirror_status(specs)
+
+    # 26. the process core extract's citations resolve in the process spec
+    check_process_core_drift()
 
     for note in notes:
         print(f"  {note}")
