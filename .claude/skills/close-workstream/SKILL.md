@@ -225,6 +225,48 @@ reading an inert file, a fixture that drifted from the tree under test, a bold-c
 anchor, a conflated clause. A design note that lists only match and non-match implies the
 field of view is the world.
 
+### A check on a proxy sees only the clauses the proxy has a shadow of
+
+The blind spots above are incidental — a wrong path, a stale fixture. This one is
+**systematic**, and it is the reason a check can be perfectly built and still not enforce
+the rule it cites. It appears whenever a rule is about **semantics** and the check is
+written against a **mechanical stand-in** for them.
+
+Worked example, PR #435 (W11 Slice 2 Task 2A). Ruling 16 clause 4 forbids the bundle slot
+four things — **refresh, poll, pub/sub, environment pointer**. The check asserts the
+module's own import roots against an allowlist, on the stated ground that "none of the four
+can be built without a broker client, a scheduler, a thread, or the metadata store." It
+reaches **two**:
+
+| Clause | What the slot itself must acquire | Import check sees it? |
+|---|---|---|
+| Poll | a clock **and** a scheduler or thread | yes |
+| Pub/sub | a broker client | yes |
+| Environment pointer | nothing — a `dict[str, str]` | **no** |
+| Refresh | nothing — a deploy-time push arrives through the existing `put()` | **no** |
+
+The import allowlist keys on **dependencies**. So it catches exactly the mechanisms that
+make the module **reach out**, and misses the ones that only require it to be **reached
+into** or to **hold a shape**. The environment pointer is the sharp case: the *permitted*
+ref → hash memo and the *forbidden* environment → hash pointer are the same
+`dict[str, str]`; the only difference is what the key means, and a dependency check cannot
+see meaning. The refresh case is worse — it needs no new surface at all, so no check scoped
+to that module can hold it, and the honest design note says so and names where it *is* held
+(review of who calls `put()`).
+
+**The diagnostic, one line per clause:** *name the dependency this clause would need.* Where
+the answer is "none", the check is blind to it — and that is a fact about the instrument,
+not about the code, so it stays true after every fix.
+
+**Why a positive control will not surface this.** The control in that PR was exemplary:
+six deliberately broken inputs appended to the *real* module source and run through the
+check's own extraction, not a lookalike — the trap in *"prove it fails on broken input"*
+avoided completely. But every one of the six was an **import**. A control is assembled from
+violations its author can already see, so it confirms the check works **on its own field of
+view** and is silent about the field's edge. **Passing a positive control licenses "this
+check fires", never "this rule is enforced."** Write both sentences, or the next reader
+takes the first as the second and stops looking.
+
 ### A gate whose passing state is empty output cannot be tested on the live tree
 
 This is the shell case, and it is not covered by "prove it fails on broken input" — there is
