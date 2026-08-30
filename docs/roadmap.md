@@ -390,10 +390,17 @@ remembers.
 
 **The rule, three clauses:**
 
-1. **All four are reconciled at the W11 close, in its `CLAUDE.md` §14 plan review** — the
-   same review whose trigger is already fixed at every workstream close. This is the natural
-   moment: §14 asks whether the plan still says the right thing now that some of the work is
-   real, and an unadopted proposal is precisely a claim about what the plan is missing.
+1. **All four are reconciled at the W11 close — at the same moment as its `CLAUDE.md` §14
+   plan review, but as its own dated record, not inside it.** The trigger is shared because
+   §14's is already fixed at every workstream close, and because §14 asks whether the plan
+   still says the right thing now that some of the work is real — an unadopted proposal is
+   precisely a claim about what the plan is missing. **The documents stay separate because
+   they are different instruments**: a §14 review answers five fixed questions and outputs a
+   proposal carrying one maintainer acceptance line, while a reconciliation walks each note
+   section by section and outputs adopt / reject / defer per note. **Bundling them would make
+   that single acceptance line ambiguous** — accepting "the review" would silently accept four
+   adoptions — and the NT-0010/0011 reconciliation set the precedent by running as its own
+   pass rather than writing a proposal straight into the governed file.
 2. **An adopted note converts to a Work row** — here, under the phase that will carry it,
    with a workstream id and dependencies like any other row. Adoption is not a status change
    on the note; it is a row on this page. Until that row exists, nothing is scheduled.
