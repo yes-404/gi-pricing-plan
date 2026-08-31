@@ -36,6 +36,10 @@ Checks (all non-destructive, exit 1 on any failure):
      a docs/audit/work/*/README.md (or closure-records.md) work-item closure record.
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
      real section, or numbered step, of docs/process/delivery-process.md (NT-0014 §3).
+ 28. Every filed plan (the `writing-plans` file kind, dated on or after 2026-08-31) states
+     an explicit "Acceptance Standard" heading with content under it (NT-0014 §2 C1,
+     Ruling 46). Plans dated before the cutoff, and the `-ledger`/`-final-review`/
+     `-verified`/`-handover` file kinds, are out of scope by design — never retro-red-gated.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -46,6 +50,7 @@ import json
 import pathlib
 import re
 import sys
+from datetime import date
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 ROOT = REPO / "docs"
@@ -656,6 +661,118 @@ def check_process_core_drift() -> None:
     )
 
 
+#: The date C1 and the `writing-plans` acceptance-standard field land together (NT-0014 §2,
+#: Ruling 46 — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 46). A constant, not
+#: read from the clock or git history: the verdict must be a property of the plan's own
+#: filename, reproducible in any clone at any revision, never of when the check happens to
+#: run. **Permanent once landed, the same way a check number is (`CLAUDE.md` §5) — do not
+#: move it forward to "catch up" a plan filed between this date and today.**
+PLAN_ACCEPTANCE_STANDARD_CUTOFF = date(2026, 8, 31)
+
+#: docs/plans/README.md's four file kinds: the plan itself carries no suffix; these four do,
+#: and none of them declares an acceptance standard of their own (Ruling 46 §2). A filename
+#: not matching one of these and not carrying a `YYYY-MM-DD-` prefix is a naming defect the
+#: check refuses outright, rather than silently guessing which kind it is.
+_PLAN_KIND_EXCLUDED_SUFFIXES = ("-ledger.md", "-final-review.md", "-verified.md", "-handover.md")
+_PLAN_FILENAME_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})-")
+_ACCEPTANCE_STANDARD_HEADING = re.compile(r"^#{1,6}\s+.*acceptance standard", re.IGNORECASE)
+
+
+def check_plan_acceptance_standard() -> None:
+    """28. A filed plan (the `writing-plans` file kind) states an explicit acceptance standard.
+
+    Mechanises NT-0014's C1 and `delivery-process.md` §5 step 4 / §6 step 1: the lead's
+    replan-vs-proceed check that "an acceptance standard was actually defined, not just
+    implied." A bare heading is not "actually defined" either, so the check also requires
+    content under it — but it cannot judge whether that content is a *good* standard; that
+    stays the lead's read (`.claude/roles/lead.md`).
+
+    **The discriminator is Ruling 46's, not a warn-then-red switch**: a plan's own filename
+    date against `PLAN_ACCEPTANCE_STANDARD_CUTOFF`, a constant. Nothing here reads the clock
+    or git history, so the same file gets the same verdict in any clone at any revision —
+    the property a time-of-run switch cannot have. C1 and the `writing-plans` field it
+    validates land in the same commit, so the cutoff is that commit's date and zero plans
+    filed before today are ever in scope: **no warn phase, because there is nothing to warn
+    about.**
+
+    Scope is the plan *kind* only — the file `writing-plans` produces, discriminated by the
+    four documented suffixes in `docs/plans/README.md`, never by guessing at content. Widen
+    it past that and it reds on every future ledger, ruling record or handover file, which
+    the "no warn phase" design above cannot excuse (Ruling 46 §2's own warning about a check
+    that guesses).
+
+    Legacy plans (filed before the cutoff) get **one aggregate note line**, not one warning
+    each — Ruling 46 §2 took this from the same principle a hundred per-file lines would
+    violate: a check nobody reads because it never says anything new is worse than no check.
+    """
+    plans_dir = ROOT / "plans"
+    legacy = 0
+    checked = 0
+    for f in sorted(plans_dir.glob("*.md")):
+        name = f.name
+        if name == "README.md":
+            continue
+        if name.endswith(_PLAN_KIND_EXCLUDED_SUFFIXES):
+            continue
+
+        m = _PLAN_FILENAME_DATE.match(name)
+        if not m:
+            fail(
+                f"docs/plans/{name}: not one of the four documented kind-suffixes "
+                "(-ledger/-final-review/-verified/-handover) and carries no `YYYY-MM-DD-` "
+                "date prefix either — docs/plans/README.md §Naming requires the prefix on "
+                "every filed plan, and check 28 cannot classify or date this file without it"
+            )
+            continue
+
+        filed = date.fromisoformat(m.group(1))
+        if filed < PLAN_ACCEPTANCE_STANDARD_CUTOFF:
+            legacy += 1
+            continue
+
+        checked += 1
+        lines = f.read_text(encoding="utf-8").splitlines()
+        heading_idx = next(
+            (i for i, line in enumerate(lines) if _ACCEPTANCE_STANDARD_HEADING.match(line)),
+            None,
+        )
+        if heading_idx is None:
+            fail(
+                f"docs/plans/{name}: no \"Acceptance Standard\" heading — every plan filed "
+                f"on or after {PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} must state one "
+                "explicitly (delivery-process.md §5 step 4 / §6 step 1; field format in "
+                ".claude/skills/writing-plans/SKILL.md)"
+            )
+            continue
+
+        # Stop scanning at the next heading of any level; a bare heading followed
+        # immediately by another heading is exactly the "implied, not defined" case.
+        body_has_content = False
+        for line in lines[heading_idx + 1 :]:
+            if re.match(r"^#{1,6}\s", line):
+                break
+            if line.strip():
+                body_has_content = True
+                break
+        if not body_has_content:
+            fail(
+                f"docs/plans/{name}: \"Acceptance Standard\" heading has no content before "
+                "the next heading — a bare heading is \"implied\", not \"actually defined\" "
+                "(delivery-process.md §5 step 4)"
+            )
+
+    if legacy:
+        notes.append(
+            f"{legacy} legacy plan(s) filed before "
+            f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} exempted from check 28 "
+            "(Ruling 46 — never retro-red-gated)"
+        )
+    notes.append(
+        f"check 28: {checked} plan(s) filed on/after "
+        f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} checked for an acceptance standard"
+    )
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
@@ -1099,6 +1216,9 @@ def main() -> int:
 
     # 26. the process core extract's citations resolve in the process spec
     check_process_core_drift()
+
+    # 28. every filed plan dated on/after the cutoff states an acceptance standard
+    check_plan_acceptance_standard()
 
     for note in notes:
         print(f"  {note}")

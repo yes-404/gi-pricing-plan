@@ -10,7 +10,11 @@
   id landed inside it (`docs/audit/plan-reviews.md` review 8 Q4, the same mechanism found
   twice on roadmap rows); **slice design** — how the work is cut into slices, their
   sequencing and dependencies, not only the task lists and per-slice gates within each once
-  cut; decision points with options and recommendations. **The planner owns conducting and
+  cut; decision points with options and recommendations. **Every plan states its acceptance
+  standard in the exact machine-checkable form `.claude/skills/writing-plans/SKILL.md`
+  defines** — that skill is the field's one source (name, position, format; NT-0014 §2 C1),
+  this is a pointer only, and `scripts/audit-docs.py` check 28 reds a plan-kind file filed
+  on or after its cutoff date that omits or leaves it empty. **The planner owns conducting and
   filing the `CLAUDE.md` §14 phase review itself** (`.claude/skills/phase-review`) — a
   separate obligation from the replan-trigger sentence above, on its own fixed schedule
   rather than triggered by a finding: trigger fixed, not discretionary (at each workstream

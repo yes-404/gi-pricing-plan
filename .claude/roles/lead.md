@@ -33,6 +33,12 @@
   **The cost is real and is accepted**: a fresh agent re-reads the plan and rulings from disk
   instead of holding them. Measured against it, W11 Task 3C ran on a fresh agent in ~28
   minutes, so the re-read is cheaper than it looks.
+- **The replan-vs-proceed check** (`delivery-process.md` §5 step 4 / §6 step 1) **consults
+  `scripts/audit-docs.py` check 28's output as evidence that a plan's acceptance standard
+  was actually defined, not just implied** (NT-0014 §2 C1). A green check 28 is necessary,
+  not sufficient — it proves the "Acceptance Standard" heading exists and is non-empty, not
+  that its content is a real, testable standard; that reading stays the lead's own. The
+  field's format is `.claude/skills/writing-plans/SKILL.md`'s alone to define.
 - **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
   workstream close, and again before a phase's exit demo, not discretionary. Grounded here
   rather than left assumed: the NT-0010/0011 adoption changed the very workstream cut
