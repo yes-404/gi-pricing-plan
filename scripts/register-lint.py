@@ -18,14 +18,19 @@ corrected by Ruling 49's Text A/B/C) states in prose:
      `deferred with an owner`, `reassigned`, `not started` — binding, may not be linted
      away), or the negated form F37/F40 need (`fix before close is not available` /
      `is not required` — already a `fix before close` prefix, so no separate branch is
-     needed). A cell that opens with a bare status marker (`resolved …`, `Fixed —`) is a
-     documented, separate case — Ruling 50 §1 classifies it "not a grammar gap" and defers
-     the actual fix to a future status field (P4) — so it is excluded from *this* rule and
-     checked instead by rule 2. Anything else is a grammar violation.
-  2. **Resolution-annotation format.** Wherever a Decision cell (or the status-only cells
-     rule 1 excludes) carries a resolution marker (`resolved`/`Fixed`, case-insensitive),
-     the cell must also carry a date (`YYYY-MM-DD`) and a PR/commit/doc reference — the
-     content Ruling 49's Text A requires ("naming the PR or commit that discharged it").
+     needed). A cell whose *opening* — emphasis stripped — is a bare status marker
+     (`resolved …`, `Fixed —`) is a documented, separate case — Ruling 50 §1 classifies it
+     "not a grammar gap" and defers the actual fix to a future status field (P4) — so it is
+     excluded from *this* rule and checked instead by rule 2. Anything else is a grammar
+     violation.
+  2. **Resolution-annotation format.** Every cell rule 1 excluded as a status opening
+     (`_opens_with_status` — the *same* predicate, not a second one that could drift from
+     the first) must carry a date (`YYYY-MM-DD`) and a PR/commit/doc reference — the content
+     Ruling 49's Text A requires ("naming the PR or commit that discharged it"). Sharing one
+     predicate between the exclusion and the trigger closes a real gap: an earlier version
+     excluded on the bare opening in rule 1 but triggered rule 2 only on a markdown-emphasis
+     regex, so an unemphasised `Fixed - ...` opening with no date and no reference was
+     excluded by rule 1 and never reached by rule 2 — `lint_register()` returned `[]` for it.
   3. **Unowned-row decay.** Wherever a Decision cell says `unowned` (bare, `unowned by
      design`, or `unowned-pending-authorisation`), the cell must say more than the bare
      disposition — Ruling 49's Text B requires it to "name the event that next confirms or
@@ -72,11 +77,6 @@ _PR_OR_SHA_OR_DOC = re.compile(
     r"PR\s*#\d+|`[0-9a-f]{7,40}`|`docs/[^`]+`|`\.claude/[^`]+`", re.IGNORECASE
 )
 _UNOWNED = re.compile(r"\bunowned\b", re.IGNORECASE)
-# A genuine status annotation is markdown-emphasised at the word itself — `*resolved …*`,
-# `**Fixed**`, `***Resolved …***` — never a bare "resolved"/"fixed" occurring in prose about
-# something else (e.g. "resolved separately by PR #355", "rather than fixed because …",
-# both real register text that is not this row's own resolution).
-_STATUS_MARKER = re.compile(r"\*{1,3}(resolved|fixed)\b", re.IGNORECASE)
 # The proxy for "names the event" — a cell long enough to say more than the bare
 # disposition + "unowned" is presumed to name something; a bare stop is presumed not to.
 _UNOWNED_MIN_LEN = 40
@@ -138,6 +138,24 @@ def _strip_emphasis(cell: str) -> str:
     return _EMPHASIS.sub("", cell).strip()
 
 
+def _opens_with_status(decision: str) -> bool:
+    """True when the Decision cell's own **opening** — emphasis stripped — is a status
+    marker (`resolved …`, `Fixed —`).
+
+    This is the single predicate rule 1 excludes on and rule 2 triggers on — one test used
+    twice, never two written separately that happen to agree today. That drift was a real,
+    proven bug: an earlier version excluded on this opening-based test in rule 1 but
+    triggered rule 2 on a narrower, markdown-emphasis-only regex, so a bare, unemphasised
+    `Fixed - undocumented status change, no date, no ref` was excluded by rule 1 (correctly
+    — a status opening isn't a grammar violation) and never reached by rule 2 either (the
+    emphasis regex didn't match) — `lint_register()` returned `[]` for a row carrying
+    neither a date nor a reference. Sharing this one predicate closes that gap: anything
+    rule 1 lets through as "not a grammar question" is exactly what rule 2 must then check.
+    """
+    opening = _strip_emphasis(decision).lower()
+    return any(opening.startswith(s) for s in STATUS_PREFIXES)
+
+
 def check_decision_grammar(row: Row) -> str | None:
     decision = row.fields[4]
     opening = _strip_emphasis(decision).lower()
@@ -145,9 +163,10 @@ def check_decision_grammar(row: Row) -> str | None:
         return None
     if any(opening.startswith(v) for v in VERDICTS):
         return None
-    if any(opening.startswith(s) for s in STATUS_PREFIXES):
-        # Rule 1 does not judge this cell — rule 2 does. Ruling 50 §1 classifies this
-        # class "not a grammar gap"; the actual fix is a future status field (P4).
+    if _opens_with_status(decision):
+        # Rule 1 does not judge this cell — rule 2 does (same predicate, see
+        # `_opens_with_status`). Ruling 50 §1 classifies this class "not a grammar gap";
+        # the actual fix is a future status field (P4).
         return None
     return (
         f"{row.finding_id}: Decision cell opens with {decision[:60]!r}, which matches "
@@ -159,7 +178,7 @@ def check_decision_grammar(row: Row) -> str | None:
 
 def check_resolution_annotation(row: Row) -> str | None:
     decision = row.fields[4]
-    if not _STATUS_MARKER.search(decision):
+    if not _opens_with_status(decision):
         return None
     has_date = bool(_DATE.search(decision))
     has_ref = bool(_PR_OR_SHA_OR_DOC.search(decision))

@@ -108,6 +108,26 @@ def test_a_resolution_marker_with_no_date_or_reference_is_refused(tmp_path: path
     assert "no a date" in failures[0] or "no a PR" in failures[0]
 
 
+def test_an_unemphasised_status_opening_with_no_date_or_reference_is_refused(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Regression for a proven bypass, not a theoretical one.
+
+    An earlier version excluded a status opening from rule 1 on the bare `STATUS_PREFIXES`
+    test (no emphasis required) but only triggered rule 2 on a markdown-emphasis-only regex
+    (`*resolved`, `**Fixed**`). A new row opening `Fixed - ...` with *no* emphasis was
+    excluded by rule 1 (correctly — a status opening is not a grammar violation) and never
+    reached by rule 2 either, so `lint_register()` returned `[]` for a row carrying neither a
+    date nor a reference. This is the auditor's exact synthetic row that found the hole.
+    Both rules now share one predicate (`_opens_with_status`) precisely so this cannot recur.
+    """
+    cell = "Fixed - undocumented status change, no date, no ref"
+    failures = _lint(tmp_path, _table(cell))
+    assert failures, "an unemphasised status opening with no date/reference must be refused"
+    assert "F999998" in failures[0]
+    assert "no a date" in failures[0] or "no a PR" in failures[0]
+
+
 def test_a_well_formed_resolution_annotation_is_accepted(tmp_path: pathlib.Path) -> None:
     for cell in (
         "*resolved 2026-08-28 (PR #302) — the fix landed.*",
