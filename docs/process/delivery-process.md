@@ -214,8 +214,10 @@ rows relevant to it before finalizing (§11 obligation 7).
   script can check what prose cannot. **This document is authoritative and the extract is
   derived** — on any disagreement the markdown wins and the extract is wrong by definition,
   which is why its own `meta` records `"authoritative": false`. Each block cites the section
-  it came from, and a drift check compares the two (NT-0014 §3). One source with enforcement,
-  never a second source.
+  it came from. Two gate checks hold it to that: every block's citation must resolve in this
+  document, and the extract must record the digest of the revision of this document it was
+  last reconciled against, so a change here reds until someone re-reads it. One source with
+  enforcement, never a second source.
 
 ## 11. Plan file obligations
 
