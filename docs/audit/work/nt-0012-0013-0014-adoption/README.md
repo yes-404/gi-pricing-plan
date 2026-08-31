@@ -234,3 +234,28 @@ blocking. **C3 — correctly not delivered** (discharged by ruling). No slice is
 — left undated and unsigned here for the lead to complete.
 
 Lead acceptance: _____________________ Date: _____________
+
+---
+
+**Accepted by the lead, 2026-08-31**, under the adoption record's §1.1 delegation of the
+maintainer's acceptance authority. The auditor's verdicts above are **adopted unamended**, and
+its satisfaction is stated in its own words in this record.
+
+**What this close does not claim.** **F61 is open and unowned**: C2's `PreToolUse` layer is
+bypassable in exactly the way Ruling 40 disqualified C3's git hook for — session-disabled
+hooks, a gitignored `settings.local.json` — and **unlike C3 there is no CI-equivalent
+backstop**, because nothing re-derives counts from artifacts. C2 therefore inherits C3's
+disqualifying defect without C3's saving grace, and Ruling 40 never reconciled the two. What
+genuinely mitigates it, and is not nothing, is that `record()`'s own refusal is unconditional
+and mutation-proven independent of hook wiring — which C3 never had. **The gap needs a decision:
+build the re-derivation cycle, or accept it explicitly. It is not discharged by having been
+disclosed.**
+
+**F58 and F57 are likewise open**: artifact B has no live writer, and no retry-cap cycle has
+run, so `delivery-process.md` §7's caps remain in force with none of the instrumentation their
+own adoption was conditioned on. **The adoption built the mechanisms; it did not start them.**
+
+**One correction this close prompted.** NT-0012's and NT-0013's own `Status` rows still read
+`open` while their rules had been in force since `97965be`, and NT-0014's read `accepted` after
+its last slice merged. All three are corrected to `landed` — found by the auditor, outside its
+write scope, and fixed here rather than left for a reader to trip over.
