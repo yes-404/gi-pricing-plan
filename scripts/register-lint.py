@@ -83,6 +83,7 @@ DISPOSITIONS = ("fix before close", "accept", "carry forward", "split verdict")
 VERDICTS = ("delivered but untested", "deferred with an owner", "reassigned", "not started")
 STATUS_PREFIXES = ("resolved", "fixed")
 
+_UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 _SEP_ROW = re.compile(r"^\|\s*-+\s*\|")
 _EMPHASIS = re.compile(r"^[\*_`\s]+")
 _DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
@@ -150,13 +151,22 @@ def parse_register(path: pathlib.Path) -> tuple[list[Row], list[str]]:
     }
 
     # `in_table` latches on once the header/separator row is seen and is never reset by a
-    # blank or prose line — the register's one data table is interrupted by blank lines for
-    # readability (e.g. around F52-F61) without a repeated header, and resetting on any
-    # non-`|` line silently dropped every row after the first such gap (confirmed: 10 of 58
-    # rows, F52-F61, invisible to this check despite `main()` printing "OK (0 violations)").
-    # A line that does not start with `|` is simply skipped, never treated as "table over" —
-    # safe here because the register's prose sections (after the table) contain no `|`-led
-    # lines at all, verified directly rather than assumed.
+    # blank or prose line: resetting on any non-`|` line silently dropped every row after
+    # the first such gap (F64 — 10 of 58 rows invisible despite `main()` printing "OK (0
+    # violations)"). A line that does not start with `|` is simply skipped, never treated
+    # as "table over" — safe here because the register's prose sections (after the table)
+    # contain no `|`-led lines at all, verified directly rather than assumed.
+    #
+    # But tolerating the gap is NOT accepting it, and the earlier version of this comment
+    # got that wrong: it called the blank lines around F52-F61 a readability choice. They
+    # were a defect. GitHub-Flavoured Markdown ends a table at a blank line, so every row
+    # after the first gap rendered as a bare paragraph rather than a table row — F52 alone,
+    # then F53-F64 — and the register's own reader saw a broken table for as long as the
+    # gaps existed. Teaching the parser to read past them removed the only thing that would
+    # have reported it: the check was made lenient about the exact document defect it
+    # should have failed on, and so went permanently blind to it. `_table_gaps` below now
+    # fails on the gap while this loop still reads through it, so a future gap is loud in
+    # the check AND its rows are still linted rather than skipped.
     in_table = False
     # This function has silently dropped rows three separate times in one day (a strictness
     # mismatch between two rules, the blank-line reset the comment above fixes, and the
@@ -196,6 +206,51 @@ def parse_register(path: pathlib.Path) -> tuple[list[Row], list[str]]:
             continue
         rows.append(Row(fields[0], fields, lineno, line))
         classified += 1
+    # Structural: the table must be one contiguous block of `|`-led lines. A blank or
+    # prose line between the header and the last data row splits the rendered table in two
+    # (GFM ends a table at a blank line) and everything after the gap renders as prose.
+    # Reported here rather than tolerated — see the `in_table` comment above.
+    if rows:
+        first = min(header_lines) if header_lines else 0
+        # The sweep's upper bound must NOT be `rows[-1].line_no`: that is wherever the
+        # field-splitter last SUCCEEDED, and a row missing its leading `|` is skipped
+        # before it ever reaches the splitter — so a hidden row appended after the last
+        # parsed row sits outside the range and stays invisible. That is the likeliest
+        # position for one to appear, since every finding from F52 on was filed by
+        # appending. Bound instead by the last line that is row-SHAPED (four or more
+        # unescaped `|`), which a leading-pipe-less row still satisfies. Found by the
+        # auditor against the first version of this check, which claimed the residual
+        # closed and closed only the sandwiched half of it.
+        # ...but searched only as far as the table's own section runs. Bounding by the last
+        # row-shaped line ANYWHERE in the file pulls the sweep past the table's end to a
+        # stray four-pipe line — a fenced example table, a shell pipeline in prose — and
+        # then flags every ordinary line in between. The auditor built that fixture against
+        # the first version of this bound: 8 problems, 7 of them prose, blank lines and a
+        # heading that were never part of any table. A markdown heading cannot occur inside
+        # a table (rows are single lines), so it is a terminator a stray pipe count cannot
+        # defeat. BOTH bounds are needed and neither alone is right: the heading alone would
+        # flag the prose paragraph sitting between this table and `## F42 is retired`.
+        section_end = next(
+            (i for i, line in enumerate(lines) if i > first and line.startswith("#")),
+            len(lines),
+        )
+        last = max(
+            (
+                i
+                for i, line in enumerate(lines[:section_end])
+                if i >= first and len(_UNESCAPED_PIPE.findall(line)) >= 4
+            ),
+            default=first,
+        )
+        for idx in range(first, last + 1):
+            if not lines[idx].startswith("|"):
+                problems.append(
+                    f"{path.name}:{idx + 1}: the findings table is split by a "
+                    f"non-table line — GitHub renders every row after it as a "
+                    f"paragraph, not a table row. Remove the gap; the table is one "
+                    f"contiguous block from its header to its last row"
+                )
+
     assert classified == seen, (
         f"{path}: {seen - classified} table-region `|`-led line(s) fell through this "
         "loop's accounting uncounted — the exact silent-row-drop failure this tally exists "
