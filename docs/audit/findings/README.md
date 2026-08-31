@@ -43,12 +43,19 @@ entry rather than an essay.
 
 ## What moves, what stays, and which way the link points
 
+**Every field is reduced to an index-level value; both essays move** (NT-0015 P4, `.claude/
+notes/0015-the-register-is-a-ledger-evidence-is-a-file.md` §2 — *"The register row becomes
+the index entry: id, concerns, work item, phase, decision, owner, status, link"*). Concerns
+is not the only cell that can be an essay: a Decision cell that argues its own reasoning at
+length (F27's is the case that surfaced this) migrates exactly the same way.
+
 | Stays in the register row | Moves to `findings/<F-id>.md` |
 |---|---|
-| Finding id cell, self-naming `(F<id>)` unchanged | The evidence essay: what was found, how it was verified, the reasoning |
-| A short Concerns **synopsis** — what the finding is, in one to three sentences, still naming the requirement id(s) it concerns (the row does not become a bare pointer) | Limb detail (F27's `(c)`, F43's `L1`/`L2`/`L3`, …), as sections |
+| Finding id cell, self-naming `(F<id>)` unchanged | Both essays: the Concerns reasoning (what was found, how it was verified) and the Decision reasoning (why this disposition, what was weighed) |
+| A short Concerns **synopsis** — what the finding is, in one to three sentences, still naming the requirement id(s) it concerns (the row does not become a bare pointer) | Limb detail (F27's `(c)`, F43's `L1`/`L2`/`L3`, …), as sections — never as filenames |
+| Decision, compressed to its **disposition at index length**: the opening word (`carry forward`, `accept`, …), the owner, and every token below that a script matches on | The Decision's own reasoning — why, not what |
 | A forward link to the findings file | Nothing links back by requirement — the essay is free-standing evidence, not a second index |
-| Work item, Phase, Decision — unchanged | — |
+| Work item, Phase — unchanged (already index-length) | — |
 
 **The link points one way: row → file.** The register row is what a reader lands on first
 (it is what `register-lint.py`, `register-owed.py` and check 25 all read), and it links
@@ -56,6 +63,34 @@ forward to the fuller essay for whoever needs it. The findings file does not nee
 back to the row to be resolvable — nothing reads it mechanically — but naming the row's own
 `(F<id>)` self-citation once near the top of the file costs nothing and helps a reader who
 opened the file directly.
+
+### Compression must preserve every mechanically-matched token
+
+**A register row is read by scripts as well as by people, and a script's read is not
+redundant with a person's.** Two predicates in `scripts/register-lint.py` and `scripts/
+register-owed.py` currently match on specific substrings of the Decision cell, not on its
+length or its meaning — `register-lint.py`'s decision-grammar check matches the cell's
+*opening word* (`check_decision_grammar`), and `register-owed.py`'s `review` mode matches
+the literal token `§14` **anywhere** in the Decision cell and nowhere else in the row
+(`_matches_review`, `_REVIEW_MARKER`) — unlike its work-id mode, which also falls back to
+the Work item cell (`_matches_work_id`). Prose that reads as redundant restatement to a
+person may be the only thing one of these matches on.
+
+**Shortening a Decision cell can therefore remove a row from a future agenda with no test
+failing and no signal printed anywhere** — the same silent-loss shape `docs/audit/register.
+md`'s F63 records at the register level, reproduced one layer down inside a single row's own
+edit. Before compressing a Decision cell: check what the two functions named above currently
+match in it, and keep those tokens verbatim in the compressed sentence. **This list is the
+code's, not this README's — if a future predicate is added to either script, this paragraph
+is not the place that gets updated; the functions are.** Point a migration at
+`scripts/register-lint.py`'s `check_decision_grammar` and `scripts/register-owed.py`'s
+`_matches_review`/`_matches_work_id` directly, every time, rather than trust this summary to
+still be complete.
+
+**Prove it, don't just inspect for the token.** Run `register-owed.py`'s relevant modes
+before and after a Decision-cell compression, on the same tree, and confirm the row appears
+in both. Believing a sentence carries a marker and confirming a script still matches it are
+different claims; only the second is evidence.
 
 ## Write-once, amended in place
 
