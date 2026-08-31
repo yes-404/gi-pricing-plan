@@ -171,6 +171,16 @@ testpaths = [
     # it end to end — but everything that decides whether it still works is pure: the ARFF
     # reader, the recipe order, and the rule set's conformance to FR-DATA-16.
     "examples/fremtpl2",
+    # A regression test nothing runs is not a regression test. This is the fourth time
+    # this exact defect has bitten (see the sibling comments above and
+    # .github/workflows/python.yml's `paths:` filter, which each record one prior
+    # occurrence — scope-audit.py, the seed under examples/**, and tests/** for
+    # FR-PLAT-57): a script or its tests lived somewhere `uv run pytest -q` and CI's path
+    # filter both skip, and the gap was noticed only after something went unchecked.
+    # `.claude/skills/reporter-cycle/scripts/` is stdlib-only and outside the uv
+    # workspace, but `pyproject.toml` itself IS in python.yml's filter, so listing its
+    # tests root here is what makes them run in CI on any PR that touches this file.
+    ".claude/skills/reporter-cycle/scripts/tests",
 ]
 # Each package owns a test module of the same name (test_money.py in both). The legacy
 # prepend import mode collides on the basename; importlib keeps them distinct without
