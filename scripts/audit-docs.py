@@ -40,6 +40,10 @@ Checks (all non-destructive, exit 1 on any failure):
      an explicit "Acceptance Standard" heading with content under it (NT-0014 §2 C1,
      Ruling 46). Plans dated before the cutoff, and the `-ledger`/`-final-review`/
      `-verified`/`-handover` file kinds, are out of scope by design — never retro-red-gated.
+ 29. Every Decision cell in docs/audit/register.md opens with the register's own disposition
+     vocabulary, a CLAUDE.md §13 verdict, or the negated fix-before-close shape; every
+     resolution annotation names a date and a PR/commit/doc reference; every unowned row
+     says more than the bare word (Ruling 50, `scripts/register-lint.py`).
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -47,10 +51,12 @@ from __future__ import annotations
 
 import collections
 import hashlib
+import importlib.util
 import json
 import pathlib
 import re
 import sys
+import types
 from datetime import date
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -71,6 +77,32 @@ notes: list[str] = []
 
 def fail(msg: str) -> None:
     failures.append(msg)
+
+
+# scripts/register-lint.py — check 29's implementation. A hyphenated filename cannot be
+# `import`ed; loaded by path, as `bench-trace-size.py` already does for `bench-rating.py`.
+def _load_register_lint() -> types.ModuleType:
+    spec = importlib.util.spec_from_file_location(
+        "_register_lint", REPO / "scripts" / "register-lint.py"
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def check_register_grammar() -> None:
+    """Check 29: docs/audit/register.md's Decision-cell grammar (Ruling 50)."""
+    register = ROOT / "audit" / "register.md"
+    if not register.exists():
+        notes.append("no docs/audit/register.md — check 29 skipped")
+        return
+    register_lint = _load_register_lint()
+    violations = register_lint.lint_register(register)
+    for v in violations:
+        fail(f"check 29: {v}")
+    notes.append(f"check 29: register grammar — {len(violations)} violation(s)")
 
 
 
@@ -1315,6 +1347,9 @@ def main() -> int:
 
     # 28. every filed plan dated on/after the cutoff states an acceptance standard
     check_plan_acceptance_standard()
+
+    # 29. every docs/audit/register.md Decision cell conforms to its own header grammar
+    check_register_grammar()
 
     for note in notes:
         print(f"  {note}")
