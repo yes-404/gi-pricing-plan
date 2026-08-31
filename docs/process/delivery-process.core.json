@@ -50,7 +50,7 @@
     "watcher": {
       "type": "support_mechanical",
       "constraints": ["report_only", "deterministic_no_llm_core"],
-      "publishes": "roster-state.md",
+      "publishes": ["roster-state.md", "runtime-state.json"],
       "definition": ".claude/roles/watcher.md",
       "source": "\u00a73, \u00a713"
     },
@@ -238,19 +238,32 @@
   },
 
   "runtime_state_schema": {
-    "description": "Shape of the runtime state file the watcher/hooks maintain. Fixes the implicit-state gap: agents read position and counters here instead of reconstructing them from history.",
+    "description": "Shape of the runtime state file the watcher writes (NT-0014 artifact B, .claude/skills/watcher-runtime-state). Ruling 47 (docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md) rejected the note's original design -- a state file compared against artifact history -- because a dead or unwired writer and a genuinely idle process both read zero, so a mismatch never fires. The watcher re-derives each block every cycle instead; a block whose derived content is unchanged this cycle is left untouched, timestamp included, which is what makes a no-op cycle byte-identical (Ruling 47(d)'s acceptance test).",
+    "source": "§8, §10, §13",
     "example": {
-      "updated_at": "2026-08-30T14:00:00Z",
-      "position": { "project": "gi-pricing-plan", "phase": "2", "work": "W11", "slice": "W11-S3", "flow_step": "implement_green" },
-      "retry_counters": {
-        "work:W11:replan": 0,
-        "slice:W11-S3:fix_loop": 1
+      "schema": "gi-pricing-plan-runtime-state",
+      "schema_version": 1,
+      "project": "gi-pricing-plan",
+      "position": {
+        "written_by": "watcher",
+        "written_at": "2026-08-30T14:00:00Z",
+        "phase": { "value": "2", "read_from": "docs/roadmap.md §7" },
+        "work": { "value": "W11", "read_from": "docs/roadmap.md §7" },
+        "slice": { "value": "W11-S3", "read_from": "docs/plans/2026-08-29-w11-map.md" }
       },
-      "pending_human_checkpoint": null,
-      "in_flight_expensive_verifications": [
-        { "what": "full_test_suite", "by": "auditor", "tree": "6f77abb", "started_at": "2026-08-30T13:52:00Z" }
-      ],
-      "escalations_open": []
+      "in_flight_expensive_verifications": {
+        "written_by": "watcher",
+        "written_at": "2026-08-30T14:00:00Z",
+        "entries": [
+          { "what": "full_test_suite", "by": "auditor", "tree": "6f77abb", "started_at": "2026-08-30T13:52:00Z", "ttl_seconds": 1800 }
+        ]
+      }
+    },
+    "not_yet_present": {
+      "retry_counters": "ships with NT-0014 script C2 (adoption slice G, blocked, not built) -- Ruling 47(c): a 0 from a counter nothing increments is indistinguishable from a true zero, so it is absent rather than a zero or empty placeholder",
+      "flow_step": "has no source artifact -- a running agent's belief about its own step, the roster-state.md (F31) claim verbatim -- so Ruling 47(c) drops it rather than carrying an unfalsifiable field",
+      "pending_human_checkpoint": "not in this slice's scope (Ruling 47(c): 'slice E therefore ships position and in_flight_expensive_verifications only')",
+      "escalations_open": "same as pending_human_checkpoint"
     }
   }
 }

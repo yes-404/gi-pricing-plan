@@ -135,6 +135,7 @@ files = [
     "examples/fremtpl2",
     ".claude/skills/balance-watch/scripts",
     ".claude/skills/reporter-cycle/scripts",
+    ".claude/skills/watcher-runtime-state/scripts",
 ]
 warn_unreachable = true
 disallow_any_explicit = false
