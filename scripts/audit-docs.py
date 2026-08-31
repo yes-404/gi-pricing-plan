@@ -46,6 +46,7 @@ Usage: python3 scripts/audit-docs.py
 from __future__ import annotations
 
 import collections
+import hashlib
 import json
 import pathlib
 import re
@@ -661,6 +662,98 @@ def check_process_core_drift() -> None:
     )
 
 
+def check_process_core_digest() -> None:
+    """27. The process core extract's recorded digest matches the current bytes of the spec.
+
+    Check 26 is, by its own docstring, "the cheap half of a drift check": it resolves each
+    block's `source` citation but compares nothing about *content*. That gap was not
+    theoretical — at the moment this check was proposed (Ruling 45,
+    `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`), `delivery-process.md` had taken two
+    commits past the extract's only commit, including one that added two normative rules to
+    the very section (§15) a guard block cites, and check 26 stayed green throughout.
+
+    This is the other half. `meta.derived_from_digest` records a `sha256:` digest of the
+    exact bytes of `meta.derived_from` (`delivery-process.md`) as read at the last
+    reconciliation, paired with the commit that reconciliation happened at
+    (`meta.verified_against_tree`, already present on the artifact — Ruling 45 makes it
+    load-bearing for the first time). Comparing prose to JSON semantically is not buildable;
+    comparing "the source has not moved since a human last reconciled the extract against
+    it" is exactly this — three lines, and the check that actually forces the reconciliation.
+
+    The pairing with a commit is not decoration (Ruling 45 §2): a bare digest mismatch says
+    only "it changed", but the recorded commit lets the failure message name the exact range
+    a session should read — `git diff <verified_against_tree>..HEAD -- delivery-process.md`
+    — the difference between re-reading the diff and blindly bumping a hash.
+
+    One-directional like check 26 and for the same reason: the markdown is authoritative
+    (`meta.authoritative` is `false`), so a mismatch is always the extract falling behind,
+    never the spec being wrong. Known cost, accepted per the ruling: this reds on every edit
+    to the process spec, including a typo — the right price for a forced re-read.
+
+    Numbered 27, the number Ruling 45 §3 reserved (free at `1407e09`); slice F took 28,
+    leaving 27 here.
+    """
+    if not PROCESS_SPEC.is_file():
+        notes.append("no docs/process/delivery-process.md — check 27 skipped")
+        return
+    if not PROCESS_CORE.is_file():
+        # Check 26 already fails loudly when the extract is missing but still required by
+        # §10; nothing further to say about a digest with no file to read it from.
+        notes.append("no process core extract — check 27 skipped (check 26 covers this)")
+        return
+
+    raw = PROCESS_CORE.read_text(encoding="utf-8")
+    try:
+        core = json.loads(raw)
+    except json.JSONDecodeError:
+        # Already reported by check 26; do not double-report the same defect.
+        return
+
+    meta = core.get("meta", {})
+    recorded_tree = meta.get("verified_against_tree")
+    recorded_digest = meta.get("derived_from_digest")
+
+    if not recorded_tree:
+        fail(
+            "process core `meta.verified_against_tree` is missing or empty — the digest "
+            "must be paired with the commit it was taken at (Ruling 45 §2), so a future "
+            "mismatch can name the exact range to read"
+        )
+
+    if not recorded_digest:
+        fail(
+            "process core `meta.derived_from_digest` is missing — Ruling 45 requires a "
+            "`sha256:`-prefixed digest of the exact bytes of `meta.derived_from` "
+            "(delivery-process.md), recorded at the commit it was last reconciled against"
+        )
+        return
+
+    if not recorded_digest.startswith("sha256:"):
+        fail(
+            f"process core `meta.derived_from_digest` {recorded_digest!r} is not "
+            "`sha256:`-prefixed — Ruling 45 specifies a sha256 digest of the exact bytes"
+        )
+        return
+
+    actual_digest = "sha256:" + hashlib.sha256(PROCESS_SPEC.read_bytes()).hexdigest()
+    if recorded_digest != actual_digest:
+        fail(
+            f"process core `meta.derived_from_digest` ({recorded_digest}) does not match "
+            f"the current bytes of delivery-process.md ({actual_digest}) — the spec has "
+            f"changed since the extract was last reconciled at "
+            f"{recorded_tree or '<unrecorded commit>'}; read "
+            f"`git diff {recorded_tree or '<unrecorded commit>'}..HEAD -- "
+            "docs/process/delivery-process.md`, reconcile the extract against it, and "
+            "update both `meta.derived_from_digest` and `meta.verified_against_tree`"
+        )
+        return
+
+    notes.append(
+        f"check 27: process core digest matches delivery-process.md "
+        f"(reconciled at {recorded_tree})"
+    )
+
+
 #: The date C1 and the `writing-plans` acceptance-standard field land together (NT-0014 §2,
 #: Ruling 46 — `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md` Ruling 46). A constant, not
 #: read from the clock or git history: the verdict must be a property of the plan's own
@@ -1216,6 +1309,9 @@ def main() -> int:
 
     # 26. the process core extract's citations resolve in the process spec
     check_process_core_drift()
+
+    # 27. the process core extract's recorded digest matches delivery-process.md's bytes
+    check_process_core_digest()
 
     # 28. every filed plan dated on/after the cutoff states an acceptance standard
     check_plan_acceptance_standard()
