@@ -41,6 +41,16 @@ step. A record that predates a checklist change names the version it used.
 The requirements evidenced, each with its tree and its measurement. A count carries the
 tree and the corpus it counted over (CLAUDE.md §13).
 
+### Owed list
+
+**The owed list is generated, not recalled.** Run `register-owed.py <id>` against a
+committed revision and paste its output verbatim into the closure record as a fenced block
+marked generated, naming the command and that revision. The block is evidence; the record's
+own findings-and-resolutions table stays hand-written, because it carries per-close
+judgements and findings that have no register row. State in one sentence that every id in
+the block appears in that table with a resolution, and that the table adds nothing the block
+does not carry except findings named as having no register row.
+
 ### Findings
 
 One row per finding. Each row names the requirement or artifact id it concerns, states

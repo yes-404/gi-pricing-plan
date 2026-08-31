@@ -19,6 +19,16 @@ Write `docs/audit/phases/<phase>/README.md` with these sections.
 The phase's boundaries, workstream cuts and requirement set as filed, and how the actual
 phase measured against them.
 
+### Owed list
+
+**The owed list is generated, not recalled.** Run `register-owed.py <id>` against a
+committed revision and paste its output verbatim into the closure record as a fenced block
+marked generated, naming the command and that revision. The block is evidence; the record's
+own findings-and-resolutions table stays hand-written, because it carries per-close
+judgements and findings that have no register row. State in one sentence that every id in
+the block appears in that table with a resolution, and that the table adds nothing the block
+does not carry except findings named as having no register row.
+
 ### Finding roll-up
 
 Every finding carried into the phase is resolved, accepted with an owner, or re-planned.

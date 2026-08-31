@@ -123,10 +123,17 @@ def parse_register(path: pathlib.Path) -> tuple[list[Row], list[str]]:
     rows: list[Row] = []
     problems: list[str] = []
     text = path.read_text(encoding="utf-8")
+    # `in_table` latches on once the header/separator row is seen and is never reset by a
+    # blank or prose line — the register's one data table is interrupted by blank lines for
+    # readability (e.g. around F52-F61) without a repeated header, and resetting on any
+    # non-`|` line silently dropped every row after the first such gap (confirmed: 10 of 58
+    # rows, F52-F61, invisible to this check despite `main()` printing "OK (0 violations)").
+    # A line that does not start with `|` is simply skipped, never treated as "table over" —
+    # safe here because the register's prose sections (after the table) contain no `|`-led
+    # lines at all, verified directly rather than assumed.
     in_table = False
     for i, line in enumerate(text.splitlines(), start=1):
         if not line.startswith("|"):
-            in_table = False
             continue
         if _SEP_ROW.match(line):
             in_table = True

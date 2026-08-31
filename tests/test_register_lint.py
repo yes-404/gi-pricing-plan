@@ -193,6 +193,59 @@ def test_an_unowned_row_with_a_named_trigger_is_accepted(tmp_path: pathlib.Path)
     assert _lint(tmp_path, _table(cell)) == []
 
 
+# --- Rows across a blank line ------------------------------------------------------------
+
+def test_a_data_row_after_a_blank_line_is_still_parsed(tmp_path: pathlib.Path) -> None:
+    """Regression for a proven bug (found building `register-owed.py`, NT-0015 P5): the live
+    register uses blank lines inside its one data table for readability, with no repeated
+    header (`docs/audit/register.md` around F52-F61). An earlier `parse_register` reset
+    `in_table` on any non-`|` line, including a blank one, and only a fresh separator/header
+    row set it back — so every row after the first such blank line was silently dropped, and
+    `main()` still printed 'OK (0 violations)' because a dropped row is never checked. This
+    is `CLAUDE.md` §13's 'a check that has never printed a failure has not been tested'
+    turned inside out: the check printed passing precisely because it had stopped looking.
+    Proven directly against the live register at the tree this fix lands on: parsing it finds
+    58 rows, not 48 — the ten past the first blank line (F52-F61) were invisible before.
+    """
+    content = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+        "| A (F999996) | before the gap | W1 | 1 | carry forward — unowned by design, "
+        "decays to the next §14 review |\n"
+        "\n"
+        "| B (F999995) | after the gap | W1 | 1 | **not started** — nothing built yet |\n"
+    )
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    rows, problems = register_lint.parse_register(f)
+    assert problems == []
+    assert [r.finding_id for r in rows] == ["A (F999996)", "B (F999995)"], (
+        "the row after the blank line must not be silently dropped"
+    )
+
+
+def test_live_register_row_count_matches_a_direct_count(tmp_path: pathlib.Path) -> None:
+    """The register's own blank-line gaps (verified above) mean a naive `grep -c '^| F'`-style
+    count is not a safe cross-check on its own — but a count of every line that looks like a
+    data row (starts with `| ` and is not the header or separator) is, since those are the
+    same three lines this parser itself excludes. Catches a future regression where the parser
+    drops rows again but by a different mechanism than the blank-line one above.
+    """
+    text = REGISTER.read_text(encoding="utf-8")
+    expected = 0
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        if register_lint._SEP_ROW.match(line):
+            continue
+        if "Finding id" in line and "Decision" in line:
+            continue
+        expected += 1
+    rows, problems = register_lint.parse_register(REGISTER)
+    assert problems == []
+    assert len(rows) == expected
+
+
 # --- Control: the live register must pass, on the tree this check lands on -------------
 
 def test_the_live_register_passes() -> None:
