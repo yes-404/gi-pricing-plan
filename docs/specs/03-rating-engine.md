@@ -416,9 +416,16 @@ pins; every `model_call` step's `mode` equals `model_reference_mode`
   "outputs": {"payable_premium_minor": 36_120, "peril_risk_premium": {"AD": 9_820, "…": "…"}},
   "decline_reasons": [],
   "trace": {"…see 4.5…"},
-  "timing_ms": {"total": 7.4, "model_call": 3.1, "table_lookups": 0.9, "expressions": 0.4}
+  "timing_ms": {"total": 7.4, "evaluate": 6.6}
 }
 ```
+
+*(Corrected 2026-08-31, F62 — the decision-maker ruled the example was wrong.)* `timing_ms`
+carries exactly the two keys `score_one` emits: `total` (the whole call, `t_start` to
+return) and `evaluate` (`async_evaluate()` alone, the DAG walk inside the ZEN engine); their
+difference is input validation and post-evaluation ladder/output construction. No
+requirement anywhere in this suite names a `model_call`/`table_lookups`/`expressions`
+breakdown — `docs/plans/2026-08-31-f62-timing-ms-ruling.md` Ruling 54.
 
 ### 4.5 `Trace`
 
