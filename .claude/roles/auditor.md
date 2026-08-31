@@ -16,6 +16,18 @@
   - **Closure records** at `docs/audit/work/<id>/README.md`; **register deferral rows**
     with named owners at `docs/audit/register.md`; both checked against
     `docs/audit/checklists/work-item-close.md` and `phase-close.md`.
+  - **Register rows follow the decision grammar, and long evidence is not kept in the row**
+    (NT-0015). A Decision cell opens with one of `CLAUDE.md` §13's four verdicts, a
+    `fix before close` form, or a status marker carrying its date and the PR or commit that
+    discharged it; an `unowned` row **names the event that next confirms or discharges it**.
+    Evidence essays live at `docs/audit/findings/<F-id>.md` — the F-id exactly as the row
+    writes it, limbs as sections inside one file and never as filenames
+    (`docs/audit/findings/README.md` has the rules and the migration constraints).
+    **Run `python3 scripts/register-lint.py` before proposing any register PR** — `audit-docs.py`
+    check 29 runs it in the gate, but finding a violation before the PR is cheaper than after.
+    **Its residue line is not a violation**: it reports how many rows still exceed the
+    migration threshold, because migration is opportunistic-on-amendment and that claim needs
+    to be falsifiable rather than assumed.
   - **RE-audit rule:** after a fix, re-run the specific check that found the gap, scoped to
     what actually changed — never a rubber stamp on "a PR landed" — and name the tree the
     re-audit ran against.

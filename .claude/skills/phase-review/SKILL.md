@@ -17,6 +17,20 @@ At **each workstream close**, and again **before a phase's exit demo**. Both can
 once, and did for review 2. A fixed trigger, not "when someone remembers": a review that
 happens after the mis-cut is a review of a decision already paid for.
 
+## The agenda includes every register row that decayed to this review
+
+The agenda includes every `docs/audit/register.md` row that has decayed to this review —
+every unowned row naming no other event. **Each gets a disposition in the review's output:**
+an owner, an accepted deferral with a new named event, or a finding against the register.
+**Listing one without disposing of it is not a disposition.** (NT-0015 P2, Ruling 49 B.)
+
+Generate the list; do not recall it — `python3 scripts/register-owed.py review` against a
+**committed** revision (it refuses a dirty register). The reason is measured: at the W11 close
+the hand-compiled owed list lost NFR-RATE-13/14 (F41), and running the generator over that
+same close afterwards surfaced ten further attributed rows the record never mentions (F63).
+The output is **evidence, not authority** — where it and the record disagree, one or the other
+is amended, never silently (`CLAUDE.md` §0).
+
 ## The five questions, in order
 
 Order matters. Completion first, because an omission is only visible once you know what is
