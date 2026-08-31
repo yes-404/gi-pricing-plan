@@ -23,6 +23,9 @@ directory records what they close, and never restates their audit steps.
   writes, following [`phase-review`](../../.claude/skills/phase-review/SKILL.md).
 - [`register.md`](register.md) — the global list of open findings carried across work items
   and phases.
+- [`findings/`](findings/README.md) — the evidence essay for a register row too long to
+  carry inline; the row stays the index, this is where its Concerns prose migrates to
+  (NT-0015 P4).
 - [`security-posture.md`](security-posture.md) — the repository *platform's* security
   configuration as a public repo: what is enforced, what refuses to change, and what is
   deliberately open. Distinct from the product's security NFRs, which are requirements in
