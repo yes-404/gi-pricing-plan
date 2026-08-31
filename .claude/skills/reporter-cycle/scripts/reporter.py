@@ -25,6 +25,9 @@ import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+LONDON = ZoneInfo("Europe/London")
 
 DEFAULT_CHANNEL = "C0BSYRQ6NGM"  # #claude-code-update
 
@@ -152,34 +155,50 @@ def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
     silently omitting the ETA section. `stale` is `True`/`False` once the `**Updated:**`
     stamp parses and is compared against `now`; it is `None` when a headline was found but
     the stamp was not, so the caller can say staleness is unknown instead of guessing.
+
+    The stamp accepts two forms: a bare UTC `Z` suffix, or the GB-local form the lead's own
+    `eta.md` header documents ("All times are GB local (BST, UTC+1)") and actually writes —
+    `BST` or `GMT`. The GB-local forms are resolved via `zoneinfo.ZoneInfo("Europe/London")`
+    rather than a hardcoded UTC+1, so a `GMT` (winter, UTC+0) stamp is not silently treated
+    as if it were an hour ahead. Any other suffix — or no recognised suffix at all — is left
+    unparsed (`stale=None`), never guessed.
     """
     try:
         text = eta_file.read_text()
     except OSError:
         return None, None
 
+    # The label itself is not part of the content: it is only how this regex locates the
+    # paragraph in eta.md (a label the lead's file always carries and that this file must
+    # not ask the lead to drop). Capture the label separately so it can be excluded from
+    # the returned text — the caller prefixes its own "*ETA:*" label, and returning this
+    # one too doubled it in every historical post.
     headline_pattern = re.compile(
-        r"^\*\*Headline:\*\*.*?(?=\n[ \t]*\n|\Z)", re.MULTILINE | re.DOTALL
+        r"^\*\*Headline:\*\*[ \t]*(.*?)(?=\n[ \t]*\n|\Z)", re.MULTILINE | re.DOTALL
     )
     headline_match = headline_pattern.search(text)
     if not headline_match:
         return None, None
-    headline = headline_match.group(0).strip()
+    headline = headline_match.group(1).strip()
 
     updated_pattern = re.compile(
-        r"^\*\*Updated:\*\*\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})Z", re.MULTILINE
+        r"^\*\*Updated:\*\*\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})\s*(Z|BST|GMT)\b",
+        re.MULTILINE,
     )
     updated_match = updated_pattern.search(text)
     if not updated_match:
         return headline, None
     try:
-        updated = datetime.strptime(
+        naive = datetime.strptime(
             f"{updated_match.group(1)} {updated_match.group(2)}", "%Y-%m-%d %H:%M"
-        ).replace(tzinfo=UTC)
+        )
     except ValueError:
         return headline, None
 
-    return headline, (now - updated) > timedelta(hours=2)
+    suffix = updated_match.group(3)
+    updated = naive.replace(tzinfo=UTC) if suffix == "Z" else naive.replace(tzinfo=LONDON)
+
+    return headline, (now - updated.astimezone(UTC)) > timedelta(hours=2)
 
 
 def get_remote_main_sha(repo_dir: Path) -> str | None:
