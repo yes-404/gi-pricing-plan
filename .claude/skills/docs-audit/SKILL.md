@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, every F-id citation against the findings register or a closure record, and the process core extract's § citations against the process spec — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, every F-id citation against the findings register or a closure record, the process core extract's § citations against the process spec, and every filed plan's acceptance-standard field — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -206,6 +206,43 @@ the one that motivated the whole proposal: at `6f77abb` the process spec's own
 back-reference named `CLAUDE.md` §12 for a pointer that lives in §15, and no gate in the
 repository could see it.
 
+### The plan acceptance standard (check 28)
+
+Mechanises NT-0014 §2's C1 and `delivery-process.md` §5 step 4 / §6 step 1 — the lead's
+replan-vs-proceed check that "an acceptance standard was actually defined, not just
+implied." The field's name/position/format is defined exactly once, in
+`.claude/skills/writing-plans/SKILL.md`; this check reads that shape, it does not restate
+it.
+
+**The note that raised this (NT-0014) proposed "warn until the format lands, red
+thereafter" — rejected.** A time-of-run switch makes a verdict depend on *when* the check
+ran rather than a fact in the file, so the same plan could pass on Tuesday and fail on
+Wednesday, and a fresh clone could never reproduce which. Ruled instead
+(`docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, Ruling 46): **the discriminator is
+the plan's own filename date against `PLAN_ACCEPTANCE_STANDARD_CUTOFF`, a constant written
+in the script** — durable and reproducible in any clone at any revision.
+
+- **No warn phase.** C1 landed in the same commit as the `writing-plans` field it
+  validates, so the cutoff is that commit's date and zero plans filed before it are ever
+  in scope.
+- **Never retro-red-gated.** A plan filed before the cutoff is exempt permanently, not
+  temporarily — `docs/plans/README.md`'s "do not edit a filed plan to agree with today"
+  rule applies to what a gate demands of it too. Legacy plans get **one aggregate note
+  line** (count + cutoff date), not one warning per file — a hundred repeated warnings train
+  every reader to skim past the check's output.
+- **Scope is the plan *kind* only** — the suffix-less file `writing-plans` produces,
+  discriminated by `docs/plans/README.md`'s four documented suffixes
+  (`-ledger`/`-final-review`/`-verified`/`-handover`), never by guessing at a file's
+  content. A filename with none of those suffixes and no `YYYY-MM-DD-` date prefix either
+  is refused outright rather than silently classified.
+- **"Defined" requires content**, not just the heading. A heading with nothing under it
+  before the next heading is "implied," which §5 step 4 explicitly distinguishes from
+  "defined" — that half is checked too, and reds.
+
+**What it cannot do.** Whether the content under the heading is a *good* acceptance
+standard — testable, tied to a real requirement — is not mechanised; that judgement stays
+the lead's read at the replan-vs-proceed gate (`.claude/roles/lead.md`).
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -286,6 +323,15 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-08-31 — Check 28 added (every plan-kind file dated on/after the cutoff states a
+non-empty "Acceptance Standard" heading) and this skill updated with it in the same commit.
+Proven on deliberately broken input: a synthetic plan dated after the cutoff with no
+heading reds and names the file; the same plan dated before the cutoff passes silently
+(rolled into the aggregate legacy-count note line); a conforming plan dated after the
+cutoff — the positive control — passes; a plan carrying the heading with nothing under it
+before the next heading still reds. All four proven both as a manual gate run and as a
+permanent `tests/test_audit_docs_plan_acceptance_standard.py`.
 
 2026-08-30 (third entry, same day) — Check 26 added (the process core extract's § citations) and this skill updated with it in the same commit. Proven on deliberately broken input rather than asserted: six mutations run through `scripts/audit-docs.py` itself — a `§99` section, a `§5.99` step past §5's eight, `authoritative: true`, a `derived_from` naming no file, a `source` citing nothing, and the extract deleted while §10 still requires it. Each produced its own distinct failure, and the unmutated tree stayed silent. `.claude/skills/README.md`'s cell said "23 checks" while the code had 24; the count is now removed from that cell rather than bumped, because a restated count is `NT-0003` by construction.
 
