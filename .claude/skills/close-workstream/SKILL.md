@@ -549,6 +549,12 @@ Reconciles with the roadmap's claim of "~N" / *differs, because …*
 **Gate:** ruff clean · mypy --strict clean · N contracts kept, 0 broken · N tests pass ·
 docs audit 15/15 · req-coverage N requirements
 
+**Retry counters (NT-0014 artifact B, `~/gi-pricing-plan.local/handover/
+runtime-state.json`):** this workstream's final `replan`/`fix` counts per layer, read with
+`python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py show` —
+`none recorded` is a valid value, not an omission, when the workstream closed clean on
+its first pass.
+
 **Requirement coverage:** X of N in-scope requirements carry test evidence (Y %).
 
 **Not delivered by W<n>:** every unevidenced requirement with a verdict — delivered but
@@ -561,6 +567,11 @@ looking.
 ```
 
 ## Verified
+
+2026-08-31 — added the closure record's retry-counters line, NT-0014 adoption slice G
+(impact-matrix row 16: "Closure record includes the layer's final retry counters read
+from B"). The field became writable only once `scripts/hooks/retry_cap_hook.py` (C2)
+existed to populate it — no closure has cited it yet.
 
 2026-08-30 — §5a, written at W11's close from an obligation that was live and unmet while
 this skill had no step that would have found it. Plan review 8 §5.1's acceptance

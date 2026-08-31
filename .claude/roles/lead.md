@@ -39,6 +39,13 @@
   not sufficient — it proves the "Acceptance Standard" heading exists and is non-empty, not
   that its content is a real, testable standard; that reading stays the lead's own. The
   field's format is `.claude/skills/writing-plans/SKILL.md`'s alone to define.
+- **Recording a fix/replan verdict updates the retry counter in the runtime state file
+  (NT-0014 artifact B) via the hook, not by hand** — run
+  `python3 scripts/hooks/retry_cap_hook.py record --layer <layer> --id <id> --kind
+  {replan,fix} --evidence <pr/commit/plan citation>` (NT-0014 §2 C2,
+  `docs/process/delivery-process.md` §7). On breach the command refuses and writes a
+  durable notification to the state file — that refusal *is* the pause-and-notify-a-human
+  step, not a signal to retry the command until it succeeds.
 - **Answerable for `CLAUDE.md` §14's phase review firing on its fixed trigger** — at each
   workstream close, and again before a phase's exit demo, not discretionary. Grounded here
   rather than left assumed: the NT-0010/0011 adoption changed the very workstream cut
