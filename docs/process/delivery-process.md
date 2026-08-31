@@ -107,10 +107,15 @@ workstream is already sliced into.
 2. **Write test (red)** — executor writes a failing test directly from the acceptance
    standard.
 3. **Implement (green)** — executor writes just enough code to pass.
-4. **Verify & refactor** — the full local gate must be green. **Not yet built as a
-   blocking hook** — today this is an instruction the executor follows, not an
-   enforcement mechanism (rulings record Part C row 5; an implementation gap, not a
-   document conflict). Failure loops back to Implement, guarded (§7).
+4. **Verify & refactor** — the full local gate must be green. **Deliberately not built as
+   a blocking hook** (rulings record: `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`,
+   Ruling 48, closing Part C row 5) — CI runs the full gate on every pushed branch on a
+   clean runner, which is the stronger check; a local or git hook would check a weaker
+   thing at higher cost and can be bypassed without trace. Today this is an instruction
+   the executor follows, and the enforcement sits at CI and at the merge. The residual gap
+   is named rather than implied: a commit that is never pushed runs under no gate, and
+   nothing depends on one, because a Slice closes on a clean audit and the lead's merge
+   and both act on a PR. Failure loops back to Implement, guarded (§7).
 5. **Slice audit** — auditor checks the implementation against the slice plan: no missing
    requirements, all gates met, watching for implementation-level drift from the stated
    acceptance criteria.
@@ -134,7 +139,13 @@ re-run from the first slice run under this process (the pilot — W11's first sl
 revisit the numbers once a workstream's worth of data exists, not before. On breach, the
 loop pauses and notifies a human instead of retrying again; the redirect goes back into
 that layer's own map plan (or Implement, at Slice level) — it does not require the whole
-project to stop.
+project to stop. **The mechanism doing this logging is the runtime state file (NT-0014
+artifact B, `.claude/skills/watcher-runtime-state`) and the retry-cap hook
+(`scripts/hooks/retry_cap_hook.py`, registered as a Claude Code `PreToolUse` hook in
+`.claude/settings.json`, NT-0014 script C2)** — recording a replan/fix decision runs the
+hook, which increments the counter in the runtime state file and, on breach, refuses the
+retry and writes a durable notification there. Cap values are unchanged by this
+mechanism; only their instrumentation moved from prose to an artifact.
 
 ## 8. Parallelism
 

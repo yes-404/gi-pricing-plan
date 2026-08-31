@@ -35,12 +35,16 @@ no indicator, because it converts 'I do not know' into a confident wrong answer.
    `position`, `in_flight_expensive_verifications`) carries its own `written_by` /
    `written_at`. A block whose derived content has not changed this cycle is left
    **completely untouched**, timestamp included.
-2. **`retry_counters` is absent entirely, never present as an empty or zero value.**
-   NT-0014 script C2 (the hook that increments it) does not exist yet — adoption slice G
-   is blocked on it (`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §2). A `0`
-   from a counter nothing increments is indistinguishable from a true zero
-   (`.claude/notes/0007-context-bound-measures-cap-not-discipline.md`'s boundary-metric
-   trap in another dress) — so it is not shipped until C2 can actually write it.
+2. **`retry_counters` is absent entirely, never present as an empty or zero value.** As
+   written by *this* script (`write_runtime_state.py`), that remains true: `cycle` never
+   touches the field. **Corrected 2026-08-31, NT-0014 adoption slice G:** the block is no
+   longer absent from the file as a whole — `scripts/hooks/retry_cap_hook.py` (C2) now
+   writes it at the moment a fix/replan decision is recorded, independently of this
+   script's cycle. The reasoning this condition states still binds C2's own design
+   (Ruling 47(c): a `0` from a counter nothing increments is indistinguishable from a
+   true zero — `.claude/notes/0007-context-bound-measures-cap-not-discipline.md`'s
+   boundary-metric trap in another dress); only the "does not exist yet" clause was
+   superseded.
 3. **`in_flight_expensive_verifications` entries expire.** This block is genuinely
    underivable from a durable artifact — ephemeral coordination state a role announces
    about itself (spec §8's "announce an expensive verification, check for one already in
@@ -106,15 +110,25 @@ one-second-later timestamp as the only diff, at the same byte offset the real
 
 ## Not built in this slice
 
-- **`retry_counters`** — ships with C2 (adoption slice G), per condition 2 above.
+- **`retry_counters`** — not written by *this* script. NT-0014 adoption slice G shipped
+  it via a separate writer, `scripts/hooks/retry_cap_hook.py` (C2) — see the correction on
+  condition 2 above and that script's own docstring.
 - **Hook enforcement** (announcing is not required, checking before starting is not
-  enforced) — that is C2/C3's job (slices F/G), not this file's. This slice is
-  descriptive infrastructure only; nothing here blocks an action.
+  enforced) — C2 enforces the retry cap it owns (`scripts/hooks/retry_cap_hook.py`); this
+  file's own protocol (announce/check an expensive verification) still has no enforcing
+  hook, C3 having been dissolved (Ruling 40) rather than built. This script remains
+  descriptive infrastructure only for the blocks it writes; nothing here blocks an action.
 - **Auto-derivation of `position`** — see above. A future slice could attempt one if a
   decision-maker rules the trade-off (a parser that is sometimes wrong) acceptable;
   nothing here forecloses it.
 
 ## Verified
+
+2026-08-31 — corrected condition 2 and "Not built in this slice" now that NT-0014
+adoption slice G shipped `retry_counters` via a second writer
+(`scripts/hooks/retry_cap_hook.py`, C2) this script does not itself touch. Found while
+implementing slice G and checking this skill against the repository before relying on it
+(`CLAUDE.md` §15: verify against the primary source).
 
 2026-08-30 — filed for NT-0014 adoption slice E
 (`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §2), against Ruling 47

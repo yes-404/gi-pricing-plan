@@ -7,7 +7,9 @@ mismatch detector compares against artifact history -- because that design's act
 failure mode is agreement by vacancy: a dead or unwired writer leaves both sides reading
 zero, so the mismatch never fires. The ruling requires the watcher to **re-derive**
 rather than compare, and binds the result with four falsifiability conditions: no
-file-level freshness token, `retry_counters` absent entirely until C2 exists,
+file-level freshness token, `retry_counters` written only by its own dedicated writer
+(never fabricated here as a placeholder zero -- NT-0014 script C2,
+`scripts/hooks/retry_cap_hook.py`, landed in adoption slice G),
 `in_flight_expensive_verifications` entries carry a TTL and expire, and position fields
 name the artifact they were read from. Ruling 47(d) states the acceptance test as the
 violation that must become impossible: **a cycle in which nothing changed must produce a
@@ -111,10 +113,14 @@ def test_a_cycle_that_omits_position_args_keeps_the_prior_position(
     assert after == before
 
 
-def test_retry_counters_is_never_present(tmp_path: pathlib.Path) -> None:
-    """Ruling 47(c): `retry_counters` may not appear in B until NT-0014 script C2
-    exists (adoption slice G, not yet built) -- a `0` from a counter nothing increments
-    is indistinguishable from a true zero. Absent, never zero."""
+def test_cycle_never_writes_retry_counters(tmp_path: pathlib.Path) -> None:
+    """Ruling 47(c): a `0` from a counter nothing increments is indistinguishable from a
+    true zero, so `retry_counters` is written only by its own dedicated writer
+    (`scripts/hooks/retry_cap_hook.py`, NT-0014 script C2, adoption slice G) -- never by
+    this script's `cycle`, which has no source artifact for it and must not fabricate
+    one. (Renamed 2026-08-31 from `test_retry_counters_is_never_present`: C2 now exists
+    and does write the block via a separate path, so the absolute claim in the old name
+    was no longer true of the file as a whole -- only of what `cycle` itself writes.)"""
     state_file = tmp_path / "runtime-state.json"
     _run(state_file, "cycle", "--phase", "2", "--phase-source", "docs/roadmap.md §7")
     doc = json.loads(state_file.read_text())

@@ -110,7 +110,19 @@ closed: check the id against `docs/roadmap.md` before acting on it, and say so p
 Proposals land in `docs/audit/plan-reviews.md` as a dated `### Plan review N` section, and
 anything undecided goes to `docs/open-questions.md` with options and a recommendation.
 
+**Cite the phase's retry counters (NT-0014 artifact B).** The same field
+`close-workstream` cites at Work close (`.claude/skills/close-workstream/SKILL.md`,
+"Closure record template") applies here one layer up: read
+`python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py show` for
+each `project`/`phase`-layer `replan`/`fix` entry the phase's Works recorded, and name it
+in the review — this is the §7 pilot data question 5 ("no change" included) has to answer
+against, once one workstream's worth exists.
+
 ## Verified
+
+2026-08-31 — added the retry-counters citation to Output, NT-0014 adoption slice G
+(impact-matrix row 17: "Same as row 16 at phase level"). Not yet exercised by a real
+review — no phase-level review has run since C2 existed to populate the counters.
 
 2026-08-29 — the Output location corrected. It named `docs/roadmap.md`, which was where
 reviews 1-6 originally landed; the roadmap slim (NT-0009, accepted 2026-08-27) moved all six
