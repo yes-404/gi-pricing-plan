@@ -438,6 +438,46 @@ code; both were wrong together, and no amount of comparing them would have said 
 Check generated output against the **requirement** — open the spec clause and read the
 document — not only against the thing it was generated from.
 
+### A "verified against tree" field set at authoring time cites a tree that never held the change
+
+`docs/process/delivery-process.core.json`'s `meta.verified_against_tree` exists so a future
+digest mismatch can name the exact range to read: `git diff <verified_against_tree>..HEAD --
+delivery-process.md`. That only works if the recorded commit is one where the digest and the
+markdown were actually reconciled **together** — the tree a human read both artifacts at.
+
+**Setting it to the branch's own base, at authoring time, is the wrong commit by
+construction**: a PR's base is the tree *before* that PR's own edits, so a branch that edits
+`delivery-process.md` and updates the digest in the same commit cannot correctly cite its own
+base — the base is exactly the tree the reconciliation was checking *against*, not the tree it
+was performed *at*. NT-0014 adoption slice H set the field to its own base commit when it
+first built check 27; slice G rebased onto H, edited `delivery-process.md` again, "re-reconciled"
+the digest — and set the field to slice H's base too, one commit further removed from the
+actual reconciliation. Neither was caught, because check 27 (`scripts/audit-docs.py`) validates
+only the **digest** against the current file bytes — never the SHA against anything — so a wrong
+SHA produces no red anywhere. Confirmed live at `9e8783d`: `meta.verified_against_tree` reads
+`79991f36c3337b87a2ae788acae3c255d5ae1084`, a tree that predates slice G's own edits to
+`delivery-process.md` §6/§7 by one merge; `git diff 79991f3..HEAD -- docs/process/
+delivery-process.md` at that point would show a future reader G's own already-reconciled
+changes as if they were an unreviewed drift, which is the opposite of what the field exists to
+tell them.
+
+**It was harmless here only by accident.** H's own citation of its base was never wrong in
+effect, because nothing between H's base and H's own commit touched the spec bytes the digest
+covers — the field pointed at a stale-but-content-identical tree. That is not a property of the
+mechanism; it is a property of nobody having landed a second `delivery-process.md` edit in
+between, which G then did.
+
+**The fix: recompute both fields at the actual merge commit, after merge, not at authoring
+time.** The PR author cannot know the eventual merge SHA before GitHub assigns it, so citing a
+tree "at authoring time" always means citing something *before* the change — the branch's own
+base or an ancestor of it. Either recompute the digest (it will not move, since it is a hash of
+content already correct) and set the tree field to the actual merge commit in a small follow-up
+once it is known, or — cheaper, and what should become the norm — do not set the field to a
+commit at all until the merge is known; leave it pointing at the previous reconciliation's
+commit until a follow-up (or the next PR that touches the spec) updates it to the new merge SHA
+in the same motion. Never cite the working branch's own base as if it were the point of
+reconciliation.
+
 ## 4. Measure NFRs, don't assert them
 
 Record the number and the budget it is measured against:
@@ -631,3 +671,14 @@ outright.
 
 2026-08-15 — the injection lesson above came from plan review 2, after an independent
 audit found that this skill's own worked example had passed for the wrong reason.
+
+2026-08-31 — the `meta.verified_against_tree` authoring-time habit, found auditing the
+NT-0012/0013/0014 adoption's close. Confirmed live at `9e8783d`:
+`docs/process/delivery-process.core.json`'s `meta.verified_against_tree` reads
+`79991f36c3337b87a2ae788acae3c255d5ae1084`, slice H's own base commit — one merge before
+slice G's own edits to the spec bytes the digest covers, both re-set by G to the same wrong
+value. `uv run mypy` and `check 27` were both green throughout; check 27 validates the
+digest, never the SHA, so the wrong citation produces no failure anywhere. No register row
+filed — the digest itself is correct and the citation self-heals whenever `delivery-process.md`
+next changes, so this is process guidance for the next author, not an open defect with an
+owner.
