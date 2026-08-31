@@ -333,6 +333,17 @@ uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item c
 The three axes answer different questions and none substitutes for another —
 [`close-workstream`](../close-workstream/SKILL.md) has the method and the incident behind each.
 
+```bash
+python3 scripts/register-owed.py <work-id | phase | review>   # e.g. W11, 2, review
+```
+
+NT-0015 P5's owed-list generator (Ruling 52) — every open `docs/audit/register.md` row
+owed by, or blocking, the named close, searched across both the Work item and Decision
+columns so an owner named only in prose is still found. **On-demand, not gated**: it is not
+part of `CLAUDE.md` §11's gate command list (same treatment as `scope-audit.py` above), and
+it refuses to run against an uncommitted register rather than citing a dirty tree.
+`close-workstream` §5b has the closure-record citation format.
+
 ## NFR measurement — and the contention factor that reads like a regression
 
 `bench-data.py` knows `01`'s budgets; `bench-model.py` knows `02`'s. Run phases in separate
@@ -420,6 +431,10 @@ The relay is what moves a committed job to the broker. **Without `beat` running,
 `queued` and nothing explains why.**
 
 ## Verified
+
+2026-08-31 — `register-owed.py` added to the closure-audit section, NT-0015 P5 (Ruling 52).
+Deliberately not added to `CLAUDE.md` §11's gate command list: it is on-demand, the same
+treatment `scope-audit.py` already has here.
 
 2026-08-30 (third entry, the reused-`session` note immediately above) — `225c0dd`'s own
 message claimed the extension's 8 surfaced errors fixed, `examples/fremtpl2/seed.py`

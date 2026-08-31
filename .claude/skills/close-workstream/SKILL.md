@@ -537,6 +537,29 @@ register row that did exist, and the roadmap still lost them for two workstreams
 records them as *"omitted from this row until now"*. A row is necessary and has not been
 sufficient.
 
+## 5b. Generate the owed list, don't recall it
+
+`docs/audit/register.md`'s open rows owed by, or blocking, this close are not a list you
+compile by hand while writing the closure record — that is precisely how F41 lost
+NFR-RATE-13/14 for two workstreams even though a register row, F-W9-1, existed for them the
+whole time (§5a's own precedent quotes the same row). Run it and paste the output verbatim:
+
+```bash
+python3 scripts/register-owed.py <work-id>     # e.g. W11
+```
+
+**Ruling 52** (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`) binds the result's shape,
+and the exact wording is in
+[`checklists/work-item-close.md`](../../../docs/audit/checklists/work-item-close.md)'s Owed
+list step: the block names the command and the **committed revision** it ran against (the
+script itself refuses on an uncommitted register — never a bare date, never a dirty
+worktree), it lands verbatim as a fenced, explicitly-generated block, and it is **evidence,
+not authority** — it is not a substitute for the hand-written Findings section, which still
+carries per-close judgements and findings that name no register row (`FR-RATE-36, 37, 42 not
+started` is real and has no row). Reconcile the two in one sentence: every id in the
+generated block appears in the Findings section with a resolution, and the Findings section
+adds nothing the block does not carry except findings named as having no register row.
+
 ## 6. Update the plan docs in the same commit
 
 - `docs/roadmap.md` — status table, closure evidence with dates, the §5 mapping
@@ -607,6 +630,11 @@ looking.
 ```
 
 ## Verified
+
+2026-08-31 — §5b added, NT-0015 P5 (Ruling 52, `docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`):
+`scripts/register-owed.py` exists and its tests pass (`tests/test_register_owed.py`). Not
+yet cited by a real closure record — the first close to use it is this proposal's own
+acceptance evidence.
 
 2026-08-31 — added the closure record's retry-counters line, NT-0014 adoption slice G
 (impact-matrix row 16: "Closure record includes the layer's final retry counters read
