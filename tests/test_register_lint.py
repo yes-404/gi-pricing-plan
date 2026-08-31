@@ -218,10 +218,132 @@ def test_a_data_row_after_a_blank_line_is_still_parsed(tmp_path: pathlib.Path) -
     f = tmp_path / "register.md"
     f.write_text(content, encoding="utf-8")
     rows, problems = register_lint.parse_register(f)
-    assert problems == []
     assert [r.finding_id for r in rows] == ["A (F999996)", "B (F999995)"], (
         "the row after the blank line must not be silently dropped"
     )
+    # Amended 2026-08-31: the gap is now ALSO a reported problem. Reading past it and
+    # accepting it are different things, and the original version of this test asserted
+    # `problems == []` — pinning the tolerance as correct behaviour. It was not: GFM ends a
+    # table at a blank line, so the live register rendered F52 and then F53-F64 as bare
+    # paragraphs for as long as the gaps existed. This check had been taught to read through
+    # the one document defect it should have failed on. Both halves are the contract now:
+    # every row is still linted, AND the gap is loud.
+    assert len(problems) == 1, "the gap must be reported, not silently tolerated"
+    assert "split by a non-table line" in problems[0]
+
+
+def test_a_contiguous_table_reports_no_gap(tmp_path: pathlib.Path) -> None:
+    """Positive control for the check above, run against the same code path rather than an
+    easier one: an unbroken table of the same shape must report nothing. Without this, a gap
+    check that fired on every register — or on none — would look identical in the suite.
+    """
+    content = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+        "| A (F999996) | before | W1 | 1 | carry forward — unowned by design, "
+        "decays to the next §14 review |\n"
+        "| B (F999995) | after | W1 | 1 | **not started** — nothing built yet |\n"
+    )
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    rows, problems = register_lint.parse_register(f)
+    assert len(rows) == 2
+    assert problems == []
+
+
+def test_a_row_missing_its_leading_pipe_is_reported_even_as_the_last_line(
+    tmp_path: pathlib.Path,
+) -> None:
+    """GFM makes leading pipes optional, so a contributor can write a row this parser skips
+    entirely: `if not line.startswith("|"): continue` fires before `seen` is incremented, so
+    the `assert classified == seen` guard — the device that makes every other silent-drop
+    class here impossible — cannot see it.
+
+    The first version of the contiguity check bounded its sweep by `rows[-1].line_no`, i.e.
+    wherever the field-splitter last SUCCEEDED, and so caught such a row only when a
+    well-formed row followed it. The auditor refuted that with this fixture: a hidden row as
+    the LAST line was invisible, `problems == []`. That is the position that matters, because
+    every finding from F52 on was filed by appending to the end of the table. Both positions
+    are pinned here so the bound cannot regress to the parsed-rows one.
+    """
+    header = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+    )
+    good = (
+        "| A (F999996) | before | W1 | 1 | carry forward — unowned by design, "
+        "decays to the next §14 review |\n"
+    )
+    hidden = "C (F999994) | no leading pipe | W1 | 1 | **not started** — nothing built yet |\n"
+
+    trailing = tmp_path / "trailing.md"
+    trailing.write_text(header + good + hidden, encoding="utf-8")
+    rows, problems = register_lint.parse_register(trailing)
+    assert len(rows) == 1, "the hidden row is still not parsed — that is the residual"
+    assert len(problems) == 1, "but it must no longer be SILENT"
+    assert "split by a non-table line" in problems[0]
+
+    sandwiched = tmp_path / "sandwiched.md"
+    sandwiched.write_text(header + good + hidden + good, encoding="utf-8")
+    _, problems = register_lint.parse_register(sandwiched)
+    assert len(problems) == 1
+
+
+def test_prose_and_a_fenced_example_table_below_the_register_are_not_flagged(
+    tmp_path: pathlib.Path,
+) -> None:
+    """The contiguity sweep must stop at the end of the table's own section, not at the last
+    four-pipe line anywhere in the file.
+
+    The first bound that fixed the trailing-row case searched the whole file for row-shaped
+    lines, so a fenced example table — or a `|`-heavy shell pipeline in prose — appearing
+    anywhere below the register dragged the upper bound down to it and flagged every ordinary
+    line in between. The auditor built exactly this fixture: 8 problems, 7 of them prose,
+    blank lines and a heading that belong to no table.
+
+    A markdown heading cannot occur inside a table, so it terminates the section safely. Both
+    bounds are needed: heading alone would flag the prose paragraph that sits between the
+    live register's table and `## F42 is retired`, which is why that shape is pinned too.
+    """
+    header = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+    )
+    good = (
+        "| A (F999996) | before | W1 | 1 | carry forward — unowned by design, "
+        "decays to the next §14 review |\n"
+    )
+
+    below = tmp_path / "below.md"
+    below.write_text(
+        header + good + "\nSome prose about the register.\n\n## Appendix\n\n"
+        "```\n| col1 | col2 | col3 | col4 |\n```\n",
+        encoding="utf-8",
+    )
+    _, problems = register_lint.parse_register(below)
+    # The one surviving problem is the pre-existing field-count check on the fenced row,
+    # which this change neither introduced nor addresses. No contiguity problem at all.
+    assert not [p for p in problems if "split by a non-table line" in p]
+
+    live_shape = tmp_path / "live_shape.md"
+    live_shape.write_text(
+        header + good + "\nA carried finding is written here by the close checklist.\n"
+        "\n## F42 is retired\n\nprose\n",
+        encoding="utf-8",
+    )
+    _, problems = register_lint.parse_register(live_shape)
+    assert problems == [], "the paragraph between the table and the next heading is not a gap"
+
+
+def test_the_live_register_table_is_contiguous(tmp_path: pathlib.Path) -> None:
+    """The live register must render as one table. This is the corpus check: the unit tests
+    above prove the rule, this proves the artifact obeys it. It failed at `567eea2` — two
+    blank lines around F52 split the table into three, and everything from F52 on rendered as
+    prose in GitHub's view of the file while every check printed OK.
+    """
+    rows, problems = register_lint.parse_register(register_lint.TARGETS[0])
+    assert rows, "the live register parsed to zero rows — the parser, not the register"
+    assert problems == [], f"the live register's table is not contiguous: {problems}"
 
 
 # --- Header detected by position, not by text --------------------------------------------
