@@ -154,3 +154,34 @@ passes — the bare `uv run mypy` does not examine `.claude/skills/` at all (its
 `files` list is `packages/*/src` and `backend/src` only), so that command alone would have
 proven nothing about this file. There is no CI workflow for `.claude/**`
 (`docs/audit/register.md` F26), so these local runs are the only gate this change has.
+
+**2026-08-31 — two `get_eta` defects found and fixed, TDD, against a new regression suite
+(not merely re-smoke-tested).** (1) The `**Updated:**` regex required a literal `Z`
+suffix, but `eta.md`'s own header says "All times are GB local (BST, UTC+1)" and real
+stamps are written that way — measured over the reporter's full operating history (212
+Slack messages, 2026-08-29..2026-08-31), the STALE branch had fired zero times and
+166/190 ETA posts read "staleness unknown". Fixed by accepting `BST`/`GMT` alongside `Z`
+and resolving GB-local stamps through `zoneinfo.ZoneInfo("Europe/London")` rather than a
+hardcoded `+1`, so a `GMT` (winter, UTC+0) stamp is not treated as an hour ahead. (2) the
+returned headline included its own `**Headline:**` label, doubling it at the call site
+(`*ETA:* **Headline:** …`) in every historical post — the label is now stripped in
+`get_eta`, with the rest of the paragraph (its own `**` emphasis, em dashes, and
+additional lines) relayed byte-for-byte.
+
+Both defects are exercised by
+`.claude/skills/reporter-cycle/scripts/tests/test_reporter.py` (9 tests, run directly —
+not part of `pyproject.toml`'s `testpaths`, since these scripts are stdlib-only utilities
+outside the uv workspace): a BST stamp, a GMT stamp (chosen specifically so a hardcoded
+`+1` would flip its `stale` result), a `Z` stamp (regression guard — one is live in
+`eta.md`), an unparseable-timezone stamp and a garbage-suffix-glued-to-letters stamp (both
+must still return `stale=None`, not a guess), a stamp old enough that the STALE branch
+actually fires (asserted through to `format_routine_post`'s rendered `STALE` text — that
+branch had never fired in production), a missing-stamp and a missing-file case, and the
+headline-label-stripped-content-preserved-verbatim case. Every test was confirmed to fail
+for the stated reason against the pre-fix code before the fix was applied. `uv run ruff
+check .` passes repo-wide; `uv run mypy --strict` on `reporter.py` and the new test file
+passes. The full workspace `uv run pytest -q` was not run to completion for this change:
+`reporter.py` sits outside every `testpaths` entry and nothing in the workspace imports it,
+so that suite does not exercise the changed code, and — contending for the same
+docker-compose Postgres/Redis/MinIO stack as other sessions running concurrently in this
+repository's shared `.git` — it was still at 23% after 21 minutes when stopped.
