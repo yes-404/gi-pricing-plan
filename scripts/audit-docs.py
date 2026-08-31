@@ -43,7 +43,9 @@ Checks (all non-destructive, exit 1 on any failure):
  29. Every Decision cell in docs/audit/register.md opens with the register's own disposition
      vocabulary, a CLAUDE.md §13 verdict, or the negated fix-before-close shape; every
      resolution annotation names a date and a PR/commit/doc reference; every unowned row
-     says more than the bare word (Ruling 50, `scripts/register-lint.py`).
+     says more than the bare word (Ruling 50, `scripts/register-lint.py`). Also prints, as a
+     note rather than a failure, the count of rows not yet migrated to
+     docs/audit/findings/<F-id>.md against the migration threshold (Ruling 51, NT-0015 P4).
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -93,7 +95,11 @@ def _load_register_lint() -> types.ModuleType:
 
 
 def check_register_grammar() -> None:
-    """Check 29: docs/audit/register.md's Decision-cell grammar (Ruling 50)."""
+    """Check 29: docs/audit/register.md's Decision-cell grammar (Ruling 50), plus the P4
+    findings-file migration residue line (Ruling 51) — a note, never a failure, so the
+    "opportunistic migration" claim stays falsifiable everywhere the docs gate runs, not
+    only when `register-lint.py` is invoked directly.
+    """
     register = ROOT / "audit" / "register.md"
     if not register.exists():
         notes.append("no docs/audit/register.md — check 29 skipped")
@@ -103,6 +109,8 @@ def check_register_grammar() -> None:
     for v in violations:
         fail(f"check 29: {v}")
     notes.append(f"check 29: register grammar — {len(violations)} violation(s)")
+    rows, _problems = register_lint.parse_register(register)
+    notes.append(f"check 29: {register_lint.residue_line(register, rows)}")
 
 
 

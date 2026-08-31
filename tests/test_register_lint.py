@@ -224,6 +224,57 @@ def test_a_data_row_after_a_blank_line_is_still_parsed(tmp_path: pathlib.Path) -
     )
 
 
+# --- Header detected by position, not by text --------------------------------------------
+
+def test_a_data_row_naming_both_column_headers_is_not_dropped(tmp_path: pathlib.Path) -> None:
+    """Regression for a proven bug, found live rather than hypothesised: the header test was
+    `"Finding id" in line and "Decision" in line` — a substring match anywhere in the row,
+    not a header-position check. An auditor's own draft finding (F64), *about this exact
+    parser*, quoted both column names in its Concerns cell and was silently dropped by the
+    bug it was describing — no violation, no structural-problem message, nothing in
+    `main()`'s output to say a row had vanished. Reworded before it landed, so this fixture
+    reconstructs the collision shape rather than quoting the live row.
+
+    `parse_register` now finds the header by **position** — the `|`-led line immediately
+    before the delimiter row — so a data row's prose can say anything about the register's
+    own columns without being mistaken for one.
+    """
+    content = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+        "| Parser drops rows naming its own columns (F964) | `register-lint.py`'s header "
+        "test matches any line containing both `Finding id` and `Decision` as substrings, "
+        "so a row about this exact bug is itself silently dropped | NT-0015 | 2 | fix "
+        "before close — detect the header by position, not by text |\n"
+        "| Second, unrelated row (F963) | nothing special | W1 | 1 | **not started** |\n"
+    )
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    rows, problems = register_lint.parse_register(f)
+    assert problems == []
+    assert [r.finding_id for r in rows] == [
+        "Parser drops rows naming its own columns (F964)",
+        "Second, unrelated row (F963)",
+    ], "a data row naming both column headers in its own prose must not be dropped"
+
+
+def test_the_header_row_itself_is_never_parsed_as_data(tmp_path: pathlib.Path) -> None:
+    """The position-based header detection must still exclude the real header — this is the
+    control for the fix above: a check that only ever adds rows in would pass the collision
+    test above by accident if it stopped excluding the header entirely.
+    """
+    content = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+        "| A (F962) | concerns | W1 | 1 | **not started** |\n"
+    )
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    rows, problems = register_lint.parse_register(f)
+    assert problems == []
+    assert [r.finding_id for r in rows] == ["A (F962)"]
+
+
 def test_live_register_row_count_matches_a_direct_count(tmp_path: pathlib.Path) -> None:
     """The register's own blank-line gaps (verified above) mean a naive `grep -c '^| F'`-style
     count is not a safe cross-check on its own — but a count of every line that looks like a
@@ -269,3 +320,99 @@ def test_check_29_is_wired_into_the_docs_gate() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "check 29" in result.stdout, result.stdout
+
+
+# --- P4: findings-file migration residue (Ruling 51) ------------------------------------
+#
+# Ruling 51 §2: "the residue is measured, in one aggregate line" — "with no such line,
+# 'incremental migration' is a claim nothing can falsify." CLAUDE.md §13: "a check that has
+# never printed a failure has not been tested" — so this proves the count non-zero on a
+# fixture built to need migration, and zero on one that does not, rather than asserting the
+# mechanism works from reading the code.
+
+def _rows_of(content: str, tmp_path: pathlib.Path) -> list[object]:
+    f = tmp_path / "register.md"
+    f.write_text(content, encoding="utf-8")
+    rows, problems = register_lint.parse_register(f)
+    assert problems == []
+    return cast("list[object]", rows)
+
+
+def test_residue_is_nonzero_when_a_row_exceeds_the_threshold(tmp_path: pathlib.Path) -> None:
+    """A deliberately broken input: one row long enough to need a findings-file split, and
+    nothing else in the table. The residue count must be exactly 1, not 0 and not silently
+    swallowed — the failure mode this line exists to make impossible to miss.
+    """
+    long_decision = "carry forward — unowned by design, decays to the next §14 review. " + (
+        "Forensic evidence padding this cell well past the migration threshold. " * 20
+    )
+    content = _table(long_decision, finding="Long row (F999994)")
+    assert len(content) > register_lint.ROW_LENGTH_THRESHOLD, "fixture must exceed the threshold"
+    rows = _rows_of(content, tmp_path)
+    over, total = register_lint.residue(rows)
+    assert (over, total) == (1, 1)
+    line = register_lint.residue_line(tmp_path / "register.md", rows)
+    assert "1 of 1" in line
+    assert str(register_lint.ROW_LENGTH_THRESHOLD) in line
+
+
+def test_residue_is_zero_when_every_row_is_short(tmp_path: pathlib.Path) -> None:
+    """The control: a table with no row anywhere near the threshold must report a true zero,
+    not a count that happens to read as zero because nothing was measured.
+    """
+    content = _table("**not started** — nothing built yet", finding="Short row (F999993)")
+    assert len(content) < register_lint.ROW_LENGTH_THRESHOLD
+    rows = _rows_of(content, tmp_path)
+    over, total = register_lint.residue(rows)
+    assert (over, total) == (0, 1)
+    line = register_lint.residue_line(tmp_path / "register.md", rows)
+    assert "0 of 1" in line
+
+
+def test_residue_counts_are_never_treated_as_lint_failures() -> None:
+    """An over-threshold row must not, on its own, fail `lint_register` — Ruling 51: 'never a
+    per-row judgement,' and the migration is opportunistic-on-amendment, not mandatory. This
+    guards against the residue mechanism accidentally growing into a fourth grammar rule.
+    """
+    failures = register_lint.lint_register(REGISTER)
+    assert failures == [], (
+        "no row should fail linting purely for exceeding the migration threshold"
+    )
+
+
+def test_residue_line_reflects_the_live_register(tmp_path: pathlib.Path) -> None:
+    """Cross-check against the live register directly, so a change to `ROW_LENGTH_THRESHOLD`
+    or to `residue()` that silently stops counting correctly is caught here, not only in the
+    executor's own hand-run measurement.
+    """
+    rows, problems = register_lint.parse_register(REGISTER)
+    assert problems == []
+    over, total = register_lint.residue(rows)
+    assert total == len(rows)
+    recomputed_over = sum(1 for r in rows if len(r.raw) > register_lint.ROW_LENGTH_THRESHOLD)
+    assert over == recomputed_over
+
+
+def test_register_lint_main_prints_the_residue_line() -> None:
+    """`main()` — the entry point a developer or CI actually runs — must print the residue
+    line, not just make it importable. Runs the real subprocess so nothing about pytest's own
+    import machinery can hide a wiring mistake in `main()` itself.
+    """
+    result = subprocess.run(
+        ["python3", str(SCRIPT)], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "residue —" in result.stdout, result.stdout
+    assert str(register_lint.ROW_LENGTH_THRESHOLD) in result.stdout
+
+
+def test_check_29_note_carries_the_residue_line() -> None:
+    """The docs gate itself (not just standalone `register-lint.py`) must surface the residue
+    count, per Ruling 51's 'printed every run' — otherwise a developer who only ever runs
+    `audit-docs.py` never sees it.
+    """
+    result = subprocess.run(
+        ["python3", str(AUDIT_SCRIPT)], capture_output=True, text=True, cwd=ROOT
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "residue —" in result.stdout, result.stdout
