@@ -33,6 +33,16 @@
   **The cost is real and is accepted**: a fresh agent re-reads the plan and rulings from disk
   instead of holding them. Measured against it, W11 Task 3C ran on a fresh agent in ~28
   minutes, so the re-read is cheaper than it looks.
+- **On entering a Work item, Phase or review, the owed list is generated, never recalled** —
+  run `python3 scripts/register-owed.py <work-id | phase | review>` against a **committed**
+  revision (the script refuses a dirty `docs/audit/register.md`, so this is enforced, not
+  merely asked). NT-0015 P5, Ruling 52. The reason is measured, not stylistic: at the W11
+  close the hand-compiled owed list **lost NFR-RATE-13/14** (F41), and running the generator
+  against that same close afterwards surfaced **ten further W11-attributed rows the closure
+  record never mentions**. A recalled list is compiled at the moment of highest load, by the
+  person with the most reason to believe it is complete. The output is **evidence, not
+  authority** — where it and a record's own findings table disagree, one or the other is
+  amended, never silently (`CLAUDE.md` §0).
 - **The replan-vs-proceed check** (`delivery-process.md` §5 step 4 / §6 step 1) **consults
   `scripts/audit-docs.py` check 28's output as evidence that a plan's acceptance standard
   was actually defined, not just implied** (NT-0014 §2 C1). A green check 28 is necessary,
