@@ -252,6 +252,72 @@ makes it true.
 
 ---
 
+## 4a. Acceptance Standard
+
+**Added 2026-08-31, after filing.** See *Corrections after filing* for why this section is
+numbered `4a` rather than inserted as a `## 5`, and for the record of what it does and does
+not change.
+
+**The honest shape of this plan's standard is a conjunction, and stating it as anything else
+would be a formality.** Each slice below carries its own numbered, command-checkable
+acceptance, because each slice is one PR, one audit and one gate, and no slice is accepted
+on another's evidence. What follows is
+therefore the **plan-level** standard: the conjunction, plus the four conditions no single
+slice can carry because they are properties of the plan as a whole.
+
+The plan is complete when all eight hold, each by a command a fresh reviewer can run at the
+close tree, and each stated with the tree it was run at.
+
+1. **Every slice's own acceptance block passes at the tree its PR merged on.** Four blocks,
+   19 items, each named rather than ranged, because a range silently drops an item appended
+   inside it: §6.1, §6.2, §6.3, §6.4; §7.1, §7.2, §7.3, §7.4, §7.5; §8.1, §8.2, §8.3, §8.4;
+   §9.1, §9.2, §9.3, §9.4, §9.5, §9.6. A slice whose block has an unrun item is not accepted,
+   and the verdict is the lead's, never a slice's own.
+2. **The gate is green on both halves at the close tree**, not the Python half alone —
+   `uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q`, then
+   `python3 scripts/audit-docs.py`, then the frontend half of `CLAUDE.md` §11. A Python-only
+   green has been reported as a passing gate in this repository before.
+3. **Enforcement is proven on deliberately broken input, three times, and the proofs are
+   named with their commands.** §6's mutation of the `NOTES` constant — written at its Step 1,
+   run at its Step 2, re-asserted as §6.2 — exits non-zero; §7's Step 5 non-git invocation
+   exits non-zero rather than emitting an empty census; §9's Step 8 re-runs the first
+   mutation against the moved root and exits non-zero. A check
+   that has never printed a failure has not been tested — `CLAUDE.md` §13.
+4. **The census reproduces byte for byte at its own tree** — §7.3 — and its companion
+   document states the tree, the corpus rule and the row count, which equals
+   `git ls-files | wc -l`. A census that cannot be reproduced from a stated corpus is not
+   evidence, and §1 above is the measurement showing why.
+5. **No frozen file is edited.** `git diff --stat <first-merge>..<close-tree> -- docs/plans/`
+   names this plan and no other file under `docs/plans/`, and names it only for appended
+   *Corrections after filing* entries. NT-0016 C4 and [`README.md`](README.md).
+6. **No identifier is minted and no dependency is added.**
+   `git diff <first-merge>..<close-tree> -- pyproject.toml uv.lock` is empty, and
+   `python3 scripts/req-coverage.py` reports the same requirement total as at `b551060`.
+   §10's prediction table is the falsification route for both.
+7. **Every question §2 marks *not rulable* has either been ruled at the decision gate against
+   Slice 3's draft, or is carried forward with a named owner.** Q1, Q2, Q3 and Q7's general
+   half — cited individually. Silence is not one of the outcomes; `CLAUDE.md` §13's four
+   verdicts apply to a deferred question exactly as they apply to an unevidenced requirement.
+8. **Slice 4 is not accepted on a green audit alone.** §9.1's grep returns exactly the
+   tombstone plus files under `docs/plans/`, §9.3's working-note count matches the pre-move
+   tree, and §9.5 shows the `docs` workflow ran on the PR. §1b is the measurement proving a
+   green audit after a move is reachable with the checks switched off, so item 3's third
+   proof and this item's three commands are what separate *watched* from *quiet*.
+
+**What this standard deliberately does not cover.** NT-0016 §11's own draft acceptance items
+(c) through (f) — the ownership matrix, the verdict-2/verdict-4 filings, `file-lint.py`'s
+three broken fixtures, and one new file of each high-traffic category born through the
+updated skills — belong to Stages 2–5, which §4 leaves unscoped. Claiming them here would
+make this plan's completion depend on work it does not describe. Item (b), *every tracked
+file resolves to exactly one category*, is likewise Stage 2's; what this plan owes toward it
+is Slice 3's draft, and item 7 above is where that debt is discharged or carried.
+
+**Acceptance of the plan as a whole is the maintainer's**, per the undated line at the foot
+of this file and `CLAUDE.md` §12. A slice closes on a clean audit and the lead's merge; the
+plan does not.
+
+---
+
 ## 5. Global Constraints
 
 Every slice's requirements implicitly include these. Values are copied from their sources.
@@ -654,8 +720,45 @@ it is given.
 
 ## Corrections after filing
 
-*None yet.* A filed plan is frozen at its date ([`README.md`](README.md)); a correction is
-**appended to this section**, in this file, naming what it supersedes and when.
+**2026-08-31 — §4a, *Acceptance Standard*, added after filing. Nothing in the plan is
+superseded.**
+
+`scripts/audit-docs.py` check 28 landed in `26de823` (PR #510, NT-0014 adoption slice F) with
+a cutoff constant of 2026-08-31 and made an explicit `Acceptance Standard` heading a required
+field on every plan-kind file filed on or after that date. This plan was filed the same day
+and merged as `826d636` about an hour earlier, so it was the first and only file the check
+had in scope, and `main` went red on it. The obligation is not new — `../process/
+delivery-process.md` §11 already required a plan's acceptance to be executable, and §5 step 4
+gates on whether a standard was *defined* rather than *implied*; what `26de823` added is the
+field's machine-checkable name and position, which `.claude/skills/writing-plans/SKILL.md`
+now defines as the single source.
+
+**Why this is an addition and not an edit to a frozen claim.** [`README.md`](README.md)
+freezes a filed plan so that what was believed at its date survives; the rule it states is
+against editing a plan *to agree with today's repository*, which destroys the record of which
+side was believed. This plan made no claim about its own acceptance standard — it stated
+per-slice acceptance and said nothing at the plan level — so §4a contradicts nothing and
+overwrites nothing. Every count, every file list and every line reference elsewhere in this
+document still reads as it did at `826d636`, and §4a introduces no new measurement: its eight
+items cite the slices' existing blocks and §1's existing figures.
+
+**Why it is numbered `4a` rather than inserted as a new `## 5`.** The recommended position in
+`writing-plans`' header template is above *Global Constraints*, which here is §5. Taking that
+number would renumber §5 through §11, and this document's §11 self-review cites §4, §5, §7
+and §8 by number — so a renumber would either break four live citations or require editing
+them, which is the frozen-file edit the paragraph above declines to make. `4a` puts the
+section exactly where the template asks for it and leaves every existing number and every
+citation to one untouched. It is the same device `.claude/notes/0016-…` uses for its own §3a,
+and `CLAUDE.md` §5's "never renumber, append" is the rule behind both.
+
+**What a reader should take from this.** The plan as filed did not state a plan-level
+acceptance standard. It does now, added a day later under a check that did not exist when it
+was written, and §4a says so in its own first line rather than reading as though it had been
+there all along.
+
+---
+
+*Further corrections are appended below, each dated, each naming what it supersedes.*
 
 **This section is not optional and it does not live anywhere else.** Corrections to this plan
 belong here and nowhere else — not in a sibling ruling, not in a later plan, not in an audit
