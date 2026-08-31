@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-29, the lead — the primary source for its own observed failures, dispatched to this decision-maker session to file |
-| **Status** | `open` — the receiving half of the mitigation already has a home (`docs/process/delivery-process.md` §15, verified below); the stronger mitigation, "remove the relay," does not yet appear in any governing document |
+| **Status** | `landed` 2026-08-31 — the "remove the relay" half landed in `docs/process/delivery-process.md` §15 in adoption slice D (`97965be`); the receiving half already had a home. Closed with the adoption (`docs/audit/work/nt-0012-0013-0014-adoption/README.md`). **Corrected from `open`, which had been false since `97965be`.** The note's own thesis was borne out during the W11 reopen: the lead's relayed claims were corrected by members thirteen times, every one correctly |
 | **Deliverable** | Evidence only, per `CLAUDE.md` §0's table — no code, no spec change. `.claude/roles/lead.md` already carries the claim this note evidences; a later decision may fold the mitigations into `delivery-process.md` or `lead.md` directly |
 | **Owner** | The lead is the author and the primary source; this decision-maker session verified what it could independently and files the note |
 | **Lands in** | Partially landed already: `docs/process/delivery-process.md` §15's third bullet. Not yet landed: the "remove the relay" standing-practice change |

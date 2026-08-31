@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Raised** | 2026-08-29, the lead — found sweeping the rest of the W11 handover for durable lessons, the step task #23 itself specifies |
-| **Status** | `open` — the two rules below are assessed and written down; where each permanently lands (a role file's credential-handling duty, an operational skill, or both) is not yet decided |
+| **Status** | `landed` 2026-08-31 — both rules have durable homes, filed in adoption slice C (`97965be`): the credential-lifetime rule in `.claude/skills/secret-hygiene`, the search-by-shape rule in `.claude/skills/close-workstream`. Closed with the adoption (`docs/audit/work/nt-0012-0013-0014-adoption/README.md`). **Corrected from `open`, which had been false since `97965be`** — the same staleness NT-0014's own row carried and that `NT-0003` exists to name |
 | **Deliverable** | Rules only, per `CLAUDE.md` §0's table — no code, no spec change. A later decision names the skill or role file each rule lands in |
 | **Owner** | The lead found and assessed both instances; this decision-maker session drafted and files the note; the lead or maintainer accepts where each rule lands |
 | **Lands in** | Not yet decided. Candidates: whichever role's charter owns posting to an external channel (the credential-lifetime rule), and a search-discipline note or skill this session's own `CompiledBundle` finding already motivates (the search-by-shape rule) |
