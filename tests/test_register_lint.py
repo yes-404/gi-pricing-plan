@@ -128,6 +128,28 @@ def test_an_unemphasised_status_opening_with_no_date_or_reference_is_refused(
     assert "no a date" in failures[0] or "no a PR" in failures[0]
 
 
+def test_an_appended_resolution_with_no_reference_is_refused(tmp_path: pathlib.Path) -> None:
+    """Regression for a second, real gap the fix for the first one nearly introduced.
+
+    Making rule 2 trigger only on `_opens_with_status` (rule 1's exclusion test) would have
+    been a *replacement* of the old trigger, not an *extension* of it — and the old trigger
+    (`_STATUS_MARKER`, searched anywhere in the cell) covered a shape `_opens_with_status`
+    structurally cannot see: a row that opens with a disposition/verdict and is discharged
+    later, appended in place, when the finding lands. F50 and F51 are exactly this shape —
+    `carry forward, unowned. … ***Resolved 2026-08-30*** — Ruling 42 §7 assigned the fix …` —
+    and it is the *common* discharge shape here, not an edge case. Built from that real form,
+    with the reference stripped out, rather than a minimal string.
+    """
+    cell = (
+        "carry forward, unowned. Fix is a docstring correction restating the true safety "
+        "argument. ***Resolved 2026-08-30*** — the fix landed."
+    )
+    failures = _lint(tmp_path, _table(cell))
+    assert failures, "an appended resolution with no reference must be refused"
+    assert "F999998" in failures[0]
+    assert "no a PR" in failures[0]
+
+
 def test_a_well_formed_resolution_annotation_is_accepted(tmp_path: pathlib.Path) -> None:
     for cell in (
         "*resolved 2026-08-28 (PR #302) — the fix landed.*",

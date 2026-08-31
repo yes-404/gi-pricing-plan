@@ -23,14 +23,18 @@ corrected by Ruling 49's Text A/B/C) states in prose:
      "not a grammar gap" and defers the actual fix to a future status field (P4) — so it is
      excluded from *this* rule and checked instead by rule 2. Anything else is a grammar
      violation.
-  2. **Resolution-annotation format.** Every cell rule 1 excluded as a status opening
-     (`_opens_with_status` — the *same* predicate, not a second one that could drift from
-     the first) must carry a date (`YYYY-MM-DD`) and a PR/commit/doc reference — the content
-     Ruling 49's Text A requires ("naming the PR or commit that discharged it"). Sharing one
-     predicate between the exclusion and the trigger closes a real gap: an earlier version
-     excluded on the bare opening in rule 1 but triggered rule 2 only on a markdown-emphasis
-     regex, so an unemphasised `Fixed - ...` opening with no date and no reference was
-     excluded by rule 1 and never reached by rule 2 — `lint_register()` returned `[]` for it.
+  2. **Resolution-annotation format.** Triggers on the union of two conditions, each closing
+     a gap the other cannot: (a) every cell rule 1 excluded as a status opening
+     (`_opens_with_status` — the *same* predicate rule 1 uses, not a second one that could
+     drift from the first — this is what closes the bare-opening bypass: an earlier version
+     excluded `Fixed - ...` in rule 1 but only triggered rule 2 on a markdown-emphasis regex,
+     so `lint_register()` returned `[]` for a row with no date and no reference); (b) a cell
+     carrying an *emphasised* resolution marker anywhere (`_STATUS_MARKER` — a row that opens
+     with a disposition and is discharged later, appended in place, e.g. F50/F51's "carry
+     forward, unowned. … `***Resolved 2026-08-30***` — …", which (a) alone cannot see because
+     it only looks at the opening). Either way, the cell must carry a date (`YYYY-MM-DD`) and
+     a PR/commit/doc reference — the content Ruling 49's Text A requires ("naming the PR or
+     commit that discharged it").
   3. **Unowned-row decay.** Wherever a Decision cell says `unowned` (bare, `unowned by
      design`, or `unowned-pending-authorisation`), the cell must say more than the bare
      disposition — Ruling 49's Text B requires it to "name the event that next confirms or
@@ -77,6 +81,15 @@ _PR_OR_SHA_OR_DOC = re.compile(
     r"PR\s*#\d+|`[0-9a-f]{7,40}`|`docs/[^`]+`|`\.claude/[^`]+`", re.IGNORECASE
 )
 _UNOWNED = re.compile(r"\bunowned\b", re.IGNORECASE)
+# A genuine status annotation is markdown-emphasised at the word itself — `*resolved …*`,
+# `**Fixed**`, `***Resolved …***` — never a bare "resolved"/"fixed" occurring in prose about
+# something else (e.g. "resolved separately by PR #355", "rather than fixed because …",
+# both real register text that is not this row's own resolution). This catches an
+# *appended* resolution — a row that opens with a disposition and is discharged later, in
+# place, when the finding lands (F50, F51's shape: "carry forward, unowned. … ***Resolved
+# 2026-08-30*** — …") — which `_opens_with_status` alone cannot see, because that predicate
+# only looks at the cell's opening.
+_STATUS_MARKER = re.compile(r"\*{1,3}(resolved|fixed)\b", re.IGNORECASE)
 # The proxy for "names the event" — a cell long enough to say more than the bare
 # disposition + "unowned" is presumed to name something; a bare stop is presumed not to.
 _UNOWNED_MIN_LEN = 40
@@ -178,7 +191,13 @@ def check_decision_grammar(row: Row) -> str | None:
 
 def check_resolution_annotation(row: Row) -> str | None:
     decision = row.fields[4]
-    if not _opens_with_status(decision):
+    # A union, not either alone: `_opens_with_status` is rule 1's own exclusion test — the
+    # bare-opening bypass closes only if rule 2 checks everything rule 1 excludes.
+    # `_STATUS_MARKER` covers the appended-resolution shape (F50, F51: a row opens with a
+    # disposition and is discharged later, in place, with "*** Resolved <date> *** — …"
+    # partway through the cell) — a case `_opens_with_status` cannot see because it only
+    # looks at the opening. Dropping either half reopens a gap the other cannot cover.
+    if not (_opens_with_status(decision) or _STATUS_MARKER.search(decision)):
         return None
     has_date = bool(_DATE.search(decision))
     has_ref = bool(_PR_OR_SHA_OR_DOC.search(decision))
