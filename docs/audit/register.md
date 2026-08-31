@@ -1,8 +1,31 @@
 # Global register of open findings
 
 One row per open finding, keyed by the requirement or artifact id it concerns. Each row
-names the work item that carried it, the phase, and the decision. A finding is removed
-when the close resolves it, accepts it, or re-plans it with an owner.
+names the work item that carried it, the phase, and the decision.
+
+A finding is not removed when it resolves. Its row is annotated in place — **Resolved
+<date>**, naming the PR or commit that discharged it and quoting what the annotation
+supersedes — because a deleted row leaves every citation to it dangling, and
+`scripts/audit-docs.py` check 25 resolves finding citations against this file. A row is
+removed only when the phase whose register carries it is archived.
+
+An unowned row must name the event that next confirms or assigns its owner. Absent a named
+event it decays to the next `CLAUDE.md` §14 plan review, which must give it a disposition
+rather than merely list it; a row that reaches a review and leaves it unchanged is a review
+finding, not a register one.
+
+A Decision cell opens with one of: the register's own disposition vocabulary — `fix before
+close`, `accept`, `carry forward`, `split verdict` — each with its qualifiers (`with an
+owner`, `with a trigger`, `unowned`, `phase boundary`, `provisional owner`); or `CLAUDE.md`
+§13's four verdicts — `delivered but untested`, `deferred with an owner`, `reassigned`,
+`not started` — which are binding, already appear (F53, F54), and may not be linted away by
+a register-local vocabulary; or the negated form F37 and F40 need — a decision that a fix is
+**not available** or **not required** before close, which must state where the work goes
+instead. Every row carries one of the five ownership shapes: workstream, event, trigger,
+next-toucher, unowned-pending-authorisation.
+
+Status is not a Decision. The five rows that write one there (F-W10-1-1, F-W10-2-1,
+F-W10-2-2, F32, F28) are corrected when P4 gives status its own field, or sooner.
 
 | Finding id | Concerns | Work item | Phase | Decision |
 |---|---|---|---|---|
