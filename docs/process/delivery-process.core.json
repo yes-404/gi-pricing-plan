@@ -3,72 +3,128 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:fe27cce8d2b881c23512a6f071db61ca766702c23c0be0ac5993f53415c17aea",
-    "verified_against_tree": "15eb6338ea95558c540e759efbf9ae84dfba3780",
+    "derived_from_digest": "sha256:312f9735d98213359912aa47197d0a4a7dccee8a1c90cf069b7a810295a2cc6a",
+    "verified_against_tree": "b3358eb5011fe0a6fbef4a14aaad7701b6da416a",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (NT-0014 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
     "spec_adopted": "2026-08-29"
   },
-
   "vocabularies": {
-    "plan_gate_decision": ["replan", "proceed", "escalate_parent"],
-    "audit_verdict_proposal": ["fix", "accept", "defer"],
-    "lead_verdict_action": ["adopt", "amend", "reject"],
-    "finding_decision": ["fix_before_close", "accept_with_instrument", "carry_forward_named_owner_or_trigger"],
-    "interrupt_class": ["critical", "queued_to_next_touchpoint"]
+    "plan_gate_decision": [
+      "replan",
+      "proceed",
+      "escalate_parent"
+    ],
+    "audit_verdict_proposal": [
+      "fix",
+      "accept",
+      "defer"
+    ],
+    "lead_verdict_action": [
+      "adopt",
+      "amend",
+      "reject"
+    ],
+    "finding_decision": [
+      "fix_before_close",
+      "accept_with_instrument",
+      "carry_forward_named_owner_or_trigger"
+    ],
+    "interrupt_class": [
+      "critical",
+      "queued_to_next_touchpoint"
+    ]
   },
-
   "roles": {
     "lead": {
-      "authority": ["plan_gate_decision", "lead_verdict_action", "merge"],
+      "authority": [
+        "plan_gate_decision",
+        "lead_verdict_action",
+        "merge"
+      ],
       "definition": ".claude/roles/lead.md",
       "source": "\u00a73, \u00a75.4, \u00a75.7"
     },
     "planner": {
-      "authority": ["write_map_plan", "write_slice_plan"],
-      "must_include": ["acceptance_standard"],
+      "authority": [
+        "write_map_plan",
+        "write_slice_plan"
+      ],
+      "must_include": [
+        "acceptance_standard"
+      ],
       "definition": ".claude/roles/planner.md",
       "source": "\u00a73"
     },
     "decision_maker": {
-      "authority": ["rule_decision_points", "rule_spec_vs_code_conflicts"],
-      "not_authority": ["audit_verdicts"],
+      "authority": [
+        "rule_decision_points",
+        "rule_spec_vs_code_conflicts"
+      ],
+      "not_authority": [
+        "audit_verdicts"
+      ],
       "definition": ".claude/roles/decision-maker.md",
       "source": "\u00a73, \u00a75.7"
     },
     "auditor": {
-      "authority": ["propose_audit_verdict"],
-      "constraints": ["fresh_context", "never_fixes", "report_only"],
+      "authority": [
+        "propose_audit_verdict"
+      ],
+      "constraints": [
+        "fresh_context",
+        "never_fixes",
+        "report_only"
+      ],
       "definition": ".claude/roles/auditor.md",
       "source": "\u00a73"
     },
     "executor": {
-      "authority": ["implement_tdd", "commit", "open_pr"],
-      "constraints": ["slice_layer_only", "never_self_merges"],
+      "authority": [
+        "implement_tdd",
+        "commit",
+        "open_pr"
+      ],
+      "constraints": [
+        "slice_layer_only",
+        "never_self_merges"
+      ],
       "definition": ".claude/roles/executor.md",
       "source": "\u00a73, \u00a76.7"
     },
     "watcher": {
       "type": "support_mechanical",
-      "constraints": ["report_only", "deterministic_no_llm_core"],
-      "publishes": ["roster-state.md", "runtime-state.json"],
+      "constraints": [
+        "report_only",
+        "deterministic_no_llm_core"
+      ],
+      "publishes": [
+        "roster-state.md",
+        "runtime-state.json"
+      ],
       "definition": ".claude/roles/watcher.md",
       "source": "\u00a73, \u00a713"
     },
     "reporter": {
       "type": "support_mechanical_first",
-      "constraints": ["reads_watcher_files_only", "never_polls_agents"],
+      "constraints": [
+        "reads_watcher_files_only",
+        "never_polls_agents"
+      ],
       "definition": ".claude/roles/reporter.md",
       "source": "\u00a73, \u00a713"
     }
   },
-
   "hierarchy": {
-    "order": ["project", "phase", "work", "slice"],
+    "order": [
+      "project",
+      "phase",
+      "work",
+      "slice"
+    ],
     "children_execution": "strictly_sequential",
     "source": "\u00a74, \u00a78"
   },
-
   "layers": {
     "project": {
       "child": "phase",
@@ -111,77 +167,202 @@
       "source": "\u00a72, \u00a74, \u00a76, \u00a77"
     }
   },
-
   "flows": {
     "map_layer_flow": {
-      "applies_to": ["project", "phase", "work"],
+      "applies_to": [
+        "project",
+        "phase",
+        "work"
+      ],
       "source": "\u00a75",
       "steps": [
-        { "id": "enter", "actor": "lead", "action": "load_parent_context_and_relevant_findings" },
-        { "id": "map_plan", "actor": "planner", "action": "break_into_children", "required_fields": ["acceptance_standard"] },
-        { "id": "resolve_open_questions", "actor": "decision_maker", "gate": "all_open_questions_resolved" },
-        { "id": "plan_gate", "actor": "lead", "decision": "plan_gate_decision",
-          "checks": ["resolution_sound", "acceptance_standard_explicitly_defined_not_implied"],
+        {
+          "id": "enter",
+          "actor": "lead",
+          "action": "load_parent_context_and_relevant_findings"
+        },
+        {
+          "id": "map_plan",
+          "actor": "planner",
+          "action": "break_into_children",
+          "required_fields": [
+            "acceptance_standard"
+          ]
+        },
+        {
+          "id": "resolve_open_questions",
+          "actor": "decision_maker",
+          "gate": "all_open_questions_resolved"
+        },
+        {
+          "id": "plan_gate",
+          "actor": "lead",
+          "decision": "plan_gate_decision",
+          "checks": [
+            "resolution_sound",
+            "acceptance_standard_explicitly_defined_not_implied"
+          ],
           "transitions": {
-            "replan": { "to": "map_plan", "guarded_by": "retry_cap" },
-            "escalate_parent": { "to": "parent.map_plan", "unavailable_at": ["project"] },
-            "proceed": { "to": "process_children" }
+            "replan": {
+              "to": "map_plan",
+              "guarded_by": "retry_cap"
+            },
+            "escalate_parent": {
+              "to": "parent.map_plan",
+              "unavailable_at": [
+                "project"
+              ]
+            },
+            "proceed": {
+              "to": "process_children"
+            }
           }
         },
-        { "id": "process_children", "action": "invoke_child_flow_per_child", "mode": "strictly_sequential" },
-        { "id": "audit", "actor": "auditor", "scope": "this_layers_own_drift_level_only" },
-        { "id": "verdict", "proposer": "auditor", "proposal": "audit_verdict_proposal",
-          "decider": "lead", "decider_action": "lead_verdict_action",
+        {
+          "id": "process_children",
+          "action": "invoke_child_flow_per_child",
+          "mode": "strictly_sequential"
+        },
+        {
+          "id": "audit",
+          "actor": "auditor",
+          "scope": "this_layers_own_drift_level_only"
+        },
+        {
+          "id": "verdict",
+          "proposer": "auditor",
+          "proposal": "audit_verdict_proposal",
+          "decider": "lead",
+          "decider_action": "lead_verdict_action",
           "transitions": {
-            "fix": { "to": "map_plan", "guarded_by": "retry_cap" },
-            "accept": { "to": "close_out" },
-            "defer": { "log_to": "findings_register", "then": "close_out" }
+            "fix": {
+              "to": "map_plan",
+              "guarded_by": "retry_cap"
+            },
+            "accept": {
+              "to": "close_out"
+            },
+            "defer": {
+              "log_to": "findings_register",
+              "then": "close_out"
+            }
           }
         },
-        { "id": "close_out",
+        {
+          "id": "close_out",
           "transitions": {
-            "phase_or_work": { "to": "parent.process_children.next" },
-            "project": { "to": "human_checkpoint" }
+            "phase_or_work": {
+              "to": "parent.process_children.next"
+            },
+            "project": {
+              "to": "human_checkpoint"
+            }
           }
         }
       ]
     },
     "slice_tdd_flow": {
-      "applies_to": ["slice"],
+      "applies_to": [
+        "slice"
+      ],
       "source": "\u00a76",
       "steps": [
-        { "id": "slice_plan", "actors": ["planner", "decision_maker", "lead"], "same_gate_pattern_as": "map_layer_flow.plan_gate", "escalate_parent_target": "work.map_plan", "required_fields": ["scope", "acceptance_standard"] },
-        { "id": "write_test_red", "actor": "executor", "input": "acceptance_standard" },
-        { "id": "implement_green", "actor": "executor" },
-        { "id": "verify_refactor", "actor": "executor", "gate": "full_local_gate_green",
-          "enforcement": "deliberately_not_a_blocking_hook_ci_is_the_stronger_check_ruling_40",
-          "transitions": { "failure": { "to": "implement_green", "guarded_by": "retry_cap" } }
+        {
+          "id": "slice_plan",
+          "actors": [
+            "planner",
+            "decision_maker",
+            "lead"
+          ],
+          "same_gate_pattern_as": "map_layer_flow.plan_gate",
+          "escalate_parent_target": "work.map_plan",
+          "required_fields": [
+            "scope",
+            "acceptance_standard"
+          ]
         },
-        { "id": "slice_audit", "actor": "auditor", "scope": "implementation_level_drift_vs_slice_plan" },
-        { "id": "verdict", "proposer": "auditor", "proposal": "audit_verdict_proposal",
-          "decider": "lead", "decider_action": "lead_verdict_action",
+        {
+          "id": "write_test_red",
+          "actor": "executor",
+          "input": "acceptance_standard"
+        },
+        {
+          "id": "implement_green",
+          "actor": "executor"
+        },
+        {
+          "id": "verify_refactor",
+          "actor": "executor",
+          "gate": "full_local_gate_green",
+          "enforcement": "deliberately_not_a_blocking_hook_ci_is_the_stronger_check_ruling_40",
           "transitions": {
-            "fix": { "to": "implement_green", "guarded_by": "retry_cap" },
-            "accept": { "to": "commit" },
-            "defer": { "log_to": "findings_register", "then": "commit" }
+            "failure": {
+              "to": "implement_green",
+              "guarded_by": "retry_cap"
+            }
           }
         },
-        { "id": "commit", "actor": "executor", "constraints": ["small_working_commit", "pr_opened", "never_self_merged"] },
-        { "id": "return_to_work", "signals": "slice_complete" }
+        {
+          "id": "slice_audit",
+          "actor": "auditor",
+          "scope": "implementation_level_drift_vs_slice_plan"
+        },
+        {
+          "id": "verdict",
+          "proposer": "auditor",
+          "proposal": "audit_verdict_proposal",
+          "decider": "lead",
+          "decider_action": "lead_verdict_action",
+          "transitions": {
+            "fix": {
+              "to": "implement_green",
+              "guarded_by": "retry_cap"
+            },
+            "accept": {
+              "to": "commit"
+            },
+            "defer": {
+              "log_to": "findings_register",
+              "then": "commit"
+            }
+          }
+        },
+        {
+          "id": "commit",
+          "actor": "executor",
+          "constraints": [
+            "small_working_commit",
+            "pr_opened",
+            "never_self_merged"
+          ]
+        },
+        {
+          "id": "return_to_work",
+          "signals": "slice_complete"
+        }
       ]
     }
   },
-
   "guards": {
     "retry_caps": {
       "status": "instrumented_defaults_not_permanent_governance",
-      "values": { "project": 1, "phase": 1, "work": 1, "slice": 2 },
+      "values": {
+        "project": 1,
+        "phase": 1,
+        "work": 1,
+        "slice": 2
+      },
       "on_breach": {
         "action": "pause_and_notify_human",
         "redirect": "same_layer_map_plan_or_implement_at_slice",
         "scope": "does_not_stop_whole_project"
       },
-      "instrumentation": ["log_every_replan_iteration", "log_every_audit_fix_iteration", "log_per_slice_reaudit_count", "log_gate_reruns"],
+      "instrumentation": [
+        "log_every_replan_iteration",
+        "log_every_audit_fix_iteration",
+        "log_per_slice_reaudit_count",
+        "log_gate_reruns"
+      ],
       "enforcement_hook": "scripts/hooks/retry_cap_hook.py (NT-0014 script C2)",
       "revisit_when": "one_workstreams_worth_of_data_exists",
       "source": "\u00a77"
@@ -202,31 +383,56 @@
       "source": "\u00a78"
     },
     "human_checkpoints": {
-      "at_close_of": ["work", "phase", "project"],
-      "never_at": ["slice"],
+      "at_close_of": [
+        "work",
+        "phase",
+        "project"
+      ],
+      "never_at": [
+        "slice"
+      ],
       "decider": "maintainer",
       "source": "\u00a72"
     },
     "message_discipline": {
       "max_words": 50,
-      "must_cite_artifact_by": ["path", "pr_number", "task_id"],
+      "must_cite_artifact_by": [
+        "path",
+        "pr_number",
+        "task_id"
+      ],
       "reasoning_location": "durable_artifact_not_message",
-      "gate_reports_must_name": ["command", "totals", "tree_or_sha"],
+      "gate_reports_must_name": [
+        "command",
+        "totals",
+        "tree_or_sha"
+      ],
       "source": "\u00a715"
     }
   },
-
   "monitoring": {
     "model": "events_over_polling",
-    "watcher_checks": ["threshold_compares", "mtime_staleness", "roster_diff", "hygiene"],
-    "status_line": { "stale_after_minutes": 20, "on_stale": "nudge_lead", "on_unanswered": "reporter_critical_relay_and_treat_lead_as_dead_member" },
+    "watcher_checks": [
+      "threshold_compares",
+      "mtime_staleness",
+      "roster_diff",
+      "hygiene"
+    ],
+    "status_line": {
+      "stale_after_minutes": 20,
+      "on_stale": "nudge_lead",
+      "on_unanswered": "reporter_critical_relay_and_treat_lead_as_dead_member"
+    },
     "interrupts": {
-      "critical": ["balance_crossing", "dead_member", "blocked_slice"],
+      "critical": [
+        "balance_crossing",
+        "dead_member",
+        "blocked_slice"
+      ],
       "queued": "everything_else_to_next_lead_touchpoint"
     },
     "source": "\u00a713"
   },
-
   "artifacts": {
     "findings_register": "docs/audit/register.md",
     "open_questions_log": "docs/open-questions.md",
@@ -238,7 +444,6 @@
     "runtime_state_location": "handover_ops_area_outside_repo",
     "source": "\u00a79, \u00a710, \u00a713"
   },
-
   "hooks": {
     "C2_retry_cap": {
       "script": "scripts/hooks/retry_cap_hook.py",
@@ -255,10 +460,9 @@
       "source": "\u00a76.4"
     }
   },
-
   "runtime_state_schema": {
     "description": "Shape of the runtime state file (NT-0014 artifact B). `position` and `in_flight_expensive_verifications` are written by the watcher (.claude/skills/watcher-runtime-state); `retry_counters` and `pending_human_checkpoint` are written by the retry-cap hook (scripts/hooks/retry_cap_hook.py, NT-0014 script C2, adoption slice G) at the moment a fix/replan decision is recorded. Ruling 47 (docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md) rejected the note's original design -- a state file compared against artifact history -- because a dead or unwired writer and a genuinely idle process both read zero, so a mismatch never fires. Each block is re-derived (watcher) or live-updated at the moment of the event (hook) rather than compared against a second tally; a block whose content is unchanged this cycle is left untouched, timestamp included, which is what makes a no-op watcher cycle byte-identical (Ruling 47(d)'s acceptance test).",
-    "source": "§8, §10, §13",
+    "source": "\u00a78, \u00a710, \u00a713",
     "example": {
       "schema": "gi-pricing-plan-runtime-state",
       "schema_version": 1,
@@ -266,22 +470,45 @@
       "position": {
         "written_by": "watcher",
         "written_at": "2026-08-30T14:00:00Z",
-        "phase": { "value": "2", "read_from": "docs/roadmap.md §7" },
-        "work": { "value": "W11", "read_from": "docs/roadmap.md §7" },
-        "slice": { "value": "W11-S3", "read_from": "docs/plans/2026-08-29-w11-map.md" }
+        "phase": {
+          "value": "2",
+          "read_from": "docs/roadmap.md \u00a77"
+        },
+        "work": {
+          "value": "W11",
+          "read_from": "docs/roadmap.md \u00a77"
+        },
+        "slice": {
+          "value": "W11-S3",
+          "read_from": "docs/plans/2026-08-29-w11-map.md"
+        }
       },
       "in_flight_expensive_verifications": {
         "written_by": "watcher",
         "written_at": "2026-08-30T14:00:00Z",
         "entries": [
-          { "what": "full_test_suite", "by": "auditor", "tree": "6f77abb", "started_at": "2026-08-30T13:52:00Z", "ttl_seconds": 1800 }
+          {
+            "what": "full_test_suite",
+            "by": "auditor",
+            "tree": "6f77abb",
+            "started_at": "2026-08-30T13:52:00Z",
+            "ttl_seconds": 1800
+          }
         ]
       },
       "retry_counters": {
         "written_by": "hook:C2",
         "written_at": "2026-08-31T10:00:00Z",
         "entries": {
-          "slice:W11-S3:fix": { "count": 1, "evidence": [ { "at": "2026-08-31T10:00:00Z", "evidence": "PR #506" } ] }
+          "slice:W11-S3:fix": {
+            "count": 1,
+            "evidence": [
+              {
+                "at": "2026-08-31T10:00:00Z",
+                "evidence": "PR #506"
+              }
+            ]
+          }
         }
       },
       "pending_human_checkpoint": null
