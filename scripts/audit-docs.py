@@ -484,6 +484,13 @@ def check_finding_citations() -> None:
     resolved against the wrong row instead of catching. Narrowing to where the incident this
     check answers actually happened is what keeps that kind of false confidence out.
 
+    **All three scan roots are unconditionally present, so a missing one is an error, not a
+    legitimate absence.** Unlike an artifact the repository may not have built yet, `research/`,
+    `plans/` and `.claude/notes/` are the same three named just above as this check's
+    deliberate, symmetric scope — none of them is optional relative to the other two, so a
+    `git mv` of any one would silently narrow this check's coverage were its disappearance
+    only skipped rather than reported.
+
     **Only the register's own citation form is matched**: an id in parentheses immediately
     after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
     itself, and how every genuine cross-document citation found while writing this check was
