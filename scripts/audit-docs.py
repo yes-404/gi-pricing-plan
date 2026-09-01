@@ -46,6 +46,9 @@ Checks (all non-destructive, exit 1 on any failure):
      says more than the bare word (Ruling 50, `scripts/register-lint.py`). Also prints, as a
      note rather than a failure, the count of rows not yet migrated to
      docs/audit/findings/<F-id>.md against the migration threshold (Ruling 51, NT-0015 P4).
+ 30. The vacated .claude/notes/ tombstone holds exactly the README plus a frozen,
+     closed set of 18 per-file redirect stubs, each byte-identical to a rendered
+     template — a stray file or an edited stub body both fail (Ruling 61).
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -60,10 +63,37 @@ import re
 import sys
 import types
 from datetime import date
+from typing import Final
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 ROOT = REPO / "docs"
 NOTES = REPO / "docs" / "notes"
+
+# Ruling 61: the vacated .claude/notes/ tombstone -- a frozen, closed registry, not
+# derived from the README's own mapping table (same reasoning as Ruling 59's census
+# carve-out: a stray edit to the source of truth must not also defeat the check).
+OLD_NOTES = REPO / ".claude" / "notes"
+OLD_NOTES_TOMBSTONE_DATE: Final = "2026-09-01"
+OLD_NOTES_STUB_NAMES: Final[tuple[str, ...]] = (
+    "0001-phase-boundary-plan-review.md",
+    "0002-demo-entrance-and-guide.md",
+    "0003-duplicated-status-goes-stale.md",
+    "0004-a-reference-that-resolves-only-for-the-writer.md",
+    "0005-deferred-items-with-no-durable-custody.md",
+    "0006-two-rules-for-reading-an-artifact.md",
+    "0007-context-bound-measures-cap-not-discipline.md",
+    "0008-project-closure-audit-structure.md",
+    "0009-slim-the-roadmap.md",
+    "0010-layered-slice-based-workflow.md",
+    "0011-per-agent-model-and-skill-settings.md",
+    "0012-a-credential-is-borrowed-not-stored.md",
+    "0013-the-lead-is-the-highest-error-node.md",
+    "0014-machine-readable-process-core.md",
+    "0015-the-register-is-a-ledger-evidence-is-a-file.md",
+    "0016-file-taxonomy-reference-coding-and-custody-investigation.md",
+    "0017-a-public-repository-needs-a-public-face.md",
+    "0018-a-turn-that-ends-strands-what-it-started.md",
+)
 _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 # docs/plans/ only: ids listed after this marker are being allocated, not cited. See check 2.
 UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
@@ -261,6 +291,92 @@ def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
     # The verdict belongs in the summary line, not just the failure list: a note reading
     # "all carry" above a FAILED block is the shape this audit exists to catch.
     notes.append(f"{ok} of {checked} §10 mirror rows carry their register status")
+
+
+def check_notes_tombstone() -> None:
+    """30. The vacated `.claude/notes/` tombstone: exactly the README plus the frozen,
+    closed set of per-file redirect stubs (Ruling 61), each byte-identical to a rendered
+    template.
+
+    Ruling 57 (`docs/plans/2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md`) chose a single
+    README tombstone at the vacated path. NT-0016 Slice 4's own execution found that a
+    directory-level README does not make an *individual* old-path citation resolve: 13
+    frozen plans under `docs/plans/` cite notes by their old path
+    (`../../.claude/notes/000N-....md`), C4 forbids editing a frozen plan to fix its
+    citation, and check 1 (broken links) tests on-disk existence per link target, not per
+    directory. The fix was 18 one-line redirect stubs, one per moved note -- which fixed
+    check 1, but sat at a location nothing in this script reads any more (`NOTES` points at
+    `docs/notes/`, `docs.yml`'s path filter no longer names the old path). Ruling 61 kept
+    the stubs and required this check: without it, a stray file or an edited stub body at
+    the old path would be invisible to every check in this script, recreating -- in a
+    different shape -- exactly the unwatched-drift risk Ruling 57's own tombstone design
+    was chosen to avoid.
+
+    **A frozen, closed registry, not a re-parse of the README's own mapping table** -- the
+    same design choice Ruling 59 made for the file-census provenance carve-out, for the same
+    reason: deriving the expected set from a file a stray edit could also touch would let
+    one edit defeat both the content it changes and the check meant to catch the change.
+    `OLD_NOTES_STUB_NAMES` is that registry.
+
+    Three things are checked, in order:
+
+    1. `OLD_NOTES` is unconditionally expected to exist as a directory -- the same posture
+       `check_notes` already takes for `NOTES` itself.
+    2. **Exact membership.** The `*.md` basenames actually present must equal
+       `{"README.md", *OLD_NOTES_STUB_NAMES}` -- not a superset or subset check. A name
+       present on disk and absent from the registry is a stray file; a registered name
+       absent from disk is a deleted stub. Either way, a mismatched set is reported by name
+       rather than only by count, so the failure names exactly what changed.
+    3. **Exact content, per stub.** Each registered stub's bytes must equal a template
+       rendered from its own name, deterministically -- not a regex or a prefix match.
+       Ruling 59's own record already found a byte-exact comparison stronger and no more
+       expensive than a looser pattern match for a template this short, and the same
+       reasoning applies here: a body edited in any way -- a typo fix, an added sentence,
+       real content pasted in -- fails.
+
+    `README.md` itself is not re-validated here: Ruling 57 already specifies its content,
+    and this check's job is the 18 files that specification does not cover.
+    """
+    if not OLD_NOTES.is_dir():
+        fail(f"{OLD_NOTES.relative_to(REPO).as_posix()} does not exist — check 30 cannot run")
+        return
+
+    expected_names = {"README.md", *OLD_NOTES_STUB_NAMES}
+    actual_names = {p.name for p in OLD_NOTES.glob("*.md")}
+
+    stray = sorted(actual_names - expected_names)
+    for name in stray:
+        fail(
+            f"{OLD_NOTES.relative_to(REPO).as_posix()}/{name} is not a registered stub "
+            "(Ruling 61) — a stray file at the vacated notes path is invisible to every "
+            "other check in this script"
+        )
+
+    missing = sorted(expected_names - actual_names)
+    for name in missing:
+        fail(
+            f"{OLD_NOTES.relative_to(REPO).as_posix()}/{name} is registered (Ruling 61) "
+            "but missing from disk"
+        )
+
+    for name in OLD_NOTES_STUB_NAMES:
+        stub = OLD_NOTES / name
+        if not stub.is_file():
+            continue  # already reported above as missing
+        expected = (
+            "# Moved\n\n"
+            f"This note moved to [`docs/notes/{name}`](../../docs/notes/{name}) on "
+            f"{OLD_NOTES_TOMBSTONE_DATE} (NT-0016 Slice 4). See [this directory's "
+            "README](README.md) for the full mapping and why this stub exists rather "
+            "than a symlink (Ruling 57).\n"
+        )
+        actual = stub.read_text(encoding="utf-8")
+        if actual != expected:
+            fail(
+                f"{OLD_NOTES.relative_to(REPO).as_posix()}/{name} does not match its "
+                "rendered template (Ruling 61) — a stub body was edited, and nothing "
+                "downstream of the old path would otherwise notice"
+            )
 
 
 def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
@@ -1357,6 +1473,10 @@ def main() -> int:
 
     # 16-20. the working notes in docs/notes/
     check_notes(set(defined), in_file, adrs)
+
+    # 30. the vacated .claude/notes/ tombstone: exactly the README plus the frozen
+    # stub set, each stub byte-identical to its rendered template — Ruling 61.
+    check_notes_tombstone()
 
     # 23. every spec §10 mirror row carries the register's status for that question
     check_open_question_mirror_status(specs)

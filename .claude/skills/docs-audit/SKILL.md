@@ -243,6 +243,44 @@ in the script** — durable and reproducible in any clone at any revision.
 standard — testable, tied to a real requirement — is not mechanised; that judgement stays
 the lead's read at the replan-vs-proceed gate (`.claude/roles/lead.md`).
 
+### The notes tombstone (check 30)
+
+NT-0016 Slice 4 moved `.claude/notes/` to `docs/notes/` and left a `README.md`
+tombstone at the vacated path, per Ruling 57. Slice 4's own execution then found that
+a directory-level README does not make an *individual* old-path citation resolve:
+13 frozen plans under `docs/plans/` cite a note by its old path, C4 forbids editing a
+frozen plan to fix its own citation, and check 1 tests on-disk existence per link
+target — so 18 one-line redirect stubs were added, one per moved note, to keep those
+links resolving. That fixed check 1, but left the stubs at a location nothing else in
+this script reads: `NOTES` points at `docs/notes/`, and `docs.yml`'s path filter no
+longer names the old path at all. Ruling 61
+(`docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md`) kept the stubs
+and required this check, because an accepted-and-undetected gap is the exact shape
+`docs/audit/register.md`'s F58 names — a stated mechanism nothing runs.
+
+**A frozen, closed registry, not a re-parse of the README's own mapping table** — the
+same design choice Ruling 59 made for the file-census provenance carve-out, and for
+the same reason: deriving the expected set from a file a stray edit could also touch
+would let one edit defeat both the content it changes and the check meant to catch the
+change. `OLD_NOTES_STUB_NAMES` in `scripts/audit-docs.py` is that registry — 18
+basenames, never derived from `docs/notes/README.md`'s table.
+
+Three things are checked: the old path exists as a directory; its `*.md` basenames
+equal exactly `{"README.md", *OLD_NOTES_STUB_NAMES}` — a stray file or a deleted stub
+both fail this, by name; and each registered stub's bytes equal a template rendered
+from its own filename, exactly — not a regex or a prefix match, the same byte-exact
+reasoning Ruling 59 already established for a template this short. `README.md` itself
+is not re-validated here — Ruling 57 already specifies its content, and this check's
+job is the 18 files that specification does not cover.
+
+**Proven on deliberately broken input, both cases Ruling 61 §4 names**: a stray file
+added at the old path fails, naming the file, before its content is even read; an
+edited stub body (a sentence appended to an existing stub) fails, naming the file and
+the mismatch. Both reproduced as `tests/test_audit_docs_notes_tombstone.py`, alongside
+a positive-control test that the tombstone as built stays silent and `audit-docs.py`
+still reports 18 working notes — the count is unaffected, since check 30 reads the old
+path and `check_notes` reads `docs/notes/`, two disjoint roots.
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -323,6 +361,20 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-01 — Check 30 added (the vacated `.claude/notes/` tombstone: exactly the
+README plus a frozen, closed set of 18 per-file redirect stubs, each byte-identical
+to a rendered template). Ruling 61
+(`docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md`), raised when
+NT-0016 Slice 4's own execution found the ruled single-README tombstone (Ruling 57)
+does not keep 13 frozen plans' individual old-path note citations resolving on disk
+(check 1), and the stub files built to fix that were watched by nothing once `NOTES`
+moved to `docs/notes/`. **Proven on deliberately broken input, both cases the ruling
+names**: a stray file added at the old path fails, naming the file, before its content
+is read; an edited stub body (a sentence appended) fails, naming the file and the
+mismatch. Both reproduced as `tests/test_audit_docs_notes_tombstone.py`, alongside a
+positive-control test that the unmodified tombstone stays silent and `audit-docs.py`
+still reports 18 working notes.
 
 2026-08-31 — Check 28 added (every plan-kind file dated on/after the cutoff states a
 non-empty "Acceptance Standard" heading) and this skill updated with it in the same commit.
