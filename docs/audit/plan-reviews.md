@@ -2776,3 +2776,23 @@ separately.
   changed since review 10.
 - `git status --short` — run this session, confirming a clean tree at `567eea2` before
   drafting.
+
+---
+
+#### Correction appended 2026-09-01 — review 11's F31 paragraph misattributes proposal 5.3
+
+**The paragraph above — "F31 — reaffirm review 10's own proposal 5.3" (this file, line 2549
+at `43fd277`) — names the wrong review.** The only proposal numbered 5.3 in this file sits
+inside plan review 9's section: its prose at `:1979-1981` ("Recommendation (5.3): apply it —
+a role-file edit…") and its consolidated table row at `:2066` ("5.3 — Apply F31's charter
+correction to `watcher.md` — text already drafted in the withdrawal notice"). Plan review 10's
+section (`:2151-2476`) carries no 5.3 in prose or table — `sed -n '2151,2476p'` piped to
+`grep '5\.3'` returns nothing. **What the paragraph *meant* is unchanged**: review 11 carries
+proposal 5.3 forward into the acceptance batch; the review that first proposed it is review 9.
+
+The same misattribution is shared by the register text the paragraph quotes —
+`docs/audit/register.md`'s F31 row cites `plan-reviews.md:1979-1981` but labels it "review
+10" — and is flagged here for the register's owner rather than edited: the register is the
+auditor's file, not the planner's (`.claude/roles/planner.md`). The landing package's §1.2
+(`docs/plans/2026-09-01-nt-0016-landing-package.md`) made the same error when written and is
+corrected on its own branch, PR #549.
