@@ -137,6 +137,53 @@ def get_prs(repo_dir: Path) -> tuple[int, list[dict[str, object]]]:
         return 0, []
 
 
+def _parse_updated_stamp(text: str) -> datetime | None:
+    """Parse eta.md's `**Updated:**` stamp out of already-read file text.
+
+    Factored out of `get_eta` (below) so there is exactly one place that understands the
+    stamp format — a bare UTC `Z` suffix, or the GB-local `BST`/`GMT` forms `eta.md`'s own
+    header documents, resolved via `zoneinfo.ZoneInfo("Europe/London")` rather than a
+    hardcoded UTC+1. `get_eta_updated` (below) calls this too, for `nudge.py`'s
+    multi-signal liveness check, so that caller reuses this parser instead of writing a
+    second one that could drift from it (CLAUDE.md §2: "a shape defined twice will
+    diverge"). Returns an aware UTC datetime, or `None` if no stamp matches or it fails to
+    parse — never a naive datetime and never a guess.
+    """
+    updated_pattern = re.compile(
+        r"^\*\*Updated:\*\*\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})\s*(Z|BST|GMT)\b",
+        re.MULTILINE,
+    )
+    updated_match = updated_pattern.search(text)
+    if not updated_match:
+        return None
+    try:
+        naive = datetime.strptime(
+            f"{updated_match.group(1)} {updated_match.group(2)}", "%Y-%m-%d %H:%M"
+        )
+    except ValueError:
+        return None
+
+    suffix = updated_match.group(3)
+    updated = naive.replace(tzinfo=UTC) if suffix == "Z" else naive.replace(tzinfo=LONDON)
+    return updated.astimezone(UTC)
+
+
+def get_eta_updated(eta_file: Path) -> datetime | None:
+    """Read eta.md and return its parsed `**Updated:**` stamp as an aware UTC datetime.
+
+    `None` covers a missing file, an unreadable one, or one whose stamp does not parse —
+    the same three cases `get_eta` already distinguishes for `stale=None`, collapsed here
+    into a single "unknown" result because the caller (`nudge.py`) only needs an age, not a
+    reason. See `_parse_updated_stamp` for why this exists as its own function rather than
+    being inlined into `get_eta`.
+    """
+    try:
+        text = eta_file.read_text()
+    except OSError:
+        return None
+    return _parse_updated_stamp(text)
+
+
 def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
     """Read the lead-owned ETA file: the Headline paragraph, verbatim, and its staleness.
 
@@ -181,24 +228,11 @@ def get_eta(eta_file: Path, now: datetime) -> tuple[str | None, bool | None]:
         return None, None
     headline = headline_match.group(1).strip()
 
-    updated_pattern = re.compile(
-        r"^\*\*Updated:\*\*\s*(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})\s*(Z|BST|GMT)\b",
-        re.MULTILINE,
-    )
-    updated_match = updated_pattern.search(text)
-    if not updated_match:
-        return headline, None
-    try:
-        naive = datetime.strptime(
-            f"{updated_match.group(1)} {updated_match.group(2)}", "%Y-%m-%d %H:%M"
-        )
-    except ValueError:
+    updated = _parse_updated_stamp(text)
+    if updated is None:
         return headline, None
 
-    suffix = updated_match.group(3)
-    updated = naive.replace(tzinfo=UTC) if suffix == "Z" else naive.replace(tzinfo=LONDON)
-
-    return headline, (now - updated.astimezone(UTC)) > timedelta(hours=2)
+    return headline, (now - updated) > timedelta(hours=2)
 
 
 def get_remote_main_sha(repo_dir: Path) -> str | None:
