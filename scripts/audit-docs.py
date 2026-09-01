@@ -276,10 +276,15 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
     Two limits are worth stating rather than implying. **Number reuse across a deletion is
     not detectable here** — a snapshot cannot see the retired number, so that check stays
     manual and stays in the README. And gaps in the sequence are *legal*: a deleted note
-    retires its number, so contiguity is deliberately not asserted.
+    retires its number, so contiguity is deliberately not asserted. A missing `NOTES` root is
+    an **error**, not a legitimate absence: unlike an artifact the repository may not have
+    built yet, this directory is unconditionally present, so its disappearance can only mean
+    a move or a deletion that forgot to update this check.
     """
     if not NOTES.is_dir():
-        notes.append("no .claude/notes/ directory — checks 16-20 skipped")
+        fail(
+            f"{NOTES.relative_to(REPO).as_posix()} does not exist — checks 16-20 cannot run"
+        )
         return
 
     def rel(path: pathlib.Path) -> str:
@@ -549,7 +554,13 @@ def check_finding_citations() -> None:
         registered |= set(_FINDING_TABLE_CELL.findall(source.read_text(encoding="utf-8")))
 
     scan_dirs = [ROOT / "research", ROOT / "plans", NOTES]
-    scanned = sorted({f for d in scan_dirs if d.is_dir() for f in d.rglob("*.md")})
+    scanned_files: set[pathlib.Path] = set()
+    for d in scan_dirs:
+        if not d.is_dir():
+            fail(f"{d.relative_to(REPO).as_posix()} does not exist — check 25 cannot scan it")
+            continue
+        scanned_files |= set(d.rglob("*.md"))
+    scanned = sorted(scanned_files)
     for f in scanned:
         text = f.read_text(encoding="utf-8")
         cited = set(_FINDING_CITED.findall(text))
