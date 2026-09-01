@@ -6,25 +6,33 @@ implied, produced by `scripts/file-census.py`.
 
 ## The artifact
 
-`docs/audit/file-census-b2fb122.csv` — **1317 data rows**, one per tracked file, header
+`docs/audit/file-census-5ef559d.csv` — **1319 data rows**, one per tracked file, header
 `path,area,name_pattern,size_bytes,mutability,referenced_by`.
 
 ## The tree
 
-**Commit `b2fb122`** — `b2fb122a3aeae34f68f26786a5a7dadb5d2045d5`, `main`'s tip at
-2026-08-31, the commit this slice's branch was cut from
-(`fix(reporter): get_eta accepts GB-local stamps and strips its own Headline label (#530)`).
+**Commit `5ef559d`** — `5ef559d5f964eba85eeaa4238c71e4eb20e31f4b`, `main`'s tip at the start
+of this slice's Slice 2 execution session, 2026-09-01
+(`fix(reporter): log the Slack response and rendered post, not just ok (#536)`).
 
-The census documents that commit's tree specifically — **not** the commit that adds this
+An earlier census committed by this slice's first (interrupted) pass was generated at
+`b2fb122`, main's tip on 2026-08-31. By the time that work resumed, five more PRs had merged
+(`#532`–`#536`), so the tracked corpus had changed and the old CSV's row count no longer
+equalled `git ls-files | wc -l` at the branch's tree. This document and CSV supersede that
+one; the earlier `docs/audit/file-census-b2fb122.csv` was removed rather than kept alongside,
+so exactly one census file is ever committed at a time.
+
+The census documents commit `5ef559d`'s tree specifically — **not** the commit that adds this
 script, its test, and these two census artifacts. That is a deliberate, non-circular choice
 rather than an oversight: a file cannot truthfully embed the hash of the commit that first
 introduces it (the hash is a function of the tree, which would have to include the file
-naming its own not-yet-computed hash). `b2fb122` is a concrete, already-existing, independently
+naming its own not-yet-computed hash). `5ef559d` is a concrete, already-existing, independently
 checkable commit — the same citation style `docs/plans/2026-08-31-nt-0016-investigation.md`
-§1 uses for `b551060` — so anyone can verify this census without depending on this PR's own
-eventual squash-merge commit identity. Consequently, `scripts/file-census.py`,
-`tests/test_file_census.py`, this document and the CSV itself are **not** part of the 1317
-rows: they postdate the stated tree by construction.
+§1 uses for `b551060`. Consequently, `scripts/file-census.py`, `tests/test_file_census.py`,
+this document and the CSV itself are **not** part of the 1319 rows: they postdate the stated
+tree by construction. (Verified directly: `git grep -c '^scripts/file-census.py,'
+docs/audit/file-census-5ef559d.csv` returns 0, and likewise for
+`tests/test_file_census.py` and any `docs/audit/file-census` path.)
 
 ## The corpus rule
 
@@ -36,8 +44,8 @@ of the same commit. `git ls-files` reads the index, so it reproduces from a stat
 regardless of which machine or checkout runs it; a working-tree census does not, which is
 disqualifying for something meant to stand as evidence.
 
-Row count equals `git ls-files | wc -l` at commit `b2fb122`: **1317**, confirmed by checking
-out that commit and running `git ls-files | wc -l` directly.
+Row count equals `git ls-files | wc -l` at commit `5ef559d`: **1319**, confirmed by checking
+out that commit in a separate worktree and running `git ls-files | wc -l` directly.
 
 ## Column rules
 
@@ -59,9 +67,9 @@ out that commit and running `git ls-files | wc -l` directly.
   - `docs/specs/` and `docs/process/` -> `living`
   - everything else -> `unknown`
 
-  At commit `b2fb122`: **1108 `unknown`, 137 `frozen`, 61 `generated`, 11 `living`** (1317
+  At commit `5ef559d`: **1109 `unknown`, 138 `frozen`, 61 `generated`, 11 `living`** (1319
   total). The large `unknown` count is expected and is itself a Stage 1 input, not a defect
-  in this script — most of `.claude/` (429 of the 1317 tracked files, the largest single
+  in this script — most of `.claude/` (429 of the 1319 tracked files, the largest single
   `area`) carries no directory-level mutability signal this rule can see, and the plan is
   explicit that inventing one to shrink that number is the wrong move.
 - **`referenced_by`** — counts *tracked files whose content contains the target's basename*,
@@ -73,12 +81,12 @@ out that commit and running `git ls-files | wc -l` directly.
   rather than its literal filename. Both are acceptable and neither is silent, because the
   rule is written down here.
 
-## Per-area counts at `b2fb122` (top areas)
+## Per-area counts at `5ef559d` (top areas)
 
 | area | files |
 |---|---|
 | `.claude` | 429 |
-| `docs` | 253 |
+| `docs` | 255 |
 | `backend` | 237 |
 | `frontend` | 211 |
 | `packages` | 137 |
@@ -96,9 +104,9 @@ itself is the artifact of record).
 ## Reproducing this census
 
 ```
-git worktree add /tmp/census-check b2fb122a3aeae34f68f26786a5a7dadb5d2045d5
+git worktree add /tmp/census-check 5ef559d5f964eba85eeaa4238c71e4eb20e31f4b
 python3 scripts/file-census.py --root /tmp/census-check --out /tmp/c.csv
-diff /tmp/c.csv docs/audit/file-census-b2fb122.csv
+diff /tmp/c.csv docs/audit/file-census-5ef559d.csv
 git worktree remove /tmp/census-check
 ```
 
