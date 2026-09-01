@@ -768,8 +768,22 @@ document, the finding stays there and a summary plus its citation is appended he
 
 ---
 
-**Maintainer acceptance:** _pending._ This plan is a proposal. Nothing in it is scheduled,
-and no work begins, until this line carries a date and a signature — `../roadmap.md` §7
-clause 2, and the undated acceptance line on
+**Maintainer acceptance: accepted as filed, 2026-09-01.** Verbatim, quoted rather than
+reasoned around — the maintainer chose *"Accept the whole plan as filed"* from four options,
+the alternatives being acceptance limited to Slices 1 and 2, Slice 1 alone as a standalone
+defect fix, and a continued hold. **All four slices are scheduled from this date.** The two
+dependency gates the plan states in §4 are unaffected by this line and still bind: Slice 4
+does not begin until Slice 1 has merged and until Q5, Q6 and Q7's notes half are ruled by the
+decision-maker; Slice 3 does not begin until Slice 2's census exists. Acceptance of the plan
+*as a whole* — §4a's eight-item standard — remains a separate act at its close.
+
+**What this line does not do.** It does not date
 [`2026-08-30-nt-0014-0017-reconciliation.md`](2026-08-30-nt-0014-0017-reconciliation.md),
-which this plan does not pre-empt.
+whose own acceptance line is still `_pending._` The sentence this one replaces named that as a
+second condition; the maintainer's answer was given against this plan and is recorded against
+this plan only. §3 above *changes* that reconciliation's recommendation in one narrow respect
+— it separates the notes move from the deferred Stages 2–5 rather than deferring it with them
+— and accepting this plan as filed accepts that change **for the purposes of this plan's four
+slices**. The reconciliation's remaining three dispositions are untouched and still bind
+nothing. Flagged here rather than resolved silently, because deeming an undated line accepted
+by implication is exactly the record loss `CLAUDE.md` §0 exists to prevent.
