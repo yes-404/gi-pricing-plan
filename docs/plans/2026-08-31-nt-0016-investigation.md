@@ -768,6 +768,51 @@ document, the finding stays there and a summary plus its citation is appended he
 
 ---
 
+**2026-09-01 — Slice 1's Step 1 test (§6), broken harness: the patched-copy-in-`tmp_path`
+technique breaks `REPO` resolution and fails for the wrong reason. Nothing else in the plan
+is superseded.**
+
+Found while independently re-verifying §1b's evidence for
+[`2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md`](2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md)
+(Q4, Q5, Q6, Q7's notes half), not by executing Slice 1 — filed ahead of that slice starting so
+its executor does not spend the time the plan's own §6 Step 2 "Discriminator" paragraph asks
+them to spend diagnosing it.
+
+`scripts/audit-docs.py` computes `REPO = pathlib.Path(__file__).resolve().parent.parent` — the
+repository root derived from the running script's *own* file location, not from its working
+directory. §6 Step 1's test writes the mutated script to `tmp_path / "audit-docs.py"` (pytest's
+per-test scratch directory, outside the repository tree) and subprocess-invokes it there with
+`cwd=ROOT`. Reproduced exactly as the plan writes it, at `b2fb122`: the subprocess crashes with
+`FileNotFoundError: [Errno 2] No such file or directory: '<tmp_path's parent>/docs/open-questions.md'`
+inside `main()`, at its first `docs/`-relative read — before the run ever reaches `check_notes`
+or `scan_dirs`. `returncode` is `1`, non-zero as the test's first assertion expects, but for a
+cause the test's own "Discriminator" paragraph names as disqualifying: *"a failure naming any
+path other than `notes-that-do-not-exist`... [means] the harness is wrong."*
+`/tmp/.../docs/open-questions.md` is exactly such a path. The test as written fails at its final
+assertion (`assert "notes-that-do-not-exist" in result.stdout`, `stdout` is empty) rather than
+passing.
+
+**A working alternative, confirmed by running it.** Writing the patched script to a path
+*inside* the repository tree at the same depth as the original —
+`scripts/_scratch_audit_docs_patched.py`, removed in a `finally` — leaves `REPO` resolving
+correctly; the subprocess then runs the real audit and reaches the `NOTES`-guarded code paths.
+This is the idiom `tests/test_audit_docs_finding_citations.py` already uses for its own
+broken-input proof: a scratch file written *inside* `ROOT` and removed in a `finally`, not
+pytest's `tmp_path`. §6's instruction to "mirror `tests/test_audit_docs_finding_citations.py`
+exactly" and its own literal Step 1 code disagree on this one point — the existing test's
+in-tree-scratch idiom is the one that works, and the `tmp_path` idiom in the code block is the
+one that does not.
+
+**What this does not do.** It does not change Slice 1's acceptance criteria, its behavioural
+description at §6, or its Step 3 implementation — only the test's scratch-file location needs
+to change. It is not a ruling and prescribes no code: fixing the test is Slice 1's executor's
+to do under `test-driven-development`, and this correction does not do it for them. Filed as a
+correction rather than left for the executor to discover cold, because
+`.claude/roles/decision-maker.md` requires verifying evidence before writing it down, and this
+was found in the course of that verification, not sought out.
+
+---
+
 **Maintainer acceptance: accepted as filed, 2026-09-01.** Verbatim, quoted rather than
 reasoned around — the maintainer chose *"Accept the whole plan as filed"* from four options,
 the alternatives being acceptance limited to Slices 1 and 2, Slice 1 alone as a standalone
