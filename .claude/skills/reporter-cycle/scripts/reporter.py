@@ -284,11 +284,20 @@ def set_last_reported_sha(handover_dir: Path, sha: str) -> None:
     _last_sha_path(handover_dir).write_text(sha)
 
 
-def post_to_slack(token: str | None, text: str, channel: str) -> bool:
-    """Post one message to Slack. `token` is read once by the caller, never logged."""
+def post_to_slack(token: str | None, text: str, channel: str) -> tuple[bool, str]:
+    """Post one message to Slack. `token` is read once by the caller, never logged.
+
+    Returns `(ok, detail)`. `detail` is a short, token-safe description of the outcome —
+    the caller logs it so a failed post says *what* Slack rejected, not merely that it
+    was rejected. It is built to never carry the token: the Slack response body itself
+    never echoes the `Authorization` header, but `subprocess.TimeoutExpired`'s own
+    `__str__` includes the full argv it was given — which contains
+    `Authorization: Bearer <token>` — so that exception is caught separately and never
+    stringified into `detail` or the log.
+    """
     if not token:
         print("ERROR: No Slack token", file=sys.stderr)
-        return False
+        return False, "no token available"
     payload = {"channel": channel, "text": text, "mrkdwn": True}
     try:
         result = subprocess.run(
@@ -303,14 +312,28 @@ def post_to_slack(token: str | None, text: str, channel: str) -> bool:
             timeout=10,
             check=False,
         )
-        response = json.loads(result.stdout)
-        ok = bool(response.get("ok", False))
-        if not ok:
-            print(f"Slack error: {response.get('error', 'unknown')}", file=sys.stderr)
-        return ok
-    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+    except subprocess.TimeoutExpired:
+        # Deliberately not `{exc}`: TimeoutExpired.__str__ includes the full argv,
+        # which carries the bearer token in the Authorization header.
+        print("ERROR posting to Slack: curl timed out after 10s", file=sys.stderr)
+        return False, "transport error: curl timed out after 10s"
+    except OSError as exc:
+        # A plain OSError (e.g. curl not found) does not echo argv the way
+        # TimeoutExpired does, so this is safe to include verbatim.
         print(f"ERROR posting to Slack: {exc}", file=sys.stderr)
-        return False
+        return False, f"transport error: {exc}"
+    try:
+        response = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        print(f"ERROR posting to Slack: {exc}", file=sys.stderr)
+        detail = f"unparseable response (exit {result.returncode}): {result.stdout[:200]!r}"
+        return False, detail
+    ok = bool(response.get("ok", False))
+    if not ok:
+        error = str(response.get("error", "unknown"))
+        print(f"Slack error: {error}", file=sys.stderr)
+        return False, error
+    return True, "ok"
 
 
 def _short_sha(sha: str | None) -> str:
@@ -421,8 +444,9 @@ def main() -> int:
     text = format_routine_post(
         eta_headline, eta_stale, pr_count, prs, merged_status, merged_subjects, remote_sha
     )
-    ok = post_to_slack(token, text, _channel())
-    _log_line(log_path, f"routine post - ok={ok}")
+    ok, detail = post_to_slack(token, text, _channel())
+    _log_line(log_path, f"routine post - ok={ok} - detail={detail}")
+    _log_line(log_path, f"routine post body: {text!r}")
     if ok and remote_sha is not None:
         set_last_reported_sha(handover_dir, remote_sha)
     return 0 if ok else 1

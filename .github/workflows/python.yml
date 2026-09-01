@@ -25,6 +25,15 @@ on:
       # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
       # triggered only the docs workflow — a check that cannot run is not enforcement.
       - 'tests/**'
+      # .claude/skills/reporter-cycle/** for the fifth time this has bitten (the
+      # fourth is pyproject.toml's own testpaths comment, which registered this same
+      # directory's tests as collectable but not as triggered): reporter.py's tests
+      # are stdlib-only and outside the uv workspace, but `uv run pytest -q` still
+      # collects and runs them via testpaths, so a PR touching only this directory
+      # was checked by nothing here — a check that cannot run is not enforcement.
+      # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
+      # skill edit does not drag every skill through the Python gate.
+      - '.claude/skills/reporter-cycle/**'
       - '.github/workflows/python.yml'
   pull_request:
     paths:
@@ -45,6 +54,15 @@ on:
       # directory was checked by nothing. Noticed when FR-PLAT-57's single-head guard
       # triggered only the docs workflow — a check that cannot run is not enforcement.
       - 'tests/**'
+      # .claude/skills/reporter-cycle/** for the fifth time this has bitten (the
+      # fourth is pyproject.toml's own testpaths comment, which registered this same
+      # directory's tests as collectable but not as triggered): reporter.py's tests
+      # are stdlib-only and outside the uv workspace, but `uv run pytest -q` still
+      # collects and runs them via testpaths, so a PR touching only this directory
+      # was checked by nothing here — a check that cannot run is not enforcement.
+      # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
+      # skill edit does not drag every skill through the Python gate.
+      - '.claude/skills/reporter-cycle/**'
       - '.github/workflows/python.yml'
 
 concurrency:
