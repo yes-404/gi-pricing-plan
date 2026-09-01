@@ -213,3 +213,18 @@ success, and the `TimeoutExpired` token-leak guard specifically — asserting th
 string is absent from `detail`) plus the log line's content on both the failure and
 success path; all 15 tests (9 prior + 6 new) pass. `uv run ruff check .` and
 `uv run mypy --strict` on `reporter.py` and the test file both pass.
+
+
+**Same day — the token at `REPORTER_TOKEN_PATH` also permits `conversations.history`,
+not just `chat.postMessage`.** Verified by the reporter itself (not by this change, and
+not re-verified here): it read back the 10:00 UTC post from `C0BSYRQ6NGM` and quoted its
+first line, having previously — wrongly — asserted it had "no direct access to the Slack
+API," when it posts through that API every cycle and the real question was scope, not
+access. Reading the channel back is therefore a second, independent way to confirm a
+post landed — evidence from the destination, not the sender — and it does not replace
+the log line above, nor the reverse: **read-back answers what actually arrived in the
+channel; the log answers what the sender tried to send, and what Slack said back.** The
+case that keeps both necessary: a post that never left produces no message to read, so
+the channel is simply silent — and a silent channel is indistinguishable from a cycle
+that never fired at all. The log is the only artifact that tells those two apart, which
+is why it still has a reason to exist now that read-back is available.
