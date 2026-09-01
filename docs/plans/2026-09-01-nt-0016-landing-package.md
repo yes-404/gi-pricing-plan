@@ -151,3 +151,15 @@ process/documentation row of the same class as the NT-0014 and NT-0015 rows it l
   separate acceptance act at the plan's close.
 - **It does not decide any register-row disposition.** Each of the eleven rows behind review
   11 goes to its named owner (§1.2); this package names the owners and stops.
+
+---
+
+## Corrections after filing
+
+**2026-09-01 — the §3 sentence "the three lines in §1.1–§1.3 stay `_pending._` until then" is
+superseded.** The maintainer signed the batch on 2026-09-01: the reconciliation's acceptance
+block is dated (appended at that file's foot, PR #552) and the three plan-review acceptance
+lines in [`../audit/plan-reviews.md`](../audit/plan-reviews.md) are dated together under
+proposal 11.1 (PR #552). The superseded sentence is kept verbatim above as the record of the
+pre-signature state; the half of it that remains true is the first — only the maintainer can
+date an acceptance line.
