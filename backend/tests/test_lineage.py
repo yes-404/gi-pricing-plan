@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import pathlib
+import re
+import subprocess
 from datetime import date
 
 import pytest
@@ -565,6 +569,129 @@ async def test_a_purge_without_a_reason_is_refused(
 
 # -- FR-DATA-32: loaders, and the licence rule OQ-DATA-5 settled --------------------------------
 
+# Ruling 59 (`docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md`) §3: a second,
+# conditional carve-out for a generated repository self-census, alongside
+# `licensed_vendored_skill` below. It is a closed, explicit registry of
+# (generator script, filename pattern the generator owns) — a filename match makes a file a
+# *candidate* only; it never itself grants the exemption (§3 point 1 and point 4). Everything
+# unregistered still goes through the unmodified whole-tree sweep.
+GENERATED_CORPUS_REGISTRY: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "scripts/file-census.py",
+        re.compile(r"^docs/audit/file-census-(?P<sha>[0-9a-f]{7,40})\.csv$"),
+    ),
+)
+
+# The header `scripts/file-census.py` writes (plan §7 Interfaces). Checked verbatim, not
+# inferred, so a header drift is itself caught rather than silently tolerated.
+CENSUS_CSV_HEADER = "path,area,name_pattern,size_bytes,mutability,referenced_by"
+
+
+def resolve_commit(root: pathlib.Path, sha: str) -> str | None:
+    """Resolve `sha` to a commit reachable from `root`'s git history.
+
+    Ruling 59 §3 point 2: tries local resolution first, then a shallow
+    `git fetch --depth 1 origin <sha>` and retries against `FETCH_HEAD` — the shape
+    `.github/workflows/python.yml`'s undeclared (so depth-1) `actions/checkout@v4` needs.
+    Returns `None`, never raises, when both attempts fail; the caller decides what that
+    means (§3 point 2's last bullet: never a silent exemption).
+    """
+
+    def _verify(ref: str) -> str | None:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--quiet", "--verify", f"{ref}^{{commit}}"],
+            capture_output=True, text=True, check=False,
+        )
+        if proc.returncode != 0:
+            return None
+        resolved = proc.stdout.strip()
+        return resolved or None
+
+    resolved = _verify(sha)
+    if resolved is not None:
+        return resolved
+
+    fetch = subprocess.run(
+        ["git", "-C", str(root), "fetch", "--depth", "1", "origin", sha],
+        capture_output=True, text=True, check=False,
+    )
+    if fetch.returncode != 0:
+        return None
+    return _verify("FETCH_HEAD")
+
+
+def generated_from_tracked_corpus(path: pathlib.Path, root: pathlib.Path) -> bool:
+    """Ruling 59 §3's `generated_from_tracked_corpus` carve-out predicate.
+
+    Returns `False` — not exempted, falls through to the unmodified whole-tree sweep — when
+    `path` does not match a registered pattern, when its header does not match
+    `CENSUS_CSV_HEADER` exactly, or when its sorted `path` column does not exactly equal the
+    named commit's `git ls-tree -r --name-only` output, sorted (full-list equality, not a
+    set — §3 point 2's second-to-last bullet: a set would hide a duplicated or dropped row).
+
+    Raises `AssertionError`, naming the file and the unresolved SHA, when a candidate names a
+    commit that cannot be resolved even after the fetch attempt in `resolve_commit`. A
+    carve-out satisfied by "cannot verify, so allow it" is exactly the failure class this
+    repository keeps re-finding (§3 point 2's last bullet) — this refuses that fallback by
+    raising rather than by discipline.
+    """
+    try:
+        rel = path.relative_to(root).as_posix()
+    except ValueError:
+        return False
+
+    sha: str | None = None
+    for _generator, pattern in GENERATED_CORPUS_REGISTRY:
+        match = pattern.match(rel)
+        if match is not None:
+            sha = match.group("sha")
+            break
+    if sha is None:
+        return False  # not a registered candidate — §3 point 1
+
+    commit = resolve_commit(root, sha)
+    if commit is None:
+        raise AssertionError(
+            f"{rel}: names commit {sha!r} as the tree it documents, but that commit could "
+            "not be resolved (local resolution and `git fetch --depth 1 origin <sha>` both "
+            "failed) — refusing to exempt a file whose provenance cannot be verified "
+            "(Ruling 59 §3 point 2)"
+        )
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    lines = text.splitlines()
+    if not lines or lines[0] != CENSUS_CSV_HEADER:
+        return False  # header mismatch — not exempted (§3 point 3)
+
+    csv_paths = sorted(row[0] for row in csv.reader(lines[1:]) if row)
+
+    tree = subprocess.run(
+        ["git", "-C", str(root), "ls-tree", "-r", "--name-only", commit],
+        capture_output=True, text=True, check=True,
+    )
+    tree_paths = sorted(line for line in tree.stdout.splitlines() if line)
+
+    return csv_paths == tree_paths
+
+
+def licensed_vendored_skill(path: pathlib.Path) -> bool:
+    """True when `path` sits under a skill directory that commits its upstream licence.
+
+    Matched at any depth rather than against one fixed prefix: a worktree under
+    `.claude/worktrees/` carries its own `.claude/skills/`, and a check anchored to
+    the outer one would fail the whole suite in the main checkout whenever a worktree
+    happened to exist.
+    """
+    parts = path.parts
+    for i in range(len(parts) - 3):
+        if parts[i] == ".claude" and parts[i + 1] == "skills":
+            skill_dir = pathlib.Path(*parts[: i + 3])
+            return any((skill_dir / n).is_file() for n in ("LICENSE", "LICENSE.txt"))
+    return False
+
 
 @pytest.mark.req("FR-DATA-32")
 def test_loaders_ship_for_every_reference_set_the_requirement_names() -> None:
@@ -605,33 +732,22 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
     somebody has shipped rows — and this is the test that says so before a licence holder
     does.
 
-    Vendored skills under `.claude/skills/` are the one carve-out, and it is conditional
-    rather than blanket. `ui-ux-pro-max` (2026-08-17) is the first vendored skill to ship
-    data files — 18 CSVs of font, colour and UX guidance — and FR-DATA-32 is about UK
-    *reference* sets whose rows are not ours to redistribute, not about a third-party
-    payload committed under its own licence. So the exemption is bought by that licence:
-    a skill may carry data only while its LICENSE travels with it in the same directory,
-    which is precisely the exposure this test exists to prevent. Delete the licence and
-    this fails, which is the point.
+    Two carve-outs, both conditional rather than blanket. Vendored skills under
+    `.claude/skills/` are the first: `ui-ux-pro-max` (2026-08-17) is the first vendored
+    skill to ship data files — 18 CSVs of font, colour and UX guidance — and FR-DATA-32 is
+    about UK *reference* sets whose rows are not ours to redistribute, not about a
+    third-party payload committed under its own licence. So the exemption is bought by that
+    licence: a skill may carry data only while its LICENSE travels with it in the same
+    directory, which is precisely the exposure this test exists to prevent. Delete the
+    licence and this fails, which is the point.
+
+    The second is `generated_from_tracked_corpus` (Ruling 59,
+    `docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md`) — a closed registry of
+    generated repository self-census artifacts, bought by provable reproducibility against
+    the tree their own filename names, never by location or filename alone. Delete a row
+    from the census, or point it at a tree it does not match, and this fails too.
     """
-    import pathlib
-
     root = pathlib.Path(__file__).resolve().parents[2]
-
-    def licensed_vendored_skill(path: pathlib.Path) -> bool:
-        """True when `path` sits under a skill directory that commits its upstream licence.
-
-        Matched at any depth rather than against one fixed prefix: a worktree under
-        `.claude/worktrees/` carries its own `.claude/skills/`, and a check anchored to
-        the outer one would fail the whole suite in the main checkout whenever a worktree
-        happened to exist.
-        """
-        parts = path.parts
-        for i in range(len(parts) - 3):
-            if parts[i] == ".claude" and parts[i + 1] == "skills":
-                skill_dir = pathlib.Path(*parts[: i + 3])
-                return any((skill_dir / n).is_file() for n in ("LICENSE", "LICENSE.txt"))
-        return False
 
     data_files = [
         path
@@ -640,6 +756,7 @@ def test_no_reference_rows_are_bundled_in_the_repository() -> None:
         if ".venv" not in path.parts
         and ".git" not in path.parts
         and not licensed_vendored_skill(path)
+        and not generated_from_tracked_corpus(path, root)
     ]
     assert data_files == [], f"unexpected bundled data: {data_files}"
 
