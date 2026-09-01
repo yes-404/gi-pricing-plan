@@ -80,6 +80,28 @@ Named collisions, so no one has to re-derive that they are authorised:
 - **`audit-docs.py`'s existing checks**, check 19's `ADR-(\d{4})` first among them. Rewriting a
   check is in-scope work sequenced into S1, not a constraint to design around.
 
+### 3a. The scope boundary — the local handover is not governed
+
+Received 2026-09-01, in the maintainer's own words:
+
+> handover is pure local files and not covered by NT0019, NT0019 focuses on the project only
+
+**`~/gi-pricing-plan.local/` is outside the standard entirely** — `handover/`, `inbox/`,
+`drafts/`, `scratch/`, the state files and the logs. No header, no id, no family, no
+`INDEX.md` row, no lint, and no place in any population count or migration task.
+
+This makes explicit what the note already implies rather than amending it: §1.12 says
+*"Scratch (`.planning/`, `.superpowers/`, runtime state, chat) is never a family"*, and every
+path in §5's impact map is a repository path. Where it bites is §1.2's `PL- kind: handover`
+family and §5.2's *"handover → `PL- kind: handover`"* mapping — **those mean a handover
+document filed inside the repository**, not the local directory this team works from. No
+slice migrates the local tree into `docs/`.
+
+The consequence, which is a rule about where decisions go rather than a migration task: a
+decision living only in the local handover is not governed and does not survive its session.
+The note's own answer stands — if a local file carries a decision, the decision becomes a
+repository record. That is the rule this very file exists to satisfy.
+
 **Two limits, which the instruction does not lift.** First, a rule that yields still yields
 *visibly*: every collision lands as a dated edit naming what gave way to what, because
 changing either side quietly destroys the record of which was believed
