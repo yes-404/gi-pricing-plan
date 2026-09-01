@@ -27,6 +27,19 @@ next-toucher, unowned-pending-authorisation.
 Status is not a Decision. The five rows that write one there (F-W10-1-1, F-W10-2-1,
 F-W10-2-2, F32, F28) are corrected when P4 gives status its own field, or sooner.
 
+**Every data row begins with a literal `|`.** GFM itself does not require this — a table
+row missing its leading pipe still renders — but `scripts/register-lint.py`'s parser treats
+that leading `|` as the sole test for whether a line is even a candidate row: a line
+without it is skipped (`if not line.startswith("|"): continue`) before it is counted, before
+its fields are split, and before the `assert classified == seen` accounting guard that
+exists specifically to make a silent row-loss loud can see it — that guard cannot detect a
+class of loss its own counted population never included. The table-contiguity check added
+after F52 (`a3b9c9e`) does report such a row as a structural problem, because it still
+carries four or more unescaped pipes and so falls inside the swept range — the gap it
+leaves is loud — but the row itself is still not parsed: no `Row` is produced, and none of
+its five fields is read. A row loses its leading `|` only by mistake; nothing but this
+sentence keeps one from being written that way.
+
 | Finding id | Concerns | Work item | Phase | Decision |
 |---|---|---|---|---|
 | FR-DATA-57 (F6) | `unrun_layers` projection — Phase 2 validation-report successor | W7-4 | 2 | carry forward with an owner (Phase 2 validation-report workstream) |
