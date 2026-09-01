@@ -832,3 +832,56 @@ this plan only. §3 above *changes* that reconciliation's recommendation in one 
 slices**. The reconciliation's remaining three dispositions are untouched and still bind
 nothing. Flagged here rather than resolved silently, because deeming an undated line accepted
 by implication is exactly the record loss `CLAUDE.md` §0 exists to prevent.
+
+---
+
+**2026-09-01 — Slice 4 execution: the single-file tombstone does not keep frozen-plan links
+resolving; extended, not replaced, and two unrelated pre-existing defects surfaced by the
+move are fixed. Nothing in §9 or Ruling 57 is superseded.**
+
+§9's Step 6 and Ruling 57 (`2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md`) both describe
+the tombstone as one file — `.claude/notes/README.md`, one paragraph plus the old-to-new
+mapping. Neither anticipated `scripts/audit-docs.py` check 1 (`ROOT.rglob("*.md")` under
+`docs/`, every relative markdown link must resolve on disk): the 11 frozen plans that cite an
+individual note by its old path (e.g. `../../.claude/notes/0007-....md`) are markdown links
+whose *target file*, not just the directory, must exist. A directory-level README does not
+make an individual `0007-....md` target resolve; running the audit after Step 7 produced 9
+broken-link failures, one per frozen-plan citation of a moved note, naming the exact files.
+
+**Resolution: the tombstone directory also carries one one-line redirect stub per moved
+note** (18 files, `.claude/notes/NNNN-....md`, each pointing at its `docs/notes/` equivalent
+and at the directory's own `README.md` — never at each other, and never repeating the
+literal old-path string, since `tests/test_notes_move_citations.py` scans this file class
+too). This is not the symlink Ruling 57 rejects: the ruling's own reasoning is that
+`audit-docs.py`'s mechanism (`NOTES`, `check_notes`, `scan_dirs`) would keep resolving
+`.claude/notes` as a live, populated notes root through a symlink. Slice 4's edit to `NOTES`
+(§9 Step 4) already repoints that mechanism at `docs/notes` and never references
+`.claude/notes` again in any form — the stub files are consequently invisible to
+`check_notes` and `scan_dirs` alike, and exist solely to satisfy check 1's on-disk
+requirement for the citations C4 forbids editing. Confirmed after writing them:
+`git grep -l "\.claude/notes" -- .` (item 1's own command) still returns exactly the
+tombstone `README.md` and files under `docs/plans/` — the 18 stubs are not among them,
+because each one names its own target by relative link rather than by repeating the literal
+old path.
+
+**Two further failures the same audit run surfaced are pre-existing defects the move made
+visible, not defects Slice 4 introduced:**
+
+- `docs/notes/README.md` (moved, unedited in content) had three table rows (NT-0012,
+  NT-0013, NT-0014) missing a trailing `|`, invisible to check 22's table-cell-count check
+  while the file lived outside `docs/`'s scan root. Fixed: trailing pipe added to all three,
+  no other content changed.
+- Editing `docs/process/delivery-process.md`'s one literal `.claude/notes` reference (a
+  living citation this slice is scoped to repair) is exactly the "reds on every edit... the
+  right price for a forced re-read" cost Ruling 45 accepts by design for check 27. Reconciled
+  per that ruling's own procedure: `meta.derived_from_digest` recomputed against the file's
+  post-edit bytes and `meta.verified_against_tree` updated to `15eb633`'s full SHA, the tree
+  this slice branched from — no normative content of the process spec changed, only the
+  path string.
+
+**What this does not do.** It does not change §9's Step count, acceptance items, or Ruling
+57's chosen tombstone form — a README, not a symlink — which stands exactly as ruled; it
+adds one execution detail (the stub files) Ruling 57 did not need to rule on because Q6 never
+considered check 1's per-file existence requirement. It does not edit any frozen plan: the 11
+plans citing old note paths keep their original text unedited, resolving now via the stub
+files rather than the directory-level README alone.

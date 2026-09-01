@@ -1,6 +1,6 @@
 # Delivery Process — Project → Phase → Work → Slice
 
-Adopted 2026-08-29 from NT-0010 (`.claude/notes/0010-layered-slice-based-workflow.md`),
+Adopted 2026-08-29 from NT-0010 (`docs/notes/0010-layered-slice-based-workflow.md`),
 reconciled and ruled in `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md`
 ("the rulings record"). This document is the process specification `CLAUDE.md` §15 points
 at. It governs how a Claude Code team does the work in this repository — a distinct concept
@@ -152,7 +152,7 @@ mechanism; only their instrumentation moved from prose to an artifact.
 Sequential processing of a layer's **children** (Project→Phase→Work→Slice: no two Slices
 run at once, at any layer) — the same bound on context/resource usage per session
 the **reproduced design proposal's** §7 intended, at
-`.claude/notes/0010-layered-slice-based-workflow.md:322-327` ("this bounds context/resource
+`docs/notes/0010-layered-slice-based-workflow.md:322-327` ("this bounds context/resource
 usage per session ... revisit only if resource budget materially changes"). That is the
 proposal reproduced *inside* the note, **not** NT-0010's own §7, which is a different
 subject; the bare "NT-0010 §7" resolved only for a reader who already knew which numbering

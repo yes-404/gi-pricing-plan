@@ -91,7 +91,7 @@ Thumbs.db
 # planning-with-files working memory. The skill writes an agent's live plan state into the
 # working directory; it is per-session scratch, rewritten every few turns, not a record.
 # The durable record belongs where the audit can see it: a finished plan or ledger in
-# docs/plans/, a decision in docs/ or .claude/notes/ (NT-NNNN). What must never be
+# docs/plans/, a decision in docs/ (NT-NNNN in docs/notes/). What must never be
 # committed is an *unaudited* account of what the project is doing, which is exactly what
 # these live files are — superseded several times an hour and never reconciled with anything.
 # Anchored with a leading slash on purpose: the skill writes these to the project root, and

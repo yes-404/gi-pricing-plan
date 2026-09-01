@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consistency audit for the docs/ specification suite and the .claude/notes/ working notes.
+"""Consistency audit for the docs/ specification suite and the docs/notes/ working notes.
 
 Checks (all non-destructive, exit 1 on any failure):
   1. No broken relative markdown links.
@@ -18,7 +18,7 @@ Checks (all non-destructive, exit 1 on any failure):
  13. Terms are not redefined in a module glossary after 00-overview defines them.
  14. Every module is exercised by at least one workflow, above a coverage floor.
  15. Every open-question row has an owner and a status from a known set.
- 16. Every working note carries the header block .claude/notes/README.md requires.
+ 16. Every working note carries the header block docs/notes/README.md requires.
  17. Note numbering is well-formed and unique, and matches each file's own heading.
  18. The notes index and the directory agree, in both directions.
  19. Every reference a note makes resolves — links, FR-/NFR- ids, OQ- ids, ADRs, NT- ids.
@@ -32,7 +32,7 @@ Checks (all non-destructive, exit 1 on any failure):
  24. Every route `00` §5.6 declares as canonical for a module appears in that module's
      own §5.3 view table (FR-OVR-22); §5.6 is canonical, so a mismatch is a §5.3 error.
  25. Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in docs/research/, docs/plans/ or
-     .claude/notes/ resolves against docs/audit/register.md, an archived phase register, or
+     docs/notes/ resolves against docs/audit/register.md, an archived phase register, or
      a docs/audit/work/*/README.md (or closure-records.md) work-item closure record.
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
      real section, or numbered step, of docs/process/delivery-process.md (NT-0014 §3).
@@ -63,7 +63,7 @@ from datetime import date
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 ROOT = REPO / "docs"
-NOTES = REPO / ".claude" / "notes"
+NOTES = REPO / "docs" / "notes"
 _ABS_PREFIX = "https://contracts.gi-pricing.dev/"
 # docs/plans/ only: ids listed after this marker are being allocated, not cited. See check 2.
 UNALLOCATED = re.compile(r"next free\s*:", re.IGNORECASE)
@@ -264,7 +264,7 @@ def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
 
 
 def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
-    """16-20. The working notes in .claude/notes/, against that directory's README.
+    """16-20. The working notes in docs/notes/, against that directory's README.
 
     The notes are not the specification, so most of their audit standard is judgement — is
     this status still true of the repository, is this deliverable still right for the phase
@@ -367,7 +367,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
     # 18. the index and the directory, in both directions
     readme = NOTES / "README.md"
     if not readme.is_file():
-        fail(".claude/notes/README.md is missing — the index is part of the standard")
+        fail("docs/notes/README.md is missing — the index is part of the standard")
         return
     indexed: dict[str, tuple[str, str]] = {}
     for line in readme.read_text(encoding="utf-8").splitlines():
@@ -378,7 +378,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
         indexed[row.group(1)] = (row.group(2), cells[3] if len(cells) > 3 else "")
     for number, path in sorted(seen.items()):
         if number not in indexed:
-            fail(f"{rel(path)} is not listed in the .claude/notes/README.md index")
+            fail(f"{rel(path)} is not listed in the docs/notes/README.md index")
         elif indexed[number][0] != path.name:
             fail(
                 f"index row NT-{number} links to {indexed[number][0]}, but the file is "
@@ -390,7 +390,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
                 f"{head_word(indexed[number][1])!r}, the file says {status_of[number]!r}"
             )
     for number in sorted(set(indexed) - set(seen)):
-        fail(f"index lists note NT-{number}, but no such file exists in .claude/notes/")
+        fail(f"index lists note NT-{number}, but no such file exists in docs/notes/")
 
     # 19, second pass: a note citing another note — a `superseded` row must name a real one,
     # and a retired number must not be quietly resurrected by a reference to it.
@@ -473,7 +473,7 @@ def check_finding_citations() -> None:
     on 2026-08-29, caught only because someone happened to remember the register's actual
     contents rather than by anything mechanical.
 
-    **Scope is deliberately narrow: `docs/research/`, `docs/plans/` and `.claude/notes/` only**
+    **Scope is deliberately narrow: `docs/research/`, `docs/plans/` and `docs/notes/` only**
     — where a citation is *made*. Not `docs/audit/` itself, where findings are *filed* and a
     retired id or a not-yet-filed one is legitimately named in the prose explaining exactly
     that (the F42 tombstone note names both F42 and F45 in plain, unparenthesised text for
@@ -486,7 +486,7 @@ def check_finding_citations() -> None:
 
     **All three scan roots are unconditionally present, so a missing one is an error, not a
     legitimate absence.** Unlike an artifact the repository may not have built yet, `research/`,
-    `plans/` and `.claude/notes/` are the same three named just above as this check's
+    `plans/` and `docs/notes/` are the same three named just above as this check's
     deliberate, symmetric scope — none of them is optional relative to the other two, so a
     `git mv` of any one would silently narrow this check's coverage were its disappearance
     only skipped rather than reported.
@@ -1355,7 +1355,7 @@ def main() -> int:
                     f"has no matching row — fix {f.name} §5.3 (`00` §5.6 is canonical)"
                 )
 
-    # 16-20. the working notes in .claude/notes/
+    # 16-20. the working notes in docs/notes/
     check_notes(set(defined), in_file, adrs)
 
     # 23. every spec §10 mirror row carries the register's status for that question

@@ -5,7 +5,7 @@ authority for its **status** (Work item, Phase, Decision — the fields `registe
 and `register-owed.py` parse). This directory is not a second ledger. It holds the
 **evidence essay** — the Concerns-column prose that established a finding — for the rows
 where that essay has grown too long to serve as an index entry at the same time it serves
-as the record of how the finding was established. NT-0015 P4 (`.claude/notes/0015-the-
+as the record of how the finding was established. NT-0015 P4 (`docs/notes/0015-the-
 register-is-a-ledger-evidence-is-a-file.md` §2) is why this directory exists; Ruling 51 and
 Ruling 53 (`docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md`) are what bind its shape below.
 
@@ -30,7 +30,7 @@ not a finding, it is a clause of one.
 
 **A migrated row's Finding-id cell is not touched.** It still reads `... (F27)` exactly as
 before. `scripts/audit-docs.py` check 25 resolves every finding citation made outside
-`docs/audit/` (`docs/research/`, `docs/plans/`, `.claude/notes/`) by matching that exact
+`docs/audit/` (`docs/research/`, `docs/plans/`, `docs/notes/`) by matching that exact
 parenthesised form against `docs/audit/register.md`'s own text — never against this
 directory, which the check does not read at all. Move the essay, keep the self-naming: a
 citation that resolved before a row's migration resolves identically after it, because

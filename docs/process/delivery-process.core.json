@@ -3,8 +3,8 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:195a40c474f0bad19b91128f08086a59a45d46b31d8b04dc8d14429fa986f5a7",
-    "verified_against_tree": "79991f36c3337b87a2ae788acae3c255d5ae1084",
+    "derived_from_digest": "sha256:fe27cce8d2b881c23512a6f071db61ca766702c23c0be0ac5993f53415c17aea",
+    "verified_against_tree": "15eb6338ea95558c540e759efbf9ae84dfba3780",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (NT-0014 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
     "spec_adopted": "2026-08-29"

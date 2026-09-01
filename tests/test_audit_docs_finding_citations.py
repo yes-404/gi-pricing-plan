@@ -2,7 +2,7 @@
 
 Before this check existed, `audit-docs.py` validated `docs/audit/register.md` inward (every
 §10 mirror row carries the register's status) but never outward: a citation from
-`docs/research/`, `docs/plans/` or `.claude/notes/` to a finding id was never checked against
+`docs/research/`, `docs/plans/` or `docs/notes/` to a finding id was never checked against
 anything. A draft citing a withdrawn `F42`, or a tombstone note promising `F45` hours before a
 row existed for it, both reached `main` in the same week this check was written, caught only
 because someone happened to remember the register's actual contents.

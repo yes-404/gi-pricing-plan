@@ -29,7 +29,7 @@ Three rules survive every phase change:
 - **Counts and status that change are not written in this file.** `req-coverage.py` prints
   requirement counts; `docs/roadmap.md` holds workstream and component status. Four
   incidents of the copy here going stale:
-  [`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md).
+  [`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md).
 - **Every spec change runs `python3 scripts/audit-docs.py` before commit.**
 
 ## 1. Project Mission
@@ -43,7 +43,7 @@ design decision favours reproducibility, auditability, and transparency of the m
 ## 2. Repository Layout — *the annotated tree and the reasoning are `.claude/skills/repo-architecture`*
 
 **Component status — exists, partial, scheduled — belongs to `docs/roadmap.md` §6 and only
-there** ([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md)). Three entries
+there** ([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)). Three entries
 carry a rule: **`uv.lock` is committed** — a lockfile, not an environment; **`docs/contracts/`
 is generated and never hand-edited**; **a filed plan under `docs/plans/` is frozen at its
 date**. **It is a polyglot monorepo and neither language is the "main" one** — the root
@@ -136,7 +136,7 @@ silent:
 The phase list, workstream rows, closure records, decision gates, the current phase and its
 exit criteria, which workstreams are open, and the retrofit-impossible list are written
 **only** there
-([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md) records this mechanism —
+([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md) records this mechanism —
 this file restating phase or status content and the restatement going stale). Two things
 change how you work rather than what is planned:
 
@@ -175,7 +175,7 @@ follow:
   compaction cap sits, not how light the usage was — a heavy session and a disciplined one
   produce the same zero. Read trends at the boundary (the share of calls near the cap, and
   the spend those calls carry), never absence above it.
-  ([`NT-0007`](.claude/notes/0007-context-bound-measures-cap-not-discipline.md))
+  ([`NT-0007`](docs/notes/0007-context-bound-measures-cap-not-discipline.md))
 
 ## 11. Commands Reference — *every command is in `.claude/skills/dev-commands`*
 
@@ -199,7 +199,7 @@ pnpm --dir frontend test && pnpm --dir frontend build
 Project procedures live in `.claude/skills/`, versioned with the repo. **Its `README.md` is
 the index**, `.claude/agents/README.md` the same for the delegable specialists; team roles
 are the `.md` files directly under `.claude/roles/`. **This section keeps no second list**
-([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md)).
+([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)).
 
 - **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
   step)? Write or update a skill, update the README, commit both with the work.
@@ -261,13 +261,13 @@ bind wherever anything here is audited, not only at a close:
   corpus it counted over; a schema or contract name carries its full path; a `Verified` date
   carries the tree; a word with two scopes (`shape`, `slug`, `contract`, `variant`) says which
   it means. The test: would it still resolve for a reader holding none of your open context?
-  ([`NT-0004`](.claude/notes/0004-a-reference-that-resolves-only-for-the-writer.md))
+  ([`NT-0004`](docs/notes/0004-a-reference-that-resolves-only-for-the-writer.md))
 - **Name the range, not the tip; verify the claim, not just the citation.** A review or gate
   names `origin/main...branch`, never the branch's tip SHA — a tip is the record of the last
   edit, not the change set. And a citation can be correct while the content it vouches for is
   wrong: read to the part of the cited artifact that carries the claim — a requirement's
   clauses including its dated amendments, a test's asserts, a function's body.
-  ([`NT-0006`](.claude/notes/0006-two-rules-for-reading-an-artifact.md))
+  ([`NT-0006`](docs/notes/0006-two-rules-for-reading-an-artifact.md))
 - **A Work, Phase or Project close is accepted by the maintainer, with a dated line. A Slice
   is not: it closes on a clean audit and the lead's merge.**
 
@@ -276,7 +276,7 @@ bind wherever anything here is audited, not only at a close:
 §13 audits **one workstream against its own scope**. This audits **the plan** — whether the
 phase boundaries, workstream cuts and requirement set still make sense now that some of the
 work is real. The plan is a working hypothesis, re-tested while the phase is still open.
-*(Raised as [`NT-0001`](.claude/notes/0001-phase-boundary-plan-review.md), 2026-08-15.)*
+*(Raised as [`NT-0001`](docs/notes/0001-phase-boundary-plan-review.md), 2026-08-15.)*
 **Trigger: at each workstream close, and again before a phase's exit demo** — fixed, not
 "sometime". The five questions are in the skill; three rules bind outside it:
 
@@ -304,7 +304,7 @@ extracted so a script can check it. **The markdown is authoritative; the extract
 content, so the extract fell two commits behind its source with the gate green throughout
 (Ruling 45). Corrected 2026-08-30 to a pointer rather than a second description, because a
 restated enforcement is how one of the two statements goes stale
-([`NT-0003`](.claude/notes/0003-duplicated-status-goes-stale.md)) — which is what happened
+([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)) — which is what happened
 here. Read the markdown to know the process; the extract exists so a rule that can be checked
 mechanically is not left to prose.
 
