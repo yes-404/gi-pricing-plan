@@ -185,3 +185,31 @@ passes. The full workspace `uv run pytest -q` was not run to completion for this
 so that suite does not exercise the changed code, and — contending for the same
 docker-compose Postgres/Redis/MinIO stack as other sessions running concurrently in this
 repository's shared `.git` — it was still at 23% after 21 minutes when stopped.
+
+**2026-09-01 — the routine-post log line recorded only `ok=True`/`ok=False`, never the
+Slack response or the message sent.** Found 2026-08-31, deferred for want of session time:
+an artifact consulted as evidence that could say *that* a post happened but never *what*
+was sent or *what* Slack said back. `post_to_slack` now returns `(ok, detail)` instead of a
+bare `bool`; `main()` logs `detail` alongside `ok` and the rendered post body as a second
+log line. `detail` is built to never carry the token: the Slack response body itself never
+echoes the `Authorization` header, but `subprocess.TimeoutExpired.__str__` includes the
+full argv it was given — which contains `Authorization: Bearer <token>` — so that
+exception is now caught in its own branch and never stringified into `detail` or the log
+(previously it was folded into the same `except (OSError, subprocess.TimeoutExpired,
+json.JSONDecodeError)` clause as the others and printed via `f"{exc}"`, which would have
+put a live token into stderr — never into the log file itself, since only stdout's `ok`
+value reached `_log_line`, but the token-safety of `detail` is now an explicit invariant
+rather than an accident of what happened not to be logged). Proved on deliberately broken
+input, not merely re-smoke-tested: a real call against the live Slack API with a garbage
+token, run twice against a scratch handover directory, produced
+`ok=False - detail=invalid_auth` (Slack's real error, not just the boolean) and the
+rendered post body on both lines, with the token appearing zero times in the log file on
+disk (`grep -c` on the token substring, not inferred from the script's return code). A
+second live end-to-end run of `main()` with `subprocess.run` stubbed to return a Slack
+success response produced `ok=True - detail=ok` plus the rendered body, confirming the
+change did not disturb the success path. Six new unit tests in
+`test_reporter.py` cover `post_to_slack`'s four branches (no token, Slack error, Slack
+success, and the `TimeoutExpired` token-leak guard specifically — asserting the token
+string is absent from `detail`) plus the log line's content on both the failure and
+success path; all 15 tests (9 prior + 6 new) pass. `uv run ruff check .` and
+`uv run mypy --strict` on `reporter.py` and the test file both pass.
