@@ -14,7 +14,7 @@ artifact B, NT-0014 §2. Runtime/ops state lives outside this repository (spec �
 
 ## Why this exists, and why its shape changed from NT-0014's original proposal
 
-The note (`.claude/notes/0014-machine-readable-process-core.md` §2) proposed B as a
+The note (`docs/notes/0014-machine-readable-process-core.md` §2) proposed B as a
 state file the watcher writes and a mismatch detector compares against artifact history.
 `docs/plans/2026-08-30-nt-0014-q1-q3-q4-rulings.md`, **Ruling 47**, rejected that design:
 the failure this file will actually have is **agreement by vacancy**, not disagreement —
@@ -42,7 +42,7 @@ no indicator, because it converts 'I do not know' into a confident wrong answer.
    writes it at the moment a fix/replan decision is recorded, independently of this
    script's cycle. The reasoning this condition states still binds C2's own design
    (Ruling 47(c): a `0` from a counter nothing increments is indistinguishable from a
-   true zero — `.claude/notes/0007-context-bound-measures-cap-not-discipline.md`'s
+   true zero — `docs/notes/0007-context-bound-measures-cap-not-discipline.md`'s
    boundary-metric trap in another dress); only the "does not exist yet" clause was
    superseded.
 3. **`in_flight_expensive_verifications` entries expire.** This block is genuinely

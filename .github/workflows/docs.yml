@@ -4,18 +4,18 @@ name: docs
 # the workflow level, not per job, so each component gets its own workflow. The alternative
 # — one workflow with an action-based filter — adds a dependency to save a file.
 #
-# `.claude/notes/**` is in the filter because checks 16-20 audit that directory. Adding the
-# checks without adding the path would have been the worse half of a change: the audit would
-# pass on every note-only commit by never running on one.
+# The working notes live under docs/notes/ (moved out from under .claude, NT-0016 Slice 4),
+# so `docs/**` below already covers the path checks 16-20 audit; no separate notes entry is
+# needed the way one once was, back when the notes sat outside docs/ entirely.
 # The two path lists are duplicated rather than shared by a YAML anchor: GitHub Actions does
 # not expand anchors in workflow files, and an alias here parses as a literal string that
 # matches no path — the filter would silently match nothing.
 on:
   push:
     branches: [main]
-    paths: ['docs/**', '.claude/notes/**', 'scripts/audit-docs.py', 'CLAUDE.md', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'CLAUDE.md', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['docs/**', '.claude/notes/**', 'scripts/audit-docs.py', 'CLAUDE.md', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'CLAUDE.md', '.github/workflows/docs.yml']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,7 +31,7 @@ jobs:
         with: {python-version: "3.12"}
       # 25 checks: requirement IDs, cross-references, dependency direction, glossary
       # single-sourcing, money discipline, JSON Schema validity and $ref resolution over
-      # docs/ (1-15), the working notes in .claude/notes/ (16-20), every endpoint and
+      # docs/ (1-15), the working notes in docs/notes/ (16-20), every endpoint and
       # pricing-core function a workflow journey cites (21, FR-OVR-17), every table row's
       # cell count (22), every spec §10 mirror row's status (23), §5.3/§5.6 canonical-route
       # agreement (24), and F-id citations against the findings register (25).

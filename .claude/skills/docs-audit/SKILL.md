@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Verify the integrity of the docs/ specification suite and the .claude/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, every F-id citation against the findings register or a closure record, the process core extract's § citations against the process spec, and every filed plan's acceptance-standard field — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
+description: Verify the integrity of the docs/ specification suite and the docs/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, every F-id citation against the findings register or a closure record, the process core extract's § citations against the process spec, and every filed plan's acceptance-standard field — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
 # Auditing the docs suite
@@ -65,16 +65,16 @@ a module with unglamorous requirements.
 | 15 | Every `OQ-` row has an owner and a recognised status | "decided" written into the *owner* column while the status still says open |
 | 16 | Every working note has the header block and a known status | A note with no deliverable or no verdict — the two fields that make it actionable |
 | 17 | Note numbering: `NNNN-kebab.md`, unique, matching the `NT-NNNN` heading | A number reused or a heading that disagrees with its filename, so an `NT-0002` reference points at two things |
-| 18 | The `.claude/notes/README.md` index and the directory agree, both ways | A note added and never indexed, or an index row outliving its file |
+| 18 | The `docs/notes/README.md` index and the directory agree, both ways | A note added and never indexed, or an index row outliving its file |
 | 19 | Every link, `FR-`/`NFR-`, `OQ-`, `ADR-` and `NT-` reference in a note resolves | A note citing a requirement — or a superseding note — that never existed, which reads exactly like one that does |
 | 20 | No note defines a requirement id in the bold `**FR-…**` form | A requirement escaping `docs/specs/`, where `CLAUDE.md` §5's permanence rule does not reach it |
 
-**Checks 16–20 cover the mechanical half of `.claude/notes/README.md`'s audit standard.**
+**Checks 16–20 cover the mechanical half of `docs/notes/README.md`'s audit standard.**
 The other half — is this status still *true*, is this deliverable still right for the
 current phase — is judgement, and the README marks which is which. Do not read a green run
 as "the notes are current".
 
-**`.claude/notes/**` is in `docs.yml`'s path filter.** Adding checks without adding the path
+**`docs/notes/**` is in `docs.yml`'s path filter.** Adding checks without adding the path
 would have been the worse half of the change: they would pass on every note-only commit by
 never running on one.
 
@@ -139,7 +139,7 @@ pass below found the gap — the same drift this skill exists to prevent, in its
 
 | # | Check | The defect it catches |
 |---|---|---|
-| 25 | Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in `docs/research/`, `docs/plans/` or `.claude/notes/` resolves against `docs/audit/register.md`, an archived phase register, **or a work-item closure record** (`docs/audit/work/*/README.md`, `docs/audit/closure-records.md`) | A citation to a withdrawn or not-yet-filed finding — `(F42)`, `(F45)` — reads as a real reference and nothing complains |
+| 25 | Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in `docs/research/`, `docs/plans/` or `docs/notes/` resolves against `docs/audit/register.md`, an archived phase register, **or a work-item closure record** (`docs/audit/work/*/README.md`, `docs/audit/closure-records.md`) | A citation to a withdrawn or not-yet-filed finding — `(F42)`, `(F45)` — reads as a real reference and nothing complains |
 
 **Resolves against three sources, not one — a register-only first version fired on correct
 behaviour, ruled wrong 2026-08-30.** `docs/audit/register.md`'s own header states its
@@ -149,7 +149,7 @@ during its own slice's audit — `F-W9-3-2`, resolved the day it was raised, rec
 corrected (`03-rating-engine.md:671`) — therefore never gets a register row at all, and
 treating that citation as dangling is a worse defect than the gap the check exists to catch:
 it fires on every properly-closed finding cited this way. **Swept 2026-08-30** against the
-real corpus: of 14 distinct F-ids cited in `docs/research/`/`docs/plans/`/`.claude/notes/`,
+real corpus: of 14 distinct F-ids cited in `docs/research/`/`docs/plans/`/`docs/notes/`,
 13 resolve via the register and exactly **1** (`F-W9-3-2`) resolves only via a closure
 record — the false-positive rate a register-only design would have had, and the incident
 that forced this fix.
@@ -158,7 +158,7 @@ Deliberately narrow on two further axes, both found necessary against the real c
 rather than assumed. Only the register's own parenthesised citation form is matched — a
 bare `F1` is a document's own private numbering far more often than a register reference:
 several hundred hits across the W5 and W6b task plans' own "Findings" sections alone. And
-only `docs/research/`, `docs/plans/` and `.claude/notes/` are scanned, never `docs/audit/`
+only `docs/research/`, `docs/plans/` and `docs/notes/` are scanned, never `docs/audit/`
 itself (where a retired or not-yet-filed id is legitimately named in prose) or
 `docs/roadmap.md`/`docs/phase-0-status.md` (a live check found the latter's `(F13)` citing
 `track-a-findings.md`'s own local F13, which collides with the register's unrelated F13 —
@@ -243,6 +243,44 @@ in the script** — durable and reproducible in any clone at any revision.
 standard — testable, tied to a real requirement — is not mechanised; that judgement stays
 the lead's read at the replan-vs-proceed gate (`.claude/roles/lead.md`).
 
+### The notes tombstone (check 30)
+
+NT-0016 Slice 4 moved `.claude/notes/` to `docs/notes/` and left a `README.md`
+tombstone at the vacated path, per Ruling 57. Slice 4's own execution then found that
+a directory-level README does not make an *individual* old-path citation resolve:
+13 frozen plans under `docs/plans/` cite a note by its old path, C4 forbids editing a
+frozen plan to fix its own citation, and check 1 tests on-disk existence per link
+target — so 18 one-line redirect stubs were added, one per moved note, to keep those
+links resolving. That fixed check 1, but left the stubs at a location nothing else in
+this script reads: `NOTES` points at `docs/notes/`, and `docs.yml`'s path filter no
+longer names the old path at all. Ruling 61
+(`docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md`) kept the stubs
+and required this check, because an accepted-and-undetected gap is the exact shape
+`docs/audit/register.md`'s F58 names — a stated mechanism nothing runs.
+
+**A frozen, closed registry, not a re-parse of the README's own mapping table** — the
+same design choice Ruling 59 made for the file-census provenance carve-out, and for
+the same reason: deriving the expected set from a file a stray edit could also touch
+would let one edit defeat both the content it changes and the check meant to catch the
+change. `OLD_NOTES_STUB_NAMES` in `scripts/audit-docs.py` is that registry — 18
+basenames, never derived from `docs/notes/README.md`'s table.
+
+Three things are checked: the old path exists as a directory; its `*.md` basenames
+equal exactly `{"README.md", *OLD_NOTES_STUB_NAMES}` — a stray file or a deleted stub
+both fail this, by name; and each registered stub's bytes equal a template rendered
+from its own filename, exactly — not a regex or a prefix match, the same byte-exact
+reasoning Ruling 59 already established for a template this short. `README.md` itself
+is not re-validated here — Ruling 57 already specifies its content, and this check's
+job is the 18 files that specification does not cover.
+
+**Proven on deliberately broken input, both cases Ruling 61 §4 names**: a stray file
+added at the old path fails, naming the file, before its content is even read; an
+edited stub body (a sentence appended to an existing stub) fails, naming the file and
+the mismatch. Both reproduced as `tests/test_audit_docs_notes_tombstone.py`, alongside
+a positive-control test that the tombstone as built stays silent and `audit-docs.py`
+still reports 18 working notes — the count is unaffected, since check 30 reads the old
+path and `check_notes` reads `docs/notes/`, two disjoint roots.
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -323,6 +361,20 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-01 — Check 30 added (the vacated `.claude/notes/` tombstone: exactly the
+README plus a frozen, closed set of 18 per-file redirect stubs, each byte-identical
+to a rendered template). Ruling 61
+(`docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md`), raised when
+NT-0016 Slice 4's own execution found the ruled single-README tombstone (Ruling 57)
+does not keep 13 frozen plans' individual old-path note citations resolving on disk
+(check 1), and the stub files built to fix that were watched by nothing once `NOTES`
+moved to `docs/notes/`. **Proven on deliberately broken input, both cases the ruling
+names**: a stray file added at the old path fails, naming the file, before its content
+is read; an edited stub body (a sentence appended) fails, naming the file and the
+mismatch. Both reproduced as `tests/test_audit_docs_notes_tombstone.py`, alongside a
+positive-control test that the unmodified tombstone stays silent and `audit-docs.py`
+still reports 18 working notes.
 
 2026-08-31 — Check 28 added (every plan-kind file dated on/after the cutoff states a
 non-empty "Acceptance Standard" heading) and this skill updated with it in the same commit.
@@ -452,7 +504,7 @@ with no link to what keeps it current is the exact pattern that had already drif
 ways twice. It used to be six places in total, until `CLAUDE.md`'s three mentions were
 removed: §0's own rule is that counts which change do not belong in it.
 
-2026-08-15 — Extended with checks 16–20 over `.claude/notes/`. **All five were proven
+2026-08-15 — Extended with checks 16–20 over `docs/notes/`. **All five were proven
 against deliberately broken input**, twelve breakages in total, each producing exactly one
 targeted failure and the suite passing again on revert: a removed `**Owner**` row, a status
 of `pending`, a heading renumbered to `NT-0009` under filename `0001`, a duplicated number,

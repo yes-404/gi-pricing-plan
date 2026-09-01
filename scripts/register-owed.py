@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print every open `docs/audit/register.md` row owed by, or blocking, a named close.
 
-Ordered by NT-0015 P5 (`.claude/notes/0015-the-register-is-a-ledger-evidence-is-a-file.md`
+Ordered by NT-0015 P5 (`docs/notes/0015-the-register-is-a-ledger-evidence-is-a-file.md`
 §2), which exists to replace an owed list compiled by hand at the moment of highest load —
 F41, verbatim: the W11 close's hand-compiled list "already runs to thirteen items — a list
 that lost NFR-RATE-13/14 for two workstreams even though a register row, F-W9-1, existed for

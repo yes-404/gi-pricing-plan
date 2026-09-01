@@ -568,7 +568,7 @@ needs a dated maintainer acceptance line before it binds. Evidence derived at `o
 `07ae047`, rebased onto `d4bc394` while this PR was open (see review 8, Question 4: `d4bc394`
 is in fact one of this pair's own recommendations, landed independently before either review
 was filed). Nothing else moved underneath this review — `07ae047` (#313) touched only
-`.claude/notes/`, and `d4bc394` (#314) touched only the two lines review 8 names.
+`docs/notes/`, and `d4bc394` (#314) touched only the two lines review 8 names.
 
 **1. Completion — reused, not re-derived.** W9's own closure record already carries fresh
 completion evidence for its scope (`docs/audit/work/W9/README.md:26-29`), so it is cited
@@ -1611,7 +1611,7 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
 
   **The rule that would have caught this already exists.** `CLAUDE.md` §13: "a reference carries
   its scope and its measurement… a `Verified` date carries the tree"
-  ([NT-0004](../../.claude/notes/0004-a-reference-that-resolves-only-for-the-writer.md)). The
+  ([NT-0004](../../docs/notes/0004-a-reference-that-resolves-only-for-the-writer.md)). The
   auditor's F44 row followed it; the lead's dispatch did not, and the lead is the one who cites §13
   at other people. **Three instances tonight of an existing rule failing to fire on someone who
   already knew it**: this locator (§13's own scope rule, against its own author); the 3h22m
@@ -1690,7 +1690,7 @@ filing — deliberately not re-checked here, rather than guess at an outcome not
   freshness indicator (cited above under instance 1, but not previously examined from this
   angle) and Ruling 34's finding that sampling would hide `NFR-RATE-1`/`2`'s violation below the
   metric's own resolution. Both are already tied, by their own source documents, to
-  [`NT-0007`](../../.claude/notes/0007-context-bound-measures-cap-not-discipline.md)'s "a boundary metric
+  [`NT-0007`](../../docs/notes/0007-context-bound-measures-cap-not-discipline.md)'s "a boundary metric
   reads zero by construction" — plausible third and fourth instances of this section's narrow
   shape, or possibly a related-but-distinct family of their own; this review does not decide
   which, only declines to count them before checking either with the care the six above got.
@@ -2537,7 +2537,7 @@ that the instance is W12's even though the class is not. See the W12 map plan.
 **F26 — still open, verified rather than assumed stale.** Register text: *"owner decided: W11
 (Ruling 29)... to land before the charter amendments R6 is holding for the §14 review."* W11
 closed (twice) without landing it. Verified directly: `.github/workflows/docs.yml:16,18`'s
-`paths:` filter is `['docs/**', '.claude/notes/**', 'scripts/audit-docs.py', 'CLAUDE.md',
+`paths:` filter is `['docs/**', 'docs/notes/**', 'scripts/audit-docs.py', 'CLAUDE.md',
 '.github/workflows/docs.yml']` — no `.claude/roles/**` or `.claude/skills/**`. The gap Ruling
 29 named is exactly as open as it was at W11's close. **Recommendation**: name a fresh owner
 now that W11 cannot discharge it — the fix is small and self-contained (a path-filter addition
@@ -2619,8 +2619,8 @@ text, lines 1233–2472): **neither review mentions P12 or P1b.**
   its own, since the reasoning failure generalises past this repository."* The failure is
   diagnosing from a log you have been writing to yourself without subtracting your own
   attempts first — `watcher.md`'s operational fix landed, but the generalisable working note
-  never did. Checked `.claude/notes/` in full (eighteen notes, `0001`–`0018`): none covers
-  this. **Recommendation**: write the note (a `.claude/notes/0019-…` candidate); this review
+  never did. Checked `docs/notes/` in full (eighteen notes, `0001`–`0018`): none covers
+  this. **Recommendation**: write the note (a `docs/notes/0019-…` candidate); this review
   does not write it, since a role writes what its own charter names
   (`.claude/roles/planner.md`) and an NT-numbered working note is nobody's charter item by
   default — flagging it is as far as this review's grant reaches.
@@ -2642,7 +2642,7 @@ review re-checked F28's own row against what actually got folded in, rather than
 below) numbers all four candidates — A, B, the third, and P12 — into `delivery-process.md` §15
 in one pass, rather than three followed by a stray fourth later.
 
-**(b) NT-0015's impact-matrix row 15.** Verified directly: `.claude/notes/
+**(b) NT-0015's impact-matrix row 15.** Verified directly: `docs/notes/
 0015-the-register-is-a-ledger-evidence-is-a-file.md:114` names row 15 as *"Adoption plan
 `docs/plans/<date>-nt-0015-adoption.md`."* No such file exists in `docs/plans/` (checked by
 listing), and `docs/roadmap.md:424` already records why: *"writing a plan today for work
@@ -2762,9 +2762,9 @@ separately.
 - `.claude/roles/watcher.md:11-24` — read directly, to confirm F31's clause is unchanged.
 - `docs/audit/work/nt-0010-0011-adoption/pilot-findings.md:600-650` — read directly, for F28's
   P7/P12/P1b dispositions and owners.
-- `.claude/notes/` (`0001`–`0018`), listed in full — to confirm no note covers P1b's carried
+- `docs/notes/` (`0001`–`0018`), listed in full — to confirm no note covers P1b's carried
   half.
-- `.claude/notes/0015-the-register-is-a-ledger-evidence-is-a-file.md:114` and
+- `docs/notes/0015-the-register-is-a-ledger-evidence-is-a-file.md:114` and
   `docs/roadmap.md:424` — read directly, for NT-0015's row 15 and its own stated disposition
   owner.
 - `docs/specs/03-rating-engine.md:137,176-178,596-597,611` — read directly.

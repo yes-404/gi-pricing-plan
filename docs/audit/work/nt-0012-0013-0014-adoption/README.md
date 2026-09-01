@@ -1,7 +1,7 @@
 # Audit record — nt-0012-0013-0014-adoption (`docs/audit/checklists/work-item-close.md`)
 
 > Not a `CLAUDE.md` §13 numbered-workstream closure — NT-0012, NT-0013 and NT-0014 are notes
-> under `.claude/notes/`, not a roadmap `W`-id, and this Work closes under the maintainer's
+> under `docs/notes/`, not a roadmap `W`-id, and this Work closes under the maintainer's
 > 2026-08-30 delegation (`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §1.1), not
 > under `CLAUDE.md` §13's own acceptance line. It follows `work-item-close.md`'s checklist
 > because the lead asked for it in that shape, and because the checklist's own sections —
@@ -99,9 +99,9 @@ slice. **Verdict: accepted, carried forward** (no new evidence needed).
 **Verdict: delivered and tested** (each ruling's own text is the acceptance criterion; each
 landed verbatim where ruled).
 
-**Finding, not in the lead's brief, found independently**: both `.claude/notes/0012...md` and
-`.claude/notes/0013...md` still carry `Status: open` at `9e8783d`, unchanged since they were
-raised — even though the rules each note asked for are now built and landed. `.claude/notes/
+**Finding, not in the lead's brief, found independently**: both `docs/notes/0012...md` and
+`docs/notes/0013...md` still carry `Status: open` at `9e8783d`, unchanged since they were
+raised — even though the rules each note asked for are now built and landed. `docs/notes/
 README.md`'s own definition of `open` is *"Raised, assessed, not agreed... nothing is
 built"*, which is no longer true of either. Same shape NT-0014's own note hit and was
 corrected for (2026-08-30, by the lead, "only the party that changed the facts can verify
@@ -207,7 +207,7 @@ No finding filed.
 | F57 (amended) | §7 retry-cap instrumentation — slice G landed, giving the counter a writer, but zero fix/replan cycles have run through it yet | amended in place; stays open until a live workstream runs under it | closed-with-findings |
 | F33 (noted) | `scripts/audit-docs.py` now carries checks 25–28, still outside `[tool.mypy]`'s `files` (10 real errors when run directly, confirmed live) | note added; disposition unchanged, still owned by the §14 review bundling F27(c)/F29/F33 | closed-with-findings |
 | F58 (re-confirmed, not new) | Artifact B has no live scheduled writer | unchanged; re-confirmed current at `9e8783d` | closed-with-findings |
-| NT-0012/0013 `Status: open` (new, unfiled) | Both notes' rules landed (slices C, D) but their own `Status` fields still read `open`, contradicting `.claude/notes/README.md`'s definition | not the auditor's write scope (each note's `Owner` field names the lead/maintainer); flagged in this record and in the report to the lead rather than filed as a register row, since it is a one-line note correction, not a workstream-scale gap | open — needs the lead to correct both notes' `Status` fields |
+| NT-0012/0013 `Status: open` (new, unfiled) | Both notes' rules landed (slices C, D) but their own `Status` fields still read `open`, contradicting `docs/notes/README.md`'s definition | not the auditor's write scope (each note's `Owner` field names the lead/maintainer); flagged in this record and in the report to the lead rather than filed as a register row, since it is a one-line note correction, not a workstream-scale gap | open — needs the lead to correct both notes' `Status` fields |
 | C2/C3 test-count (2436 vs. verified 2429→2440) | Stale self-reported PR figure, pre-rebase | resolved by this audit's own `--collect-only` runs at both trees; no fix needed, no further action | closed |
 | Ruling 48 citation reword | Cosmetic | accept — body verbatim, citation arguably improved | closed |
 | `meta.verified_against_tree` set at authoring time (habit) | Not a defect today (digest is content-correct); citation points at the wrong commit and would mislead a future `git diff` instruction | recorded as a `close-workstream` skill addition and Verified-log entry, not a register row (self-healing on next spec edit) | closed |

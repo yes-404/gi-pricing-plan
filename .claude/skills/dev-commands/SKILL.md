@@ -47,7 +47,7 @@ has been green here while the frontend was red.** Run both.
 
 ```bash
 uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
-python3 scripts/audit-docs.py                # structural checks over docs/ and .claude/notes/
+python3 scripts/audit-docs.py                # structural checks over docs/ and docs/notes/
 uv run python scripts/req-coverage.py        # requirement traceability
 uv run python scripts/generate-contracts.py  # regenerate; --check fails CI on drift
 ```

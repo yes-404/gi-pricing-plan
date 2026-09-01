@@ -1,6 +1,6 @@
 # Agent Settings — model, effort, skills and tool scope for the seven roles
 
-Adopted 2026-08-29 from NT-0011 (`.claude/notes/0011-per-agent-model-and-skill-settings.md`),
+Adopted 2026-08-29 from NT-0011 (`docs/notes/0011-per-agent-model-and-skill-settings.md`),
 companion to `docs/process/delivery-process.md`, reconciled and ruled in
 `docs/plans/2026-08-29-nt-0010-0011-reconciliation-rulings.md` ("the rulings record").
 Per-role tool scope is stated in full in each role's own file under `.claude/roles/` — this

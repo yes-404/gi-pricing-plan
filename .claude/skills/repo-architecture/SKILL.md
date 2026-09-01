@@ -36,6 +36,7 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 │   ├── contracts/          JSON Schema + OpenAPI, generated from model-schema, published
 │   ├── research/           spike findings, with what each one changed
 │   ├── plans/              filed implementation plans and their execution ledgers
+│   ├── notes/              maintainer notes, `NT-NNNN` (audit-docs checks them)
 │   ├── roadmap.md          phases, workstreams, decision gates, component status
 │   ├── open-questions.md   every unresolved choice, gated by phase
 │   ├── skills-map.md       stack component → where used → skills
@@ -57,7 +58,6 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 ├── tests/                  repository invariants — enforcement the audit can see
 ├── scripts/                audit-docs · req-coverage · scope-audit · generate-contracts ·
 │                           bench-data · bench-model · demo · graphify-docs-extract
-├── .claude/notes/          maintainer notes, `NT-NNNN` (audit-docs checks them)
 ├── .claude/skills/         project procedures, written and vendored
 └── .claude/agents/         delegable specialists — own context, not the turn's
 ```
@@ -142,7 +142,7 @@ the code is written against.** Two scripts keep that honest, and both are in the
 
 - **`scripts/audit-docs.py`** — structural checks over the spec suite: requirement IDs,
   cross-references in both directions, dependency direction, glossary single-sourcing,
-  money discipline, schema validity. It also checks the `.claude/notes/` working notes,
+  money discipline, schema validity. It also checks the `docs/notes/` working notes,
   and the `docs/workflows/` journeys' citations against the interfaces the specs declare
   (FR-OVR-17).
 - **`scripts/req-coverage.py`** — turns `@pytest.mark.req` marks into a report of which

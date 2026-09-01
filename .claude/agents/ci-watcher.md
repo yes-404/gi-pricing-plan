@@ -88,7 +88,7 @@ CI is **path-filtered per component** (`CLAUDE.md` §2), so a PR legitimately ru
 |---|---|
 | `python.yml` | `packages/`, `backend/`, `pipelines/`, `scripts/`, `examples/`, `docs/contracts/`, root `pyproject.toml`, `uv.lock`, `.importlinter` |
 | `frontend.yml` | `frontend/`, `docs/contracts/openapi/` (a contract change can break the generated client) |
-| `docs.yml` | `docs/`, `.claude/notes/`, `scripts/audit-docs.py`, root `CLAUDE.md` |
+| `docs.yml` | `docs/`, `docs/notes/`, `scripts/audit-docs.py`, root `CLAUDE.md` |
 
 Note `.claude/agents/`, `.claude/skills/` and `docs/contracts/schemas/`-only changes fire
 **none** of these — a PR there runs no checks, which is itself worth saying in the report.
