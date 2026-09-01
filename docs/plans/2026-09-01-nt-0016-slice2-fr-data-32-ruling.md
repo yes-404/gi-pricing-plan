@@ -1,5 +1,5 @@
 # Ruling 59 — NT-0016 Slice 2's census CSV and FR-DATA-32: the test is overbroad, the
-requirement is not (2026-09-01)
+requirement is not (2026-09-01, corrected before merge 2026-09-01 — see §7)
 
 **What this is.** PR #537 (`exec-nt-0016-slice2-file-census`, NT-0016 Slice 2, plan
 [`2026-08-31-nt-0016-investigation.md`](2026-08-31-nt-0016-investigation.md) §7) added
@@ -29,10 +29,11 @@ The testable definition of "done" for this ruling record:
 3. §3 states, precisely enough for an executor to implement without further judgement calls,
    what the carve-out predicate must check and what it must NOT accept as sufficient (a bare
    path/directory allowlist).
-4. §4 states a broken-input case the resolution must still catch, in a form an executor can
-   turn directly into a test: a file under the same reserved location that is **not**
-   reproducible from any registered generator must still fail
-   `test_no_reference_rows_are_bundled_in_the_repository`.
+4. §4 states three broken-input cases the resolution must still catch, in a form an
+   executor can turn directly into tests: a file matching the registered pattern whose
+   content does not match its named tree, and a file naming an unresolvable tree, must both
+   still fail `test_no_reference_rows_are_bundled_in_the_repository` — never a silent
+   exemption in either case.
 5. `python3 scripts/audit-docs.py` exits 0 on the branch carrying this record.
 6. `git grep -nE '\bFR-[A-Z]+-[0-9]|\bNFR-[A-Z]+-[0-9]|\bOQ-[A-Z]+-[0-9]|\bADR-[0-9]'
    docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md` returns matches only to
@@ -55,6 +56,9 @@ The testable definition of "done" for this ruling record:
 | The test's predicate is a repo-wide extension sweep with no awareness of provenance | **Confirmed** — `test_lineage.py:631-643`: `root.rglob(pattern)` over `*.csv`, `*.parquet`, `*.xlsx`, excluding only `.venv`, `.git`, and `licensed_vendored_skill` paths |
 | Slice 2's CSV is generated from `git ls-files`, carries no reference-set content, and its own plan states it must reproduce byte-for-byte at its own tree | **Confirmed** — plan §7: "The corpus is `git ls-files`... Re-running the script at the same commit reproduces the committed CSV byte for byte" (acceptance item 3); header is `path,area,name_pattern,size_bytes,mutability,referenced_by` — file metadata about this repository's own tracked files, not reference-set rows |
 | Slice 3's artifact (`docs/audit/file-taxonomy-draft.md`) does not recur this problem | **Confirmed** — plan §8: `.md`, not matched by the `*.csv`/`*.parquet`/`*.xlsx` sweep |
+| §3 point 2 as originally filed ("regenerate... against the current tree") is itself broken, independent of any future merge | **Confirmed, independently, 2026-09-01, correcting this record** — cloned the repo fresh, checked out PR #539's branch tip `aace8d6`, ran `scripts/file-census.py --out` bare (i.e. against "the current tree" as originally worded): 1324 rows, not 1320 — `diff` is non-empty. The PR's own checkout already contains `scripts/file-census.py`, `tests/test_file_census.py`, `docs/audit/file-census.md` and the CSV itself, none of which existed at `5ef559d`, so "the current tree" is never the tree the filename names, not even at the moment the PR is opened. The companion document already states this in words (`docs/audit/file-census.md`: "they postdate the stated tree by construction"); this confirms it against the artifact rather than the document describing it |
+| Regenerating at the **named** tree reproduces byte-for-byte, and the cheaper path-list check agrees | **Confirmed, independently** — `git worktree add /tmp/census-check 5ef559d...` then `scripts/file-census.py --root /tmp/census-check --out` diffs empty against the committed CSV (byte-identical, 1319 rows); `git -C /tmp/census-check ls-tree -r --name-only 5ef559d...` sorted, diffed against the CSV's `path` column sorted, also empty (1319/1319) |
+| A shallow CI checkout cannot resolve an ancestor SHA locally, and a targeted fetch can | **Confirmed, independently** — `.github/workflows/python.yml` sets no `fetch-depth`, so `actions/checkout@v4`'s documented default (`1`) applies; reproduced locally with `git clone --depth 1`: `git rev-parse --verify 5ef559d...^{commit}` exits `1` (unresolvable) before a fetch, and `git fetch --depth 1 origin 5ef559d...` then resolves it via `FETCH_HEAD` with the correct 1319-entry tree. A fetch-by-SHA against GitHub's own hosted remote depends on `uploadpack.allowAnySHA1InWant`/`allowReachableSHA1InWant`, on by default for github.com; not independently re-verified against github.com itself in this session, only against a local `file://` remote, which is a strictly easier case — flagged rather than asserted as fact for the CI-hosted case |
 | This class already has a named precedent in the register | **Confirmed** — `docs/audit/findings/F66.md`: "a syntactic proxy used where a semantic distinction... was needed, and the proxy was never scoped to make that distinction," citing `a3b9c9e` as the prior instance of the same shape. Grepped `docs/audit/register.md` for `FR-DATA-32`, `file-census`, `test_no_reference_rows`: no existing row names this specific conflict — it is not already filed, so this ruling is not a duplicate |
 
 ## 2. Ruled
@@ -125,15 +129,56 @@ which must hold together:
    re.compile(r"^docs/audit/file-census-[0-9a-f]{7,40}\.csv$"))`. A candidate file is a
    carve-out *candidate* only if its path matches some registered pattern; everything else
    still goes through the unmodified whole-tree sweep.
-2. **Actual regeneration, not a claim.** For a candidate, the test invokes the registered
-   generator script (loaded the way Slice 2's own `tests/test_file_census.py` loads
-   `scripts/file-census.py` — by path, via `importlib.util.spec_from_file_location`, since
-   the hyphenated filename is not import-name-clean) against the current tree, and diffs
-   its output byte-for-byte against the committed file's content.
+2. **Verified against the tree the filename names, never "the current tree."**
+   `docs/audit/file-census-<sha>.csv` documents commit `<sha>`'s tree specifically — never
+   the tree of whatever commit `pytest` happens to be running at. **This binds the original
+   wording of this point, filed 2026-09-01 and corrected the same day before merge**: "the
+   current tree" is wrong even for the PR that introduces the file, because that checkout
+   already contains the generator script, its test, and the census's own companion
+   document — none of which existed at `5ef559d` and all of which the census correctly
+   excludes (`docs/audit/file-census.md`: "they postdate the stated tree by construction").
+   Verified directly: regenerating bare inside PR #539's own branch tip produces 1324 rows
+   against the committed 1320 — not a future-merge risk, a same-PR one. Every future merge
+   to `main` only widens the gap.
+
+   The registered pattern already captures the tree as its own capture group
+   (`[0-9a-f]{7,40}` inside `file-census-(?P<sha>[0-9a-f]{7,40})\.csv$`); the check
+   resolves against **that** commit, not `HEAD`:
+
+   - Attempt local resolution first: `git rev-parse --quiet --verify "<sha>^{commit}"`.
+   - If that fails, attempt `git fetch --depth 1 origin <sha>` and retry resolution against
+     `FETCH_HEAD`. Verified mechanically against a local shallow clone (`git clone --depth
+     1`): the ancestor SHA is unresolvable before the fetch and resolves correctly,
+     1319-entry tree included, after it. `actions/checkout@v4` in this workflow sets no
+     `fetch-depth`, so its documented default (a single-commit shallow clone) applies — the
+     fetch step is not defensive padding, it is required on every ordinary CI run of this
+     test, not only a hypothetical one.
+   - **If resolution still fails after the fetch attempt, the test fails outright** —
+     naming the unresolved SHA and the file — and the candidate is **not** exempted. A
+     carve-out that falls back to "cannot verify, so allow it" is a carve-out satisfied by
+     absence, the failure class this repository already keeps re-finding; this design
+     refuses that fallback by construction rather than by discipline.
+   - Once the commit resolves: `git ls-tree -r --name-only <sha>`, sorted, compared against
+     the CSV's own `path` column, sorted, for **exact equality of the full list** — not a
+     set (a set would hide a duplicated or dropped row). The header row is checked
+     separately against the exact string `path,area,name_pattern,size_bytes,mutability,
+     referenced_by` from §7's Interfaces contract.
+   - **This checks the property FR-DATA-32 actually cares about — provenance of rows — and
+     deliberately stops there.** It does not re-derive `area`, `name_pattern`, `mutability`
+     or `referenced_by`; those are Slice 2's own correctness, already the subject of
+     `tests/test_file_census.py`'s byte-for-byte acceptance criterion (plan §7, item 3), and
+     re-deriving them here would run the same expensive full-repo `referenced_by` content
+     scan a second time, for a purpose (licensing) that a wrong `mutability` guess cannot
+     touch. Real reference-set rows (ONS postcode, ABI vehicle groups, occupation codes)
+     cannot satisfy "the `path` column, sorted, equals `git ls-tree -r --name-only <sha>`,
+     sorted" for any resolvable `<sha>` in this repository's history, which is the fact that
+     matters for this requirement.
 3. **Exemption fires only on an exact match.** A candidate that matches a registered
-   filename pattern but does **not** reproduce byte-for-byte is *not* exempted — it falls
-   through to the existing `assert data_files == []` and fails the test, exactly as
-   unregistered bundled data does today.
+   filename pattern but whose header or sorted `path` column does **not** exactly equal the
+   named tree's (point 2) is *not* exempted — it falls through to the existing
+   `assert data_files == []` and fails the test, exactly as unregistered bundled data does
+   today. (Amended with point 2, §7: the match is against the named tree's `git ls-tree`
+   output, not a byte-for-byte regeneration of the whole file.)
 4. **Nothing about this predicate may be satisfied by a file's location or name alone.**
    The filename-pattern match in point 1 only narrows which files are even *offered* the
    chance to prove reproducibility; it never itself grants the exemption. This is the
@@ -147,25 +192,34 @@ which must hold together:
 
 ## 4. Broken-input proof this resolution must be provable against
 
-Per `CLAUDE.md` §13, a carve-out that has never printed a failure has not been tested. The
-executor must demonstrate, as a test on a synthetic fixture (mirroring
-`tests/test_file_census.py`'s own synthetic-tree pattern, not the live repository — the live
-sweep is an integration-style check over the real tree and cannot host a deliberately-broken
-fixture inside itself):
+Per `CLAUDE.md` §13, a carve-out that has never printed a failure has not been tested. Three
+cases, all against a synthetic fixture git repository (mirroring
+`tests/test_file_census.py`'s own synthetic-tree pattern, not the live repository — the
+whole-tree sweep is an integration-style check over the real tree and cannot host a
+deliberately-broken fixture inside itself, and the live repository's own history should not
+be mutated to manufacture a bad commit):
 
-- A file at a path matching the registered pattern (e.g.
-  `docs/audit/file-census-abc1234.csv`) whose **content is not** what
-  `scripts/file-census.py` would produce for that fixture tree (e.g. a hand-written CSV
-  simulating a genuinely bundled ABI/ONS extract, or simply the wrong header) is **still
-  reported by `generated_from_tracked_corpus` as not exempt**, and a whole-tree sweep over a
-  fixture containing only that file still asserts `data_files == [that path]` — i.e. the
-  test fails exactly as it does today for real bundled data.
-- The genuine, actually-reproducible census file continues to pass (the positive control),
-  so the proof is a contrast, not a single assertion — per the standing rule that a positive
-  control must exercise the same predicate the guard fires on, not an easier case.
+- **Positive control.** A file whose name matches the registered pattern and whose `path`
+  column, sorted, genuinely equals `git ls-tree -r --name-only <sha>`, sorted, at a real
+  commit in the fixture repo's own history is exempted, and the whole-tree sweep passes.
+  Verified for the real artifact independently in this session (§1): the committed
+  `file-census-5ef559d.csv`'s path column matches `git ls-tree -r --name-only 5ef559d...`
+  exactly, 1319/1319.
+- **Mismatched content, resolvable SHA.** A file matching the registered pattern, naming a
+  commit that *does* resolve in the fixture repo, but whose `path` column diverges from that
+  commit's `git ls-tree` (e.g. rows describing an ABI vehicle-group table, or the fixture
+  tree's own generator/test files spliced in the way the real "current tree" mistake would
+  produce) is **not** exempted, and the whole-tree sweep still reports it in
+  `data_files` — the test fails exactly as it does today for real bundled data.
+- **Unresolvable SHA.** A file matching the registered pattern but naming a commit absent
+  from the fixture repo and unreachable by fetch (no matching remote, or a remote lacking
+  that object) causes the **test itself to fail** naming the unresolved SHA — never a silent
+  exemption and never a silent pass-through. This is the case the "fetch-then-hard-fail"
+  design in §3 point 2 exists for, and it is the one the dispatch's own "carve-out satisfied
+  by absence" warning is about; it needs its own assertion, not only the other two.
 
-This is the executor's task, filed here as the acceptance condition the fix is not done
-without; it is not performed by this ruling record.
+All three are the executor's task, filed here as the acceptance condition the fix is not
+done without; none is performed by this ruling record.
 
 ## 5. Spec amendment: not needed
 
@@ -209,3 +263,38 @@ direction:
 
 No other part of the dispatch was found wrong. The F66 analogy holds on independent
 re-reading of both texts, not only on the dispatch's say-so.
+
+## 7. Correction, before merge (2026-09-01)
+
+**§3 point 2 as first filed bound reproducibility to "the current tree." That binding was
+itself defective**, caught by the lead before merge — not a hypothetical about a future
+`main` moving past `5ef559d`, but a same-PR defect: PR #539's own checkout already contains
+`scripts/file-census.py`, `tests/test_file_census.py` and `docs/audit/file-census.md`, none
+of which existed at `5ef559d` and all of which the census correctly excludes, so "the
+current tree" was never the tree the filename names, not even at the moment the file is
+first committed. Left as filed, the carve-out this ruling specifies would never fire and
+`test_no_reference_rows_are_bundled_in_the_repository` would stay red permanently —
+defeating the point of ruling (b) over (a) or (c) in the first place.
+
+**Independently re-verified before correcting**, not accepted on the strength of the
+dispatch alone (this role's charter): cloned the repository fresh, checked out PR #539's
+branch tip `aace8d6`, ran `scripts/file-census.py --out` bare — 1324 rows against the
+committed 1320, non-empty diff, confirming the defect directly against the artifact rather
+than trusting the companion document's account of it. Separately confirmed the corrected
+mechanism actually works: `git worktree add` to `5ef559d` reproduces the committed CSV
+byte-for-byte, and the cheaper `git ls-tree -r --name-only 5ef559d... | sort` matches the
+CSV's sorted `path` column exactly, 1319/1319. Also confirmed the shallow-checkout concern
+is real rather than theoretical: `.github/workflows/python.yml` sets no `fetch-depth`, and a
+local `git clone --depth 1` cannot resolve `5ef559d` until an explicit `git fetch --depth 1
+origin <sha>` is run, after which it resolves correctly — verified against a local `file://`
+remote; not independently re-verified against `github.com`'s own SHA-fetch policy in this
+session, and §1's evidence table flags that gap rather than silently assuming it away.
+
+**Corrected: §3 point 2 now resolves the named tree (from the filename's own captured SHA)
+rather than "the current tree," with an explicit local-resolve-then-fetch procedure and a
+hard failure — never a silent exemption — when the commit cannot be resolved even after the
+fetch. §4 gained a third proof case (an unresolvable SHA) the original two-case version did
+not cover, which is exactly the "carve-out satisfied by absence" failure mode named in the
+correction that prompted this.** Everything else in this record — the verdict, the chosen
+and rejected limbs in §2, the no-spec-amendment finding in §5, and both corrections to the
+dispatch in §6 — is unchanged and re-stands on its original evidence.
