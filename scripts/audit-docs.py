@@ -276,10 +276,15 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[str]) -> None:
     Two limits are worth stating rather than implying. **Number reuse across a deletion is
     not detectable here** — a snapshot cannot see the retired number, so that check stays
     manual and stays in the README. And gaps in the sequence are *legal*: a deleted note
-    retires its number, so contiguity is deliberately not asserted.
+    retires its number, so contiguity is deliberately not asserted. A missing `NOTES` root is
+    an **error**, not a legitimate absence: unlike an artifact the repository may not have
+    built yet, this directory is unconditionally present, so its disappearance can only mean
+    a move or a deletion that forgot to update this check.
     """
     if not NOTES.is_dir():
-        notes.append("no .claude/notes/ directory — checks 16-20 skipped")
+        fail(
+            f"{NOTES.relative_to(REPO).as_posix()} does not exist — checks 16-20 cannot run"
+        )
         return
 
     def rel(path: pathlib.Path) -> str:
@@ -479,6 +484,13 @@ def check_finding_citations() -> None:
     resolved against the wrong row instead of catching. Narrowing to where the incident this
     check answers actually happened is what keeps that kind of false confidence out.
 
+    **All three scan roots are unconditionally present, so a missing one is an error, not a
+    legitimate absence.** Unlike an artifact the repository may not have built yet, `research/`,
+    `plans/` and `.claude/notes/` are the same three named just above as this check's
+    deliberate, symmetric scope — none of them is optional relative to the other two, so a
+    `git mv` of any one would silently narrow this check's coverage were its disappearance
+    only skipped rather than reported.
+
     **Only the register's own citation form is matched**: an id in parentheses immediately
     after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
     itself, and how every genuine cross-document citation found while writing this check was
@@ -549,7 +561,13 @@ def check_finding_citations() -> None:
         registered |= set(_FINDING_TABLE_CELL.findall(source.read_text(encoding="utf-8")))
 
     scan_dirs = [ROOT / "research", ROOT / "plans", NOTES]
-    scanned = sorted({f for d in scan_dirs if d.is_dir() for f in d.rglob("*.md")})
+    scanned_files: set[pathlib.Path] = set()
+    for d in scan_dirs:
+        if not d.is_dir():
+            fail(f"{d.relative_to(REPO).as_posix()} does not exist — check 25 cannot scan it")
+            continue
+        scanned_files |= set(d.rglob("*.md"))
+    scanned = sorted(scanned_files)
     for f in scanned:
         text = f.read_text(encoding="utf-8")
         cited = set(_FINDING_CITED.findall(text))
