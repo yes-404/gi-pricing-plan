@@ -2075,6 +2075,11 @@ is met, and the decision point above is ruled by the lead. Everything in questio
 not expected to change on those events, but will be re-read against whatever tree is current
 before filing, per this document's own rule that a claim names the tree it was checked at.
 
+> **Maintainer acceptance: accepted as proposed, 2026-09-01 — dated together with reviews 10 and
+> 11 under review 11's proposal 11.1.** The `_pending._` paragraph above is kept as the record of
+> the pre-acceptance state; the preconditions it names were met before this line was dated
+> (review 10's §5d records the first two, at `b749acb`).
+
 #### Sources
 
 - `docs/roadmap.md` §7 (workstream table, risk table, Phase 2 demo-able outcome) — read directly at
@@ -2448,6 +2453,10 @@ tautological test rather than merely unaddressed.
 its own acceptance line** ([`../plans/2026-08-30-nt-0014-0017-reconciliation.md`](../plans/2026-08-30-nt-0014-0017-reconciliation.md)) —
 accepting this review accepts none of its four dispositions.
 
+> **Maintainer acceptance: accepted as proposed, 2026-09-01 — dated together with reviews 9 and
+> 11 under review 11's proposal 11.1.** The `_pending._` sentence above is kept as the record;
+> the reconciliation it names is accepted separately, this same date, by its own line.
+
 #### Sources
 
 - `docs/audit/work/W11/README.md` §10, at `origin/docs/audit-w11-second-close` (PR #503) — the
@@ -2746,6 +2755,15 @@ and will be carried.
 **Maintainer acceptance:** _pending._ Nothing above binds until this line carries a date, and
 per proposal 11.1 this review recommends it be dated alongside reviews 9 and 10 rather than
 separately.
+
+> **Maintainer acceptance: accepted as proposed, 2026-09-01 — dated together with reviews 9 and
+> 10 under review 11's proposal 11.1.** The `_pending._` sentence above is kept as the record;
+> the premise-correction sentence in the section above it ("neither has ever been dated") is
+> likewise superseded by these datings and kept as the record of the state it was written
+> against. **Applied with the dating:** the eleven register rows behind this review now pass to
+> their named owners (this review's own table above lists which); the four unnumbered rule
+> candidates — Candidate A, Candidate B, review 9's third, and P12 — are numbered in the same
+> pass into `docs/process/delivery-process.md` §15, applied by the lead, not written here.
 
 #### Sources
 
