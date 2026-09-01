@@ -32,7 +32,7 @@ every path read from the environment instead:
 |---|---|---|---|
 | `REPORTER_HANDOVER_DIR` | **Yes** | none — exits 2 if unset | both scripts |
 | `REPORTER_TOKEN_PATH` | No | `~/.slack-token` | `reporter.py` |
-| `REPORTER_REPO_DIR` | No | current working directory | `reporter.py` (for `gh pr list`) |
+| `REPORTER_REPO_DIR` | No | current working directory | `reporter.py` (for `gh pr list`) and, since 2026-09-01, `nudge.py` (for `origin/main`'s local commit timestamp — see the dated entry below) |
 | `REPORTER_SLACK_CHANNEL` | No | `C0BSYRQ6NGM` (`#claude-code-update`) | `reporter.py` |
 | `REPORTER_STALE_SECONDS` | No | `1200` (20 minutes) | `nudge.py` |
 
@@ -67,9 +67,15 @@ bash .claude/skills/reporter-cycle/scripts/reporter-cycle.sh
    landing at `:00/:15/:30/:45` UTC indefinitely.
 4. **The staleness marker is a bare Unix timestamp, one line, nothing else.** `nudge.py`
    reads it with a plain `float()`; any other format is a parse failure treated the same as
-   "no status seen yet" (returns `None`, never raises) — a stricter parser would turn a
-   corrupted marker into a crash instead of a missed nudge, and a missed nudge is the safer
-   failure here.
+   "no reading" (returns `None`, never raises) — a stricter parser would turn a corrupted
+   marker into a crash, which is worse than a `None` reading the caller can reason about
+   explicitly. **What the caller does with that `None` changed 2026-09-01** (see the dated
+   entry below): under the original single-signal check, `None` meant "nothing to compare
+   against, so don't nudge" — silently the safer failure when the marker was the only
+   signal. Under the current three-signal conjunction, `None` instead counts as *stale*
+   (never as fresh) for whichever signal produced it, because a missing source is not
+   evidence of life; it can no longer, on its own, either force a nudge (the other two
+   signals must also be stale) or block one.
 5. **`reporter.py` exits 0 on a token outage, not a non-zero code.** The calling loop must
    keep running through an outage — treating a missing token as a fatal script error would
    stop the entire 15-minute cycle, including the parts of it (staleness detection) that do
@@ -228,3 +234,75 @@ case that keeps both necessary: a post that never left produces no message to re
 the channel is simply silent — and a silent channel is indistinguishable from a cycle
 that never fired at all. The log is the only artifact that tells those two apart, which
 is why it still has a reason to exist now that read-back is available.
+
+**2026-09-01 — the single-signal nudge produced a false positive at the busiest moment,
+so `nudge.py` now requires all three available liveness signals to be stale.** Defect: the
+nudge fired off `.last_lead_status_ts` alone, which records when the lead last *talked to
+the reporter*, not whether the lead is alive. At 10:45Z the marker read 25.4 minutes
+"stale" while the lead had, in that same window, merged six PRs, restarted two executors
+and dispatched two roles — direct evidence of life the marker could not see. An alarm that
+fires hardest when the lead is busiest gets ignored, and the real cost is not that one
+false positive but the credibility loss that follows it: the alarm becomes background
+noise on the one day it would matter.
+
+Fix: `check_and_nudge` now reads three independent signals and nudges only when every one
+of them is stale — `lead_is_stale`, a pure conjunction, is the predicate:
+`nudge_needed = all(is_stale(marker_age), is_stale(eta_age), is_stale(main_age))`, i.e. the
+*freshest* signal must be older than the threshold, not merely one of them.
+
+1. `.last_lead_status_ts` (`marker_age_seconds`) — unchanged source, the original signal.
+2. `eta.md`'s `**Updated:**` stamp (`eta_age_seconds`) — parsed via `reporter.get_eta_updated`,
+   itself now factored out of `get_eta`'s existing `**Updated:**` parsing (`_parse_updated_stamp`)
+   so there is exactly one place in this skill that understands the stamp format; `nudge.py`
+   does not carry a second regex for it.
+3. `origin/main`'s newest commit (`main_commit_age_seconds`) — read from the LOCAL ref only
+   (`git log -1 --format=%ct origin/main`), never fetched from inside the nudge path: a
+   monitor that blocks on the network is a monitor that can itself stop. Keeping that local
+   ref current is `reporter.py`'s job (it fetches only after `get_remote_main_sha` confirms,
+   via `git ls-remote`, that the tip actually moved); this function only reads what is
+   already there.
+
+**The 20-minute default threshold (`REPORTER_STALE_SECONDS`) did not change.** The defect
+was in what counted as evidence of life, not in how long the alarm should wait — widening
+the window would have hidden the same defect behind a longer fuse instead of fixing it.
+
+**A missing or unparseable source counts as stale, never as fresh** (`_is_stale`: `age is
+None or age > threshold`). The alternative — treating an unreadable source as evidence the
+lead is alive — would let the alarm go silent forever the instant one file went missing or
+one `git log` call failed, which is the exact "fails into silence" class this repository
+keeps producing. Because the predicate is a conjunction of all three signals, a missing
+source can never *cause* a nudge by itself; it can only fail to *block* one the other two
+signals already justify (`test_lead_is_stale_missing_source_does_not_alone_force_a_nudge`).
+
+Proved both directions, TDD, against
+`.claude/skills/reporter-cycle/scripts/tests/test_nudge.py` (15 tests, all new — this is
+the first test file `nudge.py` has had). Negative case, all three permutations: any one
+fresh signal blocks the nudge regardless of how stale the other two are
+(`test_lead_is_stale_any_one_fresh_signal_blocks_the_nudge`). Positive case — the one that
+matters most, since a predicate that stops firing entirely is strictly worse than the
+over-firing single-signal version it replaces, and fails silently: all three signals stale
+DOES fire, exercised end-to-end through `check_and_nudge` against a real handover
+directory and a real git repository (an `origin/main` ref built locally with `git
+update-ref`, never a network call), with the timestamps aged past the threshold by
+injecting a future `now` rather than by backdating files on disk — the sources "cannot be
+retroactively aged," so the clock is what moves instead. Real captured output from that
+run:
+
+```
+2026-09-01T10:52:12Z - nudge sent - marker 25.0 min, eta 25.2 min, main 25.0 min (all >20.0 min threshold)
+```
+
+`get_eta`'s own pre-existing behaviour (its 2-hour Slack-post staleness flag, unrelated to
+this 20-minute nudge) is unchanged and still covered by all 15 of `test_reporter.py`'s
+prior tests, re-run and still green after the `_parse_updated_stamp` extraction — confirming
+the refactor moved the parsing without changing what `get_eta` returns. `uv run ruff check
+.`, `uv run mypy` (the bare invocation — `.claude/skills/reporter-cycle/scripts` is in its
+configured `files` list) and `uv run lint-imports` all pass repo-wide.
+`.claude/skills/reporter-cycle/scripts/tests/` (both files, 30 tests) passes via
+`uv run python -m pytest`. A full-repo `uv run pytest -q` was not run to completion on this
+shared machine — `uv run pytest -q --collect-only` confirmed 2509 tests collect with no
+errors (the changed/added files included, and the count several other sessions' concurrent
+work on this same machine independently corroborated the same day), and the scoped run
+above exercised every line this change touches; a prior full attempt on this machine the
+same day was abandoned as stalled by another session for the same load-contention reason
+`.claude/skills/dev-commands` already documents.
