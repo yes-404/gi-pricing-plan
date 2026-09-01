@@ -299,22 +299,26 @@ reconciliation-rulings.md` Part B4 (adopted as written) and `docs/plans/2026-08-
 Failures that put wrong content into filed artifacts on 2026-08-29, enumerated below rather
 than counted — this line said "three" while listing four, because a bullet was appended and
 the number was not. **None was caught by a check; each was caught by someone declining to
-accept something.**
+accept something.** Rules 1–5 below predate numbering; Rules 6–9 are the four unnumbered
+candidates review 9 recommended and review 11 completed, **numbered at the 2026-09-01
+acceptance** of plan reviews 9/10/11 (review 9's proposal 5.4, `docs/audit/plan-reviews.md`; a
+number assigned before the thing exists was the defect the candidates were held unnumbered
+to avoid, so the numbering is this date's act).
 
-- **Name which claim is wrong, in the first sentence.** A hedged correction — "both readings
-  are valid", "that may also be right" — preserves the error: the wrong claim stays standing
-  in a filed document, and the hedge grows a sentence explaining a discrepancy that does not
-  exist. State which side is wrong and supply exact replacement text, not a description of
-  the change.
-- **Dispatch and report cross, and neither is ordered.** A message and the thing it describes
-  travel independently. A correction routinely arrives after the artifact it corrects is
-  published; a report of "not landed yet" is routinely written before a merge it could not
-  have seen. Before acting on a premise someone sent you, check it is still live. When
-  sending, name the tree or SHA your claim is about — a status claim with no named tree is
-  unverifiable the moment it is sent.
-- **Verify against the primary source; never implement against a relay.** A fact arriving
-  from whoever reads everything and derives nothing reads as already-checked, so it gets
-  *less* scrutiny rather than more. `lead.md` already requires the sending half of this —
+- **Rule 1 — name which claim is wrong, in the first sentence.** A hedged correction — "both
+  readings are valid", "that may also be right" — preserves the error: the wrong claim stays
+  standing in a filed document, and the hedge grows a sentence explaining a discrepancy that
+  does not exist. State which side is wrong and supply exact replacement text, not a
+  description of the change.
+- **Rule 2 — dispatch and report cross, and neither is ordered.** A message and the thing it
+  describes travel independently. A correction routinely arrives after the artifact it
+  corrects is published; a report of "not landed yet" is routinely written before a merge it
+  could not have seen. Before acting on a premise someone sent you, check it is still live.
+  When sending, name the tree or SHA your claim is about — a status claim with no named tree
+  is unverifiable the moment it is sent.
+- **Rule 3 — verify against the primary source; never implement against a relay.** A fact
+  arriving from whoever reads everything and derives nothing reads as already-checked, so it
+  gets *less* scrutiny rather than more. `lead.md` already requires the sending half of this —
   the lead states this explicitly in every dispatch — and the half no charter states yet is
   the receiving one: a member holding a supplied premise it doubts says so instead of
   implementing it. On 2026-08-29 this was the only mechanism that caught anything: a
@@ -323,17 +327,17 @@ accept something.**
   auditor's Tools line minutes after that same file had been assigned to the planner in the
   same conversation — caught by running `git log` against the file itself and finding every
   commit on it was already a plan review, not by remembering the earlier assignment.
-- **Remove the relay, do not merely distrust it** (`NT-0013`). The bullet above says do not
-  *trust* a relay; this says do not *create* one. **Members send artifacts directly to whoever
-  needs them. The lead is addressed for a decision or a verdict — the one thing that cannot be
-  delegated — and not as a conduit for everything else.** The two are one rule, and the reason
-  they are stated together is that the weaker half landed alone first: a reader who finds only
-  "verify the relay" concludes the remedy is more careful reading, which is exactly what
-  `NT-0013`'s eight instances refute — the relay was reading carefully each time, and still
-  restated things wrongly. Routing is the fix; attention is not. This practice was adopted
-  mid-session on 2026-08-29 and decayed within the hour because it was announced and never
-  written down, which is why it is written here.
-- **A gate or check result names its corpus — the command, the totals, and the tree**
+- **Rule 4 — remove the relay, do not merely distrust it** (`NT-0013`). The bullet above says
+  do not *trust* a relay; this says do not *create* one. **Members send artifacts directly to
+  whoever needs them. The lead is addressed for a decision or a verdict — the one thing that
+  cannot be delegated — and not as a conduit for everything else.** The two are one rule, and
+  the reason they are stated together is that the weaker half landed alone first: a reader
+  who finds only "verify the relay" concludes the remedy is more careful reading, which is
+  exactly what `NT-0013`'s eight instances refute — the relay was reading carefully each
+  time, and still restated things wrongly. Routing is the fix; attention is not. This
+  practice was adopted mid-session on 2026-08-29 and decayed within the hour because it was
+  announced and never written down, which is why it is written here.
+- **Rule 5 — a gate or check result names its corpus — the command, the totals, and the tree**
   (pilot finding P11). Two roles independently reported a PR's gate "clean" while its CI was
   failing on a named invariant. Neither lied: one had run its own new test file (7/7), the
   other had run four checks and one test file and re-run a real failure until it went green
@@ -343,6 +347,20 @@ accept something.**
   reference rule applied to a test count instead of a citation, and §11 already warns that a
   Python-only "gate" has been green here while the frontend was red. **A subset is a subset;
   say which one you ran.**
+- **Rule 6 — do not move a branch someone is reading** (review 9's Candidate A, numbered
+  here at acceptance). While a branch is under review or audit, do not push to it. Freeze on
+  request, name the frozen SHA where the reviewer will see it, and when a change genuinely
+  cannot wait, say what moved and why rather than letting the reviewer discover it.
+- **Rule 7 — declare up front that a count is not load-bearing** (review 9's Candidate B,
+  numbered here at acceptance). A count is not load-bearing unless stated at the granularity
+  it was counted at — prefer the heading that says so to the retraction after the fact.
+- **Rule 8 — a correction states what it supersedes, not only what it asserts** (review 9's
+  third candidate, numbered here at acceptance). A corrected claim without a named prior
+  leaves both readings live until a reader checks, which is how a correction nearly reverted
+  work already correctly done under the position it silently replaced.
+- **Rule 9 — a correction is checked by a differently-shaped probe than the one that found
+  the original** (pilot finding P12, folded in by review 11 and numbered here at acceptance).
+  Never by re-reading the passage just edited.
 - **Messages are 50 words or fewer** (maintainer rule, 2026-08-29). A dispatch states the
   instruction and cites its artifact by path, PR number or task id; it does not carry the
   reasoning. Reasoning belongs in a task, a plan, a ruling record or a merged artifact —
