@@ -60,8 +60,9 @@ only the first would have passed a document asserting the second.
    catch, reappearing inside the document that discharges them.
 4. **Every tree-pinned figure is a marked slot until it is measured at the final tree.**
    *Violation:* a `[SLOT-n]` marker replaced by a figure measured at any tree other than the one
-   named in §Header, or `[SLOT-0]`–`[SLOT-3]` left unfilled when §10 is signed. §6.0 is the
-   register of them. **`[SLOT-4]` is the deliberate exception** — the gap checks are filled by the
+   named in §Header, or `[SLOT-0]`–`[SLOT-3]` left unfilled when §10 is signed — **all are
+   filled at `32fc63c`**. §6.0 is the register of them, and it is the authority on slot state
+   rather than a count of `[SLOT-` tokens, which are mentions. **`[SLOT-4]` is the deliberate exception** — the gap checks are filled by the
    executor in the session that runs the migration and are *never* filled in this document, per
    item 5. **`[SLOT-5]` is filled** (§2.6), and carried its own violation while it was open: a
    figure written into it on relay rather than from its author with its predicate, which is the
@@ -105,9 +106,9 @@ instruction that **the re-ask names the gap**.
 | # | Condition | State | Where |
 |---|---|---|---|
 | 0 | **W37-5c is closed** | **Discharged at `ac10d30`.** Both acts had happened — a clean audit, and the lead's merge of #647 as `c888b61` — and for a while **neither of the two records that carry a close said so**. #651 files both: the closure record's Sign-off, and a `W37-5c CLOSED` clause in `docs/roadmap.md`'s W37 row on W37-5b's precedent form. Check rather than trust this cell: `grep -c "W37-5c CLOSED" docs/roadmap.md` → **1** at `ac10d30`, **0** at `c888b61`. **Why the gap existed is §8.1**, and it is the more useful half | [`W37-5c/README.md`](../audit/work/W37-5c/README.md) |
-| 1 | **§3 and §4 re-derived at that tree** | **`[SLOT-1]`** — deliberately not yet run. §6 states why it runs once, late, and carries the slot register | §6 |
-| 2 | **The addendum merged and re-run** | **Merged** — Addenda A and B are on `main` inside the superseded ask (`c888b61`). **Re-run: `[SLOT-2]`** | §7 |
-| 3 | **F80–F82 shown cleared by execution** | **Satisfied literally and not sufficiently.** All three gaps, across four guards, are FIRE→PASS on the real corpus. A **fifth** abort point survives and was never touched by the commit that cleared them | **§2** |
+| 1 | **§3 and §4 re-derived at that tree** | **DISCHARGED at `32fc63c`.** Run once, late, against the tree the ask is made from. Every prior figure reproduced at `64f63ee` first; the instrument confirmed byte-identical across the pins, so every movement is corpus movement. **Four ambiguities are reported and not resolved** | §6.1b |
+| 2 | **The addendum merged and re-run** | **DISCHARGED at `32fc63c`.** Merged inside the superseded ask; re-run here. Census passes 98 = 98; corpus flat; **Addendum A's two owed rows both close** — and the pass found **a ruling record the census cannot see** | §7 |
+| 3 | **F80–F82 shown cleared by execution** | **Satisfied literally and not sufficiently** — the closure record's phrase, and it survives even though everything is now cleared. Three gaps across four guards FIRE→PASS; a **fifth** abort point survived that commit, and a **sixth**, post-write, sat behind it. **All are cleared at `32fc63c` and `migrate()` runs to completion** | **§2**, `[SLOT-3]` at §2.4 |
 | 4 | **The re-ask names the gap** | **Named as a condition with its check, not as a date** — and one of the map plan's three limbs no longer measures what it was written to measure | **§5** |
 
 **Condition 3 is the one this document is organised around**, because it is the one where the
@@ -253,21 +254,68 @@ that slice. **The maintainer is entitled to know that, and to know how it was fo
 
 ### 2.4 How far the run gets — `[SLOT-3]`, and it is a distance rather than a yes
 
-`[SLOT-3]` — **how far a real `migrate()` run gets at this document's tree.**
+**`[SLOT-3]` — FILLED: at `32fc63c`, `migrate()` runs to completion.** No abort, no seventh
+failure.
 
-**The slot is deliberately wider than "the fifth abort's disposition", because the question has
-changed.** Once the fifth is cleared the run reaches its first write, and what a maintainer is
-asked to authorise is no longer *"a run that stops before it starts"* but something else. Filled
-at the final tree with **one of three** states — the third did not exist when this document was
-first drafted:
+**The slot is deliberately wider than "the fifth abort's disposition", because the question
+changed twice.** Once the fifth is cleared the run reaches its first write; once the `RS` gap is
+closed it reaches the end. What a maintainer is asked to authorise moved with it. The three
+states it was drafted for, and which one holds:
 
-- **Does not start.** The fifth abort still fires; a go-ahead authorises a run whose first act
-  is an abort. §9 recommends against.
-- **Starts and does not complete.** The fifth is cleared and the run reaches
-  `_write_document_drafts`, then fails — **a partial migration, not a clean abort.** This is
-  §2.6, and it is the state the tree was in when this slot was last checked. **A go-ahead given
-  in this state authorises a run that leaves the repository in neither shape.**
-- **Completes.** The run reaches the end of `migrate()` on the real corpus.
+- **Does not start** — *was true at `c888b61`.* The fifth abort fires; a go-ahead authorises a
+  run whose first act is an abort.
+- **Starts and does not complete** — *was true once the fifth was cleared.* The run reaches
+  `_write_document_drafts`, then raises `KeyError: 'RS'` after 125 writes (§2.6). A partial run.
+- **Completes** — ***true at `32fc63c`***. The run reaches the end of `migrate()`.
+
+**The figures at `32fc63c`, with the identity closing:**
+
+| | `32fc63c` | at `ac10d30` |
+|---|---|---|
+| **written — reported** (`MigrateResult.files_written`, deduped) | **1,088** | 1,085 |
+| **written — all-API union** | **1,090** | 1,087 |
+| `Path.write_text` distinct paths | 1,089 | 1,086 |
+| **deleted** | **202** | 202 |
+| **created** | **293** | 293 |
+| **modified** | **797** | 794 |
+
+```
+created 293 + modified 797 = 1,090 = distinct paths written
+1,090 − 2                  = 1,088 = files_written
+      the 2 = docs/INDEX.md, docs/REDIRECTS.csv — written, never appended
+deleted 202                = files_deleted 202
+```
+
+**The `+3` is measured and its cause is checkable, which is why the earlier figures were not
+carried forward with a disclosure.** Three files entered the corpus between the pins —
+`docs/audit/findings/F93.md` (#652), `scripts/double-stamp-scan.py` and
+`tests/test_double_stamp_scan.py` (#653) — and each was confirmed rewritten by the run rather
+than assumed. **`created` and `deleted` are flat while `written` and `modified` both move by
+exactly 3**, which is the signature of three *pre-existing* files gaining rewritten citations and
+nothing else moving. Both new `scripts/`/`tests/` files cite `NT-0019 §1.5`, `F88` and `F89`, so
+the rewrite pass reaching them is correct behaviour.
+
+**Why this measurement replaces the earlier one rather than sitting beside it, and the reason is
+not recency.** Every earlier run **copied a build over a snapshot** — corpus from one tree,
+`scripts/doc-id.py` from another — because the fix was unmerged, and each time its author had to
+**argue the seam was harmless**. The arguments were sound as far as anyone could check them.
+**But "that cannot matter" is the exact class of claim this work keeps discovering was wrong** —
+F80, F81, F82, the `RS` gap and `is_vendored`'s `LICENSE` probe were each a plausible
+*that-cannot-matter* that mattered, usually because the population the claim ranged over had not
+been enumerated. **At `32fc63c` corpus and code come from one tree by construction, because the
+fix is merged. Nothing has to be assumed harmless, so nothing can be wrongly assumed harmless.**
+
+**Provenance and the boundary, carried verbatim from its author.** *"`migrate()` completing is
+measured on one corpus — `32fc63c` — on a disposable `git archive` snapshot. The harness asserts
+the destination is under the jobs directory and named `snap*` and refuses otherwise; the real
+tree was never run against. It is not a proof that no later input fails, only that nothing fails
+on the tree this ask is made from."*
+
+**And completion is not the claim that the gate is green afterwards. F90 makes those opposites** —
+check 37's 95 ruling documents do not exist until the run creates them, so **completion is
+precisely what turns the gate red.** §4 carries that, and §9.1 makes F90's disposition a
+condition on this branch of the recommendation for exactly this reason. **Only the completion
+claim is the executor's.**
 
 **In every case the fifth's own clearing is recorded the same way:** *the fifth abort point was
 found by the W37-5c close audit, not by the slice that was cut to clear abort points* — fixed
@@ -279,8 +327,9 @@ decider of "already stamped", and a reconciliation names any manifest it cannot 
 
 **Either way the finding stands as recorded.** The close audit found it; the slice did not.
 
-**And the distinction between the first two states is the one the maintainer is entitled to have
-drawn for them: an abort is honest; a partial migration is not.** A run that stops before
+**The distinction between the first two states is the one the maintainer was entitled to have
+drawn, and it is kept although neither now holds — a document that deletes the states it passed
+through leaves no record of what was believed.** An abort is honest; a partial run is not. A run that stops before
 writing leaves a repository someone can look at. A run that writes and then raises leaves one
 that has to be **discovered**. §2.6 states the crash state precisely, and it is **narrower than
 "a corpus in neither shape"** — that phrase was in an earlier draft of this section and is
@@ -1134,10 +1183,14 @@ words, independently of the citation.
 ### 6.0 The slot register
 
 **Every tree-pinned figure in this document is a marked slot until it is measured at the tree
-named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]`–`[SLOT-3]` must all be filled
-or the document is not ready for §10**, `[SLOT-5]` is already filled, and `[SLOT-4]` must **not**
-be — it is filled by the executor in the running session and never here (Acceptance Standard
-items 4 and 5).
+named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]`–`[SLOT-3]` and `[SLOT-5]` are
+all filled at `32fc63c`, so the document is ready for §10**, and `[SLOT-4]` must **not** be
+filled — it belongs to the executor in the session that runs the migration (Acceptance Standard
+items 4 and 5). **A `[SLOT-n]` token appearing in this document is a mention, not an empty
+slot**: `[SLOT-0]` alone appears four times and has been filled throughout. **The state is this
+table, never the token count** — a reader who greps for the marker and counts hits will conclude
+six slots are open, which is the same instrument-versus-question confusion §8 records three times
+over.
 
 **The rule that decides *when* a slot may be filled is not "late"; it is what kind of fact the
 slot holds.** Three kinds, and naming them tells a reader which slots could have been filled
@@ -1156,9 +1209,9 @@ lands next.
 | Slot | What fills it | Why it is not filled now |
 |---|---|---|
 | `[SLOT-0]` | **FILLED — `32fc63c`.** The tree this ask is made at | Final-tree; §6.1 names what it excludes |
-| `[SLOT-1]` | §3 and §4 of the superseded ask, re-derived in full at that tree | Condition 1 |
-| `[SLOT-2]` | Addendum A's classification sweep, re-run at that tree | Condition 2 — §7 |
-| `[SLOT-3]` | **How far a real `migrate()` run gets** — does not start / starts and does not complete / completes | §2.4, §2.6 |
+| `[SLOT-1]` | **FILLED — §6.1b.** §3 and §4 re-derived in full at `32fc63c` | Final-tree; condition 1 |
+| `[SLOT-2]` | **FILLED — §7.** Addendum A re-run at `32fc63c` | Final-tree; condition 2 |
+| `[SLOT-3]` | **FILLED — completes.** How far a real `migrate()` run gets at `32fc63c` | Final-tree; §2.4, §2.6 |
 | `[SLOT-4]` | The gap checks, re-run at the moment the branch is cut | §5.2 — **and this one is filled by the executor in the running session, never here** |
 | `[SLOT-5]` | **FILLED — 125.** Files written before the `KeyError`, from its author in a message with its predicate; a historical fact at `c888b61` that the final tree cannot change | §2.6 |
 
@@ -1230,6 +1283,112 @@ sweep importing the **shipped** `LEGACY_FORM_PATTERNS` and `sweep_legacy_forms` 
 own extracted snapshot rather than a re-typed regex, and each pattern validated against its
 `958cb7d` target before being trusted at the new pin.
 
+### 6.1b `[SLOT-1]` — §3 and §4, re-derived at `32fc63c`
+
+**The instrument was checked before the corpus.** `LEGACY_FORM_PATTERNS`,
+`LEGACY_FORM_EXCLUDED_PATHS`, `sweep_legacy_forms` and `_WAS_LINE_RE` are **byte-identical at
+`64f63ee` and `32fc63c`**, compared by extracting each block from both snapshots — even though
+`scripts/audit-docs.py` gained 417 lines between the pins. **So every movement below is corpus
+movement, not instrument movement**, which is a claim that has to be established rather than
+assumed when a figure is compared across two trees.
+
+**And every prior figure reproduced to the digit at `64f63ee` before being trusted at
+`32fc63c`** — the ordering the superseded record's §2 requires. Nothing was unreproducible. A
+**negative control** confirms the exclusion list is part of the predicate rather than incidental:
+running the sweep with `excluded_paths=()` gives **973** at `64f63ee`, not 966.
+
+#### §3.2 — the size, by area
+
+| The migration… | `64f63ee` | **`32fc63c`** | Predicate |
+|---|---|---|---|
+| **tracked files** | 1506 | **1537** | `git ls-tree -r --name-only 32fc63c \| wc -l` |
+| **rewrites a citation token in** | 966 | **997** files · **23 080** matching lines · **31 361** token hits | the shipped `sweep_legacy_forms` over the `git ls-tree` manifest of a `git archive` snapshot |
+| **stamps a header on** | 324 | **343** | 295 `.md` under `docs/` − 13 templates + 46 `SKILL.md` + 8 agents + 7 charters |
+| **moves, splits or deletes** | 242 | **261** | `docs/audit/` 65 · `docs/plans/` 157 · `docs/notes/` 20 · `.claude/notes/` 19 |
+| **regenerates, never hand-edits** | 61 | **61** | `git ls-tree -r --name-only 32fc63c \| grep -c '^docs/contracts/'` |
+| **does not touch at all** | 540 | **540** | 1537 − 997 |
+| **must leave unchanged, by rule** | 43 | **43** distinct `VR-` **ids** | `git grep -h -o -E '\bVR-[A-Z]+-[0-9]+\b' 32fc63c \| sort -u \| wc -l` |
+
+**Requirement ids renumbered: 676** (675). **Distinct requirement-family id tokens: 719** (718).
+`719 − 43 = 676` closes, and 676 measured directly agrees.
+
+**Both component sums close**: `295 − 13 + 46 + 8 + 7 = 343`, and `65 + 157 + 20 + 19 = 261`.
+
+**Per-tree, for the rewrite population** — `docs/` **345** · `backend/` 217 · `frontend/` 143 ·
+`packages/` 135 · `tests/` **63** · `.claude/` **55** · `scripts/` **21** · root 7 ·
+`examples/` 6 · `.github/` 3 · `deploy/` 2.
+
+**Two things the superseded record said that are no longer true, stated because a carried-forward
+sentence is how a figure goes stale under a correct number:**
+
+- *"Sixteen commits landed between the pins."* **Thirty-four** landed between `64f63ee` and
+  `32fc63c` — all of W37-5c plus the ask itself — `31 A / 16 M / 0 D`. **The tree is +31 files,
+  not "one script and its tests."**
+- *"Every file added to the rewrite population sits in `docs/` or `tests/`."* **False now**:
+  `.claude/` +1 and `scripts/` +2. And **+31 in with 0 out is not "the 31 new files"** —
+  `tests/fixtures/docs-migration/docs/README.md` was added carrying no legacy form, while
+  `.claude/skills/reproducing-ci-locally/SKILL.md` was *modified into* the population.
+
+#### §3.3 — the growth row at this tree
+
+| Pin | Tracked | Rewrite pop. | `VR-DST-1` | Ruling headings |
+|---|---|---|---|---|
+| `64f63ee` — the superseded ask | 1506 | 966 | 125 lines · 129 exact tokens · 32 files | 95 over 39 |
+| **`32fc63c` — this ask** | **1537** | **997** | **127** lines · **133** loose · **131** exact tokens · **33** files | **96 over 40** |
+
+**`VR-DST-1` is no longer flat: +2.** §6.2 is the argument this pass was owed, and the figure it
+rests on moved again while the argument was being made.
+
+**The `Ruling A<n>` population is 15 files** (8 at `958cb7d`, 13 at `64f63ee`, both reproduced) —
+and **75 token hits over 64 matching lines**, so the file count and the token count now diverge
+sharply. **State the unit or the figure is not a figure.**
+
+#### §4 — the bucket-C stamp population: every row flat
+
+`docs/contracts/` **61** · skills `SKILL.md` **46** · **WK** distinct roadmap row keys **41** ·
+**Phase** sections **4** — **total in scope 152**. Agents **8** · role charters **7** ·
+`docs/process/` **3** — **total already sourced 18**. **All eight rows unchanged.**
+
+**The documented WK trap reproduces exactly**: 56 raw table-row occurrences, **41** distinct
+after full-matching `W[0-9]+[a-z]?`; nine keys repeat, `56 − 15 = 41`.
+
+**But "flat by construction" does not carry, and that is worth more than the flatness.** The
+superseded record justified it by the roadmap changing only inside the W37 cell — true of
+`22d8d64`→`64f63ee`. Over `64f63ee`→`32fc63c` `docs/roadmap.md` is **not** byte-identical; the
+diff is **1 insertion / 1 deletion on one existing line**, no row added or removed, no phase
+heading touched. **The flatness is measured at these pins, not inherited from the argument that
+established it at the previous ones.**
+
+#### Four ambiguities, reported and not resolved
+
+**These are the part of the pass worth the maintainer's attention.** Each is a case where the
+figure is defensible and the *predicate* is not uniquely determined — which `CLAUDE.md` §13's
+predicate clause exists to surface.
+
+1. **The ruling-heading predicate is ambiguous, and the ambiguity now bites.** Two predicates
+   both give 95/39 at `64f63ee`: **A** = `^#+\s+Ruling\s+[0-9]+` scoped to `docs/plans/`;
+   **B** = `^##\s+Ruling\s+[0-9]+` corpus-wide. **Only A reproduces the whole growth column**
+   (72/29, 82/32, 87/35, 89/36, 95/39), so A is the plan's. **At `32fc63c` they diverge: A gives
+   96 over 40, B gives 97 over 41.** A is reported. **Re-derived without walking back through the
+   earlier pins, either answer would have looked equally defensible** — which is the argument for
+   validating a pattern against a known target before trusting it at a new one.
+2. **The plan's census is looser than the code that will act on it.** `scripts/doc-id.py`'s
+   shipped `_RULING_HEADING_RE` matches only `##`-depth headings whose text is bare or
+   em-dash-suffixed; at `32fc63c` it finds **92 over 37** in `docs/plans/` against the reported
+   **96 over 40**. **The disclosure figure and the splitter's own population are not the same
+   set.** Flagged, not adjusted — adjusting it would silently replace the plan's predicate with
+   the code's.
+3. **§3.2's "must leave unchanged" row mixes units inside one row.** **43** is distinct `VR-`
+   **ids**; the same row's description says *"files carrying a `VR-` catalogue id"*, and that
+   **file** count is **57** at `32fc63c` (56 at `64f63ee`). **The ids are flat; the files are
+   not.** Carrying the row forward unchanged would have put a flat 43 over a figure that moved.
+4. **The Phase-sections predicate is under-determined by its value.** `^## <n>. Phase <n>` gives
+   4 — the four top-level phase sections, the semantically right set. `^#+ Phase ` **also gives
+   4**, over a completely different population (`### Phase 1a`, `### Phase 1b`, and two `####`
+   status sub-headings). **Same number, different set.** The first is used. **A figure that two
+   predicates agree on is not thereby confirmed** — this is the shape a positive control exists
+   to catch, and here the agreement is coincidence.
+
 ### 6.2 What has already moved since `64f63ee`, as evidence that the pass is not academic
 
 **One figure, measured here, offered as the argument for the pass rather than as part of it.**
@@ -1269,7 +1428,109 @@ measure late, not to decide fast.
 Addendum B (*the run aborts at four points, not three*) are both on `main` inside
 [`…-go-ahead-ask.md`](2026-09-02-w37-6-go-ahead-ask.md) at `c888b61`.
 
-**Re-run: `[SLOT-2]`.** The sweep's mechanical half is a shipped instrument —
+**`[SLOT-2]` — FILLED. Re-run at `32fc63c`. The census passes, every corpus figure is
+unchanged, rows 1 and 4 close as expected — and the pass found a ruling record the census
+cannot see.**
+
+#### The census passes, and the thing it cannot tell you
+
+```
+w37 30 · w11 20 · standalone 2 · exception 1 · prose_only 10 · none 35 · conflict 0
+total classified 98 = total discovered 98 · PASS · exit 0
+```
+
+**The buckets sum, and per Addendum A's own lesson the sum was not treated as the check.** The
+`(file, ruling)` pair set was re-derived independently by regex and compared **member by
+member** against the classifier's bucket membership — identical, no ruling in two buckets,
+numerics 1–95 with no gaps, plus A1–A3.
+
+**But `total classified == total discovered` validates the *classifier* and says nothing about
+the *discoverer*, because both sides come from the same `_discover_ruling_headings`.** That is
+the same shape as Addendum A's own finding — *a sum is invariant under a transfer between two
+buckets* — one level up: **an identity between two numbers from one source cannot detect what
+that source never saw.**
+
+**And at `32fc63c` there is exactly one thing it never saw.**
+`docs/plans/2026-09-02-w37-vendored-exemption-ruling.md` — the maintainer's exemption ruling,
+filed `269c4ef` (#648) **after Addendum A's trees** — carries
+`### Acceptance — the violation that must become detectable` with three `Violation:` clauses,
+and **no `## Ruling N —` heading**. `_RULING_HEADING_RE` never matches it, so it enters no
+bucket and no total. **Of 157 files under `docs/plans/`, it is the only one with an
+acceptance-item marker and no ruling heading** — so the blind spot is one file wide, and it is
+a real acceptance item rather than a false positive.
+
+**Its own item is not defective**, so it adds no eighth row: both instrumentable violations are
+built and non-vacuous (`_check_unstampable_register` reports the symmetric difference and names
+both sides, proven on **seven** mutations), and the third clause is the process one the record
+itself closes. **Whether W37-6 *applies* it is the lead's call and is not determined here** — the
+record names itself W37-5c scope item 3, and its subject is the exempt-by-path set that widening
+`_ID_SCOPE_ROOTS` must consult, which is W37-6's own job. **Reported as a candidate.**
+
+**One further fact about the instrument, already on record and worth repeating here:** the census
+is **wired to nothing** — no CI workflow and no `audit-docs.py` check invokes it. W37-5c's closure
+record already proposes carrying it forward with an owner.
+
+#### The corpus has not grown, and the 30 is not wholly mechanical
+
+| | `32fc63c` | Addendum A at `5c0d24d` |
+|---|---|---|
+| rulings | **98** | 98 |
+| record files | **41** | 41 |
+| files carrying a genuine acceptance item | **30** | 30 |
+
+**No numbered ruling past 95 exists** — 95 numerics plus A1–A3 is 98, no gaps. The six class
+counts re-derive from the sweep's own §8 table and match §5 exactly:
+`CONSTRUCTIBLE 54 · NONE_FOUND 35 · INVALIDATED 3 · VACUOUS 2 · INDICATIVE 2 · CANNOT_DETERMINE 2`.
+
+**The caveat that belongs with the 30, and does not appear beside it anywhere else: only 23 of
+the 30 are mechanically detected.** The other **7 (23%)** rest on a hand-verified exceptions
+list — which is the one place the census's own docstring says its arithmetic promise does not
+hold. Three derivations agree on 30, but the third is the sweep's own static table, so their
+agreement means *"nothing moved"*, not *"two blind derivations concurred"*.
+
+#### The seven rows re-scored — two close, and two more moved than Addendum A predicted
+
+| # | Item | Addendum A | At `32fc63c` |
+|---|---|---|---|
+| 1 | **R84 §4 item 2** | owed, unowned, *"not built"* | **CLOSES.** `_check_emitted_ledger_axes` exists and is called from `migrate()`; six tests pass; F77's register row carries *"Built 2026-09-02 in W37-5c"* |
+| 2 | **R88 §4 item 2** | re-instrumented, *"but the gap beneath it is open"* | **Item unchanged; the gap beneath it CLOSES.** The register now reads `DISCHARGED 2026-09-02` for F80, verified by execution |
+| 3 | **R61** | deliberate, W37-6 its horizon | **Unchanged.** 18 tombstone stubs still present; the protective comment verbatim intact |
+| 4 | **R86 §4 item 3** | owed, unowned, *"cannot pass"* | **CLOSES.** Rebuilt at `e2296ec`, two tests pass, written over the union of every discovery writer |
+| 5 | **R95 §4 item 3** | re-instrumented, done | **Unchanged** — but see the mis-attribution below |
+| 6 | **R66 item 2** | withdrawn, history only | **Unchanged**, replacement live |
+| 7 | **R85 item 3** | CANNOT DETERMINE, disclosed as is | **Disposition CHANGED** — superseded at `c0739ac` (#636), *after* Addendum A's tree, by the lead's sweep: *"Ruling 85 §4 carries two acceptance items, not three… It has no failing case by construction"* |
+
+**So Addendum A's *"the open work in this table is rows 1 and 4, and nothing else"* is now
+discharged in full**, and two rows moved that it did not predict.
+
+**Three defects in the sweep's own records, reported rather than smoothed:**
+
+- **A mis-attribution.** Sweep §13 says the two `VACUOUS AT BIRTH` members were *"built —
+  W37-5c items 4 and 5, landed `e2296ec`"*. W37-5c items 4 and 5 are R84 §4 item 2 (VACUOUS) and
+  R86 §4 item 3 (INVALIDATED) — **one from each class**. The second VACUOUS member, **R95 §4
+  item 3, landed at `2e48960` (#620), is not a W37-5c scope item, and did not land at
+  `e2296ec`.**
+- **A dead predicate.** Sweep §5 and §3 cite
+  `cut -d, -f3 ruling-acceptance-item-sweep-5c0d24d.csv | …`. **That CSV does not exist** —
+  §8 discloses its deletion. The figures survive (all six class counts re-derive from §8's table
+  and match), but **the stated predicate is not runnable**, which `CLAUDE.md` §13 requires it to
+  be.
+- **Two stale line numbers**, Addendum B §B.2's exact class: Addendum A's `doc-id.py:946` is
+  `:952` at `32fc63c`, and its `audit-docs.py:55-64` is `:54-65`. **Content unchanged in both;
+  only the locators moved** — which is the argument for naming the function.
+
+#### What the re-run needed, and how it was obtained
+
+**A `git archive` snapshot cannot run the census to completion**: `flag_day_split` shells out to
+`git show` and `git log -S`, and `_commit_author_date` **raises** rather than skipping when the
+root is not a repository. It was run in a **detached clone at `32fc63c` with a verified-clean
+working tree**, and the two trees confirmed byte-identical for `docs/plans/` and for the census
+script itself. **Recorded because the obvious method silently cannot work here** — and, unlike
+the three instrument failures §8 records, this one failed loudly.
+
+---
+
+**The re-run's remaining mechanical half** is the shipped instrument —
 `scripts/ruling-acceptance-item-census.py`, whose own docstring states the narrower question it
 answers: *"did the sweep find every acceptance item there was to find, or did its enumeration
 method have a blind spot?"* Its buckets must sum to the total, so a fourth phrasing convention
