@@ -158,3 +158,33 @@ disappearance of its symptom is a finding that will recur under a different name
   cell-extent rule decides, and changes no ruled value.
 - **Does not decide who owns the six newly-stamped READMEs** beyond §1's routing rule: five are
   routed nowhere and take Reference — README, `lead`; the sixth is exempt.
+
+---
+
+## Corrections after filing
+
+**2026-09-02 — §1 and §2 treat `§5.2` as a source of `owner:` values. It is not one, and the
+maintainer has ruled the constraint's scope.**
+
+> *"'Cite the cell' means §1 — a §1.6 cell or a §1 sentence naming a role. §5.2 is the impact map
+> and grants nothing; if it sourced a value it would be a second authority over the same files."*
+
+**So the README population is uniform: all fourteen take `lead` from the README row**, and
+`.claude/agents/README.md` is not a special case. §5.2 line 347 — *"README names agents as
+Reference family owned by the lead"* — is recorded as **consistent with the row, not as its
+source**.
+
+**Why the distinction is worth more than the one value it moves.** §1 is the standard and §5.2 is
+the map of what the migration does. Reading a grant out of the map would make **two documents
+authoritative over the same files**, and they would then be free to diverge — which is `NT-0003`'s
+mechanism, applied to ownership rather than to status. The derivation's *"one sourced, thirteen
+unsourced"* framing is therefore superseded: **fourteen sourced, from one row, with one
+corroborating sentence in the map.**
+
+**§2 is unaffected in substance.** `docs/contracts/README.md` still takes `lead`, and still does so
+because *a cell governs what its text names and an index is the README row's* — the cell-extent
+rule, which is a §1.6 reading and never depended on §5.2.
+
+**§4 is unaffected.** It concerns the **stamp set**, not ownership; §4 step 5 and §5.2 disagreeing
+about which files are stamped is a question about the migration's own scope, which is exactly what
+§5.2 is for.
