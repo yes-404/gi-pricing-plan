@@ -529,6 +529,89 @@ def test_scan_header_ids_skips_a_file_whose_front_matter_is_not_the_closed_gramm
     assert list(doc_id_cli.scan_header_ids(tmp_path)) == [("PL", 1240)]
 
 
+# ---------------------------------------------------------------------------------------
+# scan_governed_headers — the skip must be reported, not silent. Raised in review of
+# PR #567: a file with no NT-0019 header at all (every file in this repo, pre-migration)
+# must stay silent, but a file whose front matter exists and fails to parse must be
+# visible — a count and the paths at minimum — because the code cannot tell "malformed
+# governed header" (what `check` exists to catch) from "legitimately foreign front
+# matter" (the vendored-skill case). `tests/test_audit_docs_scan_roots.py` names the
+# shape this guards against: a scan that silently stops covering something must not read
+# the same as a scan that covered everything and found nothing.
+# ---------------------------------------------------------------------------------------
+
+
+def test_scan_governed_headers_reports_an_unparseable_file_in_skipped(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    bad_path = tmp_path / ".claude" / "skills" / "some-skill" / "SKILL.md"
+    _write(
+        bad_path,
+        "---\nname: some-skill\nmetadata:\n  author: example\n  version: '1.0'\n---\n",
+    )
+    scan = doc_id_cli.scan_governed_headers(tmp_path)
+    skipped_paths = [path for path, _reason in scan.skipped]
+    assert skipped_paths == [bad_path]
+    ((_path, reason),) = scan.skipped
+    assert "metadata" in reason or "indented" in reason.lower()
+
+
+def test_scan_governed_headers_does_not_report_a_file_with_no_header_at_all(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    # Every file in this repository today, pre-migration — must not be noisy.
+    _write(tmp_path / "docs" / "plans" / "plain.md", "# Just a heading\n\nNo header.\n")
+    scan = doc_id_cli.scan_governed_headers(tmp_path)
+    assert scan.skipped == ()
+
+
+def test_scan_governed_headers_does_not_report_a_header_with_no_id_field(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    _write(
+        tmp_path / "docs" / "process" / "some-reference.md",
+        "---\nfamily: reference\nstatus: active\nowner: maintainer\ntitle: T\n---\n",
+    )
+    scan = doc_id_cli.scan_governed_headers(tmp_path)
+    assert scan.skipped == ()
+
+
+def test_scan_governed_headers_does_not_report_a_template_or_vendored_exclusion(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    # Excluded *before* parsing is attempted — neither is a parse failure, so neither
+    # belongs in `.skipped` (which is specifically "front matter that failed to parse").
+    _write(tmp_path / "docs" / "_templates" / "PL.md", _header("PL-99999"))
+    skill_dir = tmp_path / ".claude" / "skills" / "some-vendored-skill"
+    _write(skill_dir / "LICENSE", "MIT...\n")
+    _write(skill_dir / "SKILL.md", _header("RFC-9099", "proposal"))
+    scan = doc_id_cli.scan_governed_headers(tmp_path)
+    assert scan.skipped == ()
+
+
+def test_scan_governed_headers_ids_field_matches_scan_header_ids(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", _header("PL-1240"))
+    scan = doc_id_cli.scan_governed_headers(tmp_path)
+    assert [(prefix, number) for prefix, number, _path in scan.ids] == [("PL", 1240)]
+    assert list(doc_id_cli.scan_header_ids(tmp_path)) == [("PL", 1240)]
+
+
+def test_scan_governed_headers_candidates_scanned_counts_every_candidate(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", _header("PL-1240"))
+    _write(tmp_path / "docs" / "plans" / "plain.md", "# No header\n")
+    bad_path = tmp_path / ".claude" / "roles" / "broken.md"
+    _write(bad_path, "---\nfamily: plan\nnested:\n  x: 1\n---\n")
+    scan = doc_id_cli.scan_governed_headers(tmp_path)
+    # One resolved id, one silent no-header file, one reported skip: three candidates.
+    assert scan.candidates_scanned == 3
+    assert len(scan.ids) == 1
+    assert len(scan.skipped) == 1
+
+
 def test_scan_header_ids_ignores_a_skills_non_skill_md_files(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -707,7 +790,7 @@ def test_compute_next_at_ref_ignores_an_uncommitted_local_file(
     # An uncommitted draft claiming a much higher number must not be counted — an
     # unmerged number is reissued, never treated as taken (DP-8's "no hole" argument).
     _write(tiny_repo / "docs" / "plans" / "PL-09999-draft.md", _header("PL-9999"))
-    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo) == 1001
+    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo).number == 1001
 
 
 def test_compute_next_at_ref_ignores_a_committed_but_unmerged_branch(
@@ -719,7 +802,20 @@ def test_compute_next_at_ref_ignores_a_committed_but_unmerged_branch(
     _write(tiny_repo / "docs" / "plans" / "PL-09999-side.md", _header("PL-9999"))
     _run_git(["add", "-A"], cwd=tiny_repo)
     _run_git(["commit", "-m", "side draft", "--quiet"], cwd=tiny_repo)
-    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo) == 1001
+    assert doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo).number == 1001
+
+
+def test_compute_next_at_ref_reports_a_skipped_file(
+    doc_id_cli: types.ModuleType, tiny_repo: pathlib.Path
+) -> None:
+    bad_path = tiny_repo / ".claude" / "roles" / "broken.md"
+    _write(bad_path, "---\nfamily: plan\nnested:\n  x: 1\n---\n")
+    _run_git(["add", "-A"], cwd=tiny_repo)
+    _run_git(["commit", "-m", "add a broken header", "--quiet"], cwd=tiny_repo)
+    result = doc_id_cli.compute_next_at_ref("main", repo_root=tiny_repo)
+    assert result.number == 1001
+    skipped_names = [path.name for path, _reason in result.skipped]
+    assert skipped_names == ["broken.md"]
 
 
 def test_compute_next_at_ref_raises_a_clear_error_for_an_unresolvable_ref(
@@ -1141,6 +1237,39 @@ def test_main_next_prints_the_computed_number_and_exits_zero(
     assert capsys.readouterr().out == "1001\n"
 
 
+def test_main_next_reports_zero_skipped_on_stderr_when_clean(
+    doc_id_cli: types.ModuleType,
+    tiny_repo: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # The claim "nothing was skipped" must be printed, not merely true by the absence of
+    # a line — the same falsifiability argument `scripts/audit-docs.py`'s own residue
+    # notes make (check 29): silence must not be the only evidence of a clean run.
+    exit_code = doc_id_cli.main(["next", "--ref", "main", "--repo-root", str(tiny_repo)])
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "0 skipped" in err or "0 file(s) skipped" in err
+
+
+def test_main_next_reports_a_skipped_file_by_count_and_path_on_stderr(
+    doc_id_cli: types.ModuleType,
+    tiny_repo: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bad_path = tiny_repo / ".claude" / "roles" / "broken.md"
+    _write(bad_path, "---\nfamily: plan\nnested:\n  x: 1\n---\n")
+    _run_git(["add", "-A"], cwd=tiny_repo)
+    _run_git(["commit", "-m", "add a broken header", "--quiet"], cwd=tiny_repo)
+    exit_code = doc_id_cli.main(["next", "--ref", "main", "--repo-root", str(tiny_repo)])
+    # Reporting a skip is not a failure pre-migration — the gate must stay green.
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert captured.out == "1001\n"  # stdout stays exactly the number — machine-consumable
+    assert "1" in captured.err
+    assert "skipped" in captured.err
+    assert "broken.md" in captured.err
+
+
 def test_main_next_exits_nonzero_naming_the_cause_for_an_unresolvable_ref(
     doc_id_cli: types.ModuleType,
     tiny_repo: pathlib.Path,
@@ -1169,6 +1298,38 @@ def test_main_check_exits_nonzero_and_reports_each_failure_on_a_broken_tree(
     exit_code = doc_id_cli.main(["check", "--repo-root", str(tmp_path)])
     assert exit_code == 1
     assert "mismatch" in capsys.readouterr().err
+
+
+def test_main_check_reports_zero_skipped_on_stderr_when_clean(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", _header("PL-1240"))
+    exit_code = doc_id_cli.main(["check", "--repo-root", str(tmp_path)])
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "0 skipped" in err or "0 file(s) skipped" in err
+
+
+def test_main_check_reports_a_skipped_file_by_count_and_path_without_failing_the_gate(
+    doc_id_cli: types.ModuleType,
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # A file `check` cannot parse is reported, not silent — but does not fail the gate
+    # pre-migration: whether a *governed* file's header is malformed is check 30's
+    # question (W37-4), which can tell this case apart from legitimately foreign
+    # (vendored) front matter and this generic scan cannot.
+    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", _header("PL-1240"))
+    bad_path = tmp_path / ".claude" / "roles" / "broken.md"
+    _write(bad_path, "---\nfamily: plan\nnested:\n  x: 1\n---\n")
+    exit_code = doc_id_cli.main(["check", "--repo-root", str(tmp_path)])
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "1" in err
+    assert "skipped" in err
+    assert "broken.md" in err
 
 
 def test_main_check_classify_prints_a_table_and_exits_zero(
