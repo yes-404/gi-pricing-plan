@@ -14,6 +14,7 @@ docstring gives the identical reasoning for `next`/`check`/`widen`.
 
 from __future__ import annotations
 
+import argparse
 import collections
 import csv
 import importlib.util
@@ -195,6 +196,16 @@ def classify_every_governance_file(
         elif len(parts) >= 4 and parts[1] == "skills":
             is_vendored = doc_id_cli._docid.is_vendored(root / rel, root)
             family = "vendored-exempt" if is_vendored else "none"
+        elif parts[-1] == "README.md" or (len(parts) >= 2 and parts[1] in ("roles", "agents")):
+            # NT-0019 §1.2's Reference row names these outright: "`process/`,
+            # `contracts/`, every `README.md` anywhere in the tree, `.claude/roles/`,
+            # `.claude/skills/*/SKILL.md`, `.claude/agents/`". They read "none" here until
+            # W37-5c item 2 put a stamp path behind them, which is what made the omission
+            # visible: acceptance item (a) is stated over the whole corpus, and a charter
+            # or an agent definition is a governed Reference document, not an unmapped
+            # file. `.claude/skills/README.md` is reached by the `README.md` limb, since
+            # `*/SKILL.md` structurally cannot match it (RFC §4).
+            family = "reference"
         else:
             family = "none"
         counts[family] = counts.get(family, 0) + 1
@@ -3550,3 +3561,324 @@ def test_migrate_writes_the_closure_readmes_as_cr_documents(
     assert not (pristine_a / "docs" / "audit").exists(), (
         "an emptied docs/audit/work/<work>/ left behind would stop docs/audit/ dissolving"
     )
+
+
+# ---------------------------------------------------------------------------------------
+# W37-5c item 2 — NT-0019 §4 step 5's Reference stamp set.
+#
+# The defect is F84's shape in a second place, stated in terms by
+# `docs/plans/2026-09-02-w37-owner-field-derivation.md:179`: **"There is no discovery or
+# stamp path for `.claude/skills/`, `.claude/agents/` or `.claude/roles/` at all"**, while
+# §4 step 5 stamps all three. A population outside the question, so the run completes and
+# reports success.
+#
+# Two things are proven separately below, and conflating them is the trap:
+#
+#   * **What is stamped** — 7 charters and 13 READMEs, each `owner:` quoted from the §1
+#     cell it is read from, and the README arithmetic decomposing exactly as
+#     `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4 ruled.
+#   * **What is not, and why** — 46 `SKILL.md` and 7 agent definitions already carry the
+#     harness's own front matter, so their header must be *merged* rather than prepended
+#     and the keys declared in `docs/_templates/REFERENCE.md` first. That is W37-6's
+#     Task 1. They are reported by name rather than left absent.
+#
+# Every mutation below is applied to a copy of the **real** `.claude/` tree, per W37-5c's
+# Acceptance Standard item 5. `ROOT` is never written to.
+# ---------------------------------------------------------------------------------------
+
+_REAL_CLAUDE_SUBTREES = (".claude/roles", ".claude/agents", ".claude/skills")
+_REAL_CLAUDE_FILES = ("README.md", "docs/README.md", "packages/README.md",
+                      ".claude/settings.json")
+
+
+def _real_claude_copy(tmp_path: pathlib.Path, name: str) -> pathlib.Path:
+    """The real `.claude/` charters, agents and skills plus three real READMEs, in a git
+    repository — `git ls-files` is how the README scope reads "every `README.md` anywhere
+    in the tree", so a plain directory would give it nothing to find and every assertion
+    below would pass over an empty corpus.
+    """
+    import shutil
+
+    root = tmp_path / name
+    for rel in _REAL_CLAUDE_SUBTREES:
+        shutil.copytree(ROOT / rel, root / rel)
+    for rel in _REAL_CLAUDE_FILES:
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / rel, root / rel)
+    _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
+    _run_git(["config", "user.email", "test@example.com"], cwd=root)
+    _run_git(["config", "user.name", "Test"], cwd=root)
+    _run_git(["add", "-A"], cwd=root)
+    _run_git(["commit", "-m", "seed: real .claude subtrees", "--quiet"], cwd=root)
+    return root
+
+
+def _reference_census(module: types.ModuleType, root: pathlib.Path) -> list[Any]:
+    targets, censuses = module._discover_reference_stamp_targets(root)
+    module._check_reference_stamp_set_not_silently_unrecognised(censuses)
+    return list(targets)
+
+
+def test_reference_stamp_census_is_silent_on_the_real_corpus(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """All five scopes, over this checkout, unmutated — the control every mutation below
+    is read against, and the state `migrate` needs before W37-6 can run at all."""
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    _targets, censuses = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    doc_id_cli._check_reference_stamp_set_not_silently_unrecognised(censuses)
+    assert len(censuses) == 5, [c.scope for c in censuses]
+    assert all(census.units for census in censuses), "a scope with no units proves nothing"
+
+
+def test_reference_stamp_owners_are_only_the_two_values_their_cells_carry(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`owner:` is read from a §1 cell, never from what a role ought to own — the
+    constraint the gap-2 RFC exists to enforce, scoped by the maintainer on 2026-09-02 to
+    *"a §1.6 cell or a §1 sentence naming a role"*.
+
+    Two values reach the real corpus and no third: `maintainer` for a charter (§1.6
+    "Reference — charters") and `lead` for a README (the README row). Asserted as a
+    per-file rule rather than as a pair of counts, so a charter that silently took `lead`
+    fails here even if the totals still balanced.
+    """
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    targets, _ = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    for target in targets:
+        expected = "maintainer" if target.rel.startswith(".claude/roles/") else "lead"
+        assert target.owner == expected, target.rel
+    assert {t.owner for t in targets} == {"maintainer", "lead"}
+    assert all(t.title.strip() for t in targets), "a title is read from the H1, never invented"
+
+
+def test_readme_population_decomposes_exactly_as_the_rfc_ruled(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4, checked against the
+    tree rather than restated: *"step 5's scope **gains six**; **one of the six** — the
+    check-35 fixture — is then **exempt**; so **five are newly stamped**."* The RFC says
+    the decomposition is stated *"precisely so a mismatch is visible"*, so it is asserted
+    by name here and not as four integers.
+
+    The one figure that did move is the raw tracked-README count: 33 when the RFC was
+    written at `ffdd54c`, 38 on this branch, because W37-5c's own fixtures added five.
+    That is why the total is asserted as an **identity** — every tracked `README.md` is
+    routed, declared, or stamped — rather than as a literal that a fixture can falsify.
+    """
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    targets, censuses = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+    readme_census = next(c for c in censuses if c.scope.startswith("every tracked"))
+
+    tracked = {r for r in doc_id_cli.git_ls_files(ROOT, ".") if pathlib.Path(r).name == "README.md"}
+    stamped = {t.rel for t in targets if pathlib.Path(t.rel).name == "README.md"}
+    # The identity: three disjoint buckets, and nothing outside them.
+    assert stamped | set(readme_census.accounted) | set(readme_census.excepted) == tracked
+    assert not stamped & set(readme_census.excepted)
+    assert set(readme_census.accounted) == routed
+
+    step5_roots = ("docs/", ".claude/roles/", ".claude/agents/")
+    gained = sorted(r for r in stamped if not r.startswith(step5_roots))
+    exempt_fixture = "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md"
+    assert exempt_fixture in readme_census.excepted
+    assert gained == [
+        ".claude/skills/README.md",  # `*/SKILL.md` structurally cannot match an index
+        "README.md",
+        "deploy/README.md",
+        "examples/fremtpl2/README.md",
+        "packages/README.md",
+    ], "RFC §4's six gained, minus the one it exempts, is these five"
+    assert len(gained) + 1 == 6  # six reached
+    assert len(stamped) - len(gained) == 8  # already inside step 5's roots
+    assert len(stamped) + 1 == 14, "the RFC's population 14 = 13 stamped + the exempt fixture"
+
+
+def test_reference_declared_exceptions_all_carry_a_reason_and_name_a_real_file(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """F83's two conditions on an exemption list, applied here: every entry cites its
+    reason, and the set is checked rather than trusted. A declaration left behind after
+    its file moved is as much a defect as one added without a reason — it is how a list
+    stops describing the corpus while still passing.
+    """
+    declared = {
+        **doc_id_cli._REFERENCE_README_EXCEPTIONS,
+        **{f".claude/{k}": v for k, v in doc_id_cli._REFERENCE_CLAUDE_DIR_EXCEPTIONS.items()},
+    }
+    for key, reason in declared.items():
+        assert reason.strip(), key
+        assert (ROOT / key.rstrip("/")).exists(), f"{key}: declared, but nothing is there"
+
+    fixture_readmes = sorted(
+        rel
+        for rel in doc_id_cli.git_ls_files(ROOT, "tests/fixtures/docs-migration")
+        if pathlib.Path(rel).name == "README.md"
+    )
+    assert sorted(doc_id_cli._REFERENCE_FIXTURE_CORPUS_READMES) == fixture_readmes, (
+        "the fixture-corpus exemption is declared file by file (RFC §3), so adding a "
+        "README to the migration fixture must force a decision here rather than being "
+        "swallowed by a `tests/fixtures/` prefix"
+    )
+
+
+@pytest.mark.parametrize(
+    ("name", "break_it", "named"),
+    [
+        pytest.param(
+            "new-population",
+            lambda root: (
+                (root / ".claude" / "prompts").mkdir(),
+                (root / ".claude" / "prompts" / "x.md").write_text("# X\n", encoding="utf-8"),
+            ),
+            ".claude/prompts/",
+            id="a whole new .claude/ population appears",
+        ),
+        pytest.param(
+            "new-top-level-file",
+            lambda root: (root / ".claude" / "hooks.json").write_text("{}\n", encoding="utf-8"),
+            ".claude/hooks.json",
+            id="a new file lands directly under .claude/",
+        ),
+        pytest.param(
+            "manifest-gone",
+            lambda root: (root / ".claude" / "skills" / "docs-audit" / "SKILL.md").unlink(),
+            ".claude/skills/docs-audit/SKILL.md",
+            id="a skill directory loses its SKILL.md",
+        ),
+    ],
+)
+def test_reference_census_names_what_no_scope_accounts_for(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path,
+    name: str, break_it: Any, named: str,
+) -> None:
+    """Ruling 83 §3 item 4 — the refusal NAMES the unit.
+
+    The first two are the census's real reason for existing. Each of the three file-level
+    scopes is internally *total*: every file it walks gets a bucket, so none of them can
+    ever report an unaccounted unit. What can still be outside the question is a
+    population **no scope walks** — which is precisely F84 one level up, and precisely
+    what the `.claude/` coverage scope is for.
+    """
+    root = _real_claude_copy(tmp_path, name)
+    _reference_census(doc_id_cli, root)  # control: green before the mutation
+    break_it(root)
+    with pytest.raises(NotImplementedError, match=re.escape(named)):
+        _reference_census(doc_id_cli, root)
+
+
+def test_reference_census_names_a_stamp_target_with_no_heading_to_title_it(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`_reference_target` returns `None` — no bucket, no disposition string — for a file
+    it cannot read a `title:` from, so the census names it. The alternative it refuses is
+    stamping `title:` with the filename, which would be a value invented by the tool and
+    then indistinguishable from one someone chose.
+    """
+    root = _real_claude_copy(tmp_path, "untitled-charter")
+    path = root / ".claude" / "roles" / "auditor.md"
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("# auditor\n"), "re-derive this mutation from the real file"
+    path.write_text(text.replace("# auditor\n", "auditor\n", 1), encoding="utf-8")
+
+    with pytest.raises(NotImplementedError, match=re.escape(".claude/roles/auditor.md")):
+        _reference_census(doc_id_cli, root)
+
+
+def test_reference_census_refuses_a_declared_exception_whose_reason_is_blank(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 83 §4's second mutation, reaching this census's own exception maps: a
+    bucket-3 entry with no reason is a defect in the fix, not a legitimate exception."""
+    root = _real_claude_copy(tmp_path, "blank-reason")
+    monkeypatch.setattr(
+        doc_id_cli, "_REFERENCE_CLAUDE_DIR_EXCEPTIONS",
+        {**doc_id_cli._REFERENCE_CLAUDE_DIR_EXCEPTIONS, "settings.json": "   "},
+    )
+    with pytest.raises(ValueError, match="declared exception"):
+        _reference_census(doc_id_cli, root)
+
+
+def test_reference_stamp_targets_are_claimed_once_across_overlapping_scopes(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`.claude/agents/README.md` sits inside two scopes at once — the README row and the
+    `Reference — agents` cell — and the cell-extent rule (RFC §2: *"a cell governs what
+    its text names; an index is the README row's"*) decides which claims it.
+
+    **Both routes give `lead` here, so the value alone cannot tell anyone whether the rule
+    was applied.** What can: that the file appears exactly once in the stamp set. Two
+    claims would stamp two headers onto one file, and the second would land in front of
+    the first.
+    """
+    root = _real_claude_copy(tmp_path, "overlap")
+    targets = _reference_census(doc_id_cli, root)
+    rels = [t.rel for t in targets]
+    assert sorted(rels) == sorted(set(rels)), (
+        f"claimed more than once: {sorted(r for r in set(rels) if rels.count(r) > 1)}"
+    )
+    assert ".claude/agents/README.md" in rels
+    assert ".claude/skills/README.md" in rels
+
+
+def test_migrate_stamps_the_charters_and_readmes_and_defers_the_rest(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """End to end through `migrate`: the two populations with no ruling gap are stamped
+    with the owner their cell carries, and the one that needs a merged header is left
+    untouched and reported by name."""
+    result = doc_id_cli.migrate(pristine_a)
+
+    role = (pristine_a / ".claude" / "roles" / "example-role.md").read_text(encoding="utf-8")
+    assert role.startswith("---\nfamily: reference\n")
+    assert "owner: maintainer" in role  # §1.6 "Reference — charters"
+    assert "status: active" in role
+    assert "title: example-role" in role
+    assert "NT-0001" not in role, "a stamped charter's citations rewrite like any other's"
+
+    for rel in (".claude/agents/README.md", ".claude/skills/README.md", "docs/README.md"):
+        text = (pristine_a / rel).read_text(encoding="utf-8")
+        assert text.startswith("---\nfamily: reference\n"), rel
+        assert "owner: lead" in text, rel  # the README row
+
+    agent = (pristine_a / ".claude" / "agents" / "example-agent.md").read_text(encoding="utf-8")
+    assert agent.startswith("---\nname: example-agent\n"), (
+        "an agent definition carrying the harness's own front matter is NOT stamped: its "
+        "header must be merged, which is W37-6's Task 1"
+    )
+    assert "family: reference" not in agent
+
+    deferred = dict(result.deferred_reference_stamps)
+    assert any(k.endswith("example-agent.md") for k in deferred), deferred
+    assert all(reason.strip() for reason in deferred.values())
+
+
+def test_migrate_does_not_stamp_a_vendored_manifest_twice(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The fixture's vendored manifest carries no front matter, so the Reference scope
+    *could* claim it — and must not: NT-0019 §1.5 gives a vendored manifest two extra
+    fields (`vendored: true`, `origin:`) that only the vendored writer supplies, and two
+    claims would prepend two headers.
+    """
+    manifest = pristine_a / ".claude" / "skills" / "vendored-example-skill" / "SKILL.md"
+    assert not manifest.read_text(encoding="utf-8").startswith("---\n")
+    doc_id_cli.migrate(pristine_a)
+    text = manifest.read_text(encoding="utf-8")
+    assert text.count("\n---\n") == 1, "two header blocks — the file was stamped twice"
+    assert "vendored: true" in text  # the vendored writer's, not the Reference scope's
+
+
+def test_cmd_migrate_prints_the_deferred_reference_stamps_by_name(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The deferral list is printed, with its count, on every run — the same reason
+    `_report_skipped` prints its own zero and Ruling 94 requires the ledger axes to print
+    theirs. A population nothing reports is a population nothing can check, which is the
+    F84/item-2 defect in one sentence.
+    """
+    args = argparse.Namespace(repo_root=pristine_a)
+    assert doc_id_cli._cmd_migrate(args) == 0
+    err = capsys.readouterr().err
+    assert "Reference stamp target(s) in scope and not stamped by this run" in err
+    assert ".claude/agents/example-agent.md" in err
+    assert "W37-6" in err, "the reason travels with the name, not just the count"
