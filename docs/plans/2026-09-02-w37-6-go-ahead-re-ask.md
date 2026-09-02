@@ -357,12 +357,23 @@ per §5.1 the checks are re-run in the session that runs the migration.
 | # | Check (map plan's own words) | At 2026-09-02T19:29Z |
 |---|---|---|
 | 1 | `gh pr list --state open` returns nothing | **Holds.** `gh pr list --state open --json number` → `[]`. Sanity-checked against `gh pr list --state all --limit 8`, which returns eight merged/closed rows, so the empty result is a genuine zero and not a token failure |
-| 2 | `git branch -r` lists only `origin/main` | **Holds.** `git ls-remote --heads origin \| wc -l` → **1**, the single ref being `refs/heads/main` |
+| 2 | `git branch -r` lists only `origin/main` | **Held at 19:29Z, and no longer holds — see below.** `git ls-remote --heads origin \| wc -l` → **1**, the single ref being `refs/heads/main` |
 | 3 | `git status --porcelain` is empty | **Does not hold, and see §5.3** — 52 worktrees exist under this `.git`, including this document's own |
 
-**Check 2 is measured with `git ls-remote` rather than `git branch -r` deliberately.** `-r`
-reads local remote-tracking refs, which a sibling worktree's fetch can advance or leave stale
-under a shared `.git`; `ls-remote` asks the remote. Both were run; they agree at this tree.
+**Check 2 is measured with `git ls-remote --heads origin` and not with `git branch -r`,
+deliberately, and `git branch -r` was not run at 19:29Z.** `-r` reads local remote-tracking
+refs, which a sibling worktree's fetch can advance or leave stale under a shared `.git`;
+`ls-remote` asks the remote. **Only the `ls-remote` form is evidence for the row above**, and
+this sentence replaces an earlier one asserting both were run and agreed, which was not true of
+the 19:29Z measurement.
+
+**And the volatility clause proved itself inside fifteen minutes, which is the most useful
+thing this section has.** Re-run at **2026-09-02T19:44Z**, `git ls-remote --heads origin | wc -l`
+returns **3**: `main`, the branch carrying this document, and `w37-6-fifth-abort-point`. **Check 2
+went from holding to not holding while the document reporting it was being written**, and one of
+the two new branches is this document's own. Nothing here is a defect — it is exactly why the
+map plan calls the condition volatile, why the frozen leaf plan refuses to record an answer, and
+why §5.4 states a condition rather than a finding.
 
 ### 5.3 The limb that no longer measures what it was written to measure
 
