@@ -2002,11 +2002,14 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
             )
             for m in loose
         ]
+        def is_nested_or_preamble(unit: _CensusUnit, spans: list[tuple[int, int]] = spans) -> bool:
+            return _is_within_or_before_a_record(int(unit.key), spans)
+
         _reconcile_census(
             scope=f"{rel} (multi-ruling headings)",
             units=units,
             records={str(s) for s in record_starts},
-            is_body=lambda u, spans=spans: _is_within_or_before_a_record(int(u.key), spans),
+            is_body=is_nested_or_preamble,
         )
 
 
@@ -2074,24 +2077,31 @@ def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
         return
     units = []
     records: set[str] = set()
+    derived: set[str] = set()  # bucket 2: a different function's own record, not listed
     for path in sorted(p for p in plans_dir.iterdir() if p.is_file()):
         key = path.name
         units.append(_CensusUnit(key=key, locator=f"docs/plans/{key}", text=key))
         if _PLAN_FILENAME_RE.match(path.name) is None:
             continue
-        text = path.read_text(encoding="utf-8")
-        if _RULING_HEADING_RE.search(text):
-            continue  # derived: a multi-ruling file, a different function's own record
+        file_text = path.read_text(encoding="utf-8")
+        if _RULING_HEADING_RE.search(file_text):
+            derived.add(key)  # a multi-ruling file -- `_discover_multi_ruling_files`'s own
+            continue
         records.add(key)
 
-    def is_already_canonical(unit: _CensusUnit) -> bool:
-        return _docid.ID_RE.match(unit.key) is not None
+    def is_body(unit: _CensusUnit) -> bool:
+        # Bucket 2: derived as a multi-ruling file (computed above, the same test
+        # `_discover_plain_plans` itself uses to delegate), or already in a canonical
+        # post-migration filename shape -- an idempotency/second-run reading, checked
+        # positively via `_docid.ID_RE` rather than "the legacy pattern found nothing"
+        # (the fixture-corpus assumption Ruling 83 rejects).
+        return unit.key in derived or _docid.ID_RE.match(unit.key) is not None
 
     _reconcile_census(
         scope="docs/plans/ (plain plans)",
         units=units,
         records=records,
-        is_body=is_already_canonical,
+        is_body=is_body,
         exceptions={"README.md": "the directory's own README, not a dated record"},
     )
 
