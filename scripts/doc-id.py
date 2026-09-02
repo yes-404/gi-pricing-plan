@@ -1817,6 +1817,7 @@ class _CensusUnit:
     key: str
     locator: str
     text: str
+    level: int = 0  # heading level (1-6); 0 when the unit is not heading-shaped
 
 
 def _reconcile_census(
@@ -1873,7 +1874,8 @@ def _heading_census_units(text: str, locator_prefix: str) -> list[tuple[int, _Ce
     for m in _CENSUS_ANY_HEADING_RE.finditer(text):
         line_no = text.count("\n", 0, m.start()) + 1
         unit = _CensusUnit(
-            key=str(m.start()), locator=f"{locator_prefix}:{line_no}", text=m.group(0).strip()
+            key=str(m.start()), locator=f"{locator_prefix}:{line_no}", text=m.group(0).strip(),
+            level=len(m.group(1)),
         )
         out.append((m.start(), unit))
     return out
@@ -1890,42 +1892,73 @@ def _record_spans(record_starts: Collection[int], text_len: int) -> list[tuple[i
     ]
 
 
-def _is_within_or_before_a_record(start: int, spans: Sequence[tuple[int, int]]) -> bool:
-    """Bucket 2 for a heading-split file: nested inside an established record's own body
-    (below the split level, or a record's own internal sub-heading), or preamble before
-    the first record -- both fold into a record's body by construction, per every
-    `_discover_*` heading-splitter's own docstring ("preamble ... is prepended to the
-    first split record's body").
+def _is_body_heading(
+    unit: _CensusUnit,
+    record_level: int,
+    spans: Sequence[tuple[int, int]],
+    first_record_start: int | None,
+) -> bool:
+    """Bucket 2 for a heading-split file: nested inside an established record's own body,
+    or preamble before the first record -- both fold into a record's body by construction,
+    per every `_discover_*` heading-splitter's own docstring ("preamble ... is prepended
+    to the first split record's body").
+
+    Nesting requires BOTH position and level, and neither alone is enough:
+
+    - **Level alone is wrong** when no enclosing record exists at all -- `_discover_multi_
+      ruling_files`'s `Ruling A1`/`A2` sit at `###` while `_RULING_HEADING_RE` targets
+      `##`, but there is no *actual* `## Ruling N` record in that file for them to be
+      "below": `record_level` there is a property of the *pattern*, not a structural fact
+      about the whole file the way it is for a dedicated single-shape file. Treating
+      "deeper than the pattern's own level" as sufficient would silently exempt exactly
+      the units Ruling 83 requires this guard to name.
+    - **Position alone is wrong** for the opposite reason (an earlier version of this
+      function's mistake): a record's span runs to the *next* record's start, or EOF when
+      there is none, so a same-level "impostor" heading sitting after the last real record
+      falls inside that record's span with nothing to end it early, and would be silently
+      absorbed as "nested" -- `_discover_closure_records`'s pre-`#585` defect (eleven
+      unmatched headings folding into one neighbouring record's body) one level further
+      down.
+
+    Combined, a unit is nested only when it is both inside a specific record's span AND
+    strictly deeper than that record's own level -- a same-level heading occurring
+    anywhere in a record's span is never nested, and a deeper heading with no enclosing
+    record is never nested either.
     """
-    if any(span_start <= start < span_end for span_start, span_end in spans):
+    start = int(unit.key)
+    if unit.level > record_level and any(s <= start < e for s, e in spans):
         return True
-    return bool(spans) and start < min(span_start for span_start, _ in spans)
+    return first_record_start is not None and start < first_record_start
 
 
 def _check_heading_split_not_silently_unrecognised(
-    locator_prefix: str, text: str, heading_re: re.Pattern[str], *, scope: str
+    locator_prefix: str, text: str, heading_re: re.Pattern[str], split_level: int, *, scope: str
 ) -> None:
     """Ruling 83's census for one dedicated heading-split file (`_discover_headed_split_
     file`'s shape: the file's *entire* structure is either a record, that record's own
     nested content, or the file's leading preamble -- nothing else is going on in it, so
     the fully generic `^#{1,6}` census from `_heading_census_units` is safe here without
     the word-anchoring `_check_multi_ruling_files_not_silently_unrecognised` needs for a
-    directory of otherwise-unrelated documents).
+    directory of otherwise-unrelated documents). `split_level` is the heading depth
+    `heading_re` itself targets (3, for both `closure-records.md` and `plan-reviews.md`'s
+    `###` shape) -- passed explicitly rather than inferred from the pattern text, since a
+    record's own matched level is the one fact `_is_body_heading` must not get wrong.
     """
     headings = _heading_census_units(text, locator_prefix)
     record_starts = {m.start() for m in heading_re.finditer(text)}
     spans = _record_spans(record_starts, len(text))
+    first_record_start = min(record_starts) if record_starts else None
     units = [unit for _start, unit in headings]
     _reconcile_census(
         scope=scope,
         units=units,
         records={str(s) for s in record_starts},
-        is_body=lambda u: _is_within_or_before_a_record(int(u.key), spans),
+        is_body=lambda u: _is_body_heading(u, split_level, spans, first_record_start),
     )
 
 
 def _check_headed_split_file_not_silently_unrecognised(
-    root: Path, rel_path: str, heading_re: re.Pattern[str], description: str
+    root: Path, rel_path: str, heading_re: re.Pattern[str], split_level: int, description: str
 ) -> None:
     """Task #30/#31 (Ruling 83's census), for `_discover_headed_split_file`'s shape
     (`plan-reviews.md` today; `closure-records.md` has its own discovery function and its
@@ -1942,7 +1975,7 @@ def _check_headed_split_file_not_silently_unrecognised(
     if not text.strip():
         return
     _check_heading_split_not_silently_unrecognised(
-        rel_path, text, heading_re, scope=f"{rel_path} ({description})"
+        rel_path, text, heading_re, split_level, scope=f"{rel_path} ({description})"
     )
 
 
@@ -2015,22 +2048,29 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
         rel = path.relative_to(root).as_posix()
         record_starts = {m.start() for m in _RULING_HEADING_RE.finditer(text)}
         spans = _record_spans(record_starts, len(text))
+        first_record_start = min(record_starts) if record_starts else None
         units = [
             _CensusUnit(
                 key=str(m.start()),
                 locator=f"{rel}:{text.count(chr(10), 0, m.start()) + 1}",
                 text=m.group(0).strip(),
+                level=len(m.group(0)) - len(m.group(0).lstrip("#")),
             )
             for m in loose
         ]
-        def is_nested_or_preamble(unit: _CensusUnit, spans: list[tuple[int, int]] = spans) -> bool:
-            return _is_within_or_before_a_record(int(unit.key), spans)
+
+        def is_body(
+            unit: _CensusUnit,
+            spans: list[tuple[int, int]] = spans,
+            first_record_start: int | None = first_record_start,
+        ) -> bool:
+            return _is_body_heading(unit, 2, spans, first_record_start)  # `## Ruling N`
 
         _reconcile_census(
             scope=f"{rel} (multi-ruling headings)",
             units=units,
             records={str(s) for s in record_starts},
-            is_body=is_nested_or_preamble,
+            is_body=is_body,
         )
 
 
@@ -2421,7 +2461,7 @@ def migrate(root: Path) -> MigrateResult:
     # the lead as a collision rather than silently reconciled -- see the PR body.
     _check_plan_reviews_heading_census(root)
     _check_headed_split_file_not_silently_unrecognised(
-        root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, "plan reviews"
+        root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, 3, "plan reviews"
     )
     drafts += review_drafts
     plain_plan_drafts = _discover_plain_plans(root)
