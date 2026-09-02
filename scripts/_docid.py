@@ -17,6 +17,7 @@ standard does not use.
 from __future__ import annotations
 
 import re
+import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -306,46 +307,118 @@ def parse_header(path: Path) -> Header | None:
     )
 
 
+# Ruling 69 (`docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`, PR #563,
+# merged): NT-0019 §1.5's parenthetical, naming `planning-with-files`, `ui-ux-pro-max`,
+# `graphify`, `systematic-debugging` and the `vue-*` skills as vendored while giving "a
+# directory that provides a `LICENSE` of its own" as the reason, is a gloss identifying
+# which skills the note's author had in mind, not a specification of a detector: it is
+# wrong about three of its own five named examples (`graphify`, `systematic-debugging`,
+# every `vue-*` skill provides no such file) and about 26 of the repository's 28.
+# `vendored` is declared and reconciled, never detected. This is the hand-kept enumeration,
+# seeded from
+# `.claude/skills/README.md`'s provenance sections — the record `CLAUDE.md` §12 makes
+# authoritative for what is vendored — and reconciled against `pyproject.toml`'s
+# `[tool.ruff] exclude` list by `vendored_skills_ruff_exclude_mismatch` below, which is
+# the independent second witness, never the criterion itself: adopting the ruff list
+# outright is Ruling 69's other rejected option, because nine of its 28 entries carry a
+# deliberate NT-0019 §5.4 edit and two of those (`writing-plans`,
+# `subagent-driven-development`) are creating instruments Ruling 66 requires inside the
+# migration commit — treating ruff-exclusion itself as "vendored" would exempt them from
+# the very migration that must carry them. Extending this set is a deliberate edit,
+# recorded in `.claude/skills/README.md` in the same commit (Ruling 69 §2 part 3), never a
+# rename this constant discovers on its own.
+_VENDORED_SKILLS: Final[frozenset[str]] = frozenset({
+    "brainstorming",
+    "code-quality",
+    "create-adaptable-composable",
+    "dispatching-parallel-agents",
+    "executing-plans",
+    "finishing-a-development-branch",
+    "graphify",
+    "planning-with-files",
+    "receiving-code-review",
+    "reproducing-ci-locally",
+    "requesting-code-review",
+    "secret-hygiene",
+    "security-audit",
+    "subagent-driven-development",
+    "systematic-debugging",
+    "test-driven-development",
+    "testing-strategy",
+    "ui-ux-pro-max",
+    "using-git-worktrees",
+    "using-superpowers",
+    "verification-before-completion",
+    "vue-best-practices",
+    "vue-debug-guides",
+    "vue-pinia-best-practices",
+    "vue-router-best-practices",
+    "vue-testing-best-practices",
+    "writing-plans",
+    "writing-skills",
+})
+
+
 def is_vendored(path: Path, repo_root: Path) -> bool:
-    """True when `path` sits under a directory that ships its own `LICENSE` file —
-    NT-0019 §1.5's stated marker for a vendored skill: "anything shipping its own
-    `LICENSE` ... carries `vendored: true`".
+    """True when `path` sits beneath a directory named in `_VENDORED_SKILLS` directly
+    under `.claude/skills/` — NT-0019 §1.5's vendored-skill exemption, as Ruling 69
+    resolved it (see the comment above `_VENDORED_SKILLS`): a membership test against a
+    declared constant, never a filesystem probe.
 
-    The repository's own root `LICENSE` (`repo_root/LICENSE`) never counts: every path in
-    the repository is transitively "under" it, so if it counted every file would read as
-    vendored. Walks from `path` upward, stopping (and returning `False`) at `repo_root`
-    itself without inspecting its `LICENSE`.
+    This function's signature is unchanged from the published contract W37-3 and W37-4
+    import (Ruling 69 §2 part 4) — only the body changed, from walking the filesystem
+    for a `LICENSE` file to testing set membership.
 
-    A known, reported gap (2026-09-02): most of the skills this repository actually
-    treats as vendored (`pyproject.toml`'s `[tool.ruff] exclude` list) do not carry a
-    LICENSE file at all — the note's own §1.5 parenthetical names three of them
-    (`graphify`, `systematic-debugging`, "the vue-* skills") as vendored while giving
-    "ships a LICENSE" as the criterion; nine of the 28 ruff-excluded skills carry an
-    NT-0019 §5.4 change row, two of which (`writing-plans`, `subagent-driven-development`)
-    are creating instruments Ruling 66 places inside W37-6's own migration commit — so
-    keying vendoring off that list instead would exempt from the migration the very
-    instruments the migration must carry. Ruled as Ruling 69
-    (`docs/plans/2026-09-02-w37-migration-preconditions-rulings.md`, PR #563, not yet
-    merged at the time this was written): §1.5's parenthetical is a gloss, not a detector,
-    and the fix is to what feeds this predicate — a declared constant reconciled against
-    the ruff list so drift is loud — not to this function's published signature, which
-    the ruling preserves. Apply the ruling once #563 merges; until then this implements
-    the rule exactly as published, since it is the contracted signature W37-3 and W37-4
-    import.
+    `path` may be a file or a directory, absolute or relative to `repo_root`; both are
+    resolved before comparison, so the two forms behave identically and a symlink is
+    followed rather than compared literally. Returns `False` for anything not under
+    `repo_root/.claude/skills/<name>` — including `repo_root` itself, a file elsewhere in
+    the repository (there is no more special case for the repository's own root
+    `LICENSE`: nothing here inspects any `LICENSE` file, so there is nothing for it to be
+    mistaken for), and a path outside `repo_root` entirely.
     """
-    resolved_root = repo_root.resolve()
-    current = path.resolve()
-    if current.is_file() or not current.is_dir():
-        current = current.parent
-    while True:
-        if current == resolved_root:
-            return False
-        if (current / "LICENSE").is_file():
-            return True
-        parent = current.parent
-        if parent == current:
-            return False
-        current = parent
+    try:
+        rel_parts = path.resolve().relative_to(repo_root.resolve()).parts
+    except ValueError:
+        return False  # not under repo_root at all
+    if len(rel_parts) < 3 or rel_parts[0] != ".claude" or rel_parts[1] != "skills":
+        return False
+    return rel_parts[2] in _VENDORED_SKILLS
+
+
+def vendored_skills_ruff_exclude_mismatch(
+    repo_root: Path,
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Ruling 69 §2 part 2's reconciliation: `_VENDORED_SKILLS` against `repo_root`'s
+    `pyproject.toml`'s `[tool.ruff] exclude` list, restricted to the `.claude/skills/<name>`
+    entries — the independent second witness the ruling requires, never the criterion
+    itself (`is_vendored`'s docstring, and the comment above `_VENDORED_SKILLS`, both say
+    why the ruff list is not adopted outright: it over-exempts two of Ruling 66's creating
+    instruments).
+
+    Returns `(only_in_constant, only_in_ruff)`. Both empty means the two agree — this is
+    the passing case, and it is what the real repository must show today. Either side
+    non-empty is drift, and the caller must fail loudly naming which side moved (Ruling 69
+    acceptance item 1) rather than silently trusting one source over the other.
+
+    Reads `repo_root/pyproject.toml` fresh on every call, with `tomllib` (standard
+    library — this module's own docstring, G4/DP-5, is why nothing here may import a
+    third-party TOML parser) rather than caching the ruff list at import time, so a test
+    can point this at a synthetic `pyproject.toml` under `tmp_path` without needing to
+    reload this module. Indexes `config["tool"]["ruff"]["exclude"]` directly rather than
+    `.get`-chaining to a default: a moved or renamed key must raise, the same "fail loud"
+    the reconciliation itself exists to provide — a silent empty list here would read as
+    "ruff excludes nothing", which is drift in exactly the direction this function must
+    never hide.
+    """
+    config = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
+    exclude = config["tool"]["ruff"]["exclude"]
+    prefix = ".claude/skills/"
+    ruff_skills = frozenset(
+        entry[len(prefix) :] for entry in exclude
+        if isinstance(entry, str) and entry.startswith(prefix)
+    )
+    return _VENDORED_SKILLS - ruff_skills, ruff_skills - _VENDORED_SKILLS
 
 
 # ---------------------------------------------------------------------------------------

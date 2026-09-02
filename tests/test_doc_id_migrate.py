@@ -56,6 +56,31 @@ def doc_id_cli() -> types.ModuleType:
     )
 
 
+@pytest.fixture(autouse=True)
+def _fixture_corpus_declares_its_synthetic_vendored_skill(
+    doc_id_cli: types.ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_VENDORED_SKILLS` (Ruling 69) is a hand-declared enumeration of this repository's
+    28 real vendored skills, reconciled against `pyproject.toml`'s ruff `exclude` list —
+    it has no mechanism left for recognising an arbitrary directory as vendored by
+    inspecting the filesystem, which is exactly what Ruling 69 §2 rejected (`is_vendored`
+    no longer reads any `LICENSE` file at all).
+
+    `tests/fixtures/docs-migration/.claude/skills/vendored-example-skill/` predates that
+    ruling and is not a real vendored skill — it earned the old, LICENSE-based exemption
+    only because it carries its own `LICENSE`. Every test in this module now declares it
+    into the effective set for the duration of the test, the same way the real set is
+    declared in `.claude/skills/README.md`, rather than reintroducing a filesystem probe
+    the fixture alone would need. `monkeypatch` reverts this after each test, so the real
+    28-name set is what every other module in the suite sees.
+    """
+    monkeypatch.setattr(
+        doc_id_cli._docid,
+        "_VENDORED_SKILLS",
+        doc_id_cli._docid._VENDORED_SKILLS | {"vendored-example-skill"},
+    )
+
+
 def _run_git(args: Sequence[str], *, cwd: pathlib.Path) -> None:
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True)
 
@@ -297,6 +322,40 @@ def test_vendored_skill_manifest_is_stamped_but_files_beneath_are_untouched(
 
     license_text = (skill_dir / "LICENSE").read_text(encoding="utf-8")
     assert "MIT License" in license_text  # byte-for-byte untouched
+
+
+def test_vendored_skill_manifest_with_no_license_is_still_stamped(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_is_vendored_skill_manifest` (`scripts/doc-id.py`) tests membership in
+    `_docid._VENDORED_SKILLS`, not `LICENSE` presence — proven on a vendored skill that
+    ships none, the shape 26 of the repository's real 28 vendored skills actually have
+    (only `planning-with-files` and `ui-ux-pro-max` carry one).
+
+    Before this fix, a `LICENSE`-based `_is_vendored_skill_manifest` would return `False`
+    for a manifest with no `LICENSE` sibling — not because the skill isn't vendored, but
+    because the *manifest-boundary* check never found the file it was looking for. Once
+    `is_vendored` itself became membership-based (this same PR), that combination would
+    have made `_is_vendored_exempt` (`is_vendored` **and not** `_is_vendored_skill_manifest`)
+    read as `True and not False = True` for such a manifest — wrongly exempting it from the
+    blanket citation-rewrite pass, the opposite of NT-0019 §1.5, which never exempts a
+    manifest. This fixture skill has no `LICENSE` at all, so it only passes if
+    `_is_vendored_skill_manifest` is membership-based too.
+    """
+    monkeypatch.setattr(
+        doc_id_cli._docid,
+        "_VENDORED_SKILLS",
+        doc_id_cli._docid._VENDORED_SKILLS | {"no-license-vendored-skill"},
+    )
+    skill_dir = pristine_a / ".claude" / "skills" / "no-license-vendored-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "# no-license-vendored-skill\n\nCites `FR-13` here.\n", encoding="utf-8"
+    )
+    doc_id_cli.migrate(pristine_a)
+    manifest = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+    assert manifest.startswith("---\n")
+    assert "vendored: true" in manifest
 
 
 def test_a_citation_with_no_corresponding_record_is_left_unrewritten(
@@ -796,7 +855,7 @@ def test_migrate_raises_via_the_legacy_file_guard_on_a_real_shaped_tree(
 
 
 def test_migrate_writes_nothing_when_a_vendored_manifest_is_unparseable(
-    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Task #34: `_discover_vendored_skill_manifests` is hoisted to run alongside every
     other discovery, before any write — so a malformed manifest aborts `migrate` cleanly
@@ -804,7 +863,17 @@ def test_migrate_writes_nothing_when_a_vendored_manifest_is_unparseable(
     property that actually matters: nothing was written at all, not merely that `migrate`
     raised (which the un-hoisted call also does, just after two write phases had already
     run — the exact defect task #34 files).
+
+    `_is_vendored_skill_manifest` tests membership in `_VENDORED_SKILLS` (Ruling 69), not
+    `LICENSE` presence, so `bad-vendored-skill` must be declared into the set for this
+    fixture to be treated as a manifest at all — the `LICENSE` file it also carries is
+    incidental now, not what makes `_discover_vendored_skill_manifests` reach it.
     """
+    monkeypatch.setattr(
+        doc_id_cli._docid,
+        "_VENDORED_SKILLS",
+        doc_id_cli._docid._VENDORED_SKILLS | {"bad-vendored-skill"},
+    )
     bad_skill_dir = pristine_a / ".claude" / "skills" / "bad-vendored-skill"
     bad_skill_dir.mkdir(parents=True)
     (bad_skill_dir / "LICENSE").write_text("MIT\n", encoding="utf-8")

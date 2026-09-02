@@ -195,18 +195,20 @@ def scan_governed_headers(tree_root: Path) -> HeaderScan:
     Excludes `_templates/` (example headers with placeholder ids — the same exemption
     check 31 gets by path, NT-0019 §1.4) and vendored skill content (§1.5: a vendored
     skill's files are exempt from stamping, so they are never a real source of a live id —
-    see `_docid.is_vendored`'s own docstring for the known detection gap) *before*
-    attempting to parse either, so neither counts as a "skip": exclusion is not failure.
+    `_docid.is_vendored` tests membership in `_docid._VENDORED_SKILLS`, Ruling 69's
+    declared constant) *before* attempting to parse either, so neither counts as a "skip":
+    exclusion is not failure.
 
     A file whose front matter does not fit NT-0019 §1.5's closed grammar at all —
     `parse_header` raising `HeaderError` — is not fatal to the scan, but is recorded in
-    `.skipped`, never silently dropped: verified against this repository's own real tree,
-    `.claude/skills/create-adaptable-composable/SKILL.md` carries upstream front matter
-    with a nested `metadata:` mapping, and `is_vendored` does not catch it (the reported
-    LICENSE-detection gap). Whether a *governed* file's header is malformed enough to fail
-    the gate is check 30's question (W37-4), not this scan's — this scan's job is finding
-    every live id while making what it could not resolve legible to a reader of the CLI's
-    output, since the scan itself cannot tell "malformed governed header" from
+    `.skipped`, never silently dropped: a first-party file under `.claude/` carrying
+    foreign front matter (a nested mapping, an unknown key — the shape a vendored skill's
+    own upstream front matter takes, but outside `_VENDORED_SKILLS` so `is_vendored` does
+    not exempt it) lands here rather than being silently absorbed as a skip that reads the
+    same as "nothing to find". Whether a *governed* file's header is malformed enough to
+    fail the gate is check 30's question (W37-4), not this scan's — this scan's job is
+    finding every live id while making what it could not resolve legible to a reader of
+    the CLI's output, since the scan itself cannot tell "malformed governed header" from
     "legitimately foreign, e.g. vendored, front matter".
     """
     ids: list[tuple[str, int, Path]] = []
@@ -1636,14 +1638,25 @@ def _discover_register(root: Path) -> list[_Draft]:
 
 
 def _is_vendored_skill_manifest(path: Path) -> bool:
-    """True only for the `SKILL.md` that *defines* a vendored skill's boundary (its own
-    directory ships the `LICENSE`) — never a file beneath it. `_docid.is_vendored` cannot
-    make this distinction by itself: called on `skill_dir/SKILL.md`, it walks up from
-    `skill_dir` (a file's own directory), finds `skill_dir/LICENSE` immediately, and
-    returns `True` for the manifest exactly as it does for anything beneath it (NT-0019
-    §1.5: the manifest is stamped, only the files *beneath* it are exempt).
+    """True only for the `SKILL.md` that *defines* a vendored skill's boundary — its
+    parent directory is named in `_docid._VENDORED_SKILLS` — never a file beneath it.
+    `_docid.is_vendored` cannot make this distinction by itself: called on
+    `skill_dir/SKILL.md`, it is `True` for the manifest exactly as it is for anything
+    beneath it (NT-0019 §1.5: the manifest is stamped, only the files *beneath* it are
+    exempt).
+
+    Ruling 69 (reassigned to this slice by Ruling 76): the criterion is membership in
+    `_VENDORED_SKILLS`, the same declared constant `_docid.is_vendored` tests, not a
+    `LICENSE`-file probe. The two functions' criteria could silently disagree otherwise:
+    only 2 of the 28 real vendored skills carry a `LICENSE` (`planning-with-files`,
+    `ui-ux-pro-max`), so an unfixed, still-LICENSE-based version of this function would
+    read every one of the other 26 skills' own `SKILL.md` (`writing-plans` and
+    `subagent-driven-development` among them) as *not* the manifest — making
+    `_is_vendored_exempt` below treat each as exempt from the blanket citation-rewrite
+    pass, when NT-0019 §1.5 requires every manifest to be stamped and rewritten like any
+    other file.
     """
-    return path.name == "SKILL.md" and (path.parent / "LICENSE").is_file()
+    return path.name == "SKILL.md" and path.parent.name in _docid._VENDORED_SKILLS
 
 
 def _discover_vendored_skill_manifests(root: Path) -> list[Path]:
@@ -2478,9 +2491,10 @@ def migrate(root: Path) -> MigrateResult:
     # Hoisted here to run alongside every other discovery, before any write below: a
     # malformed vendored manifest's HeaderError must abort migrate cleanly, not after
     # Phase C's document/roadmap/register writes have already landed on disk (task #34).
-    # `_is_vendored_skill_manifest`'s LICENSE-based detection is still wrong (Ruling 69,
-    # reassigned to W37-6 by Ruling 76) -- this hoist fixes only when the crash happens,
-    # not whether it should have fired at all.
+    # `_is_vendored_skill_manifest`'s detection rule was LICENSE-based until Ruling 69's
+    # membership-test fix landed here (reassigned to this slice by Ruling 76); this hoist
+    # was never about which files the check reaches, only about when a malformed one
+    # aborts the run.
     vendored_skill_manifests = _discover_vendored_skill_manifests(root)
 
     start = compute_next(root)
