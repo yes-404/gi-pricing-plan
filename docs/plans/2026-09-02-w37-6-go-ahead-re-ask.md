@@ -328,10 +328,66 @@ for an item wrong in both directions. **This one is right in both directions and
 anyway** — it correctly describes the end state and says nothing about the path, and the path is
 where the damage is.
 
-**Stated as a class rather than as an incident, and not fixed here.** No sweep of every finding's
-clause for this property has been run; this is one instance, found while fixing an unrelated
-thing. Whether the other clauses in this effort share it is unmeasured, and that is the
-disclosure — not a claim that they do, and not a claim that they do not.
+#### The class, named — `DESTINATION_ONLY`
+
+**An acceptance item that specifies a correct end state, is satisfiable, and is silent about the
+route — so satisfying it literally can do harm the item cannot express.**
+
+**The obvious tell over-collects, and saying so is what makes the class usable.** *"It names what
+must be true after and nothing about what must not happen on the way"* describes **almost every
+acceptance item in this repository**, because `CLAUDE.md` §13 requires an item to be stated as
+*a violation that must become detectable* — a statement about the end state, by construction.
+**Destination-only is the house style, not a deviation.** So the class cannot be *"names a
+destination"*. It is **"names a destination whose cheapest route is destructive"**, and the
+narrowing is three conjuncts, all three true of F88 limb 1:
+
+1. **The clause is the acceptance test for a change to the very code path it describes** — not an
+   observation over a corpus that some other change must preserve. Limb 1's clause is the test
+   for rewriting `_discover_vendored_skill_manifests`.
+2. **A cheap, natural implementation satisfies it and is harmful.** Widening the predicate is the
+   one-line reading; it returns 28 and the writer prepends.
+3. **Nothing else in the same commit catches the harm.** The 28 are not in checks 30–39's scope
+   (F87), the exemption register is not consulted by `doc-id.py` (§2.2), and the damage is a
+   successful write rather than a raise.
+
+**Drop any one conjunct and the item is merely terse, not dangerous.** That is the difference
+between this class and the taxonomy's other seven, and it is why a sweep for it is a reading task
+rather than a grep.
+
+#### How much of the corpus this has been swept over: almost none, and the denominator is not the one it looks like
+
+**One confirmed instance. No sweep. And the population it belongs to is not the 98.**
+
+Addendum A's 98 is the **rulings** corpus — 98 rulings across 41 record files. **F88 limb 1 is a
+finding's falsifiable clause, not a ruling's acceptance item**, so *"how many of the 98"* is the
+wrong question and answering it would be the mistake this section exists to avoid. Measured at
+`origin/main`:
+
+| Population | Count | Predicate, runnable |
+|---|---|---|
+| Findings files | **30** | `git ls-tree origin/main docs/audit/findings/ --name-only \| wc -l` |
+| …carrying a falsifiable clause anywhere | **21** | `git grep -li "alsifiable" origin/main -- docs/audit/findings \| wc -l` |
+| …of those, using the `## Falsifiable` heading | **10** | `git grep -hoE "^#+ .*[Ff]alsifiable.*" origin/main -- docs/audit/findings \| sort \| uniq -c` |
+| Register-row `Falsifiable:` clauses | **19** | `git show origin/main:docs/audit/register.md \| grep -oE "Falsifiable:" \| wc -l` |
+
+**The two homes are not de-duplicated here** — a finding may carry a clause in its file *and* in
+its register row — so there is no single denominator, and inventing one would be the pasted
+constant `CLAUDE.md` §13 refuses. **The honest statement: 1 confirmed, 21 findings files and 19
+register clauses unswept.**
+
+**On the rulings side, what can be ruled out is ruled out by class and nothing more.** Of
+Addendum A's 98 at `5c0d24d`, **`NONE_FOUND` = 35** carry no item at all and **`INVALIDATED` = 3**
+cannot pass on any input — Addendum A's own words for one of them, *"not 'never fires' but
+'cannot pass'"*. **So 38 of 98 are excluded by class and 60 are unswept.** That is a derivation
+from the recorded classification, not an estimate of how many have the property; **it says
+nothing whatever about the 60.**
+
+**Not extrapolated, deliberately.** One instance is one instance. The reason it is in front of
+the maintainer is not that it is common — nobody knows whether it is — but that **every finding
+in this effort carries a falsifiable clause, this repository's whole discipline for trusting a
+fix is that the clause be met and proven on broken input, and this is the first evidence that
+such a clause can be met destructively.** A hole in the discipline is worth reporting at n=1;
+a rate is not claimable at n=1, and none is claimed.
 
 ### 2.6 A sixth failure, behind the fifth, and it is post-write
 
@@ -782,6 +838,14 @@ condition begins *"Re-ask when 5c is closed"*, and a reader checking that condit
 roadmap finds nothing. **Routed to the lead; not written by this branch**, because `docs/roadmap.md`
 is the lead's file and a slice close is the lead's act, not this document's to assert.
 
+**And it is being fixed while this document is open, which is stated so the claim above cannot
+rot silently.** PR **#651**, *"complete W37-5c's sign-off — the lead's merge happened"*, was open
+and unmerged when this section was written, with `origin/main` still at `c888b61`. **A reader
+cannot tell a still-true absence claim from one that has since been filled**, so: the two
+measurements above are true **at `c888b61`**, and the way to check them today is to re-run
+`grep -c "W37-5c CLOSED" docs/roadmap.md` rather than to trust this paragraph. If it returns
+non-zero, #651 landed and this subsection is discharged rather than wrong.
+
 ### 8.2 The `VR-DST-1` movement figure this ask was briefed with does not reproduce
 
 The brief for this document stated *"the `VR-DST-1` baseline moved +13 in one day against +5
@@ -865,13 +929,18 @@ reason.
    form F92 already set on that same file.
 4. **On W37-5c's close record — the lead will file it**, per §8.1, in a separate change that
    this branch does not make.
-5. **On §2.5's failure shape — the lead recommends a sweep, and does not run one here.** One
-   falsifiable clause in this effort has been shown to be destructive when met. Whether the
-   others share the property is **unmeasured**, and the lead's reading is that finding out is
-   cheap, is not W37-6's work, and should not gate this go-ahead: the clause that matters to the
-   run is F88 limb 1's, and §2.4 already refuses to accept it as the test. **Recommended as a
-   register row with an owner rather than as a condition on §10** — the maintainer may disagree
-   and make it one.
+5. **On `DESTINATION_ONLY` (§2.5) — the lead recommends a sweep, and does not run one here.**
+   One falsifiable clause in this effort has been shown to be **satisfiable and destructive**.
+   Whether any other shares the property is **unswept**, over 21 findings files and 19 register
+   clauses, with 60 of the rulings corpus's 98 also unexcluded. The lead's reading: **finding out
+   is a reading task, not a grep** — the class needs all three conjuncts §2.5 names, so a
+   pattern will not do it — **it is not W37-6's work, and it should not gate this go-ahead**,
+   because the one clause that bears on the run is F88 limb 1's and §2.4 already refuses to
+   accept it as the test. **Recommended as a register row with an owner rather than as a
+   condition on §10** — the maintainer may disagree and make it one.
+   **The eighth class is proposed here and is not adopted by this document**: adding a class to
+   Addendum A's taxonomy is an amendment to a filed sweep's instrument, and §2.5 names it so the
+   maintainer can adopt, rename or reject it on one line rather than reconstruct it.
 
 **What this recommendation does not do.** It does not assume the go-ahead covers anything beyond
 the run. NT-0019 §7 runs **(a) to (k)**; items (i), (j) and (k) belong to later slices — (i) to
