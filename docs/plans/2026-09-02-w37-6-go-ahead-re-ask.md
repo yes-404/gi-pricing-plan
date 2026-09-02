@@ -47,7 +47,9 @@ only the first would have passed a document asserting the second.
 2. **The four preconditions keep the distinction their closure record drew.** *Violation:*
    F87, F88, F90 and F92 presented as one class. Three are defects the slice **found** in work
    that predates it; F92 is a deferral the slice **made**. A document that blurs them flatters
-   the work.
+   the work. **A second violation of the same item: F93 counted as a fifth precondition** — it
+   is a **disclosure** (§3.2), no §7 acceptance item depends on it, and presenting it as
+   something W37-6 must act on would overstate what the run is blocked by.
 3. **Every figure carries its tree, its corpus and the predicate it counted with**
    (`CLAUDE.md` §13, as amended 2026-09-02). *Violation:* a count here that a reader holding
    none of the author's context cannot re-run — which is the defect conditions 1 and 2 exist to
@@ -695,6 +697,70 @@ about itself. **A document that merges them flatters the work in both directions
   as already-migrated, and **3** raise. So fixing only the raise leaves 25 skipped for the wrong
   reason. Limb 2 is a §5.2-routed population no `_discover_*` function reaches, with no guard
   and no census — `migrate()` completes and reports success.
+
+---
+
+### 3.2 F93 — a fifth finding that is **not** a fifth precondition
+
+**F93 is filed and is a disclosure. It does not join the table above, and the distinction is
+load-bearing.**
+
+**Cited by id and PR rather than by a link, because it has not landed.** F93 lives on **PR #652**
+(`docs/f93-vendored-stamping-contradiction`) and is **not on `origin/main` at `ac10d30`** — a
+link to `findings/F93.md` from here is a broken link, and this document's own gate said so rather
+than letting it through. **The id is verified free at `ac10d30`** and was allocated by the lead,
+not minted here (`CLAUDE.md` §12; the precedent is F88 limb 3, where two executors filed different
+findings as `F87` within an hour). **When #652 merges the citation becomes a path; until then the
+PR number is the durable form** — which is §4's own rule about squash-merge applied before the
+squash rather than after. The four are preconditions because a W37-6 planner
+or executor must act on them. This one changes nothing anybody must do, and says something a
+planner will otherwise discover mid-run.
+
+**The contradiction, both sides quoted.** NT-0019 §1.5 stamps the manifest and exempts only what
+is under it:
+
+> A vendored skill (…) carries `vendored: true` and `origin:` on its `SKILL.md` **only**; the
+> files beneath are exempt from stamping, citation rewrite and shape checks.
+
+The maintainer's ruling of 2026-09-02 exempts the manifest itself:
+
+> **Vendored manifests: exemption, as recommended.**
+
+**So the manifest is both stamped and exempt**, and the note says the stamping half **twice** —
+§1.5, and the §5 impact-map row, *"every `SKILL.md` (46) | header stamped; vendored skills get
+`vendored: true` + `origin:` and their subtrees are skipped"*. **The second site is the table a
+leaf plan is written from**, which is why saying it twice matters more than it looks.
+
+**Neither document reaches the other.** Measured at `ac10d30`: the note references the ruling
+**0** times, and the ruling mentions §1.5, `vendored: true` or `origin:` **0** times.
+
+**Why it is not a precondition, and this comes first because it is the part that bounds it.**
+`sed -n '/^## 7\./,/^## 8\./p'` over the note, grepped for `vendored|origin:|SKILL`, returns
+**0** — **no §7 acceptance item depends on the stamp**, so **W37-6 can pass its own acceptance
+with 0 of 28 manifests stamped.** And the code already follows the ruling rather than §1.5:
+`scripts/audit-docs.py` deliberately excludes `was:`, `vendored:` and `origin:` from its
+template-derived permission set, and its comment records having read *"NT-0019 §1.5's own prose
+rather than its front-matter illustration"* to get there. **Nothing is broken and nothing is
+blocked.**
+
+**Why it belongs in this document anyway.** A W37-6 planner reading §1.5 and the §5 impact map
+expects **28 stamped manifests** and will find **none**. That is F87's own justification applied
+to a second artifact — a fact that *"lived only in a passing test … invisible to whoever plans
+W37-6, who is the person who needs it."*
+
+**How it was found is worth a sentence, because it was not a sweep.** The executor's replacement
+acceptance clause **quoted §1.5 as requiring the stamp while certifying 0 of 28 stamped**, and
+**both halves were correct.** The contradiction was visible only because someone wrote the two
+down next to each other. **No instrument would have reported it**, which is the same shape as
+§2.5's three-mechanism result one level up: the corpus can hold a contradiction between a
+standard and a ruling with nothing to notice.
+
+**Custody, and what this document does not do.** Unowned; the decay event is **the next amendment
+to NT-0019 for any reason, failing which the next `CLAUDE.md` §14 review** (Ruling 49). **The
+resolution is the maintainer's** — amending an accepted standard is a spec change (`CLAUDE.md`
+§0's table). **The finding lists three available shapes and recommends none, and this document
+adds no recommendation of its own**, deliberately: a lead's preference attached to a maintainer's
+spec change is the shape §9.2 was corrected for.
 
 ---
 
