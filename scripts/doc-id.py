@@ -3504,7 +3504,13 @@ def _discover_reference_stamp_targets(
     """
     targets: list[_ReferenceStamp] = []
     censuses: list[_ReferenceScopeCensus] = []
-    readmes_claimed: set[str] = set()
+    #: Every `README.md` the README scope *saw*, whichever bucket it put it in -- not just
+    #: the ones it stamped. The directory scopes below skip these, and the distinction is
+    #: the whole safety: keyed on "stamped", a README that the README scope excepted or
+    #: routed would fall through to `.claude/agents/` and be claimed a second time, which
+    #: prepends a second header. No such file exists today, which is exactly why the
+    #: narrower reading looked correct.
+    readmes_seen: set[str] = set()
 
     def classify(units: list[_CensusUnit], scope: str, resolved: dict[str, object]) -> None:
         stamped: list[str] = []
@@ -3538,6 +3544,7 @@ def _discover_reference_stamp_targets(
         if Path(rel).name != "README.md":
             continue
         units.append(_CensusUnit(key=rel, locator=rel, text=rel))
+        readmes_seen.add(rel)
         if not (root / rel).is_file():
             # Tracked but no longer on disk: an earlier `migrate` run in this same tree
             # moved it into a family directory and did not touch the index — git state is
@@ -3564,7 +3571,6 @@ def _discover_reference_stamp_targets(
             resolved[rel] = inherited
         else:
             resolved[rel] = _reference_target(root / rel, rel, "lead")
-            readmes_claimed.add(rel)
     classify(units, "every tracked README.md (the README row)", resolved)
 
     # --- `.claude/roles/` and `.claude/agents/`: every file under them.
@@ -3576,7 +3582,7 @@ def _discover_reference_stamp_targets(
         for path in sorted(p for p in directory.rglob("*") if p.is_file()):
             rel = path.relative_to(root).as_posix()
             key = path.relative_to(directory).as_posix()
-            if rel in readmes_claimed:
+            if rel in readmes_seen:
                 continue  # the README scope above already accounts for it
             units.append(_CensusUnit(key=key, locator=rel, text=key))
             resolved[key] = (
@@ -3640,6 +3646,19 @@ def _discover_reference_stamp_targets(
                 resolved[key] = _REFERENCE_CLAUDE_DIR_EXCEPTIONS[key]
         classify(units, ".claude/ (every top-level entry — is it in a scope?)", resolved)
 
+    # The scopes overlap by design -- an index inside `.claude/agents/` is in two of them,
+    # and the cell-extent rule decides which claims it. A file claimed twice would be
+    # stamped twice, the second header landing in front of the first, and nothing
+    # downstream would say so: `frozen_file_matches_after_migration_stamp` strips one
+    # leading block. Checked here rather than left to the one overlap that exists today.
+    claimed = [t.rel for t in targets]
+    if len(set(claimed)) != len(claimed):
+        twice = sorted({rel for rel in claimed if claimed.count(rel) > 1})
+        raise ValueError(
+            f"migrate: Reference stamp target(s) claimed by more than one scope: {twice} "
+            "-- each would be stamped once per claim. Decide which scope owns them (the "
+            "cell-extent rule) rather than letting both write."
+        )
     return targets, censuses
 
 
