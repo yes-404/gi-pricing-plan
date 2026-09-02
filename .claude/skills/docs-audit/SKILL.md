@@ -497,13 +497,33 @@ real defects; fix the document.
 
 ## Verified
 
+2026-09-02 (eighth entry, same day) — **the selector entry above is superseded: `F87` is
+fixed.** `_id_scope_documents` no longer expands a directory root with `rglob("*.md")`. It
+expands it through `_docid.stamp_set_files`, the filesystem face of NT-0019 §4 step 5's
+stamp-set predicate — the same `_docid.in_stamp_set` that `nt0019_stamp_set` reads, so the
+enforced scope and the corpus the F83 register is reconciled against are now one
+definition with two consumers, in `scripts/audit-docs.py` and `scripts/doc-id.py`. A scope
+widened to the four post-migration roots now reaches **all 65** register entries, the 62
+non-`.md` files included, and check 30 consults `UNSTAMPABLE_EXEMPTIONS` and passes them
+rather than redding on every one. **`_ID_SCOPE_ROOTS` itself is unchanged** — still S1's
+two paths — so both changes are inert until the roots widen, which is the point: the
+mechanism is proven before the irreversible commit, not inside it. Pinned by
+`test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`,
+`test_check_30_passes_a_registered_unstampable_file_that_is_now_in_scope` and
+`test_the_two_stamp_set_consumers_read_one_definition` (set equality over the real corpus,
+with its own broken-input proof), which replace
+`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`. The stamp set is
+**430** at `32fc63c`, of which **62** are non-markdown; predicate
+`_docid.nt0019_stamp_set(tracked)` with `tracked` from
+`git ls-tree -r --name-only 32fc63c`. Tree `32fc63c`.
+
 2026-09-02 (seventh entry, same day) — the selector, not the asserts. Widening
 `_ID_SCOPE_ROOTS` does **not** widen what checks 30-39 see to non-markdown files:
 `_id_scope_documents` walks a directory root with `rglob("*.md")`, so a scope widened to
 `docs/` collects 583 paths and reaches **3** of the register's 65 — the vendored manifests
-— and none of the 62 non-`.md` files. Measured, not reasoned about, and pinned by
-`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`. It matters for W37-6:
-widening the roots alone leaves the 62 invisible to every one of checks 30-39. Check 35's
+— and none of the 62 non-`.md` files. Measured, not reasoned about, and pinned at the time by
+`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`. **Superseded by the
+eighth entry above, which fixed it**; kept because it is the record of what was believed. Check 35's
 second reconciliation clause was also proven by **simulating** the widened scope rather
 than waiting for it — red in bulk pre-migration (D14), green post-migration, red by name
 when one register entry is dropped, green when restored. Tree `f61f9a4`.

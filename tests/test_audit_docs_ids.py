@@ -1444,33 +1444,162 @@ def test_scope_clause_reds_by_name_on_an_unregistered_unstamped_file_in_scope(
     assert "not in the F83 exemption register" in audit.failures[0]
 
 
-def test_widening_the_scope_roots_alone_reaches_no_non_markdown_file(
+def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts(
     audit: types.ModuleType,
 ) -> None:
-    """**The selector, not the asserts.** `_id_scope_documents` walks a directory root
-    with `rglob("*.md")`, so widening `_ID_SCOPE_ROOTS` brings in no non-markdown file at
-    all: of the 65 files on the register, a fully widened scope reaches **3** — the
-    vendored manifests — and none of the 62 non-`.md` files the register mostly consists
-    of.
+    """**`F87` discharged, on the selector rather than on the roots.**
 
-    This is why the register is reconciled against NT-0019's stamp set by
-    `_check_unstampable_register`, where those 62 are reachable, and not here. Pinned as
-    a measurement because the natural assumption — that widening the roots widens the
-    scope — is false, and W37-6 will be written by someone holding that assumption
-    unless a test contradicts it.
+    This test replaces `test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`,
+    which pinned the defect: `_id_scope_documents` expanded a directory root with
+    `rglob("*.md")`, so a fully widened scope reached **3** of the register's 65 — the
+    vendored manifests, which are markdown — and **none** of the 62 non-`.md` files the
+    register mostly consists of. The glob was the gate, not the roots, and F87's own
+    falsifiable clause says so: *"not discharged by widening `_ID_SCOPE_ROOTS`, and not by
+    checks 30-39 passing"*.
+
+    The assertion is therefore made on one of the 62 rather than on a fixture: a real
+    `.json` under `docs/contracts/`, named from the register itself so this cannot pass
+    against a file the register does not carry.
     """
     setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
     rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
     assert rels, "the widened scope collected nothing at all — the simulation is broken"
-    assert not [r for r in rels if not r.endswith(".md")]
 
     registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
-    reached = registered & rels
-    assert reached == {
-        ".claude/skills/create-adaptable-composable/SKILL.md",
-        ".claude/skills/planning-with-files/SKILL.md",
-        ".claude/skills/vue-best-practices/SKILL.md",
-    }, sorted(reached)
+    missing = registered - rels
+    assert not missing, sorted(missing)
+
+    non_markdown = sorted(r for r in registered if not r.endswith(".md"))
+    assert len(non_markdown) == 62, len(non_markdown)
+    assert set(non_markdown) <= rels
+
+    # Named individually, so the proof is "one of the 62" and not "62 of something".
+    exemplar = "docs/contracts/openapi/gi-pricing.yaml"
+    assert exemplar in registered, "the register no longer carries the exemplar"
+    assert exemplar in rels
+    assert any(r.startswith("docs/contracts/") and r.endswith(".json") for r in rels)
+
+
+def test_check_30_passes_a_registered_unstampable_file_that_is_now_in_scope(
+    audit: types.ModuleType,
+) -> None:
+    """The second half of `F87`'s clause: the non-markdown file the selector now reaches
+    is *"seen by check 30, which then consults `UNSTAMPABLE_EXEMPTIONS` and passes it"*.
+
+    Run on one real `.json` alone, as a file root — so the only thing that can red is
+    check 30's treatment of that file — and then again with its register row removed, so
+    the pass is attributable to the register and to nothing else. Without the second run
+    this is a check that has never printed a failure (`CLAUDE.md` §13).
+    """
+    exemplar = "docs/contracts/openapi/gi-pricing.yaml"
+    entry = next(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path == exemplar)
+
+    setattr(audit, "_ID_SCOPE_ROOTS", (audit.REPO / exemplar,))  # noqa: B010
+    assert [p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()] == [
+        exemplar
+    ]
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_header_fields()
+    assert audit.failures == [], audit.failures
+    assert any("1 skipped as registered unstampable" in n for n in audit.notes), audit.notes
+
+    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != entry.path)
+    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", kept)  # noqa: B010
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_header_fields()
+    assert len(audit.failures) == 1, audit.failures
+    assert exemplar in audit.failures[0]
+    assert audit.failures[0].startswith("check 30:")
+
+
+# =========================================================================================
+# One stamp-set definition, two consumers — `scripts/_docid.py`'s `in_stamp_set` (NT-0019
+# §4 step 5), read by `audit-docs.py` (the F83 reconciliation corpus, and — through
+# `_docid.stamp_set_files` — the checks-30-39 enforced scope) and by `doc-id.py` (what
+# `migrate` stamps). Before the extraction each script stated the rule for itself and the
+# two had already drifted: `F87`.
+# =========================================================================================
+
+
+def _doc_id_module() -> types.ModuleType:
+    """`scripts/doc-id.py`, loaded by path. `scripts/` goes on `sys.path` first because
+    that module does a plain `import _docid`, which a `spec_from_file_location` load does
+    not arrange for on its own — the same preamble `tests/test_doc_id.py` carries.
+    """
+    scripts = str(ROOT / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    return _load_by_path("_doc_id_for_stamp_set_equality", ROOT / "scripts" / "doc-id.py")
+
+
+def test_the_two_stamp_set_consumers_read_one_definition(
+    audit: types.ModuleType,
+) -> None:
+    """Set equality over the **real corpus**, not a fixture, and reported by naming both
+    sides of the symmetric difference rather than by comparing two totals — two totals are
+    invariant under a compensating pair of errors (Ruling 83).
+
+    This is the test the extraction exists to make possible. `audit-docs.py` reaches the
+    corpus through `scripts/file-census.py`'s `git_ls_files(REPO)`; `doc-id.py` reaches it
+    through its own `git_ls_files(root, ".")`. Two entry points, two corpus readers, one
+    predicate — and the equality is the claim that the second fact is what makes the first
+    two agree.
+    """
+    docid = _doc_id_module()
+    from_audit = set(audit.nt0019_stamp_set())
+    from_migrate = set(docid.nt0019_stamp_set(ROOT))
+
+    assert from_audit, "the audit-side stamp set is empty — the corpus read failed"
+    assert not from_audit ^ from_migrate, sorted(from_audit ^ from_migrate)
+
+    # The population is the one NT-0019 §4 step 5 describes, not merely a shared one: a
+    # predicate both consumers read from the same wrong place would satisfy the equality
+    # above and nothing else here.
+    assert any(r.startswith("docs/contracts/") for r in from_audit)
+    assert ".claude/roles/lead.md" in from_audit
+    assert not any(r.startswith("scripts/") and not r.endswith("README.md") for r in from_audit)
+
+
+def test_the_equality_reds_when_one_consumer_reads_a_different_definition(
+    audit: types.ModuleType,
+) -> None:
+    """The broken-input proof for the test above (`CLAUDE.md` §13: a check that has never
+    printed a failure has not been tested).
+
+    Only `audit-docs.py`'s view of `_docid` is replaced, so the two consumers genuinely
+    disagree — which is the state the extraction removed and which nothing before it could
+    detect. `audit.nt0019_stamp_set` resolves `_docid` as a module global at call time,
+    which is what makes the substitution reach it.
+    """
+    docid = _doc_id_module()
+    real = audit._docid
+
+    class _NarrowedDocid:
+        """`_docid` with `docs/contracts/` dropped from the stamp set — the exact
+        narrowing that would put the F83 register's 59 `.json` entries back outside the
+        corpus they are reconciled against.
+        """
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(real, name)
+
+        def nt0019_stamp_set(self, tracked: object) -> list[str]:
+            return [
+                rel
+                for rel in real.nt0019_stamp_set(tracked)
+                if not rel.startswith("docs/contracts/")
+            ]
+
+    setattr(audit, "_docid", _NarrowedDocid())  # noqa: B010
+    from_audit = set(audit.nt0019_stamp_set())
+    from_migrate = set(docid.nt0019_stamp_set(ROOT))
+
+    difference = from_audit ^ from_migrate
+    assert difference, "the substitution changed nothing — this proof is vacuous"
+    assert all(r.startswith("docs/contracts/") for r in difference), sorted(difference)
 
 
 def test_check_35_owner_clause_is_a_no_op_for_every_registered_file(
