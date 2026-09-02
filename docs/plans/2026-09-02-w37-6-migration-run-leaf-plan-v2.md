@@ -482,3 +482,57 @@ records why it briefly looked otherwise.
 - **No acceptance line.** `status: active` records that the plan's own blocking row is
   resolved, and nothing more. **The maintainer's go-ahead is a separate gate and is not given**;
   §6.2 states what is still owed before it is asked for.
+
+---
+
+## Corrections after filing
+
+**2026-09-02 — §4.2's three marker figures are measured and correct; its *contrast* runs
+between two different units, and the caveat that said so did not survive from the source
+document.**
+
+Raised by the lead while establishing the provenance of `2446` for the go-ahead ask, and
+recorded here rather than edited into §4.2, which is kept verbatim above as the record of what
+the disclosure said when it was read.
+
+**The figures are measured, not derived.** All three come from one command at `cc17404`, the
+tree §4.2 names, and all three reproduce to the digit:
+
+```
+git grep -o '@pytest\.mark\.req(' cc17404 | wc -l                      -> 2446
+git grep -o '@pytest\.mark\.req(' cc17404 -- backend packages | wc -l  -> 1985
+git grep -o '@pytest\.mark\.req(' cc17404 -- docs/plans | wc -l        ->  422
+```
+
+`461` is `2446 − 1985`, arithmetic on two measured values. §4.2's sentence *"step 6 rewrites
+over `git ls-files`, 'nothing exempt'"* is the **justification for the repo-wide scope**, not
+the method by which the number was obtained; it reads as the latter, and that is a defect in
+the prose rather than in the figure.
+
+**The defect: the contrast and the subtraction use different units, three apart.** §4.2 says
+*"2446 … not 1988"* and then *"Of the extra 461"*. `2446 − 1988 = 458`. The `461` is against
+**1985**. Both operands reproduce and both are right — `1988` is the count of **lines** matching
+the bare string `pytest.mark.req` in `backend`+`packages`; `1985` is the count of **decorator
+occurrences** in the same scope. The three-apart difference is three lines that mention the
+marker without being one. **A reader of §4.2 alone has no way to see the switch.**
+
+**The caveat existed and was lost in transfer.**
+[`2026-09-02-w37-6-outstanding-obligations.md`](2026-09-02-w37-6-outstanding-obligations.md)
+§5.2 carries it explicitly — *"1988 is a line count; 1985 decorators sit on 1988 matching lines.
+Both reproduce; neither is the repository-wide figure."* It did not survive into §4.2. **Read
+§4.2's marker paragraph as *"2446 … not 1985"*.**
+
+**And `422` is correct rather than conservative.** In one unit at `cc17404` it is **422**
+decorators against **457** bare-string matches under `docs/plans`; the extra 35 are prose
+mentions of the marker, not citations the run rewrites. An earlier reading had the figure
+understating the frozen-plan load Ruling 68's predicate must classify. It does not — it is the
+right number for that load.
+
+**Why appended rather than edited.** This plan is `status: active`, and `document-ids.md` §1.7
+puts the freeze at that transition — the same reading under which it was editable while
+`draft`. Editing `1988` to `1985` in place would erase what the disclosure said while the
+maintainer was reading it, which is the record `CLAUDE.md` §0 exists to protect. The shape is
+`CLAUDE.md` §5's, applied to prose rather than to an id: **append, mark superseded, never edit
+away.** Precedent: `eb19e3f` (`#554`) added a `## Corrections after filing` section to
+[`2026-09-01-nt-0016-landing-package.md`](2026-09-01-nt-0016-landing-package.md), filed one
+commit earlier, on the same principle.
