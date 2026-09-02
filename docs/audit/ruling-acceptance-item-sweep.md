@@ -145,7 +145,11 @@ separately and dated here rather than silently folded in):** `_ruling_file_owner
 (`scripts/doc-id.py:1142`) now unconditionally returns `_RULING_DEFAULT_OWNER` for every input
 — the departure regexes are deleted, not left inert. Ruling 86 item 3's assertion (`owner ≠
 decision-maker`) now fails on *every* input, by construction, exactly as the invalidation
-predicted before the fix landed.
+predicted before the fix landed. **This is the strongest form the proof can take: a structural
+prediction, made before the code changed, confirmed by an independent later change made for an
+unrelated reason (implementing Ruling 95's own obligation, not this record's finding).** A
+prediction later confirmed by an independent event is stronger evidence than either the
+prediction or the confirmation would be alone.
 
 **Ruling 95 §3 item 3 / §4 item 3 (VACUOUS AT BIRTH) — RE-INSTRUMENT shape, distinct from
 Ruling 84's.** §4 item 3: *"Ruling 87's `decision-maker` for the three standalone ruling files
@@ -238,3 +242,102 @@ way.
 
 `ruling-acceptance-item-sweep-5c0d24d.csv`, same directory — 98 rows, one per ruling,
 columns `ruling,record_file,class,item_summary,evidence`.
+
+## 9. Provenance — how 31 became 30, not just that it did
+
+The count was not 30 on the first pass. It was **31**, reported to the lead, then corrected
+down by one file after applying the lead's own stated boundary — *"an `Overridden if `<X>``
+clause is never itself an acceptance item"* — back onto this sweep's own data. The path:
+
+1. First pass counted `nt-0015-q1-q5-rulings.md` (Rulings 49-53) as carrying acceptance items
+   for Rulings 50, 51, **52, and 53** — the last two admitted because real, running code
+   enforces their substance (`register-owed.py`'s dirty-worktree refusal for Ruling 52; the
+   findings-directory naming convention `docs/audit/findings/README.md` ties to Ruling 53).
+2. Re-reading Rulings 52 and 53's *own text* against the boundary found neither states a
+   `Violation:` clause or any check — only "Three constraints" / "Three sub-rules" plus an
+   "Overridden if" clause. **The code enforcing their substance is real; the ruling stating a
+   check is not the same fact**, and only the second counts as "genuine" under §1's own
+   definition. This is the identical conflation a verifying subagent had already been caught
+   making on Ruling 41 earlier in the same sweep — found a second time, in this sweep's own
+   output, by applying the same rule to itself rather than assuming the first catch was the
+   only instance.
+3. Rulings 52 and 53 moved CONSTRUCTIBLE → NONE_FOUND. Rulings 50 and 51 still carry genuine
+   items (50 built and tested; 51 reclassified INDICATIVE separately, §5), so
+   `nt-0015-q1-q5-rulings.md` stays in the count. **`nt-0016-q4-q5-q6-q7-notes-rulings.md`
+   (Rulings 55-58) did not survive the same re-read** — all four of its rulings state only an
+   override clause, with no exception — and dropped out of the file count entirely: 31 → 30.
+
+Recorded as a path rather than a number because the number alone does not show the count was
+**measured against a stated rule** rather than **settled on and then defended** — a sweep that
+only ever revises upward on a second look is fitting its own expectation; one that revises
+against its own reported total, by the same rule it was just handed, is checking itself.
+
+## 10. On verifying a count — a total validates the total, and nothing else
+
+The lead verified this record's first class-count line (`CONSTRUCTIBLE=52 ... NONE_FOUND=37`,
+since corrected to `54 ... 35`) by confirming the six numbers summed to 98. They did. **So
+does the corrected set** — two buckets had moved by 2 in opposite directions, and a sum is
+invariant under a transfer between buckets, so that check was not unlucky: it was
+**structurally incapable** of detecting the error it was run against. Recorded here, in the
+artifact the error nearly entered, rather than only in the chat thread that caught it, because
+it generalises past this one count: **a total validates the total and nothing else.** This is
+the same reason `scripts/ruling-acceptance-item-census.py` (§2) asserts bucket membership by
+naming which heading fell into which bucket, not by confirming a printed sum — Ruling 83's own
+census property, restated: the arithmetic only catches an undercount if the check names units,
+not if it only re-adds what it was given.
+
+## 11. Dated correction — 2026-09-02 (same day, after filing): WITHDRAWN, a seventh class
+
+**This class was absent from the brief this sweep was commissioned against.** The brief named
+two failure shapes — VACUOUS AT BIRTH and INVALIDATED — and this record added INDICATIVE and
+CANNOT_DETERMINE while the sweep was in progress. A fifth shape surfaced only after filing,
+while answering a follow-up question about which rulings a downstream migration slice applies
+to, and the six classes above cannot express it. Filed as a correction to this record, not an
+edit to §5's table or the CSV — the six-class count in §5 stands as filed, exactly as Rulings
+93 and 94 stand as filed under this record's own `Corrects` header.
+
+**The shape: an item that fires constantly and returns the wrong verdict, in both directions
+at once — false positives *and* false negatives.** It is not VACUOUS AT BIRTH, because it
+fires; not INVALIDATED, because nothing broke it — it was wrong on the day it was written; not
+INDICATIVE, because it is a genuine, running check, just of the wrong thing. Named
+**WITHDRAWN**, after the disposition both of its instances actually received.
+
+- **Ruling 66 acceptance item 2** (original, reversion-based test), withdrawn by Ruling 73.
+  Measured against the shipped `sweep_legacy_forms` on the real corpus: **8 false positives**
+  on non-members that pass (`repo-architecture`, `dev-commands`, `git-hygiene`, `CLAUDE.md`,
+  four role files), **4 false negatives** on real members that fail — one of them
+  `subagent-driven-development`, a **primary** instrument the criterion exists to protect —
+  and no under-inclusion limb at all, so a member nobody thought to list could never have been
+  caught either way. §5's CONSTRUCTIBLE count for Ruling 66 reflects its live replacement
+  (2a/2b/2c, demonstrated falsifiable against the real corpus in Ruling 73's own §5); the
+  original item is what this correction names.
+- **Ruling 16 acceptance item 1**, withdrawn the same day it was filed (`docs/plans/2026-08-
+  29-w11-algorithm-pin-maturity.md:124`, "Correction to Ruling 16," discharging register row
+  F32): the property it claimed "becomes expressible for the first time" in a later slice had
+  already shipped and passed in an earlier one. Never a standing defect — found and closed
+  same-day — which is why it counts as an instance of the shape rather than as an open
+  finding.
+
+**Both instances are closed, not open.** Verified 2026-09-02 against the item-4 follow-up
+this correction arose from: does a downstream migration slice apply to either withdrawn item?
+No — the *withdrawn* items are superseded by live, sound replacements, and nothing currently
+scheduled depends on the withdrawn text. Filed here as taxonomy, not as outstanding work.
+
+**The finding this correction states about itself, plainly rather than softened:** a
+taxonomy commissioned to classify every defect a corpus contains, and missing a slot for a
+defect that same corpus actually contains, is the same failure this sweep exists to find,
+recurring in the sweep's own instrument. It was not caught by the brief, the sweep's own
+first pass, or either verifying subagent; it surfaced only because a downstream question
+("does this still apply") forced a second look at material already filed as resolved.
+
+## 12. Status note, added 2026-09-02: two findings converted to scheduled work
+
+Not a correction to this record's own content — a pointer, so a reader arriving later does not
+have to re-derive that these two items are no longer merely findings. **W37-5c**, a precondition
+slice cut after this sweep, scopes itself to "everything that stops or blinds" the migration
+run. On the *blinds* limb: **Ruling 84 §4 item 2's substituted check (Ruling 94) is to be
+built**; **Ruling 86 §4 item 3 is to be rebuilt so it can pass on some input**. Neither stops
+the run by itself — both are checks meant to police it that currently cannot fail — which is
+exactly "blinds" rather than "stops," and exactly why both are in W37-5c's scope rather than
+already fixed. Status as of this note: scheduled, not yet built. See `docs/roadmap.md` and
+W37-5c's own filed plan for current state; this record does not track it further.
