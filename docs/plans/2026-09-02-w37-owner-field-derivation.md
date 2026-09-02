@@ -63,7 +63,14 @@ every old **id and path**."* Ids and paths. Its own worked examples are the same
 `path.relative_to(root).as_posix()` at `scripts/doc-id.py:1034`, `:1083`, `:1394`; `rel` at
 `:1152`, `:1186`; the literal `"docs/audit/closure-records.md"` at `:1268`; `None` at `:2024`.
 
-### 1.1 So Ruling 88's disposal of the objection has the hole the lead anticipated
+**And the real instances agree, which is the check the lead asked for rather than the
+documented intent.** Forty-two `^was:` lines exist at `a31d509`. **Two** are in a governed
+document — the standard's own worked example, in both copies:
+`was: 2026-08-18-profile-contract.md`, a filename. The other **forty** are test fixtures, and
+every one is `was: ~`. **No populated `was:` field anywhere in the corpus carries a role, a
+name, or a grant.** Producer, specification and instances all say the same thing.
+
+### 1.1 Two rulings rest on this premise, and one of them obliges an action
 
 Ruling 88 §2 ground 1: *"The planner's authorship is not erased by this; it is in the body and
 in `was:`."* **The `was:` half is false.** `was:` will carry
@@ -78,6 +85,25 @@ independent and hold: `owner: planner` would be the only `RFC-` contradicting §
 nothing to catch it; and the container's own text — *"takes them to the maintainer"* — makes it
 a proposal *to* the maintainer. One supporting sentence is wrong; the ruling is not.
 
+**Ruling 86 is the one that matters, because it obliges an action on the same premise.** Its §2
+states: *"The `A` semantic is preserved where it belongs — **in `was:`**, and in each record's
+own body, which says who ruled it and under what grant."* **Both halves are false, measured:**
+
+| Claim | Measured at `a31d509` |
+|---|---|
+| `was:` preserves it | `was:` will carry `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` — a path. No role, no grant |
+| the record's own body says who ruled it and under what grant | **No subsection says either.** A1 (`:67-80`) and A2 (`:81-95`) contain no mention of the delegation, the lead or the maintainer at all. A3 (`:96-108`) mentions the lead **once** — *"the lead was reading carefully each time"* — which is NT-0013's evidence about reading behaviour, not a statement of who ruled A3 or under what authority. The delegation is at **§1.1 of the same file**, which the split leaves behind |
+
+**And on that premise Ruling 86 §3 item 2 obliges** *"`owner:` is not `decision-maker` for these
+three"*, with the acceptance *"Each of the three new `RL-` records carries an `owner:` that is
+not `decision-maker`. **Violation: a frozen record attributing a decision to a role that did not
+make it.**"*
+
+**That obligation and §1.6's `RL` row now disagree, in merged artifacts.** §1.6 names the
+decision-maker; Ruling 86 forbids him for these three. This derivation does not resolve that —
+**overturning a merged ruling is not a planner's** — but it is the live conflict, it is larger
+than the reading question it was routed under, and §5 states what it needs.
+
 ### 1.2 The consequence the lead asked me to test, and it lands somewhere else
 
 The lead's worry: *"if `was:` does not carry it, adopting the family table silently destroys the
@@ -85,10 +111,11 @@ record that the lead ruled A1–A3 under delegation."*
 
 **The record is not destroyed by `owner:`, and it is not preserved by the body either. It is
 severed by the split.** Rulings A1, A2 and A3 sit at
-`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md:67,81,96`. **Their own subsections mention
-neither the delegation, nor the lead, nor the maintainer** — checked line by line. The
-delegation lives at **§1.1 of the same file**, under a different heading, which the split leaves
-with the residual `PL-`.
+`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md:67,81,96`. **No subsection states who ruled it or under what
+grant** — checked line by line, against that predicate rather than against a keyword. Two
+mention none of the three roles; the third mentions the lead once, in a sentence about
+NT-0013's evidence. The delegation lives at **§1.1 of the same file**, under a different
+heading, which the split leaves with the residual `PL-`.
 
 So under the recommended three-`RL-` split, each ruling record is separated from the only
 artifact that records the authority under which it was made — **whatever value `owner:` takes.**
@@ -191,11 +218,32 @@ an **ownership**. Amending those rulings later is one of the other purposes.
 **Of the three shapes the lead named, it is the third: §1.6 has a gap — and there are two,
 which are different problems with different owners.**
 
-**The table wins where it yields a value**, which is buckets A and B, and that covers `RL`, so
-**question 4 resolves to `owner: decision-maker` for Rulings A1–A3** and PR #603's
-`_ruling_file_owner` is wrong to derive `lead` from the delegation clause. `_PLAN_KIND_OWNER`,
-its other half, is right. **The two halves are not two readings of one rule; one applies the
-rule and the other applies a rule that does not exist.**
+**The table wins where it yields a value** — buckets A and B, which includes `RL`. On the
+table alone, question 4 resolves to `owner: decision-maker` for Rulings A1–A3.
+
+**But a merged ruling has already departed from the table for exactly these three, and this
+derivation does not overturn it.** Ruling 86 §3 item 2 obliges an owner that is *not*
+`decision-maker`, on the premise §1.1 measures as false. So the decision-maker has a question
+this derivation can frame but not answer: **does Ruling 86 item 2 survive its premise
+failing?**
+
+- **If it survives** — the reasoning being that a frozen record must not attribute a decision to
+  a role that did not make it, whatever else preserves authorship — then `RL` is a **standing,
+  ruled exception** to the family table, and the general answer is *"the table, except where a
+  ruling departs from it"*. **That is a coherent answer and it needs the departure recorded
+  somewhere a reader of §1.6 will find**, or the next reader re-derives `decision-maker` and
+  reverts it.
+- **If it does not survive** — the reasoning being that `owner:` means *who may amend* and the
+  attribution concern is answered by the missing authorship field rather than by this one — then
+  A1–A3 take `decision-maker` and Ruling 86 item 2 is amended.
+
+**PR #603's `_ruling_file_owner` implements Ruling 86 correctly and is not wrong.** An earlier
+draft of this derivation said it was; that was an error, made by reading the function without
+reading the ruling its docstring cites. It defaults to `_RULING_DEFAULT_OWNER =
+"decision-maker"`, departs only where a `The delegation — …` heading exists, and **raises rather
+than guessing** when it cannot parse a role from one. `_PLAN_KIND_OWNER` is right on the table
+reading. **The two halves are not two readings in conflict: one follows §1.6 and the other
+follows Ruling 86, and it is §1.6 and Ruling 86 that disagree.**
 
 **Gap 1 — the disambiguating rule in bucket B is never stated.** Ruling 88 supplied it correctly
 for `RFC` and its reasoning generalises, but the next reader re-derives it. *Recommendation: a
