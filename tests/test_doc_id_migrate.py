@@ -3939,3 +3939,61 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
         "a writer that raises on the real corpus cannot claim anything, but the set of "
         f"such writers is itself a finding worth noticing: {raised}"
     )
+
+
+# ---------------------------------------------------------------------------------------
+# Two checks in this slice pass on **no input at this tree** — nothing is claimed twice,
+# and nothing is both stamped and deleted. A check that is vacuous today and first fires
+# after W37-6 widens scope has not been tested; it has only been written. Both are fired
+# here, on input constructed to make them fire.
+# ---------------------------------------------------------------------------------------
+
+
+def test_the_double_claim_guard_fires_when_its_precondition_is_removed(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`_discover_reference_stamp_targets` refuses if any path is claimed by two scopes.
+    Zero paths are, so the raise is unreachable from any real corpus — which is exactly
+    the state in which a guard can be wrong and look right.
+
+    Fired by removing the one thing that prevents it: the README scope's `readmes_seen`
+    skip. With that gone, `.claude/agents/README.md` is claimed by the README row *and*
+    by the `Reference — agents` cell, and the guard names it. The mutation is applied to
+    the shipped source, so what is proven is the shipped raise, not a re-creation of it.
+    """
+    root = _real_claude_copy(tmp_path, "double-claim")
+    doc_id_cli._discover_reference_stamp_targets(root)  # control: the shipped code is fine
+
+    disarmed = _module_with_source_mutations(
+        tmp_path,
+        (
+            (
+                "            if rel in readmes_seen:\n"
+                "                continue  # the README scope above already accounts for it\n",
+                "            if False:\n"
+                "                continue  # skip disarmed for this proof\n",
+            ),
+        ),
+        name="double-claim-mut",
+    )
+    with pytest.raises(ValueError, match=re.escape(".claude/agents/README.md")):
+        disarmed._discover_reference_stamp_targets(root)
+
+
+def test_no_path_is_both_stamped_and_deleted_by_the_same_run(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """A file stamped and deleted by one commit is a defect wherever it occurs, so it is
+    checked as a property of the run rather than for the one file that raised the question
+    (`.claude/notes/README.md`, whose disposition is §4 step 4's and §5.3's to reconcile —
+    see `_REFERENCE_CLAUDE_DIR_EXCEPTIONS`).
+
+    Not a tautology: `migrate` both writes and deletes, and the 17 F84 discovers *are*
+    deleted at their old paths — they simply are not stamped there, because the README
+    scope puts them in bucket 2 rather than claiming them. Were routing ever dropped as
+    the discriminator, they would be stamped and then deleted, and this is what says so.
+    """
+    result = doc_id_cli.migrate(pristine_a)
+    assert result.files_written, "nothing written — the intersection would be empty for free"
+    assert result.files_deleted, "nothing deleted — likewise"
+    assert set(result.files_written) & set(result.files_deleted) == set()
