@@ -736,11 +736,13 @@ def test_plan_reviews_heading_census_raises_naming_unclassified_headings_by_line
     with pytest.raises(NotImplementedError) as exc_info:
         doc_id_cli._check_plan_reviews_heading_census(tmp_path)
     message = str(exc_info.value)
-    assert "line 7" in message
-    assert "Pending proposals" in message
     assert "line 9" in message
     assert "Candidate A" in message
-    # the records and the title are not misreported as unclassified
+    # the records and the title are not misreported as unclassified. Line 7 is the
+    # container, which `_discover_proposal_containers` now produces an `RFC-` for (F80's
+    # green-after) -- before that code landed it was named here, which is what F80 is.
+    assert "line 7" not in message
+    assert "Pending proposals" not in message
     assert "line 3" not in message
     assert "line 1" not in message
     assert "line 13" not in message
@@ -785,24 +787,175 @@ def test_plan_reviews_heading_census_is_silent_on_a_missing_file(
     doc_id_cli._check_plan_reviews_heading_census(tmp_path)  # no docs/ dir at all
 
 
-def test_migrate_raises_via_the_plan_reviews_census_on_a_real_shaped_tree(
+#: The real file's shape after PR #609: the container and the reviews all at `###`, the
+#: candidates demoted to `####`, and the container's date in its own `(drafted …)` trailer.
+_PLAN_REVIEWS_REAL_SHAPE = (
+    "# Plan reviews\n\n"
+    "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"
+    "### Pending proposals — for the §14 review at W11's close (drafted 2026-08-29)\n\n"
+    "Container prose.\n\n"
+    "#### Candidate A — a proposal\n\nProposal body.\n\n"
+    "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n"
+)
+
+
+def test_migrate_completes_the_plan_reviews_census_on_a_real_shaped_tree(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
-    """End-to-end: overwrite the fixture's own (clean) `plan-reviews.md` with the real
-    tree's shape -- a `##` container of undated sub-content between two dated,
-    otherwise-matching reviews -- and confirm `migrate` raises through the new census
-    rather than silently completing with the container's content folded away.
+    """End-to-end green-after for F80: the real file's post-#609 shape no longer aborts
+    `migrate`, and the container materialises as an `RFC-` rather than folding into the
+    review above it.
     """
     (pristine_a / "docs" / "audit" / "plan-reviews.md").write_text(
-        "# Plan reviews\n\n"
-        "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"
-        "## Pending proposals — drafted 2026-08-29\n\n"
-        "### Candidate A — a proposal\n\nProposal body.\n\n"
-        "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n",
+        _PLAN_REVIEWS_REAL_SHAPE, encoding="utf-8"
+    )
+    result = doc_id_cli.migrate(pristine_a)
+    assert any(f.startswith("docs/rfcs/RFC-") for f in result.files_written), result.files_written
+
+
+def test_migrate_still_raises_via_the_plan_reviews_census_on_an_unruled_heading(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The census's remaining failing case. Only two matchers claim a record in this file
+    -- `_REVIEW_HEADING_RE` and `_PROPOSAL_CONTAINER_RE` -- so a third heading at the split
+    level with no ruled disposition must still stop the run.
+    """
+    (pristine_a / "docs" / "audit" / "plan-reviews.md").write_text(
+        _PLAN_REVIEWS_REAL_SHAPE.replace(
+            "### Plan review 9", "### Deferred items — not yet ruled\n\nBody.\n\n### Plan review 9"
+        ),
         encoding="utf-8",
     )
-    with pytest.raises(NotImplementedError, match="Pending proposals"):
+    with pytest.raises(NotImplementedError, match="Deferred items"):
         doc_id_cli.migrate(pristine_a)
+
+
+def test_proposal_container_is_discovered_with_ruling_88s_fields(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 88 §2, field by field: *"`RFC-`, `kind: process`, `status: closed`,
+    `created: 2026-08-29`, `was:` `docs/audit/plan-reviews.md`, as its own record."*
+    `owner:` is `maintainer` per Ruling 88's *"Disagreed: `owner: planner`"*.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(_PLAN_REVIEWS_REAL_SHAPE, encoding="utf-8")
+    drafts = doc_id_cli._discover_plan_reviews(tmp_path)
+    containers = [d for d in drafts if d.prefix == "RFC"]
+    assert len(containers) == 1
+    c = containers[0]
+    assert (c.kind, c.status, c.owner) == ("process", "closed", "maintainer")
+    assert c.created == date(2026, 8, 29)
+    assert c.was == "docs/audit/plan-reviews.md"
+    assert c.title == "Pending proposals — for the §14 review at W11's close"
+    # Ruling 88 §3 item 5: the candidate stays body inside the record, not a record itself.
+    assert "#### Candidate A" in c.body
+    assert not any(d.title.startswith("Candidate") for d in drafts)
+
+
+def test_proposal_container_is_identified_positively_not_by_review_pattern_failure(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 93 §2's **added** acceptance item, stated as its own fixture: *"the fixture
+    is the container's heading edited to match the review pattern, and the classifier must
+    still produce an `RFC-`."* The three edits Ruling 93 §1(d) measured -- add a comma,
+    remove the parenthesis, remove the word "drafted" -- are applied here, and the heading
+    is asserted to match `_REVIEW_HEADING_RE` so the test cannot silently stop exercising
+    the collision.
+
+    *Violation this reds: a classifier that reaches the container by elimination.*
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    edited = "### Pending proposals — for the §14 review at W11's close, 2026-08-29"
+    assert doc_id_cli._REVIEW_HEADING_RE.search(edited + "\n") is not None  # the collision is real
+    (audit_dir / "plan-reviews.md").write_text(
+        _PLAN_REVIEWS_REAL_SHAPE.replace(
+            "### Pending proposals — for the §14 review at W11's close (drafted 2026-08-29)",
+            edited,
+        ),
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_plan_reviews(tmp_path)
+    container = [d for d in drafts if d.title.startswith("Pending proposals")]
+    assert [d.prefix for d in container] == ["RFC"]
+    assert container[0].created == date(2026, 8, 29)
+    doc_id_cli._check_plan_reviews_heading_census(tmp_path)  # still closes
+
+
+def test_proposal_container_section_closes_at_the_next_record_not_by_heading_level(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 93 §2's **substituted** acceptance item: *"A fixture in which a non-record
+    section and the records following it share one heading level, and no heading of any
+    higher level exists in the file. Violation: a section whose close is derived from
+    heading level."*
+
+    Built exactly that way -- every heading here is `###` or deeper, so a *"to the next
+    `##`"* rule would run to end of file from any starting point and swallow the review
+    after the container (Ruling 88 §3 item 1's trap, widened by #609).
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    body = (
+        "### Pending proposals — for the §14 review (drafted 2026-08-29)\n\nContainer.\n\n"
+        "#### Candidate A — a proposal\n\nProposal body.\n\n"
+        "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n"
+    )
+    (audit_dir / "plan-reviews.md").write_text(body, encoding="utf-8")
+    assert "\n## " not in "\n" + body  # no heading of any higher level exists
+    drafts = doc_id_cli._discover_plan_reviews(tmp_path)
+    container = next(d for d in drafts if d.prefix == "RFC")
+    assert "Candidate A" in container.body  # its own nested content is kept
+    assert "Plan review 9" not in container.body  # and the next record is not swallowed
+    assert "Body nine" not in container.body
+
+
+def test_plan_reviews_review_body_stops_at_the_container(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The other half of Ruling 88 §3 item 1, and the line-duplication it prevents: with
+    the container a record, the review *above* it must end where it starts. Mutating
+    `_discover_headed_split_file` to ignore `foreign_records` reds this by putting the
+    container's lines in two outputs at once.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(_PLAN_REVIEWS_REAL_SHAPE, encoding="utf-8")
+    drafts = doc_id_cli._discover_plan_reviews(tmp_path)
+    review_one = next(d for d in drafts if d.title.startswith("Plan review 1"))
+    assert "Body one." in review_one.body
+    assert "Pending proposals" not in review_one.body
+    assert "Candidate A" not in review_one.body
+
+
+def test_plan_reviews_guards_are_silent_on_the_real_corpus(doc_id_cli: types.ModuleType) -> None:
+    """F80's falsifiable discharge condition against the real tree -- *"discharged when the
+    discovery code lands and `_check_plan_reviews_heading_census(ROOT)` returns cleanly"* --
+    and the same for the second guard `migrate` runs over this file. F80's own "related,
+    disclosed-but-unresolved collision" section names both; clearing one and not the other
+    would still abort the run, so both are pinned here.
+    """
+    doc_id_cli._check_plan_reviews_heading_census(ROOT)
+    doc_id_cli._check_headed_split_file_not_silently_unrecognised(
+        ROOT, "docs/audit/plan-reviews.md", doc_id_cli._REVIEW_HEADING_RE, 3, "plan reviews",
+        extra_record_starts=doc_id_cli._proposal_container_starts,
+    )
+
+
+def test_real_plan_reviews_container_is_the_one_ruling_88_bounded(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """Ruling 88 §1 verified the container's boundary as lines 1155-1232, with line 1233
+    opening Plan review 9. Asserted against the real file so a corpus change that moved the
+    boundary is caught here, not in the irreversible run.
+    """
+    containers = [d for d in doc_id_cli._discover_plan_reviews(ROOT) if d.prefix == "RFC"]
+    assert len(containers) == 1
+    text = (ROOT / "docs" / "audit" / "plan-reviews.md").read_text(encoding="utf-8")
+    start_line = text.count("\n", 0, text.index(containers[0].body.splitlines()[0])) + 1
+    assert start_line == 1155
+    assert containers[0].body.count("\n") == 1232 - 1155 + 1 - 1  # 1155..1232 inclusive
 
 
 def test_roadmap_restructure_is_readable_by_doc_index(
@@ -1325,11 +1478,28 @@ def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker
     item 2, PR #603). Deliberately *not* routed through `_discover_multi_ruling_files(ROOT)`:
     that function's own matcher (`_RULING_HEADING_RE`, `##` + a bare digit) does not reach
     this file's headings at all — they are `###` and letter-suffixed (`Ruling A1`), the
-    two-axis mismatch Ruling 86/87 rule on separately (routed to "W37-6's executor", not
-    this fix). Verified: `_RULING_HEADING_RE.finditer()` over this file's text returns zero
-    matches today, so `_discover_multi_ruling_files` currently produces no draft for it at
-    all — this direct call is the only way to prove the resolution against the real
-    document until that matcher gap is closed. Must return "lead" before the fix.
+    two-axis mismatch Ruling 86/87 rule on separately. Verified: `_RULING_HEADING_RE.
+    finditer()` over this file's text returns zero matches, so `_discover_multi_ruling_
+    files` produces no draft for it at all. Must return "lead" before the fix.
+
+    **Updated when the A-series discovery landed (F81).** This docstring used to add that
+    the direct call was *"the only way to prove the resolution against the real document
+    until that matcher gap is closed"*. The gap is now closed — but by
+    `_discover_lettered_rulings`, a **separate** matcher, not by widening
+    `_RULING_HEADING_RE`, because Ruling 86 §3 item 5 requires the source file to survive
+    as a `PL-` and widening that pattern would make `_discover_plain_plans` skip it. So the
+    assertion below still holds and stays; what has changed is that the owner **is** now
+    asserted end to end against the real document, in
+    `test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields` — which is
+    the remedy the assertion's own message prescribes, reached by a mechanism it did not
+    anticipate.
+
+    **The assertion remains a live tripwire, and its message still applies as written.**
+    It fires if anyone widens `_RULING_HEADING_RE` to reach this file, which would be a
+    double-claim now that a second function already produces its three records — measured:
+    under that widening, `_discover_multi_ruling_files` returns 3 drafts for this file
+    *and* `_discover_lettered_rulings` returns 3, while `_discover_plain_plans` drops from
+    1 to 0.
     """
     path = ROOT / _A_SERIES_SOURCE
     text = path.read_text(encoding="utf-8")
@@ -1653,19 +1823,96 @@ def test_reconcile_census_refuses_a_declared_exception_with_no_reason(
 # -----------------------------------------------------------------------------------------
 
 
-def test_requirements_guard_raises_on_a_module_less_dep_id(
+def test_requirements_guard_raises_on_an_unnumbered_module_less_id(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
+    """The guard's remaining failing case, after F82's discovery landed. A module-less id
+    with a **number** is now a record (`_legacy_bare_dep_ids`); one with no number at all
+    is neither a record, nor canonical, nor declared, so the census must still refuse and
+    name it. Without this the guard would have no input that reds it at all -- the
+    "vacuous check" failure `migrate` is being hardened against.
+    """
     specs_dir = tmp_path / "docs" / "specs"
     specs_dir.mkdir(parents=True)
     (specs_dir / "00-overview.md").write_text(
         "**FR-EX-1** A normal requirement.\n\n"
-        "**DEP-1** A dependency rule with no module code -- the real corpus's actual "
-        "shape.\n",
+        "**DEP-abc** A dependency rule whose id carries no number at all.\n",
         encoding="utf-8",
     )
-    with pytest.raises(NotImplementedError, match=r"DEP-1"):
+    with pytest.raises(NotImplementedError, match=r"DEP-abc"):
         doc_id_cli._check_requirements_not_silently_unrecognised(tmp_path)
+
+
+def test_requirements_guard_raises_on_a_module_less_non_dep_id(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The census finder is widened to all four prefixes (F82); discovery is not. A
+    module-less `**FR-12a**` has no ruling making it a legacy id the way NT-0019 §1.2 and
+    §5.1 do for `DEP`, so it is named rather than silently claimed.
+
+    This is also the mutation that reds the widening itself: narrow `_CENSUS_BARE_ID_RE`
+    back to `DEP`-only and this test goes green-by-absence.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text(
+        "**FR-EX-1** A normal requirement.\n\n**FR-12a** A suffixed, module-less id.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match=r"FR-12a"):
+        doc_id_cli._check_requirements_not_silently_unrecognised(tmp_path)
+
+
+def test_requirements_guard_treats_an_already_canonical_id_as_derived(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """F82 bucket 2, checked positively. `**DEP-1**`/`**FR-12**` are exactly the form
+    `_SPEC_BOLD_RE` -- NT-0019 §1.7's own source 2, and what `compute_next` counts -- reads
+    as an allocated id, so they are already-migrated rather than unrecognised. This is what
+    lets the census widen past `DEP` without firing on `migrate`'s own second-run output.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text(
+        "**DEP-1** Already canonical. **FR-12** Also canonical. **NFR-7** And this.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_requirements_not_silently_unrecognised(tmp_path)  # must not raise
+
+
+def test_requirements_discovery_claims_a_suffixed_dep_id_with_its_own_token(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """F82's discovery half, and a regression for a defect found by running it: the draft's
+    `old_token` must be the id as written (`DEP-1a`), never a module code carried over from
+    a previous iteration of the loop (`DEP-OVR-1a`, which is what a shared `module`
+    variable produced before this was pinned). A wrong `old_token` would rewrite nothing
+    and emit a REDIRECTS row pointing at an id that never existed.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text(
+        "**DEP-OVR-9** A module-coded id, immediately before the bare one.\n\n"
+        "**DEP-1a** The suffixed, module-less id.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_requirements(tmp_path)
+    tokens = [d.old_token for d in drafts]
+    assert tokens == ["DEP-OVR-9", "DEP-1a"]  # clause order, and no module-code leak
+    assert [d.title for d in drafts] == ["DEP-OVR-9", "DEP-1a"]
+
+
+def test_requirements_discovery_leaves_an_already_canonical_dep_id_alone(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The other side of bucket 2: an already-canonical `**DEP-1**` gets no draft, so a
+    second `migrate` run over its own output allocates nothing new for it. Mutating
+    `_legacy_bare_dep_ids` to drop the `_SPEC_BOLD_RE` exclusion reds this.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text("**DEP-1** Already canonical.\n", encoding="utf-8")
+    assert doc_id_cli._discover_requirements(tmp_path) == []
 
 
 def test_requirements_guard_is_silent_when_every_id_is_recognised(
@@ -1705,10 +1952,44 @@ def test_migrate_raises_via_the_requirements_guard_on_a_real_shaped_tree(
     spec = pristine_a / "docs" / "specs" / "00-overview.md"
     text = spec.read_text(encoding="utf-8")
     spec.write_text(
-        text + "\n\n**DEP-1** A dependency rule with no module code.\n", encoding="utf-8"
+        text + "\n\n**DEP-abc** A dependency rule whose id carries no number.\n",
+        encoding="utf-8",
     )
-    with pytest.raises(NotImplementedError, match=r"DEP-1"):
+    with pytest.raises(NotImplementedError, match=r"DEP-abc"):
         doc_id_cli.migrate(pristine_a)
+
+
+def test_requirements_guard_is_silent_on_the_real_corpus(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """F82's own falsifiable discharge condition, run against the real tree rather than a
+    fixture: *"discharged when that decision lands and `_check_requirements_not_silently_
+    unrecognised(ROOT)` returns cleanly against the real tree."*
+
+    Bound to the real corpus deliberately. F81's 2026-09-02 amendment records that the
+    sibling guard was proven on the corpus it aborts against *by execution and not pinned
+    by a regression test*, so "nothing in the suite would notice if that stopped being
+    true". This is that pin, for all three guards (see the two siblings below).
+    """
+    doc_id_cli._check_requirements_not_silently_unrecognised(ROOT)  # must not raise
+
+
+def test_real_corpus_dep_ids_split_into_discovered_and_already_canonical(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """The four ids F82 names, against the real `docs/specs/00-overview.md`: `DEP-1`,
+    `DEP-2` and `DEP-3` are already in the canonical form `compute_next` counts, and
+    `DEP-1a` is the one genuinely un-migrated id. Asserted on the real file so a change to
+    either the corpus or the classification is caught here rather than in the irreversible
+    run.
+    """
+    dep = [d for d in doc_id_cli._discover_requirements(ROOT) if d.prefix == "DEP"]
+    assert [d.old_token for d in dep] == ["DEP-1a"]
+    assert dep[0].owner == "decision-maker"
+    text = (ROOT / "docs" / "specs" / "00-overview.md").read_text(encoding="utf-8")
+    canonical = {f"DEP-{m.group(2)}" for m in doc_id_cli._SPEC_BOLD_RE.finditer(text)
+                 if m.group(1) == "DEP"}
+    assert canonical == {"DEP-1", "DEP-2", "DEP-3"}
 
 
 # -----------------------------------------------------------------------------------------
@@ -1752,53 +2033,182 @@ def test_multi_ruling_guard_exempts_a_solitary_h1_ruling_file(
     doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
 
 
-def test_multi_ruling_guard_names_a_letter_suffixed_ruling_heading(
+_A_SERIES_FIXTURE = (
+    "# An adoption plan, with rulings under delegation\n\n"
+    "## 1. Background\n\nProse.\n\n"
+    "## 2. Rulings under the delegation\n\n"
+    "### Ruling A1 -- the first delegated ruling\n\nBody one.\n\n"
+    "### Ruling A2 -- the second delegated ruling\n\nBody two.\n\n"
+    "## 3. Acceptance\n\nProse.\n"
+)
+
+
+def test_multi_ruling_guard_is_silent_on_a_letter_suffixed_ruling_heading(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 83 §4's own acceptance mutation: `Ruling A1`'s shape, in a fixture. Widening
-    `_RULING_HEADING_RE`'s digit group would not catch this -- only an independent,
-    form-agnostic count does. Also proves the word-anchor keeps ordinary, unrelated section
-    headings (`## 1. Background`) out of the failure entirely, which a fully generic
-    `^#{1,6}` census would have wrongly swept in.
+    """Ruling 86's A-series is now discovered (`_discover_lettered_rulings`), so the census
+    closes on it. Until that landed this same input raised -- that raise is register
+    finding F81, and this test is its green-after.
+
+    The fixture writes `--` where the real corpus writes an em dash, deliberately: this
+    exact fixture went on passing after the discovery landed, because the first version of
+    `_LETTERED_RULING_HEADING_RE` copied `_RULING_HEADING_RE`'s optional `—`-introduced
+    title group and so matched nothing here. A record must not stop being a record because
+    of which dash someone typed, and this input is what proves it does not.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-08-30-adoption.md").write_text(_A_SERIES_FIXTURE, encoding="utf-8")
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)  # must not raise
+
+
+def test_multi_ruling_guard_still_names_a_ruling_heading_with_no_number(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The guard's remaining failing case. `_LETTERED_RULING_HEADING_RE` claims a
+    letter-prefixed *number* (`A1`), which is what Ruling 86 §2 reads the `A` as marking.
+    A `Ruling`-anchored heading in some third shape has no ruled disposition, so the census
+    must name it rather than this module inventing a record -- and the word-anchor still
+    keeps ordinary section headings out of the failure entirely.
     """
     plans_dir = tmp_path / "docs" / "plans"
     plans_dir.mkdir(parents=True)
     (plans_dir / "2026-08-30-adoption.md").write_text(
         "# An adoption plan, with rulings under delegation\n\n"
         "## 1. Background\n\nProse.\n\n"
-        "## 2. Rulings under the delegation\n\n"
-        "### Ruling A1 -- the first delegated ruling\n\nBody.\n\n"
-        "### Ruling A2 -- the second delegated ruling\n\nBody.\n\n"
+        "### Ruling Alpha -- a ruling with no number at all\n\nBody.\n\n"
+        "### Ruling A1 -- a properly numbered delegated ruling\n\nBody.\n\n"
         "## 3. Acceptance\n\nProse.\n",
         encoding="utf-8",
     )
     with pytest.raises(NotImplementedError) as exc_info:
         doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
     message = str(exc_info.value)
-    assert "Ruling A1" in message
-    assert "Ruling A2" in message
+    assert "Ruling Alpha" in message
+    assert "Ruling A1" not in message  # discovered, so not unaccounted
     assert "Background" not in message
     assert "Acceptance" not in message
 
 
-def test_migrate_raises_via_the_multi_ruling_guard_on_a_real_shaped_tree(
+def test_lettered_ruling_widening_covers_both_axes_ruling_86_names(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """Ruling 86 §3 item 1: `_RULING_HEADING_RE` misses the A-series on **two independent
+    axes** -- heading level and token shape -- and *"a fix to either alone reds nothing and
+    looks green."* Both axes are asserted here against the old pattern and the new one, so
+    a future narrowing of either is caught.
+    """
+    old, new = doc_id_cli._RULING_HEADING_RE, doc_id_cli._LETTERED_RULING_HEADING_RE
+    # axis 1, heading level: the token is fine, the depth is not
+    assert old.search("### Ruling 7 — a ruling at h3\n") is None
+    # axis 2, token shape: the depth is fine, the token is not
+    assert old.search("## Ruling A1 — a lettered ruling at h2\n") is None
+    # the new pattern is independent of both
+    for heading in ("## Ruling A1 — t\n", "### Ruling A1 — t\n", "###### Ruling A1 — t\n"):
+        assert new.search(heading) is not None, heading
+
+
+def test_migrate_completes_the_multi_ruling_guard_on_a_real_shaped_tree(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
-    """A second, separate plan file -- not the fixture's own multi-ruling file -- shaped
-    like the real corpus's `Ruling A1`/`A2`/`A3` file: no `## Ruling <digit>` heading at
-    all, so the fixture's own existing records are untouched and only this file's two
-    letter-suffixed sub-rulings are unaccounted.
+    """End-to-end green-after for F81: a plan file shaped like the real corpus's
+    `Ruling A1`/`A2`/`A3` file no longer aborts `migrate`, and the records it produces are
+    `RL-`, not folded into the plan.
     """
     (pristine_a / "docs" / "plans" / "2026-08-30-adoption.md").write_text(
-        "# An adoption plan, with rulings under delegation\n\n"
-        "## 1. Background\n\nProse.\n\n"
-        "## 2. Rulings under the delegation\n\n"
-        "### Ruling A1 -- the first delegated ruling\n\nBody.\n\n"
-        "### Ruling A2 -- the second delegated ruling\n\nBody.\n",
+        _A_SERIES_FIXTURE, encoding="utf-8"
+    )
+    result = doc_id_cli.migrate(pristine_a)
+    written = "\n".join(result.files_written)
+    assert "Ruling A1" in dict(result.assigned)
+    assert "Ruling A2" in dict(result.assigned)
+    assert "rulings/RL-" in written
+
+
+def test_migrate_still_raises_via_the_multi_ruling_guard_on_an_unnumbered_ruling(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    (pristine_a / "docs" / "plans" / "2026-08-30-adoption.md").write_text(
+        "# An adoption plan\n\n## 1. Background\n\nProse.\n\n"
+        "### Ruling Alpha -- no number\n\nBody.\n\n"
+        "### Ruling Beta -- also no number\n\nBody.\n",
         encoding="utf-8",
     )
-    with pytest.raises(NotImplementedError, match=r"Ruling A1"):
+    with pytest.raises(NotImplementedError, match=r"Ruling Alpha"):
         doc_id_cli.migrate(pristine_a)
+
+
+def test_a_series_is_discovered_from_the_real_source_with_ruling_86s_fields(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """F81's falsifiable discharge condition and Ruling 86 §2's field list, against the
+    real `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` rather than a fixture --
+    the pin F81's own 2026-09-02 amendment asks for.
+
+    Ruling 86 §2: *"three `RL-` records ... each `status: active`, `created: 2026-08-30`,
+    each carrying `was:` the adoption file's path and its old token."* `owner:` is
+    `decision-maker` per Ruling 95, which struck Ruling 86 §3 item 2's departure.
+    """
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(ROOT)  # must not raise
+    drafts = [d for d in doc_id_cli._discover_lettered_rulings(ROOT) if d.was == _A_SERIES_SOURCE]
+    assert [d.old_token for d in drafts] == ["Ruling A1", "Ruling A2", "Ruling A3"]
+    assert {d.prefix for d in drafts} == {"RL"}
+    assert {d.status for d in drafts} == {"active"}
+    assert {d.created for d in drafts} == {date(2026, 8, 30)}
+    assert {d.owner for d in drafts} == {"decision-maker"}
+    # Each body is its own `###` section, not the whole file and not a run to EOF.
+    for d in drafts:
+        assert d.body.startswith("### Ruling A")
+        assert "## 4. Acceptance" not in d.body
+
+
+def test_migrate_stays_idempotent_with_all_three_new_discoveries_present(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The three F80/F81/F82 discoveries added here, all in one tree, run twice.
+
+    Idempotency is not a bonus property for F82 -- it is the argument. `**DEP-1**` is
+    already in the canonical post-migration form, so *discovering* it would mean a second
+    run reallocating a number it had just been given, with nothing in the token to tell the
+    two apart. The `_SPEC_BOLD_RE` bucket is what makes that impossible, and this is where
+    that claim is checked rather than asserted: `**DEP-1a**` migrates to `**DEP-<n>**` and
+    the second run leaves it alone, because by then it *is* canonical.
+    """
+    (pristine_a / "docs" / "plans" / "2026-08-30-adoption.md").write_text(
+        _A_SERIES_FIXTURE, encoding="utf-8"
+    )
+    (pristine_a / "docs" / "audit" / "plan-reviews.md").write_text(
+        _PLAN_REVIEWS_REAL_SHAPE, encoding="utf-8"
+    )
+    spec = pristine_a / "docs" / "specs" / "00-overview.md"
+    spec.write_text(
+        spec.read_text(encoding="utf-8") + "\n\n**DEP-1a** A suffixed, module-less id.\n",
+        encoding="utf-8",
+    )
+    first = doc_id_cli.migrate(pristine_a)
+    assert "DEP-1a" in dict(first.assigned)
+    assert "Ruling A1" in dict(first.assigned)
+    before = _tree_files(pristine_a)
+    second = doc_id_cli.migrate(pristine_a)
+    assert second.assigned == ()
+    assert _tree_files(pristine_a) == before
+
+
+def test_a_series_extraction_leaves_the_residual_plan_ruling_86_requires(
+    doc_id_cli: types.ModuleType
+) -> None:
+    """Ruling 86 §3 item 5 presupposes a surviving plan: *"The residual `PL-` is checked
+    for sense: after §3's subsections leave, its §3 heading has nothing under it."* That is
+    only possible if the source file stays a plain plan, which is why the A-series is a
+    sibling of `_discover_multi_ruling_files` rather than a widening of
+    `_RULING_HEADING_RE` -- the widening would have made `_discover_plain_plans` skip the
+    file and produce no `PL-` at all. This is the assertion that pins that choice.
+    """
+    plain = [d for d in doc_id_cli._discover_plain_plans(ROOT) if d.was == _A_SERIES_SOURCE]
+    assert len(plain) == 1
+    assert (plain[0].prefix, plain[0].kind) == ("PL", "leaf")
+    multi = [d for d in doc_id_cli._discover_multi_ruling_files(ROOT) if d.was == _A_SERIES_SOURCE]
+    assert multi == []  # not a whole-file split
 
 
 # -----------------------------------------------------------------------------------------
@@ -2659,40 +3069,60 @@ _A_SERIES_GRANT = (
 )
 _A_SERIES_TOKENS = ("Ruling A1", "Ruling A2", "Ruling A3")
 
-# Both writers that can claim this file, mutated together — see
-# `_module_with_source_mutations`. `_discover_plain_plans` claims it today;
-# `_discover_multi_ruling_files` claims it once F81 widens `_RULING_HEADING_RE`, because
-# `_discover_plain_plans` skips any file that regex matches.
+# Every writer that can claim this file, mutated together — see
+# `_module_with_source_mutations`. `_discover_plain_plans` claims it; `_discover_multi_
+# ruling_files` would claim it if `_RULING_HEADING_RE` were ever widened to reach it; and
+# `_discover_lettered_rulings` claims its three `### Ruling A<n>` sections.
+#
+# **The third anchor was added when F81 landed, and the shape it landed in is not the one
+# this block anticipated.** The comment here read "`_discover_multi_ruling_files` claims it
+# once F81 widens `_RULING_HEADING_RE`, because `_discover_plain_plans` skips any file that
+# regex matches" — a correct reading of one way to build F81, and not the way it was built.
+# Widening that regex would destroy the residual `PL-` Ruling 86 §3 item 5 requires, so F81
+# added a sibling matcher instead and the file is now claimed by **two writers at once**
+# rather than crossing between them. The union below therefore has three sources, not two,
+# and each mutation edits all three: with three writers, a mutation reaching only two
+# leaves the third supplying the carrier and goes green for the wrong reason — the exact
+# failure this block's own docstring names, one writer further on.
 _SPLIT_RULING_DRAFT = 'old_token=f"Ruling {number_word}", was=rel, body=section_text,'
+_LETTERED_RULING_WAS = 'old_token=f"Ruling {token}", was=rel,'
+_LETTERED_RULING_BODY = 'body=text[heading.start() : end].rstrip("\\n") + "\\n",'
 
 _WAS_DROPPED = (
     ("old_token=None, was=path.relative_to(root).as_posix(),", "old_token=None, was=None,"),
     (_SPLIT_RULING_DRAFT, 'old_token=f"Ruling {number_word}", was=None, body=section_text,'),
+    (_LETTERED_RULING_WAS, 'old_token=f"Ruling {token}", was=None,'),
 )
 _BODY_DROPPED = (
     (r'body=text.rstrip("\n") + "\n",', r'body=title + "\n",'),
     (_SPLIT_RULING_DRAFT, 'old_token=f"Ruling {number_word}", was=rel, body="",'),
+    (_LETTERED_RULING_BODY, 'body="",'),
 )
 
 
 def _a_series_drafts(module: types.ModuleType) -> list[Any]:
-    """Every draft the migration derives from the A-series source, across *both* discovery
-    functions that can claim it — one `PL-` today, three `RL-` (plus any residual) once
-    F81's letter-suffixed heading widening lands.
+    """Every draft the migration derives from the A-series source, across *every* discovery
+    function that can claim it — one `PL-` residual plus three `RL-` since F81.
 
-    Gathering across both is the point, and it is the same defensive move as writing the
-    assertions over `was:`/body rather than over `owner:`, applied one level up. Ruling 86
-    §4 item 3's property is about a record's authorship trail, not about which family
+    Gathering across all of them is the point, and it is the same defensive move as writing
+    the assertions over `was:`/body rather than over `owner:`, applied one level up. Ruling
+    86 §4 item 3's property is about a record's authorship trail, not about which family
     carries it, so a *selector* bound to today's family is as brittle as an assertion bound
-    to it would be: `_discover_plain_plans` skips any file `_RULING_HEADING_RE` matches, so
-    on the day F81 widens that regex a family-bound selector reds — a red build with a
-    docstring, not a guard.
+    to it would be.
+
+    `_discover_lettered_rulings` was added to the union when F81 landed. Without it the
+    union was still non-empty — the residual `PL-` carries the whole file — so this
+    instrument went on passing while seeing **one of the four** drafts the migration now
+    derives from this source. Passing while blind to three quarters of its own subject is
+    the failure mode the block comment above describes, and it is why the selector is
+    written as "every writer" rather than as a list someone has to remember to extend.
     """
     return [
         d
         for d in (
             *module._discover_plain_plans(ROOT),
             *module._discover_multi_ruling_files(ROOT),
+            *module._discover_lettered_rulings(ROOT),
         )
         if d.was == _A_SERIES_SOURCE
     ]
@@ -2718,8 +3148,23 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
     one.
 
     Proven non-vacuous by two mutations against the real corpus, in the test below -- each
-    dropping one carrier from *both* writers that can produce these drafts, so the proof
-    does not expire when the other writer takes over.
+    dropping one carrier from *every* writer that can produce these drafts, so the proof
+    does not expire when another writer takes over.
+
+    **A constraint on work Ruling 86 §3 item 5 still owes, measured here rather than
+    discovered later.** Since F81 the union is four drafts: one residual `PL-` carrying the
+    whole file, and three `RL-` carrying their own `### Ruling A<n>` sections. Measured
+    against the real corpus, the three `RL-` bodies carry all three `Ruling A<n>` tokens but
+    **not** the delegation heading and **not** the grant -- those live in the source's §1.1,
+    which stays with the residual plan. So this instrument currently passes *because the
+    residual `PL-` body is the whole file*.
+
+    Ruling 86 §3 item 5's outstanding half is to trim that body ("after §3's subsections
+    leave, its §3 heading has nothing under it"). **Whoever does that trim must carry the
+    delegation and the grant somewhere the union still reaches**, or this test reds -- and
+    it reds correctly, because at that point the attribution trail really would be lost,
+    which is precisely the violation Ruling 86 §4 item 3 names. The trim is deliberately
+    not done in F81; this paragraph is the handover note for it.
     """
     drafts = _a_series_drafts(doc_id_cli)
     assert drafts, (
@@ -2734,6 +3179,22 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
     assert _A_SERIES_GRANT in bodies, "the drafts no longer state the grant it was under"
     for token in _A_SERIES_TOKENS:
         assert token in bodies, f"the drafts no longer carry {token}"
+
+    # The machine-readable half of the same trail, and the half that keeps the *selector*
+    # honest. Ruling 86 §3 item 3 is about the token rewrite -- "one citation becomes three
+    # ids" -- so each `Ruling A<n>` must reach the rewrite as some draft's `old_token`, not
+    # merely appear inside a body. Content, not a count, so F81's shape is not pinned.
+    #
+    # This is also what makes the union's third source load-bearing rather than merely
+    # correct: the residual `PL-` carries `old_token=None`, so dropping
+    # `_discover_lettered_rulings` from the selector above satisfies every body assertion
+    # and reds only here. Measured before it was added -- without this line, removing that
+    # source left both tests green while the instrument saw one of four drafts.
+    old_tokens = {d.old_token for d in drafts}
+    assert set(_A_SERIES_TOKENS) <= old_tokens, (
+        f"no draft carries these as `old_token:`, so the rewrite cannot resolve them: "
+        f"{sorted(set(_A_SERIES_TOKENS) - old_tokens)}"
+    )
 
 
 def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
