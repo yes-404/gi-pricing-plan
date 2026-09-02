@@ -330,6 +330,65 @@ def test_multi_ruling_file_splits_one_per_ruling(
     assert "preamble" in first.lower() or "multi-ruling" in first.lower()
 
 
+# ---------------------------------------------------------------------------------------
+# Task #31: `_discover_closure_records` no longer delegates to `_discover_headed_split_file`
+# -- the real `docs/audit/closure-records.md` has record-level semantic variation (a phase
+# close, two bespoke-audit records, several records not yet closed at all) the shared,
+# one-shape-fits-all splitter cannot express. These build a synthetic `closure-records.md`
+# directly under `tmp_path` (no `pristine_a`/git needed -- the date comes from each
+# heading's own capture, not `_module_first_commit_date`'s git-log fallback), rather than
+# widening the committed fixture corpus: every new legacy shape added there buys a
+# permanent `LEGACY_FORM_EXCLUDED_PATHS` entry (Ruling 67 §4 item 1), and none of these
+# shapes need to be *discovery-defining* content of a fixture demonstrating something else
+# -- they only need to exist long enough for one `_discover_closure_records` call.
+# ---------------------------------------------------------------------------------------
+
+
+def test_closure_records_classifies_phase_audit_and_work_headings(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "### Phase 1a — exit demo accepted 2026-08-15\n\nPhase body.\n\n"
+        "### Independent audit — 2026-08-15, and what it changed\n\nAudit body.\n\n"
+        "### W1 — Repo foundations: closed 2026-08-14\n\nWork body.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_closure_records(tmp_path)
+    assert [(d.prefix, d.kind, d.status) for d in drafts] == [
+        ("CR", "phase", "active"),
+        ("RS", "audit", "closed"),
+        ("CR", "work", "active"),
+    ]
+
+
+def test_closure_records_raises_on_the_first_not_closed_heading(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Task #31's own defect, reproduced directly: an "in progress, not closed" heading
+    must raise rather than silently fold into whichever heading matches next. Two such
+    headings present, to confirm the raise names the *first* one -- a deterministic
+    result, not whichever the implementation happens to hit.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "### W1 — Repo foundations: closed 2026-08-14\n\nWork body.\n\n"
+        "### W5 — first undetermined thing, 2026-08-15 *(in progress, not closed)*\n\nBody.\n\n"
+        "### W5 — second undetermined thing, 2026-08-16 *(in progress, not closed)*\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match="first undetermined thing"):
+        doc_id_cli._discover_closure_records(tmp_path)
+
+
+def test_closure_records_is_silent_on_a_missing_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    assert doc_id_cli._discover_closure_records(tmp_path) == []
+
+
 def test_roadmap_restructure_is_readable_by_doc_index(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
