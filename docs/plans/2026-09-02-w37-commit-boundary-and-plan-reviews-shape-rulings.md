@@ -313,10 +313,12 @@ days earlier.** This is the same mechanism as the closure-record defect fixed in
 it is the fourth heading — not the three the brief asked about — that causes it.
 
 **(b1) The guard that exists for exactly this class cannot see it.** `migrate` passes these
-drafts to `_check_legacy_file_not_silently_unrecognised` (`scripts/doc-id.py:1649-1677`),
-whose own docstring says *"zero discovered records from it is unrecognised shape, full stop
-… migrate refuses to guess and silently report success instead."* Its test is
-`if drafts: return`. With ten drafts it returns at that line. **The guard is all-or-nothing:
+drafts to `_check_legacy_file_not_silently_unrecognised` (`scripts/doc-id.py:1649-1677`). Its
+docstring states the intent — *"zero discovered records from it is unrecognised shape, full
+stop"* — and the message it raises states the consequence: *"this script's legacy pattern does
+not match this file's real shape … migrate refuses to guess and silently report success
+instead."* Its test is `if drafts: return` (`:1670`). With ten drafts it returns at that line
+and neither string is ever printed. **The guard is all-or-nothing:
 it catches a pattern that matches nothing and is blind to one that matches most of a file** —
 which is the state every one of these discovery defects has been in, including the roadmap
 no-op and the closure-record split.
