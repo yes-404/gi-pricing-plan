@@ -253,8 +253,135 @@ way.
 
 ## 8. Full table
 
-`ruling-acceptance-item-sweep-5c0d24d.csv`, same directory — 98 rows, one per ruling,
-columns `ruling,record_file,class,item_summary,evidence`.
+**Filed here directly as of 2026-09-02, replacing the standalone CSV this section used to
+point at** (`ruling-acceptance-item-sweep-5c0d24d.csv`, same directory — dropped this
+commit). CI's `test_no_reference_rows_are_bundled_in_the_repository`
+(`backend/tests/test_lineage.py`, FR-DATA-32) flagged the CSV as bundled reference data.
+Ruling 59's carve-out
+(`generated_from_tracked_corpus`) does not cover it, and is not being extended to: that
+predicate is bought by **provable reproducibility** — a file earns the exemption because
+anyone can regenerate it from tracked source and diff it against `git ls-tree`. This
+table's `class` column is not derivable by any script (§2's own docstring says so) — it
+took reading governed code and ruling text and exercising judgement, so there is no
+generator to diff against. A carve-out whose condition cannot be met is not one to extend;
+it is one to stay outside of. **What is lost is a format, not a capability**: the
+mechanised half of this sweep (§2, `scripts/ruling-acceptance-item-census.py`) is
+unaffected, committed, and independently re-runnable; only the hand-classified half moves
+from a separate file into this table.
+
+**A second reason the CSV was less machine-readable than it appeared, found while making
+this move rather than before it:** 16 of the 98 rows carried an unescaped literal comma
+inside `item_summary` or `evidence`, splitting past 5 fields under a standard `csv.reader`.
+`ruling`/`record_file`/`class` — fields 1-3 — were never affected, so the class tally below
+and in §5 does not move, but a reader loading the old file with ordinary CSV tooling rather
+than `cut` would already have hit this. Reconstructed by hand against each row's own text
+before this table was built; the tally was re-verified after and matches §5 and the
+original CSV exactly: CONSTRUCTIBLE 54, NONE_FOUND 35, INVALIDATED 3, VACUOUS 2,
+INDICATIVE 2, CANNOT_DETERMINE 2.
+
+Pinned to `5c0d24df5ce4b58411eb0e67bf7cc2b91a44a3ca`, the same tree named in this record's
+own header — 98 rows, one per ruling:
+
+| Ruling | Record file | Class | Item summary | Evidence |
+|---|---|---|---|---|
+| 1 | 2026-08-29-w11-prework-rulings.md | NONE_FOUND |  |  |
+| 2 | 2026-08-29-w11-prework-rulings.md | NONE_FOUND |  |  |
+| 3 | 2026-08-29-w11-prework-rulings.md | NONE_FOUND |  |  |
+| 4 | 2026-08-29-w11-prework-rulings.md | NONE_FOUND |  |  |
+| 5 | 2026-08-29-w11-prework-rulings.md | NONE_FOUND |  |  |
+| 6 | 2026-08-29-w11-slice1-rulings.md | CONSTRUCTIBLE | bench tooling not reaching pyproject.toml/CI | scripts/bench-rating.py exists stdlib-only; lockfile/CI grep = 0 |
+| 7 | 2026-08-29-w11-slice1-rulings.md | NONE_FOUND |  | full section read; no phrasing hit under any form |
+| 8 | 2026-08-29-w11-slice1-rulings.md | CONSTRUCTIBLE | booster deserialised once per N quotes | packages/pricing-core/tests/test_rating_runtime.py:282 passes |
+| 9 | 2026-08-29-w11-slice1-rulings.md | CONSTRUCTIBLE | two firing constraints both in decline_reasons | packages/pricing-core/tests/test_rating_score.py:239 passes |
+| 10 | 2026-08-29-w11-slice1-rulings.md | NONE_FOUND |  | full section read; none |
+| 11 | 2026-08-29-w11-slice1-rulings.md | NONE_FOUND |  | full section read; none |
+| 12 | 2026-08-29-w11-slice1-rulings.md | NONE_FOUND |  | full section read incl. addendum/findings; none |
+| 13 | 2026-08-29-w11-slice1-rulings.md | NONE_FOUND |  | full section read; none |
+| 14 | 2026-08-29-w11-slice2-rulings.md | CONSTRUCTIBLE | null rating_version_ref -> 409; override clause not triggered | backend/tests/test_score.py:139 passes; schema check confirms not triggered |
+| 15 | 2026-08-29-w11-slice2-rulings.md | CONSTRUCTIBLE | blank change_summary refused 422; override not triggered | backend/tests/test_rating_versions.py:270 passes |
+| 16 | 2026-08-29-w11-slices-2-4-rulings.md | CONSTRUCTIBLE | item1 WITHDRAWN (originality not substance) + item2 degraded-read built | register F32; docs/plans/2026-08-29-w11-algorithm-pin-maturity.md:124 Correction to Ruling 16 |
+| 17 | 2026-08-29-w11-slices-2-4-rulings.md | CONSTRUCTIBLE | malformed ScoringResult returned verbatim 200 not 500 | backend/tests/test_score.py:340 passes |
+| 18 | 2026-08-29-w11-slices-2-4-rulings.md | CONSTRUCTIBLE | unscoped account refused + RBAC no-builtin-role guard | backend/tests/test_score.py:230 + test_rbac.py:101 both pass |
+| 19 | 2026-08-29-w11-slices-2-4-rulings.md | CONSTRUCTIBLE | EVIDENCE_FLOOR vs FR-GOV-37 named list, one read of each | docs/specs/06-governance.md:145 carries the amendment citing Ruling 19 |
+| 20 | 2026-08-29-w11-slices-2-4-rulings.md | CONSTRUCTIBLE | deployment submission reaching evidence check; not yet built as ruled | DEFAULT_POLICY has no deployment entry consistent with disposition |
+| 21 | 2026-08-29-w11-slices-2-4-rulings.md | INDICATIVE | standard for judging a future auditor not a system check | measurement derivable (extraction command given); no violation threshold stated; subagent had to supply the pass/fail judgment itself |
+| 22 | 2026-08-29-w11-1-2-rate-table-maturity-ruling.md | CONSTRUCTIBLE | status-column tripwire + no resolver hardcode | backend/tests/test_rating_version_compile.py:240 passes; compile.py:311 |
+| 23 | 2026-08-29-w11-slices-3-4-rulings.md | CONSTRUCTIBLE | trace-delete refusal under NFR-OVR-6 floor | backend/tests/test_traces.py:258,284 both pass |
+| 24 | 2026-08-29-w11-slices-3-4-rulings.md | CONSTRUCTIBLE | per-run threshold above workspace setting refused | backend/tests/test_scoring_handlers.py:292,323 both pass |
+| 25 | 2026-08-29-w11-slices-3-4-rulings.md | CONSTRUCTIBLE | batch-produced traces excluded from GET /traces | backend/tests/test_traces_api.py:275 passes |
+| 26 | 2026-08-29-w11-ruling-vs-plan-scope.md | CONSTRUCTIBLE | merged PR touching scoped-out file with no ruling citation; not yet built | proposed obligation absent from delivery-process.md |
+| 27 | 2026-08-29-w11-ruling-vs-plan-scope.md | CONSTRUCTIBLE | no resolver hardcodes status; was failing at filing now fixed | historically red at 39cb58e; fixed by Ruling 28 |
+| 28 | 2026-08-29-w11-algorithm-pin-maturity.md | CONSTRUCTIBLE | maturity-check tripwire on algorithm status | compile.py:430; backend/tests/test_rating_version_compile.py:260 passes |
+| 29 | 2026-08-29-w11-algorithm-pin-maturity.md | CANNOT_DETERMINE | unowned register row with no decay event | F72's Decision cell literally contains unowned; whether Ruling 49's later conformance sentence legitimises that is open |
+| 30 | 2026-08-29-w11-fr-rate-65-attribution.md | CONSTRUCTIBLE | FR-RATE-65 absent from roadmap; fix outstanding | grep -c FR-RATE-65 docs/roadmap.md = 0; known tracked gap |
+| 31 | 2026-08-29-w11-3-d6-batch-resumability-ruling.md | NONE_FOUND |  | confirmed empty directly and against register |
+| 32 | 2026-08-29-w11-3-d6-batch-resumability-ruling.md | NONE_FOUND |  | confirmed empty; addendum at :340 is citation fixes only |
+| 33 | 2026-08-29-w11-slice-parallelism-ruling.md | NONE_FOUND |  | confirmed empty |
+| 34 | 2026-08-29-w11-nfr-rate-2-sampling-structural-ruling.md | NONE_FOUND |  | violation hits are ordinary NFR-violation prose not an item |
+| 35 | 2026-08-29-w11-nfr-rate-1-trace-capture-remedy-ruling.md | NONE_FOUND |  | full section read; none |
+| 36 | 2026-08-30-w11-nfr-rate-11-quote-input-stores-ruling.md | NONE_FOUND |  | violation hits are ordinary prose not an item |
+| 37 | 2026-08-30-w11-2b-bundle-resolution-ruling.md | NONE_FOUND |  | confirmed empty |
+| 38 | 2026-08-30-w11-service-account-permissions-ruling.md | NONE_FOUND |  | confirmed empty |
+| 39 | 2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md | NONE_FOUND |  | own text has none; the "maintainer acceptance" sentence is a sign-off superseded by reopen-direction.md §4 |
+| 40 | 2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md | CONSTRUCTIBLE | retry-cap hook: synthetic runtime state at cap+1 and cap-1 | tests/test_retry_cap_hook.py cites Ruling 40 §5 verbatim; 11 tests pass |
+| 41 | 2026-08-30-w11-reopen-hooks-and-bundle-resolution-rulings.md | NONE_FOUND |  | no formal Acceptance section anywhere in the ruling (5 subsections none titled Acceptance); an indicative-mood aside in §3 prose ("a per-request read is provable") was never promoted to a stated item |
+| 42 | 2026-08-30-w11-reopen-scope-and-batch-frame-contract-rulings.md | CONSTRUCTIBLE | three concrete prohibitions - stated by the ruling as testable not hortatory | docs/audit/work/W11/README.md §10.5 confirms all three citing Ruling 42 |
+| 43 | 2026-08-30-w11-reopen-scope-and-batch-frame-contract-rulings.md | CONSTRUCTIBLE | (a) field-exclusion test + (b) output-serialisation totality test | packages/pricing-core/tests/test_rating_score_batch.py; 11 tests pass |
+| 44 | 2026-08-30-w11-4b-trace-environment-ruling.md | CONSTRUCTIBLE | two tests: multi-env key resolves to issued env; no-env caller writes no row | backend/tests/test_score.py:796,843 cite Ruling 44 part3; auth/service.py:230-234 implements it |
+| 45 | 2026-08-30-nt-0014-q1-q3-q4-rulings.md | CONSTRUCTIBLE | digest+commit-pairing broken-input proof for the process-core extract | scripts/audit-docs.py:778 check_process_core_digest (check 27) built |
+| 46 | 2026-08-30-nt-0014-q1-q3-q4-rulings.md | CONSTRUCTIBLE | three-case cutoff-date proof for the plan acceptance-standard check | check_plan_acceptance_standard (check 28) + tests/test_audit_docs_plan_acceptance_standard.py |
+| 47 | 2026-08-30-nt-0014-q1-q3-q4-rulings.md | CONSTRUCTIBLE | no-op watcher cycle must be byte-identical | tests/test_watcher_runtime_state.py:51 test_a_cycle_with_no_change_is_byte_identical |
+| 48 | 2026-08-30-nt-0014-q1-q3-q4-rulings.md | NONE_FOUND |  | pure doc-text correction; no check described |
+| 49 | 2026-08-30-nt-0015-q1-q5-rulings.md | NONE_FOUND |  | own text is a one-time PR with no stated check; its Text A/B/C become testable via Ruling 50 |
+| 50 | 2026-08-30-nt-0015-q1-q5-rulings.md | CONSTRUCTIBLE | three broken fixtures + live-register positive control for register-lint | scripts/register-lint.py check_decision_grammar/check_resolution_annotation/check_unowned_decay - exactly the three named |
+| 51 | 2026-08-30-nt-0015-q1-q5-rulings.md | INDICATIVE | aggregate residue-count delta at two trees; report not test | register-lint.py residue/residue_line built and run; no violation threshold stated anywhere |
+| 52 | 2026-08-30-nt-0015-q1-q5-rulings.md | NONE_FOUND |  | corrected from an earlier CONSTRUCTIBLE call; the three constraints are content requirements on a closure record not a stated run/observe test - code enforcing constraint 1 exists (register-owed.py) but the ruling itself never states a violation |
+| 53 | 2026-08-30-nt-0015-q1-q5-rulings.md | NONE_FOUND |  | corrected from an earlier CONSTRUCTIBLE call; only sub-rules plus an override clause, no stated violation - findings/README.md ties to the convention but the ruling itself states no check |
+| 54 | 2026-08-31-f62-timing-ms-ruling.md | CONSTRUCTIBLE | file-level Acceptance Standard doubling as the ruling's own (single-ruling file); items 1-4 | grep commands with stated expected output all verified; item 5 explicitly disclaimed as not a check |
+| 55 | 2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md | NONE_FOUND |  | corrected from an earlier CONSTRUCTIBLE call; only an Overridden-if clause in prose, no separately labelled acceptance sentence |
+| 56 | 2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md | NONE_FOUND |  | same correction as 55 |
+| 57 | 2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md | NONE_FOUND |  | same correction as 55 |
+| 58 | 2026-09-01-nt-0016-q4-q5-q6-q7-notes-rulings.md | NONE_FOUND |  | same correction as 55; one disjunct of its own override clause is a self-acknowledged subjective call |
+| 59 | 2026-09-01-nt-0016-slice2-fr-data-32-ruling.md | CONSTRUCTIBLE | three named broken-input census cases (Broken-input proof convention) | backend/tests/test_lineage_census_carveout.py cites Ruling 59 x2; all 3 cases present |
+| 60 | 2026-09-01-ruling-60-census-provenance-checkout-depth.md | CONSTRUCTIBLE | checkout-depth config confirms Ruling 59's cases still hold | .github/workflows/python.yml:124-126 fetch-depth:0 matches §3 |
+| 61 | 2026-09-01-ruling-61-notes-tombstone-stubs-watched.md | INVALIDATED | check_notes_tombstone() must red on a stray file and on an edited stub body | function absent (0 matches); scripts/audit-docs.py:55-64 module docstring: slot 30 given to NT-0019's header check protective job ends with this commit by that same resolution until W37-6 deletes the stubs entirely; name repurposed to check_redirects/slot 36 which watches REDIRECTS.csv not the old notes root under .claude |
+| 62 | 2026-09-01-nt-0016-q1-q2-q3-q7-general-rulings.md | NONE_FOUND |  | only an Overridden-if clause; lapsed by its own clause per NT-0019 §9 |
+| 63 | 2026-09-01-nt-0016-q1-q2-q3-q7-general-rulings.md | NONE_FOUND |  | only an Overridden-if clause; lapsed by its own clause per NT-0019 §9 |
+| 64 | 2026-09-01-nt-0016-q1-q2-q3-q7-general-rulings.md | NONE_FOUND |  | only an Overridden-if clause; kept and reassigned as check 38 elsewhere but states no test itself |
+| 65 | 2026-09-01-nt-0016-q1-q2-q3-q7-general-rulings.md | NONE_FOUND |  | only an Overridden-if clause; lapsed by its own clause per NT-0019 §9 |
+| 66 | 2026-09-02-w37-migration-preconditions-rulings.md | CONSTRUCTIBLE | item1 checks 30/31/33/36 built; item2 (reversion-based) WITHDRAWN by Ruling 73 | check 34 DP-7 shared predicate confirmed shared between doc-id.py and audit-docs.py |
+| 67 | 2026-09-02-w37-migration-preconditions-rulings.md | CONSTRUCTIBLE | three items: load-bearing exclusions, positive control, one shared constant | LEGACY_FORM_PATTERNS / check 36 shared constant confirmed |
+| 68 | 2026-09-02-w37-migration-preconditions-rulings.md | CONSTRUCTIBLE | three items: filter fails on body-line change and on unclassifiable hunk; one predicate | frozen_file_matches_after_migration_stamp shared between doc-id.py and audit-docs.py |
+| 69 | 2026-09-02-w37-migration-preconditions-rulings.md | CONSTRUCTIBLE | four items: population drift loud, under/over-exemption, recorded deviation | _VENDORED_SKILLS exists in scripts/_docid.py; reconciliation tests in tests/test_doc_id.py |
+| 70 | 2026-09-02-w37-field-set-and-rollup-rulings.md | CONSTRUCTIBLE | four items: wrong-carrier check, hardcoded-policy check, silent-coverage check, ledger extra | check_header_fields/derive_field_policies read from templates; FD.md already excludes decision: citing Ruling 70 |
+| 71 | 2026-09-02-w37-field-set-and-rollup-rulings.md | CONSTRUCTIBLE | four items: unscoped/silent-empty/zero-by-construction/lost-carry-in | scripts/doc-index.py _findings_figures returns (opened,discharged,unowned_decay,carry_in); uses r.unowned not not decision |
+| 72 | 2026-09-02-w37-field-set-and-rollup-rulings.md | CONSTRUCTIBLE | four fixtures: invisible slice, mid-flight, replanned, no-catch-all | _rollup_map_plan docstring cites Ruling 72; precedence table present, no trailing catch-all |
+| 73 | 2026-09-02-w37-6-leaf-plan-findings-rulings.md | CONSTRUCTIBLE | withdrawal of Ruling 66 item2 + 2a/2b/2c substitute; own §5 two falsifiability items | sweep_legacy_forms measured wrong in both directions on the real corpus |
+| 74 | 2026-09-02-w37-6-leaf-plan-findings-rulings.md | CONSTRUCTIBLE | git-hygiene exclusion re-testable via limb 2b; gap not mis-described as closed | sweep_legacy_forms over git-hygiene returns 0 hits |
+| 75 | 2026-09-02-w37-6-leaf-plan-findings-rulings.md | CONSTRUCTIBLE | RL- route end to end; no docs/audit/ path survives in a charter | this record is its own worked exemplar of the RL- route |
+| 76 | 2026-09-02-w37-6-leaf-plan-findings-rulings.md | CONSTRUCTIBLE | no rejected criterion states anywhere; absent check reds; re-assignment visible | _VENDORED_SKILLS confirmed to exist (was absent when this ruling was filed) |
+| 77 | 2026-09-02-w37-6-leaf-plan-findings-rulings.md | CONSTRUCTIBLE | backstop zero-none row; two files findable; findings clause not half-applied | acceptance item (a)'s zero-none-row check is the backstop |
+| 78 | 2026-09-02-w37-6-leaf-plan-findings-rulings.md | CONSTRUCTIBLE | predicate asserted not trusted; result checkable after the fact; class swept not instance | _discover_closure_records verified directly: 8 CR-work + 1 CR-phase + 2 RS-audit + 10 LG- of 21 real records |
+| 79 | 2026-09-02-w37-template-parser-conflicts-rulings.md | CONSTRUCTIBLE | three items: row-template parses; Ruling 70 mutation; kind: on WK- rejected | tests/test_template_headers.py:378,407,426 all pass |
+| 80 | 2026-09-02-w37-template-parser-conflicts-rulings.md | CONSTRUCTIBLE | three items: phase body parses; no-field no-borrow; template mutation | tests/test_template_headers.py:479,507,541 all pass |
+| 81 | 2026-09-02-w37-commit-boundary-and-plan-reviews-shape-rulings.md | CONSTRUCTIBLE | three items: round-trip check; two positive controls; dual exit-0 | tests/test_doc_id_migrate.py:807; both doc-index.py --check and audit-docs.py exit 0 live |
+| 82 | 2026-09-02-w37-commit-boundary-and-plan-reviews-shape-rulings.md | CONSTRUCTIBLE | three items: coverage assertion; 11-review split; legacy-guard generalised | _check_plan_reviews_heading_census live; _discover_plan_reviews verified to return 11 drafts |
+| 83 | 2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.md | CONSTRUCTIBLE | five items: census fails today naming real headings; two mutations; legacy-guard nuance; roadmap arithmetic not yet built | _check_multi_ruling_files_not_silently_unrecognised live; _reconcile_census raises citing Ruling 83 §3 item 3 |
+| 84 | 2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.md | VACUOUS | item2 (original text): no emitted LG- carries a slice: resolving to no roadmap row | scripts/doc-id.py:946 elif key in (slice,...): continue - unconditional, no slice parameter in _stamp_header's signature; register F77; items 1/3/4 CONSTRUCTIBLE and built |
+| 85 | 2026-09-02-w37-stage-boundary-authority-ruling.md | CANNOT_DETERMINE | item3 has no Violation clause among two genuine siblings in the same §4 | reads as disclosure prose for the maintainer's weighing; items 1-2 CONSTRUCTIBLE |
+| 86 | 2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md | INVALIDATED | item3: each new RL- record carries an owner: that is not decision-maker | Ruling 95 (a later ruling) reverses the decision this item encoded; post-sweep confirmed by commit 2e48960/#620: _ruling_file_owner now unconditionally returns decision-maker for every input |
+| 87 | 2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md | CONSTRUCTIBLE | three items: no PL- body-heading; depth-independent classifier; non-constant owner - not yet built | _discover_plain_plans still returns the three files as PL-; _PLAN_KIND_OWNER[leaf]=planner still hardcoded |
+| 88 | 2026-09-02-w37-container-family-and-line-citations-rulings.md | INVALIDATED | item2 (original text): a fixture whose only level-2 heading is followed by three record headings | PR #609/2fbce0c demoted the heading; grep -c '^## ' docs/audit/plan-reviews.md = 0; rebuilt by Ruling 93 on a property not a level |
+| 89 | 2026-09-02-w37-container-family-and-line-citations-rulings.md | CONSTRUCTIBLE | three items: no legacy-path-offset citation; ledger disposition recorded; one instrument fixed | the 17-citation corpus reproduced exactly by the stated grep |
+| 90 | 2026-09-02-w37-roadmap-transform-rulings.md | CONSTRUCTIBLE | closed-work counts non-zero; 41 ids in 41 WK- rows out | _discover_roadmap(root) verified by execution to return 41 distinct ids |
+| 91 | 2026-09-02-w37-roadmap-transform-rulings.md | CONSTRUCTIBLE | body-fragment merge from every source row; disagreement forces refusal | body_fragments unconditional list comprehension; NotImplementedError on len(known_signals)>1 |
+| 92 | 2026-09-02-w37-roadmap-transform-rulings.md | CONSTRUCTIBLE | every Depends-on id resolves to a WK- row (W6 control); W6 retired with successors named | W6 verified by execution: status=retired, body names W6a/W6b |
+| 93 | 2026-09-02-w37-ruling-88-acceptance-amendment.md | CONSTRUCTIBLE | rebuilt property-based fixture + positively-identified container (replaces Ruling 88 item2) | grep -c '^## ' docs/audit/plan-reviews.md = 0 confirmed at current tree |
+| 94 | 2026-09-02-w37-vacuous-acceptance-item-ruling.md | CONSTRUCTIBLE | substituted count-and-print check + _stamp_header mutation test (replaces Ruling 84 item2); design constructible | register F77: not yet built as of this pin - no commit had touched scripts/doc-id.py or tests/test_doc_id_migrate.py for this purpose since 09b7e9b |
+| 95 | 2026-09-02-w37-gap-1-ruling-86-owner-ruling.md | VACUOUS | item3 (originally worded): Ruling 87's decision-maker owner for the 3 standalone files still holds after this amendment | scripts/doc-id.py:1541 owner=_PLAN_KIND_OWNER[leaf]=planner; zero code paths emitted decision-maker for those 3 files as of this pin - non-interference property holds, nothing to observe; re-instrumented post-sweep by commit 2e48960/#620 (test_ruling_87_standalone_files_are_untouched_by_this_amendment) |
+| A1 | 2026-08-30-nt-0012-0013-0014-adoption.md | NONE_FOUND |  | two-sentence placement Ruled clause; no test stated |
+| A2 | 2026-08-30-nt-0012-0013-0014-adoption.md | NONE_FOUND |  | placement decision only |
+| A3 | 2026-08-30-nt-0012-0013-0014-adoption.md | NONE_FOUND |  | placement decision only |
 
 ## 9. Provenance — how 31 became 30, not just that it did
 

@@ -5,8 +5,10 @@ property (`docs/plans/2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.
 applied to convention discovery rather than to a family census: **every candidate falls
 into exactly one bucket or a named exception, and the buckets sum to the total.**
 
-Filed alongside `docs/audit/ruling-acceptance-item-sweep-5c0d24d.csv`
-(`docs/audit/ruling-acceptance-item-sweep.md` §2), which records the SEMANTIC
+Filed alongside `docs/audit/ruling-acceptance-item-sweep.md` §8's table (originally a
+separate CSV of the same name; dropped 2026-09-02 — FR-DATA-32's reference-data-bundling
+guard cannot cover a hand-classified census, only a regenerate-and-diff one, and §8 states
+why in full), which records the SEMANTIC
 classification (CONSTRUCTIBLE / INVALIDATED / VACUOUS AT BIRTH / INDICATIVE /
 CANNOT_DETERMINE / NONE_FOUND) that no script can derive — that requires reading the
 governed code the item checks. **This script answers a narrower, mechanical question
