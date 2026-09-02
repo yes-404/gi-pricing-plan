@@ -1152,7 +1152,7 @@ owner naming a scope that does not include the work is how work becomes nobody's
 
 ---
 
-## Pending proposals — for the §14 review at W11's close (drafted 2026-08-29)
+### Pending proposals — for the §14 review at W11's close (drafted 2026-08-29)
 
 **This is not a plan review and binds nothing.** It has no review number, no five questions
 and no maintainer acceptance line, because the §14 trigger — a workstream close — has not
@@ -1181,7 +1181,7 @@ written before the list is closed. **Numbering happens at acceptance.**
 > the collision was real and is why both candidates are unnumbered. Reporting it rather than
 > editing another role's tree was the disposition; the owning role made the correction.
 
-### Candidate A — do not move a branch someone is reading *(P7's writer's half; drafted here for the first time)*
+#### Candidate A — do not move a branch someone is reading *(P7's writer's half; drafted here for the first time)*
 
 > Rule 4's second half tells a **reader** to name the commit they read. The **writer's** half
 > is cheaper and was missing: while a branch is under review or audit, do not push to it. A
@@ -1193,7 +1193,7 @@ written before the list is closed. **Numbering happens at acceptance.**
 > the reviewer will see it, and when a change genuinely cannot wait, say what moved and why
 > rather than letting the reviewer discover it.
 
-### Candidate B — declare up front that a count is not load-bearing *(recovered verbatim from `#370`)*
+#### Candidate B — declare up front that a count is not load-bearing *(recovered verbatim from `#370`)*
 
 > Rules 1–5 each guard a *claim* you wrote. This one guards a claim's *form*. A count of items
 > in a plan — prerequisites, findings, divergences, sites — is the first thing to age, because
@@ -1215,7 +1215,7 @@ written before the list is closed. **Numbering happens at acceptance.**
 > four, then six, then none, and every one of those figures was correct at the granularity
 > that produced it.
 
-### Also carried, and not a new rule
+#### Also carried, and not a new rule
 
 **P13 sharpens rule 5 rather than adding to it.** The sweep's unit is every obligation the
 record imposes, not every heading matching a pattern — an addendum to an existing ruling
