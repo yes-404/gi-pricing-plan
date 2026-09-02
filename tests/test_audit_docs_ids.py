@@ -651,21 +651,40 @@ def test_check_36_one_shared_constant_drives_the_sweep_entirely(
 
 
 def test_check_36_reds_alone_when_a_was_field_has_no_redirects_row(
-    audit: types.ModuleType,
+    audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
     """Live clause today: `was:` on an in-scope header with no matching REDIRECTS.csv
-    row must fail — `tests/fixtures/docs-ids/w37-4-checks/check36-was-no-redirect/docs/`
-    carries a real (but empty-of-the-relevant-row) `REDIRECTS.csv`, so clause 3's
-    post-migration gate is open and clause 1 is what fires. `audit.ROOT` moves to the
-    fixture's `docs/` (where `check_redirects` looks for `REDIRECTS.csv`); `REPO` stays
-    real, since the fixture files live under the real repository tree.
+    row must fail. Built under `tmp_path`, not a committed fixture: a real (if
+    empty-of-rows) `REDIRECTS.csv` tracked in the repository trips
+    `backend/tests/test_lineage.py::test_no_reference_rows_are_bundled_in_the_repository`
+    (FR-DATA-32) — found on this slice's own CI run, which scans the whole tree for
+    `*.csv`/`*.parquet`/`*.xlsx` outside two narrow, unrelated exemptions and does not
+    know or care that this one is empty. `check_redirects` is called directly (not
+    through `_run_all_ten`'s ten-check orchestrator) specifically so this test needs no
+    `audit.REPO` reassignment: the orchestrator's other checks (30's field-policy note,
+    39's whole-tree scan) depend on `REPO`/`_TEMPLATES_DIR` staying mutually consistent,
+    which a `tmp_path` tree run through only `check_redirects` never needs to be.
     """
-    docs_root = CHECKS_FIXTURES / "check36-was-no-redirect" / "docs"
-    assert (docs_root / "REDIRECTS.csv").is_file(), "fixture assumption"
+    docs_root = tmp_path / "docs"
+    docs_root.mkdir()
+    (docs_root / "REDIRECTS.csv").write_text(
+        "old_id,new_id,old_path,new_path\n", encoding="utf-8"
+    )
+    doc = docs_root / "doc.md"
+    doc.write_text(
+        "---\nfamily: reference\ntitle: t\nstatus: active\ncreated: 2026-09-02\n"
+        "owner: maintainer\ntree: fixture\nwas: NT-0099\ncorrected_by: []\nrelates: []\n"
+        "---\n\n# t\n\nDeliberately not restated: repeating the was: value here would "
+        "also trip clause 3's sweep.\n",
+        encoding="utf-8",
+    )
     setattr(audit, "ROOT", docs_root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    failures = _run_all_ten(audit, (docs_root / "doc.md",))
-    assert _only_check(failures, 36), failures
-    assert "NT-0099" in failures[0], failures
+    setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_redirects()
+    assert audit.failures == ["check 36: `was: NT-0099` has no docs/REDIRECTS.csv row"]
+    assert "NT-0099" in audit.failures[0]
 
 
 def test_check_36_is_gated_on_redirects_csv_and_skips_cleanly_pre_migration(
