@@ -269,25 +269,66 @@ rewrites citations in every tracked file that carries one, turns ten audit check
 to two paths" to "scoped to everything", and — because of Ruling 66 — also rewrites the
 instruments that tell every role how to create a document.**
 
-### 4.2 The size, measured at `39ee30c`
+### 4.2 The size, by area rather than as one total
 
-Commands are in §5.5. No figure here is estimated or rounded.
+**1447 tracked files at `39ee30c`.** A single number that large invites either a rubber stamp
+or a flinch, so it is broken down by *what the migration actually does to each file*. Commands
+are in §5.5; no figure here is estimated or rounded.
 
-| What | Size at `39ee30c` |
-|---|---|
-| Tracked files in the repository | **1447** |
-| Files carrying at least one form the migration rewrites (NT-0019 §7 (d)'s own pattern) | **930** — 20 507 matching lines |
-| ...by tree | `docs/` 297 · `backend/` 217 · `frontend/` 144 · `packages/` 135 · `.claude/` 55 · `tests/` 45 · `scripts/` 19 · `examples/` 6 · `.github/` 3 · `deploy/` 2 · 7 root files |
-| Files carrying a requirement-family citation | **776** with `VR-`, **771** without |
-| Distinct requirement-family ids renumbered | **710** |
-| `@pytest.mark.req` markers rewritten | **1988** |
-| Markdown documents under `docs/` that gain a YAML front-matter header | 247 exist; 13 are templates, exempt by path → **234** |
-| Files under `.claude/` that gain a header | 7 role charters + 8 agent files + 46 `SKILL.md` = **61** |
-| `docs/audit/` — deleted, its 43 files redistributed | **43** (§5.2) |
-| `docs/plans/` — split and reclassified | **130** dated files → 108 leaf + 16 ledgers + 3 maps + 3 review/verified/handover, **plus 72 ruling records extracted from 29 files** |
-| `.claude/notes/` tombstone stubs deleted | **19** |
-| Audit checks whose scope widens from two paths to the whole corpus | **10** (checks 30 to 39) |
-| Instruments rewritten in this commit under Ruling 66 | **13** (§6.2) — the map plan's seven, plus three role charters, `writing-skills`, `brainstorming` and `.claude/skills/README.md` |
+| The migration… | Files | Which |
+|---|---|---|
+| **rewrites a citation token in** | **930** | Every file matching NT-0019 §7 (d)'s own pattern; 20 507 matching lines. By tree: `docs/` 297 · `backend/` 217 · `frontend/` 144 · `packages/` 135 · `.claude/` 55 · `tests/` 45 · `scripts/` 19 · `examples/` 6 · `.github/` 3 · `deploy/` 2 · 7 root files |
+| **stamps a header on** | **295** | 234 `.md` under `docs/` (247 less the 13 templates, exempt by path) + 46 `SKILL.md` + 8 agent files + 7 role charters. This set overlaps the 930 |
+| **moves, splits or deletes** | **213** | The four trees named by `git ls-tree -r --name-only 39ee30c -- docs/audit .claude/notes docs/notes docs/plans`: `docs/audit/` (43, dissolved into four trees), `docs/notes/` (→ `docs/rfcs/`), `docs/plans/` (130 dated files reclassified, **plus 72 ruling records split out of 29 of them**), `.claude/notes/` (19 stubs deleted) |
+| **regenerates, never hand-edits** | **61** | `docs/contracts/` — rebuilt from `model-schema` after §7.9's docstring rewrite, then drift-checked |
+| **does not touch at all** | **517** | 1447 − 930. Carries no form the migration rewrites |
+| **must leave unchanged, by rule** | **52** | Files carrying a `VR-` catalogue id — **41 distinct ids, 418 occurrences**. D5 and G5 put these permanently out of scope: an id stored, transmitted or asserted by an API contract is product data governed by `docs/specs/`. **5** of the 52 enter the requirement-citation population *only* via a `VR-` id (776 with `VR-` less 771 without) and must come out of the run untouched on that account. Acceptance item (f) is the check |
+
+Two more figures the maintainer will want: **710 distinct requirement ids** are renumbered, and
+**1988 `@pytest.mark.req` markers** are rewritten. Ten audit checks widen from two scope roots to
+the whole corpus, and **13 instruments** are rewritten under Ruling 66 (§6.2).
+
+### 4.2a The number is growing, and the growth is self-referential
+
+**Both figures already written down were true when written, and both have aged.** Verified by
+re-running the same command at each pin rather than by trusting either record:
+
+| Pin | Tracked files | Files the migration rewrites |
+|---|---|---|
+| `89dd2b1` — the map plan's evidence table, and its W37-6 precondition (*"rewrites citations in 1355 tracked files"*) | **1355** | **876** |
+| `04ec6bf` — Ruling 66's evidence tree | **1360** | **881** |
+| `39ee30c` — `origin/main` as this plan is filed | **1447** | **930** |
+
+`git ls-tree -r --name-only <sha> | wc -l` reproduces 1355 and 1360 exactly at their own pins, so
+neither figure was ever wrong. **The tracked count grew +92 and the rewrite population +54 across
+a single session.**
+
+**The mechanism, measured rather than assumed.** Of the 93 files added between `89dd2b1` and
+`39ee30c` (`git diff --name-status 89dd2b1 39ee30c --diff-filter=A`):
+
+- **25 under `docs/`** — 13 `_templates/`, 7 `audit/` (finding records and the auditor's sweep),
+  4 `plans/` (ruling records and a landing package), 1 `process/` (`document-ids.md`). **Every one
+  is a governed document** this migration must classify, stamp, renumber and index. This is the
+  self-referential part: NT-0019's own slices produce documents NT-0019 must migrate.
+- **65 under `tests/`** — almost all the `tests/fixtures/docs-ids/` corpus W37-4 built.
+- **3 under `scripts/`** — `doc-id.py`, `doc-index.py`, `_docid.py`.
+
+**The dominant term is fixtures, not governed documents, and that cuts the other way.** Ruling 67
+Part 2 permits excluding exactly this class from the legacy-form sweep — *"a file whose purpose is
+to **name** legacy forms in order to detect or rewrite them"* — so the 65 enlarge the tracked
+count without enlarging what must be rewritten. **The honest measure of direction is the +54
+rewrite population, not the +92 tracked count**, and it is the figure this section leads with.
+
+**Where the cost genuinely is non-linear**, stated because it is the part a flat count hides:
+every fixture corpus that names a legacy form adds an entry to `LEGACY_SWEEP_EXCLUSIONS`, and
+Ruling 67 acceptance item 1 requires **every entry to be load-bearing** — removing it must make
+the sweep return a hit from the class that entry names. W37-5 is building a second such corpus
+(`tests/fixtures/docs-migration/`) now. Each one is a small permanent addition to what acceptance
+item (d) must justify, and unlike the document count it does not shrink after the migration.
+
+**This is presented as a trend, not as an argument for haste.** A maintainer weighing *now or
+later* should know that later is measurably larger and that the size is not constant while the
+decision is open; nothing here says the decision should be quick.
 
 ### 4.3 The enlargement Ruling 66 requires, stated plainly
 
@@ -371,8 +412,8 @@ Two pins, both shown, because they disagree and the disagreement is the point: t
 
 | Figure | `89dd2b1` (sweep) | `39ee30c` (filing) |
 |---|---|---|
-| Tracked files | — | **1447** |
-| Files matching NT-0019 §7 (d)'s legacy-form pattern | — | **930** (20 507 lines) |
+| Tracked files | 1355 | **1447** |
+| Files matching NT-0019 §7 (d)'s legacy-form pattern | 876 | **930** (20 507 lines) |
 | Files with a requirement-family citation, with `VR-` | 770 | **776** |
 | ...without `VR-` | — | **771** |
 | Distinct requirement-family ids | 710 | **710** |
@@ -1097,10 +1138,19 @@ repository later. Each is verified against the shipped artifact at `39ee30c`, no
     sweep record (this plan's evidence base) and
     `work/nt-0010-0011-adoption/pilot-findings.md`. §5.2's rows cover 41 of the directory's 43
     files. §7.11.
-11. **The map plan's W37-6 says the commit "rewrites citations in 1355 tracked files".** Measured
-    at `39ee30c`: **1447** tracked files exist and **930** match NT-0019 §7 (d)'s own legacy-form
-    pattern; the requirement-family pattern matches 776 with `VR-` and 771 without; NT-0019 §10's
-    own figure was 767. None is 1355. §4.2 uses the measurement.
+11. **The two filed size figures are both correct and both stale, and the corpus grows while the
+    decision is open.** The map plan's W37-6 precondition says the go-ahead covers a run that
+    *"rewrites citations in 1355 tracked files"*; Ruling 66's evidence tree states 1360 at
+    `04ec6bf`. Re-running `git ls-tree -r --name-only <sha> | wc -l` at each pin reproduces both
+    exactly, so **neither was ever wrong — both aged**: 1355 → 1360 → **1447** at `39ee30c`, and
+    the population the migration actually rewrites 876 → 881 → **930**. Two further defects in the
+    map plan's sentence, separate from the ageing: 1355 was its count of **tracked files**, not of
+    files carrying a citation, so it overstated the rewrite population by ~480 even at its own
+    pin; and NT-0019 §10's own figure for that population was 767 over a narrower pattern. §4.2
+    replaces the flat total with a per-area breakdown and §4.2a carries the growth, its measured
+    mechanism, and the correction that the dominant growth term is **fixtures, not governed
+    documents** — which cuts against the intuitive reading, because Ruling 67 Part 2 excludes
+    exactly that class from the sweep.
 12. **Ruling 66's acceptance item 2 cannot discriminate a member from a non-member.** It says
     reverting a member to its merge-base content must produce *"at least one hit naming that
     file"* in W37-6's acceptance sweep. But §4 step 6 rewrites citations in **every** tracked
