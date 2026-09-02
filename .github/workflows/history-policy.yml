@@ -1,0 +1,95 @@
+name: history-policy
+
+# F49: no `claude.ai/code/session_…` link ever reaches GitHub. Until now that was enforced
+# only at the squash — `delivery-process.md` §15, "the only point where one person controls
+# what lands" — so the ban held on whoever pressed merge remembering to strip the trailer.
+# The runtime now emits it unconditionally, which makes a human step the wrong instrument.
+# This turns it into a red.
+#
+# **Deliberately NOT path-filtered, unlike the three component workflows CLAUDE.md §2
+# describes.** Those filter by component because their checks are about a component; this
+# one is about a commit *message*, which can carry the trailer whatever paths the commit
+# touches. Measured rather than assumed: a commit touching only the root `README.md`
+# matches none of `docs.yml`, `python.yml` or `frontend.yml`, so a filtered version of this
+# check would pass by not running — the failure mode F49 already had.
+#
+# **Commit messages only, never tracked files.** The literal string appears legitimately in
+# `docs/audit/register.md` (F49's own row) and `docs/process/delivery-process.md` §15 — the
+# two documents that define the ban. A file scan would red on its own specification. A
+# session URL inside a document explaining why session URLs are banned is not the defect;
+# one in a commit message always is.
+#
+# **Consequence for anyone writing about this rule in a commit message: do not embed the
+# literal URL form.** The check cannot tell a commit that *carries* a session link from one
+# that *documents the ban*, and it should not try — the clever version is fragile. Two
+# commits have already tripped this: `2e4684b` quotes the predicate in its body, and the
+# first draft of the message for this very change did the same and would have red its own
+# check. Write "the session-link predicate" or break the string; the register row and
+# `delivery-process.md` §15 may hold it verbatim because files are not scanned.
+#
+# Why not narrow the pattern to the `Claude-Session:` trailer instead, which would remove
+# the false positive: measured on `origin/main` at `32fc63c`, the trailer form matches 73
+# commits and the URL form 77. The four it would miss include three real violations
+# (`ba76b3f`, `cbb8ffb`, `d2300f0`, all 2026-08-22) that carry a bare URL with no trailer
+# key. §15 bans the link, not the key, so the pattern follows the link.
+#
+# PR bodies are out of scope and stay a merge-time responsibility: they are not in git, so
+# CI cannot see them. Named here rather than left as an implied gap.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  no-session-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+
+      - name: Positive control — the pattern must match a known positive
+        run: |
+          set -euo pipefail
+          # A `grep -c` of 0 is evidence only if the pattern has been shown to match
+          # something. Three separate searches in this repository have reported
+          # present-as-absent from a pattern that could not match what it was looking for;
+          # without this step a typo here would make the check pass silently forever.
+          probe='Claude-Session: https://claude.ai/code/session_0123456789abcdef'
+          if ! printf '%s\n' "$probe" | grep -q 'claude\.ai/code/session'; then
+            echo "::error::the pattern does not match a known positive — the check is broken, not the history"
+            exit 1
+          fi
+          echo "positive control matched; a zero below is meaningful"
+
+      - name: No session link in any commit message in this range
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
+          elif [ -n "${{ github.event.before }}" ] \
+               && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            range="${{ github.event.before }}..${{ github.sha }}"
+          else
+            range="${{ github.sha }} -1"   # first push, or history unavailable: head only
+          fi
+          echo "scanning commit messages over: $range"
+
+          # shellcheck disable=SC2086
+          offenders="$(git log --format='%H %s' --grep='claude\.ai/code/session' $range || true)"
+          count="$(printf '%s' "$offenders" | grep -c . || true)"
+          echo "commits carrying a session link: $count"
+
+          if [ "$count" != "0" ]; then
+            echo "::error::F49: a session link reached a commit message. Never permitted —"
+            echo "::error::not a commit message, not a PR body, not a comment"
+            echo "$offenders"
+            echo "The product footer (🤖 Generated with Claude Code) is fine and stays;"
+            echo "the session URL is what is banned. Strip the Claude-Session trailer."
+            exit 1
+          fi
