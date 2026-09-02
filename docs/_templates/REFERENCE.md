@@ -9,6 +9,10 @@ Full field set, status vocabulary and role assignments:
 `docs/process/document-ids.md` §1.5, §1.2a, §1.6. `kind:`, `phase:`, `work:`, `slice:`,
 `plans:`, `supersedes:` and `superseded_by:` do not apply to this family and must not
 appear here — a Reference document has exactly two states, `active` and `retired`.
+`owner:` is whichever of §1.6's five roles the document names: amendments to
+`process/` arrive as an `RFC-` + `RL-` pair (§1.6); a charter's insufficiency is filed
+as an `FD-` that the maintainer amends against; a skill's or agent's owner is whichever
+role §1.6 assigns it.
 
 A **generated** Reference document (a rendered contract, a generated index) carries
 `generated: true` instead of a hand-authored body and is never hand-edited.
@@ -19,10 +23,7 @@ family: reference
 title: <one line — what this document is a reference for>
 status: active                  # active → retired (§1.2a)
 created: YYYY-MM-DD
-owner: maintainer                # amendments to process/ arrive as RFC- + RL- (§1.6);
-                                  # a charter's insufficiency is filed as an FD- that the
-                                  # maintainer amends against; a skill or agent's owner is
-                                  # whichever of the five roles §1.6 names for it
+owner: maintainer                # whichever of §1.6's five roles the document names
 tree: <commit-sha this was written against>
 corrected_by: []
 relates: []                      # ids only

@@ -9,6 +9,9 @@ Full field set, status vocabulary and role assignments:
 `plans:` do not apply to this family and must not appear here. `deliverable`,
 `lands_in` and `trigger` below are this family's declared extras (§1.5's closing
 paragraph) — no other family may use them, and this family may use no other extra.
+`deliverable:` is what `close-workstream` checks for before setting this RFC `closed`;
+`trigger:` applies only to a `process` or `incident` kind, and is omitted for
+`enhancement`.
 -->
 
 ---
@@ -20,11 +23,9 @@ status: draft                  # draft → active → closed | retired | superse
 created: YYYY-MM-DD
 owner: maintainer               # mints and owns; any role drafts on instruction (§1.6)
 tree: <commit-sha this was written against>
-deliverable: <what shipping this produces — what `close-workstream` checks for before
-  setting this `closed`>
+deliverable: <what shipping this produces>
 lands_in: <the module, component or document this deliverable lands in>
-trigger: <the condition that starts this RFC's procedure, for a `process` or `incident`
-  kind; omit for `enhancement`>
+trigger: <the condition that starts this RFC's procedure — omit for `enhancement`>
 supersedes: []
 superseded_by: ~
 corrected_by: []
