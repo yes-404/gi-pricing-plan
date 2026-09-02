@@ -1557,10 +1557,14 @@ def check_citations() -> None:
     """
     index_path = ROOT / "INDEX.md"
     if not index_path.is_file():
+        # "0 document(s) examined" stated explicitly, not just "skipped": a check that
+        # examines zero documents and passes must say so in a way that is loud on its
+        # own, not only true on a close reading — the same principle F76's guard serves
+        # one call up the stack.
         notes.append(
-            "check 32: no docs/INDEX.md yet — citation and padding checks skipped "
-            "(pre-migration; document-ids.md's own illustrative ids would otherwise "
-            "false-positive)"
+            "check 32: 0 document(s) examined — no docs/INDEX.md yet, citation and "
+            "padding checks skipped (pre-migration; document-ids.md's own illustrative "
+            "ids would otherwise false-positive)"
         )
         return
     index_ids = {
@@ -2178,8 +2182,8 @@ def check_loop_signal() -> None:
     (nothing to warn about yet), not because it was skipped.
     """
     notes.append(
-        "check 38: warn-only loop signal — no PL-/RS-/RFC-/phase population in scope yet "
-        "(pre-migration); nothing to warn about"
+        "check 38: 0 document(s) examined — warn-only loop signal, no PL-/RS-/RFC-/phase "
+        "population in scope yet (pre-migration); nothing to warn about"
     )
 
 
@@ -2202,14 +2206,44 @@ def check_index_stable() -> None:
     comparison). The PR-title/ledger clause needs a merged PR's title and a slice's
     ledger, neither of which a tree-snapshot tool can read, and `docs/ledgers/` does not
     exist in scope either — noted, not silently absent.
+
+    `build_corpus` is guarded (F76): one malformed header anywhere in the real tree —
+    `_docid.parse_header`'s `HeaderError` on a whole-document front-matter block, or a
+    `WK-`/`SL-` roadmap row block's own two failure modes, `_parse_row_block`'s
+    `HeaderError` (an unknown/duplicate field, or a non-`key: value` line) and
+    `_row_header_from_raw`'s unguarded `date.fromisoformat` (`ValueError` on a
+    non-ISO `created:`) — must not propagate. This is the *last* of the ten calls
+    `check_ids_30_39()` makes, which `main()` runs immediately before six further checks
+    with no exception boundary between any of them (`check_open_question_mirror_status`,
+    `check_finding_citations`, `check_process_core_drift`, `check_process_core_digest`,
+    `check_plan_acceptance_standard` [check 28], `check_register_grammar` [check 29]): an
+    uncaught exception here would abort `main()` before any of the six ever run, and
+    before the module-level `notes`/`failures` accumulated by every check that already
+    ran are ever printed — a traceback in place of the structured report, over exactly
+    the condition this check exists to make loud.
     """
     index_path = ROOT / "INDEX.md"
-    corpus = _doc_index.build_corpus(ROOT)
+    try:
+        corpus = _doc_index.build_corpus(ROOT)
+    except (_doc_index.HeaderError, ValueError) as exc:
+        # Caught as `_doc_index.HeaderError`, never this module's own `_docid.HeaderError`
+        # (imported above): `doc-index.py` reloads `scripts/_docid.py` under its own
+        # module instance (`scripts/doc-index.py:85-90`) rather than sharing this
+        # module's, so its `HeaderError` is a distinct class object — `except
+        # _docid.HeaderError` here would type-check but silently fail to match, and the
+        # exception would still propagate. Verified directly: `_docid.HeaderError is
+        # _doc_index.HeaderError` is `False` even though both load the same source file.
+        fail(f"check 39: docs/INDEX.md corpus could not be built — {exc}")
+        return
     if not index_path.is_file():
         if not corpus.records:
+            # "0 governed record(s)" stated with the same numeral every other check 30-39
+            # note uses, not the word "zero" — a reader (or a script) scanning for a
+            # digit to confirm a check actually examined something must not have to
+            # special-case this one's spelling.
             notes.append(
-                "check 39: no docs/INDEX.md and zero governed records — nothing to check "
-                "yet (pre-migration)"
+                "check 39: 0 governed record(s) examined — no docs/INDEX.md, nothing "
+                "to check yet (pre-migration)"
             )
         else:
             fail(
@@ -2220,9 +2254,15 @@ def check_index_stable() -> None:
         fresh = _doc_index.render_index(corpus)
         current = index_path.read_text(encoding="utf-8")
         if current != fresh:
-            fail("check 39: docs/INDEX.md is stale against a fresh regeneration")
+            fail(
+                f"check 39: docs/INDEX.md is stale against a fresh regeneration "
+                f"({len(corpus.records)} governed record(s))"
+            )
         else:
-            notes.append("check 39: docs/INDEX.md is byte-stable")
+            notes.append(
+                f"check 39: docs/INDEX.md is byte-stable "
+                f"({len(corpus.records)} governed record(s) examined)"
+            )
 
     notes.append(
         "check 39: PR-title/ledger cross-reference needs GitHub PR context this "
