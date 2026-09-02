@@ -1542,6 +1542,50 @@ _PHASE_TEMPLATE: Final = (
 )
 
 
+def _check_roadmap_not_silently_unrecognised(root: Path) -> None:
+    """Task #32: `_discover_roadmap` returning nothing is ambiguous by construction —
+    every `_discover_*` function's idempotency argument (module docstring above) reads
+    "found nothing" as "already migrated", which is only true when something already
+    moved or changed shape. `docs/roadmap.md` never moves and is rewritten in place, so
+    that reading does not hold for it: a roadmap that still has works described in a shape
+    `_discover_roadmap`'s legacy patterns do not recognise looks identical, to this
+    script, to a roadmap with nothing left to convert.
+
+    The one thing that *is* checkable without deciding anything about what the real shape
+    is or how to convert it: post-migration, `docs/roadmap.md` carries `WK-` row headings
+    `scan_roadmap_row_ids` (`_ROADMAP_ROW_RE`, line ~265) can see. So a roadmap file that
+    exists, is non-blank, and has neither a legacy phase section (`_discover_roadmap`
+    returned nothing) nor any `WK-` row already in it (nothing to show step 3 already ran)
+    is not "nothing to do" — it is a shape this script does not recognise, and `migrate`
+    must say so rather than silently report success. Called only from `migrate`'s
+    `roadmap_drafts` branch, so it never runs, and never raises, when discovery succeeded.
+
+    Deliberately does not try to tell "no works exist in the roadmap at all" apart from
+    "works exist but not in a shape this script matches" — doing that from inside this
+    check would mean guessing at the real shape, which is exactly what task #32 says not
+    to do here. A roadmap that is genuinely work-free tripping this is an accepted,
+    fail-safe false positive: a human confirms and moves on, rather than `migrate`
+    silently reporting a conversion that never happened.
+    """
+    roadmap_path = root / "docs" / "roadmap.md"
+    if not roadmap_path.is_file():
+        return
+    if not roadmap_path.read_text(encoding="utf-8").strip():
+        return
+    if any(prefix == "WK" for prefix, _ in scan_roadmap_row_ids(root)):
+        return  # already migrated: WK- rows are step 3's own output, already present
+    raise NotImplementedError(
+        "migrate: docs/roadmap.md exists and is non-blank, but _discover_roadmap found no "
+        "legacy '## Phase <id> — <title>' section, and docs/roadmap.md carries no WK- row "
+        "either. That is not 'nothing to convert' -- it is an unrecognised shape (task "
+        "#32): NT-0019 §4 step 3 requires each existing slice to become an SL- row and "
+        "each existing work a WK- row, and the real roadmap's works do not match the "
+        "legacy shape this script's patterns were built against. Resolving what the real "
+        "shape is and how to convert it is open (task #32); migrate refuses to guess and "
+        "silently report success instead."
+    )
+
+
 def _restructure_roadmap(
     root: Path, roadmap_drafts: list[_Draft], phase_id: str, phase_title: str
 ) -> None:
@@ -1689,6 +1733,8 @@ def migrate(root: Path) -> MigrateResult:
         if phase_id is None or phase_title is None:
             raise AssertionError("roadmap drafts found but no phase id/title discovered")
         _restructure_roadmap(root, roadmap_drafts, phase_id, phase_title)
+    else:
+        _check_roadmap_not_silently_unrecognised(root)
 
     register_moved_to: str | None = None
     if register_drafts:

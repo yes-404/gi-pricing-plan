@@ -351,6 +351,94 @@ def test_roadmap_restructure_is_readable_by_doc_index(
     assert phases[0].works == ("WK-17",)
 
 
+_UNRECOGNISED_ROADMAP_TEXT = (
+    "# Roadmap\n\n"
+    "## 6. Phase 1 — split into 1a and 1b\n\n"
+    "#### Phase 1a status\n\n"
+    "| WS | Scope | Status |\n"
+    "|---|---|---|\n"
+    "| **W1** | Repo foundations | open |\n"
+    "| ~~**W2**~~ ✔ | Platform core | closed |\n"
+)
+
+
+# ---------------------------------------------------------------------------------------
+# Task #32: `_discover_roadmap` returning nothing is ambiguous by construction between
+# "already migrated" (the file moved, or its tokens changed shape) and "this shape is not
+# recognised". `docs/roadmap.md` never moves, so the ambiguity is real for it in a way it
+# is not for a moved/renamed legacy file. `_check_roadmap_not_silently_unrecognised`
+# resolves it using the one signal that *is* checkable without deciding anything about the
+# real shape or how to convert it: whether `docs/roadmap.md` already carries a `WK-` row
+# (step 3's own output). Unit-level tests target that function directly; one end-to-end
+# test proves `migrate` actually wires it in.
+# ---------------------------------------------------------------------------------------
+
+
+def test_roadmap_guard_raises_on_a_non_empty_unrecognised_roadmap(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "roadmap.md").write_text(_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8")
+    with pytest.raises(NotImplementedError, match="unrecognised shape"):
+        doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)
+
+
+def test_roadmap_guard_is_silent_when_no_roadmap_file_exists(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)  # no docs/ dir at all
+
+
+def test_roadmap_guard_is_silent_on_a_blank_roadmap(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "roadmap.md").write_text("   \n\n  \n", encoding="utf-8")
+    doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)  # genuinely nothing there
+
+
+def test_roadmap_guard_is_silent_once_a_wk_row_is_already_present(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The same unrecognised-shaped prose as the raising test above, but with one `WK-`
+    row heading already present — the signal `migrate`'s own step 3 leaves behind, so this
+    reads as "already migrated", not "unrecognised". Proves the guard is not just "does
+    the legacy pattern fail to match" in disguise.
+    """
+    (tmp_path / "docs").mkdir()
+    text = _UNRECOGNISED_ROADMAP_TEXT + "\n### WK-1201 — Batch frame contract\n"
+    (tmp_path / "docs" / "roadmap.md").write_text(text, encoding="utf-8")
+    doc_id_cli._check_roadmap_not_silently_unrecognised(tmp_path)
+
+
+def test_migrate_raises_via_the_roadmap_guard_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """End-to-end: overwrite the fixture's own (recognisable) roadmap with the
+    unrecognised-shaped text and confirm `migrate` itself raises through the guard, rather
+    than silently completing steps 1/2/4-7 and reporting success on step 3. Every other
+    fixture file is untouched, so this isolates the roadmap change from the rest of the
+    corpus this same file's other tests already prove correct.
+    """
+    (pristine_a / "docs" / "roadmap.md").write_text(_UNRECOGNISED_ROADMAP_TEXT, encoding="utf-8")
+    with pytest.raises(NotImplementedError, match="unrecognised shape"):
+        doc_id_cli.migrate(pristine_a)
+
+
+def test_roadmap_restructure_is_unaffected_by_the_guard(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The guard lives in the `else` branch of `if roadmap_drafts:` — confirms directly
+    (not just by the existing tests still passing) that a *recognised* roadmap never
+    reaches `_check_roadmap_not_silently_unrecognised` at all: `migrate` succeeds and the
+    restructured file carries no trace of the guard ever running.
+    """
+    result = doc_id_cli.migrate(pristine_a)
+    assert result is not None
+    restructured = (pristine_a / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    assert "WK-" in restructured
+
+
 def test_index_md_is_byte_stable_against_a_fresh_regeneration(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
