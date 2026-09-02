@@ -1343,18 +1343,18 @@ def test_migrate_raises_via_the_multi_ruling_guard_on_a_real_shaped_tree(
 def test_headed_split_file_guard_names_an_undercounted_heading(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """A ten-of-eleven-style undercount, reproduced minimally: a heading whose trailing
-    text is not a bare date -- the real `plan-reviews.md` shape row 1 of the outstanding-
-    obligations plan names -- is invisible to `_REVIEW_HEADING_RE`, which a widening-only
-    fix cannot see because it has no independent denominator.
+    """A real, still-live undercount shape (row 1 of the outstanding-obligations plan,
+    landed as #602): `_REVIEW_HEADING_RE` was widened to accept any trailing text after
+    the date, so a heading is now only invisible to it when it carries NO date at all --
+    the corpus's "Candidate A"/"Candidate B"/"Also carried" shape. A widening-only fix
+    cannot see this either, because it still has no independent denominator.
     """
     audit_dir = tmp_path / "docs" / "audit"
     audit_dir.mkdir(parents=True)
     (audit_dir / "plan-reviews.md").write_text(
         "# Plan reviews\n\n"
         "### Plan review 1, 2026-08-15\n\nBody.\n\n"
-        "### Plan review 2 -- filed with extra trailing prose, 2026-08-20 -- **NOTE**\n\n"
-        "Body.\n",
+        "### A candidate proposal, carrying no date at all\n\nBody.\n",
         encoding="utf-8",
     )
     with pytest.raises(NotImplementedError) as exc_info:
@@ -1362,7 +1362,7 @@ def test_headed_split_file_guard_names_an_undercounted_heading(
             tmp_path, "docs/audit/plan-reviews.md", doc_id_cli._REVIEW_HEADING_RE, 3,
             "plan reviews",
         )
-    assert "Plan review 2" in str(exc_info.value)
+    assert "A candidate proposal" in str(exc_info.value)
 
 
 def test_headed_split_file_guard_is_silent_on_a_clean_file(
@@ -1407,11 +1407,10 @@ def test_migrate_raises_via_the_headed_split_file_guard_on_plan_reviews(
     reviews_path = pristine_a / "docs" / "audit" / "plan-reviews.md"
     text = reviews_path.read_text(encoding="utf-8")
     reviews_path.write_text(
-        text + "\n\n### Plan review 2 -- extra trailing prose, 2026-08-21 -- **NOTE**\n\n"
-        "Body.\n",
+        text + "\n\n### A candidate proposal, carrying no date at all\n\nBody.\n",
         encoding="utf-8",
     )
-    with pytest.raises(NotImplementedError, match="Plan review 2"):
+    with pytest.raises(NotImplementedError, match="A candidate proposal"):
         doc_id_cli.migrate(pristine_a)
 
 
