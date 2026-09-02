@@ -36,15 +36,18 @@ a charter's role definition, a skill's SKILL.md, a README's map. NT-0019 does no
 prescribe this family's body shape; only its header and its exemption from an id.>
 
 <!--
-Vendored skill detection (§1.5): a vendored skill (`planning-with-files`,
-`ui-ux-pro-max`, `graphify`, `systematic-debugging`, the `vue-*` skills — any directory
-under `.claude/skills/` holding a `LICENSE` file that is not the repository's own)
-carries two extra fields on its `SKILL.md` only, declared here and nowhere else:
+Vendored skill detection (§1.5): a vendored skill carries two extra fields on its
+`SKILL.md` only, declared here and nowhere else:
 
     vendored: true
     origin: <upstream project name and URL>
 
 The files beneath a vendored skill are exempt from stamping, citation rewrite and shape
-checks — `doc-id.py`'s detection rule (`grep`-able: any directory holding a `LICENSE`
-that is not the repository's own) is what decides this, not a hand-kept list.
+checks. Which skills count is a hand-kept list, not a filesystem property: shipping a
+`LICENSE` is neither necessary (most vendored skills ship none) nor sufficient (the
+repository's own root `LICENSE` does not make everything beneath it vendored) — Ruling 69
+rejected that detection rule. The list itself is `scripts/_docid.py`'s `_VENDORED_SKILLS`
+constant, seeded from `.claude/skills/README.md`'s provenance sections and reconciled
+there against `pyproject.toml`'s `[tool.ruff] exclude` list so the two cannot silently
+drift apart.
 -->

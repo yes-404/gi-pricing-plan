@@ -369,64 +369,67 @@ def test_parse_header_error_names_path_and_line_number(
 
 
 # ---------------------------------------------------------------------------------------
-# is_vendored — NT-0019 §1.5: "anything shipping its own LICENSE" carries `vendored: true`.
+# is_vendored — Ruling 69: NT-0019 §1.5's detection-by-filesystem gloss is rejected.
+# `is_vendored` now tests membership in `_VENDORED_SKILLS`, a declared constant reconciled
+# against `pyproject.toml`'s ruff `exclude` list (Ruling 69 §2 part 2) — nothing in the
+# function inspects a `LICENSE` file any more (Ruling 76's member 1 of 3; the other two are
+# `docs/_templates/REFERENCE.md` and this file).
 #
-# Published as specified, over the LICENSE-file heuristic the note names. Verified against
-# the live repository and reported to the lead (2026-09-02): of the 28 skills this
-# repository actually treats as vendored (`pyproject.toml`'s `[tool.ruff] exclude` list,
-# the CLAUDE.md §12 authority for "vendored"), only 2 (`planning-with-files`,
-# `ui-ux-pro-max`) carry a LICENSE file — `graphify`, `systematic-debugging` and the six
-# vue-* skills the note names in the very same sentence do not. That is a decision point
-# against NT-0019's own detection rule, routed to the decision-maker; it is not this
-# slice's to resolve unilaterally, and the function below is the published contract W37-3
-# and W37-4 import. These tests pin the function's *documented* behaviour on synthetic
-# fixtures, independent of that open question.
+# The signature is unchanged (Ruling 69 §2 part 4), so these still build a synthetic repo
+# tree under `tmp_path`; what changed is which directory *name* counts, so each test
+# monkeypatches `_VENDORED_SKILLS` down to a small closed fixture set rather than relying
+# on the real 28 — coupling these tests to the real list would make them fail the moment a
+# skill is vendored or un-vendored, the exact coupling Ruling 69 rejected for the runtime
+# predicate itself. The reconciliation against the real `pyproject.toml` is proven
+# separately, below.
 # ---------------------------------------------------------------------------------------
 
 
-def test_is_vendored_true_for_a_directory_with_its_own_license(
-    docid: types.ModuleType, tmp_path: pathlib.Path
+def test_is_vendored_true_for_a_directory_named_in_vendored_skills(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"}))
     repo_root = tmp_path / "repo"
     skill_dir = repo_root / ".claude" / "skills" / "some-vendored-skill"
     skill_dir.mkdir(parents=True)
-    (skill_dir / "LICENSE").write_text("MIT License...\n", encoding="utf-8")
     (skill_dir / "SKILL.md").write_text("---\nname: x\n---\n", encoding="utf-8")
     assert docid.is_vendored(skill_dir / "SKILL.md", repo_root) is True
 
 
-def test_is_vendored_true_for_a_file_nested_below_the_licensed_directory(
-    docid: types.ModuleType, tmp_path: pathlib.Path
+def test_is_vendored_true_for_a_file_nested_below_a_vendored_skill_directory(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"}))
     repo_root = tmp_path / "repo"
     skill_dir = repo_root / ".claude" / "skills" / "some-vendored-skill"
     nested = skill_dir / "references" / "deep.md"
     nested.parent.mkdir(parents=True)
-    (skill_dir / "LICENSE").write_text("MIT License...\n", encoding="utf-8")
     nested.write_text("content\n", encoding="utf-8")
     assert docid.is_vendored(nested, repo_root) is True
 
 
-def test_is_vendored_false_for_the_repositorys_own_license(
-    docid: types.ModuleType, tmp_path: pathlib.Path
+def test_is_vendored_false_for_a_file_outside_claude_skills(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"}))
     repo_root = tmp_path / "repo"
-    repo_root.mkdir(parents=True)
-    (repo_root / "LICENSE").write_text("Apache-2.0...\n", encoding="utf-8")
     docs = repo_root / "docs"
-    docs.mkdir()
+    docs.mkdir(parents=True)
     target = docs / "README.md"
     target.write_text("# docs\n", encoding="utf-8")
-    # Every path in the repository is transitively "under" the root LICENSE; if that
-    # counted, every file would read as vendored, which is exactly the case this test
-    # exists to rule out — the plan's own words: "the test includes the repository's own
-    # LICENSE as the case that must return false."
+    # The rejected criterion walked upward looking for a `LICENSE` file, so it needed a
+    # dedicated case ruling out the repository's own root file catching everything beneath
+    # it. The membership test has no walk and no filesystem read at all — a path is only
+    # ever vendored by being under `.claude/skills/<name>`, so this is the analogous
+    # over-matching case: a real file elsewhere in the tree must never read as vendored no
+    # matter what `_VENDORED_SKILLS` contains.
     assert docid.is_vendored(target, repo_root) is False
 
 
-def test_is_vendored_false_for_a_directory_with_no_license_anywhere(
-    docid: types.ModuleType, tmp_path: pathlib.Path
+def test_is_vendored_false_for_a_directory_not_in_vendored_skills(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"}))
     repo_root = tmp_path / "repo"
     skill_dir = repo_root / ".claude" / "skills" / "first-party-skill"
     skill_dir.mkdir(parents=True)
@@ -436,13 +439,81 @@ def test_is_vendored_false_for_a_directory_with_no_license_anywhere(
 
 
 def test_is_vendored_accepts_a_directory_path_as_well_as_a_file(
-    docid: types.ModuleType, tmp_path: pathlib.Path
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"}))
     repo_root = tmp_path / "repo"
     skill_dir = repo_root / ".claude" / "skills" / "some-vendored-skill"
     skill_dir.mkdir(parents=True)
-    (skill_dir / "LICENSE").write_text("MIT License...\n", encoding="utf-8")
     assert docid.is_vendored(skill_dir, repo_root) is True
+
+
+# ---------------------------------------------------------------------------------------
+# vendored_skills_ruff_exclude_mismatch — Ruling 69 §2 part 2 and acceptance item 1. The
+# first test is the one that matters at the real repository: it must be empty today, and
+# it is the check that reds the moment `_VENDORED_SKILLS` and `pyproject.toml`'s ruff
+# `exclude` list disagree, in either direction, naming which side moved. The rest are the
+# broken-input proof on synthetic fixtures — fast, isolated, and independent of whatever
+# the real lists happen to contain.
+# ---------------------------------------------------------------------------------------
+
+
+def test_vendored_skills_constant_is_reconciled_with_the_real_ruff_exclude_list(
+    docid: types.ModuleType,
+) -> None:
+    only_in_constant, only_in_ruff = docid.vendored_skills_ruff_exclude_mismatch(ROOT)
+    assert not only_in_constant, (
+        f"_VENDORED_SKILLS names skills pyproject.toml's ruff exclude list does not: "
+        f"{sorted(only_in_constant)}"
+    )
+    assert not only_in_ruff, (
+        f"pyproject.toml's ruff exclude list names skills _VENDORED_SKILLS does not: "
+        f"{sorted(only_in_ruff)}"
+    )
+
+
+def test_vendored_skills_ruff_exclude_mismatch_is_empty_when_the_two_lists_agree(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"alpha", "beta"}))
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff]\nexclude = [".claude/skills/alpha", ".claude/skills/beta"]\n',
+        encoding="utf-8",
+    )
+    assert docid.vendored_skills_ruff_exclude_mismatch(tmp_path) == (frozenset(), frozenset())
+
+
+def test_vendored_skills_ruff_exclude_mismatch_catches_a_skill_only_ruff_excludes(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 69 acceptance item 1, one direction: a skill line added to `pyproject.toml`
+    but not to `_VENDORED_SKILLS` must be named as having moved on the ruff side."""
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"alpha", "beta"}))
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff]\n'
+        'exclude = [".claude/skills/alpha", ".claude/skills/beta", ".claude/skills/gamma"]\n',
+        encoding="utf-8",
+    )
+    only_in_constant, only_in_ruff = docid.vendored_skills_ruff_exclude_mismatch(tmp_path)
+    assert only_in_constant == frozenset()
+    assert only_in_ruff == frozenset({"gamma"})
+
+
+def test_vendored_skills_ruff_exclude_mismatch_catches_a_skill_only_the_constant_names(
+    docid: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 69 acceptance item 1, the other direction: an entry added to
+    `_VENDORED_SKILLS` but not to `pyproject.toml` must be named as having moved on the
+    constant side — the direction that matters most, since it is silent over-exemption
+    otherwise (§5.4's "under-exempts 240 tracked files" failure mode, inverted)."""
+    monkeypatch.setattr(docid, "_VENDORED_SKILLS", frozenset({"alpha", "beta", "delta"}))
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.ruff]\nexclude = [".claude/skills/alpha", ".claude/skills/beta"]\n',
+        encoding="utf-8",
+    )
+    only_in_constant, only_in_ruff = docid.vendored_skills_ruff_exclude_mismatch(tmp_path)
+    assert only_in_constant == frozenset({"delta"})
+    assert only_in_ruff == frozenset()
 
 
 # ---------------------------------------------------------------------------------------
@@ -504,10 +575,14 @@ def test_scan_header_ids_excludes_templates(
 
 
 def test_scan_header_ids_excludes_a_vendored_skills_content(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Ruling 69: vendored is membership in `_docid._VENDORED_SKILLS`, not a `LICENSE`
+    # file — declare the fixture directory into the set rather than dropping a licence.
+    monkeypatch.setattr(
+        doc_id_cli._docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"})
+    )
     skill_dir = tmp_path / ".claude" / "skills" / "some-vendored-skill"
-    _write(skill_dir / "LICENSE", "MIT...\n")
     _write(skill_dir / "SKILL.md", _header("RFC-9099", "proposal"))
     assert list(doc_id_cli.scan_header_ids(tmp_path)) == []
 
@@ -515,12 +590,14 @@ def test_scan_header_ids_excludes_a_vendored_skills_content(
 def test_scan_header_ids_skips_a_file_whose_front_matter_is_not_the_closed_grammar(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    # A real, live example: `.claude/skills/create-adaptable-composable/SKILL.md` carries
-    # a `metadata:` mapping with an indented `author:`/`version:` underneath it — upstream
-    # front matter, not an NT-0019 header, and not something `is_vendored` currently
-    # catches either (it has no LICENSE file — the reported gap). `next` must still work
-    # against the real tree: a file it cannot parse contributes nothing, the same as a
-    # file with no front matter at all, rather than crashing the whole command.
+    # Modelled on `.claude/skills/create-adaptable-composable/SKILL.md`, which carries a
+    # `metadata:` mapping with an indented `author:`/`version:` underneath it — upstream
+    # front matter, not an NT-0019 header. That real file is itself named in
+    # `_VENDORED_SKILLS` (Ruling 69), so `is_vendored` excludes it before `parse_header`
+    # ever runs on it; "some-skill" here is deliberately *not* in the set, so this fixture
+    # still exercises the unparseable-but-not-vendored path `next` must survive: a file it
+    # cannot parse contributes nothing, the same as a file with no front matter at all,
+    # rather than crashing the whole command.
     _write(
         tmp_path / ".claude" / "skills" / "some-skill" / "SKILL.md",
         "---\nname: some-skill\nmetadata:\n  author: example\n  version: '1.0'\n---\n",
@@ -577,16 +654,24 @@ def test_scan_governed_headers_does_not_report_a_header_with_no_id_field(
 
 
 def test_scan_governed_headers_does_not_report_a_template_or_vendored_exclusion(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Ruling 69: vendored is membership in `_docid._VENDORED_SKILLS`, not a `LICENSE`
+    # file — declare the fixture directory into the set rather than dropping a licence.
+    monkeypatch.setattr(
+        doc_id_cli._docid, "_VENDORED_SKILLS", frozenset({"some-vendored-skill"})
+    )
     # Excluded *before* parsing is attempted — neither is a parse failure, so neither
-    # belongs in `.skipped` (which is specifically "front matter that failed to parse").
+    # belongs in `.skipped` (which is specifically "front matter that failed to parse"),
+    # and neither contributes a resolved id either — a valid header inside a vendored
+    # skill's content would parse cleanly if it were ever reached, so `.ids` staying empty
+    # is what proves the exclusion, not merely the absence from `.skipped`.
     _write(tmp_path / "docs" / "_templates" / "PL.md", _header("PL-99999"))
     skill_dir = tmp_path / ".claude" / "skills" / "some-vendored-skill"
-    _write(skill_dir / "LICENSE", "MIT...\n")
     _write(skill_dir / "SKILL.md", _header("RFC-9099", "proposal"))
     scan = doc_id_cli.scan_governed_headers(tmp_path)
     assert scan.skipped == ()
+    assert scan.ids == ()
 
 
 def test_scan_governed_headers_ids_field_matches_scan_header_ids(
