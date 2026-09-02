@@ -1965,14 +1965,35 @@ def _check_multi_ruling_files_not_silently_unrecognised(root: Path) -> None:
     unrelated section structure (`## 1. The maintainer's instructions`, ...), which a fully
     generic heading census would wrongly sweep in as unaccounted.
 
-    A file whose *only* such heading is also the file's own first heading is a single-
-    ruling document -- Ruling 83's "Not ruled" section states as settled fact that "one
-    ruling per file" means the multi-ruling splitter should not be reading it at all, and
-    this is that fact checked structurally (derived, not a maintained list of filenames)
-    rather than asserted. Everything else that says "Ruling" and is not one of `_RULING_
-    HEADING_RE`'s own matches -- `Ruling A1`/`A2`/`A3` included -- is named as unaccounted:
-    their disposition is a family/id-form question routed to the planner (Ruling 83 "Not
-    ruled"), and this census correctly cannot clear while they are unclassified.
+    **Both open questions this docstring originally deferred are now ruled** (`docs/plans/
+    2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md`), and this paragraph is
+    corrected rather than left to read as still-current -- the *reasoning* below is what
+    changed; the guard's behaviour today does not, because neither ruling is implemented
+    in code yet:
+
+    - **Ruling 87: a standalone ruling file (the h1 case) is `RL-`, not `PL- kind: leaf`.**
+      Its §3 item 1 leaves open *which* function converts them ("a widened ruling
+      splitter, or a prior classification pass") -- so a file whose only "Ruling"-anchored
+      heading is also the file's own first heading stays exempt from *this* function's
+      census, not because it is settled that `_discover_multi_ruling_files` will never be
+      the mechanism, but because today it demonstrably is not one (zero `_RULING_HEADING_
+      RE` matches, confirmed by running it) and no widening has landed. Once Ruling 87 is
+      implemented, whichever function claims these files owns making them a `_reconcile_
+      census` record; this guard does not anticipate that interface.
+    - **Ruling 86: `Ruling A1`/`A2`/`A3` become three `RL-` records**, via `_RULING_
+      HEADING_RE` widening on two axes (heading level and token shape, §3 item 1). That
+      widening has not landed, so they are correctly still named as unaccounted below --
+      this is `_reconcile_census` doing exactly its job (Ruling 83's own "the census
+      cannot be cleared while three units are unclassified" is now "while the ruled
+      widening is unimplemented", not a change to what this function does).
+
+    **The coupling this leaves, stated rather than anticipated:** the "record" bucket
+    below is keyed off `_RULING_HEADING_RE`'s own matches. If Ruling 86's widening lands
+    inside that same pattern, this guard needs no change. If it lands as a *different*
+    mechanism (a separate classification pass, per Ruling 87 §3 item 1's other option),
+    this guard's `record_starts` must be re-pointed to recognise that mechanism's output
+    too, or it will re-flag units a different, correct code path has already claimed. Not
+    fixed pre-emptively -- the interface does not exist yet to fix it against.
     """
     plans_dir = root / "docs" / "plans"
     if not plans_dir.is_dir():
