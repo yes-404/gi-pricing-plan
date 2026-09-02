@@ -1896,12 +1896,18 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 #      §"a total validates the total, and nothing else" records the day that happened here.
 #
 # F83 words condition 2 as "the count of *unstamped* in-scope files must equal the exempt
-# list". `unstamped` and `unstampable` coincide only after the migration W37-6 performs:
-# at this tree the stamp set holds 415 files of which 363 are unstamped, because nothing
-# has been stamped yet, against 65 that can never be stamped. The predicate that carries
-# F83's intent across that boundary is therefore **cannot be stamped**, not "has not yet
-# been" — it is equivalent to F83's wording the moment the migration lands, and it is the
-# only one of the two that is live, and falsifiable, before then.
+# list". `unstamped` and `unstampable` coincide only after the migration W37-6 performs.
+# Measured at `f61f9a4` over `git ls-files`, with `nt0019_stamp_set` and
+# `unstampable_reason` below as the predicate: the stamp set holds **415** files, of which
+# **364** carry no parseable header (361 with no `---` block at all, plus the 3 whose block
+# will not parse) because nothing has been stamped yet — against **65** that can never be
+# stamped. The predicate that carries F83's intent across that boundary is therefore
+# **cannot be stamped**, not "has not yet been": it is equivalent to F83's wording the
+# moment the migration lands, and it is the only one of the two that is live, and
+# falsifiable, before then. The live figures are printed by check 35's own note on every
+# run, which is the copy to trust — this one is a fixed measurement at a named tree, and
+# a comment restating a number the gate computes is how the two drift apart
+# (`NT-0003`).
 #
 # **Check 35's own owner clause is a no-op for every one of the 65, not merely for the
 # headerless ones.** `check_owner` skips on `header is None` *and* on `HeaderError`, so
