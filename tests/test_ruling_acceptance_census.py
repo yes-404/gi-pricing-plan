@@ -12,7 +12,13 @@ Two things proven here, both required before the flag-day rule can be trusted:
 
   1. `flag_day_split` correctly separates a pre-flag-day `none` ruling (grandfathered)
      from a post-flag-day one (a violation) — using each heading's own introduction
-     commit, not the file's, and not the ruling's number.
+     commit, not the file's, and not the ruling's number. Both synthetic rulings are
+     shaped like one an author would actually write — a verification table, a Ruled
+     section, an obligations section — not a one-line stub: the lead's own finding
+     against `docs/plans/2026-08-30-nt-0015-q1-q5-rulings.md` Ruling 50's own broken-
+     input fixture (a 24-character bare stop, easily caught, unlike the live population
+     it was meant to stand in for) is the reason a trivial fixture here would prove
+     nothing about a ruling that genuinely just forgot the section.
   2. `_NAMED_EXCEPTIONS` and `_PROSE_ONLY_RULINGS` are pinned to their flag-day contents.
      Frozen is untestable until something tries to grow it: proven by hand while writing
      this suite (added a fake `"999"` entry to each set, ran this test, watched both
@@ -68,11 +74,40 @@ def _commit(root: pathlib.Path, message: str, date: str) -> str:
     return _git(root, "rev-parse", "HEAD").stdout.strip()
 
 
+#: A ruling shaped like one an author would actually write -- a verification table, a
+#: Ruled section, an obligations section -- that simply has no acceptance item, rather
+#: than a one-sentence stub. The lead's own R50 finding is the reason this matters: R50's
+#: broken-input fixture for `check_unowned_decay` was a 24-character bare stop, which the
+#: live population (19 real rows, all verbose) never resembles -- the fixture proved the
+#: proxy catches the easiest possible case, nothing about the population it actually
+#: guards. A one-line "ordinary prose, no marker" stub here would be the identical
+#: mistake for piece 2: cheap to satisfy, worth nothing about whether a real careful
+#: author who simply forgot the new section would still be caught.
+_REALISTIC_RULING_BODY = """\
+### 1. Verified first, at `{sha}`
+
+| Claim | Verdict |
+|---|---|
+| the timeout is a bare literal in all three call sites today | Confirmed |
+| no typed setting exists for it | Confirmed |
+
+### 2. Ruled
+
+The timeout becomes a typed setting in `config.py`, defaulting to the value the three
+call sites already share. The bare literal is deleted from all three.
+
+### 3. What it obliges
+
+The setting lands in the same commit as the three call-site edits. No spec change.
+"""
+
+
 @pytest.fixture
 def synthetic_repo(tmp_path: pathlib.Path) -> pathlib.Path:
     """A minimal git repository with one ruling filed at the (synthetic) flag-day commit
     and a second, unrelated ruling with no acceptance item filed afterward -- the exact
-    shape `flag_day_split` exists to distinguish.
+    shape `flag_day_split` exists to distinguish. Both bodies are shaped like a ruling
+    someone would actually write (see `_REALISTIC_RULING_BODY`), not a one-line stub.
     """
     root = tmp_path / "repo"
     root.mkdir()
@@ -84,16 +119,16 @@ def synthetic_repo(tmp_path: pathlib.Path) -> pathlib.Path:
     plans.mkdir(parents=True)
     rulings = plans / "synthetic-rulings.md"
     rulings.write_text(
-        "## Ruling 1 — pre-flag-day, no acceptance item\n\n"
-        "Ordinary prose, no marker of any kind.\n",
+        "## Ruling 1 — pre-flag-day, a fully-drafted ruling with no acceptance item\n\n"
+        + _REALISTIC_RULING_BODY.format(sha="0000000"),
         encoding="utf-8",
     )
     _commit(root, "seed: Ruling 1, pre-flag-day", date="2026-01-01T00:00:00+00:00")
 
     with rulings.open("a", encoding="utf-8") as f:
         f.write(
-            "\n## Ruling 2 — post-flag-day, no acceptance item\n\n"
-            "Ordinary prose, no marker of any kind -- filed after the flag-day.\n"
+            "\n## Ruling 2 — post-flag-day, a fully-drafted ruling with no acceptance "
+            "item\n\n" + _REALISTIC_RULING_BODY.format(sha="1111111")
         )
     _commit(root, "add: Ruling 2, post-flag-day", date="2026-06-01T00:00:00+00:00")
 
