@@ -1193,7 +1193,16 @@ def _discover_headed_split_file(
 _CLOSURE_HEADING_RE: Final = re.compile(
     r"^###\s+(.+?),?\s*(?:accepted\s+)?(\d{4}-\d{2}-\d{2})(.*)$", re.MULTILINE
 )
-_REVIEW_HEADING_RE: Final = re.compile(r"^###\s+(.+?),\s*(\d{4}-\d{2}-\d{2})\s*$", re.MULTILINE)
+# Task #35 (plan-reviews line): widened the identical way #585 widened
+# `_CLOSURE_HEADING_RE` -- a heading no longer has to END with its date. The real
+# `docs/audit/plan-reviews.md`'s "Plan review 9" heading carries decoration after its
+# date (`... 2026-08-30 — **FILED, with its drafting history intact**`); the old
+# `\s*$` anchor required nothing-but-whitespace after the date, so that heading matched
+# nothing and its body folded into whichever matched heading preceded it. The trailing
+# group is captured (group 3) only for symmetry with `_CLOSURE_HEADING_RE` and is not
+# read by `_discover_headed_split_file` below, which still only uses groups 1-2 --
+# plan-reviews has no closure-style "not closed"/bespoke-audit classification need.
+_REVIEW_HEADING_RE: Final = re.compile(r"^###\s+(.+?),\s*(\d{4}-\d{2}-\d{2})(.*)$", re.MULTILINE)
 
 # Task #31: two `closure-records.md` headings are a bespoke audit, never a plan or a
 # closure -- CLAUDE.md §5.4's bespoke-audit rule, its worked precedent
@@ -1263,6 +1272,22 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
 
 
 def _discover_plan_reviews(root: Path) -> list[_Draft]:
+    """`docs/audit/plan-reviews.md`, via the shared `_discover_headed_split_file` --
+    unlike `_discover_closure_records` above, this file's headings carry no per-record
+    semantic variation that splitter cannot express (no phase/audit distinction, nothing
+    left mid-flight), so it still delegates rather than growing its own loop.
+
+    Task #35 (plan-reviews line): three of the file's `###` headings carry no date at
+    all ("Candidate A", "Candidate B", "Also carried, and not a new rule") and so never
+    match `_REVIEW_HEADING_RE` regardless of the trailing-anchor fix below -- whether
+    they are independent records or sub-content nested inside a neighbouring review is
+    an open design question for the decision-maker, not guessed at here. Left
+    unresolved, they fold into whichever matched heading precedes them in the file
+    (sections run heading-to-heading), the same way an unmatched heading always has
+    -- not silently dropped, but not flagged either; `_discover_headed_split_file` has
+    no accounting step that would notice a heading count short of the file's own `###`
+    total, unlike `_discover_closure_records`'s bespoke loop.
+    """
     drafts = _discover_headed_split_file(
         root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, "CR", "lead"
     )

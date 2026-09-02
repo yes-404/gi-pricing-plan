@@ -389,6 +389,88 @@ def test_closure_records_is_silent_on_a_missing_file(
     assert doc_id_cli._discover_closure_records(tmp_path) == []
 
 
+# ---------------------------------------------------------------------------------------
+# Task #35 (plan-reviews line): `_REVIEW_HEADING_RE` required a heading to END with its
+# date -- the identical end-anchor defect `_CLOSURE_HEADING_RE` carried before #585. The
+# real `docs/audit/plan-reviews.md`'s "Plan review 9" heading has decoration AFTER its
+# date (`... 2026-08-30 — **FILED, with its drafting history intact**`), so it matched
+# nothing at all, and because sections run from one matched heading to the next, its
+# entire body -- and three other unmatched, undated headings ahead of it -- folded into
+# whichever matched heading precedes it in the file. Fixed the identical way #585 fixed
+# it: widen the trailing anchor from `\s*$` (nothing but whitespace) to a captured
+# `(.*)$` (anything to end of line).
+#
+# Scope, deliberately narrow: only the end-anchor defect is fixed here. The file's three
+# UNDATED headings ("Candidate A", "Candidate B", "Also carried, and not a new rule") stay
+# out of scope -- whether they are their own records or sub-content nested inside a
+# neighbouring review is an open design question for the decision-maker (task #35's own
+# deferral), and admitting them here would mint three governed documents for things that
+# may not be documents, the mirror image of the defect this fix corrects. They are not
+# silently dropped by that omission, but they do still fold into whichever matched
+# heading precedes them -- the second test below pins that consequence down explicitly
+# (both before and after this fix) rather than leaving it an unstated side effect.
+# ---------------------------------------------------------------------------------------
+
+
+def test_plan_reviews_discovers_a_heading_with_trailing_text_after_its_date(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The real decorated shape, not a simplified stand-in: `Plan review 9`'s actual
+    heading carries an em-dash and bold decoration after its date. Before the fix this
+    heading matches nothing, so its own record disappears and its body (here, "Body
+    nine") is swallowed by the preceding matched heading's section -- silently wrong
+    (folded into a plausible-looking neighbour), not loudly missing.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"
+        "### Plan review 9 — at W11's close, 2026-08-30 — "
+        "**FILED, with its drafting history intact**\n\nBody nine.\n\n"
+        "### Plan review 10 — at W11's second close, 2026-08-30\n\nBody ten.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_plan_reviews(tmp_path)
+    assert [d.title for d in drafts] == [
+        "Plan review 1 — at W6a's close",
+        "Plan review 9 — at W11's close",
+        "Plan review 10 — at W11's second close",
+    ]
+    assert [d.created.isoformat() for d in drafts] == ["2026-08-15", "2026-08-30", "2026-08-30"]
+    review_9 = drafts[1]
+    assert "Body nine" in review_9.body
+    assert "Body ten" not in review_9.body  # correctly bounded by the NEXT matched heading
+    review_1 = drafts[0]
+    assert "Plan review 9" not in review_1.body  # no longer swallowed by its predecessor
+    assert "Body nine" not in review_1.body
+
+
+def test_plan_reviews_still_folds_an_undated_heading_into_the_preceding_review(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Out of scope, made loud rather than left an unstated side effect: an undated
+    heading between two dated ones is not its own record either before or after this fix
+    -- task #35's own open deferral, ruled on by the decision-maker, not guessed at here
+    -- so it still folds into whichever matched heading precedes it. Uses a plain
+    (already-matching) `Plan review 9` heading, not the decorated shape the test above
+    exercises, so this isolates and pins a behaviour the narrower fix leaves UNCHANGED --
+    green both before and after -- rather than re-proving the fix itself.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"
+        "### Undated sub-heading, not a review\n\nSub content.\n\n"
+        "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_plan_reviews(tmp_path)
+    assert len(drafts) == 2  # the undated heading never becomes a third record
+    review_1 = drafts[0]
+    assert "Undated sub-heading, not a review" in review_1.body  # folded in, not dropped
+    assert "Sub content." in review_1.body
+
+
 def test_roadmap_restructure_is_readable_by_doc_index(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
