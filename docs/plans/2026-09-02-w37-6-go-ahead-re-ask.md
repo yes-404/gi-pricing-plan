@@ -359,6 +359,41 @@ narrowing is three conjuncts, all three true of F88 limb 1:
 between this class and the taxonomy's other seven, and it is why a sweep for it is a reading task
 rather than a grep.
 
+**Conjunct 3 makes this a property of a clause *in a context*, not a property of a clause, and
+that has a consequence worth reading before a sweep is commissioned.** Whether anything else
+catches the harm is a fact about the commit, so **a clause is re-decided at every change that
+touches its code path**. Two things follow. **A completed sweep does not stay completed** — its
+output is a list of clauses to re-examine per change, not a set of defects to fix and close. And
+the reading-task point is stronger than "the tell is semantic": **there is no stable answer to
+cache.**
+
+**The obvious way to make conjunct 3 fail here does not work, and testing it is what showed the
+class is more robust than it looks.** The candidate: *fix F87 in the same commit, so the 28
+manifests fall inside checks 30–39 and the doubled block is caught.* **It fails twice.**
+
+- **F87 is not about these files.** Its defect is that `_id_scope_documents()` expands directory
+  roots with `rglob("*.md")`, so the widening reaches **no non-markdown file** — the 59 `.json`,
+  the `.yaml`, and two more. `SKILL.md` is markdown, so the 28 are **already inside** a widened
+  scope, F87 or no F87. F87's own measurement says the 3 exemption entries it reaches are exactly
+  these manifests.
+- **And being in scope does not catch it.** `migrate()` prepends, so the damaged file opens with
+  the migration's own valid header and the harness's block falls into the **body**. Tested
+  against a read-only `git archive origin/main` snapshot, writing only into a temp directory,
+  using the shipped `_stamp_header`, `_docid.parse_header` and `_front_matter_state`:
+
+| On the file `migrate()` would have written | |
+|---|---|
+| `parse_header` | **`Header` — parses cleanly** |
+| the header's `.extra` (where an unknown field would land) | **empty** |
+| `---` delimiter lines in the file | **4** |
+| harness `name:`/`description:` still present | **yes — in the body, not the header** |
+| `_front_matter_state` | **`"stamped"`** |
+
+**So check 30 has no unknown field to object to, and the migration's own idempotency test would
+report the damaged file as already done.** A second run would skip it. **Three independent
+mechanisms all read the corrupted file as correct**, which is a stronger statement of the hazard
+than the original one and was not visible until the counterexample was tried.
+
 #### How much of the corpus this has been swept over: almost none, and the denominator is not the one it looks like
 
 **One confirmed instance. No sweep. And the population it belongs to is not the 98.**
@@ -586,10 +621,17 @@ a reachable commit, or re-run it at `dc1666f` or later, or preserve the ref deli
 amendment, and F90's disposition is that amendment**, so the fix rides along at no extra cost —
 which is the whole reason it is raised here rather than as its own id.
 
-**This is also a live instance of a rule in the place it was not written for.** `CLAUDE.md` §13
-says *name the range, not the tip*, about reviews and gates. A **measurement** legitimately names
-a commit rather than a range — but naming a **squash-merged branch's tip** is precisely the form
-that stops resolving, and the rule as written does not reach it.
+**This is also a live instance of a rule in the place it was not written for, and it is recorded
+as an observation rather than as a condition on §10.** `CLAUDE.md` §13 says *name the range, not
+the tip*, and it was written for **reviews and gates, where a range is always available**. A
+**measurement** legitimately names a single commit — and naming a **squash-merged branch's tip**
+is the form that silently stops resolving. **That is a gap in the rule's scope, not a violation
+of it.**
+
+**It is not attached to the go-ahead line, deliberately.** Amending `CLAUDE.md` is the
+maintainer's alone (`CLAUDE.md` §12), and making a rule change a precondition for a run would be
+this document deciding something it may not. It is here because **this is a live instance rather
+than a hypothetical**, which is what makes it worth the maintainer's attention at all.
 
 **The sharp part is not the 95.** It is that **the 30 rulings written after the ruling-form
 flag-day, specifically to comply, fail exactly as the 35 that were never asked to.** The
@@ -991,9 +1033,26 @@ reason.
 
 1. **On the run itself — the recommendation is a function of `[SLOT-3]`'s three states, and only
    one of them is a go-ahead.**
-   - **Completes** → **go ahead.** Conditions 1 and 2 filled at the tree, the run reaches the end
-     of `migrate()` on the real corpus, every disclosure Ruling 66 §3 requires is present, and
-     the preconditions that would silently mis-migrate something are either fixed or disclosed.
+   - **Completes** → **go ahead, conditional on F90 being dispositioned on the same line.**
+     Conditions 1 and 2 filled at the tree, the run reaches the end of `migrate()` on the real
+     corpus, every disclosure Ruling 66 §3 requires is present, and the preconditions that would
+     silently mis-migrate something are either fixed or disclosed. **The F90 condition is not an
+     extra demand; it is §10's own invitation made binding on this branch** — and it is attached
+     here rather than left to §9.2 because **the better `[SLOT-3]` gets, the sooner F90 bites.**
+     Check 37 reds 95 of 95 migrated ruling documents, and those documents **do not exist until
+     the run creates them** — so *a completing run is precisely what produces the red*. A
+     maintainer reading only this bullet could give the line and land an irreversible commit that
+     turns the gate red with no disposition chosen, which is the outcome §4 exists to prevent.
+
+     **F87 is a disclosure and F90 is a condition, and the test that separates them is not
+     red-versus-blind — it is whether landing the commit *creates* the defect or merely *fails to
+     fix* one.** F90's 95 red documents do not exist before the run; **landing creates them.**
+     F87's blindness pre-exists and landing slightly improves it: checks 30–39 see **1** document
+     today, and after the widening they see the whole markdown corpus and **3** of the 65
+     exemption entries — 0 → 3, with 62 still unreached. **Landing leaves F87 exactly as bad as it
+     already was, and it can be fixed afterwards without a second irreversible act.** Red-versus-
+     blind gets the same answer here and for the wrong reason: it would make any future blind
+     finding a disclosure, including one that landing *creates*.
    - **Does not start** → **recommend against**, on the superseded ask's own reasoning: a
      go-ahead then authorises a run whose first act is an abort.
    - **Starts and does not complete** → **recommend against, and more firmly than for a run that
