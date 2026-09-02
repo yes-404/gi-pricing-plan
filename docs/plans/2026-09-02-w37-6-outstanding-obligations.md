@@ -84,8 +84,9 @@ Four passes, in this order:
 3. **The scripts themselves**, run rather than read where running was possible — the
    legacy-form sweep through the shipped constant, the vendored-set arithmetic, the
    full `audit-docs.py` report, the checks-30-39 scope counts.
-4. **A sweep for obligations belonging to nobody**, which is where items 30 to 34 came
-   from. Those were on none of the sources the lead supplied.
+4. **A sweep for obligations belonging to nobody** — the register, the roadmap row, the
+   plan reviews, the standard itself and every role charter. That is where items 30 to 34
+   and 36 to 39 came from. None was on the sources the lead supplied.
 
 **What would make this list wrong.** It is a snapshot of a repository three agents are
 writing to concurrently. `main` moved from `ffac8ba` to `59bba94` during the four hours
@@ -98,16 +99,23 @@ verification column, not to trust its states.** Every row's state cell is dated
 
 ## 2. The state vocabulary
 
-Six states, and each means something a maintainer can act on differently.
+Eight states. Each means something a maintainer acts on differently, and a row may add a
+qualifier after one (*"IN FLIGHT, zero commits"*) where the bare state would overstate
+progress.
 
-| State | Meaning | What the maintainer does with it |
-|---|---|---|
-| **FIXED** | Landed on `main`; nothing remains | Nothing |
-| **RULED, UNMERGED** | A decision exists as a dated record on a branch, not on `main` | Ask why the branch has not merged |
-| **IN FLIGHT** | Being worked now; the worker is named | Ask for its state, not for a plan |
-| **FILED, NOT FIXED** | The defect is recorded and understood; no code exists | Decide whether it precedes the run |
-| **NEEDS A DECISION** | A design or routing question with no ruling; the decision-maker's | Route it, or accept the delay |
-| **OWED BY THE PLANNER** | A derivation this role owes before a ruling can be made | Tell the planner to start |
+| State | Rows | Meaning | What the maintainer does with it |
+|---|---|---|---|
+| **RULED, UNMERGED** | 2 | A decision exists as a dated record on a branch, not on `main` | Ask why the branch has not merged |
+| **IN FLIGHT** | 2 | Being worked now; the worker is named | Ask for its state, not for a plan |
+| **FILED, NOT FIXED** | 25 | The defect is recorded and understood; no code exists | Decide whether it precedes the run |
+| **NEEDS A DECISION** | 1 | A routing or measurement question with no ruling | Route it, or accept the delay |
+| **NEEDS A RULING** | 1 | Two governed artifacts disagree and neither yields on its own authority | Route it to the decision-maker, or take it yourself |
+| **OWED BY THE PLANNER** | 2 | A derivation this role owes before a ruling can be made | Tell the planner to start |
+| **FILED HERE** | 4 | Found in the course of writing this list; recorded nowhere else before now | Read §5 |
+| **DISCLOSED, ACCEPTED** | 2 | A known cost of the run, already disclosed; no work discharges it | Nothing, beyond holding it while deciding |
+
+**No row is in a "fixed" state.** That is the finding the vocabulary makes visible: of 39
+obligations, none is closed on `main` today.
 
 ---
 
@@ -154,6 +162,10 @@ the row cites it rather than asserting it.
 | 33 | C | Leaf plan §4.2 states 1988 markers are rewritten. That is the `backend`+`packages` figure; the run rewrites **2445**, of which **421** sit inside frozen dated plans | FILED HERE | the next disclosure | §5.2 |
 | 34 | C | The technique Ruling 83 ratifies already exists in this repository — `scripts/register-lint.py` asserts `classified == seen` for a different file and was never applied to `migrate`'s discovery functions | FILED HERE | W37-6 executor | Reuse it rather than inventing a second form. On none of the known sources |
 | 35 | C | The permanence rule is broken between W37-6's merge and W37-9's: `CLAUDE.md` states it at two sites and D2 renumbers every requirement id | DISCLOSED, ACCEPTED | maintainer, via the go-ahead | Nothing before the run. Leaf plan §4.6 discloses it; it is listed here so it is not mistaken for an oversight |
+| 36 | A | The identifier standard's §8 assigns *"seven charters, the eleven primary skills"* to **S3**, after the migration. Ruling 66 pulls three charters and several skills into **S2**, which is this commit. §8 is unamended, and the leaf plan's own closing rule makes the note win | NEEDS A RULING | decision-maker | Either an amendment to §8, or a ruling that Ruling 66's criterion reaches across the stage boundary without one. §5.6 |
+| 37 | B | F70 — the ledger convention has lapsed. Its stated discharge is the identifier standard landing `LG-` as a first-class family *"with its own directory, lint and §1.6 owner"*, which is this slice | FILED, NOT FIXED | W37-6 | The `LG-` family landing with all three, and the register row annotated in place with the date and this commit |
+| 38 | C | The register names W37-6 in its Work item column on **exactly one row** (F76). F68 and F70 both carry `—` there while their Decision prose names this migration as the trigger | FILED HERE | the lead, with the auditor | Annotate the two Work item cells, or accept that a Work-item-scoped query under-reports W37-6's register scope by two rows |
+| 39 | C | The identifier standard's §7 runs **(a) to (k)**, not (a) to (h). Leaf plan §4.7 scopes this go-ahead to (a)-(h) and states *"accepting this run is not accepting the Work close"* | DISCLOSED, ACCEPTED | maintainer | Nothing before the run. Listed so the boundary is explicit at the moment of authorisation rather than discovered at the close |
 
 **Three items from the leaf plan's §10 are discharged and are listed so nobody re-opens
 them:** the two `docs/audit/` files with no destination row (Ruling 77, settled
@@ -231,7 +243,7 @@ not a figure.*
 
 ---
 
-## 5. Five things on none of the known sources
+## 5. Six things on none of the known sources
 
 ### 5.1 The disclosure says 710 ids are renumbered; 41 of them must never move
 
@@ -330,6 +342,32 @@ purpose is to stamp headers on 304 files for the first time, a malformed header 
 disarms the check that holds every filed plan to an acceptance standard — including
 W37-6's own ledger.
 
+
+### 5.6 The standard's own sequencing and Ruling 66 disagree, and the standard is authoritative
+
+The identifier standard's §8 cuts the work into four stages. **S2** is *"the migration PR
+(§4) at a gap"*, and its enumerated list of same-commit rows is scripts, fixtures, CI and
+the roadmap restructure. **S3** is *"conventions: every remaining H row — `CLAUDE.md`,
+README/CONTRIBUTING/PR template, seven charters, the eleven primary skills, `docs/`
+READMEs, checklists, rituals."*
+
+Ruling 66 makes the instrument set a criterion rather than a list, and leaf plan §6.2
+derives thirteen members from it — including three role charters and six skills. **Those
+are §8's S3 population, moved into S2.**
+
+The move is disclosed and reasoned in leaf plan §4.3, and Ruling 66's ground is sound: a
+document created between this commit and W37-7 would be produced by a skill still teaching
+the retired grammar. **The difficulty is not the reasoning; it is the authority.** The leaf
+plan's own last line reads: *"On any disagreement between this plan and
+[the note], the note wins and the disagreement is a finding against this plan."* §8 has not
+been amended, so a reader holding the standard alone still sees the narrower S2.
+
+This is filed as a finding, not resolved. Two readings are available and they are not
+equally cheap — one treats §8's stage list as descriptive scheduling a ruling may re-cut,
+the other treats it as part of the accepted standard, in which case moving population
+across a stage boundary is an amendment and belongs to the maintainer under `CLAUDE.md`
+§12. **The planner does not pick between them**; row 36 routes it.
+
 ---
 
 ## 6. Three corrections to the frozen plan, which is not edited
@@ -370,14 +408,14 @@ a planner supplies a new dated plan once told to, and does not decide to write o
 
 ### 7.1 The remainder does not fall on one side
 
-Walking all 35 rows, they separate on a property that decides the question by itself:
+Walking all 39 rows, they separate on a property that decides the question by itself:
 **can the item be proven on deliberately broken input outside the irreversible commit?**
 
 | Group | Rows | Testable outside the run? |
 |---|---|---|
-| **A — preconditions** | 1-15, 30, 31 | **Yes.** Every one is a defect in already-merged code or in an instrument. None needs the migration to have happened |
-| **B — genuinely in-run** | 16-29 | **No.** Each is observable only once the corpus has moved |
-| **C — neither** | 32-35 | Not a gate either way |
+| **A — preconditions** | 1-15, 30, 31, 36 | **Yes.** Every one is a defect in already-merged code or in an instrument. None needs the migration to have happened |
+| **B — genuinely in-run** | 16-29, 37 | **No.** Each is observable only once the corpus has moved |
+| **C — neither** | 32-35, 38, 39 | Not a gate either way |
 
 ### 7.2 Two rulings have already placed group A before the run
 
