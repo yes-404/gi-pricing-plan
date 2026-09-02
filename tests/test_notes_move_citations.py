@@ -105,9 +105,20 @@ _PRE_MOVE_SNAPSHOTS = {
 # in the tree that cites the old path for this same legitimate reason -- W37 will produce
 # more of them before the migration lands, each will fail this test the same way PR #560's
 # did, and each needs its own reviewed line added here, not a widened pattern.
+# Two more reviewed in 2026-09-02, within the hour of the pair above landing --
+# both audit records *about* this same migration, forbidden from resolving the
+# path without naming it: `F71.md` documents what `test_notes_move_citations`
+# (this file) forbids and cites the old path to say so; `register.md`'s F71 row
+# describes the pre-#561 state of this exact exemption, which did not yet cover
+# the note or the sweep. Reviewed in per this set's own rule, not widened into
+# one: two members to four in about one hour, all four documents *about* the
+# migration rather than migrated content. That rate, not an opinion about it, is
+# recorded in F71's own essay for a future reader if the list keeps growing.
 _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "docs/notes/0019-one-id-per-document.md",
     "docs/audit/nt-0019-verification-and-impact-sweep.md",
+    "docs/audit/findings/F71.md",
+    "docs/audit/register.md",
 }
 
 
