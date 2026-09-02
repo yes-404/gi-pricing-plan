@@ -179,12 +179,58 @@ matcher; none takes an independent census.
 | `_discover_plan_reviews` | 1265 | `_REVIEW_HEADING_RE` | **4 headings**, one of them a filed review (PR #589, Ruling 82) |
 | `_discover_plain_plans` | 1274 | `_PLAN_FILENAME_RE` | filename-shaped, not heading-shaped |
 | `_discover_requirements` | 1311 | `_LEGACY_SPEC_BOLD_RE` | — |
-| `_discover_roadmap` | 1378 | three legacy REs | **all three match zero**; the §4 step 3 silent no-op |
+| `_discover_roadmap` | 1378 | three legacy REs | **all three match zero**; no longer silent — see §1(e) |
 | `_discover_register` | 1428 | `_REGISTER_FINDING_RE` | unit is a table cell, not a heading |
 
 Four of the nine have a measured, live blind spot today. The register's unit is a row rather
 than a heading, which matters for how the property below is worded and not for whether it
 applies.
+
+**(e) The four guarded files, each function and each guard called directly at `ffac8ba`.**
+Every cell below is an execution, not a reading:
+
+| Function | Result | Guard | Guard result |
+|---|---|---|---|
+| `_discover_roadmap` | `0` drafts | `_check_roadmap_not_silently_unrecognised` (`:1864`) | **raises** |
+| `_discover_register` | `0` drafts | `_check_legacy_file_not_silently_unrecognised` (`:1842`) | **raises** |
+| `_discover_closure_records` | **raises** at match index 11 | (`:1829`) | **never reached** |
+| `_discover_plan_reviews` | `10` drafts for 11 reviews | (`:1834`) | **silent** |
+
+**Two corrections to the shape this is usually described in.** First, `_discover_closure_records`
+is commonly reported as *"21 headings → 21, fixed by `#585`"*. It does not produce 21 on this
+tree; it raises, and its guard is dead code behind that raise (§1(b)). `#585` fixed the
+*classifier*, and the arithmetic line describing the result is a description of the
+post-Ruling-84 state, not the current one. Second, the roadmap's *"silent no-op"* is no longer
+silent: task #32's guard landed and fires. What remains there is a different question, below.
+
+**(f) The principle this ruling adopts is already implemented once, in this repository, for one
+file.** `_check_roadmap_not_silently_unrecognised` (`:1605-1647`) does not ask
+`_discover_roadmap` how many works it found. It asks whether `docs/roadmap.md` carries any
+`WK-` row, read with `_ROADMAP_ROW_RE` — **a pattern that encodes the post-migration marker
+rather than the legacy matcher's expectations.** Its docstring states exactly why: *"a roadmap
+that still has works described in a shape `_discover_roadmap`'s legacy patterns do not
+recognise looks identical, to this script, to a roadmap with nothing left to convert."* That is
+this ruling's principle, and the recommendation below generalises an existing local solution
+rather than importing a new idea.
+
+**Its limitation is equally instructive, and is why the principle alone is not the ruling.** The
+check is binary — `if any(prefix == "WK" ...): return`. **One** `WK-` row silences it. It has an
+independent denominator and no arithmetic, so it detects a total failure and not an undercount
+— the mirror of `#585`, which has an arithmetic over its matches and no independent
+denominator. **Neither half is sufficient and the ruling is both.**
+
+**(g) A figure worth pinning, because two correct counts of it disagree.** `docs/roadmap.md`
+carries **41** distinct bolded work ids and **30** works that are a leading table row:
+
+```
+$ grep -oE '\*\*W[0-9]+[a-z]?\*\*' docs/roadmap.md | sort -u | wc -l   → 41
+$ grep -cE '^\| \*\*W[0-9]+[a-z]?\*\*' docs/roadmap.md                 → 30
+```
+
+Both are right over different corpora; the eleven-item difference is bolded work tokens that
+are not row heads. §4 step 3 says *"each Work a `WK-` row"*, so **which of the two is the
+conversion population is an open question**, not a discrepancy to reconcile away — and it is
+precisely the kind of question a census surfaces and a matcher-derived count cannot.
 
 ### 2. Ruled
 
@@ -216,7 +262,7 @@ than reconstructed.
 | (b) | **`#585`'s shape, generalised** — widen each matcher, classify every match, raise on the unclassifiable | **Rejected as sufficient, adopted as necessary.** It is the right treatment for a *known* variation and it is why closure-records is now correct. It cannot close the arithmetic, because its denominator is the widened matcher: (c)'s letter-id headings are invisible to any count taken this way, and widening again only moves the boundary |
 | (c) | **Maintained exclusion list per file** — an explicit table of headings that are deliberately not records | **Rejected as the primary mechanism, kept as bucket 3.** It closes the arithmetic, but the list is itself a transcribed policy with the same staleness failure as (a). Acceptable only for what cannot be derived, and only with a reason per entry |
 | (d) | **Structural invariant, no list** — no output record's body may contain a heading at the split's own level | **Adopted, as the derivation behind bucket 2.** Needs nothing maintained and would have caught Plan review 9 immediately, since Plan review 1's body contains four `###` headings. Alone it is not enough: it says a record swallowed something, not that a source unit went unaccounted for |
-| (e) | **(d) plus a level-independent census, buckets 1–3 balancing** | **Recommended and ruled.** The census is the only term that cannot be gamed by widening a regex, and it is the only one that surfaces a unit whose *id form* — not its position — is unexpected |
+| (e) | **(d) plus a level-independent census, buckets 1–3 balancing** | **Recommended and ruled.** The census is the only term that cannot be gamed by widening a regex, and the only one that surfaces a unit whose *id form* — not its position — is unexpected. It is not a new idea here: §1(f)'s roadmap guard already reads a post-migration marker instead of asking the legacy matcher, and this generalises that to an arithmetic instead of a yes/no |
 
 **Why the denominator is the whole ruling.** Every previous fix in this class widened a
 matcher. Each was correct and each left the same hole, because the thing measuring coverage
@@ -274,6 +320,10 @@ times across three files and `migrate` reports success.
 - **`_check_legacy_file_not_silently_unrecognised`'s `if drafts: return` is gone**, and a
   ten-of-eleven discovery on `plan-reviews.md` reds. *Violation: a partial match passing a
   guard written to catch a total one.*
+- **The roadmap guard stops being satisfied by a single `WK-` row.** A fixture roadmap carrying
+  41 works and exactly one `WK-` row must red. *Violation: an independent denominator used as
+  a yes/no rather than as an arithmetic* — §1(f)'s limitation, and the half `#585` has that the
+  roadmap guard lacks, exactly as the roadmap guard has the half `#585` lacks.
 
 ---
 
