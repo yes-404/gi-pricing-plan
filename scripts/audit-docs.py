@@ -81,7 +81,15 @@ entirely.
      `plans:` entry (DP-7); every `corrected_by:` entry is a record whose `corrects:` names
      this file.
  35. `owner:` is a role filename under .claude/roles/, or `maintainer`, and one the
-     directory's README.md permits where that README declares a permitted-owner list.
+     directory's README.md permits where that README declares a permitted-owner list;
+     and F83's register of files that cannot carry a header at all (60 generated
+     artifacts under docs/ in formats with no comment syntax, 3 unparseable vendored
+     SKILL.md manifests, 2 more surfaced by the check itself) reconciled against
+     NT-0019's stamp set by name — every entry citing its reason and its ruling
+     (condition 1), and the register held equal to the tree so it cannot grow silently
+     (condition 2). Naming, never a total: two errors that cancel pass a total-only
+     check, which is Ruling 83's reason and `.claude/skills/docs-audit`
+     §"a total validates the total, and nothing else".
  36. Redirects (renamed from `check_notes_tombstone`, see above): every `was:` has a
      REDIRECTS.csv row; every row's target exists; no pre-migration id or path form
      survives outside REDIRECTS.csv and `was:` lines (Ruling 67/DP-2) — one shared
@@ -1847,7 +1855,8 @@ def check_freeze() -> None:
 
 # =========================================================================================
 # Check 35 — owner: is a role filename or `maintainer`, and one the directory's README.md
-# permits (where that README declares a permitted-owner list).
+# permits (where that README declares a permitted-owner list); and F83's register of
+# files that cannot carry a header at all, reconciled against the tree by name.
 # =========================================================================================
 
 _ROLES_DIR: Final = REPO / ".claude" / "roles"
@@ -1867,6 +1876,398 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
     if m is None:
         return None
     return frozenset(name.strip() for name in m.group(1).split(","))
+
+
+# -----------------------------------------------------------------------------------------
+# F83 — the register of files that cannot carry a header at all, and the check that keeps
+# it honest. Filed as `docs/audit/findings/F83.md`; ruled by the maintainer 2026-09-02.
+#
+# Two conditions bind the exemption, and both are enforced here:
+#
+#   1. Every entry cites its reason and the ruling that permits it — "an exemption list
+#      whose entries carry no justification is indistinguishable from a list of things
+#      nobody got round to". `UnstampableExemption` makes both fields structural, so an
+#      entry cannot be added without stating them.
+#   2. The register is itself checked against the tree, so it cannot grow silently.
+#      `_check_unstampable_register` implements this, and — per F83's own words, which are
+#      Ruling 83's property applied to an exemption rather than a census — it **names**
+#      every file on each side of the disagreement and never compares two totals. Two
+#      errors that cancel pass a total-only check; `.claude/skills/docs-audit`
+#      §"a total validates the total, and nothing else" records the day that happened here.
+#
+# F83 words condition 2 as "the count of *unstamped* in-scope files must equal the exempt
+# list". `unstamped` and `unstampable` coincide only after the migration W37-6 performs.
+# Measured at `f61f9a4` over `git ls-files`, with `nt0019_stamp_set` and
+# `unstampable_reason` below as the predicate: the stamp set holds **415** files, of which
+# **364** carry no parseable header (361 with no `---` block at all, plus the 3 whose block
+# will not parse) because nothing has been stamped yet — against **65** that can never be
+# stamped. The predicate that carries F83's intent across that boundary is therefore
+# **cannot be stamped**, not "has not yet been": it is equivalent to F83's wording the
+# moment the migration lands, and it is the only one of the two that is live, and
+# falsifiable, before then. The live figures are printed by check 35's own note on every
+# run, which is the copy to trust — this one is a fixed measurement at a named tree, and
+# a comment restating a number the gate computes is how the two drift apart
+# (`NT-0003`).
+#
+# **Check 35's own owner clause is a no-op for every one of the 65, not merely for the
+# headerless ones.** `check_owner` skips on `header is None` *and* on `HeaderError`, so
+# the three vendored manifests — which do have a `---` block, one that will not parse —
+# are skipped by the second branch exactly as the 62 headerless files are skipped by the
+# first. F83's disposition, "a `generated: true` exemption in check 35", therefore
+# discharges nothing on its own; the register had to bring its own enforcement, which is
+# what `_check_unstampable_register` and `_check_scope_unstamped_are_registered` are.
+# `test_check_35_owner_clause_is_a_no_op_for_every_registered_file` pins the claim
+# against the real register rather than leaving it as a reading of the code.
+#
+# NOTE FOR W37-6: when `_ID_SCOPE_ROOTS` widens to the whole corpus, **check 30 must
+# consult `UNSTAMPABLE_EXEMPTIONS`** or it will fail on all 65 of these. That wiring is
+# deliberately not done here: it would weaken check 30 for files that are not yet in its
+# scope, and building it now is building ahead of the slice that widens the scope.
+# `UNSTAMPABLE_EXEMPTIONS` is public for exactly that consumer. **Widening the roots is
+# not by itself enough**: `_id_scope_documents` walks a directory root with
+# `rglob("*.md")`, so a scope widened to `docs/` reaches 3 of the 65 and none of the 62
+# non-markdown files — that glob, not the roots, is what excludes them
+# (`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`).
+# -----------------------------------------------------------------------------------------
+
+#: `scripts/file-census.py`'s `git_ls_files`. The corpus is `git ls-files`, never a
+#: working-tree walk — `scripts/doc-id.py` records why this repository settled on that: a
+#: walk picks up `.venv/`, `graphify-out/` and anything else untracked, which differs
+#: between two checkouts of the same commit. Loaded by path for the same reason `_docid`
+#: and `doc-index` above are: a hyphenated filename is not a legal `import` target.
+_FILE_CENSUS_PATH: Final = REPO / "scripts" / "file-census.py"
+_file_census = _load_module("_file_census_for_audit_docs", _FILE_CENSUS_PATH)
+
+
+@dataclass(frozen=True)
+class UnstampableExemption:
+    """One file that cannot carry a YAML front-matter header at all.
+
+    `reason` and `ruling` are required rather than optional because F83 condition 1 is
+    that every entry carries both: a bare path list records that a file is unstamped
+    without recording whether anyone decided it should be.
+    """
+
+    path: str
+    reason: str
+    ruling: str
+
+
+_CONTRACTS_REASON: Final = (
+    "generated artifact under docs/contracts/ in a format with no comment syntax — front "
+    "matter makes the file invalid and breaks json.load, the OpenAPI toolchain and "
+    "frontend/src/api/generated's generator"
+)
+_CONTRACTS_RULING: Final = (
+    "F83, ruled by the maintainer 2026-09-02: `generated: true` exemption rather than a "
+    "sidecar (docs/audit/findings/F83.md §'The decision, and the option not taken')"
+)
+
+#: The 59 `.json` + 1 `.yaml` under `docs/contracts/`. Enumerated as literal paths, not
+#: matched by a directory-and-extension rule: a rule would silently absorb every future
+#: file of the same shape, which is precisely the silent growth condition 2 exists to make
+#: impossible. The verbosity is the mechanism. `docs/contracts/README.md` is deliberately
+#: absent — it is markdown, it can carry a header, and F83 scopes the exemption to the
+#: files that physically cannot, not to the directory.
+_CONTRACT_ARTIFACT_PATHS: Final = (
+    "docs/contracts/openapi/generated.json",
+    "docs/contracts/openapi/gi-pricing.yaml",
+    "docs/contracts/schemas/approval-request.schema.json",
+    "docs/contracts/schemas/audit-event.schema.json",
+    "docs/contracts/schemas/banding.schema.json",
+    "docs/contracts/schemas/common/artifact-envelope.schema.json",
+    "docs/contracts/schemas/common/artifact-ref.schema.json",
+    "docs/contracts/schemas/common/blob-ref.schema.json",
+    "docs/contracts/schemas/common/money.schema.json",
+    "docs/contracts/schemas/common/provenance.schema.json",
+    "docs/contracts/schemas/custom-objective.schema.json",
+    "docs/contracts/schemas/dataset-version.schema.json",
+    "docs/contracts/schemas/diagnostics.schema.json",
+    "docs/contracts/schemas/dislocation-run.schema.json",
+    "docs/contracts/schemas/dossier.schema.json",
+    "docs/contracts/schemas/generated/artifact-envelope.schema.json",
+    "docs/contracts/schemas/generated/artifact-ref.schema.json",
+    "docs/contracts/schemas/generated/audit-event.schema.json",
+    "docs/contracts/schemas/generated/backtest.schema.json",
+    "docs/contracts/schemas/generated/banding.schema.json",
+    "docs/contracts/schemas/generated/blob-ref.schema.json",
+    "docs/contracts/schemas/generated/custom-metric.schema.json",
+    "docs/contracts/schemas/generated/custom-objective.schema.json",
+    "docs/contracts/schemas/generated/dataset-lineage.schema.json",
+    "docs/contracts/schemas/generated/dataset-split.schema.json",
+    "docs/contracts/schemas/generated/dataset-version.schema.json",
+    "docs/contracts/schemas/generated/diagnostics.schema.json",
+    "docs/contracts/schemas/generated/grouping.schema.json",
+    "docs/contracts/schemas/generated/job.schema.json",
+    "docs/contracts/schemas/generated/metric-certificate.schema.json",
+    "docs/contracts/schemas/generated/model-comparison.schema.json",
+    "docs/contracts/schemas/generated/model-spec.schema.json",
+    "docs/contracts/schemas/generated/model.schema.json",
+    "docs/contracts/schemas/generated/objective-certificate.schema.json",
+    "docs/contracts/schemas/generated/objective-usage.schema.json",
+    "docs/contracts/schemas/generated/oidc-auth-config.schema.json",
+    "docs/contracts/schemas/generated/peril-structure.schema.json",
+    "docs/contracts/schemas/generated/problem-detail.schema.json",
+    "docs/contracts/schemas/generated/profile.schema.json",
+    "docs/contracts/schemas/generated/transparency-artifact.schema.json",
+    "docs/contracts/schemas/generated/validation-report.schema.json",
+    "docs/contracts/schemas/generated/validation-rule.schema.json",
+    "docs/contracts/schemas/gipp-check.schema.json",
+    "docs/contracts/schemas/grouping.schema.json",
+    "docs/contracts/schemas/job.schema.json",
+    "docs/contracts/schemas/model-spec.schema.json",
+    "docs/contracts/schemas/model.schema.json",
+    "docs/contracts/schemas/monitoring.schema.json",
+    "docs/contracts/schemas/objective-certificate.schema.json",
+    "docs/contracts/schemas/optimisation-run.schema.json",
+    "docs/contracts/schemas/peril-structure.schema.json",
+    "docs/contracts/schemas/profile.schema.json",
+    "docs/contracts/schemas/rate-table.schema.json",
+    "docs/contracts/schemas/rating-algorithm.schema.json",
+    "docs/contracts/schemas/rating-version.schema.json",
+    "docs/contracts/schemas/regression-suite.schema.json",
+    "docs/contracts/schemas/scoring.schema.json",
+    "docs/contracts/schemas/transparency-artifact.schema.json",
+    "docs/contracts/schemas/validation-report.schema.json",
+    "docs/contracts/schemas/validation-rule.schema.json",
+)
+
+_OTHER_ARTIFACT_REASON: Final = (
+    "generated artifact under docs/ in a format with no comment syntax — the same format "
+    "impossibility F83 measured for docs/contracts/, in a file its census did not reach"
+)
+_OTHER_ARTIFACT_RULING: Final = (
+    "F83 condition 2 applied to F83's own population: surfaced by this check, NOT in the "
+    "63 the maintainer ruled — awaiting ratification, and reversible by deleting this "
+    "tuple's entries"
+)
+
+#: The two non-markdown files in the stamp set that F83's population of 63 does not name.
+#: F83 measured `docs/contracts/**` and the vendored manifests; the stamp set RFC §4 rules
+#: (`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4, "every file under
+#: `docs/`, …") is wider than that, and contains two more files that cannot carry front
+#: matter for exactly the reason F83 gives for the contracts. `delivery-process.core.json`
+#: is CLAUDE.md §15's machine-readable process extract; the census CSV is a dated audit
+#: artifact. Listed here rather than left out so the register equals the tree — the
+#: alternative was a red gate or a predicate narrowed until the two disappeared, which
+#: would blind the check to the growth it exists to catch.
+_OTHER_ARTIFACT_PATHS: Final = (
+    "docs/audit/file-census-5ef559d.csv",
+    "docs/process/delivery-process.core.json",
+)
+
+_VENDORED_MANIFEST_REASON: Final = (
+    "vendored skill manifest whose upstream front matter does not parse under the closed "
+    "field set (NT-0019 §1.5); CLAUDE.md §12 forbids editing it — vendored files stay as "
+    "upstream wrote them"
+)
+_VENDORED_MANIFEST_RULING: Final = (
+    "F83, ruled by the maintainer 2026-09-02: exempt by path rather than by edit "
+    "(docs/plans/2026-09-02-w37-5c-slice-decision.md §5, 'a manifest that won't parse gets "
+    "its header from a sidecar or an exemption, never an edit')"
+)
+
+#: The three vendored `SKILL.md` manifests that raise `HeaderError`. Two carry an indented
+#: upstream `author:` (a nested mapping the closed field set refuses); the third fails on
+#: `user-invocable: true`. Enumerated rather than derived from "raises HeaderError" for the
+#: same reason as the contracts: a predicate would absorb the next one silently. A vendored
+#: manifest that *does* parse is not here and is not exempt.
+_VENDORED_MANIFEST_PATHS: Final = (
+    ".claude/skills/create-adaptable-composable/SKILL.md",
+    ".claude/skills/planning-with-files/SKILL.md",
+    ".claude/skills/vue-best-practices/SKILL.md",
+)
+
+#: F83's exemption register. Public: W37-6's widened check 30 is its intended consumer.
+UNSTAMPABLE_EXEMPTIONS: Final[tuple[UnstampableExemption, ...]] = (
+    *(
+        UnstampableExemption(p, _CONTRACTS_REASON, _CONTRACTS_RULING)
+        for p in _CONTRACT_ARTIFACT_PATHS
+    ),
+    *(
+        UnstampableExemption(p, _OTHER_ARTIFACT_REASON, _OTHER_ARTIFACT_RULING)
+        for p in _OTHER_ARTIFACT_PATHS
+    ),
+    *(
+        UnstampableExemption(p, _VENDORED_MANIFEST_REASON, _VENDORED_MANIFEST_RULING)
+        for p in _VENDORED_MANIFEST_PATHS
+    ),
+)
+
+
+def nt0019_stamp_set(tracked: Sequence[str] | None = None) -> list[str]:
+    """Every tracked file in NT-0019's stamp set, as repo-relative posix paths.
+
+    The set is RFC §4's ruling (`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md`
+    §4, "§4 step 5 governs the stamp set"): every file under `docs/`, `.claude/roles/`,
+    `.claude/skills/*/SKILL.md` and `.claude/agents/`, plus every `README.md` in the tree.
+
+    That last clause is **derived from what §5.2 reaches** (`scripts/doc-id.py`'s
+    `_candidate_header_paths` globs `tree_root.rglob("README.md")`) rather than copied from
+    the RFC's table of six named files. The two disagree: `.claude/notes/README.md` is
+    tracked, is outside every listed root, and is not in the RFC's six. Deriving the rule
+    rather than pasting its enumeration is what makes that visible instead of inherited.
+
+    `tracked` is injectable so a test can put a corpus in front of this without a
+    filesystem; `None` means "ask git", which is the only form production uses.
+    """
+    if tracked is None:
+        tracked = list(_file_census.git_ls_files(REPO))
+    out: list[str] = []
+    for rel in tracked:
+        parts = rel.split("/")
+        is_skill_manifest = (
+            len(parts) == 4
+            and parts[0] == ".claude"
+            and parts[1] == "skills"
+            and parts[3] == "SKILL.md"
+        )
+        if (
+            rel.startswith(("docs/", ".claude/roles/", ".claude/agents/"))
+            or is_skill_manifest
+            or parts[-1] == "README.md"
+        ):
+            out.append(rel)
+    return sorted(set(out))
+
+
+def unstampable_reason(rel: str) -> str | None:
+    """Why the tracked file `rel` cannot carry a governed header, or `None` when it can.
+
+    Two disqualifiers, and only two:
+
+    * **Not markdown.** A YAML front-matter block is a markdown convention. Prepending one
+      to JSON, YAML or CSV does not produce a file with a header; it produces a file that
+      no longer parses as what it is.
+    * **A vendored manifest whose own front matter will not parse.** `is_vendored` alone is
+      not enough — a vendored manifest that parses is stampable and stays in scope. The
+      conjunction is deliberate: a *non*-vendored file that fails to parse is a defect to
+      fix, not a file to exempt, and must stay a hard failure.
+    """
+    if not rel.endswith(".md"):
+        return "not a markdown file — a YAML front-matter block would invalidate it"
+    path = REPO / rel
+    if not _docid.is_vendored(path, REPO):
+        return None
+    try:
+        _docid.parse_header(path)
+    except _docid.HeaderError as exc:
+        return f"vendored manifest whose upstream front matter does not parse: {exc}"
+    return None
+
+
+def _check_scope_unstamped_are_registered() -> int:
+    """F83 condition 2 over the **enforced** scope — the clause that goes live with W37-6.
+
+    `_check_unstampable_register` above ranges over NT-0019's whole stamp set and asks
+    which files *cannot* be stamped. This one ranges over `_id_scope_documents()` — what
+    checks 30-39 actually enforce today — and asks which files *are not* stamped, which is
+    F83 condition 2's own wording. The two coincide only after the migration; before it,
+    this clause is the one that will red from inside W37-6's commit if that commit widens
+    the scope without stamping or registering something.
+
+    **A caution for whoever widens `_ID_SCOPE_ROOTS`, measured rather than assumed.**
+    `_id_scope_documents` walks a directory root with `rglob("*.md")`, so widening the
+    roots alone brings in *no* non-markdown file: pointed at `docs/`, it returns 285 paths
+    and not one of the 62 non-`.md` files under `docs/` that `UNSTAMPABLE_EXEMPTIONS`
+    exists for. Checks 30-39 therefore cannot see them however the roots are widened, and
+    this clause cannot either — which is why the register is reconciled against the stamp
+    set by `_check_unstampable_register`, where those 62 *are* reachable, rather than
+    here. `test_widening_the_scope_roots_alone_reaches_no_non_markdown_file` pins the
+    measurement so the next reader gets the fact instead of the assumption.
+
+    Returns the number of unstamped in-scope files it found, for the caller's note.
+    """
+    registered = {entry.path for entry in UNSTAMPABLE_EXEMPTIONS}
+    unstamped = 0
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            header = None  # a header block that will not parse is not a stamp
+        if header is not None:
+            continue
+        unstamped += 1
+        rel = path.relative_to(REPO).as_posix()
+        if rel not in registered:
+            fail(
+                f"check 35: {rel}: in the checks-30-39 scope with no parseable header, "
+                "and not in the F83 exemption register — stamp it, or register it with "
+                "its reason and the ruling that permits it"
+            )
+    return unstamped
+
+
+def _check_unstampable_register() -> int:
+    """F83 condition 2: the register equals the set of files that cannot be stamped.
+
+    Set equality, reported by **naming both sides of the symmetric difference** — never by
+    comparing two totals, which is invariant under a compensating pair of errors and so
+    cannot detect the thing it is asked to detect (Ruling 83; `.claude/skills/docs-audit`
+    §"a total validates the total, and nothing else").
+
+    Returns the size of the stamp set it examined, for the caller's note.
+    """
+    try:
+        stamp_set = nt0019_stamp_set()
+    except RuntimeError as exc:
+        # `file-census.py`'s `GitLsFilesError`, which subclasses `RuntimeError`. This is
+        # the first git dependency `audit-docs.py` has; the corpus has to come from
+        # `git ls-files` rather than a walk (a walk picks up `.venv/` and `graphify-out/`),
+        # so the tool now needs a repository. Reported as a named failure rather than
+        # left to surface as a traceback, and never as a silent pass: an unreadable
+        # corpus reconciles to zero unstampable files, which is exactly the shape of a
+        # register that is perfectly correct.
+        fail(f"check 35: cannot enumerate NT-0019's stamp set: {exc}")
+        return 0
+    registered = {entry.path: entry for entry in UNSTAMPABLE_EXEMPTIONS}
+
+    if len(registered) != len(UNSTAMPABLE_EXEMPTIONS):
+        seen: set[str] = set()
+        for entry in UNSTAMPABLE_EXEMPTIONS:
+            if entry.path in seen:
+                fail(
+                    f"check 35: {entry.path}: listed twice in the F83 exemption register — "
+                    "a duplicated entry inflates the register against the tree"
+                )
+            seen.add(entry.path)
+
+    cannot: dict[str, str] = {}
+    for rel in stamp_set:
+        why = unstampable_reason(rel)
+        if why is not None:
+            cannot[rel] = why
+
+    for rel in sorted(set(cannot) - set(registered)):
+        fail(
+            f"check 35: {rel}: in NT-0019's stamp set and cannot carry a header "
+            f"({cannot[rel]}), but is not in the F83 exemption register — add it with its "
+            "reason and the ruling that permits it, or make the file stampable"
+        )
+
+    tracked_set = set(stamp_set)
+    for rel in sorted(set(registered) - set(cannot)):
+        if rel not in tracked_set:
+            fail(
+                f"check 35: {rel}: in the F83 exemption register but not in NT-0019's "
+                "stamp set — the file is untracked, deleted or moved, and the entry is "
+                "stale"
+            )
+        else:
+            fail(
+                f"check 35: {rel}: in the F83 exemption register but CAN carry a header — "
+                "an exemption for a stampable file hides it from checks 30-39; stamp it "
+                "and drop the entry"
+            )
+
+    for entry in UNSTAMPABLE_EXEMPTIONS:
+        if not entry.reason.strip() or not entry.ruling.strip():
+            fail(
+                f"check 35: {entry.path}: F83 condition 1 — an exemption register entry "
+                "must cite both its reason and the ruling that permits it"
+            )
+
+    return len(stamp_set)
 
 
 def check_owner() -> None:
@@ -1903,7 +2304,14 @@ def check_owner() -> None:
                     f"{sorted(allow_list)}"
                 )
 
-    notes.append(f"check 35: {checked} owner(s) checked in scope")
+    stamp_set_size = _check_unstampable_register()
+    unstamped_in_scope = _check_scope_unstamped_are_registered()
+    notes.append(
+        f"check 35: {checked} owner(s) checked in scope; "
+        f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
+        f"against {stamp_set_size} file(s) in NT-0019's stamp set; "
+        f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
+    )
 
 
 # =========================================================================================

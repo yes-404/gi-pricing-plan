@@ -1119,3 +1119,375 @@ def test_doc_index_check_exits_0_on_the_real_tree() -> None:
         capture_output=True, text=True, cwd=ROOT,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+# =========================================================================================
+# Check 35, second clause — F83's register of files that cannot carry a header, and the
+# condition-2 reconciliation that keeps it equal to the tree.
+#
+# Every proof below runs against the **real, unmodified corpus** rather than a fixture:
+# the thing under test is a statement about this repository's own files, and a fixture
+# tree would prove only that the reconciliation works on a tree nobody ships. What each
+# test mutates is the *register*, which is the artifact F83 makes falsifiable.
+# =========================================================================================
+
+
+def _register_without(audit: types.ModuleType, path: str) -> tuple[object, ...]:
+    """The real register minus the entry for `path`, asserting it was actually there —
+    a "remove X" helper that silently removes nothing turns every test using it green.
+    """
+    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != path)
+    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1, path
+    return kept
+
+
+def _run_check_35(audit: types.ModuleType) -> list[str]:
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_owner()
+    return list(audit.failures)
+
+
+def test_f83_register_reconciles_clean_against_the_real_tree(
+    audit: types.ModuleType,
+) -> None:
+    """The positive control. It has to come first: every red-on-broken-input test below
+    is worthless if the check reds on the unmodified tree too, and a reconciliation that
+    is *always* red is indistinguishable from one that is always right.
+    """
+    assert _run_check_35(audit) == []
+    note = next(n for n in audit.notes if "F83 register" in n)
+    # The note must state both live populations. A reconciliation reporting no numbers
+    # reads identically whether it compared 65 entries against 415 files or nothing
+    # against nothing — the invisible-zero condition checks 30-39 are pinned against.
+    assert f"{len(audit.UNSTAMPABLE_EXEMPTIONS)} exemption(s)" in note
+    assert "file(s) in NT-0019's stamp set" in note
+
+
+def test_f83_register_reds_naming_an_unstampable_file_it_does_not_list(
+    audit: types.ModuleType,
+) -> None:
+    """F83's falsifiable clause, verbatim: "an unstamped in-scope file absent from the
+    exempt list must red". Proven by dropping a real entry rather than by planting a
+    file, so the file the check names is one that genuinely exists in this tree.
+    """
+    dropped = "docs/contracts/openapi/gi-pricing.yaml"
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", _register_without(audit, dropped))  # noqa: B010
+    failures = _run_check_35(audit)
+    assert len(failures) == 1, failures
+    assert dropped in failures[0]
+    assert "not in the F83 exemption register" in failures[0]
+
+
+def test_f83_register_reds_on_an_entry_for_a_file_that_can_carry_a_header(
+    audit: types.ModuleType,
+) -> None:
+    """The other direction. `docs/contracts/README.md` is markdown, sits in the same
+    directory as the 60 exempt artifacts, and is the file F83 singles out as deliberately
+    *not* exempt ("the exemption is scoped to the files that physically cannot, not to
+    the directory"). Exempting it would hide a stampable file from checks 30-39.
+    """
+    entry = audit.UnstampableExemption("docs/contracts/README.md", "r", "r")
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
+    failures = _run_check_35(audit)
+    assert len(failures) == 1, failures
+    assert "docs/contracts/README.md" in failures[0]
+    assert "CAN carry a header" in failures[0]
+
+
+def test_f83_register_names_both_sides_when_the_two_totals_cancel(
+    audit: types.ModuleType,
+) -> None:
+    """**The property F83 condition 2 actually asks for**, and the one a total-only check
+    cannot have: two errors in opposite directions leave the count unchanged.
+
+    Here one real entry is dropped and one bogus entry added, so `len(register)` is
+    *exactly* what it was and `len(cannot)` is *exactly* what it was — a check that
+    compared the two totals passes this input while the register disagrees with the tree
+    in two places. Ruling 83's rule ("name every unmatched unit, never compare counts")
+    and `.claude/skills/docs-audit` §"a total validates the total, and nothing else",
+    which was written the same day after precisely this failure.
+    """
+    dropped = "docs/process/delivery-process.core.json"
+    bogus = audit.UnstampableExemption("docs/contracts/README.md", "r", "r")
+    mutated = (*_register_without(audit, dropped), bogus)
+    assert len(mutated) == len(audit.UNSTAMPABLE_EXEMPTIONS)  # the totals cancel
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", mutated)  # noqa: B010
+
+    failures = _run_check_35(audit)
+    assert len(failures) == 2, failures
+    assert any(dropped in f and "not in the F83 exemption register" in f for f in failures)
+    assert any("docs/contracts/README.md" in f and "CAN carry a header" in f for f in failures)
+
+
+def test_f83_register_reds_on_a_stale_entry_naming_no_tracked_file(
+    audit: types.ModuleType,
+) -> None:
+    """An entry outliving the file it exempts. Distinguished from the "can carry a
+    header" case by its own message, because the fixes differ: one is a deletion, the
+    other is a stamping.
+    """
+    entry = audit.UnstampableExemption("docs/contracts/schemas/gone.json", "r", "r")
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
+    failures = _run_check_35(audit)
+    assert len(failures) == 1, failures
+    assert "not in NT-0019's stamp set" in failures[0]
+
+
+def test_f83_register_reds_on_a_duplicated_entry(audit: types.ModuleType) -> None:
+    """A duplicate inflates the register against the tree while every path in it is
+    individually legitimate — the one corruption that dedup-by-dict would otherwise
+    swallow in silence.
+    """
+    entry = audit.UNSTAMPABLE_EXEMPTIONS[0]
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
+    failures = _run_check_35(audit)
+    assert any("listed twice" in f and entry.path in f for f in failures), failures
+
+
+def test_f83_register_reds_on_an_entry_missing_its_reason_or_ruling(
+    audit: types.ModuleType,
+) -> None:
+    """F83 condition 1: "an exemption list whose entries carry no justification is
+    indistinguishable from a list of things nobody got round to". The dataclass forces
+    both fields to be *passed*; this is what forces them to be non-empty.
+    """
+    real = audit.UNSTAMPABLE_EXEMPTIONS[0]
+    for blanked in (
+        audit.UnstampableExemption(real.path, "", real.ruling),
+        audit.UnstampableExemption(real.path, real.reason, "   "),
+    ):
+        mutated = (blanked, *audit.UNSTAMPABLE_EXEMPTIONS[1:])
+        setattr(audit, "UNSTAMPABLE_EXEMPTIONS", mutated)  # noqa: B010
+        failures = _run_check_35(audit)
+        assert any("F83 condition 1" in f for f in failures), (blanked, failures)
+
+
+def test_unstampable_reason_refuses_a_non_vendored_file_that_will_not_parse(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The conjunction in `unstampable_reason` is load-bearing and must not loosen to
+    "anything that raises HeaderError". A *non*-vendored markdown file with broken front
+    matter is a defect to fix, not a file to exempt: if it were exemptible, the easiest
+    way to silence checks 30-39 on any document would be to corrupt its header.
+
+    Proven on the real tree's own markdown, which is non-vendored by construction — every
+    one of them must come back stampable.
+    """
+    for rel in ("docs/README.md", "docs/roadmap.md", "CLAUDE.md"):
+        assert audit.unstampable_reason(rel) is None, rel
+    # …and the three vendored manifests that *do* fail to parse must come back exempt.
+    assert audit.unstampable_reason(".claude/skills/vue-best-practices/SKILL.md") is not None
+
+
+def test_nt0019_stamp_set_is_the_ruled_corpus_measured_against_git(
+    audit: types.ModuleType,
+) -> None:
+    """Coverage validated from **outside** the check.
+
+    Nothing inside check 35 can notice that `nt0019_stamp_set` has silently narrowed: a
+    smaller stamp set produces fewer unstampable files, and the reconciliation stays
+    green while the check has stopped looking. So the corpus is pinned here against
+    `git ls-files` directly rather than against a second copy of the same predicate.
+    """
+    import subprocess
+
+    tracked = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "-z"],
+        capture_output=True, check=True,
+    ).stdout.decode().split("\x00")
+    tracked = [p for p in tracked if p]
+    stamp_set = set(audit.nt0019_stamp_set())
+
+    # 1. Every tracked file under docs/ — RFC §4's "every file under `docs/`". This is
+    #    the clause that carries all 62 non-markdown exemptions; if it narrows to `*.md`
+    #    the register silently becomes a list of three.
+    docs = {p for p in tracked if p.startswith("docs/")}
+    assert docs
+    assert docs <= stamp_set
+
+    # 2. The three `.claude/` roots, each named separately: a single "some .claude file
+    #    is present" assertion passes while two of the three globs are broken.
+    for prefix in (".claude/roles/", ".claude/agents/"):
+        members = {p for p in tracked if p.startswith(prefix)}
+        assert members, prefix
+        assert members <= stamp_set, prefix
+    manifests = {
+        p for p in tracked
+        if p.startswith(".claude/skills/") and p.endswith("/SKILL.md") and p.count("/") == 3
+    }
+    assert manifests
+    assert manifests <= stamp_set
+
+    # 3. Every tracked README.md, wherever it lives — the clause derived from what §5.2
+    #    reaches rather than from the RFC's table of six, which omits
+    #    `.claude/notes/README.md`.
+    readmes = {p for p in tracked if p.rsplit("/", 1)[-1] == "README.md"}
+    assert readmes
+    assert readmes <= stamp_set
+
+    # 4. Nothing untracked leaks in. The corpus is `git ls-files`, never a working-tree
+    #    walk: a walk picks up `.venv/` and `graphify-out/`, which differ between two
+    #    checkouts of the same commit (`scripts/doc-id.py` records the measurement).
+    assert stamp_set <= set(tracked)
+
+    # 5. The set is exactly its four clauses — no fifth source, no accidental widening.
+    assert stamp_set == docs | manifests | readmes | {
+        p for p in tracked if p.startswith((".claude/roles/", ".claude/agents/"))
+    }
+
+
+def test_f83_reconciliation_reds_when_the_corpus_cannot_be_read(
+    audit: types.ModuleType,
+) -> None:
+    """`audit-docs.py`'s first git dependency, failing.
+
+    The dangerous shape is not a traceback, it is a *pass*: an unreadable corpus yields
+    zero unstampable files, which reconciles against any register as cleanly as a
+    perfectly correct one. So the failure has to be raised, not inferred from emptiness.
+    """
+    def boom() -> list[str]:
+        raise RuntimeError("could not invoke git: [Errno 2] No such file or directory")
+
+    setattr(audit, "nt0019_stamp_set", boom)  # noqa: B010
+    failures = _run_check_35(audit)
+    assert len(failures) == 1, failures
+    assert "cannot enumerate NT-0019's stamp set" in failures[0]
+    assert "could not invoke git" in failures[0]
+
+
+# =========================================================================================
+# Check 35, third clause — F83 condition 2 over the ENFORCED scope, proven by simulating
+# W37-6's widened `_ID_SCOPE_ROOTS` rather than waiting for it.
+#
+# A check that is vacuous today and first executes inside the irreversible commit is the
+# hazard this slice exists to remove: printing a zero keeps it from reading as an
+# invisible zero, and is not the same as having run it. `.claude/skills/python-test`
+# §"a discovery call is a claim; simulate the pending change".
+# =========================================================================================
+
+#: NT-0019 §1.11 check 30's own words for the post-migration scope: "every file under
+#: `docs/`, every charter, skill and agent".
+def _widened_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
+    return (
+        audit.ROOT,
+        audit.REPO / ".claude" / "roles",
+        audit.REPO / ".claude" / "skills",
+        audit.REPO / ".claude" / "agents",
+    )
+
+
+def _post_migration_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
+    """The widened scope as it stands *after* the migration: everything stampable
+    stamped, leaving only the files that cannot be.
+
+    `_id_scope_documents` yields a *file* root verbatim — only *directory* roots go
+    through its markdown glob — so a tuple of file paths models an arbitrary scope
+    exactly. That is the whole reason this simulation is possible without a fixture tree.
+    """
+    registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
+    roots: list[pathlib.Path] = []
+    for rel in audit.nt0019_stamp_set():
+        path = audit.REPO / rel
+        try:
+            header = audit._docid.parse_header(path)
+        except audit._docid.HeaderError:
+            header = None
+        if header is not None or (rel in registered and rel.endswith(".md")):
+            roots.append(path)
+    return tuple(roots)
+
+
+def test_scope_clause_reds_from_inside_the_migration_commit(
+    audit: types.ModuleType,
+) -> None:
+    """D14's "enforcement red from the migration PR", proven now rather than discovered
+    then. Widen the roots without stamping anything and clause (b) must red in bulk — a
+    green here would mean the clause cannot see the migration it exists to gate.
+    """
+    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
+    audit.failures.clear()
+    unstamped = audit._check_scope_unstamped_are_registered()
+    assert unstamped > 300, unstamped
+    assert len(audit.failures) > 300, len(audit.failures)
+
+
+def test_scope_clause_is_green_once_the_migration_has_stamped_everything(
+    audit: types.ModuleType,
+) -> None:
+    """The state W37-6 has to reach: the only unstamped files left in the enforced scope
+    are the ones the register accounts for. The positive control for the test below.
+    """
+    setattr(audit, "_ID_SCOPE_ROOTS", _post_migration_roots(audit))  # noqa: B010
+    audit.failures.clear()
+    unstamped = audit._check_scope_unstamped_are_registered()
+    assert unstamped == 3, unstamped  # the three vendored manifests, and only those
+    assert audit.failures == []
+
+
+def test_scope_clause_reds_by_name_on_an_unregistered_unstamped_file_in_scope(
+    audit: types.ModuleType,
+) -> None:
+    """F83's falsifiable clause under the scope it was written for. Identical input to
+    the test above but for one register entry, so the difference in outcome is
+    attributable to the register and to nothing else.
+    """
+    dropped = ".claude/skills/vue-best-practices/SKILL.md"
+    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != dropped)
+    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1, dropped
+    setattr(audit, "_ID_SCOPE_ROOTS", _post_migration_roots(audit))  # noqa: B010
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", kept)  # noqa: B010
+    audit.failures.clear()
+    audit._check_scope_unstamped_are_registered()
+    assert len(audit.failures) == 1, audit.failures
+    assert dropped in audit.failures[0]
+    assert "not in the F83 exemption register" in audit.failures[0]
+
+
+def test_widening_the_scope_roots_alone_reaches_no_non_markdown_file(
+    audit: types.ModuleType,
+) -> None:
+    """**The selector, not the asserts.** `_id_scope_documents` walks a directory root
+    with `rglob("*.md")`, so widening `_ID_SCOPE_ROOTS` brings in no non-markdown file at
+    all: of the 65 files on the register, a fully widened scope reaches **3** — the
+    vendored manifests — and none of the 62 non-`.md` files the register mostly consists
+    of.
+
+    This is why the register is reconciled against NT-0019's stamp set by
+    `_check_unstampable_register`, where those 62 are reachable, and not here. Pinned as
+    a measurement because the natural assumption — that widening the roots widens the
+    scope — is false, and W37-6 will be written by someone holding that assumption
+    unless a test contradicts it.
+    """
+    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
+    rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
+    assert rels, "the widened scope collected nothing at all — the simulation is broken"
+    assert not [r for r in rels if not r.endswith(".md")]
+
+    registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
+    reached = registered & rels
+    assert reached == {
+        ".claude/skills/create-adaptable-composable/SKILL.md",
+        ".claude/skills/planning-with-files/SKILL.md",
+        ".claude/skills/vue-best-practices/SKILL.md",
+    }, sorted(reached)
+
+
+def test_check_35_owner_clause_is_a_no_op_for_every_registered_file(
+    audit: types.ModuleType,
+) -> None:
+    """Check 35's *owner* clause cannot fire on any of the 65, which is why F83's
+    disposition ("a `generated: true` exemption in check 35") is a no-op on its own and
+    the register had to bring its own enforcement.
+
+    `check_owner` skips on `header is None` **and** on `HeaderError`, so this covers the
+    three unparseable manifests as well as the 62 headerless files — the wider claim, and
+    the true one.
+    """
+    for entry in audit.UNSTAMPABLE_EXEMPTIONS:
+        path = audit.REPO / entry.path
+        try:
+            header = audit._docid.parse_header(path)
+        except audit._docid.HeaderError:
+            continue  # check_owner's own `except ... : continue`
+        assert header is None, entry.path  # check_owner's own `if header is None`
