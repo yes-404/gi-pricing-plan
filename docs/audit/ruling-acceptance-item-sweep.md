@@ -194,6 +194,10 @@ sweep was asked to use has no slot for "tests, but proves the wrong thing":
   heading-only sweep misses. Register **F32**, confirmed verbatim: *"Only Ruling 16's
   acceptance item 1 is withdrawn; item 2 (the degraded read) stands."*
 
+**Forward pointer, added 2026-09-02 alongside §11.** This section names the shape; §11 is
+where it is dated and given a name — the seventh class, `WITHDRAWN`, on the maintainer's
+ruling of 2026-09-02. The observation here precedes its own classification there.
+
 ## 5. Class counts
 
 Mechanically verified against the CSV (`cut -d, -f3 ruling-acceptance-item-sweep-5c0d24d.csv |
