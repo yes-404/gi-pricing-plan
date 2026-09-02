@@ -1,8 +1,11 @@
 # W37-6 — the migration run: leaf plan, superseding
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `subagent-driven-development`. **This plan is
-> `status: draft` and must not be executed.** §2 carries one blocking decision row with no
-> resolver id; `document-ids.md` §1.7 permits `active` only when every blocking row has one.
+> `status: active`.** It was filed `draft` with one blocking decision row open; Ruling 88
+> resolved it on 2026-09-02, and `document-ids.md` §1.7's freeze condition — *"`status: active`
+> is permitted only when every blocking row has a resolver id"* — is now met. **Execution still
+> waits on the maintainer's dated go-ahead** (§4), which is a separate gate this plan does not
+> open.
 
 **Supersedes:**
 [`2026-09-02-w37-6-migration-run-leaf-plan.md`](2026-09-02-w37-6-migration-run-leaf-plan.md),
@@ -17,9 +20,12 @@ fanned out. What changes is the acceptance standard, the dependency model, and t
 
 **Spec:** [`../notes/0019-one-id-per-document.md`](../notes/0019-one-id-per-document.md).
 
-**Tree:** every figure in §4 was produced by running its own command at **`cc17404`**, in the
-session that wrote this file, with `HEAD` stamped before and after the measurement. **No figure
-is inherited from the superseded plan**, and none is re-used from an earlier pin.
+**Tree:** every figure in §4 was re-derived at **`958cb7d`** when the draft was lifted, with
+`HEAD` stamped before and after the measurement, and the legacy-form sweep run through the
+shipped `LEGACY_FORM_PATTERNS` constant rather than a re-typed copy. **No figure is inherited
+from the superseded plan**, and none is re-used from an earlier pin. **One more pass is owed at
+the ask** — the maintainer's condition 6 is a property of the day the go-ahead is requested, not
+of this document, and §4.2a is the evidence that the difference is not academic.
 
 ## Acceptance Standard
 
@@ -101,24 +107,35 @@ match the real tree. §3 has no row for a dependency that lands and is wrong. §
 rewritten for that case.
 
 **1.3 Its §4 figures are pinned at `39ee30c`**, and Ruling 66 §3 requires the disclosure to
-arrive **with** the ask. The tracked count has moved from 1447 to **1493** since that pin —
-across a single session. §4 below is re-derived in full at `cc17404`.
+arrive **with** the ask. The tracked count has moved from 1447 to **1495** since that pin —
+across a single session. §4 below is re-derived in full at `958cb7d`.
 
 ---
 
-## 2. Decision points — one blocking row, no resolver yet
+## 2. Decision points — both resolved
 
 `document-ids.md` §1.7: *"**Freeze is mechanical:** `status: active` is permitted only when
 every blocking row has a resolver id and every non-blocking row names a step."*
 
 | # | Question | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|
-| DP-A | Which family and `kind:` the `Pending proposals` container takes, and therefore what `_discover_plan_reviews` emits besides `CR-` records | decision point → decision-maker, one `RL-` | **Yes** | **Open.** Derived in [`2026-09-02-w37-pending-proposals-container-family-derivation.md`](2026-09-02-w37-pending-proposals-container-family-derivation.md), recommending `RFC- kind: process`; with the decision-maker |
+| DP-A | Which family and `kind:` the `Pending proposals` container takes, and therefore what `_discover_plan_reviews` emits besides `CR-` records | decision point → decision-maker, one `RL-` | **Yes** | **Ruling 88**, 2026-09-02 ([`2026-09-02-w37-container-family-and-line-citations-rulings.md`](2026-09-02-w37-container-family-and-line-citations-rulings.md)) — `RFC-`, `kind: process`, `status: closed`, `created: 2026-08-29`, `was:` `docs/audit/plan-reviews.md`, its own record. **`owner: maintainer`, against the derivation's recommendation of `planner`** |
 | DP-B | Where the fourteen line-number citations into the two split files are placed — a ruling, a W37-5b precondition, or a go-ahead disclosure | scope → the lead, routed to the decision-maker | No | The lead has routed it. Until placed, this plan states the property and no task builds against it (§5.3) |
 
-**This plan is `status: draft` until DP-A carries a resolver id.** That is not a delay this
-document invents; it is the standard's own freeze condition, and writing `active` over an open
-blocking row is the defect the condition exists to catch.
+**DP-A carried the freeze**, and Ruling 88 discharged it. Two things about that ruling bind
+§6.1 and are recorded here rather than left in the ruling alone:
+
+- **`owner:` is `maintainer`, not `planner`.** §1.6's `RFC` row reads *"maintainer mints and
+  owns; any role drafts on instruction; lead assesses"*, and its column is **"Owner — creates &
+  amends"**, not *author*. The derivation recommended `planner` and was wrong on this;
+  `owner: planner` would have been the only `RFC-` in the corpus contradicting §1.6, with
+  nothing to catch it because `check_owner` tests only membership.
+- **Ruling 88 amended Ruling 82's fourth constraint** — three citations of the container, not
+  two — and the third is what decided the placement.
+
+**Whether `owner:` follows §1.6's family table or the historical author is a general question
+this plan does not answer.** It is routed to the planner as a separate derivation and is not a
+dependency of this slice: Ruling 88 settled the container on the container's facts.
 
 ---
 
@@ -171,15 +188,15 @@ fields.
 
 ### 4.2 The size, by area rather than as one total
 
-**1493 tracked files at `cc17404`.** Broken down by what the migration does to each.
+**1495 tracked files at `958cb7d`.** Broken down by what the migration does to each.
 
 | The migration… | Files | Which |
 |---|---|---|
-| **rewrites a citation token in** | **952** | Every file matching NT-0019 §7 (d)'s pattern, measured through the shipped `LEGACY_FORM_PATTERNS` constant rather than a re-typed copy; 21 386 matching lines, 28 976 token hits. By tree: `docs/` 313 · `backend/` 217 · `frontend/` 143 · `packages/` 135 · `.claude/` 54 · `tests/` 53 · `scripts/` 19 · 7 root files · `examples/` 6 · `.github/` 3 · `deploy/` 2 |
-| **stamps a header on** | **311** | 250 `.md` under `docs/` (263 less the 13 templates, exempt by path) + 46 `SKILL.md` + 8 agent files + 7 role charters. Overlaps the 952 |
-| **moves, splits or deletes** | **229** | `docs/audit/` 46 · `docs/plans/` 144 · `docs/notes/` 20 · `.claude/notes/` 19, **plus 87 ruling headings split out of 35 of the plans** |
+| **rewrites a citation token in** | **954** | Every file matching NT-0019 §7 (d)'s pattern, measured through the shipped `LEGACY_FORM_PATTERNS` constant rather than a re-typed copy; 21 500 matching lines, 29 106 token hits. By tree: `docs/` 315 · `backend/` 217 · `frontend/` 143 · `packages/` 135 · `.claude/` 54 · `tests/` 53 · `scripts/` 19 · 7 root files · `examples/` 6 · `.github/` 3 · `deploy/` 2 |
+| **stamps a header on** | **313** | 252 `.md` under `docs/` (265 less the 13 templates, exempt by path) + 46 `SKILL.md` + 8 agent files + 7 role charters. Overlaps the 954 |
+| **moves, splits or deletes** | **231** | `docs/audit/` 46 · `docs/plans/` 146 · `docs/notes/` 20 · `.claude/notes/` 19, **plus 89 ruling headings split out of 36 of the plans** |
 | **regenerates, never hand-edits** | **61** | `docs/contracts/`, rebuilt from `model-schema` then drift-checked |
-| **does not touch at all** | **541** | 1493 − 952 |
+| **does not touch at all** | **541** | 1495 − 954 |
 | **must leave unchanged, by rule** | — | Files carrying a `VR-` catalogue id: **43 distinct ids**. D5 and G5 put these permanently out of scope; acceptance item (f) is the check |
 
 **Two figures, and the verb on each is corrected from the superseded plan.**
@@ -187,7 +204,7 @@ fields.
 - **673 requirement ids are renumbered** — not 710. The 710 figure is reproducible and is the
   count of *distinct requirement-family id tokens*, which the superseded §5.1 correctly labelled
   as such. Its §4.2 then said those 710 *"are renumbered"*, and **41 of them were `VR-` ids the
-  same table guarantees untouched**. At `cc17404` the renumbered population is **673** and the
+  same table guarantees untouched**. At `958cb7d` the renumbered population is **673** and the
   `VR-` population is **43**.
 - **2446 marker citations are rewritten** — not 1988. The 1988 figure is the
   `backend`+`packages` count, and step 6 rewrites over `git ls-files`, *"nothing exempt"*. Of the
@@ -202,14 +219,17 @@ fields.
 |---|---|---|---|---|
 | `39ee30c` — the superseded plan's filing | 1447 | 930 | 109 | 72 over 29 files |
 | `59bba94` — mid-session | 1473 | 938 | 120 | 82 over 32 files |
-| **`cc17404` — this filing** | **1493** | **952** | **123** | **87 over 35 files** |
+| `cc17404` — this plan filed as draft | 1493 | 952 | 123 | 87 over 35 files |
+| **`958cb7d` — the draft lifted** | **1495** | **954** | **125** | **89 over 36 files** |
 
-Every figure re-run at its own pin with the same command, so none was ever wrong; all three aged.
+Every figure re-run at its own pin with the same command, so none was ever wrong; all four aged.
+**The last two rows are four merges apart and every column moved.**
 
 **The sharpest instance, because it is measurable and was caused by the discussion itself.** The
 `Ruling A<n>` token population stood at **21 across 5 files** at `b648c22` this morning. At
-`cc17404` it is **43 across 7 files** — and every one of the 22 new tokens is in a document
-written *about* the A-series: a derivation, a ruling record, and an obligations list. **A
+`cc17404` it was **43 across 7**, and at `958cb7d` it is **44 across 8** — every one of the 23
+new tokens in a document written *about* the A-series: two derivations, two ruling records, and
+an obligations list. **A
 governed corpus grows by being governed.** It is the same mechanism §5.3 of the obligations list
 measured on the `VR-DST-1` baseline, and it is the reason the figures above carry their tree in
 every row.
@@ -284,8 +304,8 @@ the Work close**, which is a separate dated line under `CLAUDE.md` §12.
 Each is stated as a property rather than a count, because a count is stale before it merges —
 including the count of risks, which is why this sentence no longer carries one.
 
-**5.1 Checks 30-39 meet a corpus for the first time inside this commit.** Measured at
-`cc17404`: four of the ten examine exactly one document — the same one — and six examine zero.
+**5.1 Checks 30-39 meet a corpus for the first time inside this commit.** Re-measured at
+`958cb7d`, unchanged across every pin this plan has been written at: four of the ten examine exactly one document — the same one — and six examine zero.
 W37-4's ten broken-input proofs exercise each check on a fixture, which is the right proof that
 a check can fail; it is not the same as running over the whole tree. **A large first-run failure
 list inside this PR is the expected case, not a sign something went wrong, and nobody narrows a
@@ -369,17 +389,44 @@ nine exclusions), §7 (the thirteen-task list), §8 (the three W37-4 deferrals),
 finding F68) and §10 (the sixteen findings). Where a figure in those sections is quoted, **§4
 above supersedes it**; where a method is described, the method stands.
 
-**Held until DP-A carries a resolver id:**
+### 6.1 The plan-review split — the task text DP-A was holding
 
-| Held | Why | What unblocks it |
+`docs/audit/plan-reviews.md` yields **twelve records**, not eleven, and the twelfth is not a
+review.
+
+| Output | Count | Fields |
 |---|---|---|
-| The plan-review split's task text | Its output set depends on the container's family | DP-A ruled |
-| The final figure pass | Every figure re-derived at the tree the run files against, per the maintainer's condition 6 | Immediately before the ask |
-| The `status: active` line | `document-ids.md` §1.7's mechanical freeze condition | DP-A ruled |
+| `CR-`, `kind: review` | 11 | one per `Plan review N` heading; `created:` each review's own date; `owner: planner`; `status: active` |
+| `RFC-`, `kind: process` | 1 | the `Pending proposals` container, lines 1155-1232; `created: 2026-08-29`; **`owner: maintainer`**; `status: closed`; `was:` `docs/audit/plan-reviews.md` |
 
-**A held item is named, not guessed.** An executor who finds one of these already answered
-records the answer; one who finds it answered *differently* files a finding against this plan
-rather than adapting silently.
+**Four properties the executor asserts, each a violation that must become detectable.**
+
+1. **Twelve records, and the twelfth is the container.** *Violation: eleven records, or a
+   twelfth of any family other than `RFC-`.* The `$`-anchor fix landed in `#602` and
+   `_discover_plan_reviews` now returns 11; the container is the addition this ruling requires.
+2. **The three `###` headings inside the container stay body.** Ruling 82 item 2 forbids
+   widening the review pattern to reach them at any heading level. *Violation: a `CR- kind:
+   review` minted from `Candidate A`, `Candidate B` or `Also carried`, or any of the three
+   dropped* — which is also the standing acceptance item in
+   [`2026-09-02-w37-6-twelve-non-close-records-derivation.md`](2026-09-02-w37-6-twelve-non-close-records-derivation.md),
+   satisfied in both directions at once because the section containing them becomes one record.
+3. **The section is closed at the next record heading, never at the next `##`.** The file
+   contains exactly one level-2 heading (§5.2), so a rule reading to the next `##` consumes the
+   rest of the document. *Violation: a container record whose body contains a `Plan review`
+   heading.*
+4. **All three citations of the container resolve, and 2645 keeps its attribution.** Lines 1994
+   and 2121 are Plan review 9's; **line 2645 is Plan review 11's**, and it cites the container
+   as a normative source — *"the 'Pending proposals' section's own rule"*. *Violations: any of
+   the three unresolved after the rewrite; or 2645 resolving to the `CR-` minted from Plan
+   review 9.* The phrase *"both above in this document"* at 2121 becomes false under any
+   placement and is replaced, not merely re-pointed.
+
+### 6.2 Still owed at the ask, and it is not held by anything here
+
+**One more figure pass**, at the tree the go-ahead is requested against. The maintainer's
+condition 6 is a property of that day, not of this document, and §4.2a measures why: four
+merges moved every column. *Violation: a disclosure quoting a figure from a tree other than the
+one the run will start from.*
 
 ---
 
@@ -392,7 +439,7 @@ rather than adapting silently.
 NT-0019 §1.5 reads: *"A vendored skill (`planning-with-files`, `ui-ux-pro-max`, `graphify`,
 `systematic-debugging`, the `vue-*` skills — anything shipping its own `LICENSE`) …"*
 
-Measured at `cc17404`, of the 46 skill directories exactly **two** carry their own `LICENSE`:
+Measured at `958cb7d`, of the 46 skill directories exactly **two** carry their own `LICENSE`:
 **`planning-with-files` and `ui-ux-pro-max`** — and both are **named in the parenthesis, first
 and second**.
 
@@ -432,5 +479,6 @@ records why it briefly looked otherwise.
 - **A second §7 entry was drafted and removed before filing**, because Ruling 69 §2 part 2
   had already ruled the mechanism it proposed to clarify. §5.4 carries what that episode
   actually showed, which is about docstrings rather than about row 9.
-- **No acceptance line, and `status: draft`.** DP-A is open; §1.7 makes `active` unavailable, and
-  the maintainer's go-ahead is theirs alone.
+- **No acceptance line.** `status: active` records that the plan's own blocking row is
+  resolved, and nothing more. **The maintainer's go-ahead is a separate gate and is not given**;
+  §6.2 states what is still owed before it is asked for.
