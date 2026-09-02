@@ -2328,11 +2328,18 @@ _STAMP_SKIP_WITH_SLICE = 'elif key in ("slice", "deliverable", "lands_in", "trig
 _STAMP_SKIP_WITHOUT_SLICE = 'elif key in ("deliverable", "lands_in", "trigger"):'
 
 
-def _module_with_source_mutation(
-    tmp_path: pathlib.Path, old: str, new: str, *, name: str
+def _module_with_source_mutations(
+    tmp_path: pathlib.Path, mutations: Sequence[tuple[str, str]], *, name: str
 ) -> types.ModuleType:
-    """`scripts/doc-id.py` exactly as shipped with one substring replaced, loaded as its
-    own module rooted at `tmp_path/name` so its `REPO_ROOT` is that scratch tree.
+    """`scripts/doc-id.py` exactly as shipped with each `(old, new)` substring replaced,
+    loaded as its own module rooted at `tmp_path/name` so its `REPO_ROOT` is that scratch
+    tree.
+
+    Several substitutions rather than one because a carrier can have more than one writer:
+    the A-series file is claimed by `_discover_plain_plans` today and by
+    `_discover_multi_ruling_files` once F81's heading widening lands, and a mutation proof
+    that edits only today's writer stops proving anything the day the other one takes over
+    — silently if the surviving writer still supplies the carrier.
 
     `docs/_templates/` is copied in because `_stamp_header` reads the template block
     through `REPO_ROOT` rather than through the `root` it writes to -- the placeholder
@@ -2348,14 +2355,16 @@ def _module_with_source_mutation(
     import shutil
 
     source = DOC_ID_SCRIPT_PATH.read_text(encoding="utf-8")
-    assert source.count(old) == 1, (
-        f"the line this mutation edits occurs {source.count(old)} time(s) in "
-        f"{DOC_ID_SCRIPT_PATH.name}, not once -- re-derive the mutation from the rule it "
-        "proves rather than loosening the match"
-    )
+    for old, new in mutations:
+        assert source.count(old) == 1, (
+            f"the line this mutation edits occurs {source.count(old)} time(s) in "
+            f"{DOC_ID_SCRIPT_PATH.name}, not once -- re-derive the mutation from the rule "
+            "it proves rather than loosening the match"
+        )
+        source = source.replace(old, new, 1)
     root = tmp_path / name
     (root / "scripts").mkdir(parents=True)
-    (root / "scripts" / "doc-id.py").write_text(source.replace(old, new, 1), encoding="utf-8")
+    (root / "scripts" / "doc-id.py").write_text(source, encoding="utf-8")
     shutil.copytree(ROOT / "docs" / "_templates", root / "docs" / "_templates")
     return _load_by_path(
         f"_doc_id_mutation_{name}",
@@ -2446,8 +2455,8 @@ def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
     well-formed id at all, which is why `_resolves_to_row` rejects it rather than looking
     it up.
     """
-    mutated = _module_with_source_mutation(
-        tmp_path, _STAMP_SKIP_WITH_SLICE, _STAMP_SKIP_WITHOUT_SLICE, name="stamp-skip"
+    mutated = _module_with_source_mutations(
+        tmp_path, ((_STAMP_SKIP_WITH_SLICE, _STAMP_SKIP_WITHOUT_SLICE),), name="stamp-skip"
     )
     mutated_tree = tmp_path / "mutated-tree"
     ledgers = _emit_the_real_w5_ledgers(mutated, mutated_tree, resolve_work=True)
@@ -2630,7 +2639,10 @@ def test_cmd_migrate_prints_the_ledger_axis_counts_including_the_zeros(
 # So the re-derived instrument checks the two carriers Ruling 95 names, by execution, over
 # the real file -- and is written over `was:`/body content rather than over today's family,
 # so that it keeps meaning the same thing when the heading widening lands and the draft
-# becomes three `RL-`s instead of one `PL-`.
+# becomes three `RL-`s instead of one `PL-`. Reason 2 above is why that is not optional:
+# the widening is F81, in this same slice, so an instrument bound to today's family would
+# have been a red build within days rather than a check. Both the selector
+# (`_a_series_drafts`) and the mutation proof reach both writers for that reason.
 #
 # Deliberately not an assertion about `owner:` at all: post-Ruling-95 `_ruling_file_owner`
 # is content-independent, so any owner assertion over these files returns the same value
@@ -2647,15 +2659,43 @@ _A_SERIES_GRANT = (
 )
 _A_SERIES_TOKENS = ("Ruling A1", "Ruling A2", "Ruling A3")
 
-_PLAIN_PLAN_WAS = "old_token=None, was=path.relative_to(root).as_posix(),"
-_PLAIN_PLAN_WAS_DROPPED = "old_token=None, was=None,"
-_PLAIN_PLAN_BODY = r'body=text.rstrip("\n") + "\n",'
-_PLAIN_PLAN_BODY_TRUNCATED = r'body=title + "\n",'
+# Both writers that can claim this file, mutated together — see
+# `_module_with_source_mutations`. `_discover_plain_plans` claims it today;
+# `_discover_multi_ruling_files` claims it once F81 widens `_RULING_HEADING_RE`, because
+# `_discover_plain_plans` skips any file that regex matches.
+_SPLIT_RULING_DRAFT = 'old_token=f"Ruling {number_word}", was=rel, body=section_text,'
+
+_WAS_DROPPED = (
+    ("old_token=None, was=path.relative_to(root).as_posix(),", "old_token=None, was=None,"),
+    (_SPLIT_RULING_DRAFT, 'old_token=f"Ruling {number_word}", was=None, body=section_text,'),
+)
+_BODY_DROPPED = (
+    (r'body=text.rstrip("\n") + "\n",', r'body=title + "\n",'),
+    (_SPLIT_RULING_DRAFT, 'old_token=f"Ruling {number_word}", was=rel, body="",'),
+)
 
 
-def _a_series_draft(module: types.ModuleType) -> Any:
-    drafts = [d for d in module._discover_plain_plans(ROOT) if d.was == _A_SERIES_SOURCE]
-    return drafts[0] if len(drafts) == 1 else None
+def _a_series_drafts(module: types.ModuleType) -> list[Any]:
+    """Every draft the migration derives from the A-series source, across *both* discovery
+    functions that can claim it — one `PL-` today, three `RL-` (plus any residual) once
+    F81's letter-suffixed heading widening lands.
+
+    Gathering across both is the point, and it is the same defensive move as writing the
+    assertions over `was:`/body rather than over `owner:`, applied one level up. Ruling 86
+    §4 item 3's property is about a record's authorship trail, not about which family
+    carries it, so a *selector* bound to today's family is as brittle as an assertion bound
+    to it would be: `_discover_plain_plans` skips any file `_RULING_HEADING_RE` matches, so
+    on the day F81 widens that regex a family-bound selector reds — a red build with a
+    docstring, not a guard.
+    """
+    return [
+        d
+        for d in (
+            *module._discover_plain_plans(ROOT),
+            *module._discover_multi_ruling_files(ROOT),
+        )
+        if d.was == _A_SERIES_SOURCE
+    ]
 
 
 def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
@@ -2663,74 +2703,72 @@ def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
 ) -> None:
     """Ruling 86 §4 item 3's re-derived instrument (see the block comment above).
 
-    Two assertions, in the order the reasoning runs.
+    Both carriers Ruling 95 §2 names for the attribution property survive whatever drafts
+    the migration derives from the A-series source: every one of them still points `was:`
+    at that file, and between them they still carry the delegation heading, the grant it
+    was made under, and all three `Ruling A<n>` tokens.
 
-    First, that item 3's stated subject genuinely does not exist -- no `RL-` draft is
-    produced for the A-series source. This is a fixture assumption with teeth: if it ever
-    fires, Ruling 86 §3 item 1's heading widening has landed, the three `RL-` records the
-    item names now exist, and this instrument must be re-derived against them rather than
-    silenced.
+    **Asserted over the union of the drafts, and over no count**, so that F81's landing
+    neither reds it nor weakens it. Today that union is one `PL-`; after F81 it is three
+    `RL-` (plus any residual), and it still has to carry the same text -- Ruling 68 class 4
+    already requires the concatenation of every split output to reproduce the source's own
+    body lines in order, so a split that dropped the delegation preamble would violate that
+    invariant *and* lose the attribution this item protects. The union is where those two
+    meet, which is why it is the right thing to assert over rather than merely a tolerant
+    one.
 
-    Second, that the two carriers Ruling 95 §2 names for the attribution property both
-    survive whatever draft the migration does produce: `was:` still points at the source
-    file, and the body still carries the delegation heading, the grant it was made under,
-    and all three `Ruling A<n>` tokens.
-
-    Proven non-vacuous by two mutations of `_discover_plain_plans` against the real corpus,
-    in the test below -- not by inspection.
+    Proven non-vacuous by two mutations against the real corpus, in the test below -- each
+    dropping one carrier from *both* writers that can produce these drafts, so the proof
+    does not expire when the other writer takes over.
     """
-    claimed_as_rulings = [
-        d for d in doc_id_cli._discover_multi_ruling_files(ROOT) if d.was == _A_SERIES_SOURCE
-    ]
-    assert not claimed_as_rulings, (
-        "_discover_multi_ruling_files now emits a draft for the A-series source: Ruling 86 "
-        "§3 item 1's two-axis heading widening has landed, so re-derive this instrument "
-        "against the three RL- records item 3 actually names -- do not delete this "
-        "assertion"
+    drafts = _a_series_drafts(doc_id_cli)
+    assert drafts, (
+        f"fixture assumption: some discovery function still derives a draft from "
+        f"{_A_SERIES_SOURCE} -- if neither does, the file has left the migration's reach "
+        "and this instrument needs re-deriving, not deleting"
     )
+    assert all(d.was == _A_SERIES_SOURCE for d in drafts), [d.was for d in drafts]
 
-    draft = _a_series_draft(doc_id_cli)
-    assert draft is not None, (
-        f"fixture assumption: exactly one plain-plan draft still carries "
-        f"was: {_A_SERIES_SOURCE}"
-    )
-    assert draft.was == _A_SERIES_SOURCE
-    assert "The delegation" in draft.body, "the body no longer states the delegation"
-    assert _A_SERIES_GRANT in draft.body, "the body no longer states the grant it was under"
+    bodies = "\n".join(d.body for d in drafts)
+    assert "The delegation" in bodies, "the drafts no longer state the delegation"
+    assert _A_SERIES_GRANT in bodies, "the drafts no longer state the grant it was under"
     for token in _A_SERIES_TOKENS:
-        assert token in draft.body, f"the body no longer carries {token}"
+        assert token in bodies, f"the drafts no longer carry {token}"
 
 
 def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
     tmp_path: pathlib.Path,
 ) -> None:
-    """The non-vacuity proof for the instrument above: two one-line mutations of the
-    producer, each removing exactly one of the two carriers Ruling 95 §2 names, both run
-    against the real `docs/plans/` corpus.
+    """The non-vacuity proof for the instrument above: two mutations of the producer, each
+    removing exactly one of the two carriers Ruling 95 §2 names, both run against the real
+    `docs/plans/` corpus.
 
-    `was: None` is the sharper of the two -- the draft stops being findable by its source
-    path at all, which is the machine-readable half of the trail. Truncating the body to
-    its title leaves `was:` intact and destroys the human-readable half: the record no
-    longer says who ruled it or under what grant.
+    `was: None` is the sharper of the two -- the drafts stop being findable by their source
+    path at all, which is the machine-readable half of the trail. Emptying the body leaves
+    `was:` intact and destroys the human-readable half: the record no longer says who ruled
+    it or under what grant.
+
+    Each mutation edits **both** writers that can claim this file, not just the one that
+    claims it today. A proof aimed only at `_discover_plain_plans` would stop proving
+    anything the moment F81 hands the file to `_discover_multi_ruling_files` -- and would
+    do it *silently*, since the surviving writer would keep supplying the carrier and the
+    mutated module would look indistinguishable from the shipped one.
 
     Neither mutation is a fixture document, for the same reason Ruling 94 gave for the
     `slice:` item: the thing under test is a writer, and the deliberately broken input for
     a writer is the writer.
     """
-    without_was = _module_with_source_mutation(
-        tmp_path, _PLAIN_PLAN_WAS, _PLAIN_PLAN_WAS_DROPPED, name="plan-was"
-    )
-    assert _a_series_draft(without_was) is None, (
-        "dropping `was:` left the A-series draft still findable by its source path -- the "
+    without_was = _module_with_source_mutations(tmp_path, _WAS_DROPPED, name="plan-was")
+    assert not _a_series_drafts(without_was), (
+        "dropping `was:` left an A-series draft still findable by its source path -- the "
         "instrument above is not testing the carrier it claims to test"
     )
 
-    without_body = _module_with_source_mutation(
-        tmp_path, _PLAIN_PLAN_BODY, _PLAIN_PLAN_BODY_TRUNCATED, name="plan-body"
-    )
-    truncated = _a_series_draft(without_body)
-    assert truncated is not None, "the body mutation must not also break `was:`"
-    assert _A_SERIES_GRANT not in truncated.body, (
+    without_body = _module_with_source_mutations(tmp_path, _BODY_DROPPED, name="plan-body")
+    emptied = _a_series_drafts(without_body)
+    assert emptied, "the body mutation must not also break `was:`"
+    bodies = "\n".join(d.body for d in emptied)
+    assert _A_SERIES_GRANT not in bodies, (
         "the body mutation did not remove the grant statement -- re-derive it"
     )
-    assert not any(token in truncated.body for token in _A_SERIES_TOKENS), truncated.body
+    assert not any(token in bodies for token in _A_SERIES_TOKENS), bodies
