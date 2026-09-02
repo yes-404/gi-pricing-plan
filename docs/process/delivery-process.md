@@ -361,6 +361,27 @@ to avoid, so the numbering is this date's act).
 - **Rule 9 — a correction is checked by a differently-shaped probe than the one that found
   the original** (pilot finding P12, folded in by review 11 and numbered here at acceptance).
   Never by re-reading the passage just edited.
+- **Rule 10 — a branch open when a ruling merges is re-read against it before the branch
+  itself merges** (added 2026-09-02, the lead's own decision routed by §7 of
+  `docs/plans/2026-09-02-w37-6-leaf-plan-findings-rulings.md`; the mechanism is Ruling 76 §2
+  there — a different provenance from Rules 1-9's 2026-08-29 batch and 2026-09-01 numbering,
+  recorded so the two are not conflated). CI gates a branch's own diff; nothing re-checks it
+  against a ruling that lands on `main` while the branch sits open, so a branch can pass every
+  check and still ship a rule its own author never saw superseded. **Two slices, thirty-five
+  minutes apart, the same night — not one accident of timing** (Ruling 76 §1 there): Ruling 69
+  rejected keying the vendored-skill set on `LICENSE` presence at `00:30:56Z`;
+  `docs/_templates/REFERENCE.md` merged seven and a half minutes later still teaching that
+  rejected rule; `scripts/_docid.py`'s `is_vendored` merged thirty-four minutes after *that*,
+  still implementing it — on the slice Ruling 69 §3's own obligation list named **by number**.
+  **"Extend the obligation list" is not the remedy: the second slice was already on it.** What
+  was missing is not a name on a list; it is a re-read that never happened because nothing
+  asked for one.
+  **What it obliges:** before a branch merges, its author checks `docs/plans/` for any ruling
+  record landed to `main` after the branch's own merge-base, re-reads the branch's diff against
+  each one's obligations, and either fixes what it contradicts or records — on the branch, not
+  only in memory — that nothing there is touched.
+  **Violation:** a branch merges that contradicts a ruling merged to `main` after the branch's
+  merge-base, with no commit or PR text on the branch showing the ruling was checked.
 - **Messages are 50 words or fewer** (maintainer rule, 2026-08-29). A dispatch states the
   instruction and cites its artifact by path, PR number or task id; it does not carry the
   reasoning. Reasoning belongs in a task, a plan, a ruling record or a merged artifact —
