@@ -188,3 +188,73 @@ rule, which is a §1.6 reading and never depended on §5.2.
 **§4 is unaffected.** It concerns the **stamp set**, not ownership; §4 step 5 and §5.2 disagreeing
 about which files are stamped is a question about the migration's own scope, which is exactly what
 §5.2 is for.
+
+---
+
+## Dated amendment — 2026-09-02: `.claude/notes/README.md` is deleted, and §4 step 4 is what changes
+
+**The maintainer's ruling, 2026-09-02**, on a contradiction raised by W37-5c's item-2 executor:
+
+> **Deleted — §5.3 governs.** Routing decides the family (RFC #627 §1), and §5.3 routes it to
+> deletion plus a `REDIRECTS.csv` row; §5.6's blanket clause misses again as it did on the
+> fixture. The tombstone's only job is one the redirect takes over. Population stays 14.
+>
+> **Amend §4 step 4, not §5.6**: delete the stubs and `README.md`; one redirect row each. The
+> step being silent on the README is how it would survive and be stamped by accident.
+
+### The contradiction that was ruled
+
+| Section | Text | Reading |
+|---|---|---|
+| **§5.3 (`:340`)** | `` `notes/*.md` (19 stubs) + README `` → **deleted**, `REDIRECTS.csv` rows | Deleted — the only place the README's own disposition is stated |
+| **§4 step 4 (`:279`)** | *"delete the `.claude/notes/` **stubs**"* | **Silent** — and the silence is the defect |
+| **§5.6 (`:398`)** | *"every README outside `docs/` is Reference family and gets the header"* | Stamped — an unqualified universal naming no exception |
+
+**Why §5.6 loses without being amended.** It is a **blanket clause**, and this is its **second**
+known miss — the first is `tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md`,
+deliberately headerless so its own check-35 proof is not contaminated. A blanket that has missed
+twice is not repaired by adding a second carve-out to it; **routing decides the family** (§1), and
+§5.3 routes this file to deletion.
+
+**Why the lead's survival reading failed.** It rested on the file's own sentence — that it is what
+makes a frozen plan's `.claude/notes/…` citation *"still resolve to something"*. **§5.3 assigns
+exactly that job to `REDIRECTS.csv` in the same row that deletes the file**, so the stated reason
+for keeping it is discharged by the row that removes it. Raised by the executor as a counter
+before the lead ruled; the lead's reading was answered, not overruled.
+
+### What changes, and what does not
+
+**Nothing flips.** Population stays **14** — 13 stamped `README.md` plus the exempt check-35
+fixture; §4 step 5 gains **six**, one exempt, **five newly stamped**. These are this RFC's
+original figures and what `#639` already shipped, with `.claude/notes/README.md` a **declared
+exception** rather than silently outside the population.
+
+**§4 step 4 is amended and §5.6 is not.** The step's silence about the README is the mechanism by
+which it would survive and be stamped by accident, which is the failure being closed.
+
+### One correction to the amendment text, measured before writing it
+
+**The ruling's wording was "the 19 stubs and README.md", which names 20 files. There are 19.**
+At `359936b`, `git ls-tree -r --name-only 359936b -- .claude/notes/` returns **19 tracked files:
+18 numbered stubs and `README.md`.**
+
+This is **§5.3's own over-count travelling into §4** — that cell reads *"(19 stubs) + README"* and
+was already flagged as over-counting by one at
+`docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md:189`, where check 30 requires *the README
+plus exactly 18 stubs*. **Written as dictated, the amendment would encode the miscount into the
+section being fixed.** So §4 step 4 reads **18 stubs and `README.md` — 19 files, one redirect row
+each**, and the discrepancy is recorded here rather than silently normalised.
+
+### Discharge
+
+**The redirect row existing and the file not.** A citation to `.claude/notes/README.md` in a
+frozen plan resolves through `REDIRECTS.csv`, **proven on one real citation** rather than asserted.
+
+*Violation: `.claude/notes/README.md` present at the tree after W37-6 runs.*
+
+*Violation: a `.claude/notes/…` path cited by a frozen plan under `docs/plans/` with no matching
+`REDIRECTS.csv` row.*
+
+**Precondition nobody has stated: `REDIRECTS.csv` does not exist.** No tracked file matches
+`REDIRECTS` at `359936b`. W37-6 creates it, and the discharge above cannot be evaluated before it
+does — so this is a **W37-6 obligation, not a check that can pass today.**
