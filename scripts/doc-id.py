@@ -1321,19 +1321,19 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
        already applies to every legacy split file) or any heading deeper than
        `_PLAN_REVIEWS_SPLIT_LEVEL` (`####`+ -- real content today, nested inside
        several individual reviews' own "Sources"/"Proposals, consolidated" subsections);
-    3. **a declared exception** -- none exist for this file. Ruling 82 found the three
-       undated headings ("Candidate A", "Candidate B", "Also carried, and not a new
-       rule") and their `##` parent ("Pending proposals") sub-content, not records --
-       but left their POSITIVE family and `kind:` an open planner derivation (Ruling 82
-       §3 item 3; a candidate, "RFC- kind: process", was proposed in #597 but is not
-       yet ruled as of this function's own authorship), so this function has no
-       authority to invent a bucket-3 reason for them.
+    3. **a declared exception** -- none implemented for this file yet. Ruling 82 found
+       the three undated headings ("Candidate A", "Candidate B", "Also carried, and not
+       a new rule") and their `##` parent ("Pending proposals") sub-content, not
+       records. Ruling 88 has since ruled the container's family (`RFC-`,
+       `kind: process`, `status: closed`, `owner:` the maintainer) -- but a ruling is a
+       decision, not a code change: nothing in this module yet builds an `RFC-` draft
+       for it (that is separate follow-up work, not this function's), so it still has
+       no bucket-3 entry here and this function still has no authority to invent one.
 
     Anything left over is named, by line number and heading text -- never a bare count
     (Ruling 83 §3 item 4) -- and `migrate` refuses. That is today's correct outcome for
     this file, not a defect in this function: the leftover headings are exactly Ruling
-    82's `##` container and its three children, still awaiting that planner derivation
-    and a ruling on it.
+    82/88's `##` container and its three children, ruled but not yet implemented.
 
     Additive alongside the existing `_check_legacy_file_not_silently_unrecognised` call
     for this same file, not a replacement of it (Ruling 83 §1(f)): that guard still
@@ -1358,9 +1358,9 @@ def _check_plan_reviews_heading_census(root: Path) -> None:
         named = "; ".join(f"line {n} ({h!r})" for n, h in unaccounted)
         raise NotImplementedError(
             f"migrate: {path} carries heading(s) the census cannot classify as a "
-            f"record or as derived body: {named}. Their family and kind: are an open "
-            f"planner derivation (Ruling 82 §3 item 3), not migrate's to guess -- "
-            f"resolve that disposition before migrating this file."
+            f"record or as derived body: {named}. Ruling 88 ruled their disposition "
+            f"(RFC-, kind: process) but this module has no code yet that builds that "
+            f"draft -- implement that discovery before migrating this file."
         )
 
 
