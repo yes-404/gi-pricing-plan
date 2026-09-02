@@ -6,11 +6,21 @@ second is a family assignment [Ruling 78](2026-09-02-w37-6-leaf-plan-findings-ru
 reserved and the planner's derivation handed back. They are ruled below as Rulings 83 and 84.
 
 **Ruling 83's short answer is that `#585`'s approach does not generalise, and the reason is
-structural rather than a matter of effort.** `#585` widened one file's matcher and classified
-what it then caught. It installed no arithmetic, because **the denominator is still the
-matcher itself** — a census counted with the pattern you split with closes trivially and proves
-nothing. Measured live: `_RULING_HEADING_RE` misses **six** ruling headings across the corpus,
-and no count taken with that regex can ever say so.
+structural rather than a matter of effort.** `#585` did something better than it is usually
+credited with: its loop has no silent-skip branch, so every match is classified or raises, and
+the corpus supplies its own count with nothing maintained alongside it. What that cannot reach
+is the gap between the **match set** and the **unit set**, because **the denominator is still
+the matcher itself** — a census counted with the pattern you split with closes trivially and
+proves nothing. Measured live: `_RULING_HEADING_RE` misses **six** ruling headings across the
+corpus, three of them for a reason no widening would have been aimed at, and no count taken
+with that regex can ever say so.
+
+**The other half of the answer is already in the repository.** `_check_roadmap_not_silently_unrecognised`
+reads a *post-migration marker* instead of asking the legacy matcher — an independent
+denominator, exactly this ruling's principle, implemented once for one file. It is binary, so
+one `WK-` row silences it. `#585` has the arithmetic and no independent denominator; the
+roadmap guard has the independent denominator and no arithmetic. **The ruling is both halves,
+and neither is new.**
 
 **Ruling 84's short answer is that the obstacle is already gone.** The planner's derivation
 rejected `LG-` on one measured ground — that `slice:` is required and unsatisfiable — and that
@@ -21,9 +31,8 @@ nothing on its own. What it left undecided is the adoption, which Ruling 78 and 
 both reserved here. That is what Ruling 84 does, in a form one step smaller than the
 derivation's own recommendation.
 
-**Ruling numbers 81 and 82 are reserved by open PR #589**, a sibling record filed earlier the
-same day. This record does not depend on that PR merging, and if it were rejected the two
-numbers would stay spent rather than be reclaimed (`CLAUDE.md` §5).
+**Rulings 81 and 82 are the sibling record filed earlier the same day**, merged as `0e9f620`
+(PR #589) while this branch was open. 83 and 84 continue the sequence with no gap.
 
 ## Authority
 
@@ -42,8 +51,23 @@ numbers would stay spent rather than be reclaimed (`CLAUDE.md` §5).
   instruction is that it be settled before the run rather than discovered during it: *"That is
   a decision, not a code change — route it as one, so a run is not halted on it on the day."*
 - **Every figure below is measured at `ffac8ba`**, `origin/main`'s tip when this record was
-  written and re-verified as its tip immediately before the commit. The branch is cut from that
-  commit, so the measurement tree and the branch base are the same object.
+  written and the commit this branch was first cut from. **`origin/main` then advanced to
+  `59bba94` while the branch was open, and this branch is rebased onto it** — stated rather
+  than smoothed over. The two commits are PR #589 (this record's own sibling) and PR #590 (the
+  withheld go-ahead, plus a roadmap-row figure correction). `git diff --name-only ffac8ba
+  59bba94` lists three files — two new records under `docs/plans/` and `docs/roadmap.md`,
+  changed by one line. Nothing under `scripts/`, `docs/_templates/` or `docs/notes/` moved, and
+  §1(g)'s two roadmap counts re-measure to the same **41** and **30** at `59bba94`, so every
+  citation below holds at both trees. **The measurement tree stays `ffac8ba`** — that is a
+  fixed fact; which commit is `main`'s tip is not, and is why it is not restated as one below.
+- **Re-read under [`delivery-process.md`](../process/delivery-process.md) §15 Rule 10** —
+  *"a branch open when a ruling merges is re-read against that ruling before the branch itself
+  merges."* Rulings 81 and 82 merged during this branch's life and the re-read was done: Ruling
+  81's commit-boundary reasoning is applied by Ruling 83 §2 and its citation updated from an
+  open PR to the merged record; Ruling 82's plan-reviews measurement is cited in §1(d); neither
+  changes a conclusion here. PR #590 corrects the roadmap row's plan-reviews figures to the same
+  values and attributes them to *"a report"* — the section below names what that report was
+  quoting, which is the one thing it does not carry.
 - **Neither ruling edits [`NT-0019`](../notes/0019-one-id-per-document.md) §1,
   [`document-ids.md`](../process/document-ids.md), or any template.** Ruling 84 in particular
   needs no template edit, which is the respect in which it is smaller than the recommendation
@@ -61,7 +85,7 @@ carried forward with NT-0019's migration as its trigger. It is honoured here, an
 not patched from this branch.
 
 1. `git grep -n '^#\+ Ruling ' docs/plans/` shows 83–84 filling the gap immediately after
-   82 with no duplicate and no skip, counting the two reserved by open PR #589.
+   82 with no duplicate and no skip, counting 81 and 82, merged as `0e9f620`.
 2. Each `### 2. Ruled` subsection names the chosen option **and every rejected option**, with
    the measured evidence that separated them. Ruling 83 additionally carries the maintainer's
    requested *options, trade-offs and a recommendation* as a table, so the rejected designs are
@@ -176,7 +200,7 @@ matcher; none takes an independent census.
 | `_discover_adrs` | 1050 | `_ADR_TITLE_RE` | as above |
 | `_discover_multi_ruling_files` | 1109 | `_RULING_HEADING_RE` | **6 headings**, per (c) |
 | `_discover_closure_records` | 1211 | `_CLOSURE_HEADING_RE` | widened by `#585`; still `###` + a date |
-| `_discover_plan_reviews` | 1265 | `_REVIEW_HEADING_RE` | **4 headings**, one of them a filed review (PR #589, Ruling 82) |
+| `_discover_plan_reviews` | 1265 | `_REVIEW_HEADING_RE` | **4 headings**, one of them a filed review (Ruling 82) |
 | `_discover_plain_plans` | 1274 | `_PLAN_FILENAME_RE` | filename-shaped, not heading-shaped |
 | `_discover_requirements` | 1311 | `_LEGACY_SPEC_BOLD_RE` | — |
 | `_discover_roadmap` | 1378 | three legacy REs | **all three match zero**; no longer silent — see §1(e) |
@@ -278,7 +302,7 @@ misattributed one is not."* Class 4 cannot be the arithmetic.
 
 **Rejected: deferring this to W37-6.** The guard fix is testable today against a corpus that
 already produces four distinct violations, and W37-6's go-ahead is withheld. This follows
-Ruling 81's reasoning (PR #589) and differs from it in one respect that is stated rather than
+Ruling 81's reasoning and differs from it in one respect that is stated rather than
 smoothed: this change **does** alter behaviour on the real tree — `migrate` will raise where it
 now succeeds. That is not a red gate, because `migrate` is not run by CI and the tests exercise
 `tests/fixtures/docs-migration`, not the real corpus. It is the intended effect.
@@ -487,7 +511,7 @@ the run stops at a decision nobody is positioned to take on the day.
 **Not a ruling, filed here because it explains why a wrong figure survived three careful
 readers and because the artifact carrying it cannot be edited.**
 
-The lead routed PR #589's second question with *"15 `###` headings, 12 records, three
+The lead routed Ruling 82's question with *"15 `###` headings, 12 records, three
 undated … read as sub-content nested inside 'Plan review 9''s own section"*, corrected it on
 its own initiative after the maintainer challenged it, and named an executor's report as the
 source. The report was not the origin. `#585`'s **squash commit body on `main`** (`20b3025`)
@@ -507,7 +531,7 @@ citing a merged commit on `main`.
 under the `main-protection` ruleset — squash bodies cannot be rewritten — so the wrong sentence
 stays where it is and a reader who finds it has no in-place correction to find. Second, the
 correction therefore has to live in a document that the commit's subject can be traced to.
-PR #589's Ruling 82 carries the measured figures and their probes; this paragraph names where
+[Ruling 82](2026-09-02-w37-commit-boundary-and-plan-reviews-shape-rulings.md) carries the measured figures and their probes; this paragraph names where
 the superseded ones came from, so a reader arriving from `git log` has somewhere to land.
 
 The general point, which is why it is filed rather than mentioned: **a figure in a commit
@@ -521,7 +545,7 @@ act on belongs in a document that can be amended, and the commit body should poi
 | **What `Ruling A1`, `A2` and `A3` are** (`2026-08-30-nt-0012-0013-0014-adoption.md:67,81,96`) | Surfaced by Ruling 83's measurement, but deciding whether a letter-suffixed id is a ruling, sub-content, or a legacy form to renumber is a family and id-form question under NT-0019 §1.2 and §1.7 — the same species the planner derived for the twelve. I have not enumerated the option set | **The planner**, as a derivation, then back here. It is a Ruling 83 precondition: the census cannot be cleared while three units are unclassified |
 | **The three h1 ruling files** (`Ruling 59`, `60`, `61`) | A fact, not a decision — one ruling per file, so the multi-ruling splitter should not be reading them at all. Whether it currently tries is a code question | **W37-6's executor**, as a measurement during the census. If the splitter does try to split them, it is a new finding |
 | **Whether `_discover_register`'s row unit needs the same treatment** | Ruling 83's property is worded to cover it, but the register's shape was not measured here and I will not assert a blind spot I have not seen | **W37-6's executor**, inside the census |
-| **The commit boundary for Ruling 83's fix** | Ruling 81 (PR #589) settles the principle for this class; §2 applies it and names the one respect in which this fix differs. Merge order itself is the lead's | **The lead** |
+| **The commit boundary for Ruling 83's fix** | Ruling 81 settles the principle for this class; §2 applies it and names the one respect in which this fix differs. Merge order itself is the lead's | **The lead** |
 | **Whether the ten W5 slices each completed** | Evidence, not a decision. §2 fixes the rule; reading ten records against it is execution | **W37-6's executor**, per Ruling 84 §4's fourth item |
 
 ## Provenance
@@ -531,7 +555,7 @@ maintainer's own words and its design is ruled here; Ruling 84 adopts a planner 
 one step smaller than as written, on two grounds the derivation did not have.
 
 The lead's routing message corrected its own earlier `plan-reviews.md` figures unprompted, and
-the corrected figures agree with the independent measurement filed in PR #589. Chasing where
+the corrected figures agree with the independent measurement filed as Rulings 81-82. Chasing where
 the superseded ones came from produced the finding two sections above: they are quoted from a
 merged commit body on `main`, which is why three readers passed them along unchanged. **No
 figure in this record is taken from a relay** — every one was produced by executing the script
