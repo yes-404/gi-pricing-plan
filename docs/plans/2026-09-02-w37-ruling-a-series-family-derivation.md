@@ -15,7 +15,11 @@ census cannot be cleared while three units are unclassified."*
 and §1.7.
 
 **Tree:** every measurement below was produced by executing the shipped script or reading the
-shipped source at **`b648c22`**, `main` at the time of writing. None is relayed.
+shipped source at **`b648c22`**. None is relayed. **Re-verified unchanged at `01bd0bd`**
+(`main` after Rulings 79/80 landed in `e7e1d24`, which edits `scripts/doc-id.py`): both cited
+line numbers still resolve to the same statements, and both discovery functions still return
+what §2 records. The re-read is `delivery-process.md` §15 Rule 10's, and it is recorded rather
+than asserted because the file this record cites by line number is one of the files that moved.
 
 ## Acceptance Standard
 
