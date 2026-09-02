@@ -40,7 +40,7 @@ group A                        18   (1–15, 30, 31, 36)
 
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
-| 1 | W37-5b named in the W37 row's `Progress` clause, scope stated **by number**, not as a row of its own | **Partially met** | `docs/roadmap.md`'s W37 row (added `01bd0bd`) names the slice and its decision file, and describes scope by category and count ("sixteen items") rather than the literal row numbers the acceptance item's words ask for. No row is created (`grep -c '\*\*W37-5b\*\*' docs/roadmap.md` → 0, correct). **Corrected in this PR**: the Progress clause now cites every row number against its evidence inline (see the roadmap diff in this PR). |
+| 1 | W37-5b named in the W37 row's `Progress` clause, scope stated **by number**, not as a row of its own | **Met, after one correction found and fixed in drafting this record** | `docs/roadmap.md`'s W37 row (added `01bd0bd`) named the slice and its decision file but described scope only by category and count ("sixteen items"), never the literal row numbers the acceptance item's own words ask for. No row is created (`grep -c '\*\*W37-5b\*\*' docs/roadmap.md` → 0, correct). **Corrected in this PR, verified rather than asserted**: the Progress clause's new sentence was checked for every one of the eighteen numbers by direct substring search — an earlier pass of this same sentence covered fourteen (missing rows 6, 7, 8 and 13 entirely, including no mention of `e7e1d24` at all) and was caught and fixed before this record was finalised, not after. All eighteen (`1`–`15`, `30`, `31`, `36`) now appear against their own PR/ruling in the roadmap diff in this PR. |
 | 2 | Every group-A row has a named owner | **Met — 18 of 18** | §2 below. Sixteen delivered-and-tested; two (14, 36) are discharged carve-out rulings/fixes. None silent. |
 | 3 | A new dated leaf plan for W37-6, superseding the frozen one by name and date, carrying Ruling 73's amendment inline | **Met** | [`2026-09-02-w37-6-migration-run-leaf-plan-v2.md`](../../../plans/2026-09-02-w37-6-migration-run-leaf-plan-v2.md), filed draft (`958cb7d`), lifted to `status: active` (`f9975f1`) once Ruling 88 resolved its one blocking row. Header states: *"Supersedes: [the frozen plan]... which is frozen at its date and is not edited."* Item 11 restated in full inline, not by reference. Frozen original confirmed untouched: `git diff --stat b648c22..3f41d60 -- docs/plans/2026-09-02-w37-6-migration-run-leaf-plan.md` is empty. |
 | 4 | This record cited where W37-5b's close is recorded | **Met** | The roadmap's `Progress` clause cites the decision file and, in this PR, this record; this record cites both. |
@@ -289,7 +289,10 @@ uv run python scripts/req-coverage.py                           → exit 0
 python3 scripts/register-lint.py                                → OK (0 violations)
 ```
 
-`register.md`'s residue line moved from "47 of 73" to "51 of 77" (four new rows) — disclosed
+`register.md`'s residue line moved from **47 of 73** (at `3f41d60`, re-measured directly by
+running `register-lint.py`'s own `parse_register`/`residue` against that tree's file rather
+than assumed) to **53 of 79** (at this branch's tip): six new rows (F77–F82; F76 is an
+in-place amendment, not a new row), all six over the threshold. Disclosed
 per Ruling 51, not a violation.
 
 `audit-docs.py` failed once, honestly, during this audit's own drafting: a broken relative
