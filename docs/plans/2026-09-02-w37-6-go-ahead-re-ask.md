@@ -30,9 +30,14 @@ soften. §5 is the condition the four do not name and the map plan does.
 ## Acceptance Standard
 
 The violation this record must make detectable: **a W37-6 go-ahead given against a document
-that reports the preconditions as cleared when a fifth abort survives them, or against figures
-inherited from a tree the run will not start from.** Each item is stated as the violation, not
-the pass.
+that reports the run as able to complete when it cannot, or against figures inherited from a
+tree the run will not start from.** Each item is stated as the violation, not the pass.
+
+**That first clause widened on 2026-09-02 and the widening is the point.** It read *"reports the
+preconditions as cleared when a fifth abort survives them"* until the fifth was fixed and a
+**sixth** failure appeared behind it, **past the first write** (§2.6). *"The abort points are
+cleared"* and *"the run can complete"* were never the same claim, and a standard written against
+only the first would have passed a document asserting the second.
 
 1. **The fifth abort point is stated in the closure record's own words, not in a summary of
    them.** *Violation:* this document saying "the abort points are cleared" anywhere without
@@ -154,6 +159,15 @@ pattern against `_write_document_drafts`, a known writer, returns 3 hits. So the
 when there is something to find. **The irreversible commit is not at risk from row 5. What is at
 risk is the run completing at all.**
 
+**Both of those sentences are scoped to the pre-write span, and that scope is the whole of what
+they claim.** *"Five is the whole list"* was established by replaying `migrate()`'s **pre-write**
+calls; *"not at risk"* was established by finding no writer in the **pre-write** span. Neither
+says anything about what happens after `_write_document_drafts`. **Clearing row 5 moves the
+failure past the first write, and there is one there** — §2.6. The replay was complete over its
+own population; the population was the right one for *"what stops the run before it starts"* and
+the wrong one for *"can the run complete"*, and no number of re-runs of it could have found the
+sixth.
+
 ### 2.2 The mechanism — two instruments reach one population and only one consults the register
 
 This is the most useful sentence W37-5c produced, and it is the answer to *how did a fifth guard
@@ -226,23 +240,44 @@ a slice whose stated criterion was the maintainer's own — *"everything that **
 the run and is provable on broken input outside it."* A fifth thing that stops the run survived
 that slice. **The maintainer is entitled to know that, and to know how it was found.**
 
-### 2.4 Where the fifth stands now
+### 2.4 How far the run gets — `[SLOT-3]`, and it is a distance rather than a yes
 
-`[SLOT-3]` — **the disposition of `_discover_vendored_skill_manifests` at this document's tree.**
+`[SLOT-3]` — **how far a real `migrate()` run gets at this document's tree.**
 
-Filled at the final tree with one of two states, and with the sentence that belongs with either:
+**The slot is deliberately wider than "the fifth abort's disposition", because the question has
+changed.** Once the fifth is cleared the run reaches its first write, and what a maintainer is
+asked to authorise is no longer *"a run that stops before it starts"* but something else. Filled
+at the final tree with **one of three** states — the third did not exist when this document was
+first drafted:
 
-- **Cleared.** Then: *the fifth abort point was found by the W37-5c close audit, not by the
-  slice that was cut to clear abort points* — and it is fixed after the fact, in a separate
-  change, outside the irreversible commit. Red-before / green-after on the real corpus, with the
-  same execution discipline §2.1 used — and **against a test the F88 limb-1 clause alone does not
-  supply**, for the reason §2.5 gives. The acceptance test is the one §2.5 names: the classifier
-  is the sole decider of "already stamped", and a reconciliation names any manifest it cannot
-  place. **Satisfying limb 1's clause is necessary and is not sufficient.**
-- **Not cleared.** Then a go-ahead given here authorises a run whose first act is an abort, and
-  §9 says so.
+- **Does not start.** The fifth abort still fires; a go-ahead authorises a run whose first act
+  is an abort. §9 recommends against.
+- **Starts and does not complete.** The fifth is cleared and the run reaches
+  `_write_document_drafts`, then fails — **a partial migration, not a clean abort.** This is
+  §2.6, and it is the state the tree was in when this slot was last checked. **A go-ahead given
+  in this state authorises a run that leaves the repository in neither shape.**
+- **Completes.** The run reaches the end of `migrate()` on the real corpus.
+
+**In every case the fifth's own clearing is recorded the same way:** *the fifth abort point was
+found by the W37-5c close audit, not by the slice that was cut to clear abort points* — fixed
+after the fact, in a separate change, outside the irreversible commit. Red-before / green-after
+on the real corpus, with the same execution discipline §2.1 used — and **against a test the F88
+limb-1 clause alone does not supply**, for the reason §2.5 gives: the classifier is the sole
+decider of "already stamped", and a reconciliation names any manifest it cannot place.
+**Satisfying limb 1's clause is necessary and is not sufficient.**
 
 **Either way the finding stands as recorded.** The close audit found it; the slice did not.
+
+**And the distinction between the first two states is the one the maintainer is entitled to have
+drawn for them: an abort is honest; a partial migration is not.** A run that stops before
+writing leaves a repository someone can look at. A run that writes 126 files and raises leaves
+one that is in neither the old shape nor the new — and the map plan already describes that state
+and says the gate cannot diagnose it: *"a partially-applied rename set is a corpus in neither the
+old shape nor the new one, and the gate cannot tell the two apart."* **The map plan says it about
+a different cause** — splitting W37-6 across executors, which is forbidden — **and the property
+it describes is what matters here, not the cause it was written about.** Noted rather than
+elided, because a citation can be correct while the thing it is being used to vouch for is
+adjacent to what it says.
 
 ### 2.5 A falsifiable clause that is destructive when met — a failure shape with no precedent here
 
@@ -297,6 +332,56 @@ where the damage is.
 clause for this property has been run; this is one instance, found while fixing an unrelated
 thing. Whether the other clauses in this effort share it is unmeasured, and that is the
 disclosure — not a claim that they do, and not a claim that they do not.
+
+### 2.6 A sixth failure, behind the fifth, and it is post-write
+
+**Clearing the fifth abort does not make the run complete. It moves the failure past the first
+write.** Found by the executor fixing the fifth, on the fix branch, and reported here rather than
+discovered on the day.
+
+**The reported behaviour:** `migrate()` reaches `_write_document_drafts`, creates **126 files**,
+and raises `KeyError: 'RS'`. **That is a partial migration, not a clean abort** — task #34's
+failure mode one layer down, unreachable while the fifth stopped the run first.
+
+**The 126 and the `KeyError` are the executor's execution result and are not re-derived here, on
+purpose: `migrate()` is not run by this document, because its write is the irreversible commit.**
+That is the same discipline the W37-5c close audit held — it called every guard with `migrate()`'s
+own arguments and never called `migrate()`. **What is verified here is the cause, at the code
+level, by symbol, at `origin/main`:**
+
+| | At `origin/main` |
+|---|---|
+| Discovery emits the family | **Yes** — `_discover_closure_records` sets `prefix, kind, status, owner = "RS", "audit", "closed", "auditor"` for a heading matching `_CLOSURE_AUDIT_TITLE_PREFIXES` |
+| How many such records | **2** — `_CLOSURE_AUDIT_TITLE_PREFIXES` has exactly two members, and the function's own docstring says *"Two headings … are a bespoke audit record: `RS-`, `kind: audit`, `status: closed`"* |
+| `_MIGRATE_TEMPLATE_FILENAME` contains `"RS"` | **No** — `{ADR, RFC, PL, RL, CR, REFERENCE, LG}` |
+| `_DOCUMENT_FAMILY_DIR` contains `"RS"` | **No** — `{ADR, RFC, PL, RL, CR, LG}` |
+
+**Both of the writer's lookup tables omit the family discovery emits.** Predicate, runnable:
+`git show origin/main:scripts/doc-id.py | grep -n '"RS"'` returns the emit site and neither table.
+
+**This is not a disposition question, and that is what makes it cheap.** NT-0019 §1's family
+table has specified it all along — *"Document | Research | `RS` | `docs/research/` | one spike,
+measurement or audit"* — the tree layout names `research/` among the four directories
+`docs/audit/` dissolves into, `docs/_templates/RS.md` exists in the tree, and **D13 rules the
+owner**: *"Owners: research → executor, except `RS- kind: audit` → auditor."* The spec names the
+family, the directory, the template and the owner. **It is an implementation gap against a spec
+row, not an open question**, so nothing here needs a ruling.
+
+**Why the fix should close the set rather than the instance, with the measurement that makes the
+case.** Distinct prefix literals assigned anywhere in `scripts/doc-id.py` at `origin/main` —
+`git show origin/main:scripts/doc-id.py | grep -oE 'prefix\s*=\s*"[A-Z]+"|prefix, [a-z, ]+= "[A-Z]+"' | grep -oE '"[A-Z]+"' | sort -u` —
+are **ten**: `ADR`, `CR`, `FD`, `LG`, `PL`, `REFERENCE`, `RFC`, `RL`, `RS`, `WK`. The template
+table names **seven** of them and the directory table **six**. **Some of those absences are
+correct** — `REFERENCE` is stamped in place and never moved, and `WK` goes through the roadmap
+restructure — **and which ones are correct is exactly the question a set-closure check answers
+and a one-family patch does not.** `RS` is the member that is verifiably neither routed elsewhere
+nor legitimately absent. **Fixing `RS` alone would leave the next such member invisible in the
+same way**, which is the reasoning Ruling 83 already applies to censuses: the property is
+*accounting*, not the absence of a known symptom.
+
+**What this changes about the disclosure, stated plainly.** Until now every known failure stopped
+the run before it wrote anything, and §2.1 could say the irreversible commit was not at risk.
+**That is no longer the whole picture**, and `[SLOT-3]` is drafted for it.
 
 ---
 
@@ -479,10 +564,21 @@ the two new branches is this document's own. Nothing here is a defect — it is 
 map plan calls the condition volatile, why the frozen leaf plan refuses to record an answer, and
 why §5.4 states a condition rather than a finding.
 
-### 5.3 The limb that no longer measures what it was written to measure
+### 5.3 Two §14 observations — the second is about the check, the first is about who ever reads it
 
-**This is the part of the gap worth the maintainer's attention, and it is a §14 observation
-rather than an obstacle.**
+**Both are worth the maintainer's attention and neither is an obstacle to the run.** The first
+is the sharper of the two and is stated first for that reason.
+
+**(1) The active leaf plan carries no gap check at all.** The **active** superseding plan has
+**no §1 Preconditions section**, and its §6 carry-forward list names *"§5, §6, §7, §8, §9 and
+§10"* of the superseded plan — **not §1**. So the operative gap-check list lives only in the
+**map plan** and the **frozen** leaf plan, and **an executor working from the active plan alone
+never meets it.** This is **F92's shape one level up**: a precondition that exists, is correct,
+and is not in the document the person who needs it reads. F92 was filed for exactly that, about
+53 files; this is the same failure about the condition that governs when the whole run may
+start.
+
+**(2) And the check itself no longer measures what it was written to measure.**
 
 The map plan's third check is `git status --porcelain` **"in the worktree the migration runs
 in"**, and its treatment of local branches was written against the repository as it stood on
@@ -513,12 +609,9 @@ re-derived for it.* That is not a defect in the plan; a frozen plan cannot say t
 itself. It is exactly the kind of thing `CLAUDE.md` §14 exists to catch while the phase is still
 open.
 
-**One further gap in the same place, and it is the sharper one.** The **active** superseding
-leaf plan has **no §1 Preconditions section at all**, and its §6 carry-forward list names *"§5,
-§6, §7, §8, §9 and §10"* of the superseded plan — **not §1**. So the operative gap-check list
-lives in the **map plan** and in the **frozen** leaf plan, and **an executor working from the
-active plan alone never meets it.** This is F92's shape in a second place, one level up: a
-precondition that exists, is correct, and is not in the document the person who needs it reads.
+**The two compound.** Observation (2) is a check that under-measures; observation (1) is that
+the document an executor actually works from does not carry the check at all. **A weakened check
+nobody reads is not two problems of one size.**
 
 ### 5.4 The gap the lead would name
 
@@ -571,7 +664,7 @@ the executor in the running session and never here (Acceptance Standard items 4 
 | `[SLOT-0]` | The tree this ask is made at | It is not final; see below |
 | `[SLOT-1]` | §3 and §4 of the superseded ask, re-derived in full at that tree | Condition 1 |
 | `[SLOT-2]` | Addendum A's classification sweep, re-run at that tree | Condition 2 — §7 |
-| `[SLOT-3]` | The disposition of the fifth abort point | §2.4 |
+| `[SLOT-3]` | **How far a real `migrate()` run gets** — does not start / starts and does not complete / completes | §2.4, §2.6 |
 | `[SLOT-4]` | The gap checks, re-run at the moment the branch is cut | §5.2 — **and this one is filled by the executor in the running session, never here** |
 
 ### 6.1 Why it runs once, and late
@@ -706,9 +799,14 @@ across every prior commit"*, and used it as the argument for running condition 1
   span: `109 → 125` is **+16** (lines) and `112 → 129` is **+17** (exact tokens). The only
   arithmetic yielding 13 across those pins is `125 − 112` — the `958cb7d` **line** count minus
   the `39ee30c` **token** count. That is offered as the one candidate explanation, not asserted
-  as what happened: **it is precisely the cross-unit subtraction the same ask's own §5.3
-  documents as the defect in the leaf plan's §4.2**, three sections earlier and about a
-  different figure.
+  as what happened.
+- **And the document that commits it is the document that diagnoses the class.** The ask's §5.3
+  is a full, correct account of a cross-unit contrast in the leaf plan's §4.2 — *"a bare-string
+  count and a decorator count are different quantities, not two estimates of one"* is its own
+  Acceptance Standard item 2. **§3.3 is two sections earlier in the same file.** So the
+  diagnosis and the instance sit in one document, the instance first. That is the sharpest form
+  this class has taken here, and it is why the correction below is carried in both units rather
+  than as a single replacement number.
 - **The obligations list is exactly right in all three of its claims**, including the
   parenthetical *"(`git grep -c` counts lines: the exact-token count at `59bba94` is 124.)"* —
   `126` loose hits minus `2` matches of `VR-DST-1[0-9]` is 124. The over-match is real:
@@ -736,12 +834,20 @@ reason.
 
 **What the lead recommends, stated as a recommendation and not as a conclusion:**
 
-1. **On the run itself — go ahead, conditional on `[SLOT-3]` reading *cleared*.** With the fifth
-   abort point cleared and conditions 1 and 2 filled at the tree, the run can complete, every
-   disclosure Ruling 66 §3 requires is present, and the preconditions that would silently
-   mis-migrate something are either fixed or disclosed. **If `[SLOT-3]` reads *not cleared*, the
-   lead recommends against**, on exactly the reasoning the superseded ask used: a go-ahead given
-   then authorises a run that stops before it starts.
+1. **On the run itself — the recommendation is a function of `[SLOT-3]`'s three states, and only
+   one of them is a go-ahead.**
+   - **Completes** → **go ahead.** Conditions 1 and 2 filled at the tree, the run reaches the end
+     of `migrate()` on the real corpus, every disclosure Ruling 66 §3 requires is present, and
+     the preconditions that would silently mis-migrate something are either fixed or disclosed.
+   - **Does not start** → **recommend against**, on the superseded ask's own reasoning: a
+     go-ahead then authorises a run whose first act is an abort.
+   - **Starts and does not complete** → **recommend against, and more firmly than for a run that
+     does not start.** §2.6's `KeyError` is past the first write. Authorising a run in this state
+     buys a partial migration — the one outcome no acceptance item scores and the gate cannot
+     diagnose. **The cost of waiting is another figure pass; the cost of not waiting is a corpus
+     in neither shape.** The remedy is small, is not a disposition question (NT-0019 §1 has
+     specified the family all along), and belongs outside the irreversible commit like every
+     precondition before it.
 2. **On F90 — decide before, not during, and the lead's reading is that option 4 does not belong
    inside W37-6.** A depth-agnostic detector changes behaviour for all ten families sharing
    `check_shape` and needs its own broken-input proof; putting it inside the irreversible commit
@@ -795,8 +901,12 @@ answer where the question was put.
 - **W37-6 has not run.** Nothing merged is the migration; all of it is preconditions.
 - **Rulings 66–95 are filed, all on `main`.**
 - **`migrate()` still aborts on the real corpus at `c888b61`**, at
-  `_discover_vendored_skill_manifests`. `[SLOT-3]` records whether that is still true at the
-  tree this ask is made from.
+  `_discover_vendored_skill_manifests` — and **behind that abort is a post-write failure**
+  (§2.6), so *"the run aborts"* and *"the run cannot complete"* have never been the same
+  statement here. `[SLOT-3]` records how far it gets at the tree this ask is made from.
+- **No document has yet been able to say "the run completes."** Every disclosure in this Work,
+  this one included, has reported how far it gets — which is why `[SLOT-3]` asks for a distance
+  rather than a yes.
 - **Full local `uv run pytest -q` is not run by the team** — concurrent runs OOM-kill each
   other, and `docs/plans/` fixture tests collide with a concurrent `audit-docs.py` run (that is
   F89). CI runs the identical command in a clean environment.
