@@ -15,6 +15,7 @@ docstring gives the identical reasoning for `next`/`check`/`widen`.
 from __future__ import annotations
 
 import argparse
+import ast
 import collections
 import csv
 import importlib.util
@@ -1328,15 +1329,20 @@ def test_migrate_raises_via_the_legacy_file_guard_on_a_real_shaped_tree(
         doc_id_cli.migrate(pristine_a)
 
 
-def test_migrate_writes_nothing_when_a_vendored_manifest_is_unparseable(
+def test_an_unparseable_vendored_manifest_no_longer_aborts_and_is_left_untouched(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Task #34: `_discover_vendored_skill_manifests` is hoisted to run alongside every
-    other discovery, before any write — so a malformed manifest aborts `migrate` cleanly
-    rather than crashing mid-write with the tree already partially mutated. Proves the
-    property that actually matters: nothing was written at all, not merely that `migrate`
-    raised (which the un-hoisted call also does, just after two write phases had already
-    run — the exact defect task #34 files).
+    """`F88` limb 1's *stop*, on the exact input that used to produce it.
+
+    This test previously asserted the opposite — `pytest.raises(HeaderError)` — and that
+    expectation **was the defect**, pinned. A vendored `SKILL.md` whose upstream front
+    matter does not fit §1.5's closed grammar aborted `migrate` from inside discovery.
+    It now classifies `"foreign"`, is returned in `deferred` rather than dropped, is left
+    byte-identical (`CLAUDE.md` §12 — vendored files stay as upstream wrote them), and is
+    reported by name on the result.
+
+    The old predicate is asserted here rather than described, so the input is proven to be
+    the one that aborted rather than merely resembling it.
 
     `_is_vendored_skill_manifest` tests membership in `_VENDORED_SKILLS` (Ruling 69), not
     `LICENSE` presence, so `bad-vendored-skill` must be declared into the set for this
@@ -1351,15 +1357,54 @@ def test_migrate_writes_nothing_when_a_vendored_manifest_is_unparseable(
     bad_skill_dir = pristine_a / ".claude" / "skills" / "bad-vendored-skill"
     bad_skill_dir.mkdir(parents=True)
     (bad_skill_dir / "LICENSE").write_text("MIT\n", encoding="utf-8")
-    (bad_skill_dir / "SKILL.md").write_text(
+    manifest = bad_skill_dir / "SKILL.md"
+    manifest.write_text(
         "---\nname: bad-vendored-skill\nuser-invocable: true\n---\n\nBody.\n",
         encoding="utf-8",
     )
-    before = _tree_files(pristine_a)
+    before = manifest.read_bytes()
+    rel = ".claude/skills/bad-vendored-skill/SKILL.md"
+
+    # The predicate that aborted. Still raises — the fix is that discovery no longer asks.
     with pytest.raises(doc_id_cli._docid.HeaderError):
+        doc_id_cli._docid.parse_header(manifest)
+
+    scan = doc_id_cli._discover_vendored_skill_manifests(pristine_a)
+    assert rel in {r for r, _ in scan.deferred}
+    assert manifest not in scan.to_stamp
+
+    result = doc_id_cli.migrate(pristine_a)
+    assert manifest.read_bytes() == before, "a deferred vendored manifest must not be edited"
+    assert rel in {locator for locator, _ in result.deferred_reference_stamps}
+
+
+def test_migrate_writes_nothing_when_a_pre_write_guard_aborts(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """Task #34's property, kept alive after `F88`'s fix removed the abort it used to be
+    proven with.
+
+    Every `_discover_*` and every `_check_*_not_silently_unrecognised` runs before
+    `_write_document_drafts`, so a guard that fires stops the run rather than leaving the
+    tree half-migrated. The test above used to carry this, because
+    `_discover_vendored_skill_manifests` was the abort nearest that write; it no longer
+    aborts at all, so the property is re-proven here with a guard that still fires —
+    `_check_requirements_not_silently_unrecognised`, `F82`'s, whose call site sits in the
+    same pre-write span. Without this the property would have been lost with the defect
+    that happened to demonstrate it.
+    """
+    spec = pristine_a / "docs" / "specs" / "00-overview.md"
+    spec.write_text(
+        spec.read_text(encoding="utf-8")
+        + "\n\n**DEP-abc** A dependency rule whose id carries no number.\n",
+        encoding="utf-8",
+    )
+    before = _tree_files(pristine_a)
+    with pytest.raises(NotImplementedError, match=r"DEP-abc"):
         doc_id_cli.migrate(pristine_a)
-    after = _tree_files(pristine_a)
-    assert after == before, "migrate wrote something before the vendored-manifest crash"
+    assert _tree_files(pristine_a) == before, (
+        "migrate wrote something before a pre-write guard aborted"
+    )
 
 
 def test_index_md_is_byte_stable_against_a_fresh_regeneration(
@@ -3900,10 +3945,19 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
 
     Three writers need special handling and each is handled rather than skipped silently:
     `_discover_headed_split_file` is a parameterised helper with a different signature,
-    `_discover_roadmap` returns a 3-tuple, and `_discover_vendored_skill_manifests` raises
-    `HeaderError` on the real corpus today (three vendored manifests do not parse — F83's
-    third row). A writer that raises cannot claim anything, so it is recorded and passed
-    over; a writer that was silently skipped could hide a claim.
+    `_discover_roadmap` returns a 3-tuple, and `_discover_vendored_skill_manifests`
+    returns a `_VendoredManifestScan` rather than a draft list. A writer that raises
+    cannot claim anything, so it is recorded and passed over; a writer that was silently
+    skipped could hide a claim.
+
+    **`raised` is `[]` and that is the assertion `F88` limb 1 turns on.** It read
+    `["_discover_vendored_skill_manifests"]` until this fix: that function called
+    `_docid.parse_header` on three real vendored manifests whose upstream front matter
+    does not parse, and the `HeaderError` aborted every real `migrate()` run — the fifth
+    abort point W37-5c's close audit recorded as still firing. This assertion is
+    deliberately kept as an equality against the empty list rather than deleted: it is
+    also the pin that a *sixth* abort appearing in any `_discover_*` reds a test instead
+    of surfacing for the first time inside the irreversible run.
     """
     in_scope = {
         p.relative_to(ROOT).as_posix()
@@ -3927,6 +3981,8 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
             continue
         if name == "_discover_roadmap":
             produced = produced[0]
+        elif name == "_discover_vendored_skill_manifests":
+            produced = produced.to_stamp  # a scan, not a draft list — no `.was` anywhere
         claimed = {
             d.was for d in produced if getattr(d, "was", None) is not None
         }
@@ -3935,9 +3991,438 @@ def test_exactly_one_discovery_writer_claims_the_closure_readmes(
 
     assert set(claimants) == {"_discover_audit_closure_readmes"}, claimants
     assert claimants["_discover_audit_closure_readmes"] >= 17
-    assert raised == ["_discover_vendored_skill_manifests"], (
-        "a writer that raises on the real corpus cannot claim anything, but the set of "
-        f"such writers is itself a finding worth noticing: {raised}"
+    assert raised == [], (
+        "no `_discover_*` may raise on the real corpus: one that does aborts every real "
+        f"`migrate()` run before its first write, which is F88 limb 1's defect: {raised}"
+    )
+
+
+# ---------------------------------------------------------------------------------------
+# `F88` limb 1 — `_discover_vendored_skill_manifests`, the fifth abort point, on the real
+# corpus. Every proof below runs against `ROOT`, not the fixture: the defect existed
+# *because* the function was written against a fixture whose one manifest carries no front
+# matter, so a fixture cannot distinguish the fix from the defect.
+#
+# The population is derived here rather than taken from the function under test — a
+# selector that quietly returns nothing makes every downstream assertion vacuous, and the
+# shipped selector is one of the things these proofs are testing.
+# ---------------------------------------------------------------------------------------
+
+
+def _real_vendored_manifest_population(doc_id_cli: types.ModuleType) -> list[str]:
+    """The vendored `SKILL.md` in this checkout, derived independently of
+    `_is_vendored_skill_manifest` — a directory name in `_docid._VENDORED_SKILLS` (the
+    shipped constant, by symbol at this tree, never a pasted count) that has a `SKILL.md`.
+
+    The two-set equality is the guard against a corpus that shrinks silently: a declared
+    vendored skill whose manifest is missing or differently spelled leaves the directory
+    in one set and out of the other, and every count below would otherwise just get
+    smaller while staying green.
+    """
+    skills = ROOT / ".claude" / "skills"
+    declared = set(doc_id_cli._docid._VENDORED_SKILLS)
+    dirs = {p.name for p in skills.iterdir() if p.is_dir()} & declared
+    manifests = {p.parent.name for p in skills.glob("*/SKILL.md")} & declared
+    assert dirs == manifests, (
+        "a declared vendored skill directory with no SKILL.md (or the reverse) — the "
+        f"population shrank without anything saying so: {sorted(dirs ^ manifests)}"
+    )
+    assert manifests, "no vendored manifests in this checkout — every assertion below is vacuous"
+    return sorted(manifests)
+
+
+def test_vendored_manifest_scan_partitions_the_real_corpus_without_raising(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`F88` limb 1, both consequences, on the corpus that produced them.
+
+    The abort: this call raised `HeaderError` before the fix, so `migrate()` died before
+    its stamp loop on every real run. The blind skip: 25 of the 28 read as already
+    migrated because their harness front matter *parsed*.
+
+    Asserted as a **closed partition** rather than as three counts, because the defect was
+    a manifest leaving through an unnamed bucket. `to_stamp + deferred + already_stamped`
+    is the whole population or the sum fails.
+    """
+    population = _real_vendored_manifest_population(doc_id_cli)
+    scan = doc_id_cli._discover_vendored_skill_manifests(ROOT)  # must not raise
+
+    got = (
+        {p.parent.name for p in scan.to_stamp}
+        | {pathlib.PurePosixPath(rel).parent.name for rel, _ in scan.deferred}
+        | {pathlib.PurePosixPath(rel).parent.name for rel in scan.already_stamped}
+    )
+    assert got == set(population), sorted(set(population) ^ got)
+    assert (
+        len(scan.to_stamp) + len(scan.deferred) + len(scan.already_stamped)
+        == len(population)
+    ), "the partition does not close — a manifest is in two buckets or none"
+
+    # Pre-migration, every real manifest carries the harness's own block and none carries
+    # this migration's `family:` — so the whole population is deferred. Stated as a
+    # property of the tree, not as a constant: it re-derives when a manifest changes.
+    assert len(scan.deferred) == len(population)
+    assert scan.to_stamp == ()
+    assert scan.already_stamped == ()
+
+
+def test_a_vendored_manifest_whose_front_matter_parses_is_not_read_as_stamped(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`F88` limb 1's falsifiable clause: *"proven by a manifest carrying foreign front
+    matter being returned, not skipped"*.
+
+    The old predicate was `parse_header(...) is not None`, and `parse_header` puts an
+    unknown key in `.extra` rather than erroring — so a manifest opening with the
+    harness's `name:`/`description:` block returned a `Header` and was read as this
+    migration's own stamp. Both halves are asserted on the same real file: `parse_header`
+    still returns a `Header` for it (the old predicate would still skip it) **and** the
+    scan returns it as not-yet-stamped.
+    """
+    scan = doc_id_cli._discover_vendored_skill_manifests(ROOT)
+    deferred = {rel for rel, _ in scan.deferred}
+    parses: list[str] = []
+    for rel in sorted(deferred):
+        try:
+            header = doc_id_cli._docid.parse_header(ROOT / rel)
+        except doc_id_cli._docid.HeaderError:
+            continue
+        if header is not None:
+            parses.append(rel)
+    assert parses, (
+        "no vendored manifest in this checkout has front matter that parses — the "
+        "condition this test exists to prove is absent, so it proves nothing"
+    )
+    assert set(parses) <= deferred
+    # And the three whose front matter does NOT parse are in the same bucket, not lost:
+    # they are `docs/plans/2026-09-02-w37-vendored-exemption-ruling.md`'s three, and they
+    # are deferred by the same rule as the rest rather than by a second mechanism.
+    raises = sorted(deferred - set(parses))
+    assert raises, "the manifests that raise are absent — see the note above"
+
+
+def test_vendored_manifest_deferrals_are_exactly_the_reference_censuss(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """*"Two instruments reach one population"* — the sentence `F88` limb 1 was filed
+    against. They now agree, and the agreement is measured rather than asserted.
+
+    `_discover_reference_stamp_targets` reaches every `.claude/skills/*/SKILL.md` and is
+    the single channel that reports a deferral to the reader
+    (`MigrateResult.deferred_reference_stamps`). `_discover_vendored_skill_manifests`
+    reaches the vendored subset. Neither reports the other's list — a second copy is what
+    goes stale (`NT-0003`) — so this reconciles them instead, which is the only thing that
+    makes "reported elsewhere" a fact rather than a claim in a docstring.
+    """
+    population = set(_real_vendored_manifest_population(doc_id_cli))
+    scan = doc_id_cli._discover_vendored_skill_manifests(ROOT)
+    routed = {d.was for d in doc_id_cli._discover_audit_closure_readmes(ROOT)}
+    _targets, censuses = doc_id_cli._discover_reference_stamp_targets(ROOT, routed=routed)
+
+    census_deferred: set[str] = set()
+    for census in censuses:
+        for unit in census.units:
+            if unit.key not in census.excepted:
+                continue
+            if not unit.locator.startswith(".claude/skills/"):
+                continue
+            if pathlib.PurePosixPath(unit.locator).parent.name in population:
+                census_deferred.add(unit.locator)
+
+    assert census_deferred, "the census reports no vendored deferral — nothing to reconcile"
+    assert {rel for rel, _ in scan.deferred} == census_deferred
+
+
+def test_the_old_predicate_reproduces_the_abort_on_the_real_corpus(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Red-before / green-after for the *stop*, by mutating the shipped source back to the
+    predicate `c888b61` shipped — so what is proven is the shipped fix, not a re-creation
+    of it. The mutation is one line and reproduces both old consequences at once:
+    `parse_header` raises on the three unparseable manifests and returns a `Header` for
+    the rest.
+    """
+    doc_id_cli._discover_vendored_skill_manifests(ROOT)  # control: the shipped code does not raise
+
+    reverted = _module_with_source_mutations(
+        tmp_path,
+        (
+            (
+                '        state = _front_matter_state(skill_md.read_text(encoding="utf-8"))\n',
+                '        state = "stamped" if _docid.parse_header(skill_md) '
+                'is not None else "none"\n',
+            ),
+        ),
+        name="f88-old-predicate",
+    )
+    # `reverted._docid`, not `doc_id_cli._docid`: `_load_audit_docs()` (exercised earlier
+    # in this module) re-registers `sys.modules["_docid"]` with a fresh module object, so
+    # `HeaderError` is a *different class* in a copy of `doc-id.py` loaded after that
+    # point. Matching on the raising module's own class makes this proof independent of
+    # test order rather than green only in isolation — which is how it first failed.
+    with pytest.raises(reverted._docid.HeaderError, match=r"SKILL\.md:"):
+        reverted._discover_vendored_skill_manifests(ROOT)
+
+
+def test_treating_foreign_front_matter_as_stamped_is_the_blind_failure(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Red-before / green-after for the *blind skip*, isolated from the abort.
+
+    A run that no longer dies but reads someone else's front matter as its own stamp is
+    worse than the abort, because the abort announces itself. Mutating only the bucket
+    assignment — not the classifier — produces exactly that state on the real corpus:
+    every manifest reports as already migrated and nothing is deferred.
+    """
+    population = _real_vendored_manifest_population(doc_id_cli)
+    shipped = doc_id_cli._discover_vendored_skill_manifests(ROOT)
+    assert len(shipped.deferred) == len(population)
+    assert shipped.already_stamped == ()
+
+    blinded = _module_with_source_mutations(
+        tmp_path,
+        (
+            (
+                '        if state == "stamped":\n'
+                "            already_stamped.append(rel)\n",
+                '        if state in ("stamped", "foreign"):\n'
+                "            already_stamped.append(rel)\n",
+            ),
+        ),
+        name="f88-blind-skip",
+    )
+    blind = blinded._discover_vendored_skill_manifests(ROOT)
+    assert len(blind.already_stamped) == len(population)
+    assert blind.deferred == ()
+
+
+def test_a_narrowed_selector_reds_the_partition_rather_than_shrinking_quietly(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """*"What mutation would red this?"* asked of the **corpus-builder**, not of the
+    assertions.
+
+    Every count above is `len(...)` of something the function itself selected, so a
+    selector that stops matching would report a smaller, entirely self-consistent picture
+    and stay green — the failure mode that makes a check silently stop checking. The
+    guard is `_real_vendored_manifest_population`, derived from the shipped
+    `_VENDORED_SKILLS` and the directory listing rather than from the function under test.
+    Here the selector is disabled at the source and the partition assertion is shown to
+    fail, which is what makes that guard load-bearing rather than decorative.
+    """
+    population = _real_vendored_manifest_population(doc_id_cli)
+    narrowed = _module_with_source_mutations(
+        tmp_path,
+        (
+            (
+                "        if not _is_vendored_skill_manifest(skill_md):\n            continue\n",
+                "        if True:\n            continue\n",
+            ),
+        ),
+        name="f88-narrow-selector",
+    )
+    scan = narrowed._discover_vendored_skill_manifests(ROOT)
+    assert (scan.to_stamp, scan.deferred, scan.already_stamped) == ((), (), ())
+    assert (
+        len(scan.to_stamp) + len(scan.deferred) + len(scan.already_stamped)
+    ) != len(population), "the partition assertion would not have noticed an empty selector"
+
+
+# ---------------------------------------------------------------------------------------
+# The writer's two prefix tables against the set discovery can actually emit.
+#
+# `RS` was missing from both while `_discover_closure_records` emitted two `RS- kind: audit`
+# drafts, so `_write_document_drafts` raised `KeyError: 'RS'` **after writing 125 of 290
+# documents** — a partial migration, not a clean abort. Fixing the one entry would leave the
+# class open, so the set is closed instead: derived from the source, not from a list.
+# ---------------------------------------------------------------------------------------
+
+
+def _emittable_document_prefixes_from_source() -> set[str]:
+    """Every prefix a `_Draft(materialize="document", ...)` in the shipped source can carry,
+    by walking the AST rather than by running discovery.
+
+    The empirical route below can only see a branch this corpus happens to take; this sees
+    every branch. Where `prefix=` is a variable, every string literal assigned to that name
+    in the enclosing function is collected — including tuple unpacking, which is how
+    `_discover_closure_records` picks between `LG`, `RS` and `CR` — and where it is a
+    *parameter*, every literal passed at every call site of that function, which is how
+    `_discover_headed_split_file` gets its `"CR"`. Resolving the parameter rather than
+    skipping the function is the difference between closing the set and appearing to.
+    """
+    tree_for_calls = ast.parse(DOC_ID_SCRIPT_PATH.read_text(encoding="utf-8"))
+
+    def _literals_at_call_sites(func: ast.FunctionDef, param: str) -> set[str]:
+        names = [a.arg for a in func.args.args]
+        index = names.index(param) if param in names else None
+        out: set[str] = set()
+        for call in ast.walk(tree_for_calls):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)):
+                continue
+            if call.func.id != func.name:
+                continue
+            arg: ast.expr | None = None
+            if index is not None and index < len(call.args):
+                arg = call.args[index]
+            for kw in call.keywords:
+                if kw.arg == param:
+                    arg = kw.value
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                out.add(arg.value)
+        return out
+
+    tree = ast.parse(DOC_ID_SCRIPT_PATH.read_text(encoding="utf-8"))
+    found: set[str] = set()
+    calls = 0
+    for fn in ast.walk(tree):
+        if not isinstance(fn, ast.FunctionDef):
+            continue
+        for call in ast.walk(fn):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)):
+                continue
+            if call.func.id != "_Draft":
+                continue
+            kw = {k.arg: k.value for k in call.keywords}
+            mat = kw.get("materialize")
+            if not (isinstance(mat, ast.Constant) and mat.value == "document"):
+                continue
+            calls += 1
+            pre = kw.get("prefix")
+            if isinstance(pre, ast.Constant) and isinstance(pre.value, str):
+                found.add(pre.value)
+                continue
+            assert isinstance(pre, ast.Name), f"{fn.name}: prefix is {type(pre).__name__}"
+            lits: set[str] = set()
+            for node in ast.walk(fn):
+                if not isinstance(node, ast.Assign):
+                    continue
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == pre.id:
+                        if isinstance(node.value, ast.Constant):
+                            lits.add(str(node.value.value))
+                    elif isinstance(target, ast.Tuple):
+                        for i, el in enumerate(target.elts):
+                            if not (isinstance(el, ast.Name) and el.id == pre.id):
+                                continue
+                            if isinstance(node.value, ast.Tuple) and i < len(node.value.elts):
+                                v = node.value.elts[i]
+                                if isinstance(v, ast.Constant) and isinstance(v.value, str):
+                                    lits.add(v.value)
+            lits |= _literals_at_call_sites(fn, pre.id)
+            assert lits, f"{fn.name}: could not resolve prefix variable {pre.id!r}"
+            found |= lits
+    assert calls >= 6, f"the AST walk found {calls} document _Draft call(s) — it matched nothing"
+    return found
+
+
+def test_every_emittable_document_prefix_has_a_family_dir_and_a_template(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Close the set, both directions, against **both** tables separately.
+
+    `_write_document_drafts` reads `_DOCUMENT_FAMILY_DIR` and `_stamp_header` reads
+    `_MIGRATE_TEMPLATE_FILENAME`, and the two are not the same table — so a prefix can be
+    placeable and unrenderable, or the reverse, and `RS` was in fact missing from both.
+    Checking one would have half-fixed it.
+
+    Two independent derivations of the emittable set — the AST walk above and running every
+    discovery against the real corpus — and their agreement is asserted, because either
+    alone can silently narrow: the empirical one misses a branch this corpus never takes,
+    and the static one misses a prefix its variable resolution cannot follow.
+    """
+    static = _emittable_document_prefixes_from_source()
+    empirical: set[str] = set()
+    for name in sorted(n for n in dir(doc_id_cli) if n.startswith("_discover_")):
+        if name in (
+            "_discover_headed_split_file",          # a parameterised helper, not a writer
+            "_discover_reference_stamp_targets",    # stamps in place, produces no _Draft
+            "_discover_vendored_skill_manifests",   # returns a scan, not drafts
+        ):
+            continue
+        produced = getattr(doc_id_cli, name)(ROOT)
+        if name == "_discover_roadmap":
+            produced = produced[0]
+        empirical |= {x.prefix for x in produced if x.materialize == "document"}
+
+    assert static == empirical, (
+        "the two derivations of the emittable document-prefix set disagree, so one of them "
+        f"is narrowing silently: static-only={sorted(static - empirical)}, "
+        f"empirical-only={sorted(empirical - static)}"
+    )
+    emittable = static
+    assert emittable, "no emittable document prefixes — every assertion below is vacuous"
+
+    missing_dir = sorted(emittable - set(doc_id_cli._DOCUMENT_FAMILY_DIR))
+    missing_tmpl = sorted(emittable - set(doc_id_cli._MIGRATE_TEMPLATE_FILENAME))
+    assert not missing_dir, f"emittable but unplaceable: {missing_dir}"
+    assert not missing_tmpl, f"emittable but unrenderable: {missing_tmpl}"
+
+    # The one legitimate asymmetry, asserted as an equality so a second one cannot appear
+    # unnoticed: `REFERENCE` is stamped in place and never moved into a family directory.
+    assert set(doc_id_cli._MIGRATE_TEMPLATE_FILENAME) - set(
+        doc_id_cli._DOCUMENT_FAMILY_DIR
+    ) == {"REFERENCE"}
+    assert not set(doc_id_cli._DOCUMENT_FAMILY_DIR) - set(
+        doc_id_cli._MIGRATE_TEMPLATE_FILENAME
+    )
+
+    for prefix, filename in doc_id_cli._MIGRATE_TEMPLATE_FILENAME.items():
+        template = ROOT / "docs" / "_templates" / filename
+        assert template.is_file(), f"{prefix}: {template} does not exist"
+
+
+def test_the_placeability_guard_refuses_before_any_write(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Deliberately broken input: a family the corpus emits, removed from the writer's
+    table. The guard must name it and stop **with the tree untouched**.
+
+    The fixture's own emission of `PL` is asserted first rather than assumed — a corpus
+    that stopped producing plans would make this test expect a raise for the wrong reason.
+    """
+    assert doc_id_cli._discover_plain_plans(pristine_a), "fixture emits no PL- drafts"
+    monkeypatch.setattr(
+        doc_id_cli,
+        "_DOCUMENT_FAMILY_DIR",
+        {k: v for k, v in doc_id_cli._DOCUMENT_FAMILY_DIR.items() if k != "PL"},
+    )
+    before = _tree_files(pristine_a)
+    with pytest.raises(NotImplementedError, match=r"_DOCUMENT_FAMILY_DIR"):
+        doc_id_cli.migrate(pristine_a)
+    assert _tree_files(pristine_a) == before, "the guard fired after a write had landed"
+
+
+def test_without_the_guard_the_same_input_is_a_mid_write_crash(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What the guard is worth, rather than that it exists.
+
+    The identical broken input with the guard neutralised to a no-op: the failure becomes a
+    bare `KeyError` **with files already on disk**. That is the difference between a clean
+    refusal and a partially migrated repository, and it is what earns this guard a
+    pre-write slot in a run whose whole purpose is to have fewer of them.
+
+    Neutralised by `monkeypatch`, not by `_module_with_source_mutations`: that helper builds
+    a scratch `REPO_ROOT` holding only `docs/_templates`, and a full `migrate` from it dies
+    in `_load_register_lint` looking for `scripts/register-lint.py` — a failure about the
+    harness, not about the guard. The shipped guard's own behaviour is proven by the test
+    above; this one characterises its absence, and a no-op is the honest way to express
+    that.
+    """
+    monkeypatch.setattr(
+        doc_id_cli, "_check_every_document_draft_is_placeable", lambda drafts: None
+    )
+    monkeypatch.setattr(
+        doc_id_cli,
+        "_DOCUMENT_FAMILY_DIR",
+        {k: v for k, v in doc_id_cli._DOCUMENT_FAMILY_DIR.items() if k != "PL"},
+    )
+    before = _tree_files(pristine_a)
+    with pytest.raises(KeyError, match="PL"):
+        doc_id_cli.migrate(pristine_a)
+    assert _tree_files(pristine_a) != before, (
+        "the neutralised run wrote nothing, so this input does not demonstrate the "
+        "mid-write crash the guard exists to prevent — re-derive it"
     )
 
 

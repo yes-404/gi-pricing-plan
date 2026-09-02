@@ -861,9 +861,15 @@ def _load_register_lint(repo_root: Path = REPO_ROOT) -> types.ModuleType:
 # that family's template front matter").
 # ---------------------------------------------------------------------------------------
 
+#: Every prefix `_stamp_header` can render, mapped to its template. **`REFERENCE` is here
+#: and deliberately absent from `_DOCUMENT_FAMILY_DIR`**: the Reference family is stamped
+#: in place by `_stamp_reference_targets` and the vendored-manifest writer, never moved
+#: into a family directory, and it carries no `id:` (§1.2) so it has no padded filename
+#: either. That is the only legitimate difference between the two tables, and
+#: `_check_every_document_draft_is_placeable` treats it as the only one.
 _MIGRATE_TEMPLATE_FILENAME: Final[Mapping[str, str]] = {
     "ADR": "ADR.md", "RFC": "RFC.md", "PL": "PL.md", "RL": "RL.md", "CR": "CR.md",
-    "REFERENCE": "REFERENCE.md", "LG": "LG.md",
+    "REFERENCE": "REFERENCE.md", "LG": "LG.md", "RS": "RS.md",
 }
 
 _LEADING_COMMENT_RE: Final = re.compile(r"\A<!--.*?-->\n?\n?", re.DOTALL)
@@ -2467,22 +2473,93 @@ def _is_vendored_skill_manifest(path: Path) -> bool:
     return path.name == "SKILL.md" and path.parent.name in _docid._VENDORED_SKILLS
 
 
-def _discover_vendored_skill_manifests(root: Path) -> list[Path]:
-    """Every vendored skill's own `SKILL.md` that has not yet been stamped — the one
-    discovery function in this module that cannot infer "already migrated" from a legacy
-    shape being absent, because stamping does not move or rename this file (NT-0019 §1.5).
+@dataclass(frozen=True)
+class _VendoredManifestScan:
+    """Every vendored skill's own `SKILL.md`, partitioned by what *this migration* has
+    already done to it.
+
+    The three buckets are exhaustive over the manifests `_is_vendored_skill_manifest`
+    claims, so `len(to_stamp) + len(deferred) + len(already_stamped)` **is** that
+    population's size. That is the point of returning a partition rather than a list:
+    `F88` limb 1's second consequence was a manifest leaving the function through a bucket
+    with no name, which is indistinguishable from one that was never there.
+    """
+
+    #: `_front_matter_state` == `"none"` — no leading block at all, so this run prepends
+    #: one. The only bucket `migrate` writes.
+    to_stamp: tuple[Path, ...]
+    #: == `"foreign"` — a leading block this migration did not write, so its header must be
+    #: **merged** into that block rather than prepended. `(rel, reason)` per manifest.
+    #: Reported to the reader by the Reference stamp census, which reaches every
+    #: `.claude/skills/*/SKILL.md`; carried here so this function's own partition closes
+    #: and the two instruments can be reconciled against each other
+    #: (`test_vendored_manifest_deferrals_are_exactly_the_reference_censuss`).
+    deferred: tuple[tuple[str, str], ...]
+    #: == `"stamped"` — this migration's own `family:` header is already on the file. A
+    #: second run leaves it alone; this is the idempotency bucket.
+    already_stamped: tuple[str, ...]
+
+
+def _discover_vendored_skill_manifests(root: Path) -> _VendoredManifestScan:
+    """Every vendored skill's own `SKILL.md`, split by whether **this migration** has
+    stamped it — the one discovery function in this module that cannot infer "already
+    migrated" from a legacy shape being absent, because stamping does not move or rename
+    this file (NT-0019 §1.5).
+
+    **Classified with `_front_matter_state`, never with `_docid.parse_header`** — `F88`
+    limb 1, whose two consequences are independent and both come from that one wrong
+    predicate:
+
+    * *It aborted every real run.* Three real vendored manifests carry upstream front
+      matter that does not fit §1.5's closed grammar (`create-adaptable-composable` and
+      `vue-best-practices` an indented `author:`, `planning-with-files` a
+      `user-invocable: true`), so `parse_header` raised `HeaderError` from inside
+      discovery and `migrate` died before its stamp loop. `_front_matter_state` is
+      textual and cannot raise, for exactly this reason — its own docstring names these
+      same three files.
+    * *It read someone else's front matter as this migration's stamp.* `parse_header`
+      puts an unknown key in `.extra` rather than erroring, so every manifest opening
+      with the harness's `name:`/`description:` block returned a `Header` and was skipped
+      as already-migrated — 25 of the 28 at `c888b61`. `_front_matter_state` decides
+      `"stamped"` on `family:`, the key every family's template carries and no harness
+      block does: a positive test for this migration's own output rather than "the front
+      matter parsed".
+
+    **`scripts/audit-docs.py`'s `UNSTAMPABLE_EXEMPTIONS` is deliberately not consulted
+    here, and its absence is not an oversight.** That register answers *"can this file
+    carry a governed header at all?"* — a stamp-set question, owned by the gate, whose
+    three vendored entries are exempt by the maintainer's 2026-09-02 ruling
+    (`docs/plans/2026-09-02-w37-vendored-exemption-ruling.md`). This function answers
+    *"has this migration already stamped this manifest?"* — an idempotency question.
+    Substituting one for the other is what produced the defect above, and importing the
+    register would substitute a *different* wrong predicate rather than fix it: at
+    `c888b61` all 28 vendored manifests classify `"foreign"`, so the 3 registered ones
+    need no separate treatment here — they are deferred alongside the other 25, by the
+    same rule, for the same reason. (`UNSTAMPABLE_EXEMPTIONS`'s own declaration names
+    `audit-docs.py` check 30 as the consumer it was made public for, not this module.)
+
+    Forward reference by design: `_front_matter_state` and `_REFERENCE_FOREIGN_REASON` are
+    defined below, in the Reference-stamp section that carries their rationale. Moving
+    either up here would separate it from that reasoning; both resolve at call time.
     """
     skills_dir = root / ".claude" / "skills"
     if not skills_dir.is_dir():
-        return []
-    out = []
+        return _VendoredManifestScan((), (), ())
+    to_stamp: list[Path] = []
+    deferred: list[tuple[str, str]] = []
+    already_stamped: list[str] = []
     for skill_md in sorted(skills_dir.glob("*/SKILL.md")):
         if not _is_vendored_skill_manifest(skill_md):
             continue
-        if _docid.parse_header(skill_md) is not None:
-            continue  # already stamped
-        out.append(skill_md)
-    return out
+        rel = skill_md.relative_to(root).as_posix()
+        state = _front_matter_state(skill_md.read_text(encoding="utf-8"))
+        if state == "stamped":
+            already_stamped.append(rel)
+        elif state == "foreign":
+            deferred.append((rel, _REFERENCE_FOREIGN_REASON))
+        else:
+            to_stamp.append(skill_md)
+    return _VendoredManifestScan(tuple(to_stamp), tuple(deferred), tuple(already_stamped))
 
 
 def _iter_tree_files(root: Path) -> Iterator[Path]:
@@ -2540,10 +2617,64 @@ def _assign_numbers(drafts: list[_Draft], start: int) -> None:
 # of 'a legacy form' will drift").
 # ---------------------------------------------------------------------------------------
 
+#: Where each document family's files land. **`RS` is here because NT-0019 §1 puts it
+#: there** — *"| Document | Research | `RS` | `docs/research/` | one spike, measurement or
+#: audit | frozen | draft → active → closed \| retired | `spike` · `measurement` ·
+#: `audit` |"* — not because anyone chose a directory. It was absent until 2026-09-02
+#: while `_discover_closure_records` was already emitting two `RS- kind: audit` drafts, so
+#: `_write_document_drafts` raised `KeyError: 'RS'` **after** writing 125 of 290 documents:
+#: a partial migration rather than a clean abort. `_check_every_document_draft_is_placeable`
+#: below is what stops the next family doing the same.
 _DOCUMENT_FAMILY_DIR: Final[Mapping[str, str]] = {
     "ADR": "adrs", "RFC": "rfcs", "PL": "plans", "RL": "rulings", "CR": "closures",
-    "LG": "ledgers",
+    "LG": "ledgers", "RS": "research",
 }
+
+
+def _check_every_document_draft_is_placeable(drafts: Sequence[_Draft]) -> None:
+    """Refuse, **before any write**, if a draft this run would materialise as a document
+    names a prefix the writer cannot place or cannot render.
+
+    `_write_document_drafts` looks a prefix up in `_DOCUMENT_FAMILY_DIR` and `_stamp_header`
+    looks the same prefix up in `_MIGRATE_TEMPLATE_FILENAME`, inside a loop that has already
+    written files. A prefix missing from either therefore surfaces as a bare `KeyError`
+    partway through an irreversible one-way migration -- the failure mode task #34 filed
+    against a different call, one layer down. This converts it into a named refusal in the
+    pre-write span, where the tree is still untouched.
+
+    **It cannot fire on any corpus.** The emittable prefix set is a property of this
+    module's source, not of the documents it reads, so this guard adds no way for a real
+    run to stop that a source change did not already introduce -- which is why it is a
+    guard rather than only a test. The test
+    (`test_every_emittable_document_prefix_has_a_family_dir_and_a_template`) is the primary
+    instrument and derives the same set statically, so a *branch today's corpus never takes*
+    is caught at PR time; this catches what the corpus in front of it actually produced.
+    Neither subsumes the other.
+    """
+    unplaceable: list[str] = []
+    for d in drafts:
+        if d.materialize != "document":
+            continue
+        missing = [
+            table
+            for table, keys in (
+                ("_DOCUMENT_FAMILY_DIR", _DOCUMENT_FAMILY_DIR),
+                ("_MIGRATE_TEMPLATE_FILENAME", _MIGRATE_TEMPLATE_FILENAME),
+            )
+            if d.prefix not in keys
+        ]
+        if missing:
+            unplaceable.append(
+                f"{d.prefix} ({d.title[:60]!r}, from {d.was or 'no source file'}) -- "
+                f"absent from {' and '.join(missing)}"
+            )
+    if unplaceable:
+        raise NotImplementedError(
+            "migrate: discovery produced document draft(s) the writer cannot place, and "
+            "the lookup that fails is inside the write loop -- refusing before any write "
+            "rather than part-way through: "
+            + "; ".join(sorted(set(unplaceable)))
+        )
 
 
 def _slug(title: str) -> str:
@@ -4229,14 +4360,17 @@ def migrate(root: Path) -> MigrateResult:
         root / "docs" / "audit" / "register.md", register_drafts, "register finding rows"
     )
     drafts += requirement_drafts + roadmap_drafts + register_drafts
-    # Hoisted here to run alongside every other discovery, before any write below: a
-    # malformed vendored manifest's HeaderError must abort migrate cleanly, not after
-    # Phase C's document/roadmap/register writes have already landed on disk (task #34).
+    # Hoisted here to run alongside every other discovery, before any write below (task
+    # #34). The hoist was won when this call could still abort the run: a malformed
+    # vendored manifest's `HeaderError` had to stop `migrate` cleanly rather than after
+    # Phase C's document/roadmap/register writes had landed on disk. **It no longer
+    # aborts** -- `F88` limb 1's fix classifies with `_front_matter_state`, which cannot
+    # raise -- so the hoist now buys the weaker but still real property that discovery is
+    # complete before any write, the same position every other `_discover_*` occupies.
     # `_is_vendored_skill_manifest`'s detection rule was LICENSE-based until Ruling 69's
     # membership-test fix landed here (reassigned to this slice by Ruling 76); this hoist
-    # was never about which files the check reaches, only about when a malformed one
-    # aborts the run.
-    vendored_skill_manifests = _discover_vendored_skill_manifests(root)
+    # was never about which files the check reaches.
+    vendored_scan = _discover_vendored_skill_manifests(root)
     # NT-0019 §4 step 5's Reference stamp set (W37-5c item 2). Discovered here, alongside
     # every other discovery and before any write, for the same reason the vendored
     # manifests were hoisted (task #34): the census must refuse on the *pre-migration*
@@ -4247,6 +4381,11 @@ def migrate(root: Path) -> MigrateResult:
         root, routed={d.was for d in audit_closure_drafts if d.was is not None}
     )
     _check_reference_stamp_set_not_silently_unrecognised(reference_censuses)
+    # Last of the pre-write checks and the only one that reads `drafts` rather than the
+    # tree: every document draft must name a prefix the writer can place AND render. The
+    # lookups it stands in for live inside the write loop, so without this a missing family
+    # is a `KeyError` part-way through an irreversible migration.
+    _check_every_document_draft_is_placeable(drafts)
 
     start = compute_next(root)
     _assign_numbers(drafts, start)
@@ -4319,7 +4458,13 @@ def migrate(root: Path) -> MigrateResult:
     files_written = [*files_written, *_stamp_reference_targets(root, reference_targets)]
 
     skipped_vendored: list[str] = []
-    for skill_md in vendored_skill_manifests:
+    # `to_stamp` only -- a manifest already carrying front matter this migration did not
+    # write is in `vendored_scan.deferred`, and prepending a second `---` block to it is
+    # exactly what NT-0019 §4 step 5's Reference section refuses (the header has to be
+    # MERGED, which is W37-6 Task 1's work). Every one of them is reported by name, with
+    # this same reason, on `MigrateResult.deferred_reference_stamps`; there is no second
+    # copy of that list here, deliberately (`NT-0003`).
+    for skill_md in vendored_scan.to_stamp:
         header = _stamp_header(
             "REFERENCE", None, kind=None, title=skill_md.parent.name, status="active",
             created=date.today(), owner="maintainer", was=None,
