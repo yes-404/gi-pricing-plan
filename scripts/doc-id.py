@@ -1125,48 +1125,33 @@ _PLAN_FILENAME_RE: Final = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
 _RULING_HEADING_RE: Final = re.compile(r"^##\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
 
 #: NT-0019 §1.6's own default for a ruling: "ruling (RL) — decision-maker; the maintainer
-#: may author one on scope or process." A dated, bounded delegation can move it again — the
-#: only instance in the corpus at the time of writing is `docs/plans/2026-08-30-nt-0012-
-#: 0013-0014-adoption.md` §1.1, whose own heading is quoted in `_RULING_DELEGATION_HEADING_RE`
-#: below. Ruling 86 (`docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-
-#: files.md`): "it is not true that every ruling is the decision-maker's" — hardcoding it
-#: was a false attribution into a frozen record, the same class of defect Ruling 70 struck
-#: `_ROW_FIELDS` for, applied to authorship instead of a field set.
+#: may author one on scope or process." The row already contemplates a ruling authored by
+#: someone other than the decision-maker — naming the highest such case — and leaves the
+#: owner unchanged: the column is "Owner — creates & amends", not "author" (Ruling 88 §2).
+#: Ruling 86 §3 item 2 read the row the other way and made this default depart to the
+#: drafting role for a dated, bounded delegation (`docs/plans/2026-08-30-nt-0012-0013-0014-
+#: adoption.md` §1.1, the one match in the corpus, PR #603). Ruling 95 (`docs/plans/2026-09-
+#: 02-w37-gap-1-ruling-86-owner-ruling.md`) struck that clause as a self-correction against
+#: Ruling 88's own later, more general reading of the identical column applied to this same
+#: row: an exception *author* is not an exception *owner*. Every `RL-` takes this constant
+#: now, with no per-document exception — authorship is preserved where Ruling 88 already put
+#: it, in the record's own body and in `was:`, never in `owner:`.
 _RULING_DEFAULT_OWNER: Final = "decision-maker"
-
-#: A section whose own heading names itself "The delegation" and states who it is "delegated
-#: to" — matched narrowly (verified against every multi-ruling file in the real corpus at
-#: the time of writing: exactly one file matches, the one this was written for) rather than
-#: attempting to parse arbitrary "## Authority" prose, which varies file to file and is not
-#: reliably machine-derivable. A file with no such heading keeps the default above; a file
-#: whose heading names the pattern but not a parseable role is a case to fail loudly on
-#: (`_ruling_file_owner` below), never to silently default past.
-_RULING_DELEGATION_HEADING_RE: Final = re.compile(
-    r"^#{1,6}\s+[\d.]*\s*The delegation\s*—.*$", re.MULTILINE | re.IGNORECASE
-)
-_RULING_DELEGATION_ROLE_RE: Final = re.compile(
-    r"\bdelegated to the ([a-z][a-z -]*[a-z])\b", re.IGNORECASE
-)
 
 
 def _ruling_file_owner(path: Path, text: str) -> str:
-    """A split ruling's owner, derived from `text` rather than hardcoded (Ruling 86). Every
-    ruling in one multi-ruling file shares one owner here — the delegation, where one
-    exists, covers the file's rulings as a set (`2026-08-30-nt-0012-0013-0014-adoption.md`
-    §1.1 covers Rulings A1-A3 together), not one ruling at a time.
+    """A split ruling's owner — always `_RULING_DEFAULT_OWNER` (Ruling 95). `path` and
+    `text` are accepted but no longer inspected, kept only so the call site below and the
+    real-corpus regression tests documenting this correction need no restructuring.
+
+    Until Ruling 95, this derived a departure from a "The delegation — ... delegated to the
+    <role>" heading via a pair of regexes (Ruling 86 §3 item 2, PR #603) — removed along
+    with this function's body rather than left as a dead branch (Ruling 95 §3 item 3: a
+    branch that once encoded a reversed ruling is worse than no branch). Struck because
+    NT-0019 §1.6's `RL` row was already answering the question the departure re-opened, and
+    answering it the other way; see the constant's own comment above for the citations.
     """
-    heading_match = _RULING_DELEGATION_HEADING_RE.search(text)
-    if heading_match is None:
-        return _RULING_DEFAULT_OWNER
-    role_match = _RULING_DELEGATION_ROLE_RE.search(heading_match.group(0))
-    if role_match is None:
-        raise NotImplementedError(
-            f"migrate: {path} carries a 'The delegation — ...' heading "
-            f"({heading_match.group(0)!r}) but no role could be parsed from it -- a split "
-            "ruling's owner must not be guessed (Ruling 86); state who the delegation "
-            "names, or teach this pattern the new phrasing"
-        )
-    return role_match.group(1).strip().lower()
+    return _RULING_DEFAULT_OWNER
 
 # NT-0019 §5.2's suffix -> kind mapping, longest/most-specific suffix first so
 # `-slice-map` is not shadowed by a hypothetical shorter alternative.
