@@ -1,7 +1,11 @@
 # W37-6 — the migration run: the go-ahead re-ask
 
-**Date:** 2026-09-02 · **Tree:** `[SLOT-0]` · **Author:** the lead ·
+**Date:** 2026-09-02 · **Tree:** `32fc63c` · **Author:** the lead ·
 **Status:** awaiting the maintainer's dated line (§10)
+
+**`32fc63c` is `origin/main` at the moment this ask was put, and it does not contain this
+document — see §6.1, which names the exclusion and states this file's own contribution rather
+than leaving it implied.**
 
 **What this is.** The one document. The maintainer withheld W37-6's go-ahead twice on
 2026-09-02 — first with six conditions
@@ -1151,14 +1155,64 @@ lands next.
 
 | Slot | What fills it | Why it is not filled now |
 |---|---|---|
-| `[SLOT-0]` | The tree this ask is made at | It is not final; see below |
+| `[SLOT-0]` | **FILLED — `32fc63c`.** The tree this ask is made at | Final-tree; §6.1 names what it excludes |
 | `[SLOT-1]` | §3 and §4 of the superseded ask, re-derived in full at that tree | Condition 1 |
 | `[SLOT-2]` | Addendum A's classification sweep, re-run at that tree | Condition 2 — §7 |
 | `[SLOT-3]` | **How far a real `migrate()` run gets** — does not start / starts and does not complete / completes | §2.4, §2.6 |
 | `[SLOT-4]` | The gap checks, re-run at the moment the branch is cut | §5.2 — **and this one is filled by the executor in the running session, never here** |
 | `[SLOT-5]` | **FILLED — 125.** Files written before the `KeyError`, from its author in a message with its predicate; a historical fact at `c888b61` that the final tree cannot change | §2.6 |
 
-### 6.1 Why it runs once, and late
+### 6.1 The tree these figures are measured at, and the one file it cannot contain
+
+**Every figure in §6 and §7 is measured at `32fc63c`** — `origin/main` at the moment the ask was
+put, and the tree the run would start from. Three commits landed after the previous
+measurement: `22d0361` (#649, the fifth abort point and the post-write `KeyError` behind it),
+`cbf56b0` (#652, F93 and two corrections), and `32fc63c` (#653, which **adds two files** and
+therefore moves every repo-wide count).
+
+**`32fc63c` does not contain this document, and it cannot.** A document reporting figures
+measured at a tree that includes itself is a fixed point: the file must exist to be counted, and
+its content depends on the count. **That is a property of the question, not an oversight**, and
+the honest form is to name the tree and name the exclusion rather than imply the figures cover
+the merge commit.
+
+**But naming the exclusion is not the whole of the honest answer, because this document's own
+contribution is derivable — and it is stated rather than left for the reader to wonder about.**
+
+| This document adds | |
+|---|---|
+| tracked files | **+1** |
+| files in the rewrite population | **+1** — it is a member |
+| legacy-form token hits it contributes | **170** |
+
+Measured with the **shipped** `sweep_legacy_forms` and `LEGACY_FORM_PATTERNS`, extracted from
+`32fc63c` itself and run over this file's bytes — never a re-typed regex, per §2 of the record
+this supersedes. By pattern: bare finding id 101 · workstream/slice id 31 · note id 16 · legacy
+audit path 9 · ruling reference 9 · legacy dated-plan path 3 · legacy notes path 1, **summing to
+170**.
+
+**What is deliberately not stated is any post-merge total.** The deltas above hold whatever else
+lands; a total for the merge commit would not, because another branch may land first. **A delta
+is writable where a total is not**, which is the whole of the difference between what this
+subsection says and what it declines to say.
+
+**And the measurement that produced those figures failed silently first, which is worth one
+paragraph because it is the class this document reports.** The first attempt iterated
+`LEGACY_FORM_PATTERNS` as if it held bare compiled patterns and called `.findall` on each. It
+holds **`(name, pattern)` 2-tuples**, so the guard `hasattr(p, "findall")` was false for every
+entry, every pattern contributed nothing, and the run reported **0** — *this document does not
+join the rewrite population*, which is false. **The zero was produced by the instrument, not by
+the corpus.**
+
+It was caught because a hand-typed approximation had already returned a non-zero, and two
+instruments disagreeing is the only reason anyone looked. **The re-run therefore carries
+controls**, which the first did not: a **positive control** (`docs/audit/findings/F88.md` at
+`32fc63c` → **41** findings, so the instrument fires) and a **negative control** (`uv.lock` → 0).
+**A sweep with no positive control cannot distinguish "nothing there" from "nothing works"** —
+which is `CLAUDE.md` §13's own rule about a check that has never printed a failure, applied to a
+count instead of a check.
+
+### 6.1a Why it runs once, and late
 
 **The maintainer's condition is a property of the day the go-ahead is requested, not of any
 document.** The active leaf plan says so in its own §6.2, as the one thing still owed at the
