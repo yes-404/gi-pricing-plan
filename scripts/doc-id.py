@@ -1530,6 +1530,109 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
     return drafts
 
 
+# ---------------------------------------------------------------------------------------
+# F84 (`docs/audit/findings/F84.md`): the 17 closure records the migration cannot see.
+#
+# `_discover_closure_records` above reads `docs/audit/closure-records.md` and nothing
+# else -- its own docstring says so ("one `###` heading per record"). The per-work and
+# per-phase records living one-to-a-file under `docs/audit/work/` and
+# `docs/audit/phases/` are a second location it never visits, and before this block
+# `scripts/doc-id.py` carried no reference to either path at all.
+#
+# **Why this was worse than F80, F81 and F82 despite being smaller.** Those three abort:
+# a guard refuses to migrate a governed thing it has no discovery code for, so a real
+# `migrate()` run stops and names it. This one was silent -- no census covered the path,
+# so the 17 were not "discovered zero and flagged", they were outside the question. The
+# run completed, reported success, and left them to whatever generic rule reaches a
+# `README.md`. A guard that aborts is a gap that announces itself; a population no census
+# covers is a gap that does not (the asymmetry `NT-0007` records for boundary metrics).
+# ---------------------------------------------------------------------------------------
+
+#: NT-0019 §5.2's own routing, read from the row `"audit/work/*/README.md (15),
+#: audit/phases/1b/README.md, audit/exit-demo-uat.md"` -> `"closures/CR-0nnnn-*.md,
+#: kind: work / phase"`. The **directory decides the `kind:`**, which is what makes this
+#: a routing rule rather than a filename rule -- the discriminator
+#: `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §1 states for the README
+#: row: *"A `README.md` takes the family §5.2 routes it to"*, never its filename.
+#:
+#: §5.2's row says 15 work READMEs where 16 now exist (16 at `544b90c`); the rule is used
+#: here, not the count, which is why this survives that drift.
+#:
+#: **`docs/audit/exit-demo-uat.md` is in that same §5.2 row and has the same defect, and
+#: is deliberately not folded in here**: it is under neither directory, and F84's
+#: falsifiable section is written over 17 files. It is reported as a residual instead --
+#: widening a finding's discharge past what the finding states is how a discharge stops
+#: being checkable against its own text.
+_AUDIT_CLOSURE_README_DIRS: Final[Mapping[str, str]] = {
+    "docs/audit/work": "work",
+    "docs/audit/phases": "phase",
+}
+
+#: The record heading these files actually carry, verified against all 17 at `544b90c`
+#: with `grep -h '^# ' docs/audit/work/*/README.md docs/audit/phases/1b/README.md`:
+#: **14** read `# Work-item record — <id> (<title>)`, **two** read `# Audit record —
+#: <slug> (<clause>)` (`nt-0010-0011-adoption`, `nt-0012-0013-0014-adoption`) and **one**
+#: reads `# Phase record — 1b (Modelling Workbench)`. F84's own prose says their headings
+#: read *"`# Work-item record — W11`, `# Phase record — 1b`"*; that is true of 15 of the
+#: 17, and the two `# Audit record —` files are the exception the finding does not name.
+#: Matching the three forms rather than the one is what keeps all 17 discovered.
+#:
+#: **Matched, never assumed from the path.** A file under these directories whose H1 is
+#: none of the three forms is deliberately *not* claimed: `title:` would have to be
+#: invented, and the census below naming it is better than this function guessing -- the
+#: identical reading `_proposal_containers` gives a container heading with no date.
+_AUDIT_CLOSURE_TITLE_RE: Final = re.compile(
+    r"^#[ \t]+((?:Work-item|Audit|Phase)[ \t]+record[ \t]+—[ \t]+\S.*?)[ \t]*$", re.MULTILINE
+)
+
+
+def _discover_audit_closure_readmes(root: Path) -> list[_Draft]:
+    """The per-record closure documents NT-0019 §5.2 routes to `closures/CR-0nnnn-*.md`,
+    `kind: work` / `kind: phase` -- `docs/audit/work/<work>/README.md` (16 at `544b90c`)
+    and `docs/audit/phases/<phase>/README.md` (1). F84's first limb.
+
+    `owner: auditor` is §1.6's `CR` row read from the cell
+    (`docs/notes/0019-one-id-per-document.md:152`, mirrored at
+    `docs/process/document-ids.md:157`): *"auditor (`work`, `phase`); lead (`review`)"*.
+    Neither of the two kinds this function produces is `review`, so the value is uniform
+    and is not derived from what a role ought to own.
+
+    `status: active` is §1.2's `CR` row -- write-once, `active` its only value for the
+    family's whole life -- the same value `_discover_closure_records` assigns its own
+    `CR-` drafts.
+
+    `created:` is the file's git first-commit date: NT-0019 §4 step 1's own rule for a
+    document carrying no date of its own (*"git first-commit date otherwise"*), through
+    the same `_module_first_commit_date` call `_discover_register` already makes for the
+    register, which likewise has no date in its text.
+
+    Idempotent for the reason every other document discovery here is: the file moves to
+    `docs/closures/` and its source is deleted by `_write_document_drafts`, so a second
+    run's `*/README.md` glob finds nothing to claim.
+    """
+    drafts: list[_Draft] = []
+    for rel_dir, kind in _AUDIT_CLOSURE_README_DIRS.items():
+        directory = root / rel_dir
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*/README.md")):
+            text = path.read_text(encoding="utf-8")
+            title_match = _AUDIT_CLOSURE_TITLE_RE.search(text)
+            if title_match is None:
+                continue  # left for the census below to NAME, never guessed at
+            rel_path = path.relative_to(root).as_posix()
+            drafts.append(
+                _Draft(
+                    materialize="document", prefix="CR", kind=kind,
+                    title=title_match.group(1), status="active",
+                    created=_module_first_commit_date(path, root), owner="auditor",
+                    tie_break=(rel_path, 0), old_token=None, was=rel_path,
+                    body=text,
+                )
+            )
+    return drafts
+
+
 _PLAN_REVIEWS_REL_PATH: Final = "docs/audit/plan-reviews.md"
 
 #: Ruling 88 (`docs/plans/2026-09-02-w37-container-family-and-line-citations-rulings.md`,
@@ -2999,36 +3102,120 @@ def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
 
 
 def _check_flat_document_directory_not_silently_unrecognised(
-    root: Path, rel_dir: str, title_re: re.Pattern[str], description: str,
-    exceptions: Mapping[str, str],
+    root: Path, rel_dir: str, title_re: re.Pattern[str] | None, description: str,
+    exceptions: Mapping[str, str], *,
+    recursive: bool = False,
+    records: Collection[str] | None = None,
 ) -> None:
     """Task #31 (Ruling 83's census) for `_discover_notes`/`_discover_adrs`'s shared
     skip-path: "found nothing" there is read as "already migrated" purely because the
     legacy title regex found no match -- the exact fixture-corpus assumption Ruling 83
     rejects for `_discover_closure_records`, applied here to a directory instead of a
-    heading. Every file directly under `rel_dir` must carry the legacy title, already be
-    in a canonical post-migration filename shape (checked positively, the same idempotency
-    reading `_check_plain_plans_not_silently_unrecognised` uses), or be a declared
-    exception -- `<rel_dir>/README.md` in both `docs/notes/` and `docs/adr/` today.
+    heading. Every file under `rel_dir` must be a record, already be in a canonical
+    post-migration filename shape (checked positively, the same idempotency reading
+    `_check_plain_plans_not_silently_unrecognised` uses), or be a declared exception --
+    `<rel_dir>/README.md` in both `docs/notes/` and `docs/adr/` today.
+
+    Two keyword-only extensions, both defaulting to the behaviour above (F84):
+
+    `recursive=True` walks the whole subtree rather than one level. It is not a
+    convenience: `docs/audit/work/` holds one record per *sub*directory, so a flat
+    `iterdir()` over it finds no files at all and the census closes **vacuously** -- a
+    check that cannot fail, which is the "blinds the run" half of W37-5c's own criterion.
+
+    `records=` supplies the record set directly, for a caller whose discovery is not a
+    legacy-title match. Re-running the title regex would be a census counted with (a
+    close relative of) the splitter's own pattern: for F84 a `.md` file that carried a
+    record heading but was not the `README.md` the discovery glob claims would be scored
+    a record and pass, while nothing had migrated it. Exactly one of `title_re` and
+    `records` may be given, and passing both or neither raises rather than silently
+    preferring one.
+
+    The unit key is the path **relative to `rel_dir`**, so nested records are distinct
+    units (`W8/README.md`, `W9/README.md`) rather than 16 collisions on `README.md`. For
+    a flat directory that is the bare filename, unchanged, and today's two callers'
+    `{"README.md": ...}` exception maps keep working.
     """
+    if (title_re is None) == (records is None):
+        raise ValueError(
+            f"{rel_dir}: exactly one of `title_re` and `records` must be given -- a "
+            "census's record set comes either from the legacy title regex or from what "
+            "discovery actually produced, never from both and never from neither"
+        )
     directory = root / rel_dir
     if not directory.is_dir():
         return
     units = []
-    records: set[str] = set()
-    for path in sorted(p for p in directory.iterdir() if p.is_file()):
-        key = path.name
+    found: set[str] = set(records or ())
+    walk = directory.rglob("*") if recursive else directory.iterdir()
+    for path in sorted(p for p in walk if p.is_file()):
+        key = path.relative_to(directory).as_posix()
         units.append(_CensusUnit(key=key, locator=f"{rel_dir}/{key}", text=key))
-        if path.suffix == ".md" and title_re.search(path.read_text(encoding="utf-8")):
-            records.add(key)
+        if title_re is not None and path.suffix == ".md" and title_re.search(
+            path.read_text(encoding="utf-8")
+        ):
+            found.add(key)
 
     def is_already_canonical(unit: _CensusUnit) -> bool:
         return _docid.ID_RE.match(unit.key) is not None
 
     _reconcile_census(
         scope=f"{rel_dir}/ ({description})",
-        units=units, records=records, is_body=is_already_canonical, exceptions=exceptions,
+        units=units, records=found, is_body=is_already_canonical, exceptions=exceptions,
     )
+
+
+#: Ruling 83 bucket 3 for the two closure directories F84 names: every file under them
+#: that is **not** one of the 17 records, each with the reason it is not. Declared by
+#: path relative to the directory, never by prefix -- a prefix silently swallows every
+#: future file beneath it, the failure
+#: `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 names for
+#: `tests/fixtures/`. Neither entry is a file this slice migrates; both are named so the
+#: exemption list is the record of what is unstamped and why, and cannot grow without an
+#: arithmetic failure saying so (F83's condition 2).
+_AUDIT_CLOSURE_CENSUS_EXCEPTIONS: Final[Mapping[str, Mapping[str, str]]] = {
+    "docs/audit/work": {
+        "nt-0010-0011-adoption/pilot-findings.md": (
+            "the pilot's findings essay, not the adoption's record -- its own H1 is "
+            "`# Pilot findings — CLAUDE.md §15 step 6`, and NT-0019 §5.2 routes only "
+            "`audit/work/*/README.md` to `CR-`. It has no §5.2 row of its own; reported "
+            "as a residual rather than migrated by this slice"
+        ),
+    },
+    "docs/audit/phases": {
+        "1b/register.md": (
+            "NT-0019 §5.2 routes this into `docs/findings/register.md` alongside "
+            "`audit/register.md` (\"the phase register's rows merge in with `phase: "
+            "P1b`\"), not to a closure record. `_discover_register` reads only the "
+            "top-level `docs/audit/register.md`, so nothing discovers this file today -- "
+            "named here so that gap is listed rather than folded into a `CR-`"
+        ),
+    },
+}
+
+
+def _check_audit_closure_readmes_not_silently_unrecognised(
+    root: Path, drafts: Sequence[_Draft]
+) -> None:
+    """F84's discharge condition, second limb, verbatim: *"a census over that path names
+    any file it cannot classify -- proven on deliberately broken input, per Ruling 83:
+    the check must NAME the unmatched unit, never compare counts."*
+
+    Reconciles against what `_discover_audit_closure_readmes` **actually produced**
+    (`records=`), never against a re-run of its own title regex, and walks the subtree
+    rather than one level -- both reasons are in
+    `_check_flat_document_directory_not_silently_unrecognised`'s docstring above, and
+    dropping either one leaves a census that passes on input this one names.
+    """
+    claimed = {d.was for d in drafts if d.was is not None}
+    for rel_dir, kind in _AUDIT_CLOSURE_README_DIRS.items():
+        prefix = f"{rel_dir}/"
+        _check_flat_document_directory_not_silently_unrecognised(
+            root, rel_dir, None, f"{kind} closure records",
+            _AUDIT_CLOSURE_CENSUS_EXCEPTIONS.get(rel_dir, {}),
+            recursive=True,
+            records={was[len(prefix):] for was in claimed if was.startswith(prefix)},
+        )
 
 
 def _check_roadmap_not_silently_unrecognised(root: Path) -> None:
@@ -3517,6 +3704,13 @@ def migrate(root: Path) -> MigrateResult:
     )
     _check_closure_records_not_silently_unrecognised(root)
     drafts += closure_drafts
+    # F84: the same family from a second location `_discover_closure_records` never
+    # visits -- one record per whole file under `docs/audit/work/` and
+    # `docs/audit/phases/`, rather than one file split into many records. The census is
+    # passed the drafts, not the root, so it reconciles against what discovery produced.
+    audit_closure_drafts = _discover_audit_closure_readmes(root)
+    _check_audit_closure_readmes_not_silently_unrecognised(root, audit_closure_drafts)
+    drafts += audit_closure_drafts
     review_drafts = _discover_plan_reviews(root)
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "plan-reviews.md", review_drafts, "plan reviews"
@@ -3573,6 +3767,19 @@ def migrate(root: Path) -> MigrateResult:
             files_deleted = [*files_deleted, "docs/audit/register.md"]
             register_moved_to = "docs/findings/register.md"
 
+    # F84: `_write_document_drafts` deletes each migrated `docs/audit/work/<work>/
+    # README.md`, leaving its directory behind with nothing in it. Pruned bottom-up
+    # *before* the three legacy roots below, because an emptied `work/` is exactly what
+    # would otherwise keep `docs/audit/` non-empty and stop it dissolving (NT-0019 §1.4:
+    # "`docs/audit/` dissolves into `findings/`, `closures/`, `research/` and
+    # `process/`"). A directory that still holds a declared exception -- `phases/1b/`
+    # holds `register.md` -- survives, correctly: it still has a file in it.
+    for rel_dir in _AUDIT_CLOSURE_README_DIRS:
+        parent = root / rel_dir
+        if parent.is_dir():
+            for child in sorted(p for p in parent.iterdir() if p.is_dir()):
+                _remove_if_empty(child)
+        _remove_if_empty(parent)
     for legacy_dir in ("docs/notes", "docs/adr", "docs/audit"):
         _remove_if_empty(root / legacy_dir)
 
