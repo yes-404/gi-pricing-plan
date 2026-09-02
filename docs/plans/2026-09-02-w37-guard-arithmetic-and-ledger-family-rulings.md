@@ -57,8 +57,8 @@ derivation's own recommendation.
   withheld go-ahead, plus a roadmap-row figure correction). `git diff --name-only ffac8ba
   59bba94` lists three files — two new records under `docs/plans/` and `docs/roadmap.md`,
   changed by one line. Nothing under `scripts/`, `docs/_templates/` or `docs/notes/` moved, and
-  §1(g)'s two roadmap counts re-measure to the same **41** and **30** at `59bba94`, so every
-  citation below holds at both trees. **The measurement tree stays `ffac8ba`** — that is a
+  §1(g)'s roadmap counts re-measure unchanged at `59bba94` — 56 leading rows over 41 distinct
+  ids — so every citation below holds at both trees. **The measurement tree stays `ffac8ba`** — that is a
   fixed fact; which commit is `main`'s tip is not, and is why it is not restated as one below.
 - **Re-read under [`delivery-process.md`](../process/delivery-process.md) §15 Rule 10** —
   *"a branch open when a ruling merges is re-read against that ruling before the branch itself
@@ -243,18 +243,52 @@ independent denominator and no arithmetic, so it detects a total failure and not
 — the mirror of `#585`, which has an arithmetic over its matches and no independent
 denominator. **Neither half is sufficient and the ruling is both.**
 
-**(g) A figure worth pinning, because two correct counts of it disagree.** `docs/roadmap.md`
-carries **41** distinct bolded work ids and **30** works that are a leading table row:
+**(g) The work population — and this ruling's own thesis, demonstrated on this ruling's own
+evidence.** Measured at `59bba94`:
 
 ```
-$ grep -oE '\*\*W[0-9]+[a-z]?\*\*' docs/roadmap.md | sort -u | wc -l   → 41
-$ grep -cE '^\| \*\*W[0-9]+[a-z]?\*\*' docs/roadmap.md                 → 30
+$ grep -cE '^\|\s*\*\*W[0-9]+[a-z]?\*\*'          docs/roadmap.md   → 30   open works
+$ grep -cE '^\|\s*~~\*\*W[0-9]+[a-z]?\*\*~~'      docs/roadmap.md   → 26   closed works
+$ grep -cE '^\|\s*(~~)?\*\*W[0-9]+[a-z]?\*\*'     docs/roadmap.md   → 56   leading rows
+  distinct ids across those 56 rows                                 → 41
 ```
 
-Both are right over different corpora; the eleven-item difference is bolded work tokens that
-are not row heads. §4 step 3 says *"each Work a `WK-` row"*, so **which of the two is the
-conversion population is an open question**, not a discrepancy to reconcile away — and it is
-precisely the kind of question a census surfaces and a matcher-derived count cannot.
+Many rows are written `| ~~**W1**~~ ✔ | …`. **A pattern anchored on `\*\*W` cannot match a
+struck id**, so 26 of the 56 rows are invisible to it.
+
+**An earlier draft of this section called `30` a count of leading rows and offered `41 versus
+30` as two correct readings of one measurement. That was wrong, and the way it was wrong is
+this ruling's subject.** A denominator derived from a matcher, blind to a form variation the
+corpus actually carries — strikethrough here, a letter-suffixed id in §1(c)'s `Ruling A1` — is
+the same defect one level up, sitting inside the evidence for the rule against it. It is
+recorded rather than quietly fixed, because a ruling that could not survive its own predicate
+would not deserve to bind anything.
+
+**Two readers reached `30` independently before anyone opened the file, and that felt like
+corroboration.** It was one blind spot reached twice: both counts were taken with a pattern
+carrying the same assumption, so they could not have disagreed. Agreement between two
+measurements is evidence only when they could have failed differently.
+
+**And the natural repair — reading the 30 as "the open works" — does not survive either.**
+Decoration is typography here, not status. In the *"Phase 1b status"* table, `| **W5** |`
+carries no strikethrough while its own Status cell reads `✔ **closed 2026-08-22**`, and
+`| ~~**W7**~~ ✔ |` is struck **three rows below it in the same table**. `W5` appears in three
+leading rows altogether — undecorated once, struck twice. **Status lives in the Status cell;
+the id's decoration tracks nothing reliably**, so neither `30` nor `26` is a count of anything
+about a work's state.
+
+**What is actually true, and the two open questions it exposes.** The population is **41
+distinct work ids across 56 leading rows**, because a work may head a row in more than one
+table. §4 step 3 says *"each Work a `WK-` row"*, so:
+
+1. **Do all 41 convert, or only some?** Whether the works recorded as closed become `WK-` rows
+   with `status: closed` under their milestone, or do not convert at all, is undecided.
+2. **Which of a work's rows becomes *the* row?** With 56 rows for 41 works, one work's several
+   rows must be merged or one chosen. Nothing in §4 step 3 says which, and this question was
+   not visible at all while the count was believed to be one row per work.
+
+Both are design questions about what the migrated roadmap holds — exactly what a census
+surfaces and a matcher-derived count cannot. Neither is *"two readings of one measurement"*.
 
 ### 2. Ruled
 
@@ -348,6 +382,11 @@ times across three files and `migrate` reports success.
   41 works and exactly one `WK-` row must red. *Violation: an independent denominator used as
   a yes/no rather than as an arithmetic* — §1(f)'s limitation, and the half `#585` has that the
   roadmap guard lacks, exactly as the roadmap guard has the half `#585` lacks.
+- **A decorated id is counted.** A fixture row written `| ~~**W1**~~ ✔ |` must appear in the
+  census exactly like `| **W1** |`. *Violation: a row whose id carries markup the counting
+  pattern does not model.* This is §1(g)'s own failure turned into a test: it went undetected
+  in this record's first draft and in the lead's independent count, and a form variation that
+  fooled two readers is the one a fixture must carry.
 
 ---
 
@@ -417,8 +456,13 @@ by the route it gave, so the real answer is recorded here:
 - The 16 existing `-ledger.md` files are in the identical position and carry no front matter at
   all today.
 
-**(f) `work:` resolves.** `docs/roadmap.md` carries 30 bolded work rows and **zero** per-slice
-rows, W5's among the 30. W37-6 converts works to `WK-` rows in the same commit that creates
+**(f) `work:` resolves, and the "no slice rows" claim is tested against both decorations.**
+`docs/roadmap.md` carries 56 leading work rows over 41 distinct ids (§1(g)), three of them
+`W5`'s. Per-slice rows are **zero under every decoration** — `^\|\s*\*\*W<n>-<m>\*\*`,
+`^\|\s*~~\*\*W<n>-<m>\*\*~~` and the union all return 0 — which matters because §1(g) shows a
+`\*\*W`-anchored count missing 26 rows, and a "zero" from a blind pattern would be worthless.
+Twenty-three `W<n>-<m>` tokens do appear in the file, as prose and cell text rather than as row
+heads. W37-6 converts works to `WK-` rows in the same commit that creates
 these ledgers, so `work:` names a row that exists post-migration. `slice:` would name nothing,
 which is the reason to omit it rather than a reason to invent a row.
 
