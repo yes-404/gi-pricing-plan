@@ -128,3 +128,138 @@ status: closed
 phase: P8
 work: WK-1220
 ```
+
+## Ruling 72 acceptance fixtures (not part of any phase report test)
+
+Four minimal works, one per acceptance item in
+`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`'s Ruling 72 §4. Tagged
+`phase: P7`, which has no `## P7 — ...` section and is never queried by `--phase`, so
+these cannot perturb the P8/P9 phase-report fixtures.
+
+### WK-1500 — Ruling 72 item 1: the invisible slice
+
+```yaml
+id: WK-1500
+family: work
+title: Ruling 72 item 1 work
+status: active
+phase: P7
+```
+
+#### SL-1501 — closed, with a leaf plan
+
+```yaml
+id: SL-1501
+family: slice
+title: Ruling 72 item 1, closed slice
+status: closed
+phase: P7
+work: WK-1500
+```
+
+#### SL-1502 — draft, no leaf plan
+
+```yaml
+id: SL-1502
+family: slice
+title: Ruling 72 item 1, unplanned slice A
+status: draft
+phase: P7
+work: WK-1500
+```
+
+#### SL-1503 — draft, no leaf plan
+
+```yaml
+id: SL-1503
+family: slice
+title: Ruling 72 item 1, unplanned slice B
+status: draft
+phase: P7
+work: WK-1500
+```
+
+### WK-1600 — Ruling 72 item 2: mid-flight
+
+```yaml
+id: WK-1600
+family: work
+title: Ruling 72 item 2 work
+status: active
+phase: P7
+```
+
+#### SL-1601 — closed, with a leaf plan
+
+```yaml
+id: SL-1601
+family: slice
+title: Ruling 72 item 2, closed slice
+status: closed
+phase: P7
+work: WK-1600
+```
+
+#### SL-1602 — draft, no leaf plan
+
+```yaml
+id: SL-1602
+family: slice
+title: Ruling 72 item 2, unplanned slice
+status: draft
+phase: P7
+work: WK-1600
+```
+
+### WK-1700 — Ruling 72 item 3: replanned then completed
+
+```yaml
+id: WK-1700
+family: work
+title: Ruling 72 item 3 work
+status: active
+phase: P7
+```
+
+#### SL-1701 — closed, two leaf plans across a replan
+
+```yaml
+id: SL-1701
+family: slice
+title: Ruling 72 item 3, closed slice
+status: closed
+phase: P7
+work: WK-1700
+```
+
+### WK-1800 — Ruling 72 item 4: no catch-all, every slice retired
+
+```yaml
+id: WK-1800
+family: work
+title: Ruling 72 item 4 work
+status: retired
+phase: P7
+```
+
+#### SL-1801 — retired
+
+```yaml
+id: SL-1801
+family: slice
+title: Ruling 72 item 4, retired slice A
+status: retired
+phase: P7
+work: WK-1800
+```
+
+#### SL-1802 — retired
+
+```yaml
+id: SL-1802
+family: slice
+title: Ruling 72 item 4, retired slice B
+status: retired
+phase: P7
+work: WK-1800
+```

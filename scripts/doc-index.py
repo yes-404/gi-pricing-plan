@@ -36,18 +36,24 @@ governance data instead of API shapes):
    disappears on the next run, rather than needing a maintainer to notice a hand-written list
    went stale.
 
-**Two interpretations this module makes where NT-0019 is silent, flagged for the record**
-(the slice's dispatch: "If the cut turns out to have a dependency it did not name, tell me"):
+**Two points this module first flagged as its own inference or as NT-0019 silence, both
+resolved since** — by Rulings 70-72,
+`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`, not by further guessing here:
 
-- **A map plan's "slices' leaf plans"** (§1.7's roll-up line) has no header field naming the
-  linkage — `plans:` is ledger-only. This module uses the field that *is* shared: every
-  `kind: leaf` plan carrying the same `work:` as the map plan. That is well-founded (a leaf
-  plan's `slice:` resolves to an `SL-` row under the same `work:` the map plan itself
-  carries) but is this module's inference, not a quoted rule.
-- **Findings carry neither `phase:` nor `work:`** in §1.5's own field-applicability comment
-  ("phase: ... # every WK, SL, PL, LG, RL, CR, RS" — `FD` is absent from both lists), so
-  the phase report's "findings opened vs discharged" element (§1.10 (c)) cannot be scoped to
-  one phase from the header fields alone. Reported project-wide instead, labelled as such.
+- **The map-plan roll-up** (`_rollup_map_plan`, `_slice_child_state`) implements Ruling 72
+  exactly: children are the map plan's *slices*, not a `work:` proxy over leaf plans, and
+  the precedence table has **no catch-all** — an unenumerated combination raises. An
+  earlier version of this function used the `work:` proxy plus a trailing
+  `return "not started"`, which read a half-planned Work as `closed`, a mid-flight Work as
+  `not started`, and a replanned-then-completed slice as `not started` — three confirmed
+  defects, all from that one default. This module no longer claims the note is silent about
+  the missing rules: it states two of the seven, and Ruling 72 states the rest.
+- **The findings phase-report element** (`_parse_register`, `_findings_figures`) reads
+  `findings/register.md`, never an `FD-` essay's header. This module's first cut called
+  NT-0019 "silent" on scoping a finding to a phase; Ruling 71 found that claim false — the
+  note says so in §5.2 and §5.4, just not in §1.5's applicability comment, which governs the
+  essay's header and was never the carrier. Three figures, plus a separately labelled
+  carry-in, replace the earlier single project-wide count.
 
 Usage:
     python3 scripts/doc-index.py [--root PATH]              # (re)generate docs/INDEX.md
@@ -501,31 +507,108 @@ def _derive_leaf_execution(header: Header, corpus: Corpus) -> str:
     return "not started"
 
 
-def _rollup_map_plan(header: Header, corpus: Corpus) -> str:
-    """"A map plan rolls up from its slices' leaf plans" (§1.7). No header field names a
-    map plan's children directly (`plans:` is ledger-only), so this module uses the field
-    that *is* shared: every `kind: leaf` plan carrying the same `work:` — see this file's
-    module docstring for why that is well-founded rather than assumed.
+def _slice_child_state(slice_header: Header, corpus: Corpus) -> str | None:
+    """One map-plan child's contributed state, per Ruling 72
+    (`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`): the slice's *live* leaf
+    plan's derived execution — a `PL- kind: leaf` whose `slice:` names it and whose
+    `status:` is neither `superseded` nor `retired` — or, when it has none, the slice row's
+    own status mapped directly (`draft` -> `not started`, `active` -> `in progress`,
+    `closed` -> `closed`). Returns `None` for an *excluded* child: a `retired` slice with
+    no live leaf plan. More than one live leaf plan for one slice is "a check 33
+    disagreement, not a case to resolve silently" (the ruling's own words) and raises here
+    too, rather than picking one.
     """
-    children = [
+    if slice_header.id is None:
+        raise ValueError("a slice row with no id cannot be a map-plan child")
+    norm_slice_id = _normalize_id(slice_header.id)
+    live_leaf_plans = [
         r.header
         for r in corpus.records
         if r.header.family == "plan"
         and r.header.kind == "leaf"
+        and r.header.slice_ is not None
+        and _normalize_id(r.header.slice_) == norm_slice_id
+        and r.header.status not in ("superseded", "retired")
+    ]
+    if len(live_leaf_plans) > 1:
+        raise ValueError(
+            f"{slice_header.id}: more than one live leaf plan "
+            f"({', '.join(p.id or '?' for p in live_leaf_plans)}) — Ruling 72"
+        )
+    if live_leaf_plans:
+        return derive_execution(live_leaf_plans[0], corpus)
+    if slice_header.status == "draft":
+        return "not started"
+    if slice_header.status == "active":
+        return "in progress"
+    if slice_header.status == "closed":
+        return "closed"
+    if slice_header.status == "retired":
+        return None
+    raise ValueError(f"{slice_header.id}: unrecognised slice status {slice_header.status!r}")
+
+
+def _apply_rollup_precedence(included: list[str]) -> str:
+    """Ruling 72's seven-row precedence table over one map plan's non-excluded children,
+    already computed (`_slice_child_state`) — split out from `_rollup_map_plan` so the
+    table itself, and specifically its "no catch-all" row, is unit-testable against a
+    contrived `included` list without needing a corpus that can legitimately produce one
+    (every real child state `_slice_child_state` can return is one of `not started`,
+    `in progress`, `executed`, `closed`, and every non-empty combination of those four is
+    covered by rows 3-7 — the raise below exists as the safety net Ruling 72 requires, not
+    because today's inputs can reach it).
+
+    `included` must be non-empty — rows 1 and 2 are `_rollup_map_plan`'s to apply first,
+    since they need the *excluded* count too (whether there were no slices at all versus
+    every slice being excluded).
+    """
+    if any(s == "in progress" for s in included):
+        return "in progress"  # row 3 (§1.7's own rule)
+    if any(s == "not started" for s in included) and any(
+        s in ("executed", "closed") for s in included
+    ):
+        return "in progress"  # row 4
+    if all(s == "closed" for s in included):
+        return "closed"  # row 5 (§1.7's own rule)
+    if all(s in ("closed", "executed") for s in included):
+        return "executed"  # row 6
+    if all(s == "not started" for s in included):
+        return "not started"  # row 7
+    raise ValueError(
+        f"map-plan roll-up over {included} matches no row of Ruling 72's precedence table"
+    )
+
+
+def _rollup_map_plan(header: Header, corpus: Corpus) -> str:
+    """A map plan's roll-up, per Ruling 72
+    (`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`) — **not this module's own
+    inference**: an earlier version enumerated leaf plans sharing the map plan's `work:`
+    directly, which left an unplanned slice invisible to the roll-up, and completed §1.7's
+    two stated rules with a catch-all `return "not started"` that silently absorbed every
+    combination nobody had enumerated (three confirmed defects, all from that one line).
+
+    The ruled design: children are the map plan's *slices* (`SL-` rows sharing its
+    `work:`), each contributing one state via `_slice_child_state`, filtered to the
+    non-excluded ones, then matched against `_apply_rollup_precedence`'s explicit seven-row
+    table with no catch-all.
+    """
+    slices = [
+        r.header
+        for r in corpus.records
+        if r.header.family == "slice"
         and r.header.work is not None
         and header.work is not None
         and _normalize_id(r.header.work) == _normalize_id(header.work)
     ]
-    if not children:
-        return "not started"
-    states = [derive_execution(c, corpus) for c in children]
-    if any(s == "in progress" for s in states):
-        return "in progress"
-    if all(s == "closed" for s in states):
-        return "closed"
-    if all(s in ("closed", "executed") for s in states):
-        return "executed"
-    return "not started"
+    if not slices:
+        return "not started"  # row 1: no children at all
+
+    states = [_slice_child_state(s, corpus) for s in slices]
+    included = [s for s in states if s is not None]
+
+    if not included:
+        return "retired"  # row 2: every child excluded, at least one as retired
+    return _apply_rollup_precedence(included)
 
 
 # ---------------------------------------------------------------------------------------
@@ -607,6 +690,124 @@ def _all_citations(corpus: Corpus, phase_path: Path) -> set[str]:
     return cited
 
 
+# ---------------------------------------------------------------------------------------
+# The findings register (Ruling 71, `docs/plans/2026-09-02-w37-field-set-and-rollup-
+# rulings.md`) — the phase report's findings element is scoped from here, never from an
+# `FD-` essay's header: the essay carries no `phase:`/`work:` (Ruling 70/§1.5's own
+# applicability comment) and, after Ruling 70, no `decision:` either. The register row
+# carries both, today, before any migration — this reads that row.
+# ---------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RegisterRow:
+    finding_id: str
+    concerns: str
+    work_item: str
+    phase: str
+    decision: str
+    status: str  # derived: "closed" | "retired" | "active"
+    unowned: bool  # derived
+
+
+def _register_row_status(decision: str) -> str:
+    """`closed` when the Decision cell carries a Resolved annotation (§1.2a: closed covers
+    resolved); `retired` when it opens with the `accept` disposition (§1.6: "auditor sets
+    closed in place citing the PR; retired for accept"); `active` otherwise.
+    """
+    lowered = decision.strip().lower()
+    if "resolved" in lowered:
+        return "closed"
+    if lowered.startswith("accept"):
+        return "retired"
+    return "active"
+
+
+def _is_unowned(decision: str) -> bool:
+    """True for any of the register's own unowned spellings (`unowned`, `unowned by
+    design`, `unowned-pending-authorisation`, ...) — the substring `register-lint.py`'s
+    own "Unowned-row decay" rule keys off.
+    """
+    return "unowned" in decision.strip().lower()
+
+
+def _parse_register(path: Path) -> tuple[list[RegisterRow], int]:
+    """Parses `findings/register.md`'s `| Finding id | Concerns | Work item | Phase |
+    Decision |` table — the shape `register-lint.py` already parses today, reused rather
+    than invented. The header row is found by *position*, never by matching column text
+    (the same reason `register-lint.py`'s own parser gives): the first `|---|...|`
+    delimiter row marks it, and every `|`-led line after that is data.
+
+    Returns `(parsed rows, data-line count)` **separately** so a caller can assert
+    coverage — Ruling 71 acceptance item 2: a malformed row must not silently vanish into
+    a smaller-but-plausible count. A row is "parsed" only when it splits into exactly five
+    cells; a row that does not still counts toward the data-line total, so the two numbers
+    disagree exactly when something did not parse.
+    """
+    if not path.is_file():
+        return [], 0
+    lines = path.read_text(encoding="utf-8").splitlines()
+    sep_idx = next(
+        (i for i, line in enumerate(lines) if re.match(r"^\|\s*-+\s*\|", line.strip())),
+        None,
+    )
+    if sep_idx is None:
+        return [], 0
+    data_lines = [line for line in lines[sep_idx + 1 :] if line.strip().startswith("|")]
+    rows: list[RegisterRow] = []
+    for line in data_lines:
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) != 5:
+            continue  # not well-formed — excluded from `rows`, still in `data_lines`
+        finding_id, concerns, work_item, phase, decision = cells
+        rows.append(
+            RegisterRow(
+                finding_id=finding_id,
+                concerns=concerns,
+                work_item=work_item,
+                phase=phase,
+                decision=decision,
+                status=_register_row_status(decision),
+                unowned=_is_unowned(decision),
+            )
+        )
+    return rows, len(data_lines)
+
+
+def _phase_rank(phase: str) -> tuple[int, str]:
+    """`"P9" -> (9, "")`, `"P1b" -> (1, "b")` — orders phases the way §1.3 names them
+    (`P1b` legacy, no letters from now on), so a carry-in row's phase can be compared
+    against the report's target phase as "earlier than", not merely "not equal to".
+    """
+    m = re.match(r"P(\d+)([a-z]*)$", phase.strip())
+    if not m:
+        return (2**31, phase)  # unparseable — sorts last; not exercised by this slice's fixtures
+    return (int(m.group(1)), m.group(2))
+
+
+def _findings_figures(rows: list[RegisterRow], phase_id: str) -> tuple[int, int, int, int]:
+    """Ruling 71's three phase-scoped figures plus the separately-labelled carry-in:
+    `(opened, discharged, unowned_decay, carry_in)`. `opened`/`discharged`/`unowned_decay`
+    are computed over rows whose own `Phase` cell equals `phase_id`; `carry_in` is computed
+    over every *other* row whose phase sorts earlier, regardless of which phase entered
+    this call — an unowned row does not stop decaying just because two phases have passed.
+    """
+    target_rank = _phase_rank(phase_id)
+    in_phase = [r for r in rows if r.phase == phase_id]
+    opened = len(in_phase)
+    discharged = sum(1 for r in in_phase if r.status in ("closed", "retired"))
+    unowned_decay = sum(1 for r in in_phase if r.status == "active" and r.unowned)
+    carry_in = sum(
+        1
+        for r in rows
+        if r.phase != phase_id
+        and _phase_rank(r.phase) < target_rank
+        and r.status == "active"
+        and r.unowned
+    )
+    return opened, discharged, unowned_decay, carry_in
+
+
 def phase_report(corpus: Corpus, phase_id: str, root: Path) -> str:
     sections = scan_phase_sections(root / "roadmap.md")
     section = next((s for s in sections if s.phase == phase_id), None)
@@ -645,21 +846,22 @@ def phase_report(corpus: Corpus, phase_id: str, root: Path) -> str:
         rulings = corpus.rulings_for_work(w)
         lines.append(f"   - {w}: {len(rulings)}")
 
-    # 5. Findings opened versus discharged, with the unowned-decay count.
-    # Project-wide: NT-0019's field-applicability comment (§1.5) lists `phase:`/`work:` as
-    # carried by "every WK, SL, PL, LG, RL, CR, RS" — `FD` is absent from both lists, so
-    # this element cannot be scoped to one phase from the header fields alone. See this
-    # file's module docstring.
-    findings = [r.header for r in corpus.records if r.header.family == "finding"]
-    opened = len(findings)
-    discharged = [f for f in findings if f.status in ("closed", "retired")]
-    unowned_decay = [
-        f for f in findings if f.status == "active" and not (f.extra.get("decision") or "").strip()
-    ]
+    # 5. Findings opened versus discharged, with the unowned-decay count — scoped from
+    # `findings/register.md`, per Ruling 71 (docs/plans/2026-09-02-w37-field-set-and-
+    # rollup-rulings.md): the note was not silent on this, §5.2 and §5.4 name the register
+    # as the carrier. A parse-coverage mismatch raises rather than silently under-counting
+    # (Ruling 71 acceptance item 2).
+    register_rows, register_data_lines = _parse_register(root / "findings" / "register.md")
+    if len(register_rows) != register_data_lines:
+        raise ValueError(
+            f"findings/register.md: parsed {len(register_rows)} of {register_data_lines} "
+            "data row(s) — coverage mismatch (Ruling 71 acceptance item 2)"
+        )
+    opened, discharged, unowned_decay, carry_in = _findings_figures(register_rows, phase_id)
     lines.append(
-        f"5. Findings opened versus discharged (project-wide — FD carries no phase/work "
-        f"field to scope this by): {opened} opened, {len(discharged)} discharged, "
-        f"{len(unowned_decay)} unowned-decay"
+        f"5. Findings opened versus discharged, from the register: {opened} opened in "
+        f"{phase_id}, {discharged} discharged, {unowned_decay} unowned-decay in "
+        f"{phase_id}, plus {carry_in} unowned-decay carried in from an earlier phase"
     )
 
     # 6. Documents with no inbound citation outside INDEX.md, among this phase's records.

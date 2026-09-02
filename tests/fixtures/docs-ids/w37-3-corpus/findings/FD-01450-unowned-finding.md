@@ -5,19 +5,16 @@ title: Unowned finding
 status: active
 created: 2026-01-16
 owner: auditor
-phase: ~
-work: ~
-slice: ~
 tree: fixture
-plans: []
-supersedes: []
-superseded_by: ~
 corrected_by: []
 corrects: ~
 relates: []
 was: ~
-decision: ~
 ---
 
-Fixture finding, `active` with no `decision:` set — the "unowned-decay" count the findings
-phase-report element must include.
+Fixture finding essay. Per Ruling 70
+(`docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md`), `decision:` is a
+register-row field and must not appear here — `phase:`, `work:`, `slice:`, `plans:`,
+`supersedes:` and `superseded_by:` likewise do not apply to this family and are omitted
+rather than set to `~`. This finding's register row (`findings/register.md`) is what the
+phase report's "unowned-decay" figure reads.

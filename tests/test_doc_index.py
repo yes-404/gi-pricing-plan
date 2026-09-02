@@ -27,6 +27,8 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "doc-index.py"
 CORPUS = ROOT / "tests" / "fixtures" / "docs-ids" / "w37-3-corpus"
@@ -129,15 +131,76 @@ def test_execution_is_none_for_a_non_plan_family() -> None:
 
 def test_map_plan_rolls_up_any_in_progress_wins() -> None:
     corpus = _build(CORPUS)
-    # PL-1320's leaf children include PL-1302 ("in progress"), which must win over
-    # PL-1300 ("not started"), PL-1305 ("executed"), PL-1307 ("closed") and the rest.
+    # PL-1320's slices route to PL-1300 ("not started"), PL-1302 ("in progress"),
+    # PL-1305 ("executed") and PL-1307 ("closed") — "in progress" must win (Ruling 72
+    # row 3, §1.7's own rule).
     assert doc_index.derive_execution(_header(corpus, "PL-1320"), corpus) == "in progress"
 
 
 def test_map_plan_rolls_up_all_closed() -> None:
     corpus = _build(CORPUS)
-    # PL-1329's only leaf children, PL-1330 and PL-1331, are both "closed".
+    # PL-1329's two slices both route to a "closed" leaf plan (Ruling 72 row 5, §1.7's
+    # own rule).
     assert doc_index.derive_execution(_header(corpus, "PL-1329"), corpus) == "closed"
+
+
+# --- Ruling 72 (docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md): the map-plan
+# roll-up runs through the slices, and has no catch-all. Four regression fixtures, one per
+# named defect, each pinning the WRONG value an earlier version of `_rollup_map_plan`
+# produced (a `work:`-proxy enumeration over leaf plans, completed with a trailing
+# `return "not started"`), per the ruling's own §4 acceptance items.
+
+
+def test_ruling_72_item_1_the_invisible_slice() -> None:
+    """`WK-1500` has three slices: one `closed` (via `PL-1511`), two with no plan at all
+    and a `draft` slice row. The old `work:`-proxy enumeration counted only the plans —
+    `[closed]` — and read `closed`. The two unplanned slices must not be invisible.
+    """
+    corpus = _build(CORPUS)
+    assert doc_index.derive_execution(_header(corpus, "PL-1510"), corpus) == "in progress"
+
+
+def test_ruling_72_item_2_mid_flight() -> None:
+    """`WK-1600` has one `closed` slice and one unplanned `draft` slice. `states ==
+    ["closed", "not started"]` matched no branch of the old catch-all chain and fell to
+    `return "not started"`.
+    """
+    corpus = _build(CORPUS)
+    assert doc_index.derive_execution(_header(corpus, "PL-1610"), corpus) == "in progress"
+
+
+def test_ruling_72_item_3_replanned_then_completed() -> None:
+    """`SL-1701`'s leaf plan `PL-1711` was superseded by `PL-1712`, which then closed. The
+    old code enumerated `PL-1711` too (it shares `work: WK-1700`), read its raw derived
+    value `"superseded → PL-1712"`, matched no branch, and returned `"not started"` — on
+    the *normal replan path*, not an edge case. The superseded plan must be excluded from
+    the slice's live leaf plan, not counted alongside its successor.
+    """
+    corpus = _build(CORPUS)
+    assert doc_index.derive_execution(_header(corpus, "PL-1710"), corpus) == "closed"
+
+
+def test_ruling_72_item_4_no_catch_all_every_slice_retired() -> None:
+    """`WK-1800`'s two slices are both `retired`, with no leaf plans. The old code's
+    `children` list was empty (`if not children: return "not started"`), producing
+    `"not started"` — a value from a default, not a rule. Every child being *excluded* as
+    retired must roll up to `retired` (row 2), never fall through to a default.
+    """
+    corpus = _build(CORPUS)
+    assert doc_index.derive_execution(_header(corpus, "PL-1810"), corpus) == "retired"
+
+
+def test_rollup_precedence_table_has_no_catch_all() -> None:
+    """Ruling 72's substance: an unenumerated combination of child states raises rather
+    than defaulting. No corpus fixture can legitimately produce this input — the four
+    states `_slice_child_state` can return (`not started`, `in progress`, `executed`,
+    `closed`) exhaust every row of the table in every non-empty combination — so this
+    calls the precedence function directly with a value it cannot actually produce, the
+    same way the ruling's own record proves the *shape* of the missing safety net rather
+    than a reachable scenario.
+    """
+    with pytest.raises(ValueError, match="matches no row"):
+        doc_index._apply_rollup_precedence(["superseded → PL-9999"])
 
 
 def test_header_dataclass_has_no_execution_field() -> None:
@@ -236,6 +299,7 @@ def test_phase_report_contains_every_1_10_c_element() -> None:
         "Rulings per Work",
         "Findings opened versus discharged",
         "unowned-decay",
+        "carried in from an earlier phase",
         "no inbound citation outside INDEX.md",
         "closure record being filed",
     ):
@@ -262,10 +326,84 @@ def test_phase_report_plans_superseded_and_rulings_per_work() -> None:
     assert "WK-1210: 0" in report
 
 
-def test_phase_report_findings_opened_discharged_unowned_decay() -> None:
+# --- Ruling 71 (docs/plans/2026-09-02-w37-field-set-and-rollup-rulings.md): the findings
+# element is phase-scoped from `findings/register.md`, never from an `FD-` essay's header
+# (which, after Ruling 70, does not even carry `decision:` any more). The fixture register
+# holds: FD-1450 (P9, unowned, active), FD-1451 (P9, resolved -> closed), FD-1452 (P9,
+# accept -> retired), FD-1453 (P8, unowned by design, active — the carry-in for P9).
+
+
+def test_phase_report_findings_figures_are_scoped_from_the_register() -> None:
     corpus = _build(CORPUS)
     report = doc_index.phase_report(corpus, "P9", CORPUS)
-    assert "2 opened, 1 discharged, 1 unowned-decay" in report
+    assert "3 opened in P9" in report
+    assert "2 discharged" in report
+    assert "1 unowned-decay in P9" in report
+    assert "1 unowned-decay carried in from an earlier phase" in report
+
+
+def test_findings_figures_positive_control_over_the_fixture_register() -> None:
+    """`CLAUDE.md` §13: the unowned predicate is tested against a positive control — the
+    fixture register must contain at least one row the predicate matches (FD-1450) and at
+    least one it does not (FD-1451, resolved; FD-1452, accepted), so "small" cannot be
+    confused with "correct".
+    """
+    rows, data_lines = doc_index._parse_register(CORPUS / "findings" / "register.md")
+    assert len(rows) == data_lines == 4
+    unowned = {r.finding_id for r in rows if r.unowned}
+    not_unowned = {r.finding_id for r in rows if not r.unowned}
+    assert unowned == {"FD-1450", "FD-1453"}
+    assert not_unowned == {"FD-1451", "FD-1452"}
+
+
+def test_findings_register_status_derivation() -> None:
+    rows, _ = doc_index._parse_register(CORPUS / "findings" / "register.md")
+    by_id = {r.finding_id: r for r in rows}
+    assert by_id["FD-1450"].status == "active"
+    assert by_id["FD-1451"].status == "closed"  # a "Resolved" annotation
+    assert by_id["FD-1452"].status == "retired"  # the "accept" disposition
+
+
+def test_findings_register_unscoped_symptom_does_not_recur(tmp_path: Path) -> None:
+    """Ruling 71 acceptance item 1's named violation: "the opened count equals the
+    register's total row count." Build a register with rows in two phases and confirm
+    `--phase P2` counts only P2's own rows, never the whole table.
+    """
+    register = (
+        "| Finding id | Concerns | Work item | Phase | Decision |\n"
+        "|---|---|---|---|---|\n"
+        "| FD-2000 | x | WK-1 | P1 | unowned |\n"
+        "| FD-2001 | x | WK-2 | P2 | unowned |\n"
+        "| FD-2002 | x | WK-2 | P2 | fix before close — Resolved 2026-01-01, PR #1 |\n"
+    )
+    path = tmp_path / "register.md"
+    path.write_text(register, encoding="utf-8")
+    rows, data_lines = doc_index._parse_register(path)
+    assert len(rows) == data_lines == 3
+    opened, discharged, unowned_decay, carry_in = doc_index._findings_figures(rows, "P2")
+    assert opened == 2  # not 3 — the project-wide symptom this must not reproduce
+    assert discharged == 1
+    assert unowned_decay == 1
+    assert carry_in == 1  # FD-2000, P1, unowned, active
+
+
+def test_findings_register_coverage_mismatch_raises_rather_than_undercounting(
+    tmp_path: Path,
+) -> None:
+    """Ruling 71 acceptance item 2: a register row the parser cannot read must break the
+    report, never silently produce a smaller, plausible number. A five-cell row is
+    well-formed; this one has four.
+    """
+    root = tmp_path / "corpus"
+    shutil.copytree(CORPUS, root)
+    register_path = root / "findings" / "register.md"
+    text = register_path.read_text(encoding="utf-8")
+    broken = text + "| FD-3000 | broken row | P9 | unowned |\n"  # only 4 cells
+    register_path.write_text(broken, encoding="utf-8")
+
+    corpus = _build(root)
+    with pytest.raises(ValueError, match="coverage mismatch"):
+        doc_index.phase_report(corpus, "P9", root)
 
 
 def test_phase_report_uncited_list_includes_the_uncited_and_excludes_the_cited() -> None:
