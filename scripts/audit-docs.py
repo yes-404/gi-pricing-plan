@@ -1897,11 +1897,17 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 #
 # F83 words condition 2 as "the count of *unstamped* in-scope files must equal the exempt
 # list". `unstamped` and `unstampable` coincide only after the migration W37-6 performs.
-# Measured at `f61f9a4` over `git ls-files`, with `nt0019_stamp_set` and
-# `unstampable_reason` below as the predicate: the stamp set holds **415** files, of which
-# **364** carry no parseable header (361 with no `---` block at all, plus the 3 whose block
-# will not parse) because nothing has been stamped yet — against **65** that can never be
-# stamped. The predicate that carries F83's intent across that boundary is therefore
+# Measured over `git ls-files` with `nt0019_stamp_set` and `unstampable_reason` below as
+# the predicate. At the merge-base `f61f9a4`: **415** files, of which **51** are stamped,
+# **361** carry no `---` block and **3** carry one that will not parse — so **364** are
+# unstamped, against **65** that can never be stamped. The commit adding this comment
+# also adds one tracked markdown file under `docs/` (`docs/audit/findings/F87.md`), so at
+# this branch's head the same predicate gives **416 = 51 + 362 + 3**. Both figures are
+# stated because a corpus count taken inside a commit that changes the corpus is otherwise
+# unresolvable: the parts are given so they can be summed, which is the one check on a
+# decomposition that cannot itself be a proxy.
+#
+# The predicate that carries F83's intent across that boundary is therefore
 # **cannot be stamped**, not "has not yet been": it is equivalent to F83's wording the
 # moment the migration lands, and it is the only one of the two that is live, and
 # falsifiable, before then. The live figures are printed by check 35's own note on every
