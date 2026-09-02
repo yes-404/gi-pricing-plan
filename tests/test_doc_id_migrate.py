@@ -448,13 +448,19 @@ def test_plan_reviews_discovers_a_heading_with_trailing_text_after_its_date(
 def test_plan_reviews_still_folds_an_undated_heading_into_the_preceding_review(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Out of scope, made loud rather than left an unstated side effect: an undated
-    heading between two dated ones is not its own record either before or after this fix
-    -- task #35's own open deferral, ruled on by the decision-maker, not guessed at here
-    -- so it still folds into whichever matched heading precedes it. Uses a plain
-    (already-matching) `Plan review 9` heading, not the decorated shape the test above
-    exercises, so this isolates and pins a behaviour the narrower fix leaves UNCHANGED --
-    green both before and after -- rather than re-proving the fix itself.
+    """Out of scope for `_discover_plan_reviews` itself, made loud rather than left an
+    unstated side effect: an undated heading between two dated ones is not its own
+    record either before or after this fix -- Ruling 82's own ruling, not guessed at
+    here -- so this pure splitter still folds it into whichever matched heading
+    precedes it. Uses a plain (already-matching) `Plan review 9` heading, not the
+    decorated shape the test above exercises, so this isolates and pins a behaviour the
+    narrower fix leaves UNCHANGED -- green both before and after -- rather than
+    re-proving the fix itself.
+
+    `_discover_plan_reviews` alone stays silent about this fold (that is what the
+    assertions below show); `migrate` no longer is -- the census tests further below
+    (Ruling 83) independently re-scan the same source and refuse rather than let this
+    fold complete unremarked.
     """
     audit_dir = tmp_path / "docs" / "audit"
     audit_dir.mkdir(parents=True)
@@ -469,6 +475,134 @@ def test_plan_reviews_still_folds_an_undated_heading_into_the_preceding_review(
     review_1 = drafts[0]
     assert "Undated sub-heading, not a review" in review_1.body  # folded in, not dropped
     assert "Sub content." in review_1.body
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 83 (row 1 of the W37-5b obligations list, `docs/plans/2026-09-02-w37-6-
+# outstanding-obligations.md`): a guard may not derive its denominator from the same
+# matcher it is checking -- `_check_legacy_file_not_silently_unrecognised`'s
+# `if drafts: return` cannot distinguish "found every review" from "found ten of eleven",
+# because both give it a non-empty list. `_check_plan_reviews_heading_census` re-scans
+# `plan-reviews.md` independently, at every heading level (`^#{1,6}`), and classifies
+# each heading into one of three buckets:
+#
+#   1. a record       -- matched by `_REVIEW_HEADING_RE` (widened above for Plan
+#                         review 9's trailing text);
+#   2. derived body    -- the file's own first heading (folds into the preamble, the
+#                         same convention `_discover_headed_split_file` already uses)
+#                         or any heading deeper than the split level (`###`, i.e.
+#                         `####`+ -- real content in the actual file, nested inside
+#                         several individual reviews' own bodies);
+#   3. a declared exception -- none exist for this file today.
+#
+# Anything left over is named by line number and `migrate` refuses (`NotImplementedError`)
+# rather than silently completing -- Ruling 83 §3 item 4. Ruling 82 found the three
+# undated headings ("Candidate A", "Candidate B", "Also carried, and not a new rule") and
+# their `##` parent ("Pending proposals") sub-content, not records, but left their
+# POSITIVE family and `kind:` an open planner derivation (Ruling 82 §3 item 3) -- as of
+# this branch's own rebase tip (`cc17404`) a candidate ("RFC- kind: process", #597) has
+# been proposed but not ruled -- so this function still may not guess a bucket-3 reason
+# for them. They are named unclassified below instead: the row 1 obligation is exactly
+# to make that failure loud, not to resolve it.
+#
+# Additive, not a replacement, alongside the existing `_check_legacy_file_not_silently_
+# unrecognised` call at this site (Ruling 83 §1(f): the two guards catch different
+# things -- true zero-discovery versus a non-zero undercount -- and neither alone is
+# sufficient). Synthetic `tmp_path` content throughout, per the same preference already
+# used for the closure-records tests above.
+# ---------------------------------------------------------------------------------------
+
+
+def test_plan_reviews_heading_census_raises_naming_unclassified_headings_by_line(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The positive control Ruling 83 §4 requires: a `##` container plus its undated
+    `###` children, sitting between two properly dated (and matched) reviews. Neither
+    is a record, neither is derivably body (same level as the split, not deeper; not
+    the file's own title), and nothing has declared them an exception -- so the census
+    must refuse, naming both the container and its child by line number, rather than
+    let `_discover_plan_reviews`'s ten (of what should read as more) pass as complete.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n"  # line 1: the file's own title -- derived body
+        "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"  # line 3
+        "## Pending proposals — drafted 2026-08-29\n\n"  # line 7: unclassified
+        "### Candidate A — a proposal\n\nProposal body.\n\n"  # line 9: unclassified
+        "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n",  # line 13
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError) as exc_info:
+        doc_id_cli._check_plan_reviews_heading_census(tmp_path)
+    message = str(exc_info.value)
+    assert "line 7" in message
+    assert "Pending proposals" in message
+    assert "line 9" in message
+    assert "Candidate A" in message
+    # the records and the title are not misreported as unclassified
+    assert "line 3" not in message
+    assert "line 1" not in message
+    assert "line 13" not in message
+
+
+def test_plan_reviews_heading_census_is_silent_when_every_heading_is_a_record_or_the_title(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n"
+        "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"
+        "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_plan_reviews_heading_census(tmp_path)  # must not raise
+
+
+def test_plan_reviews_heading_census_treats_a_deeper_heading_as_derived_body(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A `####` heading nested inside a review's own body (real content in the actual
+    file -- e.g. every review's own "Sources" subsection) is deeper than the split
+    level and must not be reported as unclassified, with no exception needing to be
+    declared for it.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n"
+        "### Plan review 1 — at W6a's close, 2026-08-15\n\n"
+        "#### Sources\n\nBody one.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_plan_reviews_heading_census(tmp_path)  # must not raise
+
+
+def test_plan_reviews_heading_census_is_silent_on_a_missing_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    doc_id_cli._check_plan_reviews_heading_census(tmp_path)  # no docs/ dir at all
+
+
+def test_migrate_raises_via_the_plan_reviews_census_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """End-to-end: overwrite the fixture's own (clean) `plan-reviews.md` with the real
+    tree's shape -- a `##` container of undated sub-content between two dated,
+    otherwise-matching reviews -- and confirm `migrate` raises through the new census
+    rather than silently completing with the container's content folded away.
+    """
+    (pristine_a / "docs" / "audit" / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n"
+        "### Plan review 1 — at W6a's close, 2026-08-15\n\nBody one.\n\n"
+        "## Pending proposals — drafted 2026-08-29\n\n"
+        "### Candidate A — a proposal\n\nProposal body.\n\n"
+        "### Plan review 9 — at W11's close, 2026-08-30\n\nBody nine.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match="Pending proposals"):
+        doc_id_cli.migrate(pristine_a)
 
 
 def test_roadmap_restructure_is_readable_by_doc_index(

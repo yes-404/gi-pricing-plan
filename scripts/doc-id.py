@@ -1277,16 +1277,19 @@ def _discover_plan_reviews(root: Path) -> list[_Draft]:
     semantic variation that splitter cannot express (no phase/audit distinction, nothing
     left mid-flight), so it still delegates rather than growing its own loop.
 
-    Task #35 (plan-reviews line): three of the file's `###` headings carry no date at
-    all ("Candidate A", "Candidate B", "Also carried, and not a new rule") and so never
-    match `_REVIEW_HEADING_RE` regardless of the trailing-anchor fix below -- whether
-    they are independent records or sub-content nested inside a neighbouring review is
-    an open design question for the decision-maker, not guessed at here. Left
-    unresolved, they fold into whichever matched heading precedes them in the file
-    (sections run heading-to-heading), the same way an unmatched heading always has
-    -- not silently dropped, but not flagged either; `_discover_headed_split_file` has
-    no accounting step that would notice a heading count short of the file's own `###`
-    total, unlike `_discover_closure_records`'s bespoke loop.
+    Ruling 82: three of the file's `###` headings carry no date at all ("Candidate A",
+    "Candidate B", "Also carried, and not a new rule") and so never match
+    `_REVIEW_HEADING_RE` regardless of the trailing-anchor fix below -- they are ruled
+    sub-content of a `##` container, not independent records, but the container's own
+    positive family and `kind:` is a separate, still open, planner derivation (Ruling
+    82 §3 item 3). Left unclassified, they fold into whichever matched heading precedes
+    them in the file (sections run heading-to-heading), the same way an unmatched
+    heading always has -- `_discover_headed_split_file` itself has no accounting step
+    that would notice a heading count short of the file's own `###` total, unlike
+    `_discover_closure_records`'s bespoke loop. That is no longer silent at the
+    `migrate` level, though: `_check_plan_reviews_heading_census` below independently
+    re-scans this same file and refuses rather than let the fold complete unremarked
+    (Ruling 83, row 1 of the W37-5b obligations list).
     """
     drafts = _discover_headed_split_file(
         root, "docs/audit/plan-reviews.md", _REVIEW_HEADING_RE, "CR", "lead"
@@ -1294,6 +1297,71 @@ def _discover_plan_reviews(root: Path) -> list[_Draft]:
     for d in drafts:
         d.kind = "review"
     return drafts
+
+
+_ANY_HEADING_RE: Final = re.compile(r"^(#{1,6})\s+(.*?)\s*$", re.MULTILINE)
+
+_PLAN_REVIEWS_SPLIT_LEVEL: Final = 3  # `_REVIEW_HEADING_RE` records are `###` headings
+
+
+def _check_plan_reviews_heading_census(root: Path) -> None:
+    """Ruling 83 (row 1, `docs/plans/2026-09-02-w37-6-outstanding-obligations.md`): a
+    guard may not derive its denominator from the same matcher it is checking --
+    `_check_legacy_file_not_silently_unrecognised`'s `if drafts: return` cannot tell
+    "found every review" from "found ten of eleven", since both give it a non-empty
+    list (measured: `_discover_plan_reviews` returns ten drafts for eleven real
+    reviews, and the guard is satisfied). This re-scans `plan-reviews.md` independently
+    of `_REVIEW_HEADING_RE`'s own match count, at every heading level (`^#{1,6}`), and
+    classifies each heading into exactly one of Ruling 83's three buckets:
+
+    1. **a record** -- matched by `_REVIEW_HEADING_RE` (already widened above for
+       Plan review 9's trailing text);
+    2. **derived body**, computed rather than listed -- the file's own first heading
+       (folds into the preamble, the same convention `_discover_headed_split_file`
+       already applies to every legacy split file) or any heading deeper than
+       `_PLAN_REVIEWS_SPLIT_LEVEL` (`####`+ -- real content today, nested inside
+       several individual reviews' own "Sources"/"Proposals, consolidated" subsections);
+    3. **a declared exception** -- none exist for this file. Ruling 82 found the three
+       undated headings ("Candidate A", "Candidate B", "Also carried, and not a new
+       rule") and their `##` parent ("Pending proposals") sub-content, not records --
+       but left their POSITIVE family and `kind:` an open planner derivation (Ruling 82
+       §3 item 3; a candidate, "RFC- kind: process", was proposed in #597 but is not
+       yet ruled as of this function's own authorship), so this function has no
+       authority to invent a bucket-3 reason for them.
+
+    Anything left over is named, by line number and heading text -- never a bare count
+    (Ruling 83 §3 item 4) -- and `migrate` refuses. That is today's correct outcome for
+    this file, not a defect in this function: the leftover headings are exactly Ruling
+    82's `##` container and its three children, still awaiting that planner derivation
+    and a ruling on it.
+
+    Additive alongside the existing `_check_legacy_file_not_silently_unrecognised` call
+    for this same file, not a replacement of it (Ruling 83 §1(f)): that guard still
+    catches true zero-discovery (a census over zero headings has nothing to name), this
+    one catches an undercount even when discovery's own output is non-empty. Neither
+    alone is sufficient.
+    """
+    path = root / "docs" / "audit" / "plan-reviews.md"
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    record_starts = {m.start() for m in _REVIEW_HEADING_RE.finditer(text)}
+    headings = list(_ANY_HEADING_RE.finditer(text))
+    unaccounted = [
+        (text.count("\n", 0, m.start()) + 1, m.group(0).strip())
+        for idx, m in enumerate(headings)
+        if m.start() not in record_starts
+        and idx != 0  # the file's own title -- derived body, folds into the preamble
+        and len(m.group(1)) <= _PLAN_REVIEWS_SPLIT_LEVEL  # deeper is derived body too
+    ]
+    if unaccounted:
+        named = "; ".join(f"line {n} ({h!r})" for n, h in unaccounted)
+        raise NotImplementedError(
+            f"migrate: {path} carries heading(s) the census cannot classify as a "
+            f"record or as derived body: {named}. Their family and kind: are an open "
+            f"planner derivation (Ruling 82 §3 item 3), not migrate's to guess -- "
+            f"resolve that disposition before migrating this file."
+        )
 
 
 def _discover_plain_plans(root: Path) -> list[_Draft]:
@@ -1876,6 +1944,7 @@ def migrate(root: Path) -> MigrateResult:
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "plan-reviews.md", review_drafts, "plan reviews"
     )
+    _check_plan_reviews_heading_census(root)
     drafts += review_drafts
     drafts += _discover_plain_plans(root)
     requirement_drafts = _discover_requirements(root)
