@@ -18,7 +18,7 @@ The exit criterion is: *an engineer could start Phase 1 from these documents alo
 | `workflows/` | Cross-module end-to-end user journeys (wf-01 … wf-05) |
 | `contracts/` | JSON Schema for artifacts + OpenAPI stubs |
 | `adr/` | Architecture decision records (numbered, immutable once accepted) |
-| `process/` | Team execution process: layered workflow (Project→Phase→Work→Slice), roles, escalation, monitoring loop |
+| `process/` | Team execution process: layered workflow (Project→Phase→Work→Slice), roles, escalation, monitoring loop; `document-ids.md` — the document id standard, one id per governed thing |
 | `research/` | Spike findings and dated research notes. Not enumerated here — the parenthetical list this row used to carry named four notes while six existed, and would have gone stale again on the next one. `ls docs/research/` is the index |
 | `skills-map.md` | Stack component → where used → skills to research → resources |
 | `open-questions.md` | Unresolved design questions, owner, status |
