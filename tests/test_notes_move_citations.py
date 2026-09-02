@@ -58,31 +58,56 @@ _PRE_MOVE_SNAPSHOTS = {
     "docs/audit/file-taxonomy-draft.md",
 }
 
-# A maintainer-accepted note that *specifies* the old path rather than merely citing it.
-# NT-0019 (`docs/notes/0019-one-id-per-document.md`) names the old notes root under
-# `.claude` twice (deliberately not written as one contiguous string in this comment, for
-# the same self-referential reason the module docstring gives below): §4 step 4 is the
-# future migration instruction to delete that path's stubs, and §7(d)'s acceptance grep
-# must contain the literal pattern for it among the tokens a *later* migration tree is
-# checked to no longer contain. Both are the old path used as subject matter, not a stale
-# reference left over from this move -- the same distinction `_PRE_MOVE_SNAPSHOTS` draws
-# for a different reason. NT-0019 is a maintainer-accepted note
-# whose body is not edited to route around this test: its Raised field records it as
-# "written against `main` at `8f5d57d`" by the maintainer, and CLAUDE.md's write-once
-# reasoning for a frozen `docs/plans/` file (NT-0016 C4) applies here for the same cause --
-# rewriting a maintainer's own accepted words to satisfy a test would misrepresent what was
-# accepted. So, as with `_PRE_MOVE_SNAPSHOTS`, the file is named here instead of widening a
-# directory-shaped carve-out (a blanket `docs/notes/`-prefix exemption would stop this test
-# from ever catching a genuinely stale citation in any *other* note).
+# The class: a document that *specifies or verifies NT-0019's own future migration* of
+# this exact path, rather than a stale reference left over from the NT-0016 move this test
+# otherwise polices. NT-0019 (`docs/notes/0019-one-id-per-document.md`) is itself the
+# reason this class exists at all: its own §4 step 4 will *delete* the stub files check 30
+# watches, so both it and everything that verifies it against the tree necessarily name the
+# path being deleted. `docs/plans/` already has a blanket carve-out above for the same
+# reason (frozen, write-once); this set is for the same class of document living *outside*
+# that directory, where no blanket rule exists and each one needs a reviewed, named entry.
 #
-# What this stops catching: a *stray*, wrong citation of the old path added anywhere else in
-# NT-0019 -- by a future dated correction appended to it, say -- would no longer fail this
-# test either, since the exemption is by filename, not by line or by the two known-legitimate
-# occurrences. That risk is accepted narrowly for this one frozen file; it is not extended to
-# any other note, and a new note that names the old path for a similarly specifying reason
-# needs its own reviewed addition here, not a widening of this set's shape.
+# Two members so far, both audited directly rather than assumed current: NT-0019 names the
+# old notes root under `.claude` twice (deliberately not written as one contiguous string
+# in this comment, for the same self-referential reason the module docstring gives below)
+# -- §4 step 4's migration instruction, and §7(d)'s acceptance grep, which must contain the
+# literal pattern among the tokens a *later* migration tree is checked to no longer
+# contain. `docs/audit/nt-0019-verification-and-impact-sweep.md` (PR #560, merged
+# 2026-09-02, the day after NT-0019 itself) names it once, in its own §5.3/§5.4 scope note,
+# listing the directories NT-0019's impact-map sweep covers. Confirmed by re-running this
+# test against the merged tip that added it: exactly one new offender, that file alone --
+# not NT-0019 itself, which the exemption below already covered; a claim from outside this
+# session that a second, different file was *also* newly implicated did not hold up against
+# a direct check of the actual failure at that tree and is not reflected here.
+#
+# Why an explicit set and not a structural rule (e.g. "exempt any file that also cites
+# `NT-0019`"): a content-marker match would let the exemption widen itself the moment any
+# document -- and W37, NT-0019's own migration workstream, is going to produce several --
+# happens to mention `NT-0019` anywhere in a large file, without a reviewer ever choosing
+# that specific file. That is exactly the failure mode `OLD_NOTES_STUB_NAMES` (in
+# `audit-docs.py`) and `_PRE_MOVE_SNAPSHOTS` above were each already written to avoid, for
+# the same stated reason: a derived or pattern-matched set lets one edit defeat both the
+# content it changes and the check meant to catch it. Consistency with that established
+# choice, not novelty, is why this set is named the same way.
+#
+# This is a deliberate, bounded stopgap, not a design meant to outlive its problem: NT-0019
+# §5.7 lists this exact test file (with test_audit_docs_notes_tombstone.py) as **deleted**
+# by its own migration, replaced by `test_audit_docs_redirects.py`. Building a sturdier
+# mechanism for a check with a short, already-scheduled remaining lifespan would be solving
+# a problem past the point it stops existing.
+#
+# What this stops catching, and what it does not: a *stray*, wrong citation of the old path
+# added anywhere else inside either of these two named files -- by a future dated
+# correction appended to NT-0019, say, or a later edit to the audit record -- would no
+# longer fail this test, since the exemption is by filename, not by line or by the specific
+# occurrences audited above. That risk is accepted narrowly for these two files; it is not
+# extended to any other file. It does **not** stop catching a new, third document elsewhere
+# in the tree that cites the old path for this same legitimate reason -- W37 will produce
+# more of them before the migration lands, each will fail this test the same way PR #560's
+# did, and each needs its own reviewed line added here, not a widened pattern.
 _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "docs/notes/0019-one-id-per-document.md",
+    "docs/audit/nt-0019-verification-and-impact-sweep.md",
 }
 
 
