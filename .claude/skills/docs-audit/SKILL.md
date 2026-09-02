@@ -328,6 +328,35 @@ Ten broken-input proofs (one per check) and every ruling-specific mechanism proo
 in `tests/test_audit_docs_ids.py`, alongside the fixtures under
 `tests/fixtures/docs-ids/w37-4-checks/` and `tests/fixtures/docs-ids/w37-4-rollup-raise/`.
 
+### Validating a set of counts — a total validates the total, and nothing else
+
+**A sum is invariant under a transfer between buckets, so checking a total cannot detect a
+compensating error.** Added 2026-09-02 after the lead did exactly that.
+
+An agent reported six class counts summing to 98. The lead verified them by confirming the sum.
+It was 98. **So was the correct set** — two buckets had moved by 2 in opposite directions. The
+wrong figures were then published in a maintainer-facing document on the strength of that check.
+**The check was not unlucky; it was structurally incapable**, because the quantity it examines
+cannot vary with the defect it was meant to catch.
+
+**The test to apply before trusting any verification:** *can the number I am checking change when
+the error I am looking for is present?* If not, the check is theatre however carefully it is run.
+
+**This repository already had the rule and the weaker thing was done anyway.** Ruling 83 requires
+a census to refuse by **naming every unmatched unit, never by comparing counts** — its own stated
+reason being that a count cannot distinguish a true zero-gap from two mismatched miscounts that
+cancel. That is the same failure, and the ruling had been cited repeatedly the same day.
+
+**So, for any bucketed count: check membership, not the total.** Name the units in each bucket, or
+diff the enumeration. A sum is fit for catching a **loss**, not a **transfer**. When someone hands
+you a set of counts, the useful question is not *"do these add up"* but *"which rows produced each
+one"*.
+
+**And derive rather than re-check.** The error was found by its author re-building the list from
+the rows, not by re-adding the summary line — a second pass over the same summary reproduces the
+same mistake. This is why `_reconcile_census` names units and why the ruling-acceptance-item census
+script asserts bucket membership instead of confirming a printed total.
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -408,6 +437,14 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 (fourth entry, same day) — counting rule added: *"a total validates the total, and
+nothing else."* Recorded because the lead validated a set of six bucket counts by confirming they
+summed to 98, which they did — and so did the correct set, two buckets having moved by 2 in
+opposite directions. The wrong figures reached a maintainer-facing document. The rule already
+existed as Ruling 83's naming-not-counting property; what was missing was its statement as a
+**verification** discipline rather than a **census** one, so the section states the test to apply
+to any check before trusting it. Tree `ba31cd1`.
 
 2026-09-02 (third entry, same day) — F76 fixed: `check_index_stable`'s
 `_doc_index.build_corpus(ROOT)` call, the tenth and last of `check_ids_30_39()`'s ten

@@ -189,6 +189,39 @@ into an unrelated change, and don't claim CI verifies types. The inverse matters
 too: a helper target like `make quality-check` that runs *more* than CI will show
 you reds that no one is gating on.
 
+## Adding a file puts tests in scope that touching code does not
+
+**A change that only *adds* files can red suites nothing in the diff touches**, because this
+repository has **tree-scanning invariant tests** — they walk `git ls-files` and assert a property
+of the whole corpus, so their input is the tree, not the diff. Known ones include
+`backend/tests/test_lineage.py` (no bundled reference-data rows), `tests/test_notes_move_citations.py`
+(no living file cites the retired notes path), and the repository-invariant and doc-id suites.
+
+**`pytest --collect-only` cannot warn you.** Collection is unchanged — the same tests exist, and
+they were already passing. What changed is the corpus they read at run time. So the usual
+lightweight local check, *"collect to catch import breakage, then run the files I touched"*, is
+**blind to this entire class**, and blind in the reassuring direction: it goes green.
+
+**Recorded 2026-09-02 from a live instance.** A docs-only PR adding a `.csv` and a `.md` under
+`docs/audit/` passed `ruff`, `mypy`, `lint-imports`, `audit-docs.py` and `req-coverage.py` locally,
+then failed CI on **two** such tests — the CSV read as bundled data, and both new files contained a
+literal the notes-move check forbids **because the record was about that path**. Neither is
+reachable from the diff.
+
+**So: if your change adds or moves a tracked file, run the tree-scanning suites**, whatever else
+you scope. They are cheap relative to the full run and they are the only ones your file can break
+without appearing to. The agent that hit this then ran five such suites unprompted — 281 passed,
+no third failure — which converts *"I fixed the two CI reported"* into *"I checked whether CI had
+reported all of them."*
+
+**Two traps inside the fix, both refused and both worth naming.** A file flagged by a glob can be
+renamed out of it (`.csv` → `.csv.txt`), and a forbidden literal can be broken up with a
+zero-width character. **Both satisfy the detector while defeating the purpose**, and both fail again
+the moment the check is reasonably hardened. Where a document legitimately *names* a thing a check
+forbids — a citation rather than a use — describe it in prose instead: the notes-move test's own
+docstring says *"the old notes root under `.claude`"* and builds the literal by concatenation so it
+does not flag itself, which is the established form.
+
 ## Finish by confirming the run, not by explaining it
 
 "Passes locally" is a prediction. Wait for the real result:
