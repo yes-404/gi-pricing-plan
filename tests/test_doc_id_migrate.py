@@ -1403,6 +1403,68 @@ def test_discover_multi_ruling_files_ignores_a_delegation_heading(
 
 
 # ---------------------------------------------------------------------------------------
+# Ruling 95 §4's third acceptance item ("Ruling 87's `decision-maker` for the three
+# standalone ruling files still holds after this amendment") names an instrument that
+# cannot be built as worded: `decision-maker` is written by no code path for this set
+# today, because Ruling 87 item 1's classification -- which discovery function ever
+# claims these files -- is still undecided and unimplemented. That is the same
+# "acceptance item naming a value no code path writes" shape Ruling 94 ruled
+# vacuous-at-birth for Ruling 84's `slice:` item, and Ruling 94's own remedy applies
+# unchanged: the property stands, the instrument is re-derived rather than left
+# unbuilt or asserted as something it cannot be. The property item 3 actually protects
+# is non-interference -- did this amendment disturb territory Ruling 95 §3 item 2
+# deliberately leaves alone -- and that is checkable today by execution, over the real
+# files Ruling 87 §1 names.
+# ---------------------------------------------------------------------------------------
+
+_RULING_87_STANDALONE_SOURCES = (
+    "docs/plans/2026-09-01-ruling-60-census-provenance-checkout-depth.md",
+    "docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md",
+    "docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md",
+)
+
+
+def test_ruling_87_standalone_files_are_untouched_by_this_amendment(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
+    constant). `owner="planner"` asserted below is *known wrong* for these three --
+    Ruling 87 §3 item 2 ruled `decision-maker` for them, and Ruling 86 item 2's second
+    clause (still standing after Ruling 95, untouched by this PR) is exactly this
+    hardcode. Asserting it here pins today's behaviour so a future change to it is a
+    deliberate act of implementing Ruling 87, not an incidental side effect discovered
+    after the fact -- this test documents the hardcode, it does not bless it.
+
+    Only `_discover_multi_ruling_files` is checked as "no other discovery function
+    claims these": every other `_discover_*` in this module reads a different real
+    location entirely (`docs/adr/`, `docs/findings/register.md`, `docs/roadmap.md`,
+    `docs/specs/*.md`, `.claude/skills/`, ...), never `docs/plans/*.md` ruling-shaped
+    content, so `_discover_multi_ruling_files` -- the one other function this module
+    ever routes a ruling-shaped file through -- is the one collision this amendment
+    could plausibly have introduced.
+
+    Deliberately not `_ruling_file_owner`: post-Ruling-95 that function is
+    content-independent, so pointing it at these three files' real text would return
+    "decision-maker" for any input whatsoever, discriminating nothing -- a test that
+    cannot fail is worse than no test, since it would read as coverage this PR does not
+    have. It would also test a function Ruling 87 item 1 never committed to using for
+    this set: which discovery function eventually claims these files is still open.
+    """
+    drafts = doc_id_cli._discover_plain_plans(ROOT)
+    by_was = {d.was: d for d in drafts}
+    for source in _RULING_87_STANDALONE_SOURCES:
+        assert source in by_was, f"fixture assumption: {source} still exists as a plain plan"
+        assert by_was[source].owner == "planner", by_was[source]
+
+    multi_ruling_was = {d.was for d in doc_id_cli._discover_multi_ruling_files(ROOT)}
+    assert not multi_ruling_was & set(_RULING_87_STANDALONE_SOURCES), (
+        "these three are h1-titled ruling records (Ruling 87 §1) _RULING_HEADING_RE does "
+        "not match today; if this now fires, Ruling 86/87's heading-widening has landed "
+        "and this test needs updating to Ruling 87's terms, not silencing"
+    )
+
+
+# ---------------------------------------------------------------------------------------
 # The same class of defect, the opposite direction: `_discover_plain_plans` hardcoded
 # `owner="planner"` for every plan regardless of `kind:`, though NT-0019 §1.6 gives a
 # review to the auditor and a handover to the executor. Two hardcodes pointing opposite
