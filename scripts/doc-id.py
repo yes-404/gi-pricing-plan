@@ -845,7 +845,7 @@ def _load_audit_docs(repo_root: Path = REPO_ROOT) -> types.ModuleType:
 
 _MIGRATE_TEMPLATE_FILENAME: Final[Mapping[str, str]] = {
     "ADR": "ADR.md", "RFC": "RFC.md", "PL": "PL.md", "RL": "RL.md", "CR": "CR.md",
-    "REFERENCE": "REFERENCE.md",
+    "REFERENCE": "REFERENCE.md", "LG": "LG.md",
 }
 
 _LEADING_COMMENT_RE: Final = re.compile(r"\A<!--.*?-->\n?\n?", re.DOTALL)
@@ -878,6 +878,8 @@ def _stamp_header(
     owner: str,
     was: str | None,
     extra: Mapping[str, str] = types.MappingProxyType({}),
+    phase: str | None = None,
+    work: str | None = None,
 ) -> str:
     """Render one document family's front-matter block by substituting the template's own
     placeholder tokens — never a hand-built YAML string, so a field this family's template
@@ -885,6 +887,12 @@ def _stamp_header(
     for check 30's read of the same files, now applied to the writer as well as the
     checker). `number=None` is the Reference family (`prefix="REFERENCE"`): no prefix, no
     number, no `id:` line at all (§1.2), so the template simply carries none to substitute.
+
+    `phase`/`work` are optional (default `None`, dropped exactly as before Ruling 84 —
+    every caller but `_write_document_drafts`'s `LG-` path leaves them unset) — Ruling 84
+    §3: an `LG-` record carries `work:` resolved to W5's post-migration `WK-` id and,
+    derived from that same resolution, `phase:`; no other family populates either yet, for
+    the same "no data source" reason the module docstring above already gives.
     """
     canon = _docid.canonical(prefix, number) if number is not None else None
     lines = list(_template_header_lines(prefix))
@@ -909,7 +917,15 @@ def _stamp_header(
             line = re.sub(r"owner:\s*\S+(\s*#.*)?$", f"owner: {owner}", line)
         elif key == "tree":
             continue  # this fixture-corpus migration carries no real commit sha to stamp
-        elif key in ("phase", "work", "slice", "deliverable", "lands_in", "trigger"):
+        elif key == "phase":
+            if phase is None:
+                continue
+            line = re.sub(r"phase:\s*\S+", f"phase: {phase}", line)
+        elif key == "work":
+            if work is None:
+                continue
+            line = re.sub(r"work:\s*\S+", f"work: {work}", line)
+        elif key in ("slice", "deliverable", "lands_in", "trigger"):
             continue  # not populated by this slice's migration — no data source for them
         elif key in ("supersedes", "superseded_by", "corrected_by", "corrects", "relates"):
             pass  # keep the template's own empty default ([] / ~)
@@ -1304,6 +1320,32 @@ _CLOSURE_AUDIT_TITLE_PREFIXES: Final = (
 )
 
 
+#: A "not closed" record's own heading names the workstream it is one slice of — `"W5 —
+#: the GLM spine, ..."` — derived per record rather than assumed, so a future workstream's
+#: own not-yet-closed records resolve to *their* work, not a hardcoded `"W5"` (Ruling 84 is
+#: about the ten real `W5 —` records; the mechanism it obliges is general).
+_CLOSURE_WORK_TOKEN_RE: Final = re.compile(r"^(W\d+[a-z]?)\s+—")
+
+#: Ruling 84 §2: "each of the ten is read for its own outcome rather than blanket-stamped
+#: ... any that records a slice that did not complete takes retired". Read from the
+#: heading's own trailer — the same structured annotation `"not closed"` itself comes
+#: from — never the record's free-form body: a closure record's prose uses "superseded"/
+#: "reverted"/"retired" constantly for individual requirements and decisions inside an
+#: otherwise-successful slice (verified against the real ten: none of these words appears
+#: in a body in a way that means the *slice* failed), so keying off the body would
+#: false-positive on ordinary engineering narrative. A trailer that also names one of
+#: these markers is the deliberate, structured way a future record states that *this*
+#: slice itself did not complete.
+_LEDGER_RETIRED_MARKERS: Final = ("retired", "abandoned", "withdrawn")
+
+
+def _ledger_disposition(trailer: str) -> str:
+    lowered = trailer.lower()
+    if any(marker in lowered for marker in _LEDGER_RETIRED_MARKERS):
+        return "retired"
+    return "closed"
+
+
 def _discover_closure_records(root: Path) -> list[_Draft]:
     """`docs/audit/closure-records.md`: one `###` heading per record. Unlike
     `_discover_plan_reviews` below, this does not delegate to `_discover_headed_split_file`
@@ -1316,13 +1358,15 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
       phase` rather than the workstream default.
     - Two headings (`_CLOSURE_AUDIT_TITLE_PREFIXES`) are a bespoke audit record: `RS-`,
       `kind: audit`, `status: closed` rather than `CR-`/`work`/`active`.
-    - A heading carrying an "in progress, not closed" qualifier after its date is not a
-      closure at all yet. `migrate` cannot assign a family a governed document does not
-      have, so this raises rather than silently folding the record's content into
-      whichever heading happened to match next -- the exact defect task #31 files: eleven
-      unmatched headings folding into one neighbouring record's body, producing a
-      plausible-looking result instead of an error. Left failing until the decision-maker
-      rules what family these records take (task #31's own open question).
+    - A heading carrying an "in progress, not closed" qualifier after its date is a
+      per-slice delivery record, not a closure — Ruling 84
+      (`docs/plans/2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.md`):
+      `family: ledger`, `work:` resolved to the workstream's post-migration `WK-` id (by
+      `_write_document_drafts`, once `roadmap_drafts` names it — until then `work:` is
+      simply omitted, the same as any other unresolved optional field) and no `slice:`.
+      This used to raise `NotImplementedError` and stop migrate on the first of the ten;
+      Ruling 84 §1(b) is explicit that the raise was correct *while the family was
+      undecided* and is wrong now that it is decided.
     """
     path = root / "docs" / "audit" / "closure-records.md"
     if not path.is_file():
@@ -1335,24 +1379,25 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
         start = heading.start() if i > 0 else 0  # preamble folds into the first record
         end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
         section_text = text[start:end].rstrip("\n") + "\n"
+        work_token: str | None = None
         if "not closed" in trailer.lower():
-            raise NotImplementedError(
-                f"migrate: {path}, heading {title!r} ({date_str}) is not yet closed -- "
-                f"migrate cannot assign a family a governed document does not have (task "
-                f"#31). Resolve the record's disposition (or close it) before migrating."
-            )
-        if title.startswith(_CLOSURE_AUDIT_TITLE_PREFIXES):
-            prefix, kind, status = "RS", "audit", "closed"
+            prefix, kind, owner = "LG", None, "executor"
+            status = _ledger_disposition(trailer)
+            work_match = _CLOSURE_WORK_TOKEN_RE.match(title)
+            work_token = work_match.group(1) if work_match else None
+        elif title.startswith(_CLOSURE_AUDIT_TITLE_PREFIXES):
+            prefix, kind, status, owner = "RS", "audit", "closed", "auditor"
         elif title.startswith("Phase "):
-            prefix, kind, status = "CR", "phase", "active"
+            prefix, kind, status, owner = "CR", "phase", "active", "auditor"
         else:
-            prefix, kind, status = "CR", "work", "active"
+            prefix, kind, status, owner = "CR", "work", "active", "auditor"
         drafts.append(
             _Draft(
                 materialize="document", prefix=prefix, kind=kind, title=title, status=status,
-                created=date.fromisoformat(date_str), owner="auditor",
+                created=date.fromisoformat(date_str), owner=owner,
                 tie_break=("docs/audit/closure-records.md", i), old_token=None,
                 was="docs/audit/closure-records.md", body=section_text,
+                work_token=work_token,
             )
         )
     return drafts
@@ -1721,6 +1766,7 @@ def _assign_numbers(drafts: list[_Draft], start: int) -> None:
 
 _DOCUMENT_FAMILY_DIR: Final[Mapping[str, str]] = {
     "ADR": "adrs", "RFC": "rfcs", "PL": "plans", "RL": "rulings", "CR": "closures",
+    "LG": "ledgers",
 }
 
 
@@ -1729,13 +1775,30 @@ def _slug(title: str) -> str:
     return slug or "untitled"
 
 
-def _write_document_drafts(root: Path, drafts: list[_Draft]) -> tuple[list[str], list[str]]:
+def _write_document_drafts(
+    root: Path, drafts: list[_Draft], roadmap_drafts: Sequence[_Draft] = ()
+) -> tuple[list[str], list[str]]:
     """Every `materialize="document"` draft: stamp its header, write it under its family
     directory, and delete its `was` source once every draft sharing that source has been
     written. Returns `(files_written, files_deleted)`, both repo-relative posix paths.
+
+    `roadmap_drafts` resolves a draft's `work_token` (Ruling 84 §2: an `LG-` record's
+    `work:`) the same way `_restructure_roadmap` already resolves an `SL-` row's `work:` —
+    by `old_token`, against drafts that already carry their assigned `.number` (Phase B's
+    `_assign_numbers` runs over the combined draft list, `roadmap_drafts` included, before
+    this function is called). `phase:` is derived from the same lookup — the resolved
+    work's own `.phase` — rather than set directly on the `LG-` draft, since a closure
+    record has no independent way to know its workstream's phase. Neither field is set
+    when `work_token` does not resolve (the real corpus's `roadmap_drafts` is empty until a
+    separate, unassigned defect — "`_discover_roadmap` converts 0 of 41 works" — is fixed;
+    `work:`/`phase:` are simply omitted then, exactly as for any other unresolved optional
+    field, never a raise).
     """
     written: list[str] = []
     was_sources: set[str] = set()
+    roadmap_by_token = {
+        d.old_token: d for d in roadmap_drafts if d.old_token is not None
+    }
     for d in drafts:
         if d.materialize != "document":
             continue
@@ -1744,9 +1807,18 @@ def _write_document_drafts(root: Path, drafts: list[_Draft]) -> tuple[list[str],
         filename = f"{_docid.padded(d.prefix, d.number)}-{_slug(d.title)}.md"
         new_path = target_dir / filename
         d.new_path = new_path
+        work_value: str | None = None
+        phase_value = d.phase
+        if d.work_token is not None:
+            work_draft = roadmap_by_token.get(d.work_token)
+            if work_draft is not None:
+                work_value = _docid.canonical(work_draft.prefix, work_draft.number)
+                if phase_value is None:
+                    phase_value = work_draft.phase
         header = _stamp_header(
             d.prefix, d.number, kind=d.kind, title=d.title, status=d.status,
             created=d.created, owner=d.owner, was=d.was,
+            phase=phase_value, work=work_value,
         )
         new_path.write_text(header + "\n" + d.body, encoding="utf-8")
         written.append(new_path.relative_to(root).as_posix())
@@ -2486,7 +2558,7 @@ def migrate(root: Path) -> MigrateResult:
     start = compute_next(root)
     _assign_numbers(drafts, start)
 
-    files_written, files_deleted = _write_document_drafts(root, drafts)
+    files_written, files_deleted = _write_document_drafts(root, drafts, roadmap_drafts)
 
     if roadmap_drafts:
         if phase_id is None or phase_title is None:
