@@ -29,3 +29,7 @@ Fixture body.
 ## Rationale
 
 Fixture body.
+
+## Acceptance — the violation that must become detectable
+
+Fixture body.

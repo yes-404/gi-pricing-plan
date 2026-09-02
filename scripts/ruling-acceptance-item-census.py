@@ -60,6 +60,24 @@ A ruling matching **more than one** convention is a CONFLICT, printed and left f
 human — it has never happened in the corpus this script has been run against, and this
 script does not guess which one is authoritative.
 
+**Ruling-form flag-day, 2026-09-02 (maintainer ruling, discharged at `#623`'s merge,
+`aab6327`): every ruling filed after the flag-day must use the W37 form.** Before the
+flag-day, `none` was the expected, majority case (most of the corpus predates the
+acceptance-item convention entirely). After it, `none` is only still expected for the
+35 rulings that were already in that bucket when the flag-day landed -- a **post**-flag-day
+ruling with no acceptance item is a violation, not a member of the majority case, and
+`main` fails on it. **The date is the discriminator, not the ruling number**, which is
+not monotonic in time (a later-numbered ruling can be filed before an earlier-numbered
+one lands, and the reverse) -- so each `none`-bucket heading's own introduction commit is
+resolved individually (`git log -S` pickaxed on that heading's own line, scoped to the
+file it lives in), never read off the file's creation date or the ruling's own number.
+Using the **author** date rather than the committer date is deliberate: a rebase or an
+amend changes the committer date and the SHA but preserves the author date unless someone
+deliberately backdates, so this predicate survives both. A ruling appended to a file whose
+*own* first commit predates the flag-day is still correctly dated by its own heading's
+introduction commit, not the file's -- this is the trap a coarser predicate (file mtime,
+file's first commit, ruling number) would fall into, and why none of those is used.
+
 Usage: `python3 scripts/ruling-acceptance-item-census.py [--root PATH]`
 """
 
@@ -67,12 +85,20 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Final
 
 REPO_ROOT: Final = Path(__file__).resolve().parent.parent
+
+#: `#623`'s merge commit -- the maintainer's ruling-form flag-day, 2026-09-02. A `none`-
+#: bucket ruling introduced at or before this commit is grandfathered; after it, a
+#: violation. Frozen at this value the same way `_NAMED_EXCEPTIONS` and
+#: `_PROSE_ONLY_RULINGS` are frozen -- a later commit does not move the flag-day.
+_FLAG_DAY_COMMIT: Final = "aab6327"
 
 #: Every canonical "Ruling N" / "Ruling AN" heading, at heading depth 1-3 (the three
 #: standalone files use `#`, the ordinary rulings files use `##`, the A-series uses
@@ -147,6 +173,78 @@ def _section_text(root: Path, heading: RulingHeading) -> str:
     return heading.file.read_text(encoding="utf-8")[heading.start : heading.end]
 
 
+def _commit_author_date(root: Path, commit: str) -> str:
+    """ISO-8601 author date of `commit`. Raises `RuntimeError` naming the commit rather
+    than returning `None` or a sentinel -- a flag-day comparison that cannot resolve one
+    side is not silently skipped (the failure mode Ruling 59's `generated_from_tracked_
+    corpus` refuses the same way, for the same reason: 'cannot verify, so allow it' is
+    the class of bug this repository keeps re-finding).
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(root), "show", "-s", "--format=%aI", commit],
+        capture_output=True, text=True, check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f"cannot resolve commit {commit!r}: {proc.stderr.strip()}")
+    return proc.stdout.strip()
+
+
+def _heading_introduced_at(root: Path, heading: RulingHeading) -> str:
+    """ISO-8601 **author** date of the commit that first introduced `heading`'s own
+    line -- via `git log -S` pickaxed on `"Ruling {number} —"`, scoped to the file the
+    heading lives in, never on the file as a whole. Author date, not committer date: a
+    rebase or `git commit --amend` changes the SHA and the committer date but preserves
+    the author date unless someone deliberately backdates, so this predicate survives
+    both. Raises `RuntimeError` naming the ruling if no commit is found, rather than
+    treating an unresolvable heading as pre-flag-day by default -- the same
+    raise-rather-than-guess rule `_commit_author_date` follows.
+    """
+    anchor = f"Ruling {heading.number} —"
+    rel = heading.file.relative_to(root).as_posix()
+    proc = subprocess.run(
+        ["git", "-C", str(root), "log", "--reverse", "--format=%aI", "-S", anchor,
+         "--", rel],
+        capture_output=True, text=True, check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"Ruling {heading.number}: git log failed resolving its introduction date: "
+            f"{proc.stderr.strip()}"
+        )
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    if not lines:
+        raise RuntimeError(
+            f"Ruling {heading.number}: no commit in {rel}'s history introduces the "
+            f"heading line {anchor!r} -- uncommitted, or the anchor text does not match "
+            "what is on disk"
+        )
+    return lines[0]
+
+
+def flag_day_split(
+    root: Path, none_headings: list[RulingHeading]
+) -> tuple[list[RulingHeading], list[RulingHeading]]:
+    """Split the `none` bucket into `(grandfathered, violations)` by each heading's own
+    introduction date against `_FLAG_DAY_COMMIT`'s author date -- grandfathered if at or
+    before the flag-day, a violation if strictly after. Kept separate from `classify`,
+    which stays a pure function over file text with no git calls, so `classify` alone
+    stays testable without a repository and this split is independently testable against
+    a synthetic one.
+    """
+    # Compared as timezone-aware datetimes, not as raw ISO-8601 strings: git's `%aI`
+    # preserves the author's own UTC offset, which need not agree between two commits
+    # (one contributor's afternoon commit and another's, in a different offset, sort
+    # wrong under a lexicographic string compare unless every commit happens to share
+    # one offset -- true of this corpus so far, and not a fact to depend on).
+    flag_day_date = datetime.fromisoformat(_commit_author_date(root, _FLAG_DAY_COMMIT))
+    grandfathered: list[RulingHeading] = []
+    violations: list[RulingHeading] = []
+    for heading in none_headings:
+        introduced = datetime.fromisoformat(_heading_introduced_at(root, heading))
+        (violations if introduced > flag_day_date else grandfathered).append(heading)
+    return grandfathered, violations
+
+
 def classify(root: Path = REPO_ROOT) -> dict[str, list[RulingHeading]]:
     """Buckets: `w37`, `w11`, `standalone`, `exception`, `prose_only`, `none`,
     `conflict`. Every heading `_discover_ruling_headings` finds appears in exactly one
@@ -203,6 +301,23 @@ def main() -> int:
     print(f"total classified: {total}")
     print(f"total headings discovered: {discovered}")
 
+    # Ruling-form flag-day (see module docstring): split `none` by each heading's own
+    # introduction date. Printed unconditionally, the zero included (`NT-0007`) -- a
+    # passing "0 post-flag-day violations" line says which zero was checked, rather than
+    # letting an empty violations list look identical to the split never having run.
+    grandfathered, post_flag_day_violations = flag_day_split(args.root, buckets["none"])
+    print(
+        f"none, grandfathered (introduced at or before {_FLAG_DAY_COMMIT}): "
+        f"{len(grandfathered)}"
+    )
+    print(
+        f"none, post-flag-day violations (introduced after {_FLAG_DAY_COMMIT}): "
+        f"{len(post_flag_day_violations)}"
+    )
+    for h in post_flag_day_violations:
+        print(f"  VIOLATION: Ruling {h.number} in {h.file.name} has no acceptance item "
+              f"and was introduced after the ruling-form flag-day ({_FLAG_DAY_COMMIT})")
+
     if total != discovered:
         print(
             f"FAIL: {total} classified != {discovered} discovered -- a heading was "
@@ -216,7 +331,15 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print("PASS: every discovered ruling heading falls into exactly one bucket")
+    if post_flag_day_violations:
+        print(
+            f"FAIL: {len(post_flag_day_violations)} ruling(s) filed after the ruling-form "
+            "flag-day carry no acceptance item",
+            file=sys.stderr,
+        )
+        return 1
+    print("PASS: every discovered ruling heading falls into exactly one bucket, and "
+          "every post-flag-day ruling carries an acceptance item")
     return 0
 
 
