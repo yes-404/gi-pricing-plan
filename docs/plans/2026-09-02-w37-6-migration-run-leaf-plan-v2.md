@@ -281,7 +281,8 @@ the Work close**, which is a separate dated line under `CLAUDE.md` §12.
 
 ## 5. Risks this plan carries into the run
 
-Three, each stated as a property rather than a count, because a count is stale before it merges.
+Each is stated as a property rather than a count, because a count is stale before it merges —
+including the count of risks, which is why this sentence no longer carries one.
 
 **5.1 Checks 30-39 meet a corpus for the first time inside this commit.** Measured at
 `cc17404`: four of the ten examine exactly one document — the same one — and six examine zero.
@@ -311,6 +312,25 @@ lands in. **Detection is not repair**, and a citation that resolves to a file an
 wrong place in it is worse than one that fails loudly. **Placement is DP-B and no task here
 builds against it.**
 
+**5.4 A docstring can describe a ruled question as an open gap, and the next reader builds on
+it.** `is_vendored`'s docstring in `scripts/_docid.py` describes the `LICENSE` criterion as *"a
+known, reported gap"*, names the ruling that resolved it, and says *"Apply the ruling once #563
+merges; until then this implements the rule exactly as published."* **`#563` merged.** The
+docstring is now a careful, accurate description of a state the repository has left, sitting
+directly above code that still implements it.
+
+It cost real work in this Work: the shape of row 9's fix was twice argued from that docstring
+rather than from Ruling 69, and twice reached a conclusion the ruling had already closed —
+including once in a draft of §7 of this plan, removed before filing. **A description of a
+superseded state is a live hazard in a migration this size**, because it reads as current, it
+sits where the reader is already looking, and nothing checks it.
+
+**The property, which is what a check should assert:** no docstring or comment in the migration
+path names a ruling as unapplied while that ruling is merged. *Violation: a comment citing a
+merged ruling in the future tense.* **§7 of the superseded plan's §7.9 code-rewrite task is the
+natural place to sweep for it**, and the sweep is cheap — the citations are greppable. If the
+walk-through finds others, each is named in the ledger rather than fixed silently.
+
 ---
 
 ## 6. What is carried unchanged, and what is held
@@ -335,87 +355,35 @@ rather than adapting silently.
 
 ---
 
-## 7. Corrections carried, against documents that are frozen
+## 7. One correction carried, against a document that is frozen
 
-Each names what a filed document says, what its natural reading produces, and what it should
-be read to mean. **No filed document is edited** (`CLAUDE.md` §2); this section is where the
-correction lives.
+**No filed document is edited** (`CLAUDE.md` §2); this is where the correction lives.
 
-### 7.1 Row 9's *"reconciled against the ruff exclude list"* — a clarification, not an error
-
-[`2026-09-02-w37-6-outstanding-obligations.md`](2026-09-02-w37-6-outstanding-obligations.md)
-row 9 gives row 9's discharge as *"a declared constant reconciled against the ruff exclude
-list, drift loud."*
-
-**The wording is defensible and its natural reading is wrong.** *"Reconciled against"* does not
-have to mean *"equal to"*, but that is how it reads, and an equality was very nearly
-implemented from it.
-
-**What equality would produce, measured at `cc17404`.** The ruff exclude list holds 28
-`.claude/skills/` entries. **Four of them are Ruling 66's own creating instruments:**
-
-| Ruling 66 member | Skill | In the ruff exclude list |
-|---|---|---|
-| 1 | `writing-plans` | yes |
-| 2 | `subagent-driven-development` | yes |
-| 11 | `writing-skills` | yes |
-| 12 | `brainstorming` | yes |
-
-A `_VENDORED_SKILLS` set equal to the ruff list would **exempt from the migration four of the
-thirteen instruments the migration exists to carry.** The commit would land, report success,
-and leave them teaching the retired grammar — which is the exact failure DP-1 and acceptance
-item 11 exist to prevent, reintroduced by the fix for a different defect.
-
-**The figure in the code is two, and it is two because it predates the derivation.**
-`is_vendored`'s docstring in `scripts/_docid.py` names *"two of which (`writing-plans`,
-`subagent-driven-development`) are creating instruments Ruling 66 places inside W37-6's own
-migration commit."* That was right when written, against Ruling 66's floor of seven. The
-derivation in the superseded plan's §6.2 then added `writing-skills` (member 11) and
-`brainstorming` (member 12), both ruff-excluded. **Nobody updated the docstring, and the
-count reached this plan as two.** It is four.
-
-**How the clause should be read.** The ruff list is **evidence, not the definition**. Reconcile
-into three buckets, and every skill lands in exactly one:
-
-1. **in both** — vendored, exempt from stamping, citation rewrite and shape checks;
-2. **in ruff but not vendored** — a **declared exception carrying a written reason**, for a
-   style-excluded instrument the migration must still rewrite. The four members above are this
-   bucket, and so is anything else excluded for lint reasons rather than provenance;
-3. **vendored but not ruff-excluded** — a finding, not a silent addition.
-
-**Drift is loud when a skill is in none of the three, named** — never when the two sets merely
-differ, which is expected and permanent.
-
-**This is Ruling 83's census property applied to a set rather than to a document**, and the
-generalisation is worth stating: *account for every member, classify it or fail on it, never
-skip it*, and *do not derive the denominator from the thing being checked*. Ruling 83 wrote it
-for headings in a source file. It holds unchanged for skills in an exclusion list, and a fix
-built to it cannot produce the failure above.
-
-### 7.2 The vendored gloss and the vendored detector — where they actually diverge
+### 7.1 The vendored gloss and the vendored detector — where they actually diverge
 
 NT-0019 §1.5 reads: *"A vendored skill (`planning-with-files`, `ui-ux-pro-max`, `graphify`,
 `systematic-debugging`, the `vue-*` skills — anything shipping its own `LICENSE`) …"*
 
 Measured at `cc17404`, of the 46 skill directories exactly **two** carry their own `LICENSE`:
-**`planning-with-files` and `ui-ux-pro-max`**.
+**`planning-with-files` and `ui-ux-pro-max`** — and both are **named in the parenthesis, first
+and second**.
 
-**Those two are named in the parenthesis — first and second.** The divergence is therefore
-**partial and one-directional**, and stating it as a total mismatch would overstate it: the
-parenthesis's first two entries satisfy its own criterion exactly, and its remaining three
-entries — `graphify`, `systematic-debugging` and the `vue-*` group (five skills) — do not.
-**The gloss over-names by seven skills; it does not fail to name the two that qualify.**
+**The divergence is therefore partial and one-directional.** Ruling 69 §1's verification table
+states it in the same direction and in the same terms: *"The criterion misses three of the five
+names in its own parenthesis — **Confirmed.** `graphify`, `systematic-debugging` and every
+`vue-*` skill ship no licence file."* **The gloss over-names by seven skills; it does not fail
+to name the two that qualify.**
 
-`is_vendored`'s docstring states this correctly and narrowly: *"the note's own §1.5
-parenthetical names **three of them** … as vendored while giving 'ships a LICENSE' as the
-criterion."* Three of the named groups, not all five. Recorded here because the looser reading
-— that the two sets do not overlap at all — is easy to reach from the same evidence and is
-false.
+Recorded because the looser reading — that the gloss and the detector do not overlap at all — is
+easy to reach from the same evidence, was reached twice in this Work, and is false.
 
-**Neither 7.1 nor 7.2 changes what row 9 obliges.** `_VENDORED_SKILLS` is still a hand-seeded
-declared constant, still the thing that unblocks acceptance item 13, and still W37-6's under
-Ruling 76. What changes is the shape of the reconciliation, and the count of instruments an
-equality would have swallowed.
+**This changes nothing about what row 9 obliges.** `_VENDORED_SKILLS` is a hand-seeded declared
+constant listing the 28, reconciled by a gate check that asserts equality with the ruff exclude
+list restricted to `.claude/skills/` — Ruling 69 §2 part 2, where the ruff list is *"not the
+criterion; it is the independent second witness."* The obligations list's wording, *"a declared
+constant reconciled against the ruff exclude list, drift loud"*, is that mechanism, and §5.4
+records why it briefly looked otherwise.
+
 
 ---
 
@@ -430,8 +398,11 @@ equality would have swallowed.
 - **Properties, not counts, wherever a check will later verify the claim** — §3's three rules and
   §5's three risks are each stated as a violation that must be detectable.
 - **The frozen plan is not edited**, and this document supersedes rather than replaces it.
-- **Corrections against frozen documents live in §7**, never as edits to them, and each
-  states the natural reading it is displacing rather than only the right answer — a
-  correction that does not name the wrong reading leaves it available.
+- **The correction against a frozen document lives in §7**, never as an edit to it, and it
+  states the wrong reading it displaces rather than only the right answer — a correction
+  that does not name the wrong reading leaves it available.
+- **A second §7 entry was drafted and removed before filing**, because Ruling 69 §2 part 2
+  had already ruled the mechanism it proposed to clarify. §5.4 carries what that episode
+  actually showed, which is about docstrings rather than about row 9.
 - **No acceptance line, and `status: draft`.** DP-A is open; §1.7 makes `active` unavailable, and
   the maintainer's go-ahead is theirs alone.
