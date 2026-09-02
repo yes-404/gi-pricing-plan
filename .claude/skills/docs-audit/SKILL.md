@@ -277,9 +277,10 @@ job is the 18 files that specification does not cover.
 added at the old path fails, naming the file, before its content is even read; an
 edited stub body (a sentence appended to an existing stub) fails, naming the file and
 the mismatch. Both reproduced as `tests/test_audit_docs_notes_tombstone.py`, alongside
-a positive-control test that the tombstone as built stays silent and `audit-docs.py`
-still reports 18 working notes — the count is unaffected, since check 30 reads the old
-path and `check_notes` reads `docs/notes/`, two disjoint roots.
+a positive-control test that the tombstone as built stays silent and `audit-docs.py`'s
+working-notes count is unaffected, since check 30 reads the old path and `check_notes`
+reads `docs/notes/`, two disjoint roots. That test derives the expected count from
+`docs/notes/` at run time rather than restating a literal — see 2026-09-02 below for why.
 
 ## The check the script does not do
 
@@ -361,6 +362,24 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 — The check-30 section above, and the 2026-09-01 entry below, both said
+`audit-docs.py`'s positive-control test asserts the literal "18 working notes". That was
+only ever true because the tombstone's 18 frozen stubs and `docs/notes/`'s then-current
+file count happened to coincide the day this check was verified — two disjoint counts
+(the note above already says why) that did not stay equal. NT-0019, filed the next day
+(PR #555), grew `docs/notes/` to 19 and broke the hardcoded literal in
+`tests/test_audit_docs_notes_tombstone.py::test_the_unmodified_tombstone_passes` within a
+day of it being written — the same "duplicated count goes stale" failure mode `CLAUDE.md`
+already names (`NT-0003`), landing inside a test rather than a doc this time. Fixed by
+deriving the expected count from `docs/notes/*.md` (excluding `README.md`) at run time,
+the same rule `check_notes()` itself uses, instead of restating a number. **Proven on
+deliberately broken input**: temporarily changing `check_notes()`'s own count line to
+print one more than the real count reproduces a red failure (the test's independent
+recount catches the mismatch); reverted, the suite is green again. The section above is
+corrected to match; this entry is the record of why, left in place rather than silently
+edited into the 2026-09-01 entry below, which was an accurate report of what was true that
+day and is kept as written.
 
 2026-09-01 — Check 30 added (the vacated `.claude/notes/` tombstone: exactly the
 README plus a frozen, closed set of 18 per-file redirect stubs, each byte-identical

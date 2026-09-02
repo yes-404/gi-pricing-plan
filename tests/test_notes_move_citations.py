@@ -1,7 +1,10 @@
 """NT-0016 Slice 4: after the notes move, the old notes root under `.claude` may be cited
 only by its own tombstone, by files frozen under `docs/plans/README.md`'s write-once rule,
 by check 30's own mechanism (Ruling 61 -- the check that *watches* the old path necessarily
-names it), and by provenance-locked historical artifacts generated before the move landed.
+names it), by provenance-locked historical artifacts generated before the move landed, and
+by a maintainer-accepted note that *specifies* the old path's eventual deletion rather than
+merely citing it (`_SPECIFICATIONS_OF_THE_OLD_PATH` below -- added 2026-09-02 for NT-0019,
+see that constant's own comment for what this narrow exemption stops catching).
 
 This is the slice's own TDD leaf, per
 `docs/plans/2026-08-31-nt-0016-investigation.md` §9 Step 1: the invariant the move must
@@ -55,11 +58,64 @@ _PRE_MOVE_SNAPSHOTS = {
     "docs/audit/file-taxonomy-draft.md",
 }
 
+# The class: a document that *specifies or verifies NT-0019's own future migration* of
+# this exact path, rather than a stale reference left over from the NT-0016 move this test
+# otherwise polices. NT-0019 (`docs/notes/0019-one-id-per-document.md`) is itself the
+# reason this class exists at all: its own §4 step 4 will *delete* the stub files check 30
+# watches, so both it and everything that verifies it against the tree necessarily name the
+# path being deleted. `docs/plans/` already has a blanket carve-out above for the same
+# reason (frozen, write-once); this set is for the same class of document living *outside*
+# that directory, where no blanket rule exists and each one needs a reviewed, named entry.
+#
+# Two members so far, both audited directly rather than assumed current: NT-0019 names the
+# old notes root under `.claude` twice (deliberately not written as one contiguous string
+# in this comment, for the same self-referential reason the module docstring gives below)
+# -- §4 step 4's migration instruction, and §7(d)'s acceptance grep, which must contain the
+# literal pattern among the tokens a *later* migration tree is checked to no longer
+# contain. `docs/audit/nt-0019-verification-and-impact-sweep.md` (PR #560, merged
+# 2026-09-02, the day after NT-0019 itself) names it once, in its own §5.3/§5.4 scope note,
+# listing the directories NT-0019's impact-map sweep covers. Confirmed by re-running this
+# test against the merged tip that added it: exactly one new offender, that file alone --
+# not NT-0019 itself, which the exemption below already covered; a claim from outside this
+# session that a second, different file was *also* newly implicated did not hold up against
+# a direct check of the actual failure at that tree and is not reflected here.
+#
+# Why an explicit set and not a structural rule (e.g. "exempt any file that also cites
+# `NT-0019`"): a content-marker match would let the exemption widen itself the moment any
+# document -- and W37, NT-0019's own migration workstream, is going to produce several --
+# happens to mention `NT-0019` anywhere in a large file, without a reviewer ever choosing
+# that specific file. That is exactly the failure mode `OLD_NOTES_STUB_NAMES` (in
+# `audit-docs.py`) and `_PRE_MOVE_SNAPSHOTS` above were each already written to avoid, for
+# the same stated reason: a derived or pattern-matched set lets one edit defeat both the
+# content it changes and the check meant to catch it. Consistency with that established
+# choice, not novelty, is why this set is named the same way.
+#
+# This is a deliberate, bounded stopgap, not a design meant to outlive its problem: NT-0019
+# §5.7 lists this exact test file (with test_audit_docs_notes_tombstone.py) as **deleted**
+# by its own migration, replaced by `test_audit_docs_redirects.py`. Building a sturdier
+# mechanism for a check with a short, already-scheduled remaining lifespan would be solving
+# a problem past the point it stops existing.
+#
+# What this stops catching, and what it does not: a *stray*, wrong citation of the old path
+# added anywhere else inside either of these two named files -- by a future dated
+# correction appended to NT-0019, say, or a later edit to the audit record -- would no
+# longer fail this test, since the exemption is by filename, not by line or by the specific
+# occurrences audited above. That risk is accepted narrowly for these two files; it is not
+# extended to any other file. It does **not** stop catching a new, third document elsewhere
+# in the tree that cites the old path for this same legitimate reason -- W37 will produce
+# more of them before the migration lands, each will fail this test the same way PR #560's
+# did, and each needs its own reviewed line added here, not a widened pattern.
+_SPECIFICATIONS_OF_THE_OLD_PATH = {
+    "docs/notes/0019-one-id-per-document.md",
+    "docs/audit/nt-0019-verification-and-impact-sweep.md",
+}
+
 
 def test_no_living_file_cites_the_old_notes_path() -> None:
     """After the move, the old notes root under `.claude` may be named only by the
     tombstone README left there, by files frozen under `docs/plans/`, by check 30's own
-    watching mechanism, and by pre-move provenance-locked snapshots.
+    watching mechanism, by pre-move provenance-locked snapshots, and by a maintainer-accepted
+    note that specifies the path's eventual deletion (`_SPECIFICATIONS_OF_THE_OLD_PATH`).
 
     A frozen plan is never edited to agree with a later move (`docs/plans/README.md`'s
     write-once rule, NT-0016 C4) -- the tombstone this slice creates at the vacated path
@@ -74,7 +130,7 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
     tracked = subprocess.run(
         ["git", "ls-files"], capture_output=True, text=True, cwd=ROOT, check=True
     ).stdout.split()
-    exempt = _CHECK_30_MECHANISM | _PRE_MOVE_SNAPSHOTS
+    exempt = _CHECK_30_MECHANISM | _PRE_MOVE_SNAPSHOTS | _SPECIFICATIONS_OF_THE_OLD_PATH
     offenders = [
         f
         for f in tracked
