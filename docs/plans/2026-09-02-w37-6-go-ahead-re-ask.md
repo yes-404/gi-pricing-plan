@@ -54,12 +54,15 @@ only the first would have passed a document asserting the second.
    catch, reappearing inside the document that discharges them.
 4. **Every tree-pinned figure is a marked slot until it is measured at the final tree.**
    *Violation:* a `[SLOT-n]` marker replaced by a figure measured at any tree other than the one
-   named in §Header, or `[SLOT-0]`–`[SLOT-3]` or `[SLOT-5]` left unfilled when §10 is signed.
-   §6.0 is the register of them. **`[SLOT-4]` is the deliberate exception** — the gap checks are
-   filled by the executor in the session that runs the migration and are *never* filled in this
-   document, per item 5. **And `[SLOT-5]` has a second violation of its own:** a figure written
-   into it on relay rather than from its author with its predicate, which is the defect §8.2
-   records happening once already in this document's own briefing.
+   named in §Header, or `[SLOT-0]`–`[SLOT-3]` left unfilled when §10 is signed. §6.0 is the
+   register of them. **`[SLOT-4]` is the deliberate exception** — the gap checks are filled by the
+   executor in the session that runs the migration and are *never* filled in this document, per
+   item 5. **`[SLOT-5]` is filled** (§2.6), and carried its own violation while it was open: a
+   figure written into it on relay rather than from its author with its predicate, which is the
+   defect §8.2 records happening once already in this document's own briefing. **It was filled
+   only when its author sent it in a message, with the instrument** — and it is fillable ahead of
+   the final tree because it records a **historical** state at `c888b61` that no later tree
+   changes, which `[SLOT-3]` does not.
 5. **The gap is named as a condition with a re-runnable check, never as a date.** *Violation:*
    this document recording a gap as *established*, which turns a volatile live condition into a
    stale claim an executor then reads as satisfied — the failure the frozen leaf plan's §1
@@ -367,6 +370,12 @@ output is a list of clauses to re-examine per change, not a set of defects to fi
 the reading-task point is stronger than "the tell is semantic": **there is no stable answer to
 cache.**
 
+**The context-dependence above stands on conjunct 3 itself and needs no example.** *Whether
+anything else catches the harm* is a property of the commit; that is the whole argument, and it
+would hold if every illustration below failed. **The illustration is recorded because it was
+offered, tested and refuted** — and because a claim carried by a wrong example is worse than one
+carried by none.
+
 **The obvious way to make conjunct 3 fail here does not work, and testing it is what showed the
 class is more robust than it looks.** The candidate: *fix F87 in the same commit, so the 28
 manifests fall inside checks 30–39 and the doubled block is caught.* **It fails twice.**
@@ -390,9 +399,26 @@ manifests fall inside checks 30–39 and the doubled block is caught.* **It fail
 | `_front_matter_state` | **`"stamped"`** |
 
 **So check 30 has no unknown field to object to, and the migration's own idempotency test would
-report the damaged file as already done.** A second run would skip it. **Three independent
-mechanisms all read the corrupted file as correct**, which is a stronger statement of the hazard
-than the original one and was not visible until the counterexample was tried.
+report the damaged file as already done.** A second run would skip it.
+
+**And that is a larger finding than the class it was produced to test, so it is stated
+separately rather than left as a supporting bullet.** *"An acceptance item whose cheapest route is
+destructive"* undersells it. The measured result is that **a corruption of this shape is invisible
+to all three instruments the corpus has for looking at a document's front matter** — and the third
+does more than fail to notice:
+
+| Instrument | On the corrupted file | |
+|---|---|---|
+| `_docid.parse_header` | returns a valid `Header`, `.extra` empty | **does not notice** |
+| checks 30–39 | nothing to object to — the harness keys are in the body | **does not notice** |
+| `_front_matter_state` (idempotency) | returns `"stamped"` | **actively certifies it** — a second run skips the file |
+
+**The corpus has no instrument that would notice this class of damage**, and its idempotency test
+would report the damaged corpus as already migrated. That is a statement about the repository's
+instrumentation, not about one clause, and it is why the class is worth naming at all.
+
+**It was not visible until the counterexample was tried**, which is the argument for testing the
+way out of a class rather than reasoning about it.
 
 #### How much of the corpus this has been swept over: almost none, and the denominator is not the one it looks like
 
@@ -439,14 +465,48 @@ discovered on the day.
 raises `KeyError: 'RS'`. **That is a partial run, not a clean abort** — task #34's failure mode
 one layer down, unreachable while the fifth stopped the run first.
 
-**`[SLOT-5]` — the number of files written before the raise.** Deliberately not stated. An
-earlier draft carried **126** on relay; its author has since corrected it, the 126th being a
-`.pyc` the import machinery writes when `migrate` path-loads `register-lint.py` — an artifact of
-the interpreter, not an output of the run. **The corrected figure is not written here until it
-arrives from its author with its predicate**, because this document already carries one section
-(§8.2) about a relayed figure that did not reproduce, and a second one would be the same mistake
-twice in one file. **Nothing below depends on it**: the count is an artifact of how far `sorted`
-order got before the `RS` draft came up, not a meaningful fraction of the work.
+**`[SLOT-5]` — files written before the raise: 125.** Filled from its author, in a message, with
+its predicate. An earlier draft carried **126** on relay; the 126th was
+`scripts/__pycache__/register-lint.cpython-312.pyc`, written by the import machinery when
+`migrate` path-loads `register-lint.py` — an artifact of the interpreter, not an output of the
+run.
+
+**The instrument, and why it is better than a directory diff.** `pathlib.Path.write_text` was
+wrapped and every call the real writer made was recorded:
+
+```python
+_real = pathlib.Path.write_text
+def _traced(self, data, encoding=None, errors=None, newline=None):
+    calls.append(self.relative_to(SNAP).as_posix())
+    return _real(self, data, encoding=encoding, errors=errors, newline=newline)
+```
+
+**125 calls, 125 distinct paths, 0 written twice, 0 outside `docs/`**, by family
+`{rfcs: 19, adrs: 6, rulings: 95, closures: 5}` — which sums to 125. **The `.pyc` exclusion is
+structural to the instrument rather than a filter applied afterwards**: the interpreter does not
+write bytecode through `Path.write_text`, so it cannot appear in the list. A directory diff
+re-run with `__pycache__` excluded agrees at 125.
+
+**Tree.** `git archive c888b61` into a fresh directory, then `git init` and one commit so
+`migrate`'s `git log` date fallback has history; `scripts/doc-id.py` taken from
+`w37-6-fifth-abort-point` (#649), so corpus and code differ in that one file only. **And the same
+measurement on the shipped `c888b61` `doc-id.py`, same snapshot, with only
+`_discover_vendored_skill_manifests` neutralised to its own empty answer, gives the identical
+125** — which is the evidence for the sentence below.
+
+**The raise.** `KeyError: 'RS'` at `_write_document_drafts`'s
+`target_dir = root / "docs" / _DOCUMENT_FAMILY_DIR[d.prefix]`, reached from `migrate`. Line
+numbers are `:2652` on the branch and `:2581` on the shipped file — **both naming a tree, and the
+durable form is the function** (Addendum B §B.2).
+
+**This defect pre-exists the branch that revealed it.** The shipped `c888b61` `doc-id.py` raises
+the identical `KeyError` after the identical 125 writes once the fifth abort stops masking it.
+**#649 reveals it; it does not introduce it** — which is the difference between a fix having a
+defect and a fix having uncovered one, and the maintainer should get the second reading because
+it is the true one.
+
+**Nothing below depends on the count**: 125 is an artifact of how far `sorted` order got before
+the first `RS` draft came up, not a meaningful fraction of the work.
 
 **Two things must arrive with the number, or it does not go in.** **(1)** The figure, from its
 author, **in a message** — the correction reached this document's author as a mutation of a file
@@ -514,17 +574,68 @@ row, not an open question**, so nothing here needs a ruling.
 case.** Distinct prefix literals assigned anywhere in `scripts/doc-id.py` at `origin/main` —
 `git show origin/main:scripts/doc-id.py | grep -oE 'prefix\s*=\s*"[A-Z]+"|prefix, [a-z, ]+= "[A-Z]+"' | grep -oE '"[A-Z]+"' | sort -u` —
 are **ten**: `ADR`, `CR`, `FD`, `LG`, `PL`, `REFERENCE`, `RFC`, `RL`, `RS`, `WK`. The template
-table names **seven** of them and the directory table **six**. **Some of those absences are
-correct** — `REFERENCE` is stamped in place and never moved, and `WK` goes through the roadmap
-restructure — **and which ones are correct is exactly the question a set-closure check answers
-and a one-family patch does not.** `RS` is the member that is verifiably neither routed elsewhere
-nor legitimately absent. **Fixing `RS` alone would leave the next such member invisible in the
-same way**, which is the reasoning Ruling 83 already applies to censuses: the property is
-*accounting*, not the absence of a known symptom.
+table names **seven** of them and the directory table **six**.
+
+**That ten is right, and it is right partly by accident — stated because a count that is correct
+by coincidence is not reproducible.** The pattern's `[A-Z]+` character class is what excludes
+`"doc-id-next-"`, the `prefix=` argument of a `tempfile.TemporaryDirectory` call, which has
+nothing to do with document families. A broader predicate — *every string literal assigned to a
+local named `prefix`, passed as `prefix=`, or passed positionally to `_stamp_header`* — returns
+**eleven**, of which that one is an unrelated keyword collision. **Same answer, and the
+uppercase class did the excluding rather than the author.**
+
+**And the set that actually governs the two tables is narrower than either: seven.** Derived
+twice independently by the fix's author — an AST walk over the source, resolving a local through
+its assignments and a **parameter through its call sites** (which is how `_discover_headed_split_file`
+gets its `"CR"`), and an empirical run of every discovery function over the real corpus. The two
+agree exactly: **every prefix a `_Draft(materialize="document")` can carry is
+`{ADR, CR, LG, PL, RFC, RL, RS}`.**
+
+**Which is what explains the two tables' legitimate asymmetry**, and it is the part this
+document could not derive on its own: of the three in the ten and not the seven, **`FD`
+materialises as a register row and `WK` as a roadmap row** — neither becomes a file in a family
+directory — **and `REFERENCE` is stamped in place and carries no `id:`**, so it belongs in the
+template table and not the directory table.
+
+**`RS` is the only member missing, and it was missing from *both* tables** — so **checking either
+one alone would have half-fixed it**, which is the whole case for closing the set. **Fixing `RS`
+alone would leave the next such member invisible in the same way**, which is the reasoning
+Ruling 83 already applies to censuses: the property is *accounting*, not the absence of a known
+symptom.
 
 **What this changes about the disclosure, stated plainly.** Until now every known failure stopped
 the run before it wrote anything, and §2.1 could say the irreversible commit was not at risk.
 **That is no longer the whole picture**, and `[SLOT-3]` is drafted for it.
+
+### 2.6a The evidence `[SLOT-3]` is expected to record — **not** the slot, and here is the difference
+
+**On the fix branch, `migrate()` runs to completion.** Reported by its author with its method:
+`migrate()` run to the end on a **disposable snapshot** — never the real tree, with a harness
+assertion that the destination is under the jobs directory and named `snap*` — first with `RS`
+mapped in memory as a probe, then again with the fix in the branch and nothing patched. Both
+completed: **1,085 files written, 202 deleted, 293 created, 794 modified, no seventh failure.**
+
+**Two reasons this is evidence and not the slot.**
+
+1. **`[SLOT-3]` is defined as how far the run gets at the tree this ask is made from**, and that
+   tree is not final — this was measured against `c888b61` plus #649's branch, while `#651` has
+   since merged as `ac10d30` and #649 rebases onto it. **Acceptance Standard item 4 forbids
+   filling a slot from any other tree**, and a good result does not earn an exception.
+2. **Two claims must not merge into one**, and only the first is measured: ***"`migrate()` runs to
+   completion"*** and ***"the gate is green afterwards."*** F90 is the reason they differ — see §4,
+   and §9.1's *completes* branch, where **completion is what makes F90 fire.**
+
+**The author's own caveat, carried verbatim rather than summarised:** *"no seventh failure" is
+measured on one corpus, `c888b61`. It is not a proof that no later input can fail — only that
+nothing else fails on the tree the re-ask is about.*
+
+**One residual, disclosed rather than reconciled away.** `293 + 794 = 1,087`, which is **two more
+than the 1,085 writes**. The identity does not close, the explanation is not yet known — two
+files written through an API other than `Path.write_text`, or two instruments with different
+scopes, are both live candidates — and it is **routed to its author rather than guessed at here**.
+It does not bear on the 125: that crash is inside `_write_document_drafts`, well before
+`_write_redirects` and `_regenerate_index_for_migrate`, so a gap in the wrapper's coverage could
+not reach it. **That last sentence is reasoning, not a measurement**, and is marked as such.
 
 ---
 
@@ -837,10 +948,10 @@ words, independently of the citation.
 ### 6.0 The slot register
 
 **Every tree-pinned figure in this document is a marked slot until it is measured at the tree
-named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]`–`[SLOT-3]` and `[SLOT-5]` must
-all be filled or the document is not ready for §10**, and `[SLOT-4]` must **not** be — it is
-filled by the executor in the running session and never here (Acceptance Standard items 4
-and 5).
+named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]`–`[SLOT-3]` must all be filled
+or the document is not ready for §10**, `[SLOT-5]` is already filled, and `[SLOT-4]` must **not**
+be — it is filled by the executor in the running session and never here (Acceptance Standard
+items 4 and 5).
 
 | Slot | What fills it | Why it is not filled now |
 |---|---|---|
@@ -849,7 +960,7 @@ and 5).
 | `[SLOT-2]` | Addendum A's classification sweep, re-run at that tree | Condition 2 — §7 |
 | `[SLOT-3]` | **How far a real `migrate()` run gets** — does not start / starts and does not complete / completes | §2.4, §2.6 |
 | `[SLOT-4]` | The gap checks, re-run at the moment the branch is cut | §5.2 — **and this one is filled by the executor in the running session, never here** |
-| `[SLOT-5]` | Files written before the `KeyError`, **from the measurement's author with its predicate** — never on relay | §2.6 |
+| `[SLOT-5]` | **FILLED — 125.** Files written before the `KeyError`, from its author in a message with its predicate; a historical fact at `c888b61` that the final tree cannot change | §2.6 |
 
 ### 6.1 Why it runs once, and late
 
@@ -1069,9 +1180,10 @@ reason.
      maintainer reading only this bullet could give the line and land an irreversible commit that
      turns the gate red with no disposition chosen, which is the outcome §4 exists to prevent.
 
-     **F87 is a disclosure and F90 is a condition, and the test that separates them is not
-     red-versus-blind — it is whether landing the commit *creates* the defect or merely *fails to
-     fix* one.** F90's 95 red documents do not exist before the run; **landing creates them.**
+     **F87 is a disclosure and F90 is a condition — and the test that separates them replaced an
+     earlier one, which is recorded because the reasoning is what a later reader needs.** The
+     proposal was *red-versus-blind*. **The test used instead is whether landing the commit
+     *creates* the defect or merely *fails to fix* one.** F90's 95 red documents do not exist before the run; **landing creates them.**
      F87's blindness pre-exists and landing slightly improves it: checks 30–39 see **1** document
      today, and after the widening they see the whole markdown corpus and **3** of the 65
      exemption entries — 0 → 3, with 62 still unreached. **Landing leaves F87 exactly as bad as it
