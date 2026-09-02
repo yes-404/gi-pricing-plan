@@ -1018,6 +1018,14 @@ class MigrateResult:
     ledger_records_checked: int = 0
     ledger_slice_values_checked: int = 0
     ledger_work_values_checked: int = 0
+    # W37-5c item 2: `(path, reason)` for every file **in** NT-0019 §4 step 5's Reference
+    # stamp set that this run did not stamp — the 53 carrying the harness's own front
+    # matter, the two §5.2/§5.3 delete, and the check-35 fixture. Carried out and printed
+    # by name rather than left absent, for the reason the ledger-axis zeros above are:
+    # a population nothing reports is a population nothing can check. F83's condition 1
+    # ("every exempt entry cites its reason") applied to a deferral rather than to an
+    # exemption — these are waiting on W37-6's Task 1, not permanently out.
+    deferred_reference_stamps: tuple[tuple[str, str], ...] = ()
 
 
 # ---------------------------------------------------------------------------------------
@@ -1527,6 +1535,109 @@ def _discover_closure_records(root: Path) -> list[_Draft]:
                 work_token=work_token,
             )
         )
+    return drafts
+
+
+# ---------------------------------------------------------------------------------------
+# F84 (`docs/audit/findings/F84.md`): the 17 closure records the migration cannot see.
+#
+# `_discover_closure_records` above reads `docs/audit/closure-records.md` and nothing
+# else -- its own docstring says so ("one `###` heading per record"). The per-work and
+# per-phase records living one-to-a-file under `docs/audit/work/` and
+# `docs/audit/phases/` are a second location it never visits, and before this block
+# `scripts/doc-id.py` carried no reference to either path at all.
+#
+# **Why this was worse than F80, F81 and F82 despite being smaller.** Those three abort:
+# a guard refuses to migrate a governed thing it has no discovery code for, so a real
+# `migrate()` run stops and names it. This one was silent -- no census covered the path,
+# so the 17 were not "discovered zero and flagged", they were outside the question. The
+# run completed, reported success, and left them to whatever generic rule reaches a
+# `README.md`. A guard that aborts is a gap that announces itself; a population no census
+# covers is a gap that does not (the asymmetry `NT-0007` records for boundary metrics).
+# ---------------------------------------------------------------------------------------
+
+#: NT-0019 §5.2's own routing, read from the row `"audit/work/*/README.md (15),
+#: audit/phases/1b/README.md, audit/exit-demo-uat.md"` -> `"closures/CR-0nnnn-*.md,
+#: kind: work / phase"`. The **directory decides the `kind:`**, which is what makes this
+#: a routing rule rather than a filename rule -- the discriminator
+#: `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §1 states for the README
+#: row: *"A `README.md` takes the family §5.2 routes it to"*, never its filename.
+#:
+#: §5.2's row says 15 work READMEs where 16 now exist (16 at `544b90c`); the rule is used
+#: here, not the count, which is why this survives that drift.
+#:
+#: **`docs/audit/exit-demo-uat.md` is in that same §5.2 row and has the same defect, and
+#: is deliberately not folded in here**: it is under neither directory, and F84's
+#: falsifiable section is written over 17 files. It is reported as a residual instead --
+#: widening a finding's discharge past what the finding states is how a discharge stops
+#: being checkable against its own text.
+_AUDIT_CLOSURE_README_DIRS: Final[Mapping[str, str]] = {
+    "docs/audit/work": "work",
+    "docs/audit/phases": "phase",
+}
+
+#: The record heading these files actually carry, verified against all 17 at `544b90c`
+#: with `grep -h '^# ' docs/audit/work/*/README.md docs/audit/phases/1b/README.md`:
+#: **14** read `# Work-item record — <id> (<title>)`, **two** read `# Audit record —
+#: <slug> (<clause>)` (`nt-0010-0011-adoption`, `nt-0012-0013-0014-adoption`) and **one**
+#: reads `# Phase record — 1b (Modelling Workbench)`. F84's own prose says their headings
+#: read *"`# Work-item record — W11`, `# Phase record — 1b`"*; that is true of 15 of the
+#: 17, and the two `# Audit record —` files are the exception the finding does not name.
+#: Matching the three forms rather than the one is what keeps all 17 discovered.
+#:
+#: **Matched, never assumed from the path.** A file under these directories whose H1 is
+#: none of the three forms is deliberately *not* claimed: `title:` would have to be
+#: invented, and the census below naming it is better than this function guessing -- the
+#: identical reading `_proposal_containers` gives a container heading with no date.
+_AUDIT_CLOSURE_TITLE_RE: Final = re.compile(
+    r"^#[ \t]+((?:Work-item|Audit|Phase)[ \t]+record[ \t]+—[ \t]+\S.*?)[ \t]*$", re.MULTILINE
+)
+
+
+def _discover_audit_closure_readmes(root: Path) -> list[_Draft]:
+    """The per-record closure documents NT-0019 §5.2 routes to `closures/CR-0nnnn-*.md`,
+    `kind: work` / `kind: phase` -- `docs/audit/work/<work>/README.md` (16 at `544b90c`)
+    and `docs/audit/phases/<phase>/README.md` (1). F84's first limb.
+
+    `owner: auditor` is §1.6's `CR` row read from the cell
+    (`docs/notes/0019-one-id-per-document.md:152`, mirrored at
+    `docs/process/document-ids.md:157`): *"auditor (`work`, `phase`); lead (`review`)"*.
+    Neither of the two kinds this function produces is `review`, so the value is uniform
+    and is not derived from what a role ought to own.
+
+    `status: active` is §1.2's `CR` row -- write-once, `active` its only value for the
+    family's whole life -- the same value `_discover_closure_records` assigns its own
+    `CR-` drafts.
+
+    `created:` is the file's git first-commit date: NT-0019 §4 step 1's own rule for a
+    document carrying no date of its own (*"git first-commit date otherwise"*), through
+    the same `_module_first_commit_date` call `_discover_register` already makes for the
+    register, which likewise has no date in its text.
+
+    Idempotent for the reason every other document discovery here is: the file moves to
+    `docs/closures/` and its source is deleted by `_write_document_drafts`, so a second
+    run's `*/README.md` glob finds nothing to claim.
+    """
+    drafts: list[_Draft] = []
+    for rel_dir, kind in _AUDIT_CLOSURE_README_DIRS.items():
+        directory = root / rel_dir
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*/README.md")):
+            text = path.read_text(encoding="utf-8")
+            title_match = _AUDIT_CLOSURE_TITLE_RE.search(text)
+            if title_match is None:
+                continue  # left for the census below to NAME, never guessed at
+            rel_path = path.relative_to(root).as_posix()
+            drafts.append(
+                _Draft(
+                    materialize="document", prefix="CR", kind=kind,
+                    title=title_match.group(1), status="active",
+                    created=_module_first_commit_date(path, root), owner="auditor",
+                    tie_break=(rel_path, 0), old_token=None, was=rel_path,
+                    body=text,
+                )
+            )
     return drafts
 
 
@@ -2999,37 +3110,604 @@ def _check_plain_plans_not_silently_unrecognised(root: Path) -> None:
 
 
 def _check_flat_document_directory_not_silently_unrecognised(
-    root: Path, rel_dir: str, title_re: re.Pattern[str], description: str,
-    exceptions: Mapping[str, str],
+    root: Path, rel_dir: str, title_re: re.Pattern[str] | None, description: str,
+    exceptions: Mapping[str, str], *,
+    recursive: bool = False,
+    records: Collection[str] | None = None,
 ) -> None:
     """Task #31 (Ruling 83's census) for `_discover_notes`/`_discover_adrs`'s shared
     skip-path: "found nothing" there is read as "already migrated" purely because the
     legacy title regex found no match -- the exact fixture-corpus assumption Ruling 83
     rejects for `_discover_closure_records`, applied here to a directory instead of a
-    heading. Every file directly under `rel_dir` must carry the legacy title, already be
-    in a canonical post-migration filename shape (checked positively, the same idempotency
-    reading `_check_plain_plans_not_silently_unrecognised` uses), or be a declared
-    exception -- `<rel_dir>/README.md` in both `docs/notes/` and `docs/adr/` today.
+    heading. Every file under `rel_dir` must be a record, already be in a canonical
+    post-migration filename shape (checked positively, the same idempotency reading
+    `_check_plain_plans_not_silently_unrecognised` uses), or be a declared exception --
+    `<rel_dir>/README.md` in both `docs/notes/` and `docs/adr/` today.
+
+    Two keyword-only extensions, both defaulting to the behaviour above (F84):
+
+    `recursive=True` walks the whole subtree rather than one level. It is not a
+    convenience: `docs/audit/work/` holds one record per *sub*directory, so a flat
+    `iterdir()` over it finds no files at all and the census closes **vacuously** -- a
+    check that cannot fail, which is the "blinds the run" half of W37-5c's own criterion.
+
+    `records=` supplies the record set directly, for a caller whose discovery is not a
+    legacy-title match. Re-running the title regex would be a census counted with (a
+    close relative of) the splitter's own pattern: for F84 a `.md` file that carried a
+    record heading but was not the `README.md` the discovery glob claims would be scored
+    a record and pass, while nothing had migrated it. Exactly one of `title_re` and
+    `records` may be given, and passing both or neither raises rather than silently
+    preferring one.
+
+    The unit key is the path **relative to `rel_dir`**, so nested records are distinct
+    units (`W8/README.md`, `W9/README.md`) rather than 16 collisions on `README.md`. For
+    a flat directory that is the bare filename, unchanged, and today's two callers'
+    `{"README.md": ...}` exception maps keep working.
     """
+    if (title_re is None) == (records is None):
+        raise ValueError(
+            f"{rel_dir}: exactly one of `title_re` and `records` must be given -- a "
+            "census's record set comes either from the legacy title regex or from what "
+            "discovery actually produced, never from both and never from neither"
+        )
     directory = root / rel_dir
     if not directory.is_dir():
         return
     units = []
-    records: set[str] = set()
-    for path in sorted(p for p in directory.iterdir() if p.is_file()):
-        key = path.name
+    found: set[str] = set(records or ())
+    walk = directory.rglob("*") if recursive else directory.iterdir()
+    for path in sorted(p for p in walk if p.is_file()):
+        key = path.relative_to(directory).as_posix()
         units.append(_CensusUnit(key=key, locator=f"{rel_dir}/{key}", text=key))
-        if path.suffix == ".md" and title_re.search(path.read_text(encoding="utf-8")):
-            records.add(key)
+        if title_re is not None and path.suffix == ".md" and title_re.search(
+            path.read_text(encoding="utf-8")
+        ):
+            found.add(key)
 
     def is_already_canonical(unit: _CensusUnit) -> bool:
         return _docid.ID_RE.match(unit.key) is not None
 
     _reconcile_census(
         scope=f"{rel_dir}/ ({description})",
-        units=units, records=records, is_body=is_already_canonical, exceptions=exceptions,
+        units=units, records=found, is_body=is_already_canonical, exceptions=exceptions,
     )
 
+
+#: Ruling 83 bucket 3 for the two closure directories F84 names: every file under them
+#: that is **not** one of the 17 records, each with the reason it is not. Declared by
+#: path relative to the directory, never by prefix -- a prefix silently swallows every
+#: future file beneath it, the failure
+#: `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §3 names for
+#: `tests/fixtures/`. Neither entry is a file this slice migrates; both are named so the
+#: exemption list is the record of what is unstamped and why, and cannot grow without an
+#: arithmetic failure saying so (F83's condition 2).
+_AUDIT_CLOSURE_CENSUS_EXCEPTIONS: Final[Mapping[str, Mapping[str, str]]] = {
+    "docs/audit/work": {
+        "nt-0010-0011-adoption/pilot-findings.md": (
+            "the pilot's findings essay, not the adoption's record -- its own H1 is "
+            "`# Pilot findings — CLAUDE.md §15 step 6`, and NT-0019 §5.2 routes only "
+            "`audit/work/*/README.md` to `CR-`. It has no §5.2 row of its own; reported "
+            "as a residual rather than migrated by this slice"
+        ),
+    },
+    "docs/audit/phases": {
+        "1b/register.md": (
+            "NT-0019 §5.2 routes this into `docs/findings/register.md` alongside "
+            "`audit/register.md` (\"the phase register's rows merge in with `phase: "
+            "P1b`\"), not to a closure record. `_discover_register` reads only the "
+            "top-level `docs/audit/register.md`, so nothing discovers this file today -- "
+            "named here so that gap is listed rather than folded into a `CR-`"
+        ),
+    },
+}
+
+
+def _check_audit_closure_readmes_not_silently_unrecognised(
+    root: Path, drafts: Sequence[_Draft]
+) -> None:
+    """F84's discharge condition, second limb, verbatim: *"a census over that path names
+    any file it cannot classify -- proven on deliberately broken input, per Ruling 83:
+    the check must NAME the unmatched unit, never compare counts."*
+
+    Reconciles against what `_discover_audit_closure_readmes` **actually produced**
+    (`records=`), never against a re-run of its own title regex, and walks the subtree
+    rather than one level -- both reasons are in
+    `_check_flat_document_directory_not_silently_unrecognised`'s docstring above, and
+    dropping either one leaves a census that passes on input this one names.
+    """
+    claimed = {d.was for d in drafts if d.was is not None}
+    for rel_dir, kind in _AUDIT_CLOSURE_README_DIRS.items():
+        prefix = f"{rel_dir}/"
+        _check_flat_document_directory_not_silently_unrecognised(
+            root, rel_dir, None, f"{kind} closure records",
+            _AUDIT_CLOSURE_CENSUS_EXCEPTIONS.get(rel_dir, {}),
+            recursive=True,
+            records={was[len(prefix):] for was in claimed if was.startswith(prefix)},
+        )
+
+
+# ---------------------------------------------------------------------------------------
+# NT-0019 §4 step 5's Reference stamp set — W37-5c item 2.
+#
+# Before this block the only file `migrate` stamped outside a document family was a
+# *vendored* `SKILL.md`. §4 step 5 stamps *"every file under `docs/`, `.claude/roles/`,
+# `.claude/skills/*/SKILL.md`, `.claude/agents/`"*, and
+# `docs/plans/2026-09-02-w37-owner-field-derivation.md:179` states the gap in terms:
+# **"There is no discovery or stamp path for `.claude/skills/`, `.claude/agents/` or
+# `.claude/roles/` at all"**. Same shape as F84 — a population outside the question, so
+# the run completes and reports success — and it is fixed the same way: discovery, then a
+# census that NAMES what it cannot classify.
+#
+# **Two rulings decide the population and they interact**, which is why the arithmetic is
+# stated rather than left to add up (`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-
+# set.md`, §1 and §4):
+#
+#   * *"A `README.md` takes the family §5.2 routes it to; one routed nowhere is Reference
+#     — README, `lead`."* The 17 F84 discovers above are routed to `CR-`, so they leave
+#     this population **by construction rather than by exception** — there is no list to
+#     keep in step. 33 tracked `README.md` at `544b90c`, minus those 17, minus the two
+#     §5.2/§5.3 delete, is the **14** that RFC's §1 names.
+#   * *"§4 step 5 governs the stamp set"*, and gains the six READMEs §5.2 reaches that its
+#     globs miss. Eight of the 14 were already inside step 5's roots (seven under `docs/`
+#     plus `.claude/agents/README.md`); six were not; one of those six — the check-35
+#     allowlist fixture — is exempt by §3; so **13 are stamped and one is exempt**, which
+#     is the same 14 decomposed the other way. Both decompositions are asserted in
+#     `tests/test_doc_id_migrate.py`, against the tree rather than against these numbers.
+#
+# **What this slice does NOT stamp, and why it is deferred rather than exempt.** 46
+# `.claude/skills/*/SKILL.md` and 7 `.claude/agents/*.md` already carry the harness's own
+# YAML front matter (`name:`, `description:`, and for an agent `tools:`/`model:`). A stamp
+# cannot prepend a second block — `_docid.parse_header` reads exactly one, from `lines[0]
+# == "---"` to the closing `---` — so their header has to be **merged** into the block
+# they have, and the keys have to be declared in `docs/_templates/REFERENCE.md` first,
+# because Ruling 70 makes the template the licensing instrument for a family's permitted
+# fields. That work is `docs/plans/2026-09-02-w37-6-migration-run-leaf-plan.md` §7.1 Task
+# 1 (its "second finding", restated as finding 13), carried unchanged into the active v2
+# plan — **W37-6's, not this slice's**. Introducing a new convention inside a precondition
+# slice is the scope growth the W37-5c slice decision §5 refuses.
+#
+# So they are **in scope, deferred, and listed**, never quietly absent: every one is
+# reported by name on `MigrateResult.deferred_reference_stamps` with its reason, which is
+# F83's condition 2 applied to a population that is waiting on a ruling rather than on a
+# format impossibility.
+# ---------------------------------------------------------------------------------------
+
+_REFERENCE_H1_RE: Final = re.compile(r"^#[ \t]+(\S.*?)[ \t]*$", re.MULTILINE)
+
+
+def _front_matter_state(text: str) -> str:
+    """`"none"`, `"stamped"` or `"foreign"` for `text`'s leading block.
+
+    Deliberately textual rather than a `_docid.parse_header` call: three real `SKILL.md`
+    raise `HeaderError` (`create-adaptable-composable`, `planning-with-files`,
+    `vue-best-practices` — all three vendored, all three named in
+    `docs/plans/2026-09-02-w37-rfc-bucket-c-owner-values.md` §2.1), and a classifier that
+    crashes on the very files it exists to classify cannot report them.
+
+    `"stamped"` is decided by `family:`, the one key every family's template carries and
+    no harness block does — a positive test for this migration's own output, the same
+    idempotency reading `_check_plain_plans_not_silently_unrecognised` uses, rather than
+    "not one of the keys I happen to know about".
+    """
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        return "none"
+    try:
+        closing = lines.index("---", 1)
+    except ValueError:
+        return "foreign"  # an opening block this migration did not write and cannot read
+    return "stamped" if any(ln.startswith("family:") for ln in lines[1:closing]) else "foreign"
+
+
+@dataclass(frozen=True)
+class _ReferenceStamp:
+    """One Reference-family file stamped in place: no id, no number, no move (§1.2)."""
+
+    path: Path
+    rel: str
+    owner: str
+    title: str
+
+
+#: Directly-walked Reference scopes, `(rel_dir, owner)`, **each owner quoted from the §1
+#: cell it is read from, beside the value rather than in a table of its own** — a second
+#: place stating the same thing is what goes stale (`NT-0003`):
+#:
+#:   * `.claude/roles/` → `maintainer`, §1.6 *"Reference — charters | maintainer; 'a role
+#:     file that proves insufficient' → `FD-` → maintainer amends"*.
+#:   * `.claude/agents/` → `lead`, §1.6 *"Reference — agents | lead"*.
+#:
+#: Two values the maintainer's 2026-09-02 scoping admits — *"'Cite the cell' means §1 — a
+#: §1.6 cell or a §1 sentence naming a role. §5.2 is the impact map and grants nothing"* —
+#: so neither is derived from what a role ought to own.
+#:
+#: `.claude/skills/*/SKILL.md` is not here: its stamp target is a glob, not a directory's
+#: contents, and it is handled separately below. Its owner is `lead` too, one standing
+#: value, read from §1.6 *"Reference — skills"*' approves/retires cells and ruled by the
+#: maintainer at `docs/plans/2026-09-02-w37-5c-slice-decision.md` §3.
+#:
+#: Every `README.md` under any of these is claimed by the README scope instead — the
+#: cell-extent rule, `…-w37-rfc-readme-row-and-stamp-set.md` §2: *"A cell governs what its
+#: text names; an index is the README row's."*
+_REFERENCE_DIR_SCOPES: Final[tuple[tuple[str, str], ...]] = (
+    (".claude/roles", "maintainer"),
+    (".claude/agents", "lead"),
+)
+
+#: Every `README.md` inside the migration's own fixture corpus. `migrate` consumes that
+#: tree as a **root** — it is another repository as far as this script is concerned — so a
+#: real-tree run stamping a file inside it would corrupt the corpus every proof in
+#: `tests/test_doc_id_migrate.py` is read against.
+#:
+#: **Listed one path at a time, not as the `tests/fixtures/docs-migration/` prefix that
+#: would express it in one line**, because RFC §3's rule is that a fixture exemption is
+#: declared *by name*: a prefix silently swallows every future file under it, and this
+#: list is meant to be the thing that forces a decision when the fixture grows. All five
+#: arrived with W37-5c itself — at `544b90c` the fixture carried no `README.md` at all,
+#: which is why the RFC's own arithmetic was computed over 33 tracked READMEs and this
+#: branch measures 38. **The count moved; the decomposition did not**: 38 tracked, 17
+#: routed to `CR-`, 5 declared here, 2 §5.2/§5.3 delete, 1 check-35 fixture exempt →
+#: **13 stamped**, of which 8 were already inside §4 step 5's roots and 5 are the ones
+#: RFC §4 names as gained. Measured with
+#: `[r for r in git_ls_files(root, ".") if Path(r).name == "README.md"]`, the same
+#: predicate the scope itself uses.
+#:
+#: `tests/test_doc_id_migrate.py` asserts this equals the fixture's README set exactly, so
+#: it can neither grow silently nor keep an entry whose file has gone.
+_REFERENCE_FIXTURE_CORPUS_READMES: Final[tuple[str, ...]] = (
+    "tests/fixtures/docs-migration/.claude/agents/README.md",
+    "tests/fixtures/docs-migration/.claude/skills/README.md",
+    "tests/fixtures/docs-migration/docs/README.md",
+    "tests/fixtures/docs-migration/docs/audit/phases/1a/README.md",
+    "tests/fixtures/docs-migration/docs/audit/work/W1/README.md",
+)
+
+_REFERENCE_FIXTURE_CORPUS_REASON: Final = (
+    "inside `tests/fixtures/docs-migration/`, the tree `migrate` is run *against* rather "
+    "than content of this repository -- stamping it from a real-tree run would corrupt "
+    "the fixture corpus every migration proof is read against"
+)
+
+#: Bucket 3 for the README scope: named files, each with its reason. Never a path prefix
+#: — RFC §3's rule, and the reason `tests/fixtures/` is the first entry rather than the
+#: directory it lives in.
+_REFERENCE_README_EXCEPTIONS: Final[Mapping[str, str]] = {
+    **{rel: _REFERENCE_FIXTURE_CORPUS_REASON for rel in _REFERENCE_FIXTURE_CORPUS_READMES},
+    "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md": (
+        "deliberately headerless — its own test says a header here \"would then also red "
+        "check 30, contaminating this check-35 proof\". Exempt by "
+        "docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md §3, declared by name "
+        "so the exemption cannot grow into a subtree"
+    ),
+    "docs/audit/README.md": (
+        "NT-0019 §5.2: \"deleted; content to `findings/` and `closures/` READMEs\" (kind "
+        "`H`) -- a file the migration removes is not a file it stamps. The deletion is a "
+        "hand step and is not built yet, so the file is still on disk and is named here "
+        "rather than silently stamped. The old notes root under `.claude` reaches the same "
+        "disposition through `_REFERENCE_CLAUDE_DIR_EXCEPTIONS` instead of a second entry "
+        "here: see the README scope's inheritance branch"
+    ),
+}
+
+_REFERENCE_FOREIGN_REASON: Final = (
+    "in scope for §4 step 5 and NOT stamped by W37-5c: the file already carries the "
+    "harness's own front matter, so its header must be MERGED into that block rather "
+    "than prepended (`_docid.parse_header` reads exactly one block per file), and the "
+    "keys must first be declared in `docs/_templates/REFERENCE.md` under Ruling 70. That "
+    "is docs/plans/2026-09-02-w37-6-migration-run-leaf-plan.md §7.1 Task 1, W37-6's work"
+)
+
+#: Bucket 3 for the `.claude/` coverage scope below: every top-level entry no §4 step 5
+#: root reaches, with the §5.3 row that dispositions it. `worktrees/` is absent
+#: deliberately — it is `.gitignore`d, so a real checkout that has one gets it named here,
+#: which is the correct outcome for a directory that is not part of the corpus.
+_REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
+    "notes/": (
+        "OPEN QUESTION, not a settled exemption -- three sections of NT-0019 disagree "
+        "about this directory's README and the disposition here follows the one that "
+        "names it. \u00a75.3's row: \"19 stubs + README | deleted; `REDIRECTS.csv` rows\" "
+        "(kind `H + M`) -- the only place the README's own disposition is stated, and it "
+        "says deleted. Against it: \u00a74 step 4 deletes \"the stubs\" and does not "
+        "mention the README, and \u00a75.6's row for the tree outside `docs/` says "
+        "\"every README outside `docs/` is Reference family and gets the header\". "
+        "Reported to the lead 2026-09-02; if the README is ruled to survive, delete the "
+        "clause naming it here and the README scope stamps it as a seventh gained file. "
+        "The 18 stubs are not in \u00a74 step 5's stamp set under any reading. "
+        "\u00a75.3's own count is also wrong: it says 19 stubs where the directory holds "
+        "18 plus the README, which the map plan already flagged"
+    ),
+    "settings.json": (
+        "NT-0019 §5.3's only change for it is \"hook `statusMessage` citation\", kind "
+        "`M` -- the blanket citation rewrite reaches it; §4 step 5 does not, and a JSON "
+        "file cannot carry YAML front matter in any case (F83's population)"
+    ),
+    "CLAUDE.md": (
+        "**no §5.3 row and no §4 step 5 root reaches it.** `.claude/CLAUDE.md` is the "
+        "graphify instruction file; §4 step 5 stamps `.claude/roles/`, "
+        "`.claude/skills/*/SKILL.md` and `.claude/agents/`, none of which matches a file "
+        "directly under `.claude/`. Named here so the omission is listed rather than "
+        "invisible; whether the standard should reach it is the maintainer's, not this "
+        "slice's"
+    ),
+}
+
+#: Bucket-2 sentinels — a file the migration accounts for by another mechanism, rather
+#: than one it leaves unstamped. Distinct constants, not free-text, so `classify` below
+#: tests identity instead of matching a prose string that a later edit could drift.
+_ACCOUNTED_ALREADY_STAMPED: Final = "\0accounted:already-stamped"
+_ACCOUNTED_ROUTED: Final = "\0accounted:routed-to-a-document-family"
+_ACCOUNTED_VENDORED: Final = "\0accounted:vendored-skill-manifest-stamp-path"
+_ACCOUNTED_MOVED: Final = "\0accounted:already-moved-by-an-earlier-run"
+
+
+def _claude_dir_disposition(rel: str) -> str | None:
+    """The `.claude/` coverage scope's reason for `rel`'s own top-level directory, or
+    `None` when no entry covers it. Lets a file inside a dispositioned directory inherit
+    that one statement instead of repeating it.
+
+    The prefix is assembled from the constant's key rather than written out, which keeps
+    this module free of a literal path `tests/test_notes_move_citations.py` forbids every
+    living file from naming — the old notes root under `.claude`. That test's own
+    docstring builds the same string by concatenation for the same reason.
+    """
+    marker = ".claude" + "/"
+    if not rel.startswith(marker):
+        return None
+    head = rel[len(marker) :].split("/", 1)[0]
+    return _REFERENCE_CLAUDE_DIR_EXCEPTIONS.get(head + "/")
+
+
+def _reference_target(path: Path, rel: str, owner: str) -> _ReferenceStamp | str | None:
+    """A stamp target, the reason this file is in scope but not stamped by this slice, or
+    `None` for a file in scope whose shape this code does not recognise.
+
+    `None` is Ruling 83's case and is deliberately *not* given a reason: a Reference file
+    with no `# ` heading has no `title:` to read, and putting a disposition string here
+    would turn "I cannot classify this" into "I have decided about this". Left
+    unaccounted, so the census NAMES it -- the same bargain
+    `_discover_audit_closure_readmes` strikes for a record README whose H1 it cannot read,
+    and `_proposal_containers` for a container heading carrying no date.
+    """
+    text = path.read_text(encoding="utf-8")
+    state = _front_matter_state(text)
+    if state == "stamped":
+        return _ACCOUNTED_ALREADY_STAMPED  # idempotency: a second run leaves it alone
+    if state == "foreign":
+        return _REFERENCE_FOREIGN_REASON
+    heading = _REFERENCE_H1_RE.search(text)
+    if heading is None:
+        return None  # unrecognised shape -- the census names it rather than guessing
+    return _ReferenceStamp(path=path, rel=rel, owner=owner, title=heading.group(1))
+
+
+@dataclass(frozen=True)
+class _ReferenceScopeCensus:
+    """One scope's three buckets, kept apart so the census can reconcile them and the CLI
+    can report the deferrals by name."""
+
+    scope: str
+    units: tuple[_CensusUnit, ...]
+    stamped: tuple[str, ...]  # bucket 1 — stamped by this run
+    #: Bucket 2 — accounted for by the migration itself rather than by this stamp path:
+    #: a file already carrying this migration's own header (a second run's idempotency),
+    #: or a `README.md` a *document* discovery claimed and moved into a family directory.
+    #: Neither is "in scope and unstamped", so neither belongs on the deferral list.
+    accounted: tuple[str, ...]
+    excepted: dict[str, str]  # bucket 3 — every entry carries its reason
+
+
+def _discover_reference_stamp_targets(
+    root: Path, routed: Collection[str] = ()
+) -> tuple[list[_ReferenceStamp], list[_ReferenceScopeCensus]]:
+    """Every §4 step 5 Reference stamp target, plus the per-scope census the guard below
+    reconciles. `routed` is the set of repo-relative paths a *document* discovery already
+    claimed — the 17 F84 finds — so a README routed to `CR-` leaves this population by
+    construction (RFC §1) instead of by a maintained exception list.
+
+    The README population is read from `git ls-files`, not from a filesystem walk: §1.2's
+    Reference row says *"every `README.md` anywhere in the tree"*, and the tree that
+    sentence means is the tracked one. A walk would sweep in a `.venv/` or a build
+    directory and quietly inflate every count taken from it.
+    """
+    targets: list[_ReferenceStamp] = []
+    censuses: list[_ReferenceScopeCensus] = []
+    #: Every `README.md` the README scope *saw*, whichever bucket it put it in -- not just
+    #: the ones it stamped. The directory scopes below skip these, and the distinction is
+    #: the whole safety: keyed on "stamped", a README that the README scope excepted or
+    #: routed would fall through to `.claude/agents/` and be claimed a second time, which
+    #: prepends a second header. No such file exists today, which is exactly why the
+    #: narrower reading looked correct.
+    readmes_seen: set[str] = set()
+
+    def classify(units: list[_CensusUnit], scope: str, resolved: dict[str, object]) -> None:
+        stamped: list[str] = []
+        accounted: list[str] = []
+        excepted: dict[str, str] = {}
+        for key, outcome in resolved.items():
+            if outcome is None:
+                continue  # unrecognised: no bucket, so `_reconcile_census` names it
+            if isinstance(outcome, _ReferenceStamp):
+                targets.append(outcome)
+                stamped.append(key)
+            elif outcome in (
+                _ACCOUNTED_ALREADY_STAMPED, _ACCOUNTED_ROUTED, _ACCOUNTED_VENDORED,
+                _ACCOUNTED_MOVED,
+            ):
+                accounted.append(key)
+            else:
+                excepted[key] = str(outcome)
+        censuses.append(
+            _ReferenceScopeCensus(
+                scope=scope, units=tuple(units), stamped=tuple(stamped),
+                accounted=tuple(accounted), excepted=excepted,
+            )
+        )
+
+    # --- the README scope, first: it owns every index, including those inside the
+    # directory scopes below (RFC §2's cell-extent rule).
+    units: list[_CensusUnit] = []
+    resolved: dict[str, object] = {}
+    for rel in git_ls_files(root, "."):
+        if Path(rel).name != "README.md":
+            continue
+        units.append(_CensusUnit(key=rel, locator=rel, text=rel))
+        readmes_seen.add(rel)
+        if not (root / rel).is_file():
+            # Tracked but no longer on disk: an earlier `migrate` run in this same tree
+            # moved it into a family directory and did not touch the index — git state is
+            # the caller's to update, the same design choice `classify_docs_files` states
+            # for its own read. Bucket 2, not an error: on a second run the 17 F84 claims
+            # are exactly this, and `routed` is empty because there is nothing left to
+            # claim. Reading it would raise `FileNotFoundError` mid-run, which is how
+            # idempotency broke the first time this scope was wired up.
+            resolved[rel] = _ACCOUNTED_MOVED
+            continue
+        if rel in routed:
+            # Bucket 2, not an exception: §5.2 routes it to `CR-` and F84's discovery
+            # moved it. It leaves this population **by construction** — the RFC §1 rule
+            # that made routing the discriminator exists so there is no list to maintain.
+            resolved[rel] = _ACCOUNTED_ROUTED
+        elif rel in _REFERENCE_README_EXCEPTIONS:
+            resolved[rel] = _REFERENCE_README_EXCEPTIONS[rel]
+        elif (inherited := _claude_dir_disposition(rel)) is not None:
+            # A README inside a `.claude/` directory the coverage scope below already
+            # dispositions inherits that disposition rather than carrying a second entry
+            # of its own. One statement about the directory, not two that can disagree
+            # (NT-0003's mechanism) -- and it is why this file names no such directory as
+            # a literal path: the prefix is built from the constant's own key.
+            resolved[rel] = inherited
+        else:
+            resolved[rel] = _reference_target(root / rel, rel, "lead")
+    classify(units, "every tracked README.md (the README row)", resolved)
+
+    # --- `.claude/roles/` and `.claude/agents/`: every file under them.
+    for rel_dir, owner in _REFERENCE_DIR_SCOPES:
+        directory = root / rel_dir
+        if not directory.is_dir():
+            continue
+        units, resolved = [], {}
+        for path in sorted(p for p in directory.rglob("*") if p.is_file()):
+            rel = path.relative_to(root).as_posix()
+            key = path.relative_to(directory).as_posix()
+            if rel in readmes_seen:
+                continue  # the README scope above already accounts for it
+            units.append(_CensusUnit(key=key, locator=rel, text=key))
+            resolved[key] = (
+                _reference_target(path, rel, owner)
+                if path.suffix == ".md"
+                else "not a markdown document -- §4 step 5 stamps documents"
+            )
+        classify(units, f"{rel_dir}/ (NT-0019 §4 step 5)", resolved)
+
+    # --- `.claude/skills/*/SKILL.md`. The census units are the skill **directories**, not
+    # the manifests: counting the manifests would count with step 5's own glob, and a
+    # skill directory that has lost its `SKILL.md` -- or spells it differently -- is
+    # exactly the unit that glob cannot see (§5.4: "every `SKILL.md` (46)").
+    skills_dir = root / ".claude" / "skills"
+    if skills_dir.is_dir():
+        units, resolved = [], {}
+        for directory in sorted(p for p in skills_dir.iterdir() if p.is_dir()):
+            key = f"{directory.name}/SKILL.md"
+            rel = f".claude/skills/{key}"
+            units.append(_CensusUnit(key=key, locator=rel, text=key))
+            manifest = directory / "SKILL.md"
+            if not manifest.is_file():
+                continue  # no record, no exception -- the census names the directory
+            outcome = _reference_target(manifest, rel, "lead")
+            # A vendored manifest this path *could* stamp is the vendored stamp path's,
+            # not this one's: NT-0019 §1.5 gives it two extra fields (`vendored: true`,
+            # `origin:`) that only that writer supplies, and stamping it here as well
+            # would write the header twice. Ordered after `_reference_target`, not
+            # before it, deliberately: a vendored manifest carrying the harness's own
+            # front matter -- which all 28 real ones do -- is deferred with the other 53
+            # rather than reported as handled, because the vendored path cannot stamp it
+            # either. It skips any manifest `_docid.parse_header` reads, and it reads 25
+            # of the 28; the other 3 raise `HeaderError` and are F83's own third row
+            # (`create-adaptable-composable`, `planning-with-files`, `vue-best-practices`
+            # -- named in `docs/plans/2026-09-02-w37-rfc-bucket-c-owner-values.md` §2.1,
+            # all three vendored). **The two populations are distinct and only overlap by
+            # those 3**: F83's 65 are files that cannot carry front matter *in any form*,
+            # while these 53 can and already do -- someone else's. Both are unblocked by
+            # different work: F83 by its ruled exemption, these by W37-6's Task 1 merge.
+            if isinstance(outcome, _ReferenceStamp) and _is_vendored_skill_manifest(manifest):
+                outcome = _ACCOUNTED_VENDORED
+            resolved[key] = outcome
+        classify(units, ".claude/skills/*/SKILL.md (NT-0019 §4 step 5)", resolved)
+
+    # --- coverage: is every top-level entry of `.claude/` reached by a scope above, or
+    # dispositioned by §5.3? Without this, the three scopes above are each internally
+    # total -- every file they walk gets a bucket -- so the only thing that could still be
+    # "outside the question" is a population none of them walks at all. That is exactly
+    # F84's shape one level up, and it is the failure this unit finder exists to catch: a
+    # new `.claude/<something>/` of governed documents is unaccounted here on the day it
+    # appears, rather than the day someone notices it was never stamped.
+    claude_dir = root / ".claude"
+    if claude_dir.is_dir():
+        units, resolved = [], {}
+        for entry in sorted(claude_dir.iterdir()):
+            key = entry.name + ("/" if entry.is_dir() else "")
+            units.append(_CensusUnit(key=key, locator=f".claude/{key}", text=key))
+            if key in ("roles/", "agents/", "skills/"):
+                resolved[key] = _ACCOUNTED_ROUTED  # a scope above walks it
+            elif key in _REFERENCE_CLAUDE_DIR_EXCEPTIONS:
+                resolved[key] = _REFERENCE_CLAUDE_DIR_EXCEPTIONS[key]
+        classify(units, ".claude/ (every top-level entry — is it in a scope?)", resolved)
+
+    # The scopes overlap by design -- an index inside `.claude/agents/` is in two of them,
+    # and the cell-extent rule decides which claims it. A file claimed twice would be
+    # stamped twice, the second header landing in front of the first, and nothing
+    # downstream would say so: `frozen_file_matches_after_migration_stamp` strips one
+    # leading block. Checked here rather than left to the one overlap that exists today.
+    claimed = [t.rel for t in targets]
+    if len(set(claimed)) != len(claimed):
+        twice = sorted({rel for rel in claimed if claimed.count(rel) > 1})
+        raise ValueError(
+            f"migrate: Reference stamp target(s) claimed by more than one scope: {twice} "
+            "-- each would be stamped once per claim. Decide which scope owns them (the "
+            "cell-extent rule) rather than letting both write."
+        )
+    return targets, censuses
+
+
+def _check_reference_stamp_set_not_silently_unrecognised(
+    censuses: Sequence[_ReferenceScopeCensus],
+) -> None:
+    """Ruling 83's census over §4 step 5's Reference stamp set: every file in scope is a
+    stamp target, this migration's own prior output, or a **declared** exception carrying
+    its reason -- and anything else is NAMED.
+
+    The unit finder is independent of the stamp rule in every scope: `git ls-files` for
+    the READMEs (not a walk of the directories that happen to hold one today), every file
+    under `.claude/roles/` and `.claude/agents/` (not just the `.md` the stamp reaches),
+    and the skill **directories** rather than the `*/SKILL.md` glob step 5 is written in.
+    """
+    for census in censuses:
+        _reconcile_census(
+            scope=census.scope,
+            units=census.units,
+            records=set(census.stamped),
+            is_body=lambda unit, _seen=frozenset(census.accounted): unit.key in _seen,
+            exceptions=census.excepted,
+        )
+
+
+def _stamp_reference_targets(root: Path, targets: Sequence[_ReferenceStamp]) -> list[str]:
+    """Write each target's Reference header ahead of its existing body. Same mechanism as
+    the vendored-manifest stamp below it in `migrate`, and same `docs/_templates/
+    REFERENCE.md` substitution: a field that family's template does not declare cannot
+    appear (Ruling 70's guarantee, applied to the writer).
+    """
+    written: list[str] = []
+    for target in targets:
+        header = _stamp_header(
+            "REFERENCE", None, kind=None, title=target.title, status="active",
+            created=_module_first_commit_date(target.path, root), owner=target.owner,
+            was=None,
+        )
+        body = target.path.read_text(encoding="utf-8")
+        target.path.write_text(header + "\n" + body, encoding="utf-8")
+        written.append(target.rel)
+    return written
 
 def _check_roadmap_not_silently_unrecognised(root: Path) -> None:
     """Task #32: `_discover_roadmap` returning nothing is ambiguous by construction —
@@ -3517,6 +4195,13 @@ def migrate(root: Path) -> MigrateResult:
     )
     _check_closure_records_not_silently_unrecognised(root)
     drafts += closure_drafts
+    # F84: the same family from a second location `_discover_closure_records` never
+    # visits -- one record per whole file under `docs/audit/work/` and
+    # `docs/audit/phases/`, rather than one file split into many records. The census is
+    # passed the drafts, not the root, so it reconciles against what discovery produced.
+    audit_closure_drafts = _discover_audit_closure_readmes(root)
+    _check_audit_closure_readmes_not_silently_unrecognised(root, audit_closure_drafts)
+    drafts += audit_closure_drafts
     review_drafts = _discover_plan_reviews(root)
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "plan-reviews.md", review_drafts, "plan reviews"
@@ -3550,6 +4235,16 @@ def migrate(root: Path) -> MigrateResult:
     # was never about which files the check reaches, only about when a malformed one
     # aborts the run.
     vendored_skill_manifests = _discover_vendored_skill_manifests(root)
+    # NT-0019 §4 step 5's Reference stamp set (W37-5c item 2). Discovered here, alongside
+    # every other discovery and before any write, for the same reason the vendored
+    # manifests were hoisted (task #34): the census must refuse on the *pre-migration*
+    # tree, not after `_write_document_drafts` has already landed files on disk. `routed`
+    # is F84's 17, so a README the migration turns into a `CR-` leaves the README
+    # population by construction rather than by a maintained exception list.
+    reference_targets, reference_censuses = _discover_reference_stamp_targets(
+        root, routed={d.was for d in audit_closure_drafts if d.was is not None}
+    )
+    _check_reference_stamp_set_not_silently_unrecognised(reference_censuses)
 
     start = compute_next(root)
     _assign_numbers(drafts, start)
@@ -3573,6 +4268,19 @@ def migrate(root: Path) -> MigrateResult:
             files_deleted = [*files_deleted, "docs/audit/register.md"]
             register_moved_to = "docs/findings/register.md"
 
+    # F84: `_write_document_drafts` deletes each migrated `docs/audit/work/<work>/
+    # README.md`, leaving its directory behind with nothing in it. Pruned bottom-up
+    # *before* the three legacy roots below, because an emptied `work/` is exactly what
+    # would otherwise keep `docs/audit/` non-empty and stop it dissolving (NT-0019 §1.4:
+    # "`docs/audit/` dissolves into `findings/`, `closures/`, `research/` and
+    # `process/`"). A directory that still holds a declared exception -- `phases/1b/`
+    # holds `register.md` -- survives, correctly: it still has a file in it.
+    for rel_dir in _AUDIT_CLOSURE_README_DIRS:
+        parent = root / rel_dir
+        if parent.is_dir():
+            for child in sorted(p for p in parent.iterdir() if p.is_dir()):
+                _remove_if_empty(child)
+        _remove_if_empty(parent)
     for legacy_dir in ("docs/notes", "docs/adr", "docs/audit"):
         _remove_if_empty(root / legacy_dir)
 
@@ -3603,6 +4311,10 @@ def migrate(root: Path) -> MigrateResult:
         )
 
     rewritten = _rewrite_citations(root, token_map)
+
+    # Alongside the vendored-manifest stamp below, and after the citation rewrite for the
+    # same reason it is: a header this run writes carries no legacy token to rewrite.
+    files_written = [*files_written, *_stamp_reference_targets(root, reference_targets)]
 
     skipped_vendored: list[str] = []
     for skill_md in vendored_skill_manifests:
@@ -3652,6 +4364,15 @@ def migrate(root: Path) -> MigrateResult:
         ledger_records_checked=ledger_axes.records,
         ledger_slice_values_checked=ledger_axes.slice_values,
         ledger_work_values_checked=ledger_axes.work_values,
+        # Reported by `locator`, never by `key`: a unit's key is relative to its own
+        # scope (`example-agent.md`), and a path a reader cannot resolve without knowing
+        # which scope produced it is the CLAUDE.md §13 reference defect in a report line.
+        deferred_reference_stamps=tuple(
+            (unit.locator, census.excepted[unit.key])
+            for census in reference_censuses
+            for unit in census.units
+            if unit.key in census.excepted
+        ),
     )
 
 
@@ -3920,6 +4641,16 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         "docs/roadmap.md",
         file=sys.stderr,
     )
+    # Unconditionally, including the zero, and by name: a Reference file in §4 step 5's
+    # stamp set that this run did not stamp is *listed*, never quietly absent (W37-5c
+    # item 2; F83's condition 1 applied to a deferral).
+    print(
+        f"doc-id.py migrate: {len(result.deferred_reference_stamps)} Reference stamp "
+        "target(s) in scope and not stamped by this run:",
+        file=sys.stderr,
+    )
+    for where, reason in result.deferred_reference_stamps:
+        print(f"  {where} -- {reason}", file=sys.stderr)
     print(f"doc-id.py migrate: {len(result.assigned)} id(s) assigned")
     return 0
 
