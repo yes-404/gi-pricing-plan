@@ -348,7 +348,24 @@ above in this document — read"*. So the section is not orphaned prose; it has 
 citations from a governed record, and NT-0019 §4 step 6 rewrites every citation across the
 tracked tree. Whatever the disposition, those two citations need a target that resolves.
 
-**(e) A structural fact that no current check sees.** Because line 1155 is the file's only
+**(e) The planner already identified this section, and stopped one step short of a
+destination.** W37-6's leaf plan §7.5, in the list of split rules that do not partition the
+tree as written:
+
+> **A dropped section is caught**; a misattributed one is not. `plan-reviews.md`'s
+> `## Pending proposals` block (three `###` candidates, no §5.2 destination) would be either
+> dropped — caught by acceptance (g)'s class 4, *"the concatenation of the outputs reproduces
+> the input's body lines in order"* — or silently swallowed into the preceding `CR-`. Give it
+> an explicit destination rather than letting the splitter choose.
+
+**That is right, it predates this record, and it settles the disposition's direction without
+naming the destination.** Two things it did not have and this record adds: the swallowing is
+not hypothetical — it is happening now, measured in (b) — and the section is not the only
+casualty, because Plan review 9 goes with it. The instruction *"give it an explicit
+destination"* is the reason the family question is handed to the planner in §2 rather than
+left to the migration, not a reason to consider it already answered.
+
+**(f) A structural fact that no current check sees.** Because line 1155 is the file's only
 `##`, Plan reviews **9, 10 and 11** are, by heading level, children of a section titled
 *"Pending proposals"*. `_REVIEW_HEADING_RE` is anchored to `^###` and is blind to this, so it
 changes nothing today — but any tool that walks heading structure rather than matching a flat
@@ -409,16 +426,16 @@ was written to prevent. Doing it here would be the same defect with a different 
      first sentence.
    - **The unit boundary is the `##` section — lines 1155–1232 — not the three `###` inside
      it**, and not a fold into `Plan review 1`.
-   - Ruling 68 class 4's line-order constraint (*"the concatenation of every split output must
-     reproduce this file's body lines in order"*) leaves exactly two placements: the section
-     becomes its own record, or it becomes `Plan review 9`'s preamble by that record's
-     boundary starting at 1155 instead of 1233. Both must be tested; a third is not available
-     without reordering the file.
+   - Ruling 68 acceptance (g) class 4 — *"the concatenation of the outputs reproduces the
+     input's body lines in order"* — leaves exactly two placements: the section becomes its own
+     record, or it becomes `Plan review 9`'s preamble by that record's boundary starting at
+     1155 instead of 1233. Both must be tested; a third is not available without reordering the
+     file.
    - **Whichever is chosen, Plan review 9's two citations of *"the unnumbered 'Pending
      proposals' section above"* must resolve after the rewrite.** The preamble option makes
      that self-referential and the derivation must say what it rewrites to; that is a real
      cost of the option, not a disqualification of it.
-4. **The mis-nesting in (e) is recorded, not fixed here.** Reviews 9–11 sitting under a `##`
+4. **The mis-nesting in §1(f) is recorded, not fixed here.** Reviews 9–11 sitting under a `##`
    titled *"Pending proposals"* is a defect in `plan-reviews.md`'s own structure. It changes
    no output today. It goes to the lead as a finding, and the migration should not be the
    first thing to discover it.
@@ -478,7 +495,7 @@ verified; what is verified is the measured column.
 |---|---|---|
 | **The container section's family and `kind:`** | Ruling 78's precedent: the exclusion is the decision-maker's, the positive assignment is derived by the planner against §5.2's full option set and ruled afterwards. I have not done that enumeration | **The planner**, with Ruling 82 §3 item 3's four constraints. Comes back here to be ruled |
 | **The `$`-anchor fix in `_REVIEW_HEADING_RE`** | A code defect in merged W37-5, not a spec-versus-code conflict — the same species as the closure-record split already fixed in `#585` | **The lead**, folded into the existing task for the four discovery functions. §1(b) supplies the blast radius it did not have |
-| **`plan-reviews.md`'s heading mis-nesting (§1(e))** | A structural defect in a governed document, not a decision about what the standard means | **The lead**, as a finding. Fixing it before the migration is cheaper than after, but it blocks nothing |
+| **`plan-reviews.md`'s heading mis-nesting (§1(f))** | A structural defect in a governed document, not a decision about what the standard means | **The lead**, as a finding. Fixing it before the migration is cheaper than after, but it blocks nothing |
 | **Whether the executor's branch merges before or after any other open PR** | Merge order is the lead's, and `CLAUDE.md`'s standing rule reserves every merge to it. Ruling 81 fixes that the branch merges *on its own*, not when | **The lead** |
 
 ## Provenance
