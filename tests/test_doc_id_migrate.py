@@ -23,6 +23,7 @@ import subprocess
 import sys
 import types
 from collections.abc import Sequence
+from datetime import date
 
 import pytest
 
@@ -365,13 +366,17 @@ def test_closure_records_classifies_phase_audit_and_work_headings(
     ]
 
 
-def test_closure_records_raises_on_the_first_not_closed_heading(
+def test_closure_records_not_closed_headings_become_ledger_drafts(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Task #31's own defect, reproduced directly: an "in progress, not closed" heading
-    must raise rather than silently fold into whichever heading matches next. Two such
-    headings present, to confirm the raise names the *first* one -- a deterministic
-    result, not whichever the implementation happens to hit.
+    """Ruling 84 (`docs/plans/2026-09-02-w37-guard-arithmetic-and-ledger-family-rulings.md`)
+    §2: *"the raise was correct while the family was undecided and is wrong the moment it
+    is decided; it is replaced, not deleted, by the classification."* Supersedes
+    `test_closure_records_raises_on_the_first_not_closed_heading` (same name up to
+    2026-09-02): that test pinned task #31's interim raise, which Ruling 84 rules against
+    directly. Two "not closed" headings present, both under the same workstream, to prove
+    `_discover_closure_records` no longer stops at the first — it used to raise there and
+    never see the second at all.
     """
     audit_dir = tmp_path / "docs" / "audit"
     audit_dir.mkdir(parents=True)
@@ -381,8 +386,128 @@ def test_closure_records_raises_on_the_first_not_closed_heading(
         "### W5 — second undetermined thing, 2026-08-16 *(in progress, not closed)*\n\nBody.\n",
         encoding="utf-8",
     )
-    with pytest.raises(NotImplementedError, match="first undetermined thing"):
-        doc_id_cli._discover_closure_records(tmp_path)
+    drafts = doc_id_cli._discover_closure_records(tmp_path)
+
+    assert [(d.prefix, d.kind, d.status, d.owner, d.work_token) for d in drafts] == [
+        ("CR", "work", "active", "auditor", None),
+        ("LG", None, "closed", "executor", "W5"),
+        ("LG", None, "closed", "executor", "W5"),
+    ]
+
+
+def test_closure_records_ledger_disposition_reads_the_trailer_not_the_body(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 84 §2: *"each of the ten is read for its own outcome rather than
+    blanket-stamped ... any that records a slice that did not complete takes retired."*
+    Read from the heading's own trailer (`_ledger_disposition`), never the body: a real
+    closure record's prose says "superseded"/"reverted" constantly about individual
+    requirements inside an otherwise-successful slice, so a body-wide keyword search would
+    false-positive on ordinary narrative. Proves both directions on one fixture: the first
+    heading's trailer carries no disposition marker beyond "not closed" and reads
+    `closed`; the second's does and reads `retired`, even though its *body* text below
+    also says "reverted" about something unrelated, which must not itself flip the status.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "### W9 — the happy path, 2026-08-15 *(in progress, not closed)*\n\n"
+        "The design was reverted once during the slice and rebuilt; the final shape "
+        "shipped and nothing here failed.\n\n"
+        "### W9 — the abandoned path, 2026-08-16 *(in progress, not closed, retired)*\n\n"
+        "Superseded by the happy-path slice before this branch merged.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_closure_records(tmp_path)
+
+    assert [d.status for d in drafts] == ["closed", "retired"]
+
+
+def test_closure_records_real_corpus_decomposes_into_ruling_84s_four_buckets(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 84 §4's positive control: "A test that runs `_discover_closure_records`
+    against the real `docs/audit/closure-records.md` and asserts 21 drafts: 8 `CR- kind:
+    work`, 1 `CR- kind: phase`, 2 `RS- kind: audit`, 10 `LG-`. ... It must fail today with
+    the `NotImplementedError` of §1(b) — the positive control the corpus already
+    supplies." Run against `ROOT`, the real repository, not a fixture.
+    """
+    drafts = doc_id_cli._discover_closure_records(ROOT)
+
+    assert len(drafts) == 21, [(d.prefix, d.kind, d.title) for d in drafts]
+    counts = collections.Counter((d.prefix, d.kind) for d in drafts)
+    assert counts == {
+        ("CR", "work"): 8,
+        ("CR", "phase"): 1,
+        ("RS", "audit"): 2,
+        ("LG", None): 10,
+    }, counts
+    ledger_drafts = [d for d in drafts if d.prefix == "LG"]
+    assert all(d.work_token == "W5" for d in ledger_drafts), ledger_drafts
+    assert all(d.status == "closed" for d in ledger_drafts), (
+        "none of the real ten W5 records names a retired marker in its trailer — a "
+        "different status here would mean the trailer-reading rule fired on the real "
+        "corpus's free-form body prose instead"
+    )
+
+
+def test_write_document_drafts_resolves_a_ledgers_work_and_phase_from_the_roadmap(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 84 §4: "A check that every emitted `LG-` carries a `work:` that does
+    resolve, once W37-6 has created the `WK-` rows." Simulates that post-W37-6 state
+    directly on `_write_document_drafts` (`_discover_roadmap`'s own 0-of-41 defect, row 2
+    of the W37-5b obligations list, is a separate, unassigned fix — not built here, so
+    this does not go through the full `migrate()` pipeline against the real corpus, which
+    cannot resolve anything yet). Also proves the negative: `work_token` with no matching
+    roadmap draft resolves to nothing rather than raising, which is what today's real
+    corpus (empty `roadmap_drafts`) actually exercises.
+    """
+    root = tmp_path
+    (root / "docs" / "_templates").mkdir(parents=True)
+    (root / "docs" / "_templates" / "LG.md").write_text(
+        (ROOT / "docs" / "_templates" / "LG.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    work_draft = doc_id_cli._Draft(
+        materialize="roadmap_row", prefix="WK", kind=None, title="Modelling",
+        status="closed", created=date(2026, 8, 15), owner="maintainer",
+        tie_break=("roadmap.md", 0), old_token="W5", phase="P2", number=7,
+    )
+    ledger_draft = doc_id_cli._Draft(
+        materialize="document", prefix="LG", kind=None, title="the GLM spine",
+        status="closed", created=date(2026, 8, 15), owner="executor",
+        tie_break=("docs/audit/closure-records.md", 0), old_token=None,
+        was="docs/audit/closure-records.md", body="Body.\n", work_token="W5",
+        number=50,
+    )
+    unresolved_draft = doc_id_cli._Draft(
+        materialize="document", prefix="LG", kind=None, title="an orphaned record",
+        status="closed", created=date(2026, 8, 16), owner="executor",
+        tie_break=("docs/audit/closure-records.md", 1), old_token=None,
+        was="docs/audit/closure-records.md", body="Body.\n", work_token="W999",
+        number=51,
+    )
+
+    doc_id_cli._write_document_drafts(
+        root, [ledger_draft, unresolved_draft], [work_draft]
+    )
+
+    resolved_text = ledger_draft.new_path.read_text(encoding="utf-8")
+    assert "work: WK-7\n" in resolved_text, resolved_text
+    assert "phase: P2\n" in resolved_text, resolved_text
+    assert "slice:" not in resolved_text, (
+        "Ruling 84 §2: LG- carries work: and no slice: — the template still declares "
+        "slice:, so this must be an active omission, not an absent field by coincidence"
+    )
+
+    unresolved_text = unresolved_draft.new_path.read_text(encoding="utf-8")
+    assert "work:" not in unresolved_text, (
+        "an unresolved work_token must omit work: entirely, never write a broken "
+        "reference or raise — today's real corpus has zero roadmap drafts to resolve "
+        "against, and migrate must not fail because of it"
+    )
 
 
 def test_closure_records_is_silent_on_a_missing_file(
@@ -1411,6 +1536,96 @@ def test_migrate_raises_via_the_headed_split_file_guard_on_plan_reviews(
         encoding="utf-8",
     )
     with pytest.raises(NotImplementedError, match="A candidate proposal"):
+        doc_id_cli.migrate(pristine_a)
+
+
+# -----------------------------------------------------------------------------------------
+# Ruling 84 §3 item 6: the census landing before the raise removal was ordering, not the
+# whole obligation -- "removing the raise on its own does not restore a working guard, it
+# exposes one whose blind spot has simply been hidden." `_check_headed_split_file_not_
+# silently_unrecognised`'s own docstring reserved `closure-records.md` explicitly ("has its
+# own discovery function and its own disposition logic -- Ruling 84 territory, not this
+# one"), so the reachable guard this ruling exposes stays the weak `if drafts: return` one
+# unless this fix also wires the file into the census -- confirmed empirically first
+# (`_check_multi_ruling_files_not_silently_unrecognised`, `_check_headed_split_file_not_
+# silently_unrecognised`, `_check_plain_plans_not_silently_unrecognised` and
+# `_check_requirements_not_silently_unrecognised` between them touch every file
+# `migrate()` reads except this one) before writing the fix below.
+# -----------------------------------------------------------------------------------------
+
+
+def test_closure_records_census_names_an_undercounted_heading(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The identical undercount shape `test_headed_split_file_guard_names_an_undercounted_
+    heading` proves for plan-reviews.md, here for closure-records.md's own `_CLOSURE_
+    HEADING_RE` (which also requires a date): a `###` heading with no date at all is
+    invisible to `_discover_closure_records` and, pre-this-fix, silently folds into
+    whichever record precedes it -- the exact failure Ruling 83 exists to name rather than
+    leave to a count comparison.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "# Closure records\n\n"
+        "### W1 — a real closure, 2026-08-15\n\nBody.\n\n"
+        "### An undated candidate, carrying no date at all\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError) as exc_info:
+        doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+    assert "An undated candidate" in str(exc_info.value)
+
+
+def test_closure_records_census_is_silent_on_a_clean_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "# Closure records\n\n"
+        "### W1 — a real closure, 2026-08-15\n\nBody.\n\n"
+        "### W2 — the second, 2026-08-16 *(in progress, not closed)*\n\nBody.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+
+
+def test_closure_records_census_treats_a_nested_subheading_as_body(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The real file's own shape (verified directly, `docs/audit/closure-records.md`):
+    `####`/`#####` sub-headings nested inside a `###` record, e.g. W32's own back-filled
+    per-slice sub-records. Both must fold into the enclosing record's body, never read as
+    unaccounted units in their own right.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "# Closure records\n\n"
+        "### W1 — a real closure, 2026-08-15\n\n#### 1. Scope\n\nBody.\n\n"
+        "##### A yet deeper sub-point\n\nBody.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+
+
+def test_closure_records_census_is_silent_on_a_missing_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+
+
+def test_migrate_raises_via_the_closure_records_census_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    closure_path = pristine_a / "docs" / "audit" / "closure-records.md"
+    text = closure_path.read_text(encoding="utf-8")
+    closure_path.write_text(
+        text + "\n\n### An undated candidate, carrying no date at all\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match="An undated candidate"):
         doc_id_cli.migrate(pristine_a)
 
 
