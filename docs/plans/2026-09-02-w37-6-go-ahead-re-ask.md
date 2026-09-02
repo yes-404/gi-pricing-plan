@@ -828,11 +828,41 @@ branch that `git ls-remote` says does not exist. **The check that answers the qu
 actually matters — *can a reader with a fresh clone resolve this?* — is
 `git merge-base --is-ancestor <sha> origin/main`.**
 
+**And the class is half-instrumented, which is the sentence that explains the whole pattern.**
+This document produced a fourth instance while writing §3.2 — a link to `findings/F93.md`, a file
+that lives only on #652's branch — and **the gate caught that one immediately**, because
+`audit-docs.py` resolves relative links and fails on a target that does not exist. **Nothing
+checks a SHA.** Verified rather than assumed: of the script's **21** `check_` functions, none
+resolves a commit; its only occurrences of *merge-base* are check 34's prose about frozen-family
+diffs. So `4df1c45`, `bb1b45ab` and `2eda76a` **passed every gate**, and each was found by a
+person choosing to run `git merge-base --is-ancestor` on a hunch.
+
+**The covered half is the half that fails loudly anyway.** A broken path link breaks a build; **a
+SHA that resolves for nobody sits there looking authoritative forever.** That asymmetry is why
+the first three took a reader to find and the fourth took a second — and it is the reason the
+observation is worth writing down at all: **a rule that cannot be checked is exactly the kind
+that has to be written, because the alternative is that it depends on someone remembering.**
+
+**What enforcement would cost, recorded as a fact and not as a proposal.** One
+`git merge-base --is-ancestor <sha> origin/main` per match, over the **466** distinct
+SHA-shaped tokens in `docs/` at `ac10d30`. The predicate, in a fenced block because it
+contains backticks and an inline span cannot hold them without backslashes that would stop it
+running verbatim:
+
+```
+git grep -ohE '`[0-9a-f]{7,40}`' ac10d30 -- docs | sort -u | wc -l
+```
+
+It would have caught all three. **It is not proposed here**: a new gate check is a spec change,
+§4 is an observation, and the difference is the whole reason this paragraph is phrased as a cost
+rather than a recommendation.
+
 **It is not attached to the go-ahead line, deliberately.** Amending `CLAUDE.md` is the
 maintainer's alone (`CLAUDE.md` §12), and making a rule change a precondition for a run would be
 this document deciding something it may not. It is here because **this is a live instance rather
-than a hypothetical** — three of them, in §8.1, one of which is this document's own remedy for
-the first — which is what makes it worth the maintainer's attention at all.
+than a hypothetical** — four of them now, three in §8.1 and one caught by the gate in §3.2, one
+of which is this document's own remedy for the first — which is what makes it worth the
+maintainer's attention at all.
 
 **The sharp part is not the 95.** It is that **the 30 rulings written after the ruling-form
 flag-day, specifically to comply, fail exactly as the 35 that were never asked to.** The
