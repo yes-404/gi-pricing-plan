@@ -898,6 +898,192 @@ def test_check_39_is_silent_on_the_real_pre_migration_tree(audit: types.ModuleTy
 
 
 # =========================================================================================
+# F76: `check_index_stable`'s `_doc_index.build_corpus(ROOT)` call is the *last* of the
+# ten `check_ids_30_39()` makes, which `main()` runs immediately before six further
+# checks with no exception boundary between any of them
+# (`check_open_question_mirror_status`, `check_finding_citations`,
+# `check_process_core_drift`, `check_process_core_digest`,
+# `check_plan_acceptance_standard` [check 28], `check_register_grammar` [check 29]). An
+# uncaught exception there — a malformed header anywhere in the real tree — used to abort
+# `main()` before any of the six ran, and before the report of every check that already
+# ran was ever printed. Two distinct, verified ways `build_corpus` can raise: a
+# `WK-`/`SL-` row block naming an unknown field (`_doc_index.HeaderError`, not this
+# module's own `_docid.HeaderError` — see the guard's own comment) and a row block whose
+# `created:` is not ISO-8601 (`_row_header_from_raw`'s unguarded `date.fromisoformat`
+# raises `ValueError`, a second, distinct escape `HeaderError`-only handling would miss).
+# =========================================================================================
+
+
+def test_check_39_corpus_build_failure_is_a_clean_fail_not_a_crash(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The row field named here (`bogus_field`) is deliberately not `tree` — NT-0019's
+    own F76 trigger, and the field Ruling 79 is correcting `doc-index.py`'s
+    `_ROW_FIELDS` to accept, in parallel with this guard. A fixture pinned to `tree`
+    would stop reproducing `HeaderError` the moment that fix lands, silently turning
+    this proof into one that passes for the wrong reason. `bogus_field` is not, and can
+    never legitimately become, an NT-0019 §1.5 row field.
+    """
+    import shutil
+
+    root = tmp_path / "corpus"
+    shutil.copytree(FIXTURES / "w37-3-corpus", root)
+    with (root / "roadmap.md").open("a", encoding="utf-8") as fh:
+        fh.write(
+            "\n### WK-9999 — Malformed fixture row (deliberately broken)\n\n"
+            "```yaml\n"
+            "id: WK-9999\n"
+            "family: work\n"
+            "title: Malformed fixture row\n"
+            "status: active\n"
+            "phase: P9\n"
+            "bogus_field: this must never become a legal NT-0019 row field\n"
+            "```\n"
+        )
+    # The fixture really does reproduce the crash this guard exists for — proven
+    # directly against the unguarded mechanism, not assumed from the fixture's own
+    # construction (the trap this row's brief names: does it red for the reason I think
+    # it reds?).
+    with pytest.raises(audit._doc_index.HeaderError, match="bogus_field"):
+        audit._doc_index.build_corpus(root)
+
+    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_index_stable()  # must not raise
+    assert len(audit.failures) == 1, audit.failures
+    assert "check 39:" in audit.failures[0]
+    assert "bogus_field" in audit.failures[0], audit.failures
+
+
+def test_check_39_corpus_build_failure_on_a_malformed_row_date_is_also_a_clean_fail(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The second, distinct way `build_corpus` can crash: `created:` is itself a legal
+    row field (`doc-index.py`'s `_ROW_FIELDS`), so `_parse_row_block` accepts the line
+    without complaint — the crash is `_row_header_from_raw`'s own unguarded
+    `date.fromisoformat`, which raises `ValueError`, never `_docid.HeaderError`. A guard
+    written to catch only `HeaderError` would still let this one propagate.
+    """
+    import shutil
+
+    root = tmp_path / "corpus"
+    shutil.copytree(FIXTURES / "w37-3-corpus", root)
+    with (root / "roadmap.md").open("a", encoding="utf-8") as fh:
+        fh.write(
+            "\n### WK-9998 — Malformed fixture row (deliberately broken date)\n\n"
+            "```yaml\n"
+            "id: WK-9998\n"
+            "family: work\n"
+            "title: Malformed fixture row bad date\n"
+            "status: active\n"
+            "phase: P9\n"
+            "created: not-a-real-date\n"
+            "```\n"
+        )
+    with pytest.raises(ValueError, match="not-a-real-date"):
+        audit._doc_index.build_corpus(root)
+
+    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_index_stable()  # must not raise
+    assert len(audit.failures) == 1, audit.failures
+    assert "check 39:" in audit.failures[0]
+
+
+def test_check_ids_30_39_completes_when_check_39s_corpus_is_malformed(
+    audit: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """F76's own claim, proven at the exact call site the finding names: before the
+    guard, this malformed corpus made `check_ids_30_39()` itself raise — which, inside
+    `main()`, aborts the script before `check_open_question_mirror_status`,
+    `check_finding_citations`, `check_process_core_drift`, `check_process_core_digest`,
+    `check_plan_acceptance_standard` (check 28) and `check_register_grammar` (check 29)
+    ever run, and before any note from the checks that already ran is ever printed.
+    `check_ids_30_39()` returning normally is the exact mechanism by which `main()`'s
+    next statement — and the six checks after it — are reached at all, so this is the
+    orchestrator-level proof; `test_the_real_tree_passes_all_ten_checks` below already
+    covers the equivalent real-tree, real-`main()` shape end to end when nothing is
+    broken.
+    """
+    import shutil
+
+    root = tmp_path / "corpus"
+    shutil.copytree(FIXTURES / "w37-3-corpus", root)
+    with (root / "roadmap.md").open("a", encoding="utf-8") as fh:
+        fh.write(
+            "\n### WK-9997 — Malformed fixture row (deliberately broken)\n\n"
+            "```yaml\n"
+            "id: WK-9997\n"
+            "family: work\n"
+            "title: Malformed fixture row\n"
+            "status: active\n"
+            "phase: P9\n"
+            "bogus_field: this must never become a legal NT-0019 row field\n"
+            "```\n"
+        )
+    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_ids_30_39()  # must not raise — the exact call site F76 names
+    assert any(f.startswith("check 39:") for f in audit.failures), audit.failures
+
+
+def test_doc_index_header_error_is_not_this_modules_docid_header_error(
+    audit: types.ModuleType,
+) -> None:
+    """The trap the guard's own comment names, checked directly rather than trusted:
+    `doc-index.py` reloads `scripts/_docid.py` under its own module instance
+    (`scripts/doc-index.py:85-90`) instead of sharing `audit-docs.py`'s, so
+    `_doc_index.HeaderError` and `_docid.HeaderError` are two distinct class objects
+    built from the same source — `except _docid.HeaderError` around a `_doc_index` call
+    would type-check and silently fail to match. If this test ever starts failing (the
+    two becoming the same object, e.g. via a future shared-loader refactor), the guard's
+    `except` clause should be revisited, not this test weakened.
+    """
+    assert audit._docid.HeaderError is not audit._doc_index.HeaderError
+
+
+# =========================================================================================
+# "A check that examines zero documents and passes is indistinguishable from a check
+# that works" unless its own note says so. Measured directly against the real,
+# unmodified pre-migration tree — today's actual state, where checks 31, 32, 34, 36, 38
+# and 39 examine zero governed documents and checks 30, 33, 35 and 37 examine the same
+# one (`document-ids.md`) — never against a fixture built to make every check non-zero,
+# which would prove nothing about the blind spot this exists to close.
+# =========================================================================================
+
+
+def test_every_check_30_to_39_reports_how_many_documents_it_examined(
+    audit: types.ModuleType,
+) -> None:
+    """Every one of the ten must print at least one note starting `check N:` that
+    carries an explicit digit — a qualitative "skipped" or "nothing to warn about" reads
+    identical whether the check ran over one document or none, which is exactly the
+    invisible-zero condition this proves closed. Digit presence, not a specific count:
+    the real tree's own numbers (0 vs 1, which check finds which) are asserted more
+    precisely by each check's own dedicated tests above; this test's job is only that
+    every one of the ten states *a* number, on the exact input where it is easiest to
+    state none.
+    """
+    audit.failures.clear()
+    audit.notes.clear()
+    audit.check_ids_30_39()
+    for n in range(30, 40):
+        prefix = f"check {n}:"
+        own_notes = [note for note in audit.notes if note.startswith(prefix)]
+        assert own_notes, (n, audit.notes)
+        # The digit must appear *after* the prefix: "check 32:" already contains "3"
+        # and "2" in the check number itself, so scanning the whole note would pass
+        # trivially on every check regardless of whether it ever states a count —
+        # exactly the kind of check that cannot attest to its own coverage.
+        assert any(
+            any(c.isdigit() for c in note[len(prefix):]) for note in own_notes
+        ), (n, own_notes)
+
+
+# =========================================================================================
 # The whole-tree acceptance line this slice's plan states directly: the real audit must
 # exit 0, and the two sibling CI steps this slice wires in must also exit 0 pre-migration.
 # =========================================================================================

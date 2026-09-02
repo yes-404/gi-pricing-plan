@@ -261,7 +261,7 @@ reused for two things (`CLAUDE.md` §5); see the section below for what occupies
 
 The full ten-item list, and what each one catches, is `scripts/audit-docs.py`'s own
 module docstring — kept current there, per this skill's own rule, rather than restated
-here where it would go stale a second way. Four things worth knowing before reading
+here where it would go stale a second way. Six things worth knowing before reading
 that docstring:
 
 - **Path-scoped, not corpus-wide, until the migration lands.** A single module-level
@@ -294,6 +294,35 @@ that docstring:
   module level so a later migration-diff filter can call the identical function), and
   check 36 (Ruling 67/DP-2's legacy-form pattern and exclusion list, `sweep_legacy_forms`
   — one shared, explicit-parameter function, reused unscoped once the corpus migrates).
+- **Check 39's corpus build is guarded (F76, 2026-09-02) — it is not optional.**
+  `check_index_stable` is the *tenth and last* of `check_ids_30_39()`'s ten calls, and
+  `main()` runs six further checks immediately after it with no exception boundary
+  between any of them (`check_open_question_mirror_status`, `check_finding_citations`,
+  `check_process_core_drift`, `check_process_core_digest`,
+  `check_plan_acceptance_standard` [check 28], `check_register_grammar` [check 29]). An
+  uncaught exception building the corpus there used to abort the whole script before
+  any of those six ever ran, and before the `notes`/`failures` every check that already
+  ran had accumulated were ever printed — a traceback instead of a report, during
+  exactly the commit (W37-6) that stamps 304 headers for the first time. Guarded
+  against `_doc_index.HeaderError` (a malformed header, whole-document or row-block) and
+  `ValueError` (`doc-index.py`'s own row-block `created:` parsing is unguarded, unlike
+  `_docid.py`'s whole-document one). **The trap in writing the guard itself**:
+  `doc-index.py` reloads `scripts/_docid.py` under its own module instance
+  (`scripts/doc-index.py:85-90`) rather than sharing this script's, so
+  `_doc_index.HeaderError` and this script's own `_docid.HeaderError` are two distinct
+  class objects built from identical source — `_docid.HeaderError is
+  _doc_index.HeaderError` is `False`. An `except _docid.HeaderError:` guard around a
+  `_doc_index` call type-checks under mypy and silently fails to match at runtime; catch
+  the exception type the module that actually raises it exports.
+- **Every one of the ten states an explicit count, and zero is a numeral, never just
+  "skipped."** Checks 30, 33, 35 and 37 currently examine the corpus's one real
+  document (`document-ids.md`); checks 31, 32, 34, 36, 38 and 39 currently examine
+  zero. A check that examines zero documents and passes is indistinguishable from a
+  check that works unless its own note says so — `test_every_check_30_to_39_reports_how_many_documents_it_examined`
+  (`tests/test_audit_docs_ids.py`) pins this against the real, unmodified tree, and
+  scans past each note's own `check N:` prefix before looking for a digit (the prefix's
+  own number would otherwise satisfy a naive digit-scan trivially, on every check,
+  whether or not it ever states a count).
 
 Ten broken-input proofs (one per check) and every ruling-specific mechanism proof live
 in `tests/test_audit_docs_ids.py`, alongside the fixtures under
@@ -379,6 +408,37 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 (third entry, same day) — F76 fixed: `check_index_stable`'s
+`_doc_index.build_corpus(ROOT)` call, the tenth and last of `check_ids_30_39()`'s ten
+calls, was unguarded — an uncaught `_doc_index.HeaderError` or `ValueError` there
+aborted `main()` before the six checks it runs immediately afterward (see the new
+bullet in the section above), and before any note the checks that already ran had
+accumulated was ever printed. **Proven both ways, real tree and permanent test**: with
+the guard removed, appending a `WK-9999` row block carrying an unknown field to the
+real `docs/roadmap.md` and running `python3 scripts/audit-docs.py` end to end produced a
+21-line traceback and nothing else — no notes, no `FAILED` list, no
+"All checks passed." — reverted with `git checkout --`; with the guard applied, the
+identical mutation produced the full structured report (all of checks 1-38's notes,
+plus `check_open_question_mirror_status`, `check_finding_citations`,
+`check_process_core_drift`, `check_process_core_digest`, check 28 and check 29 running
+normally) with exactly one clean failure naming the corpus build error. Permanent
+proofs in `tests/test_audit_docs_ids.py`: two broken-input fixtures (an unknown row
+field — deliberately not `tree`, Ruling 79's own in-flight fix target, which would stop
+reproducing `HeaderError` the moment that lands — and a non-ISO `created:`, which is
+`ValueError`, not `HeaderError`, and would slip past a guard scoped to the latter
+alone), an orchestrator-level proof that `check_ids_30_39()` itself completes rather
+than raising, and a direct identity check that `_docid.HeaderError is not
+_doc_index.HeaderError` (the trap named in the section above). Same commit: checks 32,
+38 and 39's zero-population notes rewritten to state an explicit "0" rather than only
+"skipped"/"nothing to warn about"/the word "zero", and check 39's byte-stable/stale
+notes extended to state the record count too — pinned by a new
+`test_every_check_30_to_39_reports_how_many_documents_it_examined`, itself first written
+with a digit-scan bug (the check number in a note's own `check 32:` prefix already
+contains digits, so scanning the whole string passed trivially regardless of whether a
+count was ever stated) that was caught only by reverting the fix and confirming the
+test actually reds — the same "prove the proof is not vacuous" discipline check 39's
+own guard proof used.
 
 2026-09-02 — Checks 30-39 added (NT-0019's id-standard audit, Slice W37-4,
 `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`), path-scoped to
