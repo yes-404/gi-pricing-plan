@@ -361,6 +361,23 @@ to avoid, so the numbering is this date's act).
 - **Rule 9 — a correction is checked by a differently-shaped probe than the one that found
   the original** (pilot finding P12, folded in by review 11 and numbered here at acceptance).
   Never by re-reading the passage just edited.
+- **Rule 10 — a branch open when a ruling merges is re-read against that ruling before the
+  branch itself merges** (the lead's decision, 2026-09-02, on §7 of
+  [`the W37-6 leaf-plan findings rulings`](../plans/2026-09-02-w37-6-leaf-plan-findings-rulings.md)).
+  CI gates a branch's own diff. Nothing re-checks a branch against a ruling that landed on
+  `main` while the branch sat open, so a branch can pass every check and still ship a rule its
+  own author never saw superseded. **Two instances in one night**, with the merge order and
+  timestamps in Ruling 76 §1 rather than restated here: a template taught the vendored-skill
+  criterion a ruling had rejected eight minutes earlier, and a script shipped the same rejected
+  rule half an hour after that. **A longer obligation list would not have caught either** — the
+  second was already named in the ruling's own obligations; its branch was simply never re-read
+  against what had superseded it. **What it obliges:** before merging, a branch's author checks
+  `docs/plans/` for ruling records landed on `main` after the branch's own merge-base and
+  re-reads the diff against each one's obligations — fixing what it contradicts, or recording on
+  the branch that nothing there is touched. Derive the order with
+  `git merge-base --is-ancestor`, never from PR numbers, which invert it.
+  **Violation:** a branch merges carrying something a ruling merged after its merge-base
+  contradicts, with nothing on the branch showing that ruling was read.
 - **Messages are 50 words or fewer** (maintainer rule, 2026-08-29). A dispatch states the
   instruction and cites its artifact by path, PR number or task id; it does not carry the
   reasoning. Reasoning belongs in a task, a plan, a ruling record or a merged artifact —
