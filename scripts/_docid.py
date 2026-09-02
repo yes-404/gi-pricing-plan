@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 import tomllib
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -419,6 +419,117 @@ def vendored_skills_ruff_exclude_mismatch(
         if isinstance(entry, str) and entry.startswith(prefix)
     )
     return _VENDORED_SKILLS - ruff_skills, ruff_skills - _VENDORED_SKILLS
+
+
+# ---------------------------------------------------------------------------------------
+# NT-0019 §4 step 5's stamp set — the one definition, two consumers.
+#
+# `scripts/audit-docs.py` needs it twice over (`nt0019_stamp_set`, the corpus the F83
+# exemption register is reconciled against; and `_id_scope_documents`, the population
+# checks 30-39 enforce over) and `scripts/doc-id.py` needs it to know what `migrate`
+# stamps. Before this block each stated the rule for itself, and the two disagreed in a
+# way no instrument compared: `_id_scope_documents` expanded a directory root with
+# `rglob("*.md")`, so it reached **no** non-markdown file however the roots were widened,
+# while `nt0019_stamp_set` reached all 62 of them (`F87`).
+#
+# **The membership predicate is the definition; the filesystem walk is derived from it.**
+# `stamp_set_files` filters a walk through `in_stamp_set` rather than carrying a second,
+# glob-shaped statement of the same rule — two spellings of one rule is how the two
+# consumers came to disagree in the first place (`NT-0003`).
+#
+# The rule itself is `docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md` §4's
+# ruling, quoting NT-0019 §4 step 5: every file under `docs/`, `.claude/roles/` and
+# `.claude/agents/`, every `.claude/skills/*/SKILL.md`, plus every `README.md` anywhere in
+# the tree. That last clause is §1.2's Reference row, not step 5's own words, and it is
+# kept because `scripts/doc-id.py`'s README scope reaches those files whatever step 5's
+# roots say.
+# ---------------------------------------------------------------------------------------
+
+#: The directory prefixes NT-0019 §4 step 5 names, repo-relative and without a trailing
+#: slash. `.claude/skills` is here for `stamp_set_files`' benefit — a root a caller may
+#: legitimately name — even though only its `*/SKILL.md` members are in the set;
+#: `in_stamp_set` is what decides membership, never this tuple on its own.
+STAMP_SET_ROOTS: Final[tuple[str, ...]] = (
+    "docs",
+    ".claude/roles",
+    ".claude/agents",
+    ".claude/skills",
+)
+
+#: The one filename that is in the stamp set wherever it appears (NT-0019 §1.2's
+#: Reference row, "every `README.md` anywhere in the tree").
+STAMP_SET_ANYWHERE: Final = "README.md"
+
+
+def in_stamp_set(rel: str) -> bool:
+    """Is the repo-relative posix path `rel` in NT-0019 §4 step 5's stamp set?
+
+    A **path** predicate, not a filesystem probe: it never touches the disk, so the same
+    definition answers for a `git ls-files` listing and for a tree walk, and a test can
+    put an arbitrary corpus in front of it.
+
+    Membership is by path only. Whether a file that *is* in the set can actually carry a
+    header is a separate question with a separate answer — `audit-docs.py`'s
+    `unstampable_reason` and its `UNSTAMPABLE_EXEMPTIONS` register — and the two are kept
+    apart deliberately: 62 of the register's entries are in this set and cannot be
+    stamped, which is only expressible because membership does not already exclude them.
+    """
+    if rel.rsplit("/", 1)[-1] == STAMP_SET_ANYWHERE:
+        return True
+    if rel.startswith(("docs/", ".claude/roles/", ".claude/agents/")):
+        return True
+    parts = rel.split("/")
+    return (
+        len(parts) == 4
+        and parts[0] == ".claude"
+        and parts[1] == "skills"
+        and parts[3] == "SKILL.md"
+    )
+
+
+def nt0019_stamp_set(tracked: Iterable[str]) -> list[str]:
+    """Every path in `tracked` that NT-0019 §4 step 5 stamps, sorted and de-duplicated.
+
+    `tracked` is the caller's corpus — `git ls-files` in production, for the reason
+    `scripts/doc-id.py` records: a working-tree walk picks up `.venv/`, `graphify-out/`
+    and anything else untracked, which differs between two checkouts of the same commit.
+    Taking it as an argument rather than shelling out here is what lets a test hold a
+    corpus fixed while the predicate changes.
+    """
+    return sorted({rel for rel in tracked if in_stamp_set(rel)})
+
+
+def stamp_set_files(directory: Path, repo_root: Path) -> list[Path]:
+    """Every file under `directory` that `in_stamp_set` admits, sorted.
+
+    The filesystem face of the same rule, for a caller that has a directory rather than a
+    listing. `.git/` and `__pycache__/` are skipped; nothing else is filtered here — the
+    predicate decides.
+
+    **A directory outside every `STAMP_SET_ROOTS` prefix contributes every file it
+    holds.** Naming a directory as a scope root is itself the statement that its contents
+    are governed documents; there is no second rule for the caller to consult and no
+    silent narrowing. This is the case a test fixture root takes, and it is why pointing
+    `audit-docs.py`'s `_ID_SCOPE_ROOTS` at a fixture tree still collects that tree.
+    """
+    try:
+        rel_dir = directory.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        rel_dir = None  # outside the repository entirely
+    governed = rel_dir is not None and any(
+        rel_dir == root or rel_dir.startswith(root + "/") for root in STAMP_SET_ROOTS
+    )
+    out: list[Path] = []
+    for path in sorted(directory.rglob("*")):
+        parts = path.relative_to(directory).parts
+        if ".git" in parts or "__pycache__" in parts:
+            continue
+        if not path.is_file():
+            continue
+        if governed and not in_stamp_set(f"{rel_dir}/{'/'.join(parts)}"):
+            continue
+        out.append(path)
+    return out
 
 
 # ---------------------------------------------------------------------------------------
