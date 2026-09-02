@@ -493,6 +493,28 @@ def test_check_34_migration_stamp_allowance_rejects_a_real_content_change(
     )
 
 
+def test_check_34_migration_stamp_allowance_is_order_independent_under_prefix_collision(
+    audit: types.ModuleType,
+) -> None:
+    """Found by W37-5, applying this predicate against a real multi-id `REDIRECTS.csv`
+    rather than the single-entry maps every other test here uses: NT-0019's citation rule
+    is the bare integer, so two live ids are routinely in a literal prefix relationship
+    (`PL-1` and `PL-12` both exist in most real corpora). Inverting the shorter token
+    first used to consume part of the longer one's own digits before its own map entry
+    was ever reached, corrupting it and making a genuinely clean migration read as a
+    violation — a false failure, not a missed one, but still a check that lied about a
+    correct migration. Regression-tested here with two independent dict insertion
+    orders, so the fix (apply longest `new_token` first, `scripts/audit-docs.py`) cannot
+    silently regress back to depending on dict order.
+    """
+    old_body = "See 2026-01-01-alpha and 2026-06-01-zulu for context.\n"
+    new_text = "---\nid: RL-9\n---\nSee PL-1 and PL-12 for context.\n"
+    order_a = {"PL-1": "2026-01-01-alpha", "PL-12": "2026-06-01-zulu"}
+    order_b = {"PL-12": "2026-06-01-zulu", "PL-1": "2026-01-01-alpha"}
+    assert audit.frozen_file_matches_after_migration_stamp(old_body, new_text, order_a)
+    assert audit.frozen_file_matches_after_migration_stamp(old_body, new_text, order_b)
+
+
 def test_check_34_reds_alone_on_a_dangling_corrected_by_entry(
     audit: types.ModuleType,
 ) -> None:

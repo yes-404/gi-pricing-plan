@@ -1003,8 +1003,12 @@ def test_classify_counts_every_document_family_directory(
 def test_classify_reports_none_for_an_unclassified_file(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
+    # Not `docs/roadmap.md`: W37-5 widened `classify_docs_files` to recognise it (and
+    # `INDEX.md`, `REDIRECTS.csv`, `open-questions.md`, alongside `README.md`) as
+    # `"reference"` — a top-level `docs/*.md` file with no recognised name at all is
+    # still the genuinely unclassified case this test means to prove.
     repo = _classify_repo(tmp_path)
-    _write(repo / "docs" / "roadmap.md", "x\n")
+    _write(repo / "docs" / "some-unrecognised-file.md", "x\n")
     _commit_all(repo)
     assert doc_id_cli.classify_docs_files(repo) == {"none": 1}
 
@@ -1016,6 +1020,20 @@ def test_classify_readme_is_reference_not_none(
     _write(repo / "docs" / "README.md", "x\n")
     _commit_all(repo)
     assert doc_id_cli.classify_docs_files(repo) == {"reference": 1}
+
+
+def test_classify_the_five_other_living_top_level_files_are_reference_not_none(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """W37-5's widening: `INDEX.md`, `REDIRECTS.csv`, `roadmap.md` and
+    `open-questions.md` sit at `docs/`'s top level alongside `README.md` and are exactly
+    as living and un-numbered — none of the four has a family directory of its own, and
+    a fresh migrated tree without this widening reported all four as spurious `"none"`."""
+    repo = _classify_repo(tmp_path)
+    for name in ("INDEX.md", "REDIRECTS.csv", "roadmap.md", "open-questions.md"):
+        _write(repo / "docs" / name, "x\n")
+    _commit_all(repo)
+    assert doc_id_cli.classify_docs_files(repo) == {"reference": 4}
 
 
 def test_classify_templates_get_their_own_bucket(
