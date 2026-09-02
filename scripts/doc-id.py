@@ -2729,6 +2729,38 @@ def _find_table_blocks(lines: list[str]) -> list[tuple[int, int]]:
     return blocks
 
 
+def _roadmap_row_block(templates_dir: Path, d: _Draft, all_drafts: list[_Draft]) -> str:
+    """One `WK-`/`SL-` fenced row block, keyed off `d.prefix` rather than assuming `WK`
+    — restored from the pre-Ruling-90 version of `_restructure_roadmap`, which handled
+    both row families this way. `_discover_roadmap` above only ever produces `WK` drafts
+    today (Ruling 80/83: no slice exists in the real corpus in any shape), but this
+    function's own contract — and Ruling 81's round-trip test, which feeds it a hand-built
+    `SL` draft directly — is not limited to that one caller.
+    """
+    canon = _docid.canonical(d.prefix, d.number)
+    family = "work" if d.prefix == "WK" else "slice"
+    heading_level = "###" if d.prefix == "WK" else "####"
+    fields = {
+        "id": canon, "family": family, "title": d.title, "status": d.status,
+        "created": d.created.isoformat(), "owner": d.owner, "phase": d.phase,
+    }
+    if d.prefix == "SL" and d.work_token is not None:
+        fields["work"] = _docid.canonical(
+            "WK", next(x.number for x in all_drafts if x.old_token == d.work_token)
+        )
+    permitted = _docid.row_template_fields(templates_dir, family)
+    unknown = sorted(set(fields) - permitted)
+    if unknown:
+        raise ValueError(
+            f"_restructure_roadmap: would emit field(s) {unknown} for a {family} row "
+            f"({canon}) not declared by docs/_templates/{_docid.ROW_TEMPLATE_FILES[family]} "
+            "— the writer must not disagree with the template (Ruling 79 §3 item 4)"
+        )
+    field_text = "\n".join(f"{k}: {v}" for k, v in fields.items())
+    body = d.body.strip()
+    return f"\n{heading_level} {canon} — {d.title}\n\n```yaml\n{field_text}\n```\n\n{body}\n"
+
+
 def _restructure_roadmap(
     root: Path,
     roadmap_drafts: list[_Draft],
@@ -2815,7 +2847,11 @@ def _restructure_roadmap(
 
     inserted: dict[int, str] = {}
     for phase, idx in phase_heading_idx.items():
-        works = sorted(drafts_by_phase[phase], key=lambda d: _work_id_sort_key(d.old_token or ""))
+        phase_drafts = drafts_by_phase[phase]
+        works = sorted(
+            (d for d in phase_drafts if d.prefix == "WK"),
+            key=lambda d: _work_id_sort_key(d.old_token or ""),
+        )
         title = phase_titles.get(phase[1:])
         if title is None:
             raise AssertionError(f"_restructure_roadmap: no title recorded for phase {phase!r}")
@@ -2823,29 +2859,18 @@ def _restructure_roadmap(
         block = [
             _PHASE_TEMPLATE.format(
                 phase=phase, title=title,
-                opened=min(d.created for d in works).isoformat(),
+                opened=min(d.created for d in phase_drafts).isoformat(),
                 works=", ".join(works_canon),
             ).rstrip("\n")
         ]
-        for d in works:
-            canon = _docid.canonical("WK", d.number)
-            fields = {
-                "id": canon, "family": "work", "title": d.title, "status": d.status,
-                "created": d.created.isoformat(), "owner": d.owner, "phase": phase,
-            }
-            permitted = _docid.row_template_fields(templates_dir, "work")
-            unknown = sorted(set(fields) - permitted)
-            if unknown:
-                raise ValueError(
-                    f"_restructure_roadmap: would emit field(s) {unknown} for a work row "
-                    f"({canon}) not declared by docs/_templates/"
-                    f"{_docid.ROW_TEMPLATE_FILES['work']} — the writer must not disagree "
-                    "with the template (Ruling 79 §3 item 4)"
-                )
-            field_text = "\n".join(f"{k}: {v}" for k, v in fields.items())
-            block.append(
-                f"\n### {canon} — {d.title}\n\n```yaml\n{field_text}\n```\n\n{d.body.strip()}\n"
+        for work in works:
+            block.append(_roadmap_row_block(templates_dir, work, roadmap_drafts))
+            slices = sorted(
+                (d for d in phase_drafts if d.prefix == "SL" and d.work_token == work.old_token),
+                key=lambda d: d.tie_break,
             )
+            for sl in slices:
+                block.append(_roadmap_row_block(templates_dir, sl, roadmap_drafts))
         inserted[idx] = "\n".join(block)
 
     out: list[str] = []
