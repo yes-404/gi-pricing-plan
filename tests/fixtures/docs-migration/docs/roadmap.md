@@ -1,16 +1,17 @@
 # Roadmap (fixture)
 
-A worked example of the legacy roadmap shape the migration script restructures into
-milestone sections with fenced work/slice rows. This fixture's own grammar
-(`## Phase <id> — <title>`, `### <work-key> — <title>` + `status:`, and
-`- **<slice-key>** <title> — status: <status>`) is this corpus's own reasonable, minimal
-reading of "phase sections and work rows" — the migration spec does not pin the legacy
-shape, only the post-migration one.
+A worked example of the roadmap's real shape (Rulings 90-92,
+`docs/plans/2026-09-02-w37-roadmap-transform-rulings.md`): a Work is a markdown table
+row whose leading cell is `**W<n>[<letter>]**`, struck through with a trailing `✔` once
+closed and undecorated otherwise, gathered under a `## <n>. Phase <label> — <title>`
+heading — replacing this fixture's former invented heading-and-status-line shape
+(`### <work-key> — <title>` / `status: ...`), which the real `docs/roadmap.md` has
+never used (Ruling 80's Correction section: all three of that shape's patterns matched
+it zero times). No slice ever exists as a row or a bullet in the real corpus either
+(Ruling 83 §1(g)), so this fixture carries none.
 
-## Phase 1a — Example workbench
+## 1. Phase 1a — Example workbench
 
-### W1 — Example workstream
-status: active
-
-- **W1-1** Example slice, closed — status: closed
-- **W1-2** Another slice, still open — status: draft
+| WS | Scope | Status |
+|---|---|---|
+| **W1** | Example workstream | active |
