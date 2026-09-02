@@ -47,6 +47,36 @@ Only when every expected run is `completed` does `UNSTABLE` mean a check failed,
 `conclusion` column then names the failed workflow. (Run logs still 403; the *list* is
 readable.)
 
+## A fifth trap, verified 2026-09-02 — a cancellation is not a failure
+
+**Pushes to one branch share a CI concurrency group.** A new push cancels the in-flight run of
+every workflow on the previous head. So a **fast edit cadence starves the slower workflow
+indefinitely** while the faster one goes green every time:
+
+```
+f67de3341  docs success   python in_progress   08:58
+0780c1bd3  docs success   python CANCELLED     08:53
+30a25f7a8  docs success   python CANCELLED     08:49
+2694fc348  docs success   python CANCELLED     08:46
+```
+
+**`python` never completed once across four heads in twelve minutes**, while `docs` succeeded on
+every one — so the branch looked healthy and was structurally unverifiable.
+
+**Two things follow for a watcher.**
+
+**Report `cancelled` as `cancelled`, never as a failure.** It means a newer push superseded this
+run, not that a check failed. Reporting it as red sends someone hunting a defect that does not
+exist.
+
+**Re-point after any push.** A watcher polling a superseded SHA sees a cancellation and reports
+it as a terminal state — the head it was given no longer exists as the tip. Re-read the head
+each poll rather than pinning the SHA you were dispatched with.
+
+**The behavioural half is not yours** — it belongs to whoever holds the merge, because
+restarting the clock is their call and the author cannot see the queue. It is written up in
+`.claude/skills/git-hygiene`, which is where the push-cadence rule lives.
+
 ## What does work
 
 ```bash
