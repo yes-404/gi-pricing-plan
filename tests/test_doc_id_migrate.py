@@ -1278,33 +1278,57 @@ def test_family_rank_tie_break_orders_work_before_finding(
 
 
 # ---------------------------------------------------------------------------------------
-# Ruling 86 (docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md):
-# a split ruling's owner is derived, never hardcoded — `_discover_multi_ruling_files` used
-# to stamp every ruling `owner="decision-maker"` regardless of a dated, bounded delegation
-# (found via `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §1.1: rulings A1-A3 are
-# the lead's, under the maintainer's delegation, not the decision-maker's). Real-corpus
-# assertions here follow the lead's own instruction: assert the *property*, never a count
-# — the A-series citation population was independently measured to have grown from 21 to
-# 27 occurrences across 5 to 6 files in the time between two agents' reports, purely from
-# being discussed, so any hardcoded total would already be stale.
+# Ruling 86 (docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md) §3
+# item 2's first clause read NT-0019 §1.6's `RL` row as moving `owner:` away from
+# "decision-maker" for a ruling authored under a dated, bounded delegation
+# (`docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §1.1: rulings A1-A3 were drafted
+# by the lead, under the maintainer's delegation) and PR #603 implemented that departure.
+#
+# Ruling 95 (docs/plans/2026-09-02-w37-gap-1-ruling-86-owner-ruling.md) struck that clause:
+# the `RL` row already names an exception *author* ("the maintainer may author one on scope
+# or process") and leaves the owner unchanged, so authorship never moved it — a
+# self-correction against Ruling 88 §2's later, general reading of the identical column
+# ("Owner — creates & amends", not "author"). The tests below used to prove the departure;
+# they are changed in place to prove its absence, on the same real file and the same
+# fixtures, rather than deleted — a re-introduction of the struck clause should turn these
+# red again, not read as an unrelated gap in coverage.
+#
+# Real-corpus assertions here follow the lead's own instruction: assert the *property*,
+# never a count — the A-series citation population was independently measured to have
+# grown from 21 to 27 occurrences across 5 to 6 files in the time between two agents'
+# reports, purely from being discussed, so any hardcoded total would already be stale.
 # ---------------------------------------------------------------------------------------
 
 _A_SERIES_SOURCE = "docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md"
 
 
-def test_ruling_file_owner_derives_lead_from_the_real_delegation_clause(
+def test_ruling_owner_departure_machinery_is_removed_not_left_inert() -> None:
+    """Ruling 95 §3 item 3: with the exception struck, the delegation-heading regex and its
+    role-parsing sibling have no case left to serve, and a dead branch that once encoded a
+    reversed ruling is worse than no branch — so they are removed, not merely unreachable.
+    Read the module's own source text rather than introspecting its namespace, so hiding
+    the pair behind a different name would not silently satisfy this. Must fail before the
+    fix, when both names are still present as real module-level constants.
+    """
+    source = DOC_ID_SCRIPT_PATH.read_text(encoding="utf-8")
+    assert "_RULING_DELEGATION_HEADING_RE" not in source
+    assert "_RULING_DELEGATION_ROLE_RE" not in source
+
+
+def test_ruling_file_owner_resolves_the_real_delegation_clause_to_decision_maker(
     doc_id_cli: types.ModuleType,
 ) -> None:
-    """`_ruling_file_owner` (Ruling 86), run directly against the real A1-A3 source file's
-    own text. Deliberately *not* routed through `_discover_multi_ruling_files(ROOT)`: that
-    function's own matcher (`_RULING_HEADING_RE`, `##` + a bare digit) does not reach this
-    file's headings at all — they are `###` and letter-suffixed (`Ruling A1`), the two-axis
-    mismatch Ruling 86/87 rule on separately (routed to "W37-6's executor", not this fix).
-    Verified: `_RULING_HEADING_RE.finditer()` over this file's text returns zero matches
-    today, so `_discover_multi_ruling_files` currently produces no draft for it at all —
-    neither the old wrong owner nor this fix's right one is reachable through that path yet.
-    This test proves the *derivation* is correct on the real document regardless of when
-    the matcher is widened to reach it.
+    """`_ruling_file_owner`, run directly against the real A1-A3 source file's own text —
+    the exact file and heading ("### 1.1 The delegation — ... delegated to the lead") that
+    used to make this function return "lead" instead of the family default (Ruling 86 §3
+    item 2, PR #603). Deliberately *not* routed through `_discover_multi_ruling_files(ROOT)`:
+    that function's own matcher (`_RULING_HEADING_RE`, `##` + a bare digit) does not reach
+    this file's headings at all — they are `###` and letter-suffixed (`Ruling A1`), the
+    two-axis mismatch Ruling 86/87 rule on separately (routed to "W37-6's executor", not
+    this fix). Verified: `_RULING_HEADING_RE.finditer()` over this file's text returns zero
+    matches today, so `_discover_multi_ruling_files` currently produces no draft for it at
+    all — this direct call is the only way to prove the resolution against the real
+    document until that matcher gap is closed. Must return "lead" before the fix.
     """
     path = ROOT / _A_SERIES_SOURCE
     text = path.read_text(encoding="utf-8")
@@ -1312,35 +1336,39 @@ def test_ruling_file_owner_derives_lead_from_the_real_delegation_clause(
     assert not list(doc_id_cli._RULING_HEADING_RE.finditer(text)), (
         "fixture assumption: if _RULING_HEADING_RE now matches this file, "
         "_discover_multi_ruling_files reaches it directly and the test above this one "
-        "should be extended to assert the owner end to end, not just the derivation"
+        "should be extended to assert the owner end to end, not just the resolution"
     )
-    assert doc_id_cli._ruling_file_owner(path, text) == "lead"
+    assert "delegated to the lead" in text.lower(), (
+        "fixture assumption: the real delegation clause this correction concerns is still "
+        "in the source file -- if this fails, re-target both assertions at wherever it moved"
+    )
+    assert doc_id_cli._ruling_file_owner(path, text) == "decision-maker"
 
 
-def test_ruling_file_owner_defaults_to_decision_maker_with_no_delegation_heading(
+def test_ruling_file_owner_defaults_to_decision_maker_for_every_multi_ruling_file(
     doc_id_cli: types.ModuleType,
 ) -> None:
-    """The default (NT-0019 §1.6) holds for every real multi-ruling file that is *not*
-    under a delegation — asserted over the whole real corpus as a property (every owner is
-    "decision-maker" except drafts from the one known delegated file), never as a count of
-    drafts, which grows as the corpus does.
+    """The default (NT-0019 §1.6) holds for every real multi-ruling file, full stop — Ruling
+    95 struck the one exception Ruling 86 §3 item 2 carved out, so there is no more
+    "non-delegated" subset to filter to before asserting. Property over the whole real
+    corpus, never a count, which grows as the corpus does.
     """
     drafts = doc_id_cli._discover_multi_ruling_files(ROOT)
     assert drafts, "fixture assumption: at least one real multi-ruling file exists"
-    non_delegated = [d for d in drafts if d.was != _A_SERIES_SOURCE]
-    assert non_delegated, "fixture assumption: not every multi-ruling file is delegated"
-    assert all(d.owner == "decision-maker" for d in non_delegated), collections.Counter(
-        d.owner for d in non_delegated
+    assert all(d.owner == "decision-maker" for d in drafts), collections.Counter(
+        d.owner for d in drafts
     )
 
 
-def test_ruling_file_owner_raises_when_a_delegation_heading_names_no_role(
+def test_ruling_file_owner_no_longer_raises_on_an_unparseable_delegation_heading(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """Ruling 86: "failing loudly when it cannot be determined rather than defaulting to a
-    guess." A delegation-shaped heading that does not end in a parseable "delegated to the
-    <role>" must not silently fall back to the decision-maker default — that would hide
-    exactly the misattribution this fix exists to stop.
+    """Before Ruling 95, a delegation-shaped heading with no parseable "delegated to the
+    <role>" failed loudly rather than guessing (Ruling 86). Ruling 95 removes the whole
+    branch that heading used to trigger, not just the guessing it refused — the identical
+    fixture that used to raise is body text now, like any other content, and resolves to
+    the family default without error. Kept on the same fixture rather than a fresh one so
+    this proves the exact old failure mode is gone, not merely that some case works.
     """
     path = tmp_path / "delegation.md"
     text = (
@@ -1349,17 +1377,16 @@ def test_ruling_file_owner_raises_when_a_delegation_heading_names_no_role(
         "Body.\n"
     )
     path.write_text(text, encoding="utf-8")
-    with pytest.raises(NotImplementedError, match="delegation"):
-        doc_id_cli._ruling_file_owner(path, text)
+    assert doc_id_cli._ruling_file_owner(path, text) == "decision-maker"
 
 
-def test_discover_multi_ruling_files_wires_a_derived_owner_through_to_the_draft(
+def test_discover_multi_ruling_files_ignores_a_delegation_heading(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """The end-to-end path `_ruling_file_owner`'s real-corpus sibling test above cannot
-    exercise (today's matcher does not reach the real delegated file) — proven here on a
-    fixture whose heading level and id form the matcher *does* accept, so the wiring itself
-    is under test independent of the separate, not-this-fix's-to-close matcher gap.
+    """The end-to-end path, on a fixture whose heading level and id form `_RULING_HEADING_RE`
+    *does* accept (the real A1-A3 file's own headings still do not — see the direct-call
+    test above). Same delegation-heading fixture Ruling 86 relied on to reach "auditor";
+    Ruling 95 means the heading no longer changes the outcome at all.
     """
     plans_dir = tmp_path / "docs" / "plans"
     plans_dir.mkdir(parents=True)
@@ -1372,7 +1399,69 @@ def test_discover_multi_ruling_files_wires_a_derived_owner_through_to_the_draft(
     )
     drafts = doc_id_cli._discover_multi_ruling_files(tmp_path)
     assert len(drafts) == 1, drafts
-    assert drafts[0].owner == "auditor"
+    assert drafts[0].owner == "decision-maker"
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 95 §4's third acceptance item ("Ruling 87's `decision-maker` for the three
+# standalone ruling files still holds after this amendment") names an instrument that
+# cannot be built as worded: `decision-maker` is written by no code path for this set
+# today, because Ruling 87 item 1's classification -- which discovery function ever
+# claims these files -- is still undecided and unimplemented. That is the same
+# "acceptance item naming a value no code path writes" shape Ruling 94 ruled
+# vacuous-at-birth for Ruling 84's `slice:` item, and Ruling 94's own remedy applies
+# unchanged: the property stands, the instrument is re-derived rather than left
+# unbuilt or asserted as something it cannot be. The property item 3 actually protects
+# is non-interference -- did this amendment disturb territory Ruling 95 §3 item 2
+# deliberately leaves alone -- and that is checkable today by execution, over the real
+# files Ruling 87 §1 names.
+# ---------------------------------------------------------------------------------------
+
+_RULING_87_STANDALONE_SOURCES = (
+    "docs/plans/2026-09-01-ruling-60-census-provenance-checkout-depth.md",
+    "docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md",
+    "docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md",
+)
+
+
+def test_ruling_87_standalone_files_are_untouched_by_this_amendment(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 95 §4 item 3's re-derived instrument (see the module comment above this
+    constant). `owner="planner"` asserted below is *known wrong* for these three --
+    Ruling 87 §3 item 2 ruled `decision-maker` for them, and Ruling 86 item 2's second
+    clause (still standing after Ruling 95, untouched by this PR) is exactly this
+    hardcode. Asserting it here pins today's behaviour so a future change to it is a
+    deliberate act of implementing Ruling 87, not an incidental side effect discovered
+    after the fact -- this test documents the hardcode, it does not bless it.
+
+    Only `_discover_multi_ruling_files` is checked as "no other discovery function
+    claims these": every other `_discover_*` in this module reads a different real
+    location entirely (`docs/adr/`, `docs/findings/register.md`, `docs/roadmap.md`,
+    `docs/specs/*.md`, `.claude/skills/`, ...), never `docs/plans/*.md` ruling-shaped
+    content, so `_discover_multi_ruling_files` -- the one other function this module
+    ever routes a ruling-shaped file through -- is the one collision this amendment
+    could plausibly have introduced.
+
+    Deliberately not `_ruling_file_owner`: post-Ruling-95 that function is
+    content-independent, so pointing it at these three files' real text would return
+    "decision-maker" for any input whatsoever, discriminating nothing -- a test that
+    cannot fail is worse than no test, since it would read as coverage this PR does not
+    have. It would also test a function Ruling 87 item 1 never committed to using for
+    this set: which discovery function eventually claims these files is still open.
+    """
+    drafts = doc_id_cli._discover_plain_plans(ROOT)
+    by_was = {d.was: d for d in drafts}
+    for source in _RULING_87_STANDALONE_SOURCES:
+        assert source in by_was, f"fixture assumption: {source} still exists as a plain plan"
+        assert by_was[source].owner == "planner", by_was[source]
+
+    multi_ruling_was = {d.was for d in doc_id_cli._discover_multi_ruling_files(ROOT)}
+    assert not multi_ruling_was & set(_RULING_87_STANDALONE_SOURCES), (
+        "these three are h1-titled ruling records (Ruling 87 §1) _RULING_HEADING_RE does "
+        "not match today; if this now fires, Ruling 86/87's heading-widening has landed "
+        "and this test needs updating to Ruling 87's terms, not silencing"
+    )
 
 
 # ---------------------------------------------------------------------------------------
