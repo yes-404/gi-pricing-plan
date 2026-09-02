@@ -3985,8 +3985,12 @@ def test_no_path_is_both_stamped_and_deleted_by_the_same_run(
 ) -> None:
     """A file stamped and deleted by one commit is a defect wherever it occurs, so it is
     checked as a property of the run rather than for the one file that raised the question
-    (`.claude/notes/README.md`, whose disposition is §4 step 4's and §5.3's to reconcile —
-    see `_REFERENCE_CLAUDE_DIR_EXCEPTIONS`).
+    (the tombstone README under the old notes root, whose disposition is §4 step 4's and
+    §5.3's to reconcile — named in prose rather than as a path, because
+    `test_no_living_file_cites_the_old_notes_path` forbids every living file from writing
+    that path as a literal, and this docstring cites it rather than uses it. That test
+    reds on the literal wherever it appears, including here; see
+    `_REFERENCE_CLAUDE_DIR_EXCEPTIONS` for the disposition itself).
 
     Not a tautology: `migrate` both writes and deletes, and the 17 F84 discovers *are*
     deleted at their old paths — they simply are not stamped there, because the README
