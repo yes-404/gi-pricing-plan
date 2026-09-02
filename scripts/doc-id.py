@@ -1586,15 +1586,64 @@ def _check_roadmap_not_silently_unrecognised(root: Path) -> None:
     )
 
 
+def _check_legacy_file_not_silently_unrecognised(
+    path: Path, drafts: list[_Draft], description: str
+) -> None:
+    """The same class of defect `_check_roadmap_not_silently_unrecognised` guards against,
+    for the three legacy files (`closure-records.md`, `plan-reviews.md`, `register.md`)
+    whose own `_discover_*` docstrings already state the property that makes this check
+    *simpler* than the roadmap's: each is "matched only at the exact legacy path", i.e.
+    migrated by moving away from `path` entirely, never rewritten in place. So unlike the
+    roadmap, there is no second signal to check for "already migrated" — `path` no longer
+    existing already *is* that signal, and is handled by the first `return` below. A
+    `path` that still exists and is non-blank therefore has no valid "already migrated"
+    reading at all: zero discovered records from it is unrecognised shape, full stop
+    (confirmed live for `register.md`: `_discover_register` requires a table cell to
+    `fullmatch` bare `F<n>`, and the real file's cells are compound, e.g. `FR-DATA-57
+    (F6)`) — the third instance of the pattern `_check_roadmap_not_silently_unrecognised`'s
+    docstring names.
+    """
+    if not path.is_file():
+        return  # moved away already: correctly read as "already migrated"
+    if not path.read_text(encoding="utf-8").strip():
+        return  # genuinely nothing in it
+    if drafts:
+        return  # discovery found something; nothing ambiguous to flag
+    raise NotImplementedError(
+        f"migrate: {path} exists and is non-blank, but no {description} were recognised "
+        f"in it. That is not 'nothing to convert' -- this script's legacy pattern does not "
+        f"match this file's real shape. Resolving the real shape is open; migrate refuses "
+        f"to guess and silently report success instead."
+    )
+
+
 def _restructure_roadmap(
     root: Path, roadmap_drafts: list[_Draft], phase_id: str, phase_title: str
 ) -> None:
     """NT-0019 §4 step 3: the legacy `## Phase <id> — <title>` / `### <work-key>` /
     `- **<slice-key>**` shape becomes a `## P<n> — <title>` milestone section with a fenced
     field block, each `WK-`/`SL-` a heading carrying its own fenced row block (§1.5) — the
-    exact shape `scripts/doc-index.py`'s `scan_phase_sections`/`scan_roadmap_rows` read
-    (verified by reading that module directly, not inferred from NT-0019 §1.3's own plain,
-    unfenced illustration — see this PR's description for the discrepancy between the two).
+    exact shape `scripts/doc-index.py`'s `scan_phase_sections`/`scan_roadmap_rows` read at
+    the time this was written (verified by reading that module directly, not inferred from
+    NT-0019 §1.3's own plain, unfenced illustration).
+
+    **Ruling 80 has since settled that discrepancy the other way**: the spec's unfenced
+    illustration is right, `scan_phase_sections`'s fence requirement is the defect, and
+    `PHASE.md` — enforced unfenced by `audit-docs.py`'s `_EXPECTED_NO_BLOCK_TEMPLATES`
+    already — settles the real form. So the fenced phase heading this function emits is a
+    known, ruled latent bug (not corrected here): it only runs on discovery finding a
+    legacy phase section (the fixture's), the real roadmap's transform stays deferred
+    (task #32) until `doc-index.py`'s parsers are fixed to match the ruling, and rewriting
+    this function's *output shape* now would mean rebuilding it twice.
+
+    The row block's field set (`id, family, title, status, created, owner, phase, [work]`)
+    is narrower than NT-0019 §1.5's full closed set by construction, not as a workaround:
+    it happens to satisfy `doc-index.py`'s current `_ROW_FIELDS` (Ruling 79: wrong in both
+    directions — rejects `tree:`/`corrected_by:`/`relates:`, wrongly admits `kind:`/
+    `slice:` on a `WK-` row), but that is this function never needing those fields for a
+    freshly-converted row, not a deliberate accommodation of the wrong parser. Widening it
+    once real `WK-`/`SL-` rows need `tree:`/`corrected_by:`/`relates:` will need the parser
+    fix first, same as the fence.
     """
     work_ids = sorted(
         {d.old_token for d in roadmap_drafts if d.prefix == "WK"},
@@ -1716,13 +1765,31 @@ def migrate(root: Path) -> MigrateResult:
     drafts += _discover_notes(root)
     drafts += _discover_adrs(root)
     drafts += _discover_multi_ruling_files(root)
-    drafts += _discover_closure_records(root)
-    drafts += _discover_plan_reviews(root)
+    closure_drafts = _discover_closure_records(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "closure-records.md", closure_drafts, "closure records"
+    )
+    drafts += closure_drafts
+    review_drafts = _discover_plan_reviews(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "plan-reviews.md", review_drafts, "plan reviews"
+    )
+    drafts += review_drafts
     drafts += _discover_plain_plans(root)
     requirement_drafts = _discover_requirements(root)
     roadmap_drafts, phase_id, phase_title = _discover_roadmap(root)
     register_drafts = _discover_register(root)
+    _check_legacy_file_not_silently_unrecognised(
+        root / "docs" / "audit" / "register.md", register_drafts, "register finding rows"
+    )
     drafts += requirement_drafts + roadmap_drafts + register_drafts
+    # Hoisted here to run alongside every other discovery, before any write below: a
+    # malformed vendored manifest's HeaderError must abort migrate cleanly, not after
+    # Phase C's document/roadmap/register writes have already landed on disk (task #34).
+    # `_is_vendored_skill_manifest`'s LICENSE-based detection is still wrong (Ruling 69,
+    # reassigned to W37-6 by Ruling 76) -- this hoist fixes only when the crash happens,
+    # not whether it should have fired at all.
+    vendored_skill_manifests = _discover_vendored_skill_manifests(root)
 
     start = compute_next(root)
     _assign_numbers(drafts, start)
@@ -1780,7 +1847,7 @@ def migrate(root: Path) -> MigrateResult:
     rewritten = _rewrite_citations(root, token_map)
 
     skipped_vendored: list[str] = []
-    for skill_md in _discover_vendored_skill_manifests(root):
+    for skill_md in vendored_skill_manifests:
         header = _stamp_header(
             "REFERENCE", None, kind=None, title=skill_md.parent.name, status="active",
             created=date.today(), owner="maintainer", was=None,

@@ -439,6 +439,96 @@ def test_roadmap_restructure_is_unaffected_by_the_guard(
     assert "WK-" in restructured
 
 
+# ---------------------------------------------------------------------------------------
+# Task #34: `_check_legacy_file_not_silently_unrecognised` — the same conflation class as
+# the roadmap's, for the three legacy files that are migrated by *moving away* rather than
+# rewritten in place (`closure-records.md`, `plan-reviews.md`, `register.md`). Simpler than
+# the roadmap's guard: a file still present at its exact legacy path has no valid "already
+# migrated" reading, so there is no second signal to check — "moved away" and "file does
+# not exist" are the same fact.
+# ---------------------------------------------------------------------------------------
+
+
+def test_legacy_file_guard_raises_on_a_non_empty_unrecognised_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    f = tmp_path / "legacy.md"
+    f.write_text("### Some Heading, not a date\n\nbody\n", encoding="utf-8")
+    with pytest.raises(NotImplementedError, match="real shape"):
+        doc_id_cli._check_legacy_file_not_silently_unrecognised(f, [], "test records")
+
+
+def test_legacy_file_guard_is_silent_once_the_file_has_moved_away(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    doc_id_cli._check_legacy_file_not_silently_unrecognised(
+        tmp_path / "nonexistent.md", [], "test records"
+    )
+
+
+def test_legacy_file_guard_is_silent_on_a_blank_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    f = tmp_path / "legacy.md"
+    f.write_text("   \n\n", encoding="utf-8")
+    doc_id_cli._check_legacy_file_not_silently_unrecognised(f, [], "test records")
+
+
+def test_legacy_file_guard_is_silent_when_drafts_were_found(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    f = tmp_path / "legacy.md"
+    f.write_text("### Some Heading, not a date\n\nbody\n", encoding="utf-8")
+    doc_id_cli._check_legacy_file_not_silently_unrecognised(f, [object()], "test records")
+
+
+@pytest.mark.parametrize(
+    "rel_path",
+    [
+        "docs/audit/closure-records.md",
+        "docs/audit/plan-reviews.md",
+        "docs/audit/register.md",
+    ],
+)
+def test_migrate_raises_via_the_legacy_file_guard_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, rel_path: str
+) -> None:
+    """End-to-end, one per wired call site: overwrite just that one fixture file with
+    prose carrying no recognisable heading/cell shape, leaving the rest of the corpus
+    untouched, and confirm `migrate` raises through the guard rather than silently
+    completing with that file's records missing.
+    """
+    (pristine_a / rel_path).write_text(
+        "Some unrelated prose with no recognisable legacy shape at all.\n", encoding="utf-8"
+    )
+    with pytest.raises(NotImplementedError, match="real shape"):
+        doc_id_cli.migrate(pristine_a)
+
+
+def test_migrate_writes_nothing_when_a_vendored_manifest_is_unparseable(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """Task #34: `_discover_vendored_skill_manifests` is hoisted to run alongside every
+    other discovery, before any write — so a malformed manifest aborts `migrate` cleanly
+    rather than crashing mid-write with the tree already partially mutated. Proves the
+    property that actually matters: nothing was written at all, not merely that `migrate`
+    raised (which the un-hoisted call also does, just after two write phases had already
+    run — the exact defect task #34 files).
+    """
+    bad_skill_dir = pristine_a / ".claude" / "skills" / "bad-vendored-skill"
+    bad_skill_dir.mkdir(parents=True)
+    (bad_skill_dir / "LICENSE").write_text("MIT\n", encoding="utf-8")
+    (bad_skill_dir / "SKILL.md").write_text(
+        "---\nname: bad-vendored-skill\nuser-invocable: true\n---\n\nBody.\n",
+        encoding="utf-8",
+    )
+    before = _tree_files(pristine_a)
+    with pytest.raises(doc_id_cli._docid.HeaderError):
+        doc_id_cli.migrate(pristine_a)
+    after = _tree_files(pristine_a)
+    assert after == before, "migrate wrote something before the vendored-manifest crash"
+
+
 def test_index_md_is_byte_stable_against_a_fresh_regeneration(
     doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
 ) -> None:
