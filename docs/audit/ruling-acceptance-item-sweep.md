@@ -132,14 +132,14 @@ with no higher level anywhere in the file) rather than a specific level number.
 
 **Ruling 61 (INVALIDATED) — documented, deliberate trade, not a silent accident.** §4
 ("Broken-input proof") required `check_notes_tombstone()` to red on two named broken-input
-cases — a stray file under `.claude/notes/`, and an edited stub body. `grep -c "def
+cases — a stray file in the old notes root under `.claude`, and an edited stub body. `grep -c "def
 check_notes_tombstone" scripts/audit-docs.py` returns **0**. The module's own docstring
 (`scripts/audit-docs.py:55-64`) names the resolution: NT-0019 §5.5 gave slot 30 to its own
 header-field check (`check_header_fields`) and resolved the collision by replacing
 `check_notes_tombstone` rather than renumbering either — *"`check_notes_tombstone`'s protective
 job over the tombstone stubs ends with this commit, by that same resolution, **until W37-6
 deletes the stubs entirely**."* The successor, `check_redirects` (slot 36), watches
-`docs/REDIRECTS.csv`, not `.claude/notes/`. So: today, neither of Ruling 61's two named
+`docs/REDIRECTS.csv`, not the old notes root under `.claude`. So: today, neither of Ruling 61's two named
 fixtures is caught by anything in the gate — constructible and passing when written,
 invalidated by a later, recorded, and bounded resolution (its own stated horizon is W37-6),
 not a silent regression.
