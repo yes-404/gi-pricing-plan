@@ -67,7 +67,7 @@ their word (`CLAUDE.md` §13 rule 2).
 | 13 | No check feeds a template's own example block to its consuming parser | `e7e1d24` (#593) | **Delivered, tested** | `test_document_template_parses_to_its_family_once_filled_in` and `test_row_template_fenced_block_parses_through_doc_index_row_parser` exist and pass. |
 | 14 | `plan-reviews.md` heading mis-nesting (carve-out — the lead's) | `2fbce0c` (#609) | **Delivered by the lead** | Structural fix confirmed: 0 level-2 / 12 level-3 / 28 level-4 headings, matching the leaf plan's decomposition. |
 | 15 | Does the multi-ruling splitter try to split the three h1 ruling files? | measured in `a31d509` (#603), `d7c9b08` (#608) | **Measured — no** | Ran `_discover_multi_ruling_files(ROOT)` directly: 35 source files touched, none of the three named h1 files among them. **One false lead corrected in drafting this record**: `docs/plans/2026-09-02-w37-ruling-88-acceptance-amendment.md`'s h1 title, "# Ruling 88's second acceptance item...", matches a loose `^# Ruling [0-9]` grep but is not a standalone ruling record in canonical form — it is Ruling 93's own file, titled as a description of the ruling it amends. Confirmed by reading the heading directly; the count stays **three**, per the obligations list. |
-| 30 | `_discover_requirements`: no guard at all | `d7c9b08` (#608) | **Delivered, tested — guard's own live finding is new and unowned, see F-note below** | `_discover_requirements(ROOT)` → **660** (unchanged count, confirming nothing regressed). The new guard correctly reds today, naming `docs/specs/00-overview.md`'s real, unclassified `DEP-1`, `DEP-1a`, `DEP-2`, `DEP-3` — a genuine disclosed gap the guard was built to find, not a false positive. |
+| 30 | `_discover_requirements`: no guard at all | `d7c9b08` (#608) | **Delivered, tested — guard's own live finding is new and unowned, filed as F82** | `_discover_requirements(ROOT)` → **660** (unchanged count, confirming nothing regressed). The new guard correctly reds today, naming `docs/specs/00-overview.md`'s real, unclassified `DEP-1`, `DEP-1a`, `DEP-2`, `DEP-3` — a genuine disclosed gap the guard was built to find, not a false positive. See §6, F82. |
 | 31 | Four more discovery functions silent by construction | `d7c9b08` (#608) | **Delivered, tested** | All five `_reconcile_census` call sites confirmed by direct read (`:2354` shared by rows 4/7, `:2506`, `:2559` [row 30], `:2598`, `:2634` shared by `_discover_notes`/`_discover_adrs`). |
 | 36 | §8-vs-Ruling-66 stage-boundary conflict (carve-out — routed) | ruled `e74a683` (#596, Ruling 85) | **Ruled — reading 1: §8 is sequencing, not part of the accepted standard; Ruling 66 stands unamended** | Ruling 85's verdict rests on `docs/process/document-ids.md` (the maintainer-owned standard) lifting only §1.1–§1.13, never §4/§5/§7/§8 — confirmed by direct read of the document's own title, "NT-0019 §1, lifted verbatim." |
 
@@ -227,19 +227,26 @@ next asks for W37-6's go-ahead.
 $ python3 scripts/register-owed.py W37-5b
 ```
 
-Generated against `471972b` (`audit/w37-5b-closure`), committed revision, per Ruling 52's
-requirement that the script refuse a dirty worktree:
+Run mid-draft against a dirty worktree (Ruling 52's script correctly refused once register.md
+had a diff staged), then **re-run against this PR's actual commit** once one existed — the
+committed-revision the script requires, named below rather than a placeholder:
 
-> 2 owed row(s), 1 matched but excluded as opening with a resolution marker (F76, correctly
-> excluded — resolved in this PR, §4).
+> Generated against the commit carrying this file (see the PR head for its SHA — commands are
+> re-run, not the transcript's SHA re-typed). 4 owed row(s) for work item `W37-6`, 1 matched
+> but excluded as opening with a resolution marker (F76, correctly excluded — resolved in
+> this PR, §4).
 >
-> - **F77** (work item `W37-6`, phase 2) — carry forward, unowned: the interpretation is
->   ruled (Ruling 94); implementation has no owner yet. *Reconciled above, §5a.*
-> - **F80** (work item `W37-6`, phase 2) — not started: discovery code for the "Pending
->   proposals" `RFC-` draft. *Reconciled above, §6.*
+> - **F77** — carry forward, unowned: the interpretation is ruled (Ruling 94); implementation
+>   has no owner yet. *Reconciled above, §5a.*
+> - **F80** — not started: discovery code for the "Pending proposals" `RFC-` draft.
+>   *Reconciled above, §6.*
+> - **F81** — not started: discovery code for the real Ruling A1/A2/A3 file.
+>   *Reconciled above, §6.*
+> - **F82** — not started: a data-source decision for the four module-less `DEP-` ids.
+>   *Reconciled above, §6.*
 
 Every id above appears in this record with a resolution. This table adds only what carries
-no register row: rows 6's and 30's own guard findings (§7), and the two document-staleness
+no register row: F79 (unowned, no work-item id to filter on) and the two document-staleness
 items (F76, the roadmap's own Progress clause — both resolved in this PR).
 
 ## 9. Gate, run at `3f41d60` (this PR's edits included)
