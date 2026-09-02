@@ -511,8 +511,11 @@ standard, three candidates and one answer:
   task list citing the new register row, so the plan a planner actually reads names the
   precondition without duplicating the figure that would then go stale.
 
-**So: a register row, plus a citation from the active plan.** The precedent is already in this
-tree and is F87's: it was filed as a finding *because*, in its own words, the fact *"lived only
+**So: a register row, plus a citation from the active plan — and both now exist.** Filed as
+**F92** on the lead's direction (register row, [`findings/F92.md`](../../findings/F92.md), and a
+dated append under the active leaf plan's own `Corrections after filing` section — 37 insertions,
+**zero** deletions, which is what keeps it inside `docs/plans/README.md`'s rule rather than an
+edit to a filed plan). The precedent is already in this tree and is F87's: it was filed as a finding *because*, in its own words, the fact *"lived only
 in a passing test … invisible to whoever plans W37-6, who is the person who needs it."* The 53
 live in a commit body and a runtime print, which is the same invisibility by a different route.
 **The lead's call, not this record's** — this states the reading and its authority.
@@ -532,11 +535,13 @@ than a documentation gap** — it is the same class as F80/F81/F82, which were r
 amendment changed what this record proposed, the row says which. `CLAUDE.md` §12 reserves the
 four verdicts to the lead, and this table now records their exercise rather than a proposal.
 
-**Three W37-6 preconditions — F87, F88 and F90 — were found by this slice, and none of them
+**Four W37-6 preconditions — F87, F88, F90 and F92 — were found by this slice, and none of them
 existed on any prior list.** Not in the map plan, not in either leaf plan, not in the W37-6
 obligations list, not in the go-ahead ask. Each was produced by building the slice's own six
 items and looking at what the instruments then reported. That is the sentence a W37-6 planner
-needs from this record, and it is stated here rather than left to be inferred from three rows.
+needs from this record, and it is stated here rather than left to be inferred from four rows.
+**F92 is the one of the four the slice itself created** — the other three were pre-existing gaps
+its new instruments revealed.
 
 | Finding id | Concerns | Adopted decision | Status |
 |---|---|---|---|
@@ -553,15 +558,15 @@ needs from this record, and it is stated here rather than left to be inferred fr
 | **F89** *(amend, do not renumber)* | Five test fixtures written into the real `docs/plans/` — **plus a second instance found by this audit: an untracked closure README reds the suite** (§10b) | **Amendment 4 — closed as filed, with the second instance folded in as an amendment rather than a renumber.** F89's falsifiable clause already reopens on exactly this, and two matchers over one population disagreeing is Ruling 83's class. Adopted 2026-09-02 | **closed** |
 | **F90** | Check 37 reds 95 of 95 post-migration rulings; its detector cannot see a `###` heading | **Amendment 3 — carry forward as a W37-6 precondition, no individual owner, decaying the same way.** Filed `d8d6e3f` (#646) after this audit began; its row already names the next go-ahead request as the event and lists four options, **one of which must be dispositioned before that ask is made** | **closed-with-findings — W37-6 precondition** |
 | **F91** *(new, filed in this PR)* | The NT-0014 runtime-state writer has not run since 02:03Z, and `written_at` cannot say so | **carry forward, unowned** — the lead's direction: *"File it as a register row, no work item, carry forward. It is not this slice's defect and the closure record should say so."* **It is not this slice's defect.** Filed as register `:132` plus [`findings/F91.md`](../../findings/F91.md), split from the start because its essay is over threshold | **closed-with-findings** |
-| *(no register row — **owed**)* | **The 53-file Reference-stamp deferral is recorded only in a squash-commit body** | **carry forward, owner W37-6.** Disposition accepted entire by the lead: **a register row, plus a pointer from the active leaf plan** — §7a. **The row itself is not minted here.** Creating an `F-` id the lead has not directed is how F88 limb 3 happened (two executors filing one id within an hour, no allocator), so this record names the action and leaves the id to one line from the lead | **open — action owed, id unallocated** |
+| **F92** *(new, filed in this PR)* | 53 files deferred out of §4 step 5's Reference stamp set, recorded only in a squash-commit body | **carry forward, with an owner — W37-6**, whose §7.1 Task 1 discharges it. Filed on the lead's direction after this record had adopted the disposition but declined to mint the id: *"Creating an `F-` id you have not directed is exactly how F88 limb 3 happened."* **`F92` verified free before use** — absent from `origin/main` and from this branch, `F91` the highest allocated. Register row plus [`findings/F92.md`](../../findings/F92.md), and a dated pointer appended to the **active** leaf plan | **closed-with-findings — W37-6 precondition** |
 | *(was: no register row — **now fixed**)* | `docs/roadmap.md`:382 said three abort points, with line numbers resolving at no tree | **fix before close — done in this PR**, per amendment 1. Corrected to four, named by **function** rather than by line (Addendum B §B.2's own reasoning), with a dated clause recording that all four are now cleared and a fifth still fires | **closed** |
 | *(was: no register row — **now fixed**)* | The register read `not started` for F80, F81, F82, F84 | **fix before close — done in this PR**, per amendment 1. Four rows annotated in place, each quoting the `not started` it supersedes, per the register's own annotated-in-place rule | **closed** |
 
 **Every id in §9's generated block appears above with a resolution** — F77, F80, F83, F84, F86.
 The table adds F81, F82, F85, F87, F88, F89, F90 and F91 (register rows the block does not
 select, because their Work-item and Decision cells name W37-6 or no work item rather than
-W37-5c), plus **one finding with no register row, named as such and left unallocated on
-purpose**.
+W37-5c), plus **F92**, which was left unallocated on purpose until the lead directed the id and is now
+filed. **No finding in this record lacks a register row.**
 
 **§9's block was generated before these amendments and is not regenerated.** It is evidence of
 the register's state at the moment the owed list was taken, which is what a generated block is
@@ -681,15 +686,17 @@ and this is the same mechanism reached from the other side.
 
 ## 11. Gate, run at `d8d6e3f` with every change of this PR in the tree
 
-**The PR is no longer one Markdown file.** Adopting the verdicts (§8) made it four: this record,
-`docs/audit/register.md` (seven rows annotated, one added), `docs/roadmap.md` (the W37 row's
-abort-point sentence), and `docs/audit/findings/F91.md`. **The test selection was widened to
+**The PR is no longer one Markdown file.** Adopting the verdicts (§8) made it four, and filing
+F92 made it **six**: this record, `docs/audit/register.md` (seven rows annotated, **two** added),
+`docs/roadmap.md` (the W37 row's abort-point sentence), `docs/audit/findings/F91.md`,
+`docs/audit/findings/F92.md`, and a **37-line, zero-deletion append** to the active leaf plan
+`docs/plans/2026-09-02-w37-6-migration-run-leaf-plan-v2.md`. **The test selection was widened to
 match, and widening it is what caught a real failure** — see below.
 
 | Command | Result |
 |---|---|
 | `python3 scripts/audit-docs.py` | **PASS** — *"All checks passed."* |
-| `uv run python scripts/register-lint.py` | **PASS** — `0 violations`; residue `61 of 88`, unchanged by seven amendments |
+| `uv run python scripts/register-lint.py` | **PASS** — `0 violations`; residue `61 of 89`, unchanged in count by seven amendments and two new rows (F91 at 985 chars, F92 at 971, both split from the start) |
 | `uv run pytest -q <13 files>` — every `tests/test_*.py` naming `roadmap.md` or `register.md`, plus `test_ruling_acceptance_census.py` | **515 passed** |
 | `uv run python scripts/register-owed.py W37-5c` | **refuses, correctly** — *"has an uncommitted diff … Ruling 52 forbids citing a dirty worktree"*. §9's block was generated at `d8d6e3f` **before** these register edits, which is the state it is evidence of |
 | Frontend half | **not run** — no frontend file touched; left to CI |
@@ -757,8 +764,15 @@ against this slice**, and offered to the lead as a candidate register row if the
   lead's merge**. This is the audit; the merge is the lead's.
 - **It does not write any verdict as decided.** §12 reserves the four verdicts to the lead;
   every Decision cell in §8 is a proposal.
-- **It does not edit any filed plan.** No frozen plan is touched; `git diff --stat` over both
-  leaf plans across this branch is empty.
+- **It does not edit any filed plan, and it does append to one.** The **frozen** leaf plan is
+  untouched — `git diff --stat origin/main...HEAD -- docs/plans/2026-09-02-w37-6-migration-run-leaf-plan.md`
+  is empty. The **active** superseding plan gains **37 insertions and zero deletions** under its
+  own `Corrections after filing` section: F92's pointer. **That is the distinction
+  `docs/plans/README.md` draws** — *"Do not edit a filed plan to agree with today's
+  repository"* forbids rewriting a claim, not a dated append that changes none. Verified rather
+  than assumed: `b3471fb` (#621) set the precedent on **this same file**, 54 insertions and zero
+  deletions, and this record's earlier version said flatly that it edits no plan, which stopped
+  being true when F92 was filed.
 - **It *does* now edit `docs/audit/register.md` and `docs/roadmap.md`** — reversing what this
   bullet said in the version of this record filed at `74ca19c`, which read *"It does not edit
   `docs/roadmap.md`, `docs/audit/register.md`, or any filed plan."* That was right while the
@@ -794,12 +808,12 @@ became of it.
 | 2 | Correct the register and the roadmap before merging | **Done in this PR**, on the lead's direction and their reading of the charter boundary (§5) |
 | 3 | Treat F88 limb 1 as run-blocking, not blinding | **Done** — register `:129` reclassified; the headline above states it in the record's own words |
 | 4 | Resolve §1 item 3's authority gap | **Done, and it was the lead's to do.** The maintainer's exemption ruling existed but had never landed as a dated artifact. **#648** files it verbatim, corrects its "63" to 65, and states that the exemption does not by itself let a run proceed. `CLAUDE.md` §12 — a decision lands as a dated artifact, never in chat |
-| 5 | Give the no-register-row findings a home | **Two done, one deliberately owed.** The roadmap and register corrections are made; the 53-file deferral's disposition is accepted (a register row plus a pointer from the active plan) but **the id is not minted here** — see §8's last data row and the reason |
+| 5 | Give the no-register-row findings a home | **All three done.** The roadmap and register corrections are made, and the 53-file deferral is filed as **F92** — id allocated by the lead after this record declined to mint one, which cost a round trip and is the correct price (F88 limb 3 is what minting it unilaterally looks like) |
 
 **W37-6 preconditions, collected for whoever plans it** — **F87**, **F88** (limb 1 run-blocking
-and pre-write, limb 2 open), **F90**, plus the 53-file deferral and its join to the frozen leaf
-plan's item 13. **None of the three existed on any prior list**; each was produced by building
-this slice and reading what its own instruments then reported.
+and pre-write, limb 2 open), **F90**, and **F92** (the 53-file deferral, with its join to the
+frozen leaf plan's item 13 now stated). **None of the four existed on any prior list**; each was
+produced by building this slice and reading what its own instruments then reported.
 
 ## Sign-off
 

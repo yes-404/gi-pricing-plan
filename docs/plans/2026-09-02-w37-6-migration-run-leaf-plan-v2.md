@@ -536,3 +536,40 @@ maintainer was reading it, which is the record `CLAUDE.md` §0 exists to protect
 away.** Precedent: `eb19e3f` (`#554`) added a `## Corrections after filing` section to
 [`2026-09-01-nt-0016-landing-package.md`](2026-09-01-nt-0016-landing-package.md), filed one
 commit earlier, on the same principle.
+
+---
+
+**2026-09-02 — a precondition this plan does not name: 53 files are deferred out of §4 step 5's
+Reference stamp set, and until now the deferral existed only in a squash-commit body.**
+
+Raised at W37-5c's close and **recorded here rather than edited into any section above**, all of
+which are kept verbatim as the record of what this plan said when it was lifted to `active`.
+`docs/plans/README.md` forbids editing a filed plan to agree with today's repository; the one
+thing it permits is a dated append that changes no existing claim, which is what this is.
+Precedent on this same file: `b3471fb` (#621), 54 insertions and **zero** deletions.
+
+**What the deferral is.** `47eb2ba` (#639) built W37-5c's item 2 and deferred **53** files —
+46 `.claude/skills/*/SKILL.md` and 7 `.claude/agents/*.md`, measured at `d8d6e3f` with
+`git ls-files '.claude/skills/*/SKILL.md' | wc -l` and
+`git ls-files '.claude/agents/*.md' | grep -v 'README.md$' | wc -l`. Each already carries the
+harness's own front matter, so a stamp must be **merged** into the existing block rather than
+prepended, which requires `docs/_templates/REFERENCE.md` to declare those keys — **this plan's
+own §7.1 Task 1**, under Ruling 70's licensing instrument.
+
+**The deferral is correct.** Building the template change inside a precondition slice would have
+been building ahead of the phase (`CLAUDE.md` §0's table). Nothing here reopens it.
+
+**The join this plan could not make, and why it matters to whoever executes it.** The
+**superseded** plan
+[`2026-09-02-w37-6-migration-run-leaf-plan.md`](2026-09-02-w37-6-migration-run-leaf-plan.md)
+reaches the identical 53 files from the other end — its item 13, *"Check 30's unknown-field rule
+reds 53 files the moment they are stamped"*. **Same population, same root cause, two
+descriptions, and nothing joined them**; this plan, which supersedes that one, carried neither.
+An executor working from this document alone would have met the 53 for the first time during the
+irreversible run.
+
+**Now tracked as [`F92`](../audit/findings/F92.md)**, work item W37-6, phase 2 — a register row
+rather than a copy here, because the register is the only home `register-owed.py W37-6` can
+return, and therefore the only one that reaches a planner who does not already know to look.
+**This paragraph is the pointer; the row is the record.** Full evidence, including the search
+predicates that establish the absence, is in the finding.
