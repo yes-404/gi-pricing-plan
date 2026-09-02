@@ -315,14 +315,33 @@ that docstring:
   `_doc_index` call type-checks under mypy and silently fails to match at runtime; catch
   the exception type the module that actually raises it exports.
 - **Every one of the ten states an explicit count, and zero is a numeral, never just
-  "skipped."** Checks 30, 33, 35 and 37 currently examine the corpus's one real
+  "skipped."** Checks 30, 33 and 37 currently examine the corpus's one real
   document (`document-ids.md`); checks 31, 32, 34, 36, 38 and 39 currently examine
-  zero. A check that examines zero documents and passes is indistinguishable from a
+  zero. Check 35 examines that same one document for `owner:` **and** reconciles F83's
+  exemption register against NT-0019's whole stamp set, so its note carries three
+  numbers, not one — the register is live at full corpus width while the id checks
+  around it are still scoped to two roots. A check that examines zero documents and passes is indistinguishable from a
   check that works unless its own note says so — `test_every_check_30_to_39_reports_how_many_documents_it_examined`
   (`tests/test_audit_docs_ids.py`) pins this against the real, unmodified tree, and
   scans past each note's own `check N:` prefix before looking for a digit (the prefix's
   own number would otherwise satisfy a naive digit-scan trivially, on every check,
   whether or not it ever states a count).
+
+- **`audit-docs.py` now needs a git repository** — its first such dependency, added
+  with F83's exemption register (check 35). The stamp set is `git ls-files`, never a
+  working-tree walk: a walk picks up `.venv/`, `graphify-out/` and anything else
+  untracked, which differs between two checkouts of the same commit
+  (`scripts/doc-id.py` records the measurement). Run outside a repository, or with no
+  `git` on `PATH`, check 35 reports `cannot enumerate NT-0019's stamp set: …` and the
+  gate reds. **That failure is deliberately loud rather than skipped**, because an
+  unreadable corpus yields zero unstampable files, and zero reconciles against any
+  register exactly as cleanly as a correct one.
+- **Adding a file that cannot carry a header means adding it to the register**
+  (`UNSTAMPABLE_EXEMPTIONS` in `scripts/audit-docs.py`) with its reason and its ruling —
+  a new `.json` or `.yaml` under `docs/` reds check 35 by name until you do. That is
+  F83 condition 2 working as designed, not an obstacle: the register is enumerated as
+  literal paths rather than matched by a directory-and-extension rule precisely so the
+  population cannot grow without someone deciding that it should.
 
 Ten broken-input proofs (one per check) and every ruling-specific mechanism proof live
 in `tests/test_audit_docs_ids.py`, alongside the fixtures under
@@ -469,6 +488,18 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 (sixth entry, same day) — check 35 gained F83's exemption register: the 65 files in
+NT-0019's stamp set that cannot carry a YAML front-matter header, each citing its reason and the
+ruling that permits it, reconciled against the tree **by name** so the list cannot grow silently.
+Two of the 65 were surfaced by the check itself and are not in the 63 F83's census measured
+(`docs/process/delivery-process.core.json`, `docs/audit/file-census-5ef559d.csv`) — condition 2
+earning its place on the day it landed. The section §*"Validating a set of counts — a total
+validates the total, and nothing else"* is why the reconciliation names both sides of the
+disagreement instead of comparing two totals — cited by name rather than by position, because
+this block gains entries and a "two entries above" pointer stops resolving the moment one lands,
+which is what happened to this very sentence. Proven by mutating the register so the two totals
+cancel exactly, where a total-only implementation reports nothing at all. Tree `f61f9a4`.
 
 2026-09-02 (fifth entry, same day) — marker-count rule added: *"a marker count validates the
 marker, and nothing else."* Sibling to the total-validates-total entry below, found the same
