@@ -2051,6 +2051,41 @@ def _check_headed_split_file_not_silently_unrecognised(
     )
 
 
+def _check_closure_records_not_silently_unrecognised(root: Path) -> None:
+    """Ruling 83's census for `_discover_closure_records`, deliberately excluded from
+    `_check_headed_split_file_not_silently_unrecognised` above by that function's own
+    docstring: "closure-records.md has its own discovery function and its own disposition
+    logic -- Ruling 84 territory, not this one." `_discover_closure_records` classifies
+    every `_CLOSURE_HEADING_RE` match into one of four buckets (`CR- kind: work`, `CR-
+    kind: phase`, `RS- kind: audit`, `LG-`), but the census does not care which bucket a
+    record lands in -- it only verifies every `###`-level unit in the file is one of the
+    four, never silently folded into a neighbour's body.
+
+    Ruling 84 §3 item 6: landing Ruling 83's census before this ruling's raise removal was
+    ordering *for* this guard, not merely so the mechanism existed somewhere in the
+    codebase -- removing the raise on the "not closed" branch is what exposes `_check_
+    legacy_file_not_silently_unrecognised`'s weaker `if drafts: return` guard as the only
+    thing standing between an undercount and a silent migration. Without this function,
+    that stays true after this ruling lands too.
+
+    Reuses `_check_heading_split_not_silently_unrecognised` — closure-records.md's real
+    shape (a `###` record, its own nested `####`+ body, and one leading `#` preamble,
+    nothing else) is exactly what that function already generalises over, verified against
+    the real file directly (every `####`+ heading found sits inside an enclosing `###`
+    record's span) rather than assumed from the plan-reviews.md precedent alone.
+    """
+    path = root / "docs" / "audit" / "closure-records.md"
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        return
+    _check_heading_split_not_silently_unrecognised(
+        "docs/audit/closure-records.md", text, _CLOSURE_HEADING_RE, 3,
+        scope="docs/audit/closure-records.md (closure records)",
+    )
+
+
 _CENSUS_ANY_RULING_HEADING_RE: Final = re.compile(
     r"^#{1,6}[ \t]+Ruling[ \t]+\S.*$", re.MULTILINE
 )
@@ -2522,6 +2557,7 @@ def migrate(root: Path) -> MigrateResult:
     _check_legacy_file_not_silently_unrecognised(
         root / "docs" / "audit" / "closure-records.md", closure_drafts, "closure records"
     )
+    _check_closure_records_not_silently_unrecognised(root)
     drafts += closure_drafts
     review_drafts = _discover_plan_reviews(root)
     _check_legacy_file_not_silently_unrecognised(

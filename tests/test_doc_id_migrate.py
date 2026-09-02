@@ -1540,6 +1540,96 @@ def test_migrate_raises_via_the_headed_split_file_guard_on_plan_reviews(
 
 
 # -----------------------------------------------------------------------------------------
+# Ruling 84 §3 item 6: the census landing before the raise removal was ordering, not the
+# whole obligation -- "removing the raise on its own does not restore a working guard, it
+# exposes one whose blind spot has simply been hidden." `_check_headed_split_file_not_
+# silently_unrecognised`'s own docstring reserved `closure-records.md` explicitly ("has its
+# own discovery function and its own disposition logic -- Ruling 84 territory, not this
+# one"), so the reachable guard this ruling exposes stays the weak `if drafts: return` one
+# unless this fix also wires the file into the census -- confirmed empirically first
+# (`_check_multi_ruling_files_not_silently_unrecognised`, `_check_headed_split_file_not_
+# silently_unrecognised`, `_check_plain_plans_not_silently_unrecognised` and
+# `_check_requirements_not_silently_unrecognised` between them touch every file
+# `migrate()` reads except this one) before writing the fix below.
+# -----------------------------------------------------------------------------------------
+
+
+def test_closure_records_census_names_an_undercounted_heading(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The identical undercount shape `test_headed_split_file_guard_names_an_undercounted_
+    heading` proves for plan-reviews.md, here for closure-records.md's own `_CLOSURE_
+    HEADING_RE` (which also requires a date): a `###` heading with no date at all is
+    invisible to `_discover_closure_records` and, pre-this-fix, silently folds into
+    whichever record precedes it -- the exact failure Ruling 83 exists to name rather than
+    leave to a count comparison.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "# Closure records\n\n"
+        "### W1 — a real closure, 2026-08-15\n\nBody.\n\n"
+        "### An undated candidate, carrying no date at all\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError) as exc_info:
+        doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+    assert "An undated candidate" in str(exc_info.value)
+
+
+def test_closure_records_census_is_silent_on_a_clean_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "# Closure records\n\n"
+        "### W1 — a real closure, 2026-08-15\n\nBody.\n\n"
+        "### W2 — the second, 2026-08-16 *(in progress, not closed)*\n\nBody.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+
+
+def test_closure_records_census_treats_a_nested_subheading_as_body(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The real file's own shape (verified directly, `docs/audit/closure-records.md`):
+    `####`/`#####` sub-headings nested inside a `###` record, e.g. W32's own back-filled
+    per-slice sub-records. Both must fold into the enclosing record's body, never read as
+    unaccounted units in their own right.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "closure-records.md").write_text(
+        "# Closure records\n\n"
+        "### W1 — a real closure, 2026-08-15\n\n#### 1. Scope\n\nBody.\n\n"
+        "##### A yet deeper sub-point\n\nBody.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+
+
+def test_closure_records_census_is_silent_on_a_missing_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    doc_id_cli._check_closure_records_not_silently_unrecognised(tmp_path)
+
+
+def test_migrate_raises_via_the_closure_records_census_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    closure_path = pristine_a / "docs" / "audit" / "closure-records.md"
+    text = closure_path.read_text(encoding="utf-8")
+    closure_path.write_text(
+        text + "\n\n### An undated candidate, carrying no date at all\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match="An undated candidate"):
+        doc_id_cli.migrate(pristine_a)
+
+
+# -----------------------------------------------------------------------------------------
 # Row 31: `_discover_plain_plans`'s file-population shape. Every file directly under
 # docs/plans/ must be a record, derived (delegated to the multi-ruling function),
 # already-canonical (idempotency), or a declared exception -- `README.md` is the one
