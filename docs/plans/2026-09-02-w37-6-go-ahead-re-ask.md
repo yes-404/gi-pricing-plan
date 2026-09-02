@@ -749,10 +749,24 @@ the tip*, and it was written for **reviews and gates, where a range is always av
 is the form that silently stops resolving. **That is a gap in the rule's scope, not a violation
 of it.**
 
+**The general rule, stated rather than left implied.** Under squash-merge with branch
+auto-delete — which is this repository's flow (`CLAUDE.md` §10) — **the only durable citation for
+work that landed is the squash commit on `main`.** Never a branch head, never a PR tip, and never
+an intermediate head of a force-pushed branch: every one of those is dangling the moment it is
+superseded, and #651 alone had four heads of which three were unreachable before it merged.
+
+**And the obvious check for it is not sufficient.** `git branch -r --contains <sha>` **returns a
+false positive** on a merged-and-deleted branch, because the local remote-tracking ref survives
+GitHub's deletion until someone prunes — measured in §8.1, where it reports `1` for a SHA on a
+branch that `git ls-remote` says does not exist. **The check that answers the question that
+actually matters — *can a reader with a fresh clone resolve this?* — is
+`git merge-base --is-ancestor <sha> origin/main`.**
+
 **It is not attached to the go-ahead line, deliberately.** Amending `CLAUDE.md` is the
 maintainer's alone (`CLAUDE.md` §12), and making a rule change a precondition for a run would be
 this document deciding something it may not. It is here because **this is a live instance rather
-than a hypothetical**, which is what makes it worth the maintainer's attention at all.
+than a hypothetical** — three of them, in §8.1, one of which is this document's own remedy for
+the first — which is what makes it worth the maintainer's attention at all.
 
 **The sharp part is not the 95.** It is that **the 30 rulings written after the ruling-form
 flag-day, specifically to comply, fail exactly as the 35 that were never asked to.** The
@@ -1094,14 +1108,31 @@ places to update and will update one.** Recorded because it is the third instanc
 the first two were caught by someone else.
 
 **Why the gap existed is the part worth keeping, and it is the same mechanism as §8.2's.** The
-fix's own commit body records it. **Cited at `2eda76a`, #651's head, which carries the passage
-verbatim — and the first SHA this section cited is now unreachable, which is §4's defect
-reproduced inside this document.** An earlier revision cited `bb1b45ab`; that commit was itself
-force-pushed over, and `git branch -a --contains bb1b45ab` now returns **0** — on no ref at all,
-dangling and collectable, where F90's `4df1c45` at least still has one local branch. **The
-citation was written the same way F90's was, by the same reasoning, and went stale faster.**
-Recorded rather than quietly repointed, because two instances one document apart is what makes
-§4's observation a hazard of how this repository works rather than one finding's slip:
+fix's own commit body records it. **Cited at `ac10d30` — the squash commit on `origin/main`,
+verified to carry the passage — after two earlier revisions of this section cited SHAs that do
+not resolve.** The sequence is the point and is recorded rather than tidied away:
+
+| Cited | Ancestor of `origin/main` | `git branch -r --contains` | Verdict |
+|---|---|---|---|
+| `bb1b45ab` (first head) | **no** | 0 | force-pushed over; dangling |
+| `2eda76a` (#651's head) | **no** | **1 — a stale tracking ref** | pre-squash tip of a branch GitHub deleted on merge |
+| **`ac10d30`** (the squash) | **yes** | 2 | **durable** |
+
+**Three instances of one defect: F90's, then this document's, then this document's own remedy
+for it.** And the third is the sharpest, because **the tell that would have caught the first two
+returns a false positive on it.** `git branch -r --contains 2eda76a` says **1**, which reads as
+reachable — the ref is this checkout's own stale remote-tracking entry for a deleted branch, and
+`git remote prune origin --dry-run` names it: `* [would prune] origin/docs/w37-5c-signoff`. One
+fetch with `--prune` and the count is 0.
+
+**So the sufficient check is not the one this document first used.** `git branch -r --contains`
+answers *is there a ref here that reaches it*; the question that matters is *can a fresh clone
+resolve it*, and that is `git merge-base --is-ancestor <sha> origin/main`. **The `bb1b45ab`
+check in the previous revision returned the right answer for the wrong reason** — no stale
+tracking ref happened to exist for it. That is the third figure in this document to be right by
+coincidence, after the `[A-Z]+` character class (§2.6) and the summary-row omission (above).
+
+The passage, from `ac10d30`:
 
 > **SUPERSEDES THIS BRANCH'S FIRST COMMIT**, which said the roadmap was deliberately not edited
 > because *"no slice has ever been recorded closed there — W37-5b is not, and grep finds no
