@@ -10,8 +10,11 @@
 **Spec:** [`../notes/0019-one-id-per-document.md`](../notes/0019-one-id-per-document.md) §1.2,
 §1.7, §4 step 2 and §5.2.
 
-**Tree:** every line number, count and quotation below was read or produced at **`b648c22`**,
-`main` at the time of writing.
+**Tree:** every line number, count and quotation below was read or produced at **`b648c22`**.
+**Re-verified unchanged at `01bd0bd`** (`main` after `e7e1d24` and `01bd0bd` landed): the file
+still carries 14 `###` headings and exactly one level-2 heading, the container still opens at
+1155, and all fourteen line-number citations of §7 still resolve as counted. The re-read is
+`delivery-process.md` §15 Rule 10's.
 
 ## Acceptance Standard
 
