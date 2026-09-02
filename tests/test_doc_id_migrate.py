@@ -14,6 +14,7 @@ docstring gives the identical reasoning for `next`/`check`/`widen`.
 
 from __future__ import annotations
 
+import collections
 import csv
 import importlib.util
 import pathlib
@@ -894,3 +895,190 @@ def test_family_rank_tie_break_orders_work_before_finding(
     wk_number = int(next(n for n in numbered if n.startswith("WK-")).split("-")[1])
     fd_numbers = [int(n.split("-")[1]) for n in numbered if n.startswith("FD-")]
     assert wk_number < min(fd_numbers)
+
+
+# ---------------------------------------------------------------------------------------
+# Ruling 86 (docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-files.md):
+# a split ruling's owner is derived, never hardcoded — `_discover_multi_ruling_files` used
+# to stamp every ruling `owner="decision-maker"` regardless of a dated, bounded delegation
+# (found via `docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md` §1.1: rulings A1-A3 are
+# the lead's, under the maintainer's delegation, not the decision-maker's). Real-corpus
+# assertions here follow the lead's own instruction: assert the *property*, never a count
+# — the A-series citation population was independently measured to have grown from 21 to
+# 27 occurrences across 5 to 6 files in the time between two agents' reports, purely from
+# being discussed, so any hardcoded total would already be stale.
+# ---------------------------------------------------------------------------------------
+
+_A_SERIES_SOURCE = "docs/plans/2026-08-30-nt-0012-0013-0014-adoption.md"
+
+
+def test_ruling_file_owner_derives_lead_from_the_real_delegation_clause(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """`_ruling_file_owner` (Ruling 86), run directly against the real A1-A3 source file's
+    own text. Deliberately *not* routed through `_discover_multi_ruling_files(ROOT)`: that
+    function's own matcher (`_RULING_HEADING_RE`, `##` + a bare digit) does not reach this
+    file's headings at all — they are `###` and letter-suffixed (`Ruling A1`), the two-axis
+    mismatch Ruling 86/87 rule on separately (routed to "W37-6's executor", not this fix).
+    Verified: `_RULING_HEADING_RE.finditer()` over this file's text returns zero matches
+    today, so `_discover_multi_ruling_files` currently produces no draft for it at all —
+    neither the old wrong owner nor this fix's right one is reachable through that path yet.
+    This test proves the *derivation* is correct on the real document regardless of when
+    the matcher is widened to reach it.
+    """
+    path = ROOT / _A_SERIES_SOURCE
+    text = path.read_text(encoding="utf-8")
+
+    assert not list(doc_id_cli._RULING_HEADING_RE.finditer(text)), (
+        "fixture assumption: if _RULING_HEADING_RE now matches this file, "
+        "_discover_multi_ruling_files reaches it directly and the test above this one "
+        "should be extended to assert the owner end to end, not just the derivation"
+    )
+    assert doc_id_cli._ruling_file_owner(path, text) == "lead"
+
+
+def test_ruling_file_owner_defaults_to_decision_maker_with_no_delegation_heading(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The default (NT-0019 §1.6) holds for every real multi-ruling file that is *not*
+    under a delegation — asserted over the whole real corpus as a property (every owner is
+    "decision-maker" except drafts from the one known delegated file), never as a count of
+    drafts, which grows as the corpus does.
+    """
+    drafts = doc_id_cli._discover_multi_ruling_files(ROOT)
+    assert drafts, "fixture assumption: at least one real multi-ruling file exists"
+    non_delegated = [d for d in drafts if d.was != _A_SERIES_SOURCE]
+    assert non_delegated, "fixture assumption: not every multi-ruling file is delegated"
+    assert all(d.owner == "decision-maker" for d in non_delegated), collections.Counter(
+        d.owner for d in non_delegated
+    )
+
+
+def test_ruling_file_owner_raises_when_a_delegation_heading_names_no_role(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 86: "failing loudly when it cannot be determined rather than defaulting to a
+    guess." A delegation-shaped heading that does not end in a parseable "delegated to the
+    <role>" must not silently fall back to the decision-maker default — that would hide
+    exactly the misattribution this fix exists to stop.
+    """
+    path = tmp_path / "delegation.md"
+    text = (
+        "# A record\n\n"
+        "### 1.1 The delegation — the maintainer's authority, moved elsewhere for now\n\n"
+        "Body.\n"
+    )
+    path.write_text(text, encoding="utf-8")
+    with pytest.raises(NotImplementedError, match="delegation"):
+        doc_id_cli._ruling_file_owner(path, text)
+
+
+def test_discover_multi_ruling_files_wires_a_derived_owner_through_to_the_draft(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The end-to-end path `_ruling_file_owner`'s real-corpus sibling test above cannot
+    exercise (today's matcher does not reach the real delegated file) — proven here on a
+    fixture whose heading level and id form the matcher *does* accept, so the wiring itself
+    is under test independent of the separate, not-this-fix's-to-close matcher gap.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-09-02-fixture-delegated-rulings.md").write_text(
+        "# Fixture rulings\n\n"
+        "### 1.1 The delegation — the maintainer's authority, delegated to the auditor\n\n"
+        "## Ruling 501 — a fixture ruling\n\n"
+        "Body.\n",
+        encoding="utf-8",
+    )
+    drafts = doc_id_cli._discover_multi_ruling_files(tmp_path)
+    assert len(drafts) == 1, drafts
+    assert drafts[0].owner == "auditor"
+
+
+# ---------------------------------------------------------------------------------------
+# The same class of defect, the opposite direction: `_discover_plain_plans` hardcoded
+# `owner="planner"` for every plan regardless of `kind:`, though NT-0019 §1.6 gives a
+# review to the auditor and a handover to the executor. Two hardcodes pointing opposite
+# ways were "two wrong attributions" (the lead's words) until both were fixed.
+# ---------------------------------------------------------------------------------------
+
+
+def test_plain_plans_owner_is_derived_from_kind_not_hardcoded(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    fixtures = {
+        "2026-09-02-fixture-leaf.md": "planner",
+        "2026-09-02-fixture-final-review.md": "auditor",
+        "2026-09-02-fixture-handover.md": "executor",
+        "2026-09-02-fixture-slice-map.md": "planner",
+    }
+    for filename in fixtures:
+        (plans_dir / filename).write_text(f"# {filename}\n\nBody.\n", encoding="utf-8")
+
+    drafts = doc_id_cli._discover_plain_plans(tmp_path)
+
+    by_filename = {pathlib.Path(d.was).name: d for d in drafts}
+    assert set(by_filename) == set(fixtures)
+    for filename, expected_owner in fixtures.items():
+        assert by_filename[filename].owner == expected_owner, (filename, by_filename[filename])
+
+
+def test_plain_plans_real_corpus_owner_always_matches_its_own_kind(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Property over the whole real corpus, not a count (the corpus grows): every emitted
+    `PL-` draft's `owner` is exactly `_PLAN_KIND_OWNER[kind]` — proves the derivation is
+    wired for every plan discovered today, not merely for the fixture's four kinds.
+    """
+    drafts = doc_id_cli._discover_plain_plans(ROOT)
+    assert drafts, "fixture assumption: at least one plain plan exists in the real corpus"
+    mismatched = [
+        (d.was, d.kind, d.owner)
+        for d in drafts
+        if d.owner != doc_id_cli._PLAN_KIND_OWNER[d.kind]
+    ]
+    assert mismatched == []
+
+
+# ---------------------------------------------------------------------------------------
+# Same function, a second defect found alongside the owner hardcode: `_discover_plain_
+# plans`' title regex captured only the first physical line of a `# Title` heading. Three
+# real files (also `row 15`'s subject — the same three h1 ruling headings the multi-ruling
+# splitter does not reach) wrap their title onto a second line with no other marker, the
+# same wrapped-heading defect class already fixed in the document-family templates.
+# ---------------------------------------------------------------------------------------
+
+_WRAPPED_TITLE_FILES = (
+    "docs/plans/2026-09-01-nt-0016-slice2-fr-data-32-ruling.md",
+    "docs/plans/2026-09-01-ruling-60-census-provenance-checkout-depth.md",
+    "docs/plans/2026-09-01-ruling-61-notes-tombstone-stubs-watched.md",
+)
+
+
+def test_plan_title_joins_a_wrapped_heading_on_the_real_files(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    for rel in _WRAPPED_TITLE_FILES:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        title = doc_id_cli._plan_title(text)
+        assert title is not None, rel
+        first_line = text.splitlines()[0].removeprefix("# ")
+        assert title != first_line, (
+            f"{rel}: title equals just the heading's first physical line — the join did "
+            "not run, or this file's own wrap was fixed and this fixture is stale"
+        )
+        assert title.startswith(first_line), (rel, title)
+
+
+def test_plan_title_does_not_join_across_a_blank_line(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The join must stop at the first blank line or heading — proven directly, since every
+    real document in the corpus happens to have a blank line before its body and so cannot
+    show this failing (Ruling 83's own principle: a check that only ever passes on real
+    input has not been proven against the case it exists to rule out).
+    """
+    text = "# A short title\n\nThis paragraph must never join onto the title above.\n"
+    assert doc_id_cli._plan_title(text) == "A short title"

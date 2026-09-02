@@ -1090,6 +1090,50 @@ def _discover_adrs(root: Path) -> list[_Draft]:
 _PLAN_FILENAME_RE: Final = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)\.md$")
 _RULING_HEADING_RE: Final = re.compile(r"^##\s+Ruling\s+(\d+)\s*(?:—\s*(.+))?$", re.MULTILINE)
 
+#: NT-0019 §1.6's own default for a ruling: "ruling (RL) — decision-maker; the maintainer
+#: may author one on scope or process." A dated, bounded delegation can move it again — the
+#: only instance in the corpus at the time of writing is `docs/plans/2026-08-30-nt-0012-
+#: 0013-0014-adoption.md` §1.1, whose own heading is quoted in `_RULING_DELEGATION_HEADING_RE`
+#: below. Ruling 86 (`docs/plans/2026-09-02-w37-ruling-a-series-and-standalone-ruling-
+#: files.md`): "it is not true that every ruling is the decision-maker's" — hardcoding it
+#: was a false attribution into a frozen record, the same class of defect Ruling 70 struck
+#: `_ROW_FIELDS` for, applied to authorship instead of a field set.
+_RULING_DEFAULT_OWNER: Final = "decision-maker"
+
+#: A section whose own heading names itself "The delegation" and states who it is "delegated
+#: to" — matched narrowly (verified against every multi-ruling file in the real corpus at
+#: the time of writing: exactly one file matches, the one this was written for) rather than
+#: attempting to parse arbitrary "## Authority" prose, which varies file to file and is not
+#: reliably machine-derivable. A file with no such heading keeps the default above; a file
+#: whose heading names the pattern but not a parseable role is a case to fail loudly on
+#: (`_ruling_file_owner` below), never to silently default past.
+_RULING_DELEGATION_HEADING_RE: Final = re.compile(
+    r"^#{1,6}\s+[\d.]*\s*The delegation\s*—.*$", re.MULTILINE | re.IGNORECASE
+)
+_RULING_DELEGATION_ROLE_RE: Final = re.compile(
+    r"\bdelegated to the ([a-z][a-z -]*[a-z])\b", re.IGNORECASE
+)
+
+
+def _ruling_file_owner(path: Path, text: str) -> str:
+    """A split ruling's owner, derived from `text` rather than hardcoded (Ruling 86). Every
+    ruling in one multi-ruling file shares one owner here — the delegation, where one
+    exists, covers the file's rulings as a set (`2026-08-30-nt-0012-0013-0014-adoption.md`
+    §1.1 covers Rulings A1-A3 together), not one ruling at a time.
+    """
+    heading_match = _RULING_DELEGATION_HEADING_RE.search(text)
+    if heading_match is None:
+        return _RULING_DEFAULT_OWNER
+    role_match = _RULING_DELEGATION_ROLE_RE.search(heading_match.group(0))
+    if role_match is None:
+        raise NotImplementedError(
+            f"migrate: {path} carries a 'The delegation — ...' heading "
+            f"({heading_match.group(0)!r}) but no role could be parsed from it -- a split "
+            "ruling's owner must not be guessed (Ruling 86); state who the delegation "
+            "names, or teach this pattern the new phrasing"
+        )
+    return role_match.group(1).strip().lower()
+
 # NT-0019 §5.2's suffix -> kind mapping, longest/most-specific suffix first so
 # `-slice-map` is not shadowed by a hypothetical shorter alternative.
 _PLAN_SUFFIX_KIND: Final[tuple[tuple[str, str], ...]] = (
@@ -1104,6 +1148,48 @@ def _plan_kind_for_slug(slug: str) -> str:
         if slug.endswith(suffix):
             return kind
     return "leaf"
+
+
+#: NT-0019 §1.6's own "Owner — creates & amends" column for the `PL` family, split by
+#: `kind:` — "plan (PL map/leaf) — planner, via writing-plans"; "plan (PL review) —
+#: auditor"; "plan (PL handover) — executor". `doc-index.py`'s `_OWNERSHIP_TABLE` already
+#: transcribes the same column once, licensed by NT-0019 §1.6 rather than derived from a
+#: file (that module's own comment: "Not byte-identical prose ... kept close enough that
+#: every role name appearing in the note's own column also appears here"); this is the same
+#: transcription, narrowed to the one family this function writes, kept local rather than
+#: reached across a dynamic `importlib` load for four rows that change only when §1.6 does.
+#: Ruling 86: hardcoding a single owner ("planner") for every kind was the same false-
+#: attribution defect as `_discover_multi_ruling_files`'s "decision-maker" hardcode, in the
+#: opposite direction — a plan review is the auditor's and a handover the executor's, not
+#: the planner's, and `_plan_kind_for_slug` already computes which is which.
+_PLAN_KIND_OWNER: Final[Mapping[str, str]] = {
+    "map": "planner", "leaf": "planner", "review": "auditor", "handover": "executor",
+}
+
+
+def _plan_title(text: str) -> str | None:
+    """The file's own `# Title` line, joined with every following non-blank line up to the
+    next blank line or heading — never just the first physical line. A title that reads as
+    one continuous sentence in the source can be hard-wrapped across two (or more) physical
+    lines with no other marker (`docs/plans/2026-09-01-ruling-60-census-provenance-
+    checkout-depth.md` and two siblings, found migrating them as `PL-`: the same wrapped-
+    heading defect class already fixed in `FD.md`/`REFERENCE.md`/`RFC.md`/`WK.md`'s
+    templates, here in a real document rather than a template). Verified against every
+    plan-shaped file in the real corpus: joining changes the extracted title for exactly
+    those three files and nothing else, each into one coherent sentence.
+    """
+    lines = text.splitlines()
+    for idx, line in enumerate(lines):
+        heading_match = re.match(r"^#\s+(.+)$", line)
+        if heading_match is None:
+            continue
+        parts = [heading_match.group(1).rstrip()]
+        for cont in lines[idx + 1 :]:
+            if not cont.strip() or cont.lstrip().startswith("#"):
+                break
+            parts.append(cont.strip())
+        return " ".join(parts)
+    return None
 
 
 def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
@@ -1138,6 +1224,7 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
             continue
         created = date.fromisoformat(m.group(1))
         rel = path.relative_to(root).as_posix()
+        owner = _ruling_file_owner(path, text)
         for i, heading in enumerate(headings):
             number_word, title = heading.group(1), (heading.group(2) or "").strip()
             start = heading.start() if i > 0 else 0  # preamble folds into the first ruling
@@ -1147,7 +1234,7 @@ def _discover_multi_ruling_files(root: Path) -> list[_Draft]:
                 _Draft(
                     materialize="document", prefix="RL", kind=None,
                     title=title or f"Ruling {number_word}",
-                    status="active", created=created, owner="decision-maker",
+                    status="active", created=created, owner=owner,
                     tie_break=(rel, i),
                     old_token=f"Ruling {number_word}", was=rel, body=section_text,
                 )
@@ -1384,12 +1471,11 @@ def _discover_plain_plans(root: Path) -> list[_Draft]:
         created_str, slug = m.group(1), m.group(2)
         created = date.fromisoformat(created_str)
         kind = _plan_kind_for_slug(slug)
-        title_match = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-        title = title_match.group(1) if title_match else slug
+        title = _plan_title(text) or slug
         drafts.append(
             _Draft(
                 materialize="document", prefix="PL", kind=kind, title=title,
-                status="active", created=created, owner="planner",
+                status="active", created=created, owner=_PLAN_KIND_OWNER[kind],
                 tie_break=(path.relative_to(root).as_posix(), 0),
                 old_token=None, was=path.relative_to(root).as_posix(),
                 body=text.rstrip("\n") + "\n",
