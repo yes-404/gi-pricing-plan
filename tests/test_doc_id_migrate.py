@@ -2337,8 +2337,9 @@ def _module_with_source_mutation(
     `docs/_templates/` is copied in because `_stamp_header` reads the template block
     through `REPO_ROOT` rather than through the `root` it writes to -- the placeholder
     values a mutation must be able to emit are template data, so they have to be the real
-    ones. Nothing else is copied: no mutated module ever sees, or could write to, the
-    repository.
+    ones. A mutated module still *reads* the repository, which is the whole point of these
+    proofs -- every discovery call below is passed `ROOT` -- but it is given no path that
+    would let it write there: the `root` it writes to is always a scratch tree.
 
     The `count == 1` assertion is the guard against a silent no-op mutation, which is the
     way a mutation proof goes green for the wrong reason: a `str.replace` that matches
