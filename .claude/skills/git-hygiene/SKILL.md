@@ -309,6 +309,35 @@ commit is actually checked out — nothing moves it until a `merge`, `rebase`, o
 does. Same shape as `--date=iso-strict` below: a command answers exactly what it was asked,
 which is not always the question the reader meant.
 
+**Quote a file with `git show <sha>:<path>`, never a bare read, whenever the quotation
+carries a SHA.** The rule above is about reading `git log`; this is about reading a *file*,
+and it is the more dangerous half. `grep`, `sed` and `cat` read the working tree — whatever
+the checkout happens to be sitting at — while the sentence you write around the output names
+a commit. **The citation is to one tree and the content is from another**, and nothing in
+either half looks wrong.
+
+**Why it survives the check that catches a misremembered quotation.** The normal defence is
+*re-read it*, and re-reading returns the same wrong text, because the checkout has not moved.
+**It is self-confirming.** A misremembered phrase collapses the moment the file is opened;
+this one survives every re-read until someone opens it at a *different* tree — which
+generally means a second person, which generally means after it has been acted on. It is also
+more convincing than a misremembering precisely because it *is* a real quotation of a real
+file, just not of what it claims.
+
+**Live instance, 2026-09-02.** `_stamp_header`'s skip tuple was quoted as `("phase", "work",
+"slice", "deliverable", "lands_in", "trigger")` citing `614c92c`. That is `2fbce0c`'s line —
+`614c92c` is the commit that *split* `phase` and `work` into separately-guarded branches. The
+`grep` ran in a checkout still at `2fbce0c`: the PR had been merged, the ref fetched, and the
+working tree never reset. **The cost was in the consequence, not the quote**: acting on the
+stale tuple meant concluding that a merged ruling's positive obligation was unimplementable,
+when it was implemented and its acceptance item was live — so the reader stops looking at
+exactly the thing that needed checking.
+
+```bash
+git show <sha>:<path> | sed -n '940,950p'   # the tree you are citing
+grep -n … <path>                            # whatever you happen to be standing in
+```
+
 **A `--ff-only` merge that FAILS is a worse trap than never fetching at all — it leaves a
 belief of having synced instead of the visible absence of a sync.** `git merge --ff-only
 origin/main` run while checked out on an unrelated feature branch fails with "Not possible
@@ -348,6 +377,45 @@ from this same session in the other. Only the third file, where the branch's own
 commits happened to touch the identical row, carried this branch's real, still-missing
 change. **Read every hunk a file-scoped diff surfaces — a file's presence in the list
 proves something differs, never that the difference is this branch's own.**
+
+### Sweeping many branches at once: two diff forms are wrong, in opposite directions
+
+The rules above cost a careful read per branch, which does not scale to a whole-repo
+durability sweep. Both obvious shortcuts fail, and they fail differently. Measured
+2026-09-02 over 54 local branches:
+
+| Form | What it actually reports | Result |
+|---|---|---|
+| `git diff origin/main <branch>` (**two-dot**) | differences in *either* direction, so an old branch lists files purely because `main` moved past it | **measures age, not exposure** — 20 to 42 files for branches with nothing at risk |
+| `git diff origin/main...<branch>` (**three-dot**) | the branch's own changes since the merge base — right in principle, but **squash-merge means a merged branch's commits never became ancestors of `main`** | **flagged 54 of 54.** A measure that flags everything flags nothing |
+
+Three squash-merged branches, content verified on `main`, at `09b7e9b`:
+
+```
+w37-ruling-86-a-series               two-dot=24   three-dot=1
+w37-rulings-88-89-container-family   two-dot=20   three-dot=1
+w37-ruling-85-stage-boundary         two-dot=42   three-dot=1
+```
+
+**Three-dot is sound in one direction only: a zero is trustworthy, a non-zero is not.** The
+one branch reset to `origin/main` after its merge returned three-dot `0` — provably nothing
+outstanding. Every other merged branch returns its own record, forever.
+
+**The cheap sound instrument is the PR list, because squash-merge makes "had a merged PR" a
+sound proxy for "content is on `main`":**
+
+```bash
+gh pr list --state merged --limit 200 --json headRefName --jq '.[].headRefName' > /tmp/merged
+# then: skip any local branch whose name appears there; read only what is left
+```
+
+One API call for the whole repository. **54 collapsed to 4**, all four superseded, confirmed
+file-by-file by the per-branch rules above — which is the point: the sweep's job is to get the
+population small enough that the careful read is affordable, not to replace it.
+
+**A detached HEAD is only a risk if it has own content**, and three-dot answers that honestly
+because the zero direction is the trustworthy one: both detached heads here returned `0`
+three-dot, while two-dot claimed 152 and 70 and meant nothing.
 
 ### `ExitWorktree` refuses for the same reason, and says something scarier
 
@@ -673,6 +741,40 @@ fire. Add an always-running aggregator job and require *that* instead.
 *(Moved here from `CLAUDE.md` §2 on 2026-08-23: it is PR-flow procedure, conditional on
 something that has not happened, and an always-loaded file is the wrong place for both.)*
 
+## Pushes share a CI concurrency group: a fast edit cadence starves the slow workflow
+
+**Each push cancels the in-flight run for the same branch.** Where the workflows differ in
+duration, a cadence faster than the slowest one means the slow workflow **never completes at
+all**, while the fast one goes green on every head. The branch looks healthy and is
+structurally unverifiable.
+
+Measured 2026-09-02 on one branch, four heads in twelve minutes:
+
+```
+f67de3341  docs success   python in_progress   08:58
+0780c1bd3  docs success   python CANCELLED     08:53
+30a25f7a8  docs success   python CANCELLED     08:49
+2694fc348  docs success   python CANCELLED     08:46
+```
+
+`python` never finished once. Each push was individually defensible — a stale entry, a
+required re-read, a broken link, a corrected count — and the *cadence* was the defect, not
+any one of them.
+
+**The tell:** `docs: success` repeated beside a `python` that is always the **newest** run
+and never a **finished** one. It reads as "mostly fine" and means "never verified once."
+A `cancelled` conclusion on a superseded SHA is a superseding push, not a failure — which is
+what makes the pattern easy to wave away one row at a time.
+
+**The fix is behavioural, not technical.** Once the fast half is green, **hold the branch**.
+A further edit restarts a clock someone else is waiting on, so whether it is worth restarting
+is the **merge holder's** call, not the author's — message them and let them decide. The
+author optimising "get the record right immediately" and the merge holder optimising "land
+it" are not the same objective, and the author is the one who cannot see the queue.
+
+**If you are polling:** watch the newest head only, and re-point a watcher after any push.
+A watcher left on a superseded SHA reports a cancellation and looks like a failure.
+
 ## Amending after review: a new SHA inherits clearance it never earned
 
 CI re-runs on a re-push; nothing else does. Approvals, audit verdicts and
@@ -687,6 +789,20 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+**2026-09-02 — three traps added, all from live incidents the same day**, each measured at
+the tree named in its own section rather than described from memory.
+
+- **The stale-tree quotation** (in *Deleting branches after a squash-merge*): a `grep` in a
+  checkout that had not been reset, quoted with the SHA of a commit already merged past. It
+  is the failure mode that survives re-reading, and the guard — `git show <sha>:<path>` —
+  costs nothing.
+- **Sweeping many branches**: two-dot and three-dot diffs are both wrong here, in opposite
+  directions, and the merged-PR-name proxy collapsed 54 branches to 4. Verified by running
+  all three forms over the same population.
+- **The CI concurrency group**: four heads in twelve minutes, `python` cancelled three times
+  and never completed once, `docs` green throughout. Written by the author of those four
+  pushes; the cadence was the defect, not any single push.
 
 **2026-08-30 — the nested-fork section above added**, from a live incident during W11
 tooling work: a dispatched fork's own nested `Agent(subagent_type:"fork")` call started
