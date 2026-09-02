@@ -7,15 +7,12 @@ Phase `P6` and work `WK-1900` exist only here, chosen clear of any real or other
 number so this corpus can never collide.
 
 ## P6 — Fixture phase (check 33 rollup-raise only)
-
-```yaml
 status: active
 opened: 2026-01-01
 target: 2026-02-01
 gates: plan freeze 2026-01-10 · code freeze 2026-01-20 · docs freeze 2026-01-25
 exit criteria: not read by any test
 works: WK-1900
-```
 
 ### WK-1900 — Rollup-raise fixture work
 

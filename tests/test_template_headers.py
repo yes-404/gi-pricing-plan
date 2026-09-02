@@ -32,14 +32,17 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 import re
+import shutil
 import sys
 import types
+from datetime import date
 from typing import Any
 
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOCID_MODULE_PATH = ROOT / "scripts" / "_docid.py"
+DOC_ID_MODULE_PATH = ROOT / "scripts" / "doc-id.py"
 TEMPLATES_DIR = ROOT / "docs" / "_templates"
 
 if str(ROOT / "scripts") not in sys.path:
@@ -332,3 +335,284 @@ def test_a_wrapped_bracket_placeholder_breaks_parsing(
     )
     with pytest.raises(docid.HeaderError, match="indented line"):
         _write_and_parse(docid, tmp_path, "broken-fd.md", broken)
+
+
+# -----------------------------------------------------------------------------------
+# Rulings 79 and 80 (docs/plans/2026-09-02-w37-template-parser-conflicts-rulings.md):
+# `WK.md`/`SL.md`/`PHASE.md` against the parser that actually consumes a *row* or a
+# *phase section* embedded mid-`roadmap.md` — `scripts/doc-index.py`'s
+# `scan_roadmap_rows`/`scan_phase_sections` — never exercised above, which only proves
+# these templates against `_docid.py`'s file-level `parse_header` (Ruling 79 §1's own
+# finding: "It exercises a different parser from the one that consumes a row, and
+# passes."). Extended here rather than in a new file, per Ruling 79 §4: "a second file
+# would repeat the near-miss rather than close it."
+# -----------------------------------------------------------------------------------
+
+DOC_INDEX_MODULE_PATH = ROOT / "scripts" / "doc-index.py"
+
+
+@pytest.fixture
+def doc_index() -> types.ModuleType:
+    """Function-scoped, deliberately not `module` like `docid` above: several tests below
+    `setattr` the loaded module's own `_TEMPLATES_DIR`, and a shared module instance would
+    leak that mutation into whichever test happens to run next. Reloading fresh per test
+    is the same fix `tests/test_audit_docs_ids.py`'s own `audit` fixture already uses for
+    the identical hazard against `scripts/audit-docs.py`'s `_TEMPLATES_DIR`.
+    """
+    return _load_by_path("_doc_index_for_template_headers", DOC_INDEX_MODULE_PATH)
+
+
+def _row_fixture(fenced_body: str) -> str:
+    """A `roadmap.md` carrying exactly one row: `fenced_body` (already rendered/filled)
+    under a bare `###` heading. `scan_roadmap_rows` only cares that the nearest preceding
+    heading is level 3 or deeper — the heading's own text is never parsed — so a row
+    template's real heading is not needed here.
+    """
+    return f"# Roadmap (fixture)\n\n### row under test\n\n```yaml\n{fenced_body}\n```\n"
+
+
+@pytest.mark.parametrize(
+    ("template_filename", "family"),
+    [("WK.md", "work"), ("SL.md", "slice")],
+)
+def test_row_template_fenced_block_parses_through_doc_index_row_parser(
+    doc_index: types.ModuleType,
+    tmp_path: pathlib.Path,
+    template_filename: str,
+    family: str,
+) -> None:
+    """Ruling 79 §4's positive control: "a check that copies each row template's fenced
+    block into a roadmap fixture and parses it with doc-index.py's row parser. It must
+    fail today, before the fix, with `unknown row field 'tree'`." `WK.md` and `SL.md` both
+    declare `tree:`, `corrected_by:` and `relates:`; the old `_ROW_FIELDS` rejected all
+    three. After the fix, the row parses and the three fields are actually wired (§3 item
+    3) rather than hardcoded away in `_row_header_from_raw`.
+    """
+    raw = (TEMPLATES_DIR / template_filename).read_text(encoding="utf-8")
+    rendered = _render_as_author_would(raw)
+    fenced_body = _extract_fenced_yaml_block(rendered)
+    roadmap = tmp_path / "roadmap.md"
+    roadmap.write_text(_row_fixture(fenced_body), encoding="utf-8")
+
+    records = doc_index.scan_roadmap_rows(roadmap)
+
+    assert len(records) == 1, records
+    header = records[0].header
+    assert header.family == family
+    assert header.tree == "filled placeholder"
+    assert header.corrected_by == ()
+    assert header.relates == ()
+
+
+def test_kind_field_on_a_work_row_is_rejected(
+    doc_index: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 79 §4: "a check that `kind:` on a `WK-` row is rejected. This is the half a
+    fields-added fix leaves behind, and it must red." `docs/_templates/WK.md`'s own
+    comment forbids `kind:` by name; the old `_ROW_FIELDS` wrongly admitted it (Ruling 79
+    §1: "wrong in both directions at once").
+    """
+    roadmap = tmp_path / "roadmap.md"
+    roadmap.write_text(
+        _row_fixture(
+            "id: WK-00001\nfamily: work\ntitle: t\nstatus: draft\nkind: something"
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(doc_index.HeaderError, match="kind"):
+        doc_index.scan_roadmap_rows(roadmap)
+
+
+def test_row_field_policy_changes_with_the_wk_template(
+    doc_index: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 70 §4 item 2, applied to `doc-index.py` per Ruling 79 §4: "add a key to
+    WK.md and a row using it parses; remove a key and the same row is rejected ...  the
+    signature of a policy transcribed." Proven on a *copy* of the real templates (never
+    the real `docs/_templates/`, which this test must not mutate), by redirecting
+    `doc_index._TEMPLATES_DIR` — the same `setattr` idiom
+    `tests/test_audit_docs_ids.py::test_check_30_field_policy_changes_with_the_template`
+    already uses for `audit-docs.py`'s own constant of the same name.
+    """
+    templates_copy = tmp_path / "templates"
+    shutil.copytree(TEMPLATES_DIR, templates_copy)
+    setattr(doc_index, "_TEMPLATES_DIR", templates_copy)  # noqa: B010 -- mypy needs setattr here
+
+    wk = templates_copy / "WK.md"
+    text = wk.read_text(encoding="utf-8")
+    assert "owner: maintainer" in text, "fixture assumption: WK.md's owner: line changed"
+    assert "relates: []" in text, "fixture assumption: WK.md's relates: line changed"
+
+    roadmap = tmp_path / "roadmap.md"
+    roadmap.write_text(
+        _row_fixture(
+            "id: WK-00001\nfamily: work\ntitle: t\nstatus: draft\nowner: maintainer"
+        ),
+        encoding="utf-8",
+    )
+
+    # Remove a key the template declares today (`owner:`): the same row is rejected.
+    without_owner = "\n".join(
+        line for line in text.splitlines() if not line.strip().startswith("owner:")
+    )
+    wk.write_text(without_owner, encoding="utf-8")
+    with pytest.raises(doc_index.HeaderError, match="owner"):
+        doc_index.scan_roadmap_rows(roadmap)
+
+    # Add a key the template does not declare: a row using it now parses.
+    widened = text.replace("relates: []", "relates: []\nextra_test_field: x")
+    wk.write_text(widened, encoding="utf-8")
+    roadmap.write_text(
+        _row_fixture(
+            "id: WK-00001\nfamily: work\ntitle: t\nstatus: draft\n"
+            "owner: maintainer\nextra_test_field: x"
+        ),
+        encoding="utf-8",
+    )
+    records = doc_index.scan_roadmap_rows(roadmap)
+    assert len(records) == 1, (
+        "adding a key to WK.md did not widen doc-index.py's row parser — the policy is "
+        "not actually being read from the template"
+    )
+
+
+def test_phase_template_body_parses_via_scan_phase_sections(
+    doc_index: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 80 §4's positive control: "PHASE.md's own body, placeholders filled, parsed
+    by scan_phase_sections, must yield the phase it describes. It must fail today, before
+    the fix." Today `scan_phase_sections` only ever reads the first *fenced* block below a
+    phase heading; `PHASE.md`'s own body carries none (`_EXPECTED_NO_BLOCK_TEMPLATES` in
+    `audit-docs.py` already enforces this by path), so the old code finds nothing at all
+    for a pristine phase section — `sections == []` — the "finds nothing" half of the
+    defect; `test_phase_section_with_no_fields_of_its_own_never_borrows_a_later_blocks_
+    fields` below proves the other half, the "borrows a later block" misattribution
+    PROBE 2 in the ruling actually hit (which needs a Work fenced block present to borrow
+    from — this fixture, being just PHASE.md's own body, has none).
+    """
+    raw = (TEMPLATES_DIR / "PHASE.md").read_text(encoding="utf-8")
+    rendered = _render_as_author_would(raw)
+    roadmap = tmp_path / "roadmap.md"
+    roadmap.write_text(rendered, encoding="utf-8")
+
+    sections = doc_index.scan_phase_sections(roadmap)
+
+    assert len(sections) == 1, sections
+    section = sections[0]
+    assert section.phase == "P2"
+    assert section.status == "draft"
+    assert section.works == ("WK-01234", "WK-01234")
+
+
+def test_phase_section_with_no_fields_of_its_own_never_borrows_a_later_blocks_fields(
+    doc_index: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 80 §4 item 2, PROBE 2's own shape reproduced directly: a phase heading with
+    nothing of its own directly beneath it, followed by a `WK-` row whose `status:`
+    deliberately differs from any real phase status. Before the fix,
+    `scan_phase_sections`'s unbounded lookahead (`rest = "\n".join(lines[idx + 1:])`)
+    finds the Work's fenced block, reads its `status: retired` as the *phase's* status,
+    and reports no attached works at all — PROBE 2's exact result. After the fix: "a phase
+    section carrying no fields must produce no phase, or a loud failure — never a phase
+    built from a later block."
+    """
+    roadmap = tmp_path / "roadmap.md"
+    roadmap.write_text(
+        "# Roadmap (fixture)\n\n"
+        "## P2 — Rating engine live\n\n"
+        "### WK-01201 — Some work\n\n"
+        "```yaml\n"
+        "id: WK-01201\n"
+        "family: work\n"
+        "title: Some work\n"
+        "status: retired\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    sections = doc_index.scan_phase_sections(roadmap)
+
+    assert sections == [], (
+        f"a phase heading with nothing directly beneath it must yield no phase at all, "
+        f"never one built from a later heading's block: got {sections!r}"
+    )
+
+
+def test_phase_section_fields_change_with_the_phase_template(
+    doc_index: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 80 §4 item 3, Ruling 70 §4 item 2's mutation applied to `PHASE.md`: "rename
+    works: in the template and a phase section using the old name stops being read."
+    Proven on a *copy* of the real templates, never the real `docs/_templates/`.
+    """
+    templates_copy = tmp_path / "templates"
+    shutil.copytree(TEMPLATES_DIR, templates_copy)
+    phase_template = templates_copy / "PHASE.md"
+    text = phase_template.read_text(encoding="utf-8")
+    assert "works: WK-NNNNN, WK-NNNNN" in text, (
+        "fixture assumption: PHASE.md's works: line changed"
+    )
+    phase_template.write_text(text.replace("works:", "renamed_field:"), encoding="utf-8")
+    setattr(doc_index, "_TEMPLATES_DIR", templates_copy)  # noqa: B010 -- mypy needs setattr here
+
+    roadmap = tmp_path / "roadmap.md"
+    roadmap.write_text(
+        "# Roadmap (fixture)\n\n## P2 — Some phase\nstatus: active\nworks: WK-00001\n",
+        encoding="utf-8",
+    )
+
+    sections = doc_index.scan_phase_sections(roadmap)
+
+    assert len(sections) == 1, sections
+    assert sections[0].works == (), (
+        "renaming works: in PHASE.md did not change what scan_phase_sections reads — "
+        "the field set is not actually derived from the template"
+    )
+
+
+def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
+    doc_index: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 81 (`docs/plans/2026-09-02-w37-commit-boundary-and-plan-reviews-shape-
+    rulings.md`) §4: "take migrate's emitted row block and phase section, feed each to
+    scan_roadmap_rows and scan_phase_sections, and require the fields to survive ... This
+    must be a test in the branch that lands the fix, not a task carried into W37-6."
+
+    Exercises `doc-id.py`'s `_restructure_roadmap` — the writer half of Rulings 79 §3 item
+    4 and 80 §3 item 4 — directly against `doc-index.py`'s own readers, rather than through
+    the full `migrate()` pipeline (`tests/test_doc_id_migrate.py::
+    test_roadmap_restructure_is_readable_by_doc_index` already covers that end to end; this
+    is the narrower, Ruling-81-cited proof that the writer and reader this branch changes
+    together still agree). Ruling 81 §2's rejected option — "fix the reader and leave the
+    writer ... migrate emits blocks its own reader rejects" — is exactly the failure this
+    would catch: a `HeaderError` here means the split happened.
+    """
+    doc_id_cli = _load_by_path("_doc_id_for_template_headers", DOC_ID_MODULE_PATH)
+
+    root = tmp_path
+    templates_copy = root / "docs" / "_templates"
+    shutil.copytree(TEMPLATES_DIR, templates_copy)
+
+    work = doc_id_cli._Draft(
+        materialize="roadmap_row", prefix="WK", kind=None, title="Round-trip work",
+        status="active", created=date(2026, 9, 2), owner="maintainer",
+        tie_break=("roadmap.md", 0), old_token="W1", phase="P2", number=1,
+    )
+    slice_ = doc_id_cli._Draft(
+        materialize="roadmap_row", prefix="SL", kind=None, title="Round-trip slice",
+        status="draft", created=date(2026, 9, 2), owner="planner",
+        tie_break=("roadmap.md", 1), old_token="W1-1", phase="P2", number=1,
+        work_token="W1",
+    )
+    doc_id_cli._restructure_roadmap(root, [work, slice_], "P2", "Round-trip phase")
+
+    roadmap = root / "docs" / "roadmap.md"
+    rows = doc_index.scan_roadmap_rows(roadmap)
+    assert {r.header.id for r in rows} == {"WK-1", "SL-1"}, rows
+    slice_header = next(r.header for r in rows if r.header.id == "SL-1")
+    assert slice_header.work == "WK-1"
+
+    sections = doc_index.scan_phase_sections(roadmap)
+    assert len(sections) == 1, sections
+    assert sections[0].phase == "P2"
+    assert sections[0].works == ("WK-1",)

@@ -5,15 +5,12 @@ Synthetic corpus for `tests/test_doc_index.py` (W37-3). Phase `P9` and works `WK
 can never collide with a live id.
 
 ## P9 — Fixture phase
-
-```yaml
 status: closed
 opened: 2026-01-01
 target: 2026-02-01
 gates: plan freeze 2026-01-10 · code freeze 2026-01-20 · docs freeze 2026-01-25
 exit criteria: WF-1400 delivered end to end
 works: WK-1200, WK-1210
-```
 
 ### WK-1200 — Alpha work
 
