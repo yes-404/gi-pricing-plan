@@ -312,24 +312,52 @@ lands in. **Detection is not repair**, and a citation that resolves to a file an
 wrong place in it is worse than one that fails loudly. **Placement is DP-B and no task here
 builds against it.**
 
-**5.4 A docstring can describe a ruled question as an open gap, and the next reader builds on
-it.** `is_vendored`'s docstring in `scripts/_docid.py` describes the `LICENSE` criterion as *"a
-known, reported gap"*, names the ruling that resolved it, and says *"Apply the ruling once #563
-merges; until then this implements the rule exactly as published."* **`#563` merged.** The
-docstring is now a careful, accurate description of a state the repository has left, sitting
-directly above code that still implements it.
+**5.4 One docstring is stale in two independent ways, and both misled a reader.**
+`is_vendored`'s docstring in `scripts/_docid.py` is careful, well-sourced, and wrong twice over.
 
-It cost real work in this Work: the shape of row 9's fix was twice argued from that docstring
-rather than from Ruling 69, and twice reached a conclusion the ruling had already closed —
-including once in a draft of §7 of this plan, removed before filing. **A description of a
-superseded state is a live hazard in a migration this size**, because it reads as current, it
-sits where the reader is already looking, and nothing checks it.
+**Staleness one — it presents a ruled question as open.** It describes the `LICENSE` criterion
+as *"a known, reported gap"*, names Ruling 69 as having resolved it, and instructs: *"Apply the
+ruling once `#563` merges; until then this implements the rule exactly as published."*
+**`#563` merged.** The sentence is now an accurate description of a state the repository has
+left, sitting directly above code that still implements it.
 
-**The property, which is what a check should assert:** no docstring or comment in the migration
-path names a ruling as unapplied while that ruling is merged. *Violation: a comment citing a
-merged ruling in the future tense.* **§7 of the superseded plan's §7.9 code-rewrite task is the
-natural place to sweep for it**, and the sweep is cheap — the citations are greppable. If the
-walk-through finds others, each is named in the ledger rather than fixed silently.
+**Staleness two — its count predates the derivation that changed it.** The docstring reads
+*"nine of the 28 ruff-excluded skills carry an NT-0019 §5.4 change row, **two of which**
+(`writing-plans`, `subagent-driven-development`) are creating instruments Ruling 66 places
+inside W37-6's own migration commit"* (`scripts/_docid.py:323-325`). That was right when
+written, against Ruling 66's floor of seven. The superseded plan's §6.2 then **derived** the
+set, adding `writing-skills` (member 11) and `brainstorming` (member 12) — both ruff-excluded.
+Checked at `f4cbbb7` against all thirteen members: **four, not two.**
+
+| Ruling 66 member | Skill | In the ruff exclude list |
+|---|---|---|
+| 1 | `writing-plans` | yes |
+| 2 | `subagent-driven-development` | yes |
+| 11 | `writing-skills` | yes |
+| 12 | `brainstorming` | yes |
+
+**Neither staleness changes what row 9 obliges, and the second does not threaten the equality
+form.** Ruling 69 §2 part 3: *"The exemption reaches only the blanket passes… Exempt from the
+blanket pass is not the same as never touched: a named row in §5.4 is a deliberate edit and is
+applied."* Membership exempts the files **beneath** a `SKILL.md`, never the `SKILL.md` itself —
+and a creating instrument's instruction *is* its `SKILL.md` prose. All four receive their
+Ruling 66 edit. Ruling 69 §4 acceptance item 3 is the proof: after this commit those
+instruments must **differ** from their merge-base, and being unchanged is the violation.
+
+**Why this sits in the risk section rather than in a correction.** The shape of row 9's fix was
+argued from this docstring rather than from Ruling 69 **twice in this Work, by two different
+readers** — a lead's instruction to an executor, and a draft of §7 of this plan. Both times the
+docstring was read as current and the ruling it names was not opened. Both were caught by
+someone reading the ruling and refusing the instruction with a citation, which is the behaviour
+that worked and the only thing that did.
+
+**A description of a superseded state is a live hazard in a migration this size.** It reads as
+current, it sits where the reader is already looking, and nothing checks it. **The property a
+check should assert:** no comment in the migration path names a merged ruling in the future
+tense, and no comment states a count the corpus can contradict. *Violations: a comment citing a
+merged ruling as pending; a hard-coded count of a derived set.* Both are greppable, and the
+superseded plan's §7.9 code-rewrite task is the natural sweep point. **If the walk-through finds
+others, each is named in the ledger rather than fixed silently.**
 
 ---
 
