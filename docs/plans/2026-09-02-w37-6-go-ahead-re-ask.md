@@ -1361,9 +1361,27 @@ established it at the previous ones.**
 
 #### Four ambiguities, reported and not resolved
 
-**These are the part of the pass worth the maintainer's attention.** Each is a case where the
-figure is defensible and the *predicate* is not uniquely determined — which `CLAUDE.md` §13's
-predicate clause exists to surface.
+**These are the part of the pass worth the maintainer's attention, and none of them is resolved
+here.** Each is a case where the figure is defensible and the *predicate* is not uniquely
+determined — which `CLAUDE.md` §13's predicate clause exists to surface. **Reporting without
+resolving is deliberate**: adjusting a figure to whichever predicate a reader prefers would
+substitute this document's judgement for a measurement, and three of the four are not this
+document's to settle.
+
+**They are not the same kind of thing, and the difference is the useful part.**
+
+- **(1) is determined, but only by evidence that had to be gone and looked for** — validating
+  each candidate against five earlier pins. Without that, both answers look equally defensible.
+- **(2) is not an ambiguity at all. It is a gap between two instruments**, and it survives
+  whichever predicate anyone prefers: **the plan expects W37-6 to touch four more ruling
+  documents than W37-6's own code will find.** That one is being carried into the register as a
+  finding by the lead, filed after this document is complete so that filing it does not move the
+  figures above.
+- **(3) is a units defect in the superseded record** — the kind that misleads silently rather
+  than loudly, and the same shape as the `1988`/`1985` contrast that record itself documents.
+- **(4) is inert**: the value is flat under both predicates, so nothing rests on the choice. It
+  is listed because *two predicates agreeing is not confirmation*, which is worth saying once
+  even where it costs nothing.
 
 1. **The ruling-heading predicate is ambiguous, and the ambiguity now bites.** Two predicates
    both give 95/39 at `64f63ee`: **A** = `^#+\s+Ruling\s+[0-9]+` scoped to `docs/plans/`;
@@ -1584,6 +1602,25 @@ A document that reports none has not looked; a document that reports three has. 
 form is worth stating once: a check that is right by luck is indistinguishable from a check that
 works, until the luck changes** — and all three here were about to change, by a broader
 predicate, a later edit, and a `git fetch --prune` respectively.
+
+**A fourth pattern, distinct from the three coincidences, and it appeared three times in one
+round across three different people.** Not a wrong argument — **a correct argument attached to a
+figure from the wrong tree**:
+
+| Instance | The argument | The figure |
+|---|---|---|
+| `[SLOT-3]`'s completion result | sound | measured at `ac10d30`, not `32fc63c` |
+| The stamp-set exposure table | sound — `#653` moves it by **0**, exactly as reasoned | **429**, a level from before `cbf56b0` took it to **430** |
+| This document's own gate runs | sound | run against a `c888b61` base while the document claimed `32fc63c` |
+
+**All three were reported as one fact and were two.** Its author put it better than this document
+had: **a claim about *change* and a claim about *state* are different measurements, and a table
+cell carrying both hides which tree each came from.** The invariance was measured on one tree and
+the level inherited from another, in a single cell, as though one measurement established both.
+
+**This defect gets less scrutiny than a wrong argument, because the reasoning checks out.** A
+reader who verifies the logic stops there — which is exactly what a reader should do, and is why
+the figure needs its own provenance rather than borrowing the argument's.
 
 **And one near miss, recorded because of what it says about the failure mode.** §4 reports that a
 `grep` pattern manufactured a false absence about F90's tree, because the SHA it looked for was
