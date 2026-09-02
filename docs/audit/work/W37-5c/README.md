@@ -506,7 +506,7 @@ and this record is where a W37-6 planner will look for them.
 | **F86** | Ruling 49's decay rule: no faithful check, wrong population, blind backstop | **carry forward with an owner.** Its register row names **this close** as *"the event that next assigns an owner"*, so silence here is the defect the finding reports. Nothing in the slice built any of its three limbs — `2e5f260` files it. **Proposed owner: W37-6**, on the same footing as F87/F88/F90 (all four are instrument-correctness findings the migration commit cannot be trusted without), with the fallback the row itself names — the next §14 plan review — if the lead prefers not to load W37-6 further | **closed-with-findings** |
 | **F87** | Widening `_ID_SCOPE_ROOTS` reaches no non-markdown file; 62 of 65 stay invisible to checks 30–39 | **carry forward with an owner — W37-6, fix before close**, as its row already says. Independently confirmed here: `_id_scope_documents()` → **1** document, **0** of the 65 exempt entries in scope (§6) | **closed-with-findings — W37-6 precondition** |
 | **F88** | Two §5.2-routed populations discovery does not reach; limb 1 **aborts every real run** | **carry forward with an owner — W37-6.** §2 row 5 raises its severity above what its own row records: limb 1 is not "blind", it is a **fifth abort point**, in the same class as F80–F82 which were treated as run-blocking. Limb 3 already discharged in its filing commit | **closed-with-findings — W37-6 precondition, run-blocking** |
-| **F89** | Five test fixtures written into the real `docs/plans/`; one run's fixture reds another's gate | **carry forward with an owner.** Its row says *"the actual disposition is the lead's"* and proposes no fix. **Proposed owner: W37-6**, because a migration run in one supervised commit is precisely the occasion a concurrent gate run corrupts. Applied while auditing: §4's mutation was made on a copy outside the tree for this reason | **closed-with-findings** |
+| **F89** *(amend, do not renumber)* | Five test fixtures written into the real `docs/plans/`; one run's fixture reds another's gate — **plus a second instance found by this audit: an untracked closure README reds the suite (§10b)**, adopted by the lead 2026-09-02 as an amendment to F89 rather than a new id | **carry forward with an owner.** Its row says *"the actual disposition is the lead's"* and proposes no fix. **Proposed owner: W37-6**, because a migration run in one supervised commit is precisely the occasion a concurrent gate run corrupts. **Amendment folded in on the lead's instruction**: two matchers over one population disagreeing is Ruling 83's class, and F89's falsifiable clause already reopens on it — `_discover_audit_closure_readmes` walks the filesystem, the README census walks `git ls-files`, and a file visible to one and invisible to the other breaks a partition they are asserted to agree on. Applied while auditing: §4's mutation was made on a copy outside the tree for this reason | **closed-with-findings** |
 | **F90** | Check 37 reds 95 of 95 post-migration rulings; its detector cannot see a `###` heading | **carry forward with an owner — W37-6, fix before close.** Filed `d8d6e3f` (#646), after this audit began; its row names *"the next W37-6 go-ahead request"* as the event and lists four options, **one of which must be dispositioned before that ask is made** | **closed-with-findings — W37-6 precondition** |
 | *(no register row)* | **The 53-file Reference-stamp deferral is recorded only in a squash-commit body** | **carry forward with an owner — W37-6.** §7a. Not currently a register row; proposed as one, or as a line in the active leaf plan joining it to that plan's frozen predecessor item 13 | **open — no register row** |
 | *(no register row)* | **`docs/roadmap.md`:382 still says three abort points, with line numbers that resolve at no tree** | **fix before close.** §5b. One sentence, and the correction already exists in `6bbfe63`'s Addendum B | **open — no register row** |
@@ -652,9 +652,32 @@ disclosure. That is the check working.
 **Retry counters (NT-0014 artifact B):** `none recorded`. Read at `d8d6e3f` with
 `python3 .claude/skills/watcher-runtime-state/scripts/write_runtime_state.py show` —
 `in_flight_expensive_verifications.entries` is `[]` and no `replan`/`fix` counters exist in the
-file. **The same read shows the state file is stale**: `position.slice` reads `W37-4`,
-`written_at` `2026-09-02T02:02:13Z`, while the repository is on W37-5c. Reported as an
-observation about the watcher, not a finding against this slice.
+file.
+
+**And the state file is not merely stale — it has not been written at all since 02:03Z.**
+Corrected on the lead's challenge, which asked for the stronger claim to be evidenced or
+dropped. `written_at` alone cannot separate *"re-derived and unchanged"* from *"never touched"*
+— that is `NT-0007`'s shape, a field that reads the same either way. **`mtime` separates them**,
+and is the instrument `NT-0014` exists to be checked by:
+
+```
+/home/puzhenhao1989/gi-pricing-plan.local/handover/runtime-state.json
+  mtime                      2026-09-02 02:03:05Z
+  position.written_at        2026-09-02T02:02:13Z
+  in_flight.written_at       2026-09-01T20:06:20Z
+  read at                    2026-09-02T18:24:07Z
+```
+
+**16 h 21 min with no write**, across W37-5, W37-5b and W37-5c. `position.slice` still reads
+`W37-4`. So the claim this record makes is *the writer has not run since 02:03Z* — evidenced by
+`mtime`, not inferred from the field.
+
+**What this record does not claim**, because `mtime` cannot distinguish them: whether the
+watcher is alive and not writing, dead, or never re-armed this session. Naming the three is the
+honest stopping point — `NT-0014`'s own reasoning is that an anomaly-only monitor's silence is
+indistinguishable from its death, and reading the log or a `pgrep` would answer a different
+question than the one asked. **Reported as an observation about the watcher, not a finding
+against this slice**, and offered to the lead as a candidate register row if they read it as one.
 
 ---
 
