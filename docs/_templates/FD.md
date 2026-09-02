@@ -9,7 +9,8 @@ Full field set, status vocabulary and role assignments:
 `docs/process/document-ids.md` §1.5, §1.2a, §1.6. `kind:`, `phase:`, `work:`, `slice:`,
 `plans:`, `supersedes:` and `superseded_by:` do not apply to this family and must not
 appear here. `decision:` below is this family's declared extra (§1.2's family table) —
-no other family may use it.
+no other family may use it. `decision:` carries the register disposition and is never
+confused with `status:` (NT-0015 P4).
 -->
 
 ---
@@ -20,8 +21,7 @@ status: active                  # active → closed | retired (§1.2a)
 created: YYYY-MM-DD
 owner: auditor
 tree: <commit-sha this was written against>
-decision: <fix before close | accept | carry forward | split verdict, with qualifiers —
-  the register disposition; never confused with `status:` (NT-0015 P4)>
+decision: <fix before close | accept | carry forward | split verdict, with qualifiers>
 corrected_by: []
 relates: []                     # ids only — the SL-/WK- this discharges through, once known
 ---
