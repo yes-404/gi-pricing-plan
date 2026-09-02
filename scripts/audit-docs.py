@@ -1934,7 +1934,31 @@ LEGACY_FORM_PATTERNS: Final[tuple[tuple[str, re.Pattern[str]], ...]] = (
 #: data, never a path the migration is required to rewrite. `REDIRECTS.csv` is "already in
 #: the item"; `was:` lines (wherever they appear) are handled separately below, by line,
 #: not by path, since a `was:` line can appear inside an otherwise-checked file.
-LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = ("docs/REDIRECTS.csv",)
+#:
+#: The seven `tests/fixtures/docs-migration/` entries below are W37-5's — Ruling 67 §2's
+#: own residue class names exactly this: "the fixtures ... of the migration". Each is
+#: here only because its *discovery-defining* content — the thing that makes the fixture
+#: recognisable as its legacy shape at all, not incidental prose — is itself a legacy
+#: form: an ADR's own `ADR-0001` title, a note's own `NT-0001` title, a multi-ruling
+#: file's own `## Ruling N` headings, the roadmap fixture's own `W1-1`/`W1-2` row keys, the
+#: spec fixture's own `**FR-EX-1**`-shaped bold ids, and the vendored-skill pair's shared
+#: `FR-EX-1` citation (NT-0019 §1.5's own stated property under test: a vendored
+#: manifest's citations rewrite, a file beneath it does not — needs the same token on
+#: both sides of that boundary to prove the difference). Sixteen files carried a legacy
+#: form before this list was written; sweeping away *incidental* prose citations (a
+#: comment saying "NT-0019 §4 step 2", not tested by anything) — the same fix Ruling 67
+#: Part 1 applied to the pattern itself, applied here to the fixture corpus — got that
+#: down to these seven; see `tests/test_audit_docs_ids.py`'s load-bearing proof for each.
+LEGACY_FORM_EXCLUDED_PATHS: Final[tuple[str, ...]] = (
+    "docs/REDIRECTS.csv",
+    "tests/fixtures/docs-migration/docs/adr/0001-example-decision.md",
+    "tests/fixtures/docs-migration/docs/notes/0001-example-note.md",
+    "tests/fixtures/docs-migration/docs/plans/2026-08-12-example-rulings.md",
+    "tests/fixtures/docs-migration/docs/roadmap.md",
+    "tests/fixtures/docs-migration/docs/specs/00-overview.md",
+    "tests/fixtures/docs-migration/.claude/skills/vendored-example-skill/SKILL.md",
+    "tests/fixtures/docs-migration/.claude/skills/vendored-example-skill/references/extra.md",
+)
 
 _WAS_LINE_RE: Final = re.compile(r"^\s*was:\s")
 
