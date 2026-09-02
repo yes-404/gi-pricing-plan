@@ -1011,6 +1011,13 @@ class MigrateResult:
     files_deleted: tuple[str, ...]
     skipped_vendored: tuple[str, ...]
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    # Ruling 94's substituted Ruling 84 §4 item 2, and item 3 alongside it: what the
+    # ledger-axis check *looked at*, carried out so `_cmd_migrate` can print it whether or
+    # not it found anything. A passing zero that says which zero it counted, never the
+    # absence of a line — the same reason `_report_skipped` prints its own zero.
+    ledger_records_checked: int = 0
+    ledger_slice_values_checked: int = 0
+    ledger_work_values_checked: int = 0
 
 
 # ---------------------------------------------------------------------------------------
@@ -2940,6 +2947,134 @@ def _regenerate_index_for_migrate(root: Path) -> None:
 
 
 # ---------------------------------------------------------------------------------------
+# Ruling 84 §4's second acceptance item, as Ruling 94 substituted it
+# (`docs/plans/2026-09-02-w37-vacuous-acceptance-item-ruling.md` §2 — register finding
+# F77). The struck form asked for a check reddening "on a deliberately broken fixture
+# carrying `slice: SL-99999`", which no fixture can produce: `_stamp_header` skips `slice`
+# for every caller, so the writer refuses to emit the key a fixture would have to carry.
+# Nothing was ever wrong because nothing was ever written.
+#
+# The substituted form *counts* rather than forbids, and Ruling 94 §2 gives the reason:
+# forbidding `slice:` outright "encodes this migration's 'no data source' state as the
+# rule, so it would red correctly today and wrongly the first time a ledger legitimately
+# carries a slice" (Ruling 84 §3 item 5 keeps the field permitted for every other ledger).
+# Its broken input is "a one-line mutation of `_stamp_header` — remove `slice` from the
+# skip tuple so the template's `slice: SL-NNNNN` placeholder is emitted", the
+# mutate-the-writer shape Ruling 70 item 2 established and Rulings 79/80 already use.
+#
+# Ruling 84 §4's *third* item shares this pass, because Ruling 94 §4 obliges it — "an
+# emitted `LG-` with `work=None` must red. *Violation: assuming an item is satisfied
+# because its sibling was found vacuous*" — and because Ruling 84 §1(e) makes the two one
+# property: "the ten are permitted to omit `slice:` because `work:` is present, not
+# because both may be absent."
+#
+# Read from the files on disk, never from `migrate`'s own draft bookkeeping, for the
+# reason `migration_diff_violations` gives above: a bug in what `migrate` *reports* must
+# not be able to hide from what it *did*. `slice:` in particular exists only as a
+# template placeholder that survives `_stamp_header` — no `_Draft` field carries it — so a
+# draft-level check could not see the mutation at all.
+# ---------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _LedgerAxes:
+    """What the ledger-axis check looked at, not only what it found. The three counts are
+    reported unconditionally (including zero) by `_cmd_migrate`, per Ruling 94's "the
+    passing state today is a count of **zero**, and the check must **say so** rather than
+    pass silently" and [`NT-0007`](../docs/notes/0007-context-bound-measures-cap-not-discipline.md):
+    a boundary metric that reads zero by construction reports where the boundary sits, not
+    that anything was verified.
+    """
+
+    records: int
+    slice_values: int
+    work_values: int
+    slice_violations: tuple[str, ...]
+    work_violations: tuple[str, ...]
+
+
+def _emitted_ledger_headers(root: Path) -> list[tuple[str, _docid.Header]]:
+    """Every `LG-` document present under the ledger family directory of `root`, as
+    `(repo-relative path, parsed header)`. Filtered on the header's own `id:` rather than
+    on the filename, so a file that landed in the directory without an id — or with
+    another family's — is not counted as a ledger this migration emitted.
+    """
+    ledgers_dir = root / "docs" / _DOCUMENT_FAMILY_DIR["LG"]
+    if not ledgers_dir.is_dir():
+        return []
+    found: list[tuple[str, _docid.Header]] = []
+    for path in sorted(ledgers_dir.rglob("*.md")):
+        header = _docid.parse_header(path)
+        if header is None or header.id is None:
+            continue
+        id_match = _docid.ID_RE.fullmatch(header.id)
+        if id_match is None or id_match.group(1) != "LG":
+            continue
+        found.append((path.relative_to(root).as_posix(), header))
+    return found
+
+
+def _resolves_to_row(value: str, prefix: str, rows: Collection[tuple[str, int]]) -> bool:
+    """Whether `value` is a well-formed `prefix`-family id naming a row in `rows`.
+
+    Parsed with `_docid.ID_RE` rather than compared as a string, so the padded filename
+    form and the unpadded citation form of one id resolve alike (NT-0019 §1.1 rules 2-3) —
+    and so a value that is not an id at all, the template's own `SL-NNNNN` placeholder
+    included, resolves to nothing rather than raising.
+    """
+    match = _docid.ID_RE.fullmatch(value.strip())
+    if match is None or match.group(1) != prefix:
+        return False
+    return (prefix, int(match.group(2))) in rows
+
+
+def _check_emitted_ledger_axes(root: Path) -> _LedgerAxes:
+    """Ruling 84 §4's second and third acceptance items, over the ledgers `root` actually
+    carries, resolved against `root`'s own (post-restructure) `docs/roadmap.md`.
+
+    Both row families come from `scan_roadmap_row_ids`, the module's existing reader of
+    `WK-`/`SL-` row headings — never a second pattern, which is how two definitions of
+    "a row" drift apart (Ruling 67 §2).
+    """
+    emitted = _emitted_ledger_headers(root)
+    row_ids = list(scan_roadmap_row_ids(root))
+    slice_rows = {pair for pair in row_ids if pair[0] == "SL"}
+    work_rows = {pair for pair in row_ids if pair[0] == "WK"}
+
+    slice_values = work_values = 0
+    slice_violations: list[str] = []
+    work_violations: list[str] = []
+    for rel, header in emitted:
+        if header.slice_ is not None:
+            slice_values += 1
+            if not _resolves_to_row(header.slice_, "SL", slice_rows):
+                slice_violations.append(
+                    f"{rel}: slice: {header.slice_} resolves to no SL- row in "
+                    "docs/roadmap.md (Ruling 84 §4 item 2, as substituted by Ruling 94)"
+                )
+        if header.work is not None:
+            work_values += 1
+            if not _resolves_to_row(header.work, "WK", work_rows):
+                work_violations.append(
+                    f"{rel}: work: {header.work} resolves to no WK- row in "
+                    "docs/roadmap.md (Ruling 84 §4 item 3)"
+                )
+        elif header.slice_ is None:
+            work_violations.append(
+                f"{rel}: carries neither work: nor slice: (Ruling 84 §4 item 3 — a "
+                "ledger omits slice: because work: is present, not because both may be "
+                "absent, §1(e))"
+            )
+    return _LedgerAxes(
+        records=len(emitted),
+        slice_values=slice_values,
+        work_values=work_values,
+        slice_violations=tuple(slice_violations),
+        work_violations=tuple(work_violations),
+    )
+
+
+# ---------------------------------------------------------------------------------------
 # `migrate` itself.
 # ---------------------------------------------------------------------------------------
 
@@ -3077,6 +3212,27 @@ def migrate(root: Path) -> MigrateResult:
     _write_redirects(root, redirect_rows)
     _regenerate_index_for_migrate(root)
 
+    # Last, because it reads what was written rather than what was planned, and the
+    # roadmap it resolves against is only final after `_restructure_roadmap` above.
+    #
+    # The two limbs are treated differently, deliberately, and each for a stated reason.
+    # `slice_violations` raises: Ruling 94 says "requires every one to resolve", and the
+    # count is zero by construction today (`_stamp_header` skips the key), so this can
+    # fire only after a deliberate change to the writer — it adds no new way for a real
+    # run to stop. `work_violations` warns: Ruling 84 §4 item 3 scopes itself to "once
+    # W37-6 has created the `WK-` rows", a state nothing can execute end to end while the
+    # three unconditional guards (F80-F82) abort a real run before it, so making it abort
+    # would add an unmeasured stop to an irreversible migration. It is a hard assertion in
+    # the tests instead. Flagged as an interpretation rather than made silently, in
+    # `docs/audit/findings/F77.md`'s 2026-09-02 update and this row's register entry.
+    ledger_axes = _check_emitted_ledger_axes(root)
+    warnings.extend(ledger_axes.work_violations)
+    if ledger_axes.slice_violations:
+        raise ValueError(
+            "migrate: emitted LG- record(s) carry a slice: naming no SL- row -- "
+            + "; ".join(ledger_axes.slice_violations)
+        )
+
     return MigrateResult(
         assigned=tuple(assigned),
         redirect_rows=tuple(redirect_rows),
@@ -3084,6 +3240,9 @@ def migrate(root: Path) -> MigrateResult:
         files_deleted=tuple(files_deleted),
         skipped_vendored=tuple(skipped_vendored),
         warnings=tuple(warnings),
+        ledger_records_checked=ledger_axes.records,
+        ledger_slice_values_checked=ledger_axes.slice_values,
+        ledger_work_values_checked=ledger_axes.work_values,
     )
 
 
@@ -3343,6 +3502,15 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         print(f"skipped (vendored) {path}")
     for warning in result.warnings:
         print(f"doc-id.py migrate: warning: {warning}", file=sys.stderr)
+    # Unconditionally, including the zeros — Ruling 94: "the passing state today is a
+    # count of zero, and the check must say so rather than pass silently."
+    print(
+        f"doc-id.py migrate: ledger axes checked on {result.ledger_records_checked} "
+        f"emitted LG- record(s): {result.ledger_slice_values_checked} slice: value(s) "
+        f"and {result.ledger_work_values_checked} work: value(s) resolved against "
+        "docs/roadmap.md",
+        file=sys.stderr,
+    )
     print(f"doc-id.py migrate: {len(result.assigned)} id(s) assigned")
     return 0
 

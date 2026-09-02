@@ -24,6 +24,7 @@ import sys
 import types
 from collections.abc import Sequence
 from datetime import date
+from typing import Any
 
 import pytest
 
@@ -2300,3 +2301,474 @@ def test_register_discovery_matches_every_row_register_lint_itself_declares(
     assert len(drafts) == len(rows)
     old_tokens = [d.old_token for d in drafts]
     assert len(set(old_tokens)) == len(old_tokens)  # every id discovered exactly once
+
+
+# ---------------------------------------------------------------------------------------
+# W37-5c item 1 -- Ruling 84 §4's second acceptance item, as Ruling 94 substituted it
+# (`docs/plans/2026-09-02-w37-vacuous-acceptance-item-ruling.md` §2), plus Ruling 84 §4's
+# third item, which Ruling 94 §4 obliges to be exercised alongside it. Register finding
+# F77.
+#
+# The struck form named a broken input that cannot be built: "a deliberately broken fixture
+# carrying `slice: SL-99999`". `_stamp_header` skips `slice` for every caller, so no
+# fixture document can carry the key -- the writer refuses to emit it. Ruling 94's
+# substituted form moves the broken input to the writer: "remove `slice` from the skip
+# tuple so the template's `slice: SL-NNNNN` placeholder is emitted", the mutate-the-producer
+# shape Ruling 70 item 2 established. That is what `_module_with_source_mutation` below
+# performs, on the shipped `scripts/doc-id.py` text rather than on a monkeypatched constant
+# extracted for the purpose: a constant added to make the mutation easy is a seam this
+# module would then be testing instead of the writer.
+#
+# Every count below closes over the *real* corpus -- the ten W5 records in the real
+# `docs/audit/closure-records.md`, the real `docs/_templates/LG.md` placeholder, and the
+# real `docs/roadmap.md`'s W5 row -- written into a scratch tree, never into the repository.
+# ---------------------------------------------------------------------------------------
+
+_STAMP_SKIP_WITH_SLICE = 'elif key in ("slice", "deliverable", "lands_in", "trigger"):'
+_STAMP_SKIP_WITHOUT_SLICE = 'elif key in ("deliverable", "lands_in", "trigger"):'
+
+
+def _module_with_source_mutations(
+    tmp_path: pathlib.Path, mutations: Sequence[tuple[str, str]], *, name: str
+) -> types.ModuleType:
+    """`scripts/doc-id.py` exactly as shipped with each `(old, new)` substring replaced,
+    loaded as its own module rooted at `tmp_path/name` so its `REPO_ROOT` is that scratch
+    tree.
+
+    Several substitutions rather than one because a carrier can have more than one writer:
+    the A-series file is claimed by `_discover_plain_plans` today and by
+    `_discover_multi_ruling_files` once F81's heading widening lands, and a mutation proof
+    that edits only today's writer stops proving anything the day the other one takes over
+    — silently if the surviving writer still supplies the carrier.
+
+    `docs/_templates/` is copied in because `_stamp_header` reads the template block
+    through `REPO_ROOT` rather than through the `root` it writes to -- the placeholder
+    values a mutation must be able to emit are template data, so they have to be the real
+    ones. A mutated module still *reads* the repository, which is the whole point of these
+    proofs -- every discovery call below is passed `ROOT` -- but it is given no path that
+    would let it write there: the `root` it writes to is always a scratch tree.
+
+    The `count == 1` assertion is the guard against a silent no-op mutation, which is the
+    way a mutation proof goes green for the wrong reason: a `str.replace` that matches
+    nothing returns the original source and the "mutated" module is the shipped one.
+    """
+    import shutil
+
+    source = DOC_ID_SCRIPT_PATH.read_text(encoding="utf-8")
+    for old, new in mutations:
+        assert source.count(old) == 1, (
+            f"the line this mutation edits occurs {source.count(old)} time(s) in "
+            f"{DOC_ID_SCRIPT_PATH.name}, not once -- re-derive the mutation from the rule "
+            "it proves rather than loosening the match"
+        )
+        source = source.replace(old, new, 1)
+    root = tmp_path / name
+    (root / "scripts").mkdir(parents=True)
+    (root / "scripts" / "doc-id.py").write_text(source, encoding="utf-8")
+    shutil.copytree(ROOT / "docs" / "_templates", root / "docs" / "_templates")
+    return _load_by_path(
+        f"_doc_id_mutation_{name}",
+        root / "scripts" / "doc-id.py",
+        missing_module_name="doc_id",
+    )
+
+
+def _emit_the_real_w5_ledgers(
+    module: types.ModuleType, scratch: pathlib.Path, *, resolve_work: bool
+) -> list[Any]:
+    """Write the real ten `W5 ... (in progress, not closed)` records of
+    `docs/audit/closure-records.md` into `scratch` as `LG-` documents, exactly as
+    `migrate`'s own phase C does, and give `scratch` the `docs/roadmap.md` those ledgers
+    resolve against -- rendered by `_roadmap_row_block`, the same function
+    `_restructure_roadmap` uses, never a hand-typed heading.
+
+    `resolve_work=False` withholds the roadmap's W5 draft, which is the only way to
+    produce Ruling 84 §4 item 3's violation ("a ledger with neither axis") from real
+    inputs: `_write_document_drafts` omits `work:` when its token resolves to nothing.
+
+    Returns the ledger drafts so a caller states its expected counts in terms of the
+    corpus it actually read, not a number retyped from this docstring.
+    """
+    ledgers = [d for d in module._discover_closure_records(ROOT) if d.prefix == "LG"]
+    assert ledgers, "fixture assumption: the real closure-records file still yields LG- drafts"
+    roadmap_drafts, _phase_titles, _occurrences = module._discover_roadmap(ROOT)
+    works = [d for d in roadmap_drafts if d.old_token == "W5"] if resolve_work else []
+    if resolve_work:
+        assert len(works) == 1, works
+    module._assign_numbers([*ledgers, *works], 1000)
+    module._write_document_drafts(scratch, ledgers, works)
+    (scratch / "docs").mkdir(parents=True, exist_ok=True)
+    (scratch / "docs" / "roadmap.md").write_text(
+        "".join(
+            module._roadmap_row_block(ROOT / "docs" / "_templates", w, [*ledgers, *works])
+            for w in works
+        ),
+        encoding="utf-8",
+    )
+    return ledgers
+
+
+def test_ledger_slice_check_reports_the_zero_it_counted_on_the_real_ten(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 94: "The passing state today is a count of **zero**, and the check must
+    **say so** rather than pass silently -- a boundary metric that reads zero by
+    construction reports where the boundary sits, not that anything was verified"
+    (`NT-0007`). The zero asserted here is therefore reported *alongside* the population it
+    was counted over: ten emitted `LG-` records were opened and each was read for a
+    `slice:`, which is a different fact from "no `slice:` was found".
+
+    `_cmd_migrate` prints the same three counts unconditionally, including these zeros,
+    which is where the claim becomes falsifiable for someone reading a real run's output
+    rather than this test.
+    """
+    scratch = tmp_path / "control"
+    ledgers = _emit_the_real_w5_ledgers(doc_id_cli, scratch, resolve_work=True)
+    assert len(ledgers) == 10, (
+        "Ruling 84 §4 item 1's own number, over the real docs/audit/closure-records.md"
+    )
+
+    report = doc_id_cli._check_emitted_ledger_axes(scratch)
+
+    assert report.records == 10, report
+    assert report.slice_values == 0, report
+    assert report.slice_violations == (), report.slice_violations
+    assert report.work_values == 10, report
+    assert report.work_violations == (), report.work_violations
+
+
+def test_ledger_slice_check_reds_on_ruling_94s_stamp_header_mutation(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 94's named broken input, run against the real corpus: "The deliberately
+    broken input is a one-line mutation of `_stamp_header` -- remove `slice` from the skip
+    tuple so the template's `slice: SL-NNNNN` placeholder is emitted -- after which the
+    check must red. It is not a fixture document."
+
+    Both states are measured here rather than only the red one, because the signature
+    Ruling 94 §4 names as the violation is "a check that passes identically before and
+    after a mutation to the thing it checks": ten `slice:` values and ten violations
+    mutated, zero and zero unmutated, over the identical ten real records.
+
+    `SL-NNNNN` is asserted in the message because it is the template's own placeholder --
+    the value the writer emits once it stops skipping the key -- and because it is not a
+    well-formed id at all, which is why `_resolves_to_row` rejects it rather than looking
+    it up.
+    """
+    mutated = _module_with_source_mutations(
+        tmp_path, ((_STAMP_SKIP_WITH_SLICE, _STAMP_SKIP_WITHOUT_SLICE),), name="stamp-skip"
+    )
+    mutated_tree = tmp_path / "mutated-tree"
+    ledgers = _emit_the_real_w5_ledgers(mutated, mutated_tree, resolve_work=True)
+    mutated_report = mutated._check_emitted_ledger_axes(mutated_tree)
+
+    assert mutated_report.records == len(ledgers), mutated_report
+    assert mutated_report.slice_values == len(ledgers), mutated_report
+    assert len(mutated_report.slice_violations) == len(ledgers), mutated_report.slice_violations
+    assert all("SL-NNNNN" in v for v in mutated_report.slice_violations), (
+        mutated_report.slice_violations
+    )
+
+    control_tree = tmp_path / "control-tree"
+    _emit_the_real_w5_ledgers(doc_id_cli, control_tree, resolve_work=True)
+    control_report = doc_id_cli._check_emitted_ledger_axes(control_tree)
+    assert control_report.records == len(ledgers), control_report
+    assert control_report.slice_values == 0, control_report
+    assert control_report.slice_violations == (), control_report.slice_violations
+
+
+def test_ledger_slice_check_separates_a_resolving_slice_from_a_dangling_one(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """The passing half of the resolve limb, which the writer mutation above cannot reach.
+
+    That mutation can only ever emit the template placeholder, so it proves the check reds
+    on a `slice:` naming nothing; it proves nothing about a `slice:` naming something. A
+    check that reds on every input it can be shown is as useless as one that reds on none
+    -- which is precisely the state Ruling 86 §4 item 3 is in today (see below) -- so the
+    discriminating pair is written by hand here: two ledgers differing only in their
+    `slice:` value, against one `SL-` row.
+
+    Ruling 84 §3 item 5 is why this matters beyond the arithmetic: "`slice:` stays
+    permitted for every other ledger. Nothing here narrows the field." The lead's rejected
+    alternative -- forbid `slice:` on an `LG-` outright -- would red on the resolving
+    ledger here, and Ruling 94 §2 rejected it for exactly that: "it would red correctly
+    today and wrongly the first time a ledger legitimately carries a slice."
+
+    The row is written padded (`SL-00077`) and the ledgers cite it unpadded (`SL-77`),
+    NT-0019 §1.1 rules 2-3's two forms of one id, so the resolution is proven to go
+    through `_docid.ID_RE` rather than through string equality.
+    """
+    tree = tmp_path / "pair"
+    ledgers_dir = tree / "docs" / "ledgers"
+    ledgers_dir.mkdir(parents=True)
+    for number, slice_value in ((1, "SL-77"), (2, "SL-99999")):
+        (ledgers_dir / f"LG-{number:05d}-fixture.md").write_text(
+            "---\n"
+            f"id: LG-{number}\n"
+            "family: ledger\n"
+            "title: a fixture ledger\n"
+            "status: closed\n"
+            "created: 2026-09-02\n"
+            "owner: executor\n"
+            f"slice: {slice_value}\n"
+            "---\n\nBody.\n",
+            encoding="utf-8",
+        )
+    (tree / "docs" / "roadmap.md").write_text(
+        "#### SL-00077 — a slice row that exists\n", encoding="utf-8"
+    )
+
+    report = doc_id_cli._check_emitted_ledger_axes(tree)
+
+    assert report.records == 2, report
+    assert report.slice_values == 2, report
+    assert len(report.slice_violations) == 1, report.slice_violations
+    assert "SL-99999" in report.slice_violations[0], report.slice_violations
+    assert "LG-00002" in report.slice_violations[0], report.slice_violations
+    assert report.work_violations == (), (
+        "Ruling 84 §1(e): a ledger carrying a resolving slice: has an axis, so the "
+        "neither-axis violation must not also fire on it"
+    )
+
+
+def test_ruling_84_item_3_reds_on_an_emitted_ledger_with_neither_axis(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 84 §4's third acceptance item, which Ruling 94 §4 obliges to be exercised
+    here rather than assumed: "Ruling 84 §4's third item is exercised too, since §1(a)
+    shows it is live: an emitted `LG-` with `work=None` must red. *Violation: assuming an
+    item is satisfied because its sibling was found vacuous.*"
+
+    Its own violation clause is "a ledger with neither axis", and §1(e) says why the two
+    axes are one property: "the ten are permitted to omit `slice:` because `work:` is
+    present, not because both may be absent."
+
+    The broken input is again a real-corpus one rather than a fixture document: withhold
+    the roadmap's W5 draft and `_write_document_drafts` omits `work:` from all ten, which
+    is the state `test_write_document_drafts_resolves_a_ledgers_work_and_phase_from_the_roadmap`
+    already pins as *permitted at write time* -- correctly, since migrate must not raise
+    mid-write over an unresolved optional field. This check is where that same state stops
+    being silent: written without either axis is allowed, *ending* without either is not.
+    """
+    resolved = tmp_path / "resolved"
+    ledgers = _emit_the_real_w5_ledgers(doc_id_cli, resolved, resolve_work=True)
+    assert doc_id_cli._check_emitted_ledger_axes(resolved).work_violations == ()
+
+    orphaned = tmp_path / "orphaned"
+    _emit_the_real_w5_ledgers(doc_id_cli, orphaned, resolve_work=False)
+    report = doc_id_cli._check_emitted_ledger_axes(orphaned)
+
+    assert report.records == len(ledgers), report
+    assert report.work_values == 0, report
+    assert len(report.work_violations) == len(ledgers), report.work_violations
+    assert all("neither work: nor slice:" in v for v in report.work_violations), (
+        report.work_violations
+    )
+
+
+def test_migrate_carries_the_ledger_axis_counts_out_of_the_fixture_run(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """The counts reach `MigrateResult`, so `_cmd_migrate` has something to print. The
+    fixture corpus emits no ledger at all, which makes this the weaker of the two zeros
+    NT-0007 warns about -- and it is asserted with `records == 0` beside it precisely so
+    the two zeros cannot be confused: "no ledger existed" is a different claim from
+    "ledgers existed and carried no `slice:`", and only the real-corpus tests above make
+    the second one.
+    """
+    result = doc_id_cli.migrate(pristine_a)
+
+    assert result.ledger_records_checked == 0, result.ledger_records_checked
+    assert result.ledger_slice_values_checked == 0, result.ledger_slice_values_checked
+    assert result.ledger_work_values_checked == 0, result.ledger_work_values_checked
+
+
+def test_cmd_migrate_prints_the_ledger_axis_counts_including_the_zeros(
+    doc_id_cli: types.ModuleType,
+    pristine_a: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The other half of Ruling 94's substituted item, which the `MigrateResult` assertion
+    above does not reach: "printing the count it checked ... the check must **say so**
+    rather than pass silently."
+
+    A count carried on a result object and never printed is the `_ID_SCOPE_ROOTS` shape
+    Ruling 94 names -- true, and telling you nothing -- so the line itself is asserted,
+    on the run that produces the zeros, because the zeros are the case the requirement is
+    about. Same discipline and same stream as `_report_skipped`, whose own docstring gives
+    the reason: a scan reports what it covered, not just what it found.
+    """
+    exit_code = doc_id_cli.main(["migrate", "--repo-root", str(pristine_a)])
+
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "ledger axes checked on 0 emitted LG- record(s)" in err, err
+    assert "0 slice: value(s)" in err, err
+    assert "0 work: value(s)" in err, err
+
+
+# ---------------------------------------------------------------------------------------
+# W37-5c item 2 -- Ruling 86 §4's third acceptance item, re-instrumented.
+#
+# As worded -- "Each of the three new `RL-` records carries an `owner:` that is not
+# `decision-maker`" -- it can pass on no input at this tree, for two independent reasons,
+# and neither is a defect in how it was built:
+#
+#   1. Its property was reversed. Ruling 95 struck Ruling 86 §3 item 2's first clause, and
+#      `2e48960` made `_ruling_file_owner` return `_RULING_DEFAULT_OWNER` unconditionally,
+#      so `decision-maker` is now the only value any input can produce. The item does not
+#      "never fire"; it cannot pass.
+#   2. Its subject does not exist. `_RULING_HEADING_RE` is `^##\s+Ruling\s+(\d+)...`; the
+#      A-series' own headings are `###` and letter-suffixed (`### Ruling A1 ...`), so
+#      `_discover_multi_ruling_files` emits no `RL-` draft for that file at all. The two-
+#      axis widening Ruling 86 §3 item 1 obliges is routed to "W37-6's executor" and has
+#      not landed, so "the three new `RL-` records" are not built.
+#
+# Ruling 94's remedy is what applies -- "the property stands; the instrument is amended" --
+# and it applies to the item's *Violation* clause, which is where these acceptance items
+# state their property: "*Violation: a frozen record attributing a decision to a role that
+# did not make it.*" Ruling 95 §2 affirms that property in terms while removing `owner:`
+# as its carrier: "The attribution concern that motivated Ruling 86 item 2 is real -- *a
+# frozen record must not attribute a decision to a role that did not make it* -- and it is
+# **not what this field expresses**. Authorship is preserved where Ruling 88 already put
+# it: in the record's own body, which says who ruled it and under what grant, and in
+# `was:`, which keeps the source path. **Nothing about the A-series' history is lost by
+# this ruling.**"
+#
+# So the re-derived instrument checks the two carriers Ruling 95 names, by execution, over
+# the real file -- and is written over `was:`/body content rather than over today's family,
+# so that it keeps meaning the same thing when the heading widening lands and the draft
+# becomes three `RL-`s instead of one `PL-`. Reason 2 above is why that is not optional:
+# the widening is F81, in this same slice, so an instrument bound to today's family would
+# have been a red build within days rather than a check. Both the selector
+# (`_a_series_drafts`) and the mutation proof reach both writers for that reason.
+#
+# Deliberately not an assertion about `owner:` at all: post-Ruling-95 `_ruling_file_owner`
+# is content-independent, so any owner assertion over these files returns the same value
+# for any input whatsoever and discriminates nothing -- the identical trap
+# `test_ruling_87_standalone_files_are_untouched_by_this_amendment` names above.
+#
+# Whether Ruling 86 §4 item 3's *text* should now be struck or replaced is a ruling
+# amendment and is not taken here: this builds an instrument, it does not edit a filed
+# ruling.
+# ---------------------------------------------------------------------------------------
+
+_A_SERIES_GRANT = (
+    "authorise you to approve NT-0012 NT-0013 and NT-0014 landing on behalf of me"
+)
+_A_SERIES_TOKENS = ("Ruling A1", "Ruling A2", "Ruling A3")
+
+# Both writers that can claim this file, mutated together — see
+# `_module_with_source_mutations`. `_discover_plain_plans` claims it today;
+# `_discover_multi_ruling_files` claims it once F81 widens `_RULING_HEADING_RE`, because
+# `_discover_plain_plans` skips any file that regex matches.
+_SPLIT_RULING_DRAFT = 'old_token=f"Ruling {number_word}", was=rel, body=section_text,'
+
+_WAS_DROPPED = (
+    ("old_token=None, was=path.relative_to(root).as_posix(),", "old_token=None, was=None,"),
+    (_SPLIT_RULING_DRAFT, 'old_token=f"Ruling {number_word}", was=None, body=section_text,'),
+)
+_BODY_DROPPED = (
+    (r'body=text.rstrip("\n") + "\n",', r'body=title + "\n",'),
+    (_SPLIT_RULING_DRAFT, 'old_token=f"Ruling {number_word}", was=rel, body="",'),
+)
+
+
+def _a_series_drafts(module: types.ModuleType) -> list[Any]:
+    """Every draft the migration derives from the A-series source, across *both* discovery
+    functions that can claim it — one `PL-` today, three `RL-` (plus any residual) once
+    F81's letter-suffixed heading widening lands.
+
+    Gathering across both is the point, and it is the same defensive move as writing the
+    assertions over `was:`/body rather than over `owner:`, applied one level up. Ruling 86
+    §4 item 3's property is about a record's authorship trail, not about which family
+    carries it, so a *selector* bound to today's family is as brittle as an assertion bound
+    to it would be: `_discover_plain_plans` skips any file `_RULING_HEADING_RE` matches, so
+    on the day F81 widens that regex a family-bound selector reds — a red build with a
+    docstring, not a guard.
+    """
+    return [
+        d
+        for d in (
+            *module._discover_plain_plans(ROOT),
+            *module._discover_multi_ruling_files(ROOT),
+        )
+        if d.was == _A_SERIES_SOURCE
+    ]
+
+
+def test_ruling_86_item_3_the_a_series_attribution_trail_survives_migration(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 86 §4 item 3's re-derived instrument (see the block comment above).
+
+    Both carriers Ruling 95 §2 names for the attribution property survive whatever drafts
+    the migration derives from the A-series source: every one of them still points `was:`
+    at that file, and between them they still carry the delegation heading, the grant it
+    was made under, and all three `Ruling A<n>` tokens.
+
+    **Asserted over the union of the drafts, and over no count**, so that F81's landing
+    neither reds it nor weakens it. Today that union is one `PL-`; after F81 it is three
+    `RL-` (plus any residual), and it still has to carry the same text -- Ruling 68 class 4
+    already requires the concatenation of every split output to reproduce the source's own
+    body lines in order, so a split that dropped the delegation preamble would violate that
+    invariant *and* lose the attribution this item protects. The union is where those two
+    meet, which is why it is the right thing to assert over rather than merely a tolerant
+    one.
+
+    Proven non-vacuous by two mutations against the real corpus, in the test below -- each
+    dropping one carrier from *both* writers that can produce these drafts, so the proof
+    does not expire when the other writer takes over.
+    """
+    drafts = _a_series_drafts(doc_id_cli)
+    assert drafts, (
+        f"fixture assumption: some discovery function still derives a draft from "
+        f"{_A_SERIES_SOURCE} -- if neither does, the file has left the migration's reach "
+        "and this instrument needs re-deriving, not deleting"
+    )
+    assert all(d.was == _A_SERIES_SOURCE for d in drafts), [d.was for d in drafts]
+
+    bodies = "\n".join(d.body for d in drafts)
+    assert "The delegation" in bodies, "the drafts no longer state the delegation"
+    assert _A_SERIES_GRANT in bodies, "the drafts no longer state the grant it was under"
+    for token in _A_SERIES_TOKENS:
+        assert token in bodies, f"the drafts no longer carry {token}"
+
+
+def test_ruling_86_item_3_instrument_reds_when_either_carrier_is_dropped(
+    tmp_path: pathlib.Path,
+) -> None:
+    """The non-vacuity proof for the instrument above: two mutations of the producer, each
+    removing exactly one of the two carriers Ruling 95 §2 names, both run against the real
+    `docs/plans/` corpus.
+
+    `was: None` is the sharper of the two -- the drafts stop being findable by their source
+    path at all, which is the machine-readable half of the trail. Emptying the body leaves
+    `was:` intact and destroys the human-readable half: the record no longer says who ruled
+    it or under what grant.
+
+    Each mutation edits **both** writers that can claim this file, not just the one that
+    claims it today. A proof aimed only at `_discover_plain_plans` would stop proving
+    anything the moment F81 hands the file to `_discover_multi_ruling_files` -- and would
+    do it *silently*, since the surviving writer would keep supplying the carrier and the
+    mutated module would look indistinguishable from the shipped one.
+
+    Neither mutation is a fixture document, for the same reason Ruling 94 gave for the
+    `slice:` item: the thing under test is a writer, and the deliberately broken input for
+    a writer is the writer.
+    """
+    without_was = _module_with_source_mutations(tmp_path, _WAS_DROPPED, name="plan-was")
+    assert not _a_series_drafts(without_was), (
+        "dropping `was:` left an A-series draft still findable by its source path -- the "
+        "instrument above is not testing the carrier it claims to test"
+    )
+
+    without_body = _module_with_source_mutations(tmp_path, _BODY_DROPPED, name="plan-body")
+    emptied = _a_series_drafts(without_body)
+    assert emptied, "the body mutation must not also break `was:`"
+    bodies = "\n".join(d.body for d in emptied)
+    assert _A_SERIES_GRANT not in bodies, (
+        "the body mutation did not remove the grant statement -- re-derive it"
+    )
+    assert not any(token in bodies for token in _A_SERIES_TOKENS), bodies
