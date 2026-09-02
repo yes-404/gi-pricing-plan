@@ -422,6 +422,45 @@ instrumentation, not about one clause, and it is why the class is worth naming a
 **It was not visible until the counterexample was tried**, which is the argument for testing the
 way out of a class rather than reasoning about it.
 
+#### Measured on the completed run: the corruption did not happen, and the clause is now instrumented
+
+**The hazard above is closed for this instance, and closing it is what the rest of this subsection
+is worth reading for.** Measured by its author on the finished tree — **not** from the write trace,
+because *"nothing was written twice"* is the claim in question and cannot be its own evidence:
+
+| Net, applied to the completed tree | Result |
+|---|---|
+| a **second front-matter block immediately after the first** — the precise signature | **0** |
+| `name:` or `description:` **below** the closing `---` of the header block | **0** |
+| more than two `---` lines in the file | 218 — **all markdown thematic breaks**, read rather than counted |
+| **of the 28 vendored manifests, leading front-matter block changed** | **0** |
+
+A looser first pass flagged one file, `.claude/skills/writing-skills/SKILL.md` — a skill *about
+writing skills*, carrying example front matter in its body, and **byte-identical input to output**:
+the migration never wrote it.
+
+**Two vendored manifests were written, and that is correct rather than a near miss.**
+`secret-hygiene` and `writing-plans` took **body citation rewrites only** — `NT-0012 → RFC-130`,
+`NT-0014 → RFC-179`, `W10 → WK-905`, `W11 → WK-906`. NT-0019 §1.5 exempts the files **beneath** a
+vendored skill's boundary, not the manifest's own citations, and `_is_vendored_exempt` implements
+exactly that.
+
+**F88's acceptance items now carry this, which means the finding absorbed the diagnosis.** Item 4
+on `main` at `22d0361` reads *"**No vendored manifest is stamped** — its **leading front-matter
+block** is byte-identical before and after"*, and says of itself: ***"This is the clause the
+original lacked, and its absence is what made the original destructive."*** **The clause §2.5
+diagnoses is still live in F88's Falsifiable section, quoted above unchanged; what #649 added is
+the item that closes the gap it left.**
+
+**And closing it produced a second wrong clause, which is the part that should not be lost.** The
+first correction read *"no vendored manifest is written by the run — byte-identical before and
+after"* — which **reds on correct behaviour**, because §1.5 requires the manifest's own citations
+to rewrite. It was caught before merge and replaced by the leading-block form. **Two successive
+acceptance clauses on one item, both wrong, in opposite directions**: the original passed on
+damage, its replacement failed on correctness. That is the strongest available argument that
+writing a falsifiable clause is harder than it looks, and it is why §2.5 names a class rather
+than an incident. **The class remains unswept** — the denominator below is unchanged.
+
 #### How much of the corpus this has been swept over: almost none, and the denominator is not the one it looks like
 
 **One confirmed instance. No sweep. And the population it belongs to is not the 98.**
@@ -631,13 +670,46 @@ completed: **1,085 files written, 202 deleted, 293 created, 794 modified, no sev
 measured on one corpus, `c888b61`. It is not a proof that no later input can fail — only that
 nothing else fails on the tree the re-ask is about.*
 
-**One residual, disclosed rather than reconciled away.** `293 + 794 = 1,087`, which is **two more
-than the 1,085 writes**. The identity does not close, the explanation is not yet known — two
-files written through an API other than `Path.write_text`, or two instruments with different
-scopes, are both live candidates — and it is **routed to its author rather than guessed at here**.
-It does not bear on the 125: that crash is inside `_write_document_drafts`, well before
-`_write_redirects` and `_regenerate_index_for_migrate`, so a gap in the wrapper's coverage could
-not reach it. **That last sentence is reasoning, not a measurement**, and is marked as such.
+**The residual is closed, and it was a predicate confusion rather than a missing write.** An
+earlier revision of this section reported `293 + 794 = 1,087` against 1,085 and left it open.
+Answered by its author, by wrapping **every** filesystem-mutating API rather than hunting the two
+files — `write_text`, `write_bytes`, `Path.open` and `builtins.open` in write modes, `rename`,
+`replace`, `unlink`, `touch`, `mkdir`, the `os.` equivalents and the `shutil.` family — then
+statically scanning `doc-id.py`, `doc-index.py`, `register-lint.py` and `_docid.py` for a
+fifteenth. **There is none.**
+
+| Predicate | Figure |
+|---|---|
+| `MigrateResult.files_written` — **reported**, deduplicated by `dict.fromkeys` | **1,085** |
+| distinct paths `Path.write_text` touched | **1,086** |
+| distinct paths written across **every** mutating API | **1,087** |
+
+```
+created 293 + modified 794 = 1,087   = distinct paths written
+1,087 − 2                  = 1,085   = MigrateResult.files_written
+      the 2 = docs/INDEX.md, docs/REDIRECTS.csv — written, neither appended to files_written
+deleted 202                = MigrateResult.files_deleted 202
+```
+
+The one path `write_text` never touches is `docs/REDIRECTS.csv`: `_write_redirects` opens it with
+`redirects_path.open("w", newline=…)` and a `csv.writer` — confirmed in the source at `22d0361`.
+
+**So the figure is "1,087 written, 1,085 reported", never "1,085 written"** — and that is the
+**same predicate-versus-figure confusion as the 126**, in a second place, two rounds apart.
+
+**The 125 is unchanged, and the reasoning that said so was checked rather than accepted.** This
+document argued that a gap in the `write_text` wrapper could not reach the crash because
+`_write_redirects` runs later. Its author confirmed it **not by call order but by the delta** —
+the all-API set differs from `write_text`'s by exactly that one path, so there is no other blind
+spot to worry about. **A structural argument confirmed by measurement, in that order**, which is
+the ordering §2.6 already uses for `0 deleted`.
+
+**One figure withdrawn by its own author:** an earlier report of *"1,086 paths written more than
+once"* was the instrument, not the migration — `Path.write_text` calls `Path.open("w")`
+internally, so wrapping both double-records every path. Counted per API the figure is **306 paths
+written twice**: `_write_document_drafts` writes a file and `_rewrite_citations` re-writes it.
+Intentional, second supersedes first, **and not double-stamping** — which §2.5 establishes
+independently rather than by trusting this number.
 
 ---
 
@@ -1197,6 +1269,16 @@ A document that reports none has not looked; a document that reports three has. 
 form is worth stating once: a check that is right by luck is indistinguishable from a check that
 works, until the luck changes** — and all three here were about to change, by a broader
 predicate, a later edit, and a `git fetch --prune` respectively.
+
+**And one near miss, recorded because of what it says about the failure mode.** §4 reports that a
+`grep` pattern manufactured a false absence about F90's tree, because the SHA it looked for was
+preceded by `@ ` rather than by the words the pattern required. **One round later this document's
+author did the same thing**: checking whether F88's falsifiable clause still existed on `main`, a
+line-scoped `grep` for the full sentence returned **0** — the sentence **wraps**, and the clause
+was there all along. It was caught before anything was written, and the correction it would have
+produced was never made. **Two people, one round apart, on the same instrument.** That is the
+argument that the failure is structural rather than anyone's carelessness: **a line-scoped search
+answers a question about lines, and a claim about a document is not a claim about a line**.
 
 **What that means for the go-ahead in §10.** These are not open defects the maintainer must
 weigh. Every one is closed in the text that reports it. **The reason they are in a
