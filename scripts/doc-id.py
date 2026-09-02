@@ -1191,15 +1191,75 @@ def _discover_headed_split_file(
 
 
 _CLOSURE_HEADING_RE: Final = re.compile(
-    r"^###\s+(.+?),?\s*(?:accepted\s+)?(\d{4}-\d{2}-\d{2})\s*$", re.MULTILINE
+    r"^###\s+(.+?),?\s*(?:accepted\s+)?(\d{4}-\d{2}-\d{2})(.*)$", re.MULTILINE
 )
 _REVIEW_HEADING_RE: Final = re.compile(r"^###\s+(.+?),\s*(\d{4}-\d{2}-\d{2})\s*$", re.MULTILINE)
 
+# Task #31: two `closure-records.md` headings are a bespoke audit, never a plan or a
+# closure -- CLAUDE.md §5.4's bespoke-audit rule, its worked precedent
+# (`docs/audit/phases/1b/w11-process-conformance-audit.md`), and Ruling 77 (#579). Matched
+# by a distinctive title prefix, not the full reconstructed heading text (the exact
+# whitespace/punctuation the regex captures around the date is a capture-group detail, not
+# a stable string worth hardcoding) and not by position, so a future reordering of the
+# file does not silently misfile a different row onto this disposition.
+_CLOSURE_AUDIT_TITLE_PREFIXES: Final = (
+    "Independent audit",
+    "W4 mid-workstream scope findings",
+)
+
 
 def _discover_closure_records(root: Path) -> list[_Draft]:
-    return _discover_headed_split_file(
-        root, "docs/audit/closure-records.md", _CLOSURE_HEADING_RE, "CR", "auditor"
-    )
+    """`docs/audit/closure-records.md`: one `###` heading per record. Unlike
+    `_discover_plan_reviews` below, this does not delegate to `_discover_headed_split_file`
+    -- task #31 found the real file's headings carry real, record-level semantic
+    variation `_discover_headed_split_file`'s one-shape-fits-all output cannot express:
+
+    - Most headings end with their closing date and become a plain `CR-`, `kind: work`
+      record (`_discover_headed_split_file`'s original behaviour, unchanged here).
+    - The file's own first heading is a *phase* close, not a workstream's -- `kind:
+      phase` rather than the workstream default.
+    - Two headings (`_CLOSURE_AUDIT_TITLE_PREFIXES`) are a bespoke audit record: `RS-`,
+      `kind: audit`, `status: closed` rather than `CR-`/`work`/`active`.
+    - A heading carrying an "in progress, not closed" qualifier after its date is not a
+      closure at all yet. `migrate` cannot assign a family a governed document does not
+      have, so this raises rather than silently folding the record's content into
+      whichever heading happened to match next -- the exact defect task #31 files: eleven
+      unmatched headings folding into one neighbouring record's body, producing a
+      plausible-looking result instead of an error. Left failing until the decision-maker
+      rules what family these records take (task #31's own open question).
+    """
+    path = root / "docs" / "audit" / "closure-records.md"
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+    headings = list(_CLOSURE_HEADING_RE.finditer(text))
+    drafts: list[_Draft] = []
+    for i, heading in enumerate(headings):
+        title, date_str, trailer = heading.group(1).strip(), heading.group(2), heading.group(3)
+        start = heading.start() if i > 0 else 0  # preamble folds into the first record
+        end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
+        section_text = text[start:end].rstrip("\n") + "\n"
+        if "not closed" in trailer.lower():
+            raise NotImplementedError(
+                f"migrate: {path}, heading {title!r} ({date_str}) is not yet closed -- "
+                f"migrate cannot assign a family a governed document does not have (task "
+                f"#31). Resolve the record's disposition (or close it) before migrating."
+            )
+        if title.startswith(_CLOSURE_AUDIT_TITLE_PREFIXES):
+            prefix, kind, status = "RS", "audit", "closed"
+        elif title.startswith("Phase "):
+            prefix, kind, status = "CR", "phase", "active"
+        else:
+            prefix, kind, status = "CR", "work", "active"
+        drafts.append(
+            _Draft(
+                materialize="document", prefix=prefix, kind=kind, title=title, status=status,
+                created=date.fromisoformat(date_str), owner="auditor",
+                tie_break=("docs/audit/closure-records.md", i), old_token=None,
+                was="docs/audit/closure-records.md", body=section_text,
+            )
+        )
+    return drafts
 
 
 def _discover_plan_reviews(root: Path) -> list[_Draft]:
