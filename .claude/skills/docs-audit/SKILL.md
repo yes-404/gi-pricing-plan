@@ -357,6 +357,38 @@ the rows, not by re-adding the summary line — a second pass over the same summ
 same mistake. This is why `_reconcile_census` names units and why the ruling-acceptance-item census
 script asserts bucket membership instead of confirming a printed total.
 
+### Validating a marker count — a marker count validates the marker, and nothing else
+
+**A labelled clause is one way to state a testable failure condition, not the only way, so
+counting the label undercounts the property.** Added 2026-09-02, found while checking whether
+26 `CONSTRUCTIBLE` rows in the ruling acceptance-item sweep might be riding on a section's
+position rather than each carrying its own check — the same shape a sibling finding that day
+found in a register script's weak proxy.
+
+The check built for it: count labelled `*Violation:` clauses in a ruling's acceptance section
+and compare against the item count its own summary claims. Two rulings (79, 80) came back
+short — three items claimed, one and two clauses found. **Read both in full rather than filing
+the mismatch, and both were false alarms.** Ruling 79 §4's first and third items state their
+failure condition as *"must fail today... with `unknown row field 'tree'`"* and *"it must
+red"* — genuine, testable claims, just not carrying the literal word the count was built to
+find. Ruling 80 §4 has the identical shape. All six items across both rulings hold; the count
+was wrong, not the rulings.
+
+**The test to apply before trusting a marker count:** *is the marker itself the property, or
+only one way of stating it?* If an unlabelled phrasing can express the same claim — and here
+it plainly does — a count of the label measures the label's popularity, not the property's
+presence. This is the same failure as `scripts/register-lint.py`'s `check_unowned_decay`
+(`_UNOWNED_MIN_LEN`, a length proxy for "names an event"): a marker's **presence** stood in
+for the **property** the marker is supposed to indicate, in both directions — absent here
+(the property held without the marker), weak there (the marker fired without the property).
+
+**So, for any labelled-clause count: read what the count excludes before trusting what it
+includes.** A shortfall is real evidence something may be missing, but only a read of the
+actual text distinguishes "the item never stated a violation" from "the item stated one
+without the label" — the same distinction Rulings 21 and 51 required by hand, because a
+mechanical marker cannot draw it. A count that fires and is overruled on a full read is
+working; the failure mode is filing the count without reading past it.
+
 ## The check the script does not do
 
 The roadmap's decision-gate table must cover every open question **exactly once**. Rows
@@ -437,6 +469,14 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 (fifth entry, same day) — marker-count rule added: *"a marker count validates the
+marker, and nothing else."* Sibling to the total-validates-total entry below, found the same
+day auditing whether the same shape of weak check reached 26 rows of a separate sweep. Two
+apparent shortfalls (Rulings 79 and 80: three items claimed, one and two labelled `Violation:`
+clauses found) both cleared on a full read — the missing items stated their failure condition
+without the literal label. The count was the thing that was wrong, not the rulings; recorded
+so the next mechanical count of a label is read past before it is trusted. Tree `c0739ac`.
 
 2026-09-02 (fourth entry, same day) — counting rule added: *"a total validates the total, and
 nothing else."* Recorded because the lead validated a set of six bucket counts by confirming they
