@@ -60,7 +60,15 @@ the pass.
 6. **§10 is empty until the maintainer writes it, and no other section records a go-ahead.**
    *Violation:* an approval inferred from §9's recommendation, or a date in §10 in any hand but
    the maintainer's.
-7. **No frozen plan is edited by the branch carrying this record**, and no dated append to the
+7. **The mechanism sentence's remedy is corrected, not just its symptom repeated.**
+   *Violation:* this document quoting *"two instruments reach one population and only one
+   consults the register"* without §2.2's dated correction attached — because a maintainer
+   reading the quotation alone reaches for the register, and **importing the register is the
+   wrong repair**: it answers *can this file carry a header at all* where the abort asks *has
+   this migration already stamped it*. A second violation of the same item: **§2.4's `[SLOT-3]`
+   filled against F88 limb 1's falsifiable clause alone**, which §2.5 shows is destructive when
+   met naively.
+8. **No frozen plan is edited by the branch carrying this record**, and no dated append to the
    active plan is made to agree with a figure re-derived here. *Violation:* either leaf plan,
    or the superseded ask, modified by this branch. The check is
    `git diff --stat origin/main...<this branch> -- docs/plans/2026-09-02-w37-6-migration-run-leaf-plan.md docs/plans/2026-09-02-w37-6-migration-run-leaf-plan-v2.md docs/plans/2026-09-02-w37-6-go-ahead-ask.md`,
@@ -167,6 +175,47 @@ exemption ruling, filed the same day, says the same thing from the other side: t
 does not by itself let a run proceed
 ([`2026-09-02-w37-vendored-exemption-ruling.md`](2026-09-02-w37-vendored-exemption-ruling.md)).
 
+**Dated correction, 2026-09-02 — the sentence above is right about the symptom and points at
+the wrong remedy, and the quotation is kept rather than rewritten.** It is a verbatim quotation
+of a merged closure record, so it is not edited; what is corrected is the repair a reader
+naturally reaches for from it. Found by the executor fixing the fifth abort point, by reading
+the register's own declaration rather than a description of it. **Two things are wrong with
+"import the register into `doc-id.py`":**
+
+1. **`UNSTAMPABLE_EXEMPTIONS` was never made public for `doc-id.py`.** Its declaration binds it
+   to one named consumer, and that consumer is inside `audit-docs.py`. Verbatim, from the
+   comment block above the constant at `origin/main`: *"**NOTE FOR W37-6:** when
+   `_ID_SCOPE_ROOTS` widens to the whole corpus, **check 30 must consult
+   `UNSTAMPABLE_EXEMPTIONS`** or it will fail on all 65 of these. … `UNSTAMPABLE_EXEMPTIONS` is
+   public for exactly that consumer."*
+2. **The two instruments are not asking one question**, so importing the register would
+   substitute a *different* wrong predicate and look like a fix. The register answers **can this
+   file carry a header at all** — a stamp-set question, F83's. The aborting call answers **has
+   this migration already stamped it** — idempotency. **Conflating those is the defect.**
+
+**The remedy is one classifier plus a reconciliation test, not a second register consumer** —
+and the module already contained the right instrument. `_front_matter_state`
+(`scripts/doc-id.py`) returns `"none"`, `"stamped"` or `"foreign"`, decides `"stamped"` on
+`family:` — *"the one key every family's template carries and no harness block does, a positive
+test for this migration's own output"* — and is deliberately textual rather than a
+`parse_header` call because, in its own docstring, *"a classifier that crashes on the very files
+it exists to classify cannot report them."*
+
+**It was written by the same slice, for this exact failure, and one discovery function predated
+it and was never converted.** `git log --oneline -S'def _front_matter_state' origin/main --
+scripts/doc-id.py` returns exactly one commit: **`47eb2ba` (#639), W37-5c's own item 2**. At
+`origin/main` the classifier has **one** caller, inside the Reference-stamp path, while
+`_discover_vendored_skill_manifests` still decides with `if _docid.parse_header(skill_md) is not
+None: continue  # already stamped`. **Its own docstring names it as the singular case that most
+needed the classifier** — *"the one discovery function in this module that cannot infer 'already
+migrated' from a legacy shape being absent, because stamping does not move or rename this
+file"* — and it is the one that did not get it.
+
+**So the defect was not a wrong count; it was a bucket with no name.** `parse_header is not
+None` is a two-way test over a three-way population: it collapses `stamped` and `foreign` into
+one branch, and `foreign` is the bucket that had no name. **A maintainer reading only the
+quotation above would reach for the register, which is the wrong repair.**
+
 ### 2.3 What that means for condition 3
 
 The condition names F80, F81 and F82. **All three are cleared, on the real corpus, by
@@ -186,13 +235,68 @@ Filled at the final tree with one of two states, and with the sentence that belo
 - **Cleared.** Then: *the fifth abort point was found by the W37-5c close audit, not by the
   slice that was cut to clear abort points* — and it is fixed after the fact, in a separate
   change, outside the irreversible commit. Red-before / green-after on the real corpus, with the
-  same execution discipline §2.1 used, and the F88 limb-1 falsifiable clause satisfied on its own
-  terms: the function must **return without raising** *and* return the manifests not stamped by
-  **this** migration, rather than the ones whose foreign front matter fails to parse.
+  same execution discipline §2.1 used — and **against a test the F88 limb-1 clause alone does not
+  supply**, for the reason §2.5 gives. The acceptance test is the one §2.5 names: the classifier
+  is the sole decider of "already stamped", and a reconciliation names any manifest it cannot
+  place. **Satisfying limb 1's clause is necessary and is not sufficient.**
 - **Not cleared.** Then a go-ahead given here authorises a run whose first act is an abort, and
   §9 says so.
 
 **Either way the finding stands as recorded.** The close audit found it; the slice did not.
+
+### 2.5 A falsifiable clause that is destructive when met — a failure shape with no precedent here
+
+**This is the sharpest thing produced by fixing the fifth abort point, and it generalises past
+it.** Found by the executor, not by this document.
+
+F88 limb 1's falsifiable clause reads: *"discharged when `_discover_vendored_skill_manifests(ROOT)`
+returns without raising **and** returns the manifests that have not been stamped by *this*
+migration rather than the ones whose front matter fails to parse — **proven by a manifest
+carrying foreign front matter being returned, not skipped**."*
+
+**Wired naively — widen the predicate so foreign front matter is returned rather than skipped —
+that clause is satisfied and the repository is damaged.** Re-derived at `origin/main` against a
+read-only `git archive` snapshot, through the shipped symbols (`_is_vendored_skill_manifest`,
+`_front_matter_state`, `_docid.parse_header`), never the working tree:
+
+| At `origin/main` | Count |
+|---|---|
+| `.claude/skills/*/SKILL.md` | **46** |
+| of those, `_is_vendored_skill_manifest` true | **28** |
+| of the 28, `_front_matter_state` == `"stamped"` | **0** |
+| not stamped, `parse_header` returns a `Header` | **25** — today skipped as *"already stamped"* |
+| not stamped, `parse_header` raises | **3** — today **aborts the run** |
+| **a naive limb-1 fix returns** | **28** |
+
+Each returned path then goes through `migrate()`'s own loop, which is a **prepend, not a merge**:
+
+```
+skill_md.write_text(header + "\n" + body, encoding="utf-8")
+```
+
+Every one of the 28 already opens with the harness's own `---` block. **So the naive fix writes a
+second front-matter block above the first, on 28 vendored files, inside the irreversible
+commit** — and F92 already establishes why that is not recoverable by re-running: `parse_header`
+reads `lines[0] == "---"` to the closing `---`, so a file has exactly one block and a stamp must
+be **merged**, which is W37-6's own §7.1 Task 1 and was deliberately deferred.
+
+**Worse than the abort it was written to fix, irreversible, and it passes its own acceptance
+test.** The abort is a clean pre-write stop (§2.1). This is a write.
+
+**Why the maintainer should see it rather than only the fix.** Every finding in this effort
+carries a falsifiable clause, and this repository's whole discipline for trusting a fix is that
+the clause be met and proven on broken input. **A clause that causes harm when met is a hole in
+that discipline, not in this one finding.** It is a different shape from anything the acceptance-
+item sweep's taxonomy can express: not vacuous (it fires), not invalidated (nothing broke it),
+not indicative (it is a genuine check), and not the `WITHDRAWN` class Addendum A §A.4 had to add
+for an item wrong in both directions. **This one is right in both directions and dangerous
+anyway** — it correctly describes the end state and says nothing about the path, and the path is
+where the damage is.
+
+**Stated as a class rather than as an incident, and not fixed here.** No sweep of every finding's
+clause for this property has been run; this is one instance, found while fixing an unrelated
+thing. Whether the other clauses in this effort share it is unmeasured, and that is the
+disclosure — not a claim that they do, and not a claim that they do not.
 
 ---
 
@@ -207,7 +311,7 @@ W37-5c's own seven scope items and reading what its instruments then reported.
 | Finding | What it is | Found or made | Class |
 |---|---|---|---|
 | **[F87](../audit/findings/F87.md)** | Widening `_ID_SCOPE_ROOTS` reaches **no non-markdown file**; the glob is the gate, not the roots | **Found** — a pre-existing gap the slice's own build revealed | **Blinds.** A silent pass |
-| **[F88](../audit/findings/F88.md)** | Limb 1: `_discover_vendored_skill_manifests` aborts every real run. Limb 2: `docs/audit/phases/1b/register.md` is discovered by nothing, silently | **Found** | **Limb 1 stops** (reclassified from *blinds* by the close audit). Limb 2 blinds |
+| **[F88](../audit/findings/F88.md)** | Limb 1: `_discover_vendored_skill_manifests` aborts every real run — **and its own falsifiable clause is destructive if met naively, §2.5**. Limb 2: `docs/audit/phases/1b/register.md` is discovered by nothing, silently | **Found** | **Limb 1 stops** (reclassified from *blinds* by the close audit). Limb 2 blinds |
 | **[F90](../audit/findings/F90.md)** | Check 37 reds **95 of 95** post-migration ruling documents, its `##`-only detector unable to see a `###` heading | **Found** | **Blinds — and may change the cut. §4** |
 | **[F92](../audit/findings/F92.md)** | 53 files deferred out of §4 step 5's Reference stamp set, recorded only in a squash-commit body | **Made** — the deferral is W37-5c's own, and it was the right call | Custody, not behaviour |
 
@@ -655,6 +759,13 @@ reason.
    form F92 already set on that same file.
 4. **On W37-5c's close record — the lead will file it**, per §8.1, in a separate change that
    this branch does not make.
+5. **On §2.5's failure shape — the lead recommends a sweep, and does not run one here.** One
+   falsifiable clause in this effort has been shown to be destructive when met. Whether the
+   others share the property is **unmeasured**, and the lead's reading is that finding out is
+   cheap, is not W37-6's work, and should not gate this go-ahead: the clause that matters to the
+   run is F88 limb 1's, and §2.4 already refuses to accept it as the test. **Recommended as a
+   register row with an owner rather than as a condition on §10** — the maintainer may disagree
+   and make it one.
 
 **What this recommendation does not do.** It does not assume the go-ahead covers anything beyond
 the run. NT-0019 §7 runs **(a) to (k)**; items (i), (j) and (k) belong to later slices — (i) to
