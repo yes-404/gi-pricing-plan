@@ -3882,3 +3882,60 @@ def test_cmd_migrate_prints_the_deferred_reference_stamps_by_name(
     assert "Reference stamp target(s) in scope and not stamped by this run" in err
     assert ".claude/agents/example-agent.md" in err
     assert "W37-6" in err, "the reason travels with the name, not just the count"
+
+
+def test_exactly_one_discovery_writer_claims_the_closure_readmes(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Every F84 test above selects with `_discover_audit_closure_readmes`. **That is a
+    claim about scope wearing setup's clothes**, so it is derived here rather than assumed:
+    every `_discover_*` in the module — found by name, not from a list someone has to
+    remember to extend — is run against the real tree and asked whether it claims any file
+    under the two closure directories.
+
+    If a second writer ever claims one, the selector in every test above stops seeing the
+    whole picture while still passing, which is the failure `_a_series_drafts`' own
+    docstring records one population over: *"Passing while blind to three quarters of its
+    own subject."* The fix then is to widen the selector, not to widen this assertion.
+
+    Three writers need special handling and each is handled rather than skipped silently:
+    `_discover_headed_split_file` is a parameterised helper with a different signature,
+    `_discover_roadmap` returns a 3-tuple, and `_discover_vendored_skill_manifests` raises
+    `HeaderError` on the real corpus today (three vendored manifests do not parse — F83's
+    third row). A writer that raises cannot claim anything, so it is recorded and passed
+    over; a writer that was silently skipped could hide a claim.
+    """
+    in_scope = {
+        p.relative_to(ROOT).as_posix()
+        for rel_dir in doc_id_cli._AUDIT_CLOSURE_README_DIRS
+        for p in (ROOT / rel_dir).rglob("*")
+        if p.is_file()
+    }
+    assert in_scope, "no corpus to test against"
+
+    names = sorted(n for n in dir(doc_id_cli) if n.startswith("_discover_"))
+    assert len(names) >= 12, names  # a rename that emptied this list would pass vacuously
+    claimants: dict[str, int] = {}
+    raised: list[str] = []
+    for name in names:
+        if name == "_discover_headed_split_file":
+            continue  # a parameterised helper, called by the writers above, not one itself
+        try:
+            produced = getattr(doc_id_cli, name)(ROOT)
+        except doc_id_cli._docid.HeaderError:
+            raised.append(name)
+            continue
+        if name == "_discover_roadmap":
+            produced = produced[0]
+        claimed = {
+            d.was for d in produced if getattr(d, "was", None) is not None
+        }
+        if claimed & in_scope:
+            claimants[name] = len(claimed & in_scope)
+
+    assert set(claimants) == {"_discover_audit_closure_readmes"}, claimants
+    assert claimants["_discover_audit_closure_readmes"] >= 17
+    assert raised == ["_discover_vendored_skill_manifests"], (
+        "a writer that raises on the real corpus cannot claim anything, but the set of "
+        f"such writers is itself a finding worth noticing: {raised}"
+    )
