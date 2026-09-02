@@ -1354,3 +1354,140 @@ def test_f83_reconciliation_reds_when_the_corpus_cannot_be_read(
     assert len(failures) == 1, failures
     assert "cannot enumerate NT-0019's stamp set" in failures[0]
     assert "could not invoke git" in failures[0]
+
+
+# =========================================================================================
+# Check 35, third clause — F83 condition 2 over the ENFORCED scope, proven by simulating
+# W37-6's widened `_ID_SCOPE_ROOTS` rather than waiting for it.
+#
+# A check that is vacuous today and first executes inside the irreversible commit is the
+# hazard this slice exists to remove: printing a zero keeps it from reading as an
+# invisible zero, and is not the same as having run it. `.claude/skills/python-test`
+# §"a discovery call is a claim; simulate the pending change".
+# =========================================================================================
+
+#: NT-0019 §1.11 check 30's own words for the post-migration scope: "every file under
+#: `docs/`, every charter, skill and agent".
+def _widened_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
+    return (
+        audit.ROOT,
+        audit.REPO / ".claude" / "roles",
+        audit.REPO / ".claude" / "skills",
+        audit.REPO / ".claude" / "agents",
+    )
+
+
+def _post_migration_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
+    """The widened scope as it stands *after* the migration: everything stampable
+    stamped, leaving only the files that cannot be.
+
+    `_id_scope_documents` yields a *file* root verbatim — only *directory* roots go
+    through its markdown glob — so a tuple of file paths models an arbitrary scope
+    exactly. That is the whole reason this simulation is possible without a fixture tree.
+    """
+    registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
+    roots: list[pathlib.Path] = []
+    for rel in audit.nt0019_stamp_set():
+        path = audit.REPO / rel
+        try:
+            header = audit._docid.parse_header(path)
+        except audit._docid.HeaderError:
+            header = None
+        if header is not None or (rel in registered and rel.endswith(".md")):
+            roots.append(path)
+    return tuple(roots)
+
+
+def test_scope_clause_reds_from_inside_the_migration_commit(
+    audit: types.ModuleType,
+) -> None:
+    """D14's "enforcement red from the migration PR", proven now rather than discovered
+    then. Widen the roots without stamping anything and clause (b) must red in bulk — a
+    green here would mean the clause cannot see the migration it exists to gate.
+    """
+    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
+    audit.failures.clear()
+    unstamped = audit._check_scope_unstamped_are_registered()
+    assert unstamped > 300, unstamped
+    assert len(audit.failures) > 300, len(audit.failures)
+
+
+def test_scope_clause_is_green_once_the_migration_has_stamped_everything(
+    audit: types.ModuleType,
+) -> None:
+    """The state W37-6 has to reach: the only unstamped files left in the enforced scope
+    are the ones the register accounts for. The positive control for the test below.
+    """
+    setattr(audit, "_ID_SCOPE_ROOTS", _post_migration_roots(audit))  # noqa: B010
+    audit.failures.clear()
+    unstamped = audit._check_scope_unstamped_are_registered()
+    assert unstamped == 3, unstamped  # the three vendored manifests, and only those
+    assert audit.failures == []
+
+
+def test_scope_clause_reds_by_name_on_an_unregistered_unstamped_file_in_scope(
+    audit: types.ModuleType,
+) -> None:
+    """F83's falsifiable clause under the scope it was written for. Identical input to
+    the test above but for one register entry, so the difference in outcome is
+    attributable to the register and to nothing else.
+    """
+    dropped = ".claude/skills/vue-best-practices/SKILL.md"
+    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != dropped)
+    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1, dropped
+    setattr(audit, "_ID_SCOPE_ROOTS", _post_migration_roots(audit))  # noqa: B010
+    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", kept)  # noqa: B010
+    audit.failures.clear()
+    audit._check_scope_unstamped_are_registered()
+    assert len(audit.failures) == 1, audit.failures
+    assert dropped in audit.failures[0]
+    assert "not in the F83 exemption register" in audit.failures[0]
+
+
+def test_widening_the_scope_roots_alone_reaches_no_non_markdown_file(
+    audit: types.ModuleType,
+) -> None:
+    """**The selector, not the asserts.** `_id_scope_documents` walks a directory root
+    with `rglob("*.md")`, so widening `_ID_SCOPE_ROOTS` brings in no non-markdown file at
+    all: of the 65 files on the register, a fully widened scope reaches **3** — the
+    vendored manifests — and none of the 62 non-`.md` files the register mostly consists
+    of.
+
+    This is why the register is reconciled against NT-0019's stamp set by
+    `_check_unstampable_register`, where those 62 are reachable, and not here. Pinned as
+    a measurement because the natural assumption — that widening the roots widens the
+    scope — is false, and W37-6 will be written by someone holding that assumption
+    unless a test contradicts it.
+    """
+    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
+    rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
+    assert rels, "the widened scope collected nothing at all — the simulation is broken"
+    assert not [r for r in rels if not r.endswith(".md")]
+
+    registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
+    reached = registered & rels
+    assert reached == {
+        ".claude/skills/create-adaptable-composable/SKILL.md",
+        ".claude/skills/planning-with-files/SKILL.md",
+        ".claude/skills/vue-best-practices/SKILL.md",
+    }, sorted(reached)
+
+
+def test_check_35_owner_clause_is_a_no_op_for_every_registered_file(
+    audit: types.ModuleType,
+) -> None:
+    """Check 35's *owner* clause cannot fire on any of the 65, which is why F83's
+    disposition ("a `generated: true` exemption in check 35") is a no-op on its own and
+    the register had to bring its own enforcement.
+
+    `check_owner` skips on `header is None` **and** on `HeaderError`, so this covers the
+    three unparseable manifests as well as the 62 headerless files — the wider claim, and
+    the true one.
+    """
+    for entry in audit.UNSTAMPABLE_EXEMPTIONS:
+        path = audit.REPO / entry.path
+        try:
+            header = audit._docid.parse_header(path)
+        except audit._docid.HeaderError:
+            continue  # check_owner's own `except ... : continue`
+        assert header is None, entry.path  # check_owner's own `if header is None`

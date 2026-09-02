@@ -1903,11 +1903,25 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 # been" — it is equivalent to F83's wording the moment the migration lands, and it is the
 # only one of the two that is live, and falsifiable, before then.
 #
+# **Check 35's own owner clause is a no-op for every one of the 65, not merely for the
+# headerless ones.** `check_owner` skips on `header is None` *and* on `HeaderError`, so
+# the three vendored manifests — which do have a `---` block, one that will not parse —
+# are skipped by the second branch exactly as the 62 headerless files are skipped by the
+# first. F83's disposition, "a `generated: true` exemption in check 35", therefore
+# discharges nothing on its own; the register had to bring its own enforcement, which is
+# what `_check_unstampable_register` and `_check_scope_unstamped_are_registered` are.
+# `test_check_35_owner_clause_is_a_no_op_for_every_registered_file` pins the claim
+# against the real register rather than leaving it as a reading of the code.
+#
 # NOTE FOR W37-6: when `_ID_SCOPE_ROOTS` widens to the whole corpus, **check 30 must
 # consult `UNSTAMPABLE_EXEMPTIONS`** or it will fail on all 65 of these. That wiring is
 # deliberately not done here: it would weaken check 30 for files that are not yet in its
 # scope, and building it now is building ahead of the slice that widens the scope.
-# `UNSTAMPABLE_EXEMPTIONS` is public for exactly that consumer.
+# `UNSTAMPABLE_EXEMPTIONS` is public for exactly that consumer. **Widening the roots is
+# not by itself enough**: `_id_scope_documents` walks a directory root with
+# `rglob("*.md")`, so a scope widened to `docs/` reaches 3 of the 65 and none of the 62
+# non-markdown files — that glob, not the roots, is what excludes them
+# (`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`).
 # -----------------------------------------------------------------------------------------
 
 #: `scripts/file-census.py`'s `git_ls_files`. The corpus is `git ls-files`, never a
@@ -2136,6 +2150,48 @@ def unstampable_reason(rel: str) -> str | None:
     return None
 
 
+def _check_scope_unstamped_are_registered() -> int:
+    """F83 condition 2 over the **enforced** scope — the clause that goes live with W37-6.
+
+    `_check_unstampable_register` above ranges over NT-0019's whole stamp set and asks
+    which files *cannot* be stamped. This one ranges over `_id_scope_documents()` — what
+    checks 30-39 actually enforce today — and asks which files *are not* stamped, which is
+    F83 condition 2's own wording. The two coincide only after the migration; before it,
+    this clause is the one that will red from inside W37-6's commit if that commit widens
+    the scope without stamping or registering something.
+
+    **A caution for whoever widens `_ID_SCOPE_ROOTS`, measured rather than assumed.**
+    `_id_scope_documents` walks a directory root with `rglob("*.md")`, so widening the
+    roots alone brings in *no* non-markdown file: pointed at `docs/`, it returns 285 paths
+    and not one of the 62 non-`.md` files under `docs/` that `UNSTAMPABLE_EXEMPTIONS`
+    exists for. Checks 30-39 therefore cannot see them however the roots are widened, and
+    this clause cannot either — which is why the register is reconciled against the stamp
+    set by `_check_unstampable_register`, where those 62 *are* reachable, rather than
+    here. `test_widening_the_scope_roots_alone_reaches_no_non_markdown_file` pins the
+    measurement so the next reader gets the fact instead of the assumption.
+
+    Returns the number of unstamped in-scope files it found, for the caller's note.
+    """
+    registered = {entry.path for entry in UNSTAMPABLE_EXEMPTIONS}
+    unstamped = 0
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            header = None  # a header block that will not parse is not a stamp
+        if header is not None:
+            continue
+        unstamped += 1
+        rel = path.relative_to(REPO).as_posix()
+        if rel not in registered:
+            fail(
+                f"check 35: {rel}: in the checks-30-39 scope with no parseable header, "
+                "and not in the F83 exemption register — stamp it, or register it with "
+                "its reason and the ruling that permits it"
+            )
+    return unstamped
+
+
 def _check_unstampable_register() -> int:
     """F83 condition 2: the register equals the set of files that cannot be stamped.
 
@@ -2243,10 +2299,12 @@ def check_owner() -> None:
                 )
 
     stamp_set_size = _check_unstampable_register()
+    unstamped_in_scope = _check_scope_unstamped_are_registered()
     notes.append(
         f"check 35: {checked} owner(s) checked in scope; "
         f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
-        f"against {stamp_set_size} file(s) in NT-0019's stamp set"
+        f"against {stamp_set_size} file(s) in NT-0019's stamp set; "
+        f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
     )
 
 

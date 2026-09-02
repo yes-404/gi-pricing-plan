@@ -328,14 +328,22 @@ that docstring:
   whether or not it ever states a count).
 
 - **`audit-docs.py` now needs a git repository** — its first such dependency, added
-  with F83's exemption register (check 35). The stamp set is `git ls-files`, never a
-  working-tree walk: a walk picks up `.venv/`, `graphify-out/` and anything else
-  untracked, which differs between two checkouts of the same commit
-  (`scripts/doc-id.py` records the measurement). Run outside a repository, or with no
-  `git` on `PATH`, check 35 reports `cannot enumerate NT-0019's stamp set: …` and the
-  gate reds. **That failure is deliberately loud rather than skipped**, because an
-  unreadable corpus yields zero unstampable files, and zero reconciles against any
-  register exactly as cleanly as a correct one.
+  with F83's exemption register (check 35). Run outside a repository, or with no `git`
+  on `PATH`, check 35 reports `cannot enumerate NT-0019's stamp set: …` and the gate
+  reds. **That failure is deliberately loud rather than skipped**, because an unreadable
+  corpus yields zero unstampable files, and zero reconciles against any register exactly
+  as cleanly as a correct one.
+- **Why a git shell-out in a docs linter, and not the obvious `rglob`.** This is the
+  question the next reader will ask, so the answer is recorded rather than left to be
+  re-derived: **a working-tree walk is not a function of the tree.** It picks up
+  `.venv/`, `graphify-out/`, editor droppings and anything else untracked, so two
+  checkouts of the *same commit* enumerate different corpora and the register reconciles
+  in one and not the other. `git ls-files` is the only enumeration that depends on the
+  commit alone. `scripts/file-census.py` measured this and `scripts/doc-id.py` records
+  it as settled — *"the corpus is `git ls-files`, never a working-tree walk"* — which is
+  why `nt0019_stamp_set` reuses `file-census.py`'s helper instead of growing a third
+  copy. **Reaching for the walk is the reversal to resist**, and it will look like a
+  simplification when someone does.
 - **Adding a file that cannot carry a header means adding it to the register**
   (`UNSTAMPABLE_EXEMPTIONS` in `scripts/audit-docs.py`) with its reason and its ruling —
   a new `.json` or `.yaml` under `docs/` reds check 35 by name until you do. That is
@@ -488,6 +496,17 @@ Do not weaken the check to make it pass. Broken links and unmirrored open questi
 real defects; fix the document.
 
 ## Verified
+
+2026-09-02 (seventh entry, same day) — the selector, not the asserts. Widening
+`_ID_SCOPE_ROOTS` does **not** widen what checks 30-39 see to non-markdown files:
+`_id_scope_documents` walks a directory root with `rglob("*.md")`, so a scope widened to
+`docs/` collects 583 paths and reaches **3** of the register's 65 — the vendored manifests
+— and none of the 62 non-`.md` files. Measured, not reasoned about, and pinned by
+`test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`. It matters for W37-6:
+widening the roots alone leaves the 62 invisible to every one of checks 30-39. Check 35's
+second reconciliation clause was also proven by **simulating** the widened scope rather
+than waiting for it — red in bulk pre-migration (D14), green post-migration, red by name
+when one register entry is dropped, green when restored. Tree `f61f9a4`.
 
 2026-09-02 (sixth entry, same day) — check 35 gained F83's exemption register: the 65 files in
 NT-0019's stamp set that cannot carry a YAML front-matter header, each citing its reason and the
