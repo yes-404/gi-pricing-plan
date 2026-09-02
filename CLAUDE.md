@@ -257,11 +257,19 @@ bind wherever anything here is audited, not only at a close:
 - **NFRs are measured, not asserted; enforcement is proven on deliberately broken input.** A
   check that has never printed a failure has not been tested, and a generated artifact
   matching its source proves neither correct.
-- **A reference carries its scope and its measurement.** A count carries the tree *and* the
-  corpus it counted over; a schema or contract name carries its full path; a `Verified` date
-  carries the tree; a word with two scopes (`shape`, `slug`, `contract`, `variant`) says which
-  it means. The test: would it still resolve for a reader holding none of your open context?
+- **A reference carries its scope and its measurement.** A count carries the tree, the corpus
+  it counted over, **and the predicate it counted with** — the pattern or command verbatim and
+  runnable, or the shipped constant **by symbol at that tree, never pasted**; a schema or
+  contract name carries its full path; a `Verified` date carries the tree; a word with two
+  scopes (`shape`, `slug`, `contract`, `variant`) says which it means. The test: would it still
+  resolve for a reader holding none of your open context?
   ([`NT-0004`](docs/notes/0004-a-reference-that-resolves-only-for-the-writer.md))
+  **The predicate clause was added 2026-09-02 by the maintainer, discharging register finding
+  F85**: two counts measured at the **same tree** over the **same corpus** differed only by
+  pattern — a decorator form against a bare string that also matched prose mentions — and
+  **both satisfied this rule as it stood**, while three readers reproduced neither. A pasted
+  constant is refused for the same reason a duplicated status line is
+  ([`NT-0003`](docs/notes/0003-duplicated-status-goes-stale.md)): the copy is what goes stale.
 - **Name the range, not the tip; verify the claim, not just the citation.** A review or gate
   names `origin/main...branch`, never the branch's tip SHA — a tip is the record of the last
   edit, not the change set. And a citation can be correct while the content it vouches for is
