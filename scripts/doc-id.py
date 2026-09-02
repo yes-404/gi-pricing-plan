@@ -156,47 +156,80 @@ def _candidate_header_paths(tree_root: Path) -> Iterator[Path]:
         yield from _emit(sorted(agents_root.glob("*.md")))
 
 
-def _governed_header_ids(tree_root: Path) -> Iterator[tuple[str, int, Path]]:
-    """Every governed file under the header-bearing locations that has a parseable
-    header naming a resolvable id — the shared scan behind `next`'s header source and
+@dataclass(frozen=True)
+class HeaderScan:
+    """The result of scanning every header-bearing location once.
+
+    `skipped` exists so a file this scan cannot cover is *visible*, not silently dropped
+    — raised in review of PR #567 against `tests/test_audit_docs_scan_roots.py`'s own
+    lesson: a scan that quietly stops covering something must not read the same as a scan
+    that covered everything and found nothing. A file with **no front matter at all**, or
+    a header with no `id:` field, is not in `skipped` — that is the overwhelming majority
+    of this repository today, pre-migration, and reporting *that* as a skip would be the
+    noise the note itself warns against. Only a file whose front matter exists and fails
+    to parse — `parse_header` raising `HeaderError` — lands in `skipped`, alongside the
+    message naming why.
+    """
+
+    ids: tuple[tuple[str, int, Path], ...]
+    skipped: tuple[tuple[Path, str], ...]
+    candidates_scanned: int
+
+
+def scan_governed_headers(tree_root: Path) -> HeaderScan:
+    """Every governed file under the header-bearing locations, resolved into either a
+    live id or a reported skip — the shared scan behind `next`'s header source and
     `check`'s duplicate/mismatch detection alike.
 
     Excludes `_templates/` (example headers with placeholder ids — the same exemption
     check 31 gets by path, NT-0019 §1.4) and vendored skill content (§1.5: a vendored
     skill's files are exempt from stamping, so they are never a real source of a live id —
-    see `_docid.is_vendored`'s own docstring for the known detection gap).
+    see `_docid.is_vendored`'s own docstring for the known detection gap) *before*
+    attempting to parse either, so neither counts as a "skip": exclusion is not failure.
 
     A file whose front matter does not fit NT-0019 §1.5's closed grammar at all —
-    `parse_header` raising `HeaderError` — is skipped, not fatal: verified against this
-    repository's own real tree, `.claude/skills/create-adaptable-composable/SKILL.md`
-    carries upstream front matter with a nested `metadata:` mapping, and `is_vendored`
-    does not catch it (the reported LICENSE-detection gap). Whether a *governed* file's
-    header is malformed is check 30's question (W37-4), not this scan's; this scan's job
-    is finding every live id, and a file it cannot parse contributes none, the same as a
-    file with no front matter at all.
+    `parse_header` raising `HeaderError` — is not fatal to the scan, but is recorded in
+    `.skipped`, never silently dropped: verified against this repository's own real tree,
+    `.claude/skills/create-adaptable-composable/SKILL.md` carries upstream front matter
+    with a nested `metadata:` mapping, and `is_vendored` does not catch it (the reported
+    LICENSE-detection gap). Whether a *governed* file's header is malformed enough to fail
+    the gate is check 30's question (W37-4), not this scan's — this scan's job is finding
+    every live id while making what it could not resolve legible to a reader of the CLI's
+    output, since the scan itself cannot tell "malformed governed header" from
+    "legitimately foreign, e.g. vendored, front matter".
     """
+    ids: list[tuple[str, int, Path]] = []
+    skipped: list[tuple[Path, str]] = []
+    candidates_scanned = 0
     for path in _candidate_header_paths(tree_root):
         if "_templates" in path.relative_to(tree_root).parts:
             continue
         if _docid.is_vendored(path, tree_root):
             continue
+        candidates_scanned += 1
         try:
             header = _docid.parse_header(path)
-        except _docid.HeaderError:
+        except _docid.HeaderError as exc:
+            skipped.append((path, str(exc)))
             continue
         if header is None or header.id is None:
             continue
         match = _docid.ID_RE.fullmatch(header.id)
         if match is None:
             continue
-        yield match.group(1), int(match.group(2)), path
+        ids.append((match.group(1), int(match.group(2)), path))
+    return HeaderScan(
+        ids=tuple(ids), skipped=tuple(skipped), candidates_scanned=candidates_scanned
+    )
 
 
 def scan_header_ids(tree_root: Path) -> Iterator[tuple[str, int]]:
     """Source 1 of 4 (NT-0019 §1.7): every header `id:` field under the governed
-    locations — see `_governed_header_ids` for exactly what counts and why.
+    locations — see `scan_governed_headers` for exactly what counts and why. Drops the
+    `.skipped` report: a caller that needs it calls `scan_governed_headers` directly, as
+    the CLI does for its own reporting.
     """
-    for prefix, number, _path in _governed_header_ids(tree_root):
+    for prefix, number, _path in scan_governed_headers(tree_root).ids:
         yield prefix, number
 
 
@@ -302,7 +335,7 @@ def find_duplicate_ids(tree_root: Path) -> list[CheckFailure]:
     """
     seen: dict[int, tuple[str, Path]] = {}
     failures: list[CheckFailure] = []
-    for prefix, number, path in _governed_header_ids(tree_root):
+    for prefix, number, path in scan_governed_headers(tree_root).ids:
         earlier = seen.get(number)
         if earlier is not None:
             earlier_prefix, earlier_path = earlier
@@ -324,7 +357,7 @@ def find_header_filename_mismatches(tree_root: Path) -> list[CheckFailure]:
     compare and is silently skipped, not flagged.
     """
     failures: list[CheckFailure] = []
-    for prefix, number, path in _governed_header_ids(tree_root):
+    for prefix, number, path in scan_governed_headers(tree_root).ids:
         filename_match = _FILENAME_ID_RE.match(path.name)
         if filename_match is None:
             continue
@@ -693,7 +726,17 @@ def widen(repo_root: Path, *, to: int) -> WidenResult:
     )
 
 
-def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> int:
+@dataclass(frozen=True)
+class NextResult:
+    """`next`'s answer, plus what it could not resolve — reported, not silent (same
+    reasoning as `HeaderScan`, and over the same materialised tree, so `next`'s report and
+    its number are always about the identical snapshot)."""
+
+    number: int
+    skipped: tuple[tuple[Path, str], ...]
+
+
+def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> NextResult:
     """`compute_next`, but reading `ref`'s committed content rather than any local
     directory — the entry point `next`'s CLI uses.
     """
@@ -705,7 +748,9 @@ def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> int:
     with tempfile.TemporaryDirectory(prefix="doc-id-next-") as tmp:
         tree = Path(tmp)
         materialize_ref(ref, tree, repo_root=repo_root)
-        return compute_next(tree)
+        number = compute_next(tree)
+        skipped = scan_governed_headers(tree).skipped
+        return NextResult(number=number, skipped=skipped)
 
 
 # ---------------------------------------------------------------------------------------
@@ -713,13 +758,32 @@ def compute_next_at_ref(ref: str, *, repo_root: Path = REPO_ROOT) -> int:
 # ---------------------------------------------------------------------------------------
 
 
+def _report_skipped(command: str, skipped: Sequence[tuple[Path, str]]) -> None:
+    """Print the skip count unconditionally — including zero — so "nothing was skipped"
+    is a printed, falsifiable claim rather than the absence of a line. Raised in review of
+    PR #567: `tests/test_audit_docs_scan_roots.py` exists because a vanished scan root
+    used to make checks quietly stop running while the gate printed "All checks passed";
+    the fix there, and here, is that a scan reports what it covered, not just what it found.
+    """
+    print(
+        f"doc-id.py {command}: {len(skipped)} file(s) skipped "
+        "(front matter present but did not parse as NT-0019's header):",
+        file=sys.stderr,
+    )
+    for _path, reason in skipped:
+        # `reason` is a `HeaderError` message, which already leads with `{path}:{line}:`
+        # (`_docid.py`'s own convention) — printing `path` again here would repeat it.
+        print(f"  {reason}", file=sys.stderr)
+
+
 def _cmd_next(args: argparse.Namespace) -> int:
     try:
-        number = compute_next_at_ref(args.ref, repo_root=args.repo_root)
+        result = compute_next_at_ref(args.ref, repo_root=args.repo_root)
     except GitArchiveError as exc:
         print(f"doc-id.py next: {exc}", file=sys.stderr)
         return 1
-    print(number)
+    _report_skipped("next", result.skipped)
+    print(result.number)
     return 0
 
 
@@ -735,6 +799,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
     failures = check(args.repo_root)
     for failure in failures:
         print(f"doc-id.py check: [{failure.kind}] {failure.message}", file=sys.stderr)
+    _report_skipped("check", scan_governed_headers(args.repo_root).skipped)
     return 1 if failures else 0
 
 
