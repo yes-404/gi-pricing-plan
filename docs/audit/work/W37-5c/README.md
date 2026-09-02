@@ -825,4 +825,4 @@ saying so here keeps this record from reading as one.
 |---|---|
 | Audit proposed by | the auditor, 2026-09-02, at `d8d6e3f` |
 | Verdicts adopted by | **the lead, 2026-09-02**, with four amendments — all applied above, each named in the row it changed |
-| Closed by | *(the lead's merge — pending)* |
+| Closed by | **the lead's merge, 2026-09-02** — `#647` squash-merged as `c888b61`. **Both acts a Slice close requires are now on record**: the clean audit above, and this merge. No maintainer acceptance is sought or required. |
