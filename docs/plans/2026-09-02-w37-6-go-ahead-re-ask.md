@@ -458,8 +458,9 @@ words, independently of the citation.
 ### 6.0 The slot register
 
 **Every tree-pinned figure in this document is a marked slot until it is measured at the tree
-named in §Header.** Grep this document for `[SLOT-` and each must be filled or the document is
-not ready for §10 (Acceptance Standard item 4).
+named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]` through `[SLOT-3]` must all be
+filled or the document is not ready for §10**, and `[SLOT-4]` must **not** be — it is filled by
+the executor in the running session and never here (Acceptance Standard items 4 and 5).
 
 | Slot | What fills it | Why it is not filled now |
 |---|---|---|
