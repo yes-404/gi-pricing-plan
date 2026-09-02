@@ -18,6 +18,7 @@ import collections
 import csv
 import importlib.util
 import pathlib
+import re
 import subprocess
 import sys
 import types
@@ -1082,3 +1083,447 @@ def test_plan_title_does_not_join_across_a_blank_line(
     """
     text = "# A short title\n\nThis paragraph must never join onto the title above.\n"
     assert doc_id_cli._plan_title(text) == "A short title"
+
+
+# =========================================================================================
+# W37-5b -- Ruling 83's census (docs/plans/2026-09-02-w37-guard-arithmetic-and-ledger-
+# family-rulings.md), applied to the five discovery functions rows 30 and 31 of
+# docs/plans/2026-09-02-w37-6-outstanding-obligations.md name as silent: `_discover_
+# requirements` (no guard at all), `_discover_multi_ruling_files`, `_discover_headed_
+# split_file` (plan-reviews.md's shape), `_discover_plain_plans`, and the shared skip-path
+# of `_discover_notes`/`_discover_adrs`. Every guard here refuses by NAMING the unaccounted
+# unit, never by comparing a count (Ruling 83 §3 item 4) -- the property the two guards
+# above this section do not have (row 5: "both shipped guards test only 'zero drafts from
+# a non-blank file'").
+# =========================================================================================
+
+
+# -----------------------------------------------------------------------------------------
+# `_reconcile_census` itself: the shared mechanism every guard below calls. Tested directly
+# once, rather than through all five call sites, because it is the one place the bucket
+# arithmetic and the "name units, not counts" property can go wrong.
+# -----------------------------------------------------------------------------------------
+
+
+def test_reconcile_census_is_silent_when_every_unit_is_a_record(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    units = [doc_id_cli._CensusUnit(key="1", locator="f.md:1", text="a")]
+    doc_id_cli._reconcile_census(scope="test", units=units, records={"1"})
+
+
+def test_reconcile_census_raises_naming_the_unaccounted_unit(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    units = [
+        doc_id_cli._CensusUnit(key="1", locator="f.md:1", text="a"),
+        doc_id_cli._CensusUnit(key="2", locator="f.md:9", text="mystery heading"),
+    ]
+    with pytest.raises(NotImplementedError, match=r"f\.md:9: mystery heading"):
+        doc_id_cli._reconcile_census(scope="test", units=units, records={"1"})
+
+
+def test_reconcile_census_names_the_unit_not_just_a_count(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """The property Ruling 83 §3 item 4 and §4 both insist on: a failure message must
+    identify *which* unit is unaccounted, not merely how many. Two units, one of which is
+    a real record and one an impostor -- `len(units) - len(records) == 1` would already be
+    "the right count" even if the guard picked the wrong unit to blame, so this checks the
+    actual named unit, not just that something failed.
+    """
+    units = [
+        doc_id_cli._CensusUnit(key="1", locator="f.md:1", text="real record"),
+        doc_id_cli._CensusUnit(key="2", locator="f.md:2", text="impostor"),
+    ]
+    with pytest.raises(NotImplementedError) as exc_info:
+        doc_id_cli._reconcile_census(scope="test", units=units, records={"1"})
+    message = str(exc_info.value)
+    assert "impostor" in message
+    assert "real record" not in message
+
+
+def test_reconcile_census_is_body_predicate_exempts_a_unit(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    units = [doc_id_cli._CensusUnit(key="1", locator="f.md:1", text="nested")]
+    doc_id_cli._reconcile_census(
+        scope="test", units=units, records=set(), is_body=lambda _u: True
+    )
+
+
+def test_reconcile_census_declared_exception_with_a_reason_is_silent(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    units = [doc_id_cli._CensusUnit(key="README.md", locator="d/README.md", text="README.md")]
+    doc_id_cli._reconcile_census(
+        scope="test", units=units, records=set(),
+        exceptions={"README.md": "the directory's own README"},
+    )
+
+
+def test_reconcile_census_refuses_a_declared_exception_with_no_reason(
+    doc_id_cli: types.ModuleType,
+) -> None:
+    """Ruling 83 §4's second mutation: deleting a declared exception's reason string must
+    be refused outright, never silently treated as "still a valid exception". Covers all
+    five call sites below at once, since every one of them routes its `exceptions=` through
+    this same function rather than checking reasons itself.
+    """
+    units = [doc_id_cli._CensusUnit(key="README.md", locator="d/README.md", text="README.md")]
+    with pytest.raises(ValueError, match="no reason"):
+        doc_id_cli._reconcile_census(
+            scope="test", units=units, records=set(), exceptions={"README.md": "   "}
+        )
+
+
+# -----------------------------------------------------------------------------------------
+# Row 30: `_discover_requirements` shipped with no guard at all. `_LEGACY_SPEC_BOLD_RE`
+# assumes every legacy requirement id carries a module code; the real corpus's `DEP-1`,
+# `DEP-1a`, `DEP-2`, `DEP-3` never do -- a real, measured gap, not a hypothetical one.
+# -----------------------------------------------------------------------------------------
+
+
+def test_requirements_guard_raises_on_a_module_less_dep_id(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text(
+        "**FR-EX-1** A normal requirement.\n\n"
+        "**DEP-1** A dependency rule with no module code -- the real corpus's actual "
+        "shape.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match=r"DEP-1"):
+        doc_id_cli._check_requirements_not_silently_unrecognised(tmp_path)
+
+
+def test_requirements_guard_is_silent_when_every_id_is_recognised(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text(
+        "**FR-EX-1** One. **NFR-EX-2** Two. **DEP-EX-3** carries a module code, too.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_requirements_not_silently_unrecognised(tmp_path)
+
+
+def test_requirements_guard_does_not_flag_a_dated_amendment_sentence(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A bold clause that *references* an id in running prose -- real corpus shape, e.g.
+    `**FR-OVR-20 says so twelve rows above this one**` -- must never become a census
+    candidate: the bold span does not close immediately after the id, the one structural
+    signal a definition marker has and a reference does not.
+    """
+    specs_dir = tmp_path / "docs" / "specs"
+    specs_dir.mkdir(parents=True)
+    (specs_dir / "00-overview.md").write_text(
+        "**FR-EX-1** The one real requirement here.\n\n"
+        "**FR-EX-1 is amended by this whole bolded sentence, which is not a "
+        "definition.**\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_requirements_not_silently_unrecognised(tmp_path)
+
+
+def test_migrate_raises_via_the_requirements_guard_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    spec = pristine_a / "docs" / "specs" / "00-overview.md"
+    text = spec.read_text(encoding="utf-8")
+    spec.write_text(
+        text + "\n\n**DEP-1** A dependency rule with no module code.\n", encoding="utf-8"
+    )
+    with pytest.raises(NotImplementedError, match=r"DEP-1"):
+        doc_id_cli.migrate(pristine_a)
+
+
+# -----------------------------------------------------------------------------------------
+# Row 31: `_discover_multi_ruling_files` assumes every ruling heading is `## Ruling
+# <digits>`. Both of Ruling 83 §1(c)'s own worked form variations are reproduced: an h1
+# single-ruling file (must NOT be flagged -- Ruling 87 confirms it is not this function's
+# job) and `Ruling A1`/`A2`-shaped letter-suffixed headings (MUST be named -- Ruling 83
+# §4's own "mutation the widening approach cannot survive").
+# -----------------------------------------------------------------------------------------
+
+
+def test_multi_ruling_guard_is_silent_on_a_clean_multi_ruling_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-08-12-example-rulings.md").write_text(
+        "# Example rulings\n\n"
+        "## Ruling 1 — Example decision A\n\n### Question\n\nBody.\n\n"
+        "### Ruling\n\nBody.\n\n"
+        "## Ruling 2 — Example decision B\n\nBody.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
+
+
+def test_multi_ruling_guard_exempts_a_solitary_h1_ruling_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """One ruling per file, titling the file itself, at `#` depth -- Ruling 83's own worked
+    form variation invisible to `_RULING_HEADING_RE` (h1, not h2), and the settled non-
+    defect case (Ruling 87): `_discover_multi_ruling_files` is correctly not this file's
+    mechanism, so the census must not flag it either.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-09-01-solo-ruling.md").write_text(
+        "# Ruling 59 -- a single ruling, filed alone\n\nBody of the ruling.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
+
+
+def test_multi_ruling_guard_names_a_letter_suffixed_ruling_heading(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Ruling 83 §4's own acceptance mutation: `Ruling A1`'s shape, in a fixture. Widening
+    `_RULING_HEADING_RE`'s digit group would not catch this -- only an independent,
+    form-agnostic count does. Also proves the word-anchor keeps ordinary, unrelated section
+    headings (`## 1. Background`) out of the failure entirely, which a fully generic
+    `^#{1,6}` census would have wrongly swept in.
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-08-30-adoption.md").write_text(
+        "# An adoption plan, with rulings under delegation\n\n"
+        "## 1. Background\n\nProse.\n\n"
+        "## 2. Rulings under the delegation\n\n"
+        "### Ruling A1 -- the first delegated ruling\n\nBody.\n\n"
+        "### Ruling A2 -- the second delegated ruling\n\nBody.\n\n"
+        "## 3. Acceptance\n\nProse.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError) as exc_info:
+        doc_id_cli._check_multi_ruling_files_not_silently_unrecognised(tmp_path)
+    message = str(exc_info.value)
+    assert "Ruling A1" in message
+    assert "Ruling A2" in message
+    assert "Background" not in message
+    assert "Acceptance" not in message
+
+
+def test_migrate_raises_via_the_multi_ruling_guard_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    """A second, separate plan file -- not the fixture's own multi-ruling file -- shaped
+    like the real corpus's `Ruling A1`/`A2`/`A3` file: no `## Ruling <digit>` heading at
+    all, so the fixture's own existing records are untouched and only this file's two
+    letter-suffixed sub-rulings are unaccounted.
+    """
+    (pristine_a / "docs" / "plans" / "2026-08-30-adoption.md").write_text(
+        "# An adoption plan, with rulings under delegation\n\n"
+        "## 1. Background\n\nProse.\n\n"
+        "## 2. Rulings under the delegation\n\n"
+        "### Ruling A1 -- the first delegated ruling\n\nBody.\n\n"
+        "### Ruling A2 -- the second delegated ruling\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match=r"Ruling A1"):
+        doc_id_cli.migrate(pristine_a)
+
+
+# -----------------------------------------------------------------------------------------
+# Row 31: `_discover_headed_split_file`'s shape (`plan-reviews.md` today). A fully generic
+# `^#{1,6}` census within the one dedicated file this function is called for -- no
+# unrelated section structure to exclude, since the whole file is a record, a record's own
+# nested content, or its leading preamble.
+# -----------------------------------------------------------------------------------------
+
+
+def test_headed_split_file_guard_names_an_undercounted_heading(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """A real, still-live undercount shape (row 1 of the outstanding-obligations plan,
+    landed as #602): `_REVIEW_HEADING_RE` was widened to accept any trailing text after
+    the date, so a heading is now only invisible to it when it carries NO date at all --
+    the corpus's "Candidate A"/"Candidate B"/"Also carried" shape. A widening-only fix
+    cannot see this either, because it still has no independent denominator.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n"
+        "### Plan review 1, 2026-08-15\n\nBody.\n\n"
+        "### A candidate proposal, carrying no date at all\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError) as exc_info:
+        doc_id_cli._check_headed_split_file_not_silently_unrecognised(
+            tmp_path, "docs/audit/plan-reviews.md", doc_id_cli._REVIEW_HEADING_RE, 3,
+            "plan reviews",
+        )
+    assert "A candidate proposal" in str(exc_info.value)
+
+
+def test_headed_split_file_guard_is_silent_on_a_clean_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n### Plan review 1, 2026-08-15\n\n**Verdict:** fine.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_headed_split_file_not_silently_unrecognised(
+        tmp_path, "docs/audit/plan-reviews.md", doc_id_cli._REVIEW_HEADING_RE, 3,
+        "plan reviews",
+    )
+
+
+def test_headed_split_file_guard_treats_a_nested_subheading_as_body(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """`closure-records.md`/`plan-reviews.md`'s real shape: several levels of sub-heading
+    nested inside one record (`#### Question 1`, `##### ...`). Both must fold into the
+    enclosing record's body, never read as unaccounted units of their own.
+    """
+    audit_dir = tmp_path / "docs" / "audit"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "plan-reviews.md").write_text(
+        "# Plan reviews\n\n"
+        "### Plan review 1, 2026-08-15\n\n#### Question 1 -- Completion\n\nBody.\n\n"
+        "##### A yet deeper sub-point\n\nBody.\n",
+        encoding="utf-8",
+    )
+    doc_id_cli._check_headed_split_file_not_silently_unrecognised(
+        tmp_path, "docs/audit/plan-reviews.md", doc_id_cli._REVIEW_HEADING_RE, 3,
+        "plan reviews",
+    )
+
+
+def test_migrate_raises_via_the_headed_split_file_guard_on_plan_reviews(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    reviews_path = pristine_a / "docs" / "audit" / "plan-reviews.md"
+    text = reviews_path.read_text(encoding="utf-8")
+    reviews_path.write_text(
+        text + "\n\n### A candidate proposal, carrying no date at all\n\nBody.\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(NotImplementedError, match="A candidate proposal"):
+        doc_id_cli.migrate(pristine_a)
+
+
+# -----------------------------------------------------------------------------------------
+# Row 31: `_discover_plain_plans`'s file-population shape. Every file directly under
+# docs/plans/ must be a record, derived (delegated to the multi-ruling function),
+# already-canonical (idempotency), or a declared exception -- `README.md` is the one
+# real-corpus file that is none of the first three.
+# -----------------------------------------------------------------------------------------
+
+
+def test_plain_plans_guard_raises_on_an_unrecognised_file(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "NOTES.txt").write_text("not a dated plan, not declared", encoding="utf-8")
+    with pytest.raises(NotImplementedError, match=re.escape("NOTES.txt")):
+        doc_id_cli._check_plain_plans_not_silently_unrecognised(tmp_path)
+
+
+def test_plain_plans_guard_is_silent_on_the_declared_readme(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "README.md").write_text("Conventions for this directory.\n", encoding="utf-8")
+    (plans_dir / "2026-08-17-example-plan.md").write_text("# A plan\n\nBody.\n", encoding="utf-8")
+    doc_id_cli._check_plain_plans_not_silently_unrecognised(tmp_path)
+
+
+def test_plain_plans_guard_treats_a_multi_ruling_file_as_derived(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-08-12-rulings.md").write_text(
+        "# Rulings\n\n## Ruling 1 -- A\n\nBody.\n", encoding="utf-8"
+    )
+    doc_id_cli._check_plain_plans_not_silently_unrecognised(tmp_path)  # delegated, not flagged
+
+
+def test_plain_plans_guard_treats_an_already_canonical_filename_as_derived(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    """Idempotency: a second `migrate` run sees renamed `PL-00001-*.md` files, which
+    `_PLAN_FILENAME_RE` correctly does not match -- the guard must read that positively as
+    "already migrated", never as "the legacy pattern found nothing" (the fixture-corpus
+    assumption Ruling 83 rejects).
+    """
+    plans_dir = tmp_path / "docs" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "PL-00001-example-plan.md").write_text(
+        "---\nid: PL-1\n---\n\nBody.\n", encoding="utf-8"
+    )
+    doc_id_cli._check_plain_plans_not_silently_unrecognised(tmp_path)
+
+
+def test_migrate_raises_via_the_plain_plans_guard_on_a_real_shaped_tree(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path
+) -> None:
+    (pristine_a / "docs" / "plans" / "NOTES.txt").write_text("stray file", encoding="utf-8")
+    with pytest.raises(NotImplementedError, match=re.escape("NOTES.txt")):
+        doc_id_cli.migrate(pristine_a)
+
+
+# -----------------------------------------------------------------------------------------
+# Row 31: `_discover_notes`/`_discover_adrs`'s shared skip-path reads "found nothing" as
+# "already migrated" purely because the legacy title regex missed -- the same fixture-
+# corpus assumption Ruling 83 rejects for `_discover_closure_records`, here applied to a
+# directory instead of a heading.
+# -----------------------------------------------------------------------------------------
+
+
+def test_flat_document_directory_guard_raises_on_an_unrecognised_note(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    notes_dir = tmp_path / "docs" / "notes"
+    notes_dir.mkdir(parents=True)
+    (notes_dir / "0099-mystery.md").write_text(
+        "No legacy title heading here at all.\n", encoding="utf-8"
+    )
+    with pytest.raises(NotImplementedError, match=re.escape("0099-mystery.md")):
+        doc_id_cli._check_flat_document_directory_not_silently_unrecognised(
+            tmp_path, "docs/notes", doc_id_cli._NOTE_TITLE_RE, "notes",
+            {"README.md": "the directory's own README, not a governed note"},
+        )
+
+
+def test_flat_document_directory_guard_is_silent_on_the_declared_readme(
+    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
+) -> None:
+    notes_dir = tmp_path / "docs" / "notes"
+    notes_dir.mkdir(parents=True)
+    (notes_dir / "README.md").write_text("Conventions.\n", encoding="utf-8")
+    (notes_dir / "0001-a-note.md").write_text(
+        "# NT-0001 — A note\n\nBody.\n", encoding="utf-8"
+    )
+    doc_id_cli._check_flat_document_directory_not_silently_unrecognised(
+        tmp_path, "docs/notes", doc_id_cli._NOTE_TITLE_RE, "notes",
+        {"README.md": "the directory's own README, not a governed note"},
+    )
+
+
+@pytest.mark.parametrize(
+    ("rel_dir", "mystery_filename"),
+    [("docs/notes", "0099-mystery.md"), ("docs/adr", "0099-mystery.md")],
+)
+def test_migrate_raises_via_the_flat_document_directory_guard(
+    doc_id_cli: types.ModuleType, pristine_a: pathlib.Path, rel_dir: str, mystery_filename: str
+) -> None:
+    (pristine_a / rel_dir / mystery_filename).write_text(
+        "No legacy title heading here at all.\n", encoding="utf-8"
+    )
+    with pytest.raises(NotImplementedError, match=re.escape(mystery_filename)):
+        doc_id_cli.migrate(pristine_a)
