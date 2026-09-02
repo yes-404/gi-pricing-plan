@@ -30,6 +30,10 @@ directory records what they close, and never restates their audit steps.
   configuration as a public repo: what is enforced, what refuses to change, and what is
   deliberately open. Distinct from the product's security NFRs, which are requirements in
   `docs/specs/` and audited as such.
+- [`nt-0019-verification-and-impact-sweep.md`](nt-0019-verification-and-impact-sweep.md) —
+  the auditor's transcription check and full-class §5 impact-map sweep of NT-0019, pinned at
+  a fixed commit with every command re-runnable. Filed because `docs/plans/2026-09-01-nt-
+  0019-id-standard-map-plan.md`'s W37-6 slice names this sweep as a precondition.
 
 ## Conventions
 
