@@ -1897,11 +1897,17 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 #
 # F83 words condition 2 as "the count of *unstamped* in-scope files must equal the exempt
 # list". `unstamped` and `unstampable` coincide only after the migration W37-6 performs.
-# Measured at `f61f9a4` over `git ls-files`, with `nt0019_stamp_set` and
-# `unstampable_reason` below as the predicate: the stamp set holds **415** files, of which
-# **364** carry no parseable header (361 with no `---` block at all, plus the 3 whose block
-# will not parse) because nothing has been stamped yet — against **65** that can never be
-# stamped. The predicate that carries F83's intent across that boundary is therefore
+# Measured over `git ls-files` with `nt0019_stamp_set` and `unstampable_reason` below as
+# the predicate. At `359936b`: **416** files = **51** stamped + **362** with no `---` block
+# + **3** carrying one that will not parse, so **365** unstamped against **65** that can
+# never be stamped. **The total drifts with every markdown file added anywhere under
+# `docs/`** — it was 415 at `f61f9a4` and 417 once `docs/audit/findings/F87.md` lands — so
+# it is given with its tree and its parts, never bare: parts that are stated can be summed,
+# and that is the only check on a decomposition which cannot itself be a proxy. **Check 35's
+# own note prints the live figures every run and is the copy to trust**; a comment restating
+# a number the gate computes is how the two drift apart (`NT-0003`).
+#
+# The predicate that carries F83's intent across that boundary is therefore
 # **cannot be stamped**, not "has not yet been": it is equivalent to F83's wording the
 # moment the migration lands, and it is the only one of the two that is live, and
 # falsifiable, before then. The live figures are printed by check 35's own note on every
