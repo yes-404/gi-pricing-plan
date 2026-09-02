@@ -2574,6 +2574,30 @@ def test_migrate_carries_the_ledger_axis_counts_out_of_the_fixture_run(
     assert result.ledger_work_values_checked == 0, result.ledger_work_values_checked
 
 
+def test_cmd_migrate_prints_the_ledger_axis_counts_including_the_zeros(
+    doc_id_cli: types.ModuleType,
+    pristine_a: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The other half of Ruling 94's substituted item, which the `MigrateResult` assertion
+    above does not reach: "printing the count it checked ... the check must **say so**
+    rather than pass silently."
+
+    A count carried on a result object and never printed is the `_ID_SCOPE_ROOTS` shape
+    Ruling 94 names -- true, and telling you nothing -- so the line itself is asserted,
+    on the run that produces the zeros, because the zeros are the case the requirement is
+    about. Same discipline and same stream as `_report_skipped`, whose own docstring gives
+    the reason: a scan reports what it covered, not just what it found.
+    """
+    exit_code = doc_id_cli.main(["migrate", "--repo-root", str(pristine_a)])
+
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "ledger axes checked on 0 emitted LG- record(s)" in err, err
+    assert "0 slice: value(s)" in err, err
+    assert "0 work: value(s)" in err, err
+
+
 # ---------------------------------------------------------------------------------------
 # W37-5c item 2 -- Ruling 86 §4's third acceptance item, re-instrumented.
 #
