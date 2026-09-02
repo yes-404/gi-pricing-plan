@@ -448,6 +448,16 @@ arrives from its author with its predicate**, because this document already carr
 twice in one file. **Nothing below depends on it**: the count is an artifact of how far `sorted`
 order got before the `RS` draft came up, not a meaningful fraction of the work.
 
+**Two things must arrive with the number, or it does not go in.** **(1)** The figure, from its
+author, **in a message** — the correction reached this document's author as a mutation of a file
+in a shared, lock-free scratch directory, which carries no author, no timestamp and no predicate,
+and is indistinguishable from an overwrite by a third agent. **(2)** The **predicate**, and
+specifically **`_write_document_drafts`'s own denominator rather than a reconstruction from the
+discovery call order** — its author reports that the reconstruction route disagreed with the
+direct one by one on *both* operands, and **discarded rather than averaged**, which is the
+correct instinct and is exactly why the predicate has to travel with the figure. **A number whose
+two derivations differ by one is not a number until the predicate says which derivation it is.**
+
 **The crash state is additive, and that is structural rather than lucky.** Verified by reading
 `_write_document_drafts` at `origin/main`, not by running it. The function is **two sequential
 loops**: a write loop over the drafts, then — only after it completes — a deletion loop.
@@ -964,8 +974,14 @@ than to trust this paragraph. Non-zero means #651 landed and this subsection is 
 rather than wrong**.
 
 **Why the gap existed is the part worth keeping, and it is the same mechanism as §8.2's.** The
-fix's own commit body records it, quoted here because a force-pushed commit is not otherwise
-recoverable — `bb1b45ab`:
+fix's own commit body records it. **Cited at `2eda76a`, #651's head, which carries the passage
+verbatim — and the first SHA this section cited is now unreachable, which is §4's defect
+reproduced inside this document.** An earlier revision cited `bb1b45ab`; that commit was itself
+force-pushed over, and `git branch -a --contains bb1b45ab` now returns **0** — on no ref at all,
+dangling and collectable, where F90's `4df1c45` at least still has one local branch. **The
+citation was written the same way F90's was, by the same reasoning, and went stale faster.**
+Recorded rather than quietly repointed, because two instances one document apart is what makes
+§4's observation a hazard of how this repository works rather than one finding's slip:
 
 > **SUPERSEDES THIS BRANCH'S FIRST COMMIT**, which said the roadmap was deliberately not edited
 > because *"no slice has ever been recorded closed there — W37-5b is not, and grep finds no
@@ -1056,12 +1072,19 @@ reason.
    - **Does not start** → **recommend against**, on the superseded ask's own reasoning: a
      go-ahead then authorises a run whose first act is an abort.
    - **Starts and does not complete** → **recommend against, and more firmly than for a run that
-     does not start.** §2.6's `KeyError` is past the first write. Authorising a run in this state
-     buys a partial migration — the one outcome no acceptance item scores and the gate cannot
-     diagnose. **The cost of waiting is another figure pass; the cost of not waiting is a corpus
-     in neither shape.** The remedy is small, is not a disposition question (NT-0019 §1 has
-     specified the family all along), and belongs outside the irreversible commit like every
-     precondition before it.
+     does not start.** §2.6's `KeyError` is past the first write. **The warrant here is
+     structural, not measured** (§2.6): `_write_document_drafts` is two sequential loops, the
+     raise is a dict subscript at the top of the write loop, `deleted` is not initialised until
+     that loop ends, and no `try`/`except`/`finally` appears anywhere in the span — **so nothing
+     is deleted and nothing is modified, and that holds without anyone having run anything.**
+     The state is **duplication, recoverable by deleting the written paths** — *not* a corpus in
+     neither shape, a phrase this document used in an earlier draft and withdrew (§2.4). **What
+     it is not is diagnosable:** no acceptance item scores a partially-written state, the gate
+     cannot tell it from a completed run plus strays, and recovery depends on someone knowing
+     which paths were written. **An abort announces itself; a partial run has to be noticed.**
+     That is a smaller harm than "irreversible" and still enough. The remedy is small, is not a
+     disposition question (NT-0019 §1 has specified the family all along), and belongs outside
+     the irreversible commit like every precondition before it.
 2. **On F90 — decide before, not during, and the lead's reading is that option 4 does not belong
    inside W37-6.** A depth-agnostic detector changes behaviour for all ten families sharing
    `check_shape` and needs its own broken-input proof; putting it inside the irreversible commit
