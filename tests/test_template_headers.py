@@ -201,46 +201,42 @@ def test_sl_template_has_no_top_level_front_matter_but_its_fenced_block_parses(
     assert fenced_header.family == "slice"
 
 
-def test_wk_template_has_no_top_level_front_matter(
+def test_wk_template_has_no_top_level_front_matter_but_its_fenced_block_parses(
     docid: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """WK.md, the same two signals as SL.md above — but only the first one holds.
+    """WK.md, the same two signals as SL.md above — fixed 2026-09-02 (W37-4,
+    `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md`), deliberately, not by
+    loosening this test.
 
-    `WK.md`'s fenced block itself currently carries the *same class* of defect this
-    PR fixes in FD.md/REFERENCE.md/RFC.md: its `owner:` field's inline comment wraps
-    onto a second, indented physical line —
-
-        owner: maintainer                # opens (draft); planner writes the map plan; maintainer
-                                          # sets active; maintainer accepts the close
-
-    — which `_parse_front_matter_body` rejects as an indented continuation line
-    (NT-0019 §1.5's closed, flat grammar has no continuation-line concept), exactly
-    as it rejected REFERENCE.md's old `owner:` comment before this fix. Nothing in
-    this repository parses a `WK-`/`SL-` row's fenced content today
-    (`doc-id.py scan_roadmap_row_ids` reads only the heading line's id via regex, never
-    the block body), so this is not yet a live break — but it is real, and it is the
-    same defect class.
-
-    This PR's authorized scope is `FD.md`, `REFERENCE.md` and `RFC.md` only — the lead
-    was explicit that `WK.md` "correctly has no `---` front matter" and must not be
-    altered here. So this test does not fix WK.md and does not assert its fenced block
-    parses; it pins *today's* actual behaviour (`HeaderError`, not a silent pass) so
-    the finding is visible in the suite rather than only in a chat transcript, and
-    reported to the lead separately as new information outside this PR's scope. If
-    `WK.md` is fixed in a future PR, this assertion starts failing — correctly: update
-    it there, the same way REFERENCE.md's fenced-analogue was fixed here.
+    Until this fix, `WK.md`'s fenced block carried the *same class* of defect #570 fixed
+    in FD.md/REFERENCE.md/RFC.md: its `owner:` field's inline comment wrapped onto a
+    second, indented physical line, which `_parse_front_matter_body` rejects as an
+    indented continuation line (NT-0019 §1.5's closed, flat grammar has no
+    continuation-line concept). #570's own scope was `FD.md`/`REFERENCE.md`/`RFC.md`
+    only, and it left WK.md's copy of the defect in place on purpose, pinning
+    `HeaderError` here so the finding stayed visible in the suite rather than only in a
+    chat transcript — with an explicit instruction that fixing WK.md must update this
+    assertion, not merely re-pass it. §1.5's fenced-block policy (row families, under a
+    heading) is what W37-4 enforces, so the template and its own test move together in
+    the same commit that does the enforcing, the same relationship #570 already set for
+    the ten `---`-block families.
     """
     raw = (TEMPLATES_DIR / "WK.md").read_text(encoding="utf-8")
     rendered = _render_as_author_would(raw)
 
+    # Signal 1: the file itself does not start with `---` — parse_header returns None
+    # for the *designed* reason (no top-level block), not because parsing broke midway
+    # through a block that is actually there.
     whole_file_header = _write_and_parse(docid, tmp_path, "WK.md", rendered)
     assert whole_file_header is None
     assert not rendered.lstrip("\n").startswith("---")
 
+    # Signal 2: the fenced block itself now parses cleanly, carrying the right family.
     fenced_body = _extract_fenced_yaml_block(rendered)
     wrapped = f"---\n{fenced_body}\n---\n"
-    with pytest.raises(docid.HeaderError, match="indented line"):
-        _write_and_parse(docid, tmp_path, "fenced-WK.md", wrapped)
+    fenced_header = _write_and_parse(docid, tmp_path, "fenced-WK.md", wrapped)
+    assert fenced_header is not None, f"WK.md: fenced block failed to parse: {fenced_body!r}"
+    assert fenced_header.family == "work"
 
 
 # -----------------------------------------------------------------------------------

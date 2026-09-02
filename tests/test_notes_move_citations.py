@@ -41,12 +41,19 @@ import subprocess
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-# Check 30's own mechanism (Ruling 61): the code that watches the old path, its skill
-# documentation, and its own test all name the old path deliberately and permanently.
+# The check that watches the old path, its skill documentation, and its own test all
+# name the old path deliberately and permanently. Originally check 30 (Ruling 61,
+# `check_notes_tombstone`, watching the tombstone stubs' own content); renamed 2026-09-02
+# to check 36 (`check_redirects`, NT-0019 §5.5 -- "check_notes_tombstone" -> "check_redirects",
+# `docs/plans/2026-09-01-nt-0019-id-standard-map-plan.md` Slice W37-4) when
+# `check_notes_tombstone`'s job became watching REDIRECTS.csv instead, and its own test
+# file (`tests/test_audit_docs_notes_tombstone.py`) was deleted per NT-0019 §5.7 and
+# folded into `tests/test_audit_docs_ids.py`, which now carries the same permanent,
+# deliberate citation as part of check 36's own legacy-form-sweep positive control.
 _CHECK_30_MECHANISM = {
     "scripts/audit-docs.py",
     ".claude/skills/docs-audit/SKILL.md",
-    "tests/test_audit_docs_notes_tombstone.py",
+    "tests/test_audit_docs_ids.py",
 }
 
 # Provenance-locked historical artifacts generated before this move landed (PRs #537/#545,

@@ -9,7 +9,9 @@ comment.
 Full field set, status vocabulary and role assignments:
 `docs/process/document-ids.md` §1.5, §1.2a, §1.6. `kind:`, `slice:`, `plans:`,
 `supersedes:` and `superseded_by:` do not apply to this family and must not appear here
-— a Work is never superseded, only withdrawn (`retired`).
+— a Work is never superseded, only withdrawn (`retired`). `owner:` opens the work as
+`draft`; the planner writes its map plan; the maintainer sets it `active` and later
+accepts its close (§1.6).
 -->
 
 ### WK-NNNNN — <Title>
@@ -20,8 +22,7 @@ family: work
 title: <one line>
 status: draft                  # draft → active → closed | retired (§1.2a)
 created: YYYY-MM-DD
-owner: maintainer                # opens (draft); planner writes the map plan; maintainer
-                                  # sets active; maintainer accepts the close
+owner: maintainer               # opens, sets active, accepts the close (§1.6)
 tree: <commit-sha this was written against>
 phase: P<n>
 corrected_by: []
