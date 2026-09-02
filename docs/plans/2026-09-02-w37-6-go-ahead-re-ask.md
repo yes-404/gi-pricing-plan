@@ -54,10 +54,12 @@ only the first would have passed a document asserting the second.
    catch, reappearing inside the document that discharges them.
 4. **Every tree-pinned figure is a marked slot until it is measured at the final tree.**
    *Violation:* a `[SLOT-n]` marker replaced by a figure measured at any tree other than the one
-   named in §Header, or `[SLOT-0]` through `[SLOT-3]` left unfilled when §10 is signed. §6.0 is
-   the register of them. **`[SLOT-4]` is the deliberate exception** — the gap checks are filled
-   by the executor in the session that runs the migration and are *never* filled in this
-   document, per item 5.
+   named in §Header, or `[SLOT-0]`–`[SLOT-3]` or `[SLOT-5]` left unfilled when §10 is signed.
+   §6.0 is the register of them. **`[SLOT-4]` is the deliberate exception** — the gap checks are
+   filled by the executor in the session that runs the migration and are *never* filled in this
+   document, per item 5. **And `[SLOT-5]` has a second violation of its own:** a figure written
+   into it on relay rather than from its author with its predicate, which is the defect §8.2
+   records happening once already in this document's own briefing.
 5. **The gap is named as a condition with a re-runnable check, never as a date.** *Violation:*
    this document recording a gap as *established*, which turns a volatile live condition into a
    stale claim an executor then reads as satisfied — the failure the frozen leaf plan's §1
@@ -270,14 +272,17 @@ decider of "already stamped", and a reconciliation names any manifest it cannot 
 
 **And the distinction between the first two states is the one the maintainer is entitled to have
 drawn for them: an abort is honest; a partial migration is not.** A run that stops before
-writing leaves a repository someone can look at. A run that writes 126 files and raises leaves
-one that is in neither the old shape nor the new — and the map plan already describes that state
-and says the gate cannot diagnose it: *"a partially-applied rename set is a corpus in neither the
-old shape nor the new one, and the gate cannot tell the two apart."* **The map plan says it about
-a different cause** — splitting W37-6 across executors, which is forbidden — **and the property
-it describes is what matters here, not the cause it was written about.** Noted rather than
-elided, because a citation can be correct while the thing it is being used to vouch for is
-adjacent to what it says.
+writing leaves a repository someone can look at. A run that writes and then raises leaves one
+that has to be **discovered**. §2.6 states the crash state precisely, and it is **narrower than
+"a corpus in neither shape"** — that phrase was in an earlier draft of this section and is
+withdrawn, with the reason at §2.6.
+
+**The withdrawal, because a retraction that only removes the claim removes the record of it.**
+The map plan's *"a partially-applied rename set is a corpus in neither the old shape nor the new
+one, and the gate cannot tell the two apart"* is written about **splitting W37-6 across
+executors**, which is forbidden, and it carries an implication of irrecoverability that **the
+measured crash state does not support** (§2.6). Half of it transfers — the gate cannot tell the
+two apart — and half does not. **Borrowing the sentence imported the half that is false here.**
 
 ### 2.5 A falsifiable clause that is destructive when met — a failure shape with no precedent here
 
@@ -395,12 +400,49 @@ a rate is not claimable at n=1, and none is claimed.
 write.** Found by the executor fixing the fifth, on the fix branch, and reported here rather than
 discovered on the day.
 
-**The reported behaviour:** `migrate()` reaches `_write_document_drafts`, creates **126 files**,
-and raises `KeyError: 'RS'`. **That is a partial migration, not a clean abort** — task #34's
-failure mode one layer down, unreachable while the fifth stopped the run first.
+**The reported behaviour:** `migrate()` reaches `_write_document_drafts`, writes new files, and
+raises `KeyError: 'RS'`. **That is a partial run, not a clean abort** — task #34's failure mode
+one layer down, unreachable while the fifth stopped the run first.
 
-**The 126 and the `KeyError` are the executor's execution result and are not re-derived here, on
-purpose: `migrate()` is not run by this document, because its write is the irreversible commit.**
+**`[SLOT-5]` — the number of files written before the raise.** Deliberately not stated. An
+earlier draft carried **126** on relay; its author has since corrected it, the 126th being a
+`.pyc` the import machinery writes when `migrate` path-loads `register-lint.py` — an artifact of
+the interpreter, not an output of the run. **The corrected figure is not written here until it
+arrives from its author with its predicate**, because this document already carries one section
+(§8.2) about a relayed figure that did not reproduce, and a second one would be the same mistake
+twice in one file. **Nothing below depends on it**: the count is an artifact of how far `sorted`
+order got before the `RS` draft came up, not a meaningful fraction of the work.
+
+**The crash state is additive, and that is structural rather than lucky.** Verified by reading
+`_write_document_drafts` at `origin/main`, not by running it. The function is **two sequential
+loops**: a write loop over the drafts, then — only after it completes — a deletion loop.
+
+```
+for d in drafts:
+    target_dir = root / "docs" / _DOCUMENT_FAMILY_DIR[d.prefix]   <- KeyError: 'RS' fires here
+    ...
+    new_path.write_text(header + "\n" + d.body, encoding="utf-8")  <- writes the NEW path
+
+deleted: list[str] = []            <- not even initialised until the write loop ends
+for was in sorted(was_sources):
+    source.unlink()
+```
+
+**So a `KeyError` raised on the table lookup exits the function before the deletion loop is
+reached, and before `deleted` exists.** Nothing is unlinked; nothing is modified, because the
+write targets `new_path` and leaves the source alone. **The result is duplication — new files
+beside intact legacy sources — not a half-moved corpus.** That is recoverable by deleting the
+written paths.
+
+**What it is not is diagnosable.** No acceptance item scores a partially-written state; the gate
+cannot tell it from a completed run plus stray files; and the recovery depends on someone knowing
+*which* paths were written. **An abort is honest — it announces itself and leaves nothing behind.
+A partial run has to be noticed.** That is the whole of the difference, and it is smaller than
+"irreversible" and still enough to recommend against.
+
+**The `KeyError` and the file count are the executor's execution result and are not re-derived
+here, on purpose: `migrate()` is not run by this document, because its write is the irreversible
+commit.**
 That is the same discipline the W37-5c close audit held — it called every guard with `migrate()`'s
 own arguments and never called `migrate()`. **What is verified here is the cause, at the code
 level, by symbol, at `origin/main`:**
@@ -504,7 +546,8 @@ about itself. **A document that merges them flatters the work in both directions
 
 **This is the section the maintainer asked for by asking a wider question than "may it run".**
 
-[F90](../audit/findings/F90.md), measured at `4df1c45` against a **disposable clone** using
+[F90](../audit/findings/F90.md), measured at `4df1c45` — **a tree that resolves here and for
+nobody else; see the note after this table** — against a **disposable clone** using
 `doc-id.py`'s own unmodified splitter to materialise real stamped ruling documents, then the
 real unmodified `check_shape()`:
 
@@ -516,6 +559,37 @@ real unmodified `check_shape()`:
 
 The reproduction script is in the finding, written against the shipped symbols rather than
 against these numbers.
+
+**And the tree it names will stop resolving, which the disposition should fix while it is open.**
+F90 **does** state its tree — `docs/audit/findings/F90.md:33`, the first line under
+`## The measurement`: *"Tree: `docs/skills-marker-vs-property` @ `4df1c45` (PR #640's tip,
+containing piece 1)"*. **But `4df1c45` is reachable only from this shared checkout:**
+
+```
+git merge-base --is-ancestor 4df1c45 origin/main        -> NOT an ancestor
+git branch -r --contains 4df1c45 | wc -l                -> 0
+git branch   --contains 4df1c45 | wc -l                 -> 1   (a local branch, this checkout only)
+git ls-remote --heads origin 'docs/skills-marker-vs-property'  -> empty
+```
+
+PR #640 squash-merged as `dc1666f`, which **is** on `origin/main`; `4df1c45` is the pre-merge
+tip and survives on one local ref. **A fresh clone cannot resolve it today**, and §5.4's own gap
+condition requires releasing every agent worktree before the migration branch is cut — which
+deletes the last ref pointing at it. **So the count carries a tree that resolves for the people
+who already know the answer and for nobody else.** `CLAUDE.md` §13's test — *would it still
+resolve for a reader holding none of your open context?* — is failed, in the one way a
+correctly-formed citation still can.
+
+**The remedy is not "add a tree"; it is re-pin or re-run.** Either state the measurement against
+a reachable commit, or re-run it at `dc1666f` or later, or preserve the ref deliberately.
+**Ruling 51 makes a register-row amendment opportunistic at the row's next substantive
+amendment, and F90's disposition is that amendment**, so the fix rides along at no extra cost —
+which is the whole reason it is raised here rather than as its own id.
+
+**This is also a live instance of a rule in the place it was not written for.** `CLAUDE.md` §13
+says *name the range, not the tip*, about reviews and gates. A **measurement** legitimately names
+a commit rather than a range — but naming a **squash-merged branch's tip** is precisely the form
+that stops resolving, and the rule as written does not reach it.
 
 **The sharp part is not the 95.** It is that **the 30 rulings written after the ruling-form
 flag-day, specifically to comply, fail exactly as the 35 that were never asked to.** The
@@ -711,9 +785,10 @@ words, independently of the citation.
 ### 6.0 The slot register
 
 **Every tree-pinned figure in this document is a marked slot until it is measured at the tree
-named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]` through `[SLOT-3]` must all be
-filled or the document is not ready for §10**, and `[SLOT-4]` must **not** be — it is filled by
-the executor in the running session and never here (Acceptance Standard items 4 and 5).
+named in §Header.** Grep this document for `[SLOT-`; **`[SLOT-0]`–`[SLOT-3]` and `[SLOT-5]` must
+all be filled or the document is not ready for §10**, and `[SLOT-4]` must **not** be — it is
+filled by the executor in the running session and never here (Acceptance Standard items 4
+and 5).
 
 | Slot | What fills it | Why it is not filled now |
 |---|---|---|
@@ -722,6 +797,7 @@ the executor in the running session and never here (Acceptance Standard items 4 
 | `[SLOT-2]` | Addendum A's classification sweep, re-run at that tree | Condition 2 — §7 |
 | `[SLOT-3]` | **How far a real `migrate()` run gets** — does not start / starts and does not complete / completes | §2.4, §2.6 |
 | `[SLOT-4]` | The gap checks, re-run at the moment the branch is cut | §5.2 — **and this one is filled by the executor in the running session, never here** |
+| `[SLOT-5]` | Files written before the `KeyError`, **from the measurement's author with its predicate** — never on relay | §2.6 |
 
 ### 6.1 Why it runs once, and late
 
@@ -839,12 +915,27 @@ roadmap finds nothing. **Routed to the lead; not written by this branch**, becau
 is the lead's file and a slice close is the lead's act, not this document's to assert.
 
 **And it is being fixed while this document is open, which is stated so the claim above cannot
-rot silently.** PR **#651**, *"complete W37-5c's sign-off — the lead's merge happened"*, was open
-and unmerged when this section was written, with `origin/main` still at `c888b61`. **A reader
-cannot tell a still-true absence claim from one that has since been filled**, so: the two
-measurements above are true **at `c888b61`**, and the way to check them today is to re-run
-`grep -c "W37-5c CLOSED" docs/roadmap.md` rather than to trust this paragraph. If it returns
-non-zero, #651 landed and this subsection is discharged rather than wrong.
+rot silently.** PR **#651** files both lines. **A reader cannot tell a still-true absence claim
+from one that has since been filled**, so: the two measurements above are true **at `c888b61`**,
+and the way to check them today is to re-run `grep -c "W37-5c CLOSED" docs/roadmap.md` rather
+than to trust this paragraph. Non-zero means #651 landed and this subsection is **discharged
+rather than wrong**.
+
+**Why the gap existed is the part worth keeping, and it is the same mechanism as §8.2's.** The
+fix's own commit body records it, quoted here because a force-pushed commit is not otherwise
+recoverable — `bb1b45ab`:
+
+> **SUPERSEDES THIS BRANCH'S FIRST COMMIT**, which said the roadmap was deliberately not edited
+> because *"no slice has ever been recorded closed there — W37-5b is not, and grep finds no
+> W37-5x closure line"*. That is false. W37-5b's own CLOSED clause is in the same row, one clause
+> above where this one now goes… **I ran the grep and wrote the denial in one command block, so
+> the claim was pushed before its own measurement was read. The measurement said 1.**
+
+**A claim written in the same breath as the command that would have refuted it.** §8.2 is the
+same shape at one remove — a figure repeated all day, whose own source table never supported it.
+**Neither is a reading error; both are the measurement arriving after the sentence.** The cost
+here was a force-push rather than a wrong merged record **only because the branch had not
+landed**, which is luck rather than process.
 
 ### 8.2 The `VR-DST-1` movement figure this ask was briefed with does not reproduce
 
@@ -915,10 +1006,14 @@ reason.
 2. **On F90 — decide before, not during, and the lead's reading is that option 4 does not belong
    inside W37-6.** A depth-agnostic detector changes behaviour for all ten families sharing
    `check_shape` and needs its own broken-input proof; putting it inside the irreversible commit
-   is the thing every precondition slice so far existed to prevent. **Between a further narrow
-   slice and accepting a red gate between W37-6 and a later fix, the lead has no recommendation**
-   — that trade is the maintainer's, because one costs another cut and another close and the
-   other leaves the gate red across a window whose length is the maintainer's to accept.
+   is the thing every precondition slice so far existed to prevent. **And the maintainer is asked
+   one question, not two: do you accept a red gate across the window?** Cutting a slice is not a
+   cost they need to price — **a slice is the lead's to cut** (W37-5b was inserted by the lead's
+   decision, and W37-5c by the maintainer's; the precedent for both is in the roadmap's W37 row).
+   **Accepting a red gate is the maintainer's alone, because it is a degraded repository state
+   and nobody else may consent to one on their behalf.** So: **if the maintainer does not want
+   the red gate, the lead will cut the slice** — that is a commitment, not an option being
+   priced.
 3. **On the gap — no plan edit on the lead's authority, and one proposal.** §5.3's third limb
    (`git status --porcelain` in one worktree, against 52) is a `CLAUDE.md` §14 finding against
    the map plan, and §14's first rule is that the output of a review is a proposal, never a
@@ -936,8 +1031,15 @@ reason.
    is a reading task, not a grep** — the class needs all three conjuncts §2.5 names, so a
    pattern will not do it — **it is not W37-6's work, and it should not gate this go-ahead**,
    because the one clause that bears on the run is F88 limb 1's and §2.4 already refuses to
-   accept it as the test. **Recommended as a register row with an owner rather than as a
-   condition on §10** — the maintainer may disagree and make it one.
+   accept it as the test. **Recommended as a register row rather than as a condition on
+   §10** — the maintainer may disagree and make it one. **And it names its decay event, because
+   a row proposed with no individual owner must**: Ruling 49's decay rule, and F86 was filed six
+   hours earlier about exactly this — *a finding about unowned rows failing to name their own
+   decay event must not be one*. **No individual owner is proposed; absent a slice taking it,
+   the row decays to the next `CLAUDE.md` §14 plan review, which must give it a disposition
+   rather than list it**, and it carries the `§14` literal so `register-owed.py review` can
+   surface it. That is the disposition F87, F88 and F90 all took at W37-5c's close, and it is
+   the default here for the same reason.
    **The eighth class is proposed here and is not adopted by this document**: adding a class to
    Addendum A's taxonomy is an amendment to a filed sweep's instrument, and §2.5 names it so the
    maintainer can adopt, rename or reject it on one line rather than reconstruct it.
