@@ -1770,6 +1770,18 @@ def frozen_file_matches_after_migration_stamp(
     token to the *old* one it replaced; applying every entry to `new_text` and stripping
     its own leading `---` block should reproduce `old_body` when the only changes are the
     migration's own header stamp and token rewrite.
+
+    Longest `new_token` first (found by W37-5, applying this function against a real
+    multi-id redirects map rather than the single-entry maps this module's own tests use):
+    NT-0019's citation rule is the bare integer, so two live ids can be in a literal
+    prefix relationship — `WK-1` and `WK-17` both exist in most real corpora — and
+    replacing the shorter one first corrupts the longer one's own digits (`WK-17` loses
+    its `WK-1` prefix to the first substitution before its own entry is ever reached, and
+    the now-absent `WK-17` substring makes that second entry a no-op). Processing longest
+    to shortest guarantees every occurrence of a longer token is fully substituted, and
+    thus absent from the text, before a token it could contain as a prefix is ever tried —
+    the identical ordering `scripts/doc-id.py`'s own citation-rewrite pass uses for the
+    forward direction, for the identical reason.
     """
     lines = new_text.splitlines()
     if lines and lines[0] == "---":
@@ -1781,8 +1793,8 @@ def frozen_file_matches_after_migration_stamp(
     else:
         stripped = new_text
     restored = stripped
-    for new_token, old_token in redirects_inverse.items():
-        restored = restored.replace(new_token, old_token)
+    for new_token in sorted(redirects_inverse, key=len, reverse=True):
+        restored = restored.replace(new_token, redirects_inverse[new_token])
     return restored.strip("\n") == old_body.strip("\n")
 
 

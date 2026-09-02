@@ -1,10 +1,13 @@
 """NT-0016 Slice 4: after the notes move, the old notes root under `.claude` may be cited
 only by its own tombstone, by files frozen under `docs/plans/README.md`'s write-once rule,
 by check 30's own mechanism (Ruling 61 -- the check that *watches* the old path necessarily
-names it), by provenance-locked historical artifacts generated before the move landed, and
-by a maintainer-accepted note that *specifies* the old path's eventual deletion rather than
+names it), by provenance-locked historical artifacts generated before the move landed, by
+a maintainer-accepted note that *specifies* the old path's eventual deletion rather than
 merely citing it (`_SPECIFICATIONS_OF_THE_OLD_PATH` below -- added 2026-09-02 for NT-0019,
-see that constant's own comment for what this narrow exemption stops catching).
+see that constant's own comment for what this narrow exemption stops catching), and by
+W37-5's own migration-test fixture corpus, which carries the legacy form as synthetic
+data by construction rather than as a citation of anything real
+(`_MIGRATION_TEST_FIXTURES` below -- added 2026-09-02).
 
 This is the slice's own TDD leaf, per
 `docs/plans/2026-08-31-nt-0016-investigation.md` §9 Step 1: the invariant the move must
@@ -128,6 +131,20 @@ _SPECIFICATIONS_OF_THE_OLD_PATH = {
     "docs/audit/register.md",
 }
 
+# A different class from all three sets above: not a real governance document at all, but
+# W37-5's miniature fixture corpus (`tests/fixtures/docs-migration/`) — synthetic
+# pre-migration content built to carry, by construction, every legacy id and path form
+# `doc-id.py migrate` must recognise, `LEGACY_FORM_PATTERNS`' "legacy claude-notes path"
+# entry among them (`scripts/audit-docs.py`). Named individually, the same discipline
+# `_PRE_MOVE_SNAPSHOTS` and `_SPECIFICATIONS_OF_THE_OLD_PATH` already use, rather than a
+# blanket carve-out for the whole fixture directory: only the two files that actually
+# carry the string are listed, so a third fixture file added later and *not* meant to
+# exercise this legacy form still fails this test as intended.
+_MIGRATION_TEST_FIXTURES = {
+    "tests/fixtures/docs-migration/docs/audit/closure-records.md",
+    "tests/fixtures/docs-migration/docs/plans/2026-08-12-example-rulings.md",
+}
+
 
 def test_no_living_file_cites_the_old_notes_path() -> None:
     """After the move, the old notes root under `.claude` may be named only by the
@@ -148,7 +165,12 @@ def test_no_living_file_cites_the_old_notes_path() -> None:
     tracked = subprocess.run(
         ["git", "ls-files"], capture_output=True, text=True, cwd=ROOT, check=True
     ).stdout.split()
-    exempt = _CHECK_30_MECHANISM | _PRE_MOVE_SNAPSHOTS | _SPECIFICATIONS_OF_THE_OLD_PATH
+    exempt = (
+        _CHECK_30_MECHANISM
+        | _PRE_MOVE_SNAPSHOTS
+        | _SPECIFICATIONS_OF_THE_OLD_PATH
+        | _MIGRATION_TEST_FIXTURES
+    )
     offenders = [
         f
         for f in tracked
