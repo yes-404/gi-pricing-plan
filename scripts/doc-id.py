@@ -3196,7 +3196,8 @@ _AUDIT_CLOSURE_CENSUS_EXCEPTIONS: Final[Mapping[str, Mapping[str, str]]] = {
             "`audit/register.md` (\"the phase register's rows merge in with `phase: "
             "P1b`\"), not to a closure record. `_discover_register` reads only the "
             "top-level `docs/audit/register.md`, so nothing discovers this file today -- "
-            "named here so that gap is listed rather than folded into a `CR-`"
+            "named here so that gap is listed rather than folded into a `CR-`. **Filed as "
+            "`F88` limb 2**, 2026-09-02; this entry is its disposition, not its record"
         ),
     },
 }
@@ -3403,18 +3404,19 @@ _REFERENCE_FOREIGN_REASON: Final = (
 #: which is the correct outcome for a directory that is not part of the corpus.
 _REFERENCE_CLAUDE_DIR_EXCEPTIONS: Final[Mapping[str, str]] = {
     "notes/": (
-        "OPEN QUESTION, not a settled exemption -- three sections of NT-0019 disagree "
-        "about this directory's README and the disposition here follows the one that "
-        "names it. \u00a75.3's row: \"19 stubs + README | deleted; `REDIRECTS.csv` rows\" "
-        "(kind `H + M`) -- the only place the README's own disposition is stated, and it "
-        "says deleted. Against it: \u00a74 step 4 deletes \"the stubs\" and does not "
-        "mention the README, and \u00a75.6's row for the tree outside `docs/` says "
-        "\"every README outside `docs/` is Reference family and gets the header\". "
-        "Reported to the lead 2026-09-02; if the README is ruled to survive, delete the "
-        "clause naming it here and the README scope stamps it as a seventh gained file. "
-        "The 18 stubs are not in \u00a74 step 5's stamp set under any reading. "
-        "\u00a75.3's own count is also wrong: it says 19 stubs where the directory holds "
-        "18 plus the README, which the map plan already flagged"
+        "**RULED deleted, 2026-09-02** -- the maintainer, on the second RFC's dated "
+        "amendment (`docs/plans/2026-09-02-w37-rfc-readme-row-and-stamp-set.md`, filed as "
+        "PR #643): this directory's README goes with its stubs, \u00a75.3 governs, and "
+        "\u00a74 step 4 is amended rather than \u00a75.6 carved out again. Three sections "
+        "had disagreed -- \u00a75.3's row deletes \"stubs + README\", \u00a74 step 4 "
+        "deleted \"the stubs\" and was silent on the README, and \u00a75.6 says \"every "
+        "README outside `docs/` is Reference family and gets the header\" -- and the "
+        "silence in step 4 was precisely how this file would have been stamped by "
+        "accident. The reason the survival reading lost: the README's own text justifies "
+        "it as what makes a frozen plan's citation still resolve, which is the job "
+        "\u00a75.3 hands to `REDIRECTS.csv` in the same row that removes it. The 18 stubs "
+        "are not in \u00a74 step 5's stamp set under any reading. Note the directory holds "
+        "**18** stubs plus the README, not the 19 stubs \u00a75.3 counts"
     ),
     "settings.json": (
         "NT-0019 §5.3's only change for it is \"hook `statusMessage` citation\", kind "
